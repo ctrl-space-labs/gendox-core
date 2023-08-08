@@ -1,4 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS gendox_core;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- CREATE EXTENSION IF NOT EXISTS vector;
+
 
 create table if not exists gendox_core.types
 (
@@ -16,7 +19,7 @@ CREATE INDEX types_name_idx ON gendox_core.types (name);
 
 CREATE TABLE IF NOT EXISTS gendox_core.users
 (
-    id             bigserial    NOT NULL,
+    id             uuid DEFAULT uuid_generate_v4(),
     name           VARCHAR(255),
     email          VARCHAR(255) NOT NULL UNIQUE,
     phone          VARCHAR(20),
@@ -48,7 +51,7 @@ comment on column gendox_core.users.global_role_id is 'This is the global role, 
 
 CREATE TABLE IF NOT EXISTS gendox_core.organizations
 (
-    id           bigserial    NOT NULL,
+    id           uuid DEFAULT uuid_generate_v4(),
     name         VARCHAR(255) NOT NULL UNIQUE, -- A unique name for the organization like "ctrl-space-labs"
     display_name VARCHAR(255),                 -- A display name for the organization like "Ctrl+Space Labs"
     address      VARCHAR(255),
@@ -74,10 +77,10 @@ create table if not exists gendox_core.role_permission
 -- Organization members
 CREATE TABLE if not exists gendox_core.user_organization
 (
-    id                   bigserial NOT NULL,
-    user_id              bigint    NOT NULL,
-    organization_id      bigint    NOT NULL,
-    organization_role_id bigint    NOT NULL,
+    id                   uuid DEFAULT uuid_generate_v4(),
+    user_id              uuid   NOT NULL,
+    organization_id      uuid   NOT NULL,
+    organization_role_id bigint NOT NULL,
     created_at           timestamp,
     updated_at           timestamp,
     PRIMARY KEY (id),
@@ -90,11 +93,11 @@ CREATE TABLE if not exists gendox_core.user_organization
 -- create table document_template if not exists
 CREATE TABLE IF NOT EXISTS gendox_core.document_template
 (
-    id              BIGSERIAL,
-    name            TEXT   NOT NULL,
+    id              uuid DEFAULT uuid_generate_v4(),
+    name            TEXT NOT NULL,
     description     TEXT,
-    organization_id BIGINT NOT NULL,
-    user_id         BIGINT NOT NULL,
+    organization_id uuid NOT NULL,
+    user_id         uuid NOT NULL,
     created_at      timestamp,
     updated_at      timestamp,
     PRIMARY KEY (id),
@@ -102,39 +105,39 @@ CREATE TABLE IF NOT EXISTS gendox_core.document_template
     FOREIGN KEY (user_id) REFERENCES gendox_core.users (id)
 );
 
-comment on column gendox_core.document_template.user_id is 'The user that created the form template';
+comment on column gendox_core.document_template.user_id is 'The user that created the document template';
 comment on column gendox_core.document_template.organization_id is 'the organization that owns this template';
 
 -- A Document Sections is a section of a document template
--- It indicates the type of the document section, the title, the description for this section and the order of the field
+-- It indicates the type of the document section, the title, the description for this section and the order of the section
 -- If there is no template for the document then the document section is a section of a document indicating just the type
 CREATE TABLE IF NOT EXISTS gendox_core.document_section_template
 (
-    id                     BIGSERIAL,
-    document_template_id   BIGINT, -- optional, if null then it is a section for a document without a Template
-    document_field_type_id BIGINT  NOT NULL,
-    title                  TEXT,
-    description            TEXT,
-    field_options          TEXT,
-    field_order            INTEGER NOT NULL,
-    created_at             timestamp,
-    updated_at             timestamp,
+    id                       uuid DEFAULT uuid_generate_v4(),
+    document_template_id     uuid, -- optional, if null then it is a section for a document without a Template
+    document_section_type_id bigint  NOT NULL,
+    title                    TEXT,
+    description              TEXT,
+    section_options            TEXT,
+    section_order              INTEGER NOT NULL,
+    created_at               timestamp,
+    updated_at               timestamp,
     PRIMARY KEY (id),
-    FOREIGN KEY (document_field_type_id) REFERENCES gendox_core.types (id),
+    FOREIGN KEY (document_section_type_id) REFERENCES gendox_core.types (id),
     FOREIGN KEY (document_template_id) REFERENCES gendox_core.document_template (id)
 );
 
-comment on table gendox_core.document_section_template is 'A Document Sections is a section of a document template \n It indicates the type of the document section, the title, the description for this section and the order of the field \n If there is no template for the document then the document section is a section of a document indicating just the type';
+comment on table gendox_core.document_section_template is 'A Document Sections is a section of a document template \n It indicates the type of the document section, the title, the description for this section and the order of the section \n If there is no template for the document then the document section is a section of a document indicating just the type';
 
 
-comment on column gendox_core.document_section_template.field_options is 'If the field is a multi select field the options will go inside seperated by "option";"option"';
+comment on column gendox_core.document_section_template.section_options is 'If the section is a multi select section the options will go inside seperated by "option";"option"';
 
 
 CREATE TABLE IF NOT EXISTS gendox_core.document_instance
 (
-    id                   BIGSERIAL,
-    document_template_id bigint,
-    user_id              bigint not null,
+    id                   uuid DEFAULT uuid_generate_v4(),
+    document_template_id uuid,
+    user_id              uuid not null,
     created_at           timestamp,
     updated_at           timestamp,
     PRIMARY KEY (id),
@@ -142,15 +145,15 @@ CREATE TABLE IF NOT EXISTS gendox_core.document_instance
     FOREIGN KEY (user_id) REFERENCES gendox_core.users (id)
 );
 
-comment on column gendox_core.document_instance.user_id is 'user that submitted the form';
+comment on column gendox_core.document_instance.user_id is 'user that submitted the document';
 
 
-CREATE TABLE IF NOT EXISTS gendox_core.form_instance_fields
+CREATE TABLE IF NOT EXISTS gendox_core.document_instance_sections
 (
-    id                           BIGSERIAL,
-    document_instance_id         bigint not null,
-    document_section_template_id bigint not null,
-    field_value                  text,
+    id                           uuid DEFAULT uuid_generate_v4(),
+    document_instance_id         uuid not null,
+    document_section_template_id uuid not null,
+    section_value                  text,
     remote_url                   text,
     created_at                   timestamp,
     updated_at                   timestamp,
@@ -159,15 +162,15 @@ CREATE TABLE IF NOT EXISTS gendox_core.form_instance_fields
     FOREIGN KEY (document_section_template_id) REFERENCES gendox_core.document_section_template (id)
 );
 
-comment on column gendox_core.form_instance_fields.field_value is 'the value of the field, if the field is a multi select field the values will go inside seperated by "value";"value"';
-comment on column gendox_core.form_instance_fields.remote_url is 'if the value of the field is too big, the url will be stored here to retrieve the answer from the server';
+comment on column gendox_core.document_instance_sections.section_value is 'the value of the section, if the section is a multi select section the values will go inside seperated by "value";"value"';
+comment on column gendox_core.document_instance_sections.remote_url is 'if the value of the section is too big, the url will be stored here to retrieve the answer from the server';
 
 
 CREATE TABLE IF NOT EXISTS gendox_core.projects
 (
-    id              BIGSERIAL,
-    organization_id BIGINT NOT NULL,
-    name            TEXT   NOT NULL,
+    id              uuid DEFAULT uuid_generate_v4(),
+    organization_id uuid NOT NULL,
+    name            TEXT NOT NULL,
     description     TEXT,
     created_at      timestamp,
     updated_at      timestamp,
@@ -177,9 +180,9 @@ CREATE TABLE IF NOT EXISTS gendox_core.projects
 
 CREATE TABLE IF NOT EXISTS gendox_core.project_members
 (
-    id         BIGSERIAL,
-    project_id BIGINT NOT NULL,
-    user_id    BIGINT NOT NULL,
+    id         uuid DEFAULT uuid_generate_v4(),
+    project_id uuid NOT NULL,
+    user_id    uuid NOT NULL,
     created_at timestamp,
     updated_at timestamp,
     PRIMARY KEY (id),
@@ -189,9 +192,9 @@ CREATE TABLE IF NOT EXISTS gendox_core.project_members
 
 CREATE TABLE IF NOT EXISTS gendox_core.project_documents
 (
-    id          BIGSERIAL,
-    project_id  BIGINT NOT NULL,
-    document_id BIGINT NOT NULL,
+    id          uuid DEFAULT uuid_generate_v4(),
+    project_id  uuid NOT NULL,
+    document_id uuid NOT NULL,
     created_at  timestamp,
     updated_at  timestamp,
     PRIMARY KEY (id),
@@ -202,9 +205,9 @@ CREATE TABLE IF NOT EXISTS gendox_core.project_documents
 -- project - template
 CREATE TABLE IF NOT EXISTS gendox_core.project_templates
 (
-    id          BIGSERIAL,
-    project_id  BIGINT NOT NULL,
-    template_id BIGINT NOT NULL,
+    id          uuid DEFAULT uuid_generate_v4(),
+    project_id  uuid NOT NULL,
+    template_id uuid NOT NULL,
     created_at  timestamp,
     updated_at  timestamp,
     PRIMARY KEY (id),
@@ -215,7 +218,7 @@ CREATE TABLE IF NOT EXISTS gendox_core.project_templates
 -- AI models are supported by the system they nave name,url, type,api_key, price per token
 CREATE TABLE IF NOT EXISTS gendox_core.ai_models
 (
-    id         BIGSERIAL,
+    id         uuid DEFAULT uuid_generate_v4(),
     name       TEXT            NOT NULL,
     url        TEXT,
     type       TEXT,                     -- Completion, Embedding, Classification etc
@@ -231,11 +234,11 @@ comment on column gendox_core.ai_models.price is 'Price per 1000 tokens';
 -- Each project has an AI Agent, the user can define the behavior of the agent
 CREATE TABLE IF NOT EXISTS gendox_core.project_agent
 (
-    id                       BIGSERIAL,
-    project_id               BIGINT NOT NULL,
-    semantic_search_model_id BIGINT,
-    completion_model_id      BIGINT,
-    agent_name               TEXT   NOT NULL,
+    id                       uuid    DEFAULT uuid_generate_v4(),
+    project_id               uuid NOT NULL,
+    semantic_search_model_id uuid,
+    completion_model_id      uuid,
+    agent_name               TEXT NOT NULL,
     agent_behavior           TEXT,
     private                  boolean default true,
     created_at               timestamp,
@@ -252,9 +255,9 @@ comment on table gendox_core.project_agent is 'Each project has an AI Agent, the
 -- The user will be charged based on the number of tokens used
 CREATE TABLE IF NOT EXISTS gendox_core.message_logs
 (
-    id          BIGSERIAL,
-    project_id  BIGINT NOT NULL,
-    user_id     BIGINT NOT NULL,
+    id          uuid DEFAULT uuid_generate_v4(),
+    project_id  uuid NOT NULL,
+    user_id     uuid NOT NULL,
     request_id  uuid, --The UUID of the request that was sent to the API by the user
     token_count bigint,
     type        TEXT, -- completion input, completion output, semantic search input, training input etc
