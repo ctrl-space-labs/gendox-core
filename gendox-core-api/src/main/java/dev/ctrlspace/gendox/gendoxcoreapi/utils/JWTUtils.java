@@ -7,7 +7,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.SignedJWT;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.RegisteredJwtClaimName;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtClaimName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,18 +41,18 @@ public class JWTUtils {
         return JwtDTO.builder()
                 .originalClaims(jwt.getClaims())
                 .originalHeaders(jwt.getHeaders())
-                .iss(jwt.getClaimAsString("iss"))
-                .sub(jwt.getClaimAsString("sub"))
+                .iss(jwt.getClaimAsString(JwtClaimName.ISSUER))
+                .sub(jwt.getClaimAsString(JwtClaimName.SUBJECT))
                 .aud(jwt.getAudience())
                 .exp(jwt.getExpiresAt())
                 .nbf(jwt.getNotBefore())
                 .iat(jwt.getIssuedAt())
-                .jti(jwt.getClaimAsString(RegisteredJwtClaimName.JWT_ID))
-                .userId(jwt.getClaimAsString("user_id"))
-                .email(jwt.getClaimAsString("email"))
-                .globalRole(jwt.getClaimAsString("global_role"))
+                .jti(jwt.getClaimAsString(JwtClaimName.JWT_ID))
+                .userId(jwt.getClaimAsString(JwtClaimName.USER_ID))
+                .email(jwt.getClaimAsString(JwtClaimName.EMAIL))
+                .globalRole(jwt.getClaimAsString(JwtClaimName.GLOBAL_ROLE))
                 .orgAuthoritiesMap(
-                        jwt.getClaimAsStringList("scope").stream()
+                        jwt.getClaimAsStringList(JwtClaimName.SCOPE).stream()
                                 .map(s -> s.split(":"))
                                 .filter(outGlobalRole())
                                 .collect(Collectors.toMap(
@@ -64,7 +64,7 @@ public class JWTUtils {
                                         }))
                 )
                 .orgProjectsMap(
-                        jwt.getClaimAsStringList("projects:organization").stream()
+                        jwt.getClaimAsStringList(JwtClaimName.PROJECTS_ORGANIZATION).stream()
                                 .map(s -> s.split(":"))
                                 .collect(Collectors.toMap(
                                         s -> s[1],
@@ -95,11 +95,11 @@ public class JWTUtils {
                 .notBefore(jwtDTO.getNbf())
                 .issuedAt(jwtDTO.getIat())
                 .id(jwtDTO.getJti())
-                .claim("user_id", jwtDTO.getUserId().toString())
-                .claim("email", jwtDTO.getEmail())
-                .claim("global_role", jwtDTO.getGlobalRole())
-                .claim("scope", getAuthorities(jwtDTO))
-                .claim("projects:organization", jwtDTO.getOrgProjectsMap().entrySet().stream()
+                .claim(JwtClaimName.USER_ID, jwtDTO.getUserId().toString())
+                .claim(JwtClaimName.EMAIL, jwtDTO.getEmail())
+                .claim(JwtClaimName.GLOBAL_ROLE, jwtDTO.getGlobalRole())
+                .claim(JwtClaimName.SCOPE, getAuthorities(jwtDTO))
+                .claim(JwtClaimName.PROJECTS_ORGANIZATION, jwtDTO.getOrgProjectsMap().entrySet().stream()
                         .flatMap(entry -> entry.getValue().projectIds().stream().map(s -> s + ":" + entry.getKey().toString()))
                         .collect(Collectors.toList()))
                 .build();
