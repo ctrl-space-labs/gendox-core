@@ -4,44 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.security.oauth2.jwt.Jwt;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
-/**
- * sample JSON JWT
- * {
- *      "iss": "https://dev-ctrlspace.eu.auth0.com/",
- *      "sub": "google-oauth2|60b0a0b0b0b0b0b0b0b0b0b0",
- *      "aud": [
- *          "https://gendox-api.ctrlspace.dev",
- *          "https://dev-ctrlspace.eu.auth0.com/userinfo"
- *      ],
- *      "iat": 1622212345,
- *      "exp": 1622298745,
- *      "scope": "openid profile email",
- *      "user_id": "376cc7cb-2df8-4f31-8fcc-11e709c5bf8a",
- *      "email": "sekas.x@gmail.com",
- *      "orgAuthorities": [
- *          "b3cea61b-3339-4386-b228-921be60ee754:ROLE_USER",
- *          "b3cea61b-3339-4386-b228-921be60ee754:ROLE_ADMIN",
- *          "b3cea61b-3339-4386-b228-921be60ee754:OP_READ_DOCUMENT",
- *          "b3cea61b-3339-4386-b228-921be60ee754:OP_WRITE_DOCUMENT",
- *          "b3cea61b-3339-4386-b228-921be60ee754:OP_ADD_USERS",
- *          "b3cea61b-3339-4386-b228-921be60ee754:OP_REMOVE_USERS",
- *          "b3cea61b-3339-4386-b228-921be60ee754:OP_DELETE_ORGANIZATION",
- *          "b3cea61b-3339-4386-b228-921be60ee754:OP_EDIT_PROJECT_SETTINGS",
- *          "59326c6a-990f-400e-bdb9-0a3ca0b47a60:ROLE_USER",
- *          "59326c6a-990f-400e-bdb9-0a3ca0b47a60:ROLE_READER",
- *          "59326c6a-990f-400e-bdb9-0a3ca0b47a60:OP_READ_DOCUMENT"
- *      ]
- * }
- */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -82,12 +50,13 @@ public class JwtDTO {
      */
     private String jti;
 
-    private UUID userId;
+    private String userId;
     private String email;
     private String globalRole;
 
     // OrganizationId -> Authorities
-    private Map<String, OrganizationAuthorities> authoritiesMap;
+    private Map<String, OrganizationAuthorities> orgAuthoritiesMap;
+    private Map<String, OrganizationProject> orgProjectsMap;
     private Map<String, Object> originalClaims;
     private Map<String, Object> originalHeaders;
 
@@ -95,6 +64,8 @@ public class JwtDTO {
 
 
     public record OrganizationAuthorities(Set<String> orgAuthorities) {
+    }
+    public record OrganizationProject(Set<String> projectIds) {
     }
 
 

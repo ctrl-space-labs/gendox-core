@@ -3,6 +3,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 import jakarta.persistence.*;
 
 import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -23,10 +26,13 @@ public class Project {
     private String description;
     @Basic
     @Column(name = "created_at", nullable = true)
-    private Timestamp createdAt;
+    private Instant createdAt;
     @Basic
     @Column(name = "updated_at", nullable = true)
-    private Timestamp updatedAt;
+    private Instant updatedAt;
+
+    @OneToMany(mappedBy = "project")
+    private List<ProjectMember> projectMembers;
 
     public UUID getId() {
         return id;
@@ -60,49 +66,41 @@ public class Project {
         this.description = description;
     }
 
-    public Timestamp getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Timestamp createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
-    public Timestamp getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(Timestamp updatedAt) {
+    public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public List<ProjectMember> getProjectMembers() {
+        return projectMembers;
+    }
+
+    public void setProjectMembers(List<ProjectMember> projectMembers) {
+        this.projectMembers = projectMembers;
+    }
+
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         Project project = (Project) o;
-
-        if (id != null ? !id.equals(project.id) : project.id != null) return false;
-        if (organizationId != null ? !organizationId.equals(project.organizationId) : project.organizationId != null)
-            return false;
-        if (name != null ? !name.equals(project.name) : project.name != null) return false;
-        if (description != null ? !description.equals(project.description) : project.description != null)
-            return false;
-        if (createdAt != null ? !createdAt.equals(project.createdAt) : project.createdAt != null) return false;
-        if (updatedAt != null ? !updatedAt.equals(project.updatedAt) : project.updatedAt != null) return false;
-
-        return true;
+        return Objects.equals(id, project.id) && Objects.equals(organizationId, project.organizationId) && Objects.equals(name, project.name) && Objects.equals(description, project.description) && Objects.equals(createdAt, project.createdAt) && Objects.equals(updatedAt, project.updatedAt) && Objects.equals(projectMembers, project.projectMembers);
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (organizationId != null ? organizationId.hashCode() : 0);
-        result = 31 * result + (name != null ? name.hashCode() : 0);
-        result = 31 * result + (description != null ? description.hashCode() : 0);
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        return result;
+        return Objects.hash(id, organizationId, name, description, createdAt, updatedAt, projectMembers);
     }
 }

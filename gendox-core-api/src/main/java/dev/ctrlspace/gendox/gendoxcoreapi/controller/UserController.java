@@ -1,16 +1,17 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-import com.nimbusds.jwt.JWTClaimsSet;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,19 +26,23 @@ public class UserController {
 
     //    @Autowired
     private UserService userService;
+    private JwtEncoder jwtEncoder;
 
     @Autowired
-    public UserController(UserService userService) {
+    public UserController(UserService userService,
+                          JwtEncoder jwtEncoder) {
         this.userService = userService;
+        this.jwtEncoder = jwtEncoder;
     }
 
 
-//    @GetMapping("/users")
-//    public List<User> getAllUsers(UserCriteria userCriteria) throws Exception {
-//
-//        // run code to get the user from the database
-//        return userService.getAllUsers();
-//    }
+    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_READ_DOCUMENT')")
+    @GetMapping("/users")
+    public List<User> getAllUsers(@Valid UserCriteria criteria) throws Exception {
+
+        // run code to get the user from the database
+        return userService.getAllUsers(criteria);
+    }
 
 
     @GetMapping("/users/{id}")
@@ -50,12 +55,13 @@ public class UserController {
     }
 
     @GetMapping("/users/login")
-    public JwtClaimsSet getUserByLogin() throws Exception {
+    public JwtResponse getUserByLogin(@RequestParam("email") String email ) throws Exception {
 
         // run code to get the user from the database
-        JwtClaimsSet jwt = userService.getJwtClaims("csekas@test.com");
+        JwtClaimsSet claims = userService.getJwtClaims(email);
 
-        return jwt;
+        String jwt = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+        return new JwtResponse(jwt);
     }
 
 //
@@ -84,5 +90,8 @@ public class UserController {
 //        userService.deleteUser(id);
 //    }
 
+
+    record JwtResponse(String token) {
+    }
 
 }

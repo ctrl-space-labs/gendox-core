@@ -8,6 +8,7 @@ import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,8 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -27,6 +30,9 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -42,6 +48,7 @@ import java.text.ParseException;
 import java.util.stream.Collectors;
 
 @Configuration
+@EnableMethodSecurity(prePostEnabled = true, securedEnabled = true)
 public class SecurityConfiguration {
 
     @Value("${rsa.private-key}")
@@ -49,6 +56,10 @@ public class SecurityConfiguration {
 
     @Autowired
     private ResourceLoader resourceLoader;
+
+    @Autowired
+    @Qualifier("delegatedAuthenticationEntryPoint")
+    private AuthenticationEntryPoint authEntryPoint;
 
 
     @Bean
@@ -70,6 +81,7 @@ public class SecurityConfiguration {
                                            DaoAuthenticationProvider daoAuthenticationProvider,
                                            CorsConfigurationSource corsConfigurationSource,
                                            JwtDecoder jwtDecoder,
+                                           JwtAuthenticationConverter jwtAuthenticationConverter,
                                            JwtEncoder jwtEncoder) throws Exception {
 
         http
@@ -82,12 +94,16 @@ public class SecurityConfiguration {
                                 .requestMatchers("/users/login").permitAll()
                                 .anyRequest().authenticated()
                 )
+                .exceptionHandling(httpExConfigurer-> httpExConfigurer.authenticationEntryPoint(authEntryPoint))
                 .httpBasic(Customizer.withDefaults())
                 .authenticationProvider(daoAuthenticationProvider)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .oauth2ResourceServer(oauth2 ->
-                        oauth2.jwt(jtw -> jtw.decoder(jwtDecoder)));
+                        oauth2.jwt(jwt -> {
+                            jwt.decoder(jwtDecoder);
+                            jwt.jwtAuthenticationConverter(jwtAuthenticationConverter());
+                        }));
 
         return http.build();
     }
@@ -103,6 +119,19 @@ public class SecurityConfiguration {
         provider.setPasswordEncoder(passwordEncoder);
         provider.setUserDetailsService(userDetailsService);
         return provider;
+    }
+
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        // Customize the converter here
+        JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
+        jwtGrantedAuthoritiesConverter.setAuthorityPrefix(""); // removes the default SCOPE_ prefix
+
+        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
+        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);
+
+        return jwtAuthenticationConverter;
+
     }
 
     @Bean
