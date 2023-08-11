@@ -1,6 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.authentication;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
