@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -30,10 +31,10 @@ public class AiModel {
     private BigDecimal price;
     @Basic
     @Column(name = "created_at", nullable = true)
-    private Timestamp createdAt;
+    private Instant createdAt;
     @Basic
     @Column(name = "updated_at", nullable = true)
-    private Timestamp updatedAt;
+    private Instant updatedAt;
 
     public UUID getId() {
         return id;
@@ -83,19 +84,19 @@ public class AiModel {
         this.price = price;
     }
 
-    public Timestamp getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Timestamp createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
-    public Timestamp getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(Timestamp updatedAt) {
+    public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }
 

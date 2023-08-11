@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 import jakarta.persistence.*;
 
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -12,18 +13,19 @@ public class ProjectMember {
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
-    @Basic
-    @Column(name = "project_id", nullable = false)
-    private UUID projectId;
-    @Basic
-    @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    @ManyToOne
+    @JoinColumn(name = "project_id", referencedColumnName = "id", nullable = false)
+    private Project project;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+    private User user;
     @Basic
     @Column(name = "created_at", nullable = true)
-    private Timestamp createdAt;
+    private Instant createdAt;
     @Basic
     @Column(name = "updated_at", nullable = true)
-    private Timestamp updatedAt;
+    private Instant updatedAt;
 
     public UUID getId() {
         return id;
@@ -33,35 +35,35 @@ public class ProjectMember {
         this.id = id;
     }
 
-    public UUID getProjectId() {
-        return projectId;
+    public Project getProject() {
+        return project;
     }
 
-    public void setProjectId(UUID projectId) {
-        this.projectId = projectId;
+    public void setProject(Project project) {
+        this.project = project;
     }
 
-    public UUID getUserId() {
-        return userId;
+    public User getUser() {
+        return user;
     }
 
-    public void setUserId(UUID userId) {
-        this.userId = userId;
+    public void setUser(User user) {
+        this.user = user;
     }
 
-    public Timestamp getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Timestamp createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
-    public Timestamp getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(Timestamp updatedAt) {
+    public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }
 
@@ -73,8 +75,8 @@ public class ProjectMember {
         ProjectMember that = (ProjectMember) o;
 
         if (id != null ? !id.equals(that.id) : that.id != null) return false;
-        if (projectId != null ? !projectId.equals(that.projectId) : that.projectId != null) return false;
-        if (userId != null ? !userId.equals(that.userId) : that.userId != null) return false;
+        if (project != null ? !project.equals(that.project) : that.project != null) return false;
+        if (user != null ? !user.equals(that.user) : that.user != null) return false;
         if (createdAt != null ? !createdAt.equals(that.createdAt) : that.createdAt != null) return false;
         if (updatedAt != null ? !updatedAt.equals(that.updatedAt) : that.updatedAt != null) return false;
 
@@ -84,8 +86,8 @@ public class ProjectMember {
     @Override
     public int hashCode() {
         int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (projectId != null ? projectId.hashCode() : 0);
-        result = 31 * result + (userId != null ? userId.hashCode() : 0);
+        result = 31 * result + (project != null ? project.hashCode() : 0);
+        result = 31 * result + (user != null ? user.hashCode() : 0);
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
         result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
         return result;

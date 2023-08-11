@@ -5,7 +5,6 @@ import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWT;
-import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.RegisteredJwtClaimName;
@@ -16,10 +15,8 @@ import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Component;
 
 import java.text.ParseException;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Component
@@ -33,8 +30,10 @@ public class JWTUtils {
     private JwtEncoder jwtEncoder;
 
     public JwtDTO toJwtDTO(String jwtString) {
-        jwtDecoder.decode(jwtString);
         Jwt jwt = jwtDecoder.decode(jwtString);
+        return toJwtDTO(jwt);
+    }
+    public JwtDTO toJwtDTO(Jwt jwt) {
         //implement the commented constructor in JwtDTO class
         return JwtDTO.builder()
                 .originalClaims(jwt.getClaims())
@@ -46,26 +45,45 @@ public class JWTUtils {
                 .nbf(jwt.getNotBefore())
                 .iat(jwt.getIssuedAt())
                 .jti(jwt.getClaimAsString(RegisteredJwtClaimName.JWT_ID))
-                .userId(UUID.fromString(jwt.getClaimAsString("user_id")))
+                .userId(jwt.getClaimAsString("user_id"))
                 .email(jwt.getClaimAsString("email"))
-                .authoritiesMap(
-                        jwt.getClaimAsStringList("orgAuthorities").stream()
+                .globalRole(jwt.getClaimAsString("global_role"))
+                .orgAuthoritiesMap(
+                        jwt.getClaimAsStringList("scope").stream()
                                 .map(s -> s.split(":"))
-//                                .map(s -> new JwtDTO.OrganizationAuthorities(s[0], new HashSet<>(Arrays.asList(s[1]))))
-                                .collect(Collectors.toMap(s -> s[0], s -> new JwtDTO.OrganizationAuthorities(new HashSet<>(Arrays.asList(s[1]))), (orgAuth1, orgAuth2) -> {
-                                    orgAuth1.orgAuthorities().addAll(orgAuth2.orgAuthorities());
-                                    return orgAuth1;
-                                }))
+                                .filter(outGlobalRole())
+                                .collect(Collectors.toMap(
+                                        s -> s[1],
+                                        s -> new JwtDTO.OrganizationAuthorities(new HashSet<>(Arrays.asList(s[0]))),
+                                        (orgAuth1, orgAuth2) -> {
+                                            orgAuth1.orgAuthorities().addAll(orgAuth2.orgAuthorities());
+                                            return orgAuth1;
+                                        }))
+                )
+                .orgProjectsMap(
+                        jwt.getClaimAsStringList("projects:organization").stream()
+                                .map(s -> s.split(":"))
+                                .collect(Collectors.toMap(
+                                        s -> s[1],
+                                        s -> new JwtDTO.OrganizationProject(new HashSet<>(Arrays.asList(s[0]))),
+                                        (orgProj1, orgProj2) -> {
+                                            orgProj1.projectIds().addAll(orgProj2.projectIds());
+                                            return orgProj1;
+                                        }))
                 )
                 .build();
     }
 
-    public JWTClaimsSet toClaims(String jwtString) throws JOSEException, ParseException {
-        JWT jwt = SignedJWT.parse(jwtString);
-        return jwt.getJWTClaimsSet();
+    private static Predicate<String[]> outGlobalRole() {
+        return s -> !s[1].equals("GLOBAL_ROLE");
     }
 
-    public JwtClaimsSet toClaims(JwtDTO jwtDTO) {
+//    public JWTClaimsSet toClaims(String jwtString) throws JOSEException, ParseException {
+//        JWT jwt = SignedJWT.parse(jwtString);
+//        return jwt.getJWTClaimsSet();
+//    }
+
+    public JwtClaimsSet toClaimsSet(JwtDTO jwtDTO) {
         return JwtClaimsSet.builder()
                 .issuer(jwtDTO.getIss())
                 .subject(jwtDTO.getSub())
@@ -76,14 +94,26 @@ public class JWTUtils {
                 .id(jwtDTO.getJti())
                 .claim("user_id", jwtDTO.getUserId().toString())
                 .claim("email", jwtDTO.getEmail())
-                .claim("orgAuthorities", jwtDTO.getAuthoritiesMap().entrySet().stream()
-                        .flatMap(entry -> entry.getValue().orgAuthorities().stream().map(s -> entry.getKey().toString() + ":" + s))
+                .claim("global_role", jwtDTO.getGlobalRole())
+                .claim("scope", getAuthorities(jwtDTO))
+                .claim("projects:organization", jwtDTO.getOrgProjectsMap().entrySet().stream()
+                        .flatMap(entry -> entry.getValue().projectIds().stream().map(s -> s + ":" + entry.getKey().toString()))
                         .collect(Collectors.toList()))
                 .build();
+
+    }
+
+    private List<String> getAuthorities(JwtDTO jwtDTO) {
+        List<String> authoritiesMap = jwtDTO.getOrgAuthoritiesMap().entrySet().stream()
+                .flatMap(entry -> entry.getValue().orgAuthorities().stream().map(s -> s + ":" + entry.getKey().toString()))
+                .collect(Collectors.toList());
+
+        authoritiesMap.add(jwtDTO.getGlobalRole() + ":GLOBAL_ROLE");
+        return authoritiesMap;
     }
 
     public String toJwtString(JwtDTO jwtDTO) {
-        var claims = toClaims(jwtDTO);
+        var claims = toClaimsSet(jwtDTO);
         return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
     }
 
@@ -104,20 +134,19 @@ public class JWTUtils {
     }
 
     // Method to check if token is valid
-    public boolean isTokenValid(String jwtString, RSAKey rsaKey) {
-        JWTClaimsSet claims = null;
-        try {
-            claims = toClaims(jwtString);
-            return verifyJWTSignature(jwtString, rsaKey) &&
-                    !isTokenExpired(claims.getExpirationTime()) &&
-                    !isTokenRevoked(jwtString);
-        } catch (JOSEException | ParseException e) {
-            logger.error("Error while parsing JWT", e);
-            return false;
-        }
-
-    }
-
+//    public boolean isTokenValid(String jwtString, RSAKey rsaKey) {
+//        JWTClaimsSet claims = null;
+//        try {
+//            claims = toClaims(jwtString);
+//            return verifyJWTSignature(jwtString, rsaKey) &&
+//                    !isTokenExpired(claims.getExpirationTime()) &&
+//                    !isTokenRevoked(jwtString);
+//        } catch (JOSEException | ParseException e) {
+//            logger.error("Error while parsing JWT", e);
+//            return false;
+//        }
+//
+//    }
 
 
     public JWT getJWT(String jwtString) throws JOSEException, ParseException {

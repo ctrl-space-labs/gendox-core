@@ -3,6 +3,8 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 import jakarta.persistence.*;
 
 import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -26,10 +28,13 @@ public class Organization {
     private String phone;
     @Basic
     @Column(name = "created_at", nullable = true)
-    private Timestamp createdAt;
+    private Instant createdAt;
     @Basic
     @Column(name = "updated_at", nullable = true)
-    private Timestamp updatedAt;
+    private Instant updatedAt;
+
+    @OneToMany(mappedBy = "organization")
+    private List<UserOrganization> userOrganizations;
 
     public UUID getId() {
         return id;
@@ -71,19 +76,19 @@ public class Organization {
         this.phone = phone;
     }
 
-    public Timestamp getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Timestamp createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
-    public Timestamp getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(Timestamp updatedAt) {
+    public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }
 

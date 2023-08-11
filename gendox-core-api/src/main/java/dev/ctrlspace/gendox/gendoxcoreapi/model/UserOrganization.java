@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 import jakarta.persistence.*;
 
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -13,21 +14,23 @@ public class UserOrganization {
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
-    @Basic
-    @Column(name = "user_id", nullable = false)
-    private UUID userId;
-    @Basic
-    @Column(name = "organization_id", nullable = false)
-    private UUID organizationId;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+    private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "organization_id", referencedColumnName = "id", nullable = false)
+    private Organization organization;
     @ManyToOne
     @JoinColumn(name = "organization_role_id", referencedColumnName = "id", nullable = false)
     private Type role;
     @Basic
     @Column(name = "created_at", nullable = true)
-    private Timestamp createdAt;
+    private Instant createdAt;
     @Basic
     @Column(name = "updated_at", nullable = true)
-    private Timestamp updatedAt;
+    private Instant updatedAt;
 
     public UUID getId() {
         return id;
@@ -37,20 +40,20 @@ public class UserOrganization {
         this.id = id;
     }
 
-    public UUID getUserId() {
-        return userId;
+    public User getUser() {
+        return user;
     }
 
-    public void setUserId(UUID userId) {
-        this.userId = userId;
+    public void setUser(User user) {
+        this.user = user;
     }
 
-    public UUID getOrganizationId() {
-        return organizationId;
+    public Organization getOrganization() {
+        return organization;
     }
 
-    public void setOrganizationId(UUID organizationId) {
-        this.organizationId = organizationId;
+    public void setOrganizationId(Organization organization) {
+        this.organization = organization;
     }
 
     public Type getRole() {
@@ -61,19 +64,19 @@ public class UserOrganization {
         this.role = role;
     }
 
-    public Timestamp getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Timestamp createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
-    public Timestamp getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(Timestamp updatedAt) {
+    public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }
 
@@ -82,11 +85,11 @@ public class UserOrganization {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         UserOrganization that = (UserOrganization) o;
-        return Objects.equals(id, that.id) && Objects.equals(userId, that.userId) && Objects.equals(organizationId, that.organizationId) && Objects.equals(role, that.role) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt);
+        return Objects.equals(id, that.id) && Objects.equals(user, that.user) && Objects.equals(organization, that.organization) && Objects.equals(role, that.role) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, userId, organizationId, role, createdAt, updatedAt);
+        return Objects.hash(id, user, organization, role, createdAt, updatedAt);
     }
 }

@@ -15,7 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -49,14 +48,14 @@ public class JWTUtilsTest {
         assertEquals(2, jwt.getAud().size());
         assertEquals("https://gendox-api.ctrlspace.dev", jwt.getAud().get(0));
         assertEquals("376cc7cb-2df8-4f31-8fcc-11e709c5bf8a", jwt.getUserId().toString());
-        assertEquals(2, jwt.getAuthoritiesMap().size());
-        JwtDTO.OrganizationAuthorities firstOrgAuth = jwt.getAuthoritiesMap().get("b3cea61b-3339-4386-b228-921be60ee754");
+        assertEquals(2, jwt.getOrgAuthoritiesMap().size());
+        JwtDTO.OrganizationAuthorities firstOrgAuth = jwt.getOrgAuthoritiesMap().get("b3cea61b-3339-4386-b228-921be60ee754");
         assertEquals(8, firstOrgAuth.orgAuthorities().size());
         assertTrue(firstOrgAuth.orgAuthorities().contains("ROLE_USER"));
         assertTrue(firstOrgAuth.orgAuthorities().contains("ROLE_ADMIN"));
         assertFalse(firstOrgAuth.orgAuthorities().contains("ROLE_READER"));
 
-        JwtDTO.OrganizationAuthorities secondOrgAuth = jwt.getAuthoritiesMap().get("59326c6a-990f-400e-bdb9-0a3ca0b47a60");
+        JwtDTO.OrganizationAuthorities secondOrgAuth = jwt.getOrgAuthoritiesMap().get("59326c6a-990f-400e-bdb9-0a3ca0b47a60");
         assertEquals(3, secondOrgAuth.orgAuthorities().size());
         assertTrue(secondOrgAuth.orgAuthorities().contains("ROLE_USER"));
         assertTrue(secondOrgAuth.orgAuthorities().contains("ROLE_READER"));

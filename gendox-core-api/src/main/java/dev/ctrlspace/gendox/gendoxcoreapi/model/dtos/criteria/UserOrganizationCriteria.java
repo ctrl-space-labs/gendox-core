@@ -1,5 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
-
+package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,12 +9,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class UserCriteria {
+public class UserOrganizationCriteria {
 
-
-    private String email;
+    private String userId;
     private String organizationId;
-    private String projectId;
-    //the role that has in an organization
-    private String role;
+    private String roleName;
 }

@@ -5,7 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.time.Instant;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -18,6 +20,6 @@ public class GendoxErrorResponse {
     private String errorCode;
     private String errorMessage;
     private Instant timestamp;
-    private Instant time;
+    private List<Serializable> metadata;
 
 }
