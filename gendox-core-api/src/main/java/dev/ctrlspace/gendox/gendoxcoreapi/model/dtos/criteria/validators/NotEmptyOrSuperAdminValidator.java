@@ -1,15 +1,16 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.validators;
 
 import com.querydsl.core.util.StringUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.RoleNamesConstants;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-public class NotNullOrSuperAdminValidator implements ConstraintValidator<NotNullOrSuperAdmin, String> {
+public class NotEmptyOrSuperAdminValidator implements ConstraintValidator<NotEmptyOrSuperAdmin, String> {
 
         @Override
-        public void initialize(NotNullOrSuperAdmin constraintAnnotation) {
+        public void initialize(NotEmptyOrSuperAdmin constraintAnnotation) {
             // Any initialization can be done here
         }
 
@@ -30,6 +31,6 @@ public class NotNullOrSuperAdminValidator implements ConstraintValidator<NotNull
         private boolean isSuperAdmin() {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             return authentication != null && authentication.getAuthorities().stream()
-                    .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith("ROLE_SUPER_ADMIN"));
+                    .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith(RoleNamesConstants.SUPER_ADMIN));
         }
     }

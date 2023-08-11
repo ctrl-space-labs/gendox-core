@@ -14,16 +14,16 @@ public class Organization {
     @Column(name = "id", nullable = false)
     private UUID id;
     @Basic
-    @Column(name = "name", nullable = false, length = 255)
+    @Column(name = "name", nullable = false)
     private String name;
     @Basic
-    @Column(name = "display_name", nullable = true, length = 255)
+    @Column(name = "display_name", nullable = true)
     private String displayName;
     @Basic
-    @Column(name = "address", nullable = true, length = 255)
+    @Column(name = "address", nullable = true)
     private String address;
     @Basic
-    @Column(name = "phone", nullable = true, length = 255)
+    @Column(name = "phone", nullable = true)
     private String phone;
     @Basic
     @Column(name = "created_at", nullable = true)

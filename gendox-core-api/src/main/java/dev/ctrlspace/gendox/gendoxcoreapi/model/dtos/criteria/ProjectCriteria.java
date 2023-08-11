@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.validators.NotNullOrSuperAdmin;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.validators.AtLeastOneFieldIsNotEmpty;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.validators.NotEmptyOrSuperAdmin;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,8 +16,8 @@ import java.util.List;
 public class ProjectCriteria {
 
         private String name;
-        @NotNullOrSuperAdmin
         private String organizationId;
         private String userId;
+        //populate in controller as default with user's projects
         private List<String> projectIdIn;
 }

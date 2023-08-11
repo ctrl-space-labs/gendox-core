@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.RoleNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -25,13 +26,13 @@ public class SecurityUtils {
 
     public boolean isSuperAdmin(Authentication authentication) {
         return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith("ROLE_SUPER_ADMIN"));
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith(RoleNamesConstants.SUPER_ADMIN));
     }
 
     public boolean isUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith("ROLE_USER"));
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith(RoleNamesConstants.USER));
     }
 
 
@@ -57,7 +58,7 @@ public class SecurityUtils {
             return false;
         }
 
-        if (!jwtDTO.getOrgAuthoritiesMap().get(organizationId).orgAuthorities().contains(organizationId)){
+        if (!jwtDTO.getOrgAuthoritiesMap().get(organizationId).orgAuthorities().contains(authority)){
             return false;
         }
 
