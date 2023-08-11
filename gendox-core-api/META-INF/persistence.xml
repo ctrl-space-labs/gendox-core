@@ -10,7 +10,6 @@
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection</class>
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionTemplate</class>
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentTemplate</class>
-    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.FlywaySchemaHistory</class>
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.MessageLog</class>
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.Organization</class>
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent</class>

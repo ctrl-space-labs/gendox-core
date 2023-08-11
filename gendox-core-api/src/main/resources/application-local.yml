@@ -20,6 +20,9 @@ spring:
     url: jdbc:postgresql://localhost:5432/postgres
     username: postgres
     password: 123456789
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
 
 rsa:
   private-key: classpath:.env/local/local-non-production-use-private_key.pem
