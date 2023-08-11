@@ -17,13 +17,10 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -81,8 +78,7 @@ public class SecurityConfiguration {
                                            DaoAuthenticationProvider daoAuthenticationProvider,
                                            CorsConfigurationSource corsConfigurationSource,
                                            JwtDecoder jwtDecoder,
-                                           JwtAuthenticationConverter jwtAuthenticationConverter,
-                                           JwtEncoder jwtEncoder) throws Exception {
+                                           JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
@@ -102,7 +98,7 @@ public class SecurityConfiguration {
                 .oauth2ResourceServer(oauth2 ->
                         oauth2.jwt(jwt -> {
                             jwt.decoder(jwtDecoder);
-                            jwt.jwtAuthenticationConverter(jwtAuthenticationConverter());
+                            jwt.jwtAuthenticationConverter(jwtAuthenticationConverter);
                         }));
 
         return http.build();

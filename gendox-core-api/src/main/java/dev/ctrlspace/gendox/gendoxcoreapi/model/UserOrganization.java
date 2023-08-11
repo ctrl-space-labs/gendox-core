@@ -2,7 +2,6 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import jakarta.persistence.*;
 
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
