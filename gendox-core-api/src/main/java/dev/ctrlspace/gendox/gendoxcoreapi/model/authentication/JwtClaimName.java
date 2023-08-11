@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.authentication;
 
-public class RegisteredJwtClaimName {
+public class JwtClaimName {
 
     /**
      * The "iss" (issuer) claim identifies the principal that issued the JWT.
@@ -37,4 +37,30 @@ public class RegisteredJwtClaimName {
      * The "jti" (JWT ID) claim provides a unique identifier for the JWT.
      */
     public static final String JWT_ID = "jti";
+
+    /**
+     * The "user_id" claim identifies the user.
+     */
+    public static final String USER_ID = "user_id";
+
+    /**
+     * The "email" claim identifies the user.
+     */
+    public static final String EMAIL = "email";
+
+    /**
+     * The "global_role" claim identifies the user.
+     */
+    public static final String GLOBAL_ROLE = "global_role";
+
+    /**
+     * The "scope" claim identifies the user.
+     */
+    public static final String SCOPE = "scope";
+
+    /**
+     * The "projects:organization" claim identifies the user.
+     */
+    public static final String PROJECTS_ORGANIZATION = "projects:organization";
+
 }

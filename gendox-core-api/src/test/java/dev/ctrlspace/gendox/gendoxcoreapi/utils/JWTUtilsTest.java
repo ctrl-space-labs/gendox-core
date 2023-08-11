@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtClaimName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,16 +66,16 @@ public class JWTUtilsTest {
         JwtClaimsSet jwtClaimsSet = jwtUtils.toClaimsSet(jwtDTO);
         assertEquals(12, jwtClaimsSet.getClaims().size());
         assertEquals("f9c4757b-2d6c-4f16-8922-f0346090c840", jwtClaimsSet.getSubject());
-        assertEquals("f9c4757b-2d6c-4f16-8922-f0346090c840", jwtClaimsSet.getClaims().get("user_id"));
-        assertEquals("csekas@test.com", jwtClaimsSet.getClaims().get("email"));
+        assertEquals("f9c4757b-2d6c-4f16-8922-f0346090c840", jwtClaimsSet.getClaims().get(JwtClaimName.USER_ID));
+        assertEquals("csekas@test.com", jwtClaimsSet.getClaims().get(JwtClaimName.EMAIL));
         assertEquals("https://auth.gendox.com/", jwtClaimsSet.getAudience().get(0));
-        assertEquals("ROLE_USER", jwtClaimsSet.getClaims().get("global_role"));
-        assertEquals("eefeaba9-8c08-4651-92dc-3d2b98a6e261:aaefc0d0-2c6b-4384-8af0-da4d2e85a3a1", ((List<String>) (jwtClaimsSet.getClaims().get("projects:organization"))).get(0));
+        assertEquals("ROLE_USER", jwtClaimsSet.getClaims().get(JwtClaimName.GLOBAL_ROLE));
+        assertEquals("eefeaba9-8c08-4651-92dc-3d2b98a6e261:aaefc0d0-2c6b-4384-8af0-da4d2e85a3a1", ((List<String>) (jwtClaimsSet.getClaims().get(JwtClaimName.PROJECTS_ORGANIZATION))).get(0));
         assertEquals("https://auth.gendox.com/", jwtClaimsSet.getIssuer().toString());
-        assertEquals(8, ((List<String>) jwtClaimsSet.getClaim("scope")).size());
-        assertTrue(((List<String>) jwtClaimsSet.getClaim("scope")).stream().anyMatch(s -> s.equals("ROLE_ADMIN:aaefc0d0-2c6b-4384-8af0-da4d2e85a3a1")));
-        assertTrue(((List<String>) jwtClaimsSet.getClaim("scope")).stream().anyMatch(s -> s.equals("OP_DELETE_ORGANIZATION:aaefc0d0-2c6b-4384-8af0-da4d2e85a3a1")));
-        assertTrue(((List<String>) jwtClaimsSet.getClaim("scope")).stream().anyMatch(s -> s.equals("ROLE_USER:GLOBAL_ROLE")));
+        assertEquals(8, ((List<String>) jwtClaimsSet.getClaim(JwtClaimName.SCOPE)).size());
+        assertTrue(((List<String>) jwtClaimsSet.getClaim(JwtClaimName.SCOPE)).stream().anyMatch(s -> s.equals("ROLE_ADMIN:aaefc0d0-2c6b-4384-8af0-da4d2e85a3a1")));
+        assertTrue(((List<String>) jwtClaimsSet.getClaim(JwtClaimName.SCOPE)).stream().anyMatch(s -> s.equals("OP_DELETE_ORGANIZATION:aaefc0d0-2c6b-4384-8af0-da4d2e85a3a1")));
+        assertTrue(((List<String>) jwtClaimsSet.getClaim(JwtClaimName.SCOPE)).stream().anyMatch(s -> s.equals("ROLE_USER:GLOBAL_ROLE")));
 
 
     }
@@ -88,17 +89,17 @@ public class JWTUtilsTest {
         validJwt = Jwt.withTokenValue(validToken)
                 .header("alg", "RS256")
                 .header("typ", "JWT")
-                .claim("iss", "https://auth.gendox.com/")
-                .claim("sub", "f9c4757b-2d6c-4f16-8922-f0346090c840")
-                .claim("user_id", "f9c4757b-2d6c-4f16-8922-f0346090c840")
-                .claim("email", "csekas@test.com")
-                .claim("aud", Arrays.asList("https://auth.gendox.com/", "https://api.gendox.com/", "https://app.gendox.com/"))
+                .claim(JwtClaimName.ISSUER, "https://auth.gendox.com/")
+                .claim(JwtClaimName.SUBJECT, "f9c4757b-2d6c-4f16-8922-f0346090c840")
+                .claim(JwtClaimName.USER_ID, "f9c4757b-2d6c-4f16-8922-f0346090c840")
+                .claim(JwtClaimName.EMAIL, "csekas@test.com")
+                .claim(JwtClaimName.AUDIENCE, Arrays.asList("https://auth.gendox.com/", "https://api.gendox.com/", "https://app.gendox.com/"))
                 .expiresAt(Instant.now().plus(3600 * 24, ChronoUnit.SECONDS))
                 .issuedAt(Instant.now())
-                .claim("jti", "7f20196d-5e80-46af-8d3e-6154df07ba08")
-                .claim("global_role", "ROLE_USER")
-                .claim("projects:organization", Arrays.asList("eefeaba9-8c08-4651-92dc-3d2b98a6e261:aaefc0d0-2c6b-4384-8af0-da4d2e85a3a1"))
-                .claim("scope", Arrays.asList("OP_READ_DOCUMENT:aaefc0d0-2c6b-4384-8af0-da4d2e85a3a1",
+                .claim(JwtClaimName.JWT_ID, "7f20196d-5e80-46af-8d3e-6154df07ba08")
+                .claim(JwtClaimName.GLOBAL_ROLE, "ROLE_USER")
+                .claim(JwtClaimName.PROJECTS_ORGANIZATION, Arrays.asList("eefeaba9-8c08-4651-92dc-3d2b98a6e261:aaefc0d0-2c6b-4384-8af0-da4d2e85a3a1"))
+                .claim(JwtClaimName.SCOPE, Arrays.asList("OP_READ_DOCUMENT:aaefc0d0-2c6b-4384-8af0-da4d2e85a3a1",
                         "OP_EDIT_PROJECT_SETTINGS:aaefc0d0-2c6b-4384-8af0-da4d2e85a3a1",
                         "OP_WRITE_DOCUMENT:aaefc0d0-2c6b-4384-8af0-da4d2e85a3a1",
                         "OP_DELETE_ORGANIZATION:aaefc0d0-2c6b-4384-8af0-da4d2e85a3a1",
