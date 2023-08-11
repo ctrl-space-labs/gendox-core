@@ -20,6 +20,6 @@ public class GendoxErrorResponse {
     private String errorCode;
     private String errorMessage;
     private Instant timestamp;
-    private List<Serializable> metadata;
+    private Serializable metadata;
 
 }

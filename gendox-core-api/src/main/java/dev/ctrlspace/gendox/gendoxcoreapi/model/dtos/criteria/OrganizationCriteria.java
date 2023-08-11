@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.validators.AtLeastOneFieldIsNotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,10 +14,10 @@ import java.util.List;
 @Builder(toBuilder = true)
 public class OrganizationCriteria {
 
-
     private String organizationId;
     private String userId;
     private String name;
     private String displayName;
-    private List<String> organizationIdIn; //this is mandatory for simple users
+    //populate in controller as default with user's organizations
+    private List<String> organizationIdIn;
 }

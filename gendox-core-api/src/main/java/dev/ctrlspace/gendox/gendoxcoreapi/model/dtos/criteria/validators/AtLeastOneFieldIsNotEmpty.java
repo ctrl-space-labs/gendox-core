@@ -8,14 +8,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+@Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-@Constraint(validatedBy = NotNullOrSuperAdminValidator.class)
-public @interface NotNullOrSuperAdmin {
-
-    String message() default "Field is not valid";
-
+@Constraint(validatedBy = AtLeastOneFieldIsNotEmptyValidator.class)
+public @interface AtLeastOneFieldIsNotEmpty {
+    String message() default "At least one of the fields must have a value";
     Class<?>[] groups() default {};
-
     Class<? extends Payload>[] payload() default {};
+    String[] fieldNames() default {};
 }

@@ -13,10 +13,10 @@ public class User {
     @Column(name = "id", nullable = false)
     private UUID id;
     @Basic
-    @Column(name = "name", nullable = true, length = 255)
+    @Column(name = "name", nullable = true)
     private String name;
     @Basic
-    @Column(name = "email", nullable = false, length = 255)
+    @Column(name = "email", nullable = false)
     private String email;
     @Basic
     @Column(name = "phone", nullable = true, length = 20)
