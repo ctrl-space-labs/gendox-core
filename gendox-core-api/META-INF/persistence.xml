@@ -8,7 +8,7 @@
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel</class>
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance</class>
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection</class>
-    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionTemplate</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionMetadata</class>
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentTemplate</class>
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.MessageLog</class>
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.Organization</class>

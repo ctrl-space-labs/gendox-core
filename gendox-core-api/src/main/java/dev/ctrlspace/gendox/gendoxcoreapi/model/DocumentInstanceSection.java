@@ -16,8 +16,8 @@ public class DocumentInstanceSection {
     @Column(name = "document_instance_id", nullable = false)
     private UUID documentInstanceId;
     @Basic
-    @Column(name = "document_section_template_id", nullable = false)
-    private UUID documentSectionTemplateId;
+    @Column(name = "document_section_metadata_id", nullable = false)
+    private UUID documentSectionMetadataId;
     @Basic
     @Column(name = "section_value", nullable = true, length = -1)
     private String sectionValue;
@@ -47,12 +47,12 @@ public class DocumentInstanceSection {
         this.documentInstanceId = documentInstanceId;
     }
 
-    public UUID getDocumentSectionTemplateId() {
-        return documentSectionTemplateId;
+    public UUID getDocumentSectionMetadataId() {
+        return documentSectionMetadataId;
     }
 
-    public void setDocumentSectionTemplateId(UUID documentSectionTemplateId) {
-        this.documentSectionTemplateId = documentSectionTemplateId;
+    public void setDocumentSectionMetadataId(UUID documentSectionTemplateId) {
+        this.documentSectionMetadataId = documentSectionTemplateId;
     }
 
     public String getSectionValue() {
@@ -97,7 +97,7 @@ public class DocumentInstanceSection {
         if (id != null ? !id.equals(that.id) : that.id != null) return false;
         if (documentInstanceId != null ? !documentInstanceId.equals(that.documentInstanceId) : that.documentInstanceId != null)
             return false;
-        if (documentSectionTemplateId != null ? !documentSectionTemplateId.equals(that.documentSectionTemplateId) : that.documentSectionTemplateId != null)
+        if (documentSectionMetadataId != null ? !documentSectionMetadataId.equals(that.documentSectionMetadataId) : that.documentSectionMetadataId != null)
             return false;
         if (sectionValue != null ? !sectionValue.equals(that.sectionValue) : that.sectionValue != null) return false;
         if (remoteUrl != null ? !remoteUrl.equals(that.remoteUrl) : that.remoteUrl != null) return false;
@@ -111,7 +111,7 @@ public class DocumentInstanceSection {
     public int hashCode() {
         int result = id != null ? id.hashCode() : 0;
         result = 31 * result + (documentInstanceId != null ? documentInstanceId.hashCode() : 0);
-        result = 31 * result + (documentSectionTemplateId != null ? documentSectionTemplateId.hashCode() : 0);
+        result = 31 * result + (documentSectionMetadataId != null ? documentSectionMetadataId.hashCode() : 0);
         result = 31 * result + (sectionValue != null ? sectionValue.hashCode() : 0);
         result = 31 * result + (remoteUrl != null ? remoteUrl.hashCode() : 0);
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
