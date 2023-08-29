@@ -136,11 +136,13 @@ comment on column gendox_core.document_section_metadata.section_options is 'If t
 CREATE TABLE IF NOT EXISTS gendox_core.document_instance
 (
     id                   uuid DEFAULT uuid_generate_v4(),
+    organization_id uuid NOT NULL,
     document_template_id uuid,
     user_id              uuid not null,
     created_at           timestamp,
     updated_at           timestamp,
     PRIMARY KEY (id),
+    FOREIGN KEY (organization_id) REFERENCES gendox_core.organizations (id),
     FOREIGN KEY (document_template_id) REFERENCES gendox_core.document_template (id),
     FOREIGN KEY (user_id) REFERENCES gendox_core.users (id)
 );

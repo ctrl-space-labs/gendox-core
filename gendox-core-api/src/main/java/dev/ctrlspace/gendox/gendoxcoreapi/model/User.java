@@ -3,6 +3,8 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -30,6 +32,13 @@ public class User {
     @Basic
     @Column(name = "updated_at", nullable = true)
     private Instant updatedAt;
+
+
+    @OneToMany(mappedBy = "user")
+    private List<UserOrganization> userOrganizations;
+
+    @OneToMany(mappedBy = "project")
+    private List<ProjectMember> projectMembers;
 
     public UUID getId() {
         return id;
@@ -87,6 +96,23 @@ public class User {
         this.updatedAt = updatedAt;
     }
 
+    public List<UserOrganization> getUserOrganizations() {
+        return userOrganizations;
+    }
+
+    public void setUserOrganizations(List<UserOrganization> userOrganizations) {
+        this.userOrganizations = userOrganizations;
+    }
+
+    public List<ProjectMember> getProjectMembers() {
+        return projectMembers;
+    }
+
+    public void setProjectMembers(List<ProjectMember> projectMembers) {
+        this.projectMembers = projectMembers;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -94,15 +120,16 @@ public class User {
 
         User user = (User) o;
 
-        if (id != null ? !id.equals(user.id) : user.id != null) return false;
-        if (name != null ? !name.equals(user.name) : user.name != null) return false;
-        if (email != null ? !email.equals(user.email) : user.email != null) return false;
-        if (phone != null ? !phone.equals(user.phone) : user.phone != null) return false;
-        if (globalRole != null ? !globalRole.equals(user.globalRole) : user.globalRole != null) return false;
-        if (createdAt != null ? !createdAt.equals(user.createdAt) : user.createdAt != null) return false;
-        if (updatedAt != null ? !updatedAt.equals(user.updatedAt) : user.updatedAt != null) return false;
-
-        return true;
+        if (!Objects.equals(id, user.id)) return false;
+        if (!Objects.equals(name, user.name)) return false;
+        if (!Objects.equals(email, user.email)) return false;
+        if (!Objects.equals(phone, user.phone)) return false;
+        if (!Objects.equals(globalRole, user.globalRole)) return false;
+        if (!Objects.equals(createdAt, user.createdAt)) return false;
+        if (!Objects.equals(updatedAt, user.updatedAt)) return false;
+        if (!Objects.equals(userOrganizations, user.userOrganizations))
+            return false;
+        return Objects.equals(projectMembers, user.projectMembers);
     }
 
     @Override
@@ -114,6 +141,8 @@ public class User {
         result = 31 * result + (globalRole != null ? globalRole.hashCode() : 0);
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
         result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
+        result = 31 * result + (userOrganizations != null ? userOrganizations.hashCode() : 0);
+        result = 31 * result + (projectMembers != null ? projectMembers.hashCode() : 0);
         return result;
     }
 }

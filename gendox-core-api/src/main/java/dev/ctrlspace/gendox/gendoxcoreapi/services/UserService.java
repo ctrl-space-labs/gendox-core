@@ -18,6 +18,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.stereotype.Service;
 
+import java.awt.print.Pageable;
 import java.util.List;
 import java.util.UUID;
 
@@ -42,7 +43,7 @@ public class UserService implements UserDetailsService {
 
     }
 
-    public List<User> getAllUsers(UserCriteria criteria) {
+    public List<User> getAllUsers(UserCriteria criteria, Pageable pageable) {
 
         return userRepository.findAll();
     }

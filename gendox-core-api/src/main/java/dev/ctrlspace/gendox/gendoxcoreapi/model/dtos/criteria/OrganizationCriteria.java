@@ -20,4 +20,5 @@ public class OrganizationCriteria {
     private String displayName;
     //populate in controller as default with user's organizations
     private List<String> organizationIdIn;
+
 }

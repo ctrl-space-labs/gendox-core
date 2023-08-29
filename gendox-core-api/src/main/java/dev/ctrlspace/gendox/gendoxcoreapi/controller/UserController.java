@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.awt.print.Pageable;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,15 +40,17 @@ public class UserController {
     }
 
 
-    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_READ_DOCUMENT')")
+    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_READ_DOCUMENT') " +
+            "|| @securityUtils.hasAuthorityToRequestedProjectId()")
     @GetMapping("/users")
-    public List<User> getAllUsers(@Valid UserCriteria criteria) throws Exception {
+    public List<User> getAllUsers(@Valid UserCriteria criteria, Pageable pageable) throws Exception {
 
         // run code to get the user from the database
-        return userService.getAllUsers(criteria);
+        return userService.getAllUsers(criteria, pageable);
     }
 
 
+    // TODO add authorization check if the user belongs to the same organization
     @GetMapping("/users/{id}")
     public User getUserById(@PathVariable UUID id, Authentication authentication) throws Exception {
 
@@ -57,6 +60,7 @@ public class UserController {
         return user;
     }
 
+    // TODO this is just for demo purposes, need to be rewrite
     @GetMapping("/users/login")
     public JwtResponse getUserByLogin(@RequestParam("email") String email ) throws Exception {
 

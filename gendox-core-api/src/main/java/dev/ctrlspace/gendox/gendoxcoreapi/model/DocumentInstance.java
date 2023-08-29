@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -12,6 +13,9 @@ public class DocumentInstance {
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
+    @Basic
+    @Column(name = "organization_id", nullable = false)
+    private UUID organizationId;
     @Basic
     @Column(name = "document_template_id", nullable = true)
     private UUID documentTemplateId;
@@ -31,6 +35,14 @@ public class DocumentInstance {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public UUID getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(UUID organizationId) {
+        this.organizationId = organizationId;
     }
 
     public UUID getDocumentTemplateId() {
@@ -65,6 +77,7 @@ public class DocumentInstance {
         this.updatedAt = updatedAt;
     }
 
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -72,19 +85,20 @@ public class DocumentInstance {
 
         DocumentInstance that = (DocumentInstance) o;
 
-        if (id != null ? !id.equals(that.id) : that.id != null) return false;
-        if (documentTemplateId != null ? !documentTemplateId.equals(that.documentTemplateId) : that.documentTemplateId != null)
+        if (!Objects.equals(id, that.id)) return false;
+        if (!Objects.equals(organizationId, that.organizationId))
             return false;
-        if (userId != null ? !userId.equals(that.userId) : that.userId != null) return false;
-        if (createdAt != null ? !createdAt.equals(that.createdAt) : that.createdAt != null) return false;
-        if (updatedAt != null ? !updatedAt.equals(that.updatedAt) : that.updatedAt != null) return false;
-
-        return true;
+        if (!Objects.equals(documentTemplateId, that.documentTemplateId))
+            return false;
+        if (!Objects.equals(userId, that.userId)) return false;
+        if (!Objects.equals(createdAt, that.createdAt)) return false;
+        return Objects.equals(updatedAt, that.updatedAt);
     }
 
     @Override
     public int hashCode() {
         int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (organizationId != null ? organizationId.hashCode() : 0);
         result = 31 * result + (documentTemplateId != null ? documentTemplateId.hashCode() : 0);
         result = 31 * result + (userId != null ? userId.hashCode() : 0);
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);

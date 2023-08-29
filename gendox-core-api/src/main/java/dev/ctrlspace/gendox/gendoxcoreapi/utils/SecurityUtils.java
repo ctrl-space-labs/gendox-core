@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.RoleNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +49,7 @@ public class SecurityUtils {
 //        authentication.ge
         HttpServletRequest request = getCurrentHttpRequest();
         //get request param with name "organizationId"
-        String organizationId = request.getParameter("organizationId");
+        String organizationId = request.getParameter(QueryParamNames.ORGANIZATION_ID);
 
         if (organizationId == null) {
             return false;
@@ -65,25 +66,28 @@ public class SecurityUtils {
         return true;
     }
 
-//    hasAuthorityToRequestedProjectId
-    public boolean hasAuthorityToRequestedProjectId(String authority) {
+    public boolean hasAuthorityToRequestedProjectId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
+        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt)authentication.getPrincipal());
         if (isSuperAdmin(authentication)) {
             return true; // Skip validation if user is an admin
         }
         HttpServletRequest request = getCurrentHttpRequest();
-        //get request param with name "projectId"
-        String projectId = request.getParameter("projectId");
+        //get request param with name "projectID"
+        String projectId = request.getParameter(QueryParamNames.PROJECT_ID);
 
         if (projectId == null) {
             return false;
         }
 
-        return jwtDTO.getOrgProjectsMap()
+        if (!jwtDTO.getOrgProjectsMap()
                 .entrySet()
                 .stream()
-                .anyMatch(entry -> entry.getValue().projectIds().contains(projectId));
+                .anyMatch(entry -> entry.getValue().projectIds().contains(projectId))) {
+            return false;
+        }
+
+        return true;
     }
 
     private HttpServletRequest getCurrentHttpRequest() {
