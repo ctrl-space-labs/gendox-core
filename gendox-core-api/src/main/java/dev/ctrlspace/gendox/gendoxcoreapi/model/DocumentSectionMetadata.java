@@ -6,8 +6,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "document_section_template", schema = "gendox_core")
-public class DocumentSectionTemplate {
+@Table(name = "document_section_metadata", schema = "gendox_core")
+public class DocumentSectionMetadata {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Id
     @Column(name = "id", nullable = false)
@@ -114,7 +114,7 @@ public class DocumentSectionTemplate {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        DocumentSectionTemplate that = (DocumentSectionTemplate) o;
+        DocumentSectionMetadata that = (DocumentSectionMetadata) o;
 
         if (id != null ? !id.equals(that.id) : that.id != null) return false;
         if (documentTemplateId != null ? !documentTemplateId.equals(that.documentTemplateId) : that.documentTemplateId != null)

@@ -111,7 +111,7 @@ comment on column gendox_core.document_template.organization_id is 'the organiza
 -- A Document Sections is a section of a document template
 -- It indicates the type of the document section, the title, the description for this section and the order of the section
 -- If there is no template for the document then the document section is a section of a document indicating just the type
-CREATE TABLE IF NOT EXISTS gendox_core.document_section_template
+CREATE TABLE IF NOT EXISTS gendox_core.document_section_metadata
 (
     id                       uuid DEFAULT uuid_generate_v4(),
     document_template_id     uuid, -- optional, if null then it is a section for a document without a Template
@@ -127,10 +127,10 @@ CREATE TABLE IF NOT EXISTS gendox_core.document_section_template
     FOREIGN KEY (document_template_id) REFERENCES gendox_core.document_template (id)
 );
 
-comment on table gendox_core.document_section_template is 'A Document Sections is a section of a document template \n It indicates the type of the document section, the title, the description for this section and the order of the section \n If there is no template for the document then the document section is a section of a document indicating just the type';
+comment on table gendox_core.document_section_metadata is 'A Document Sections Metadata is used to describe the sections in a template etc. \n It indicates the type of the document section, the title, the description for this section and the order of the section \n If there is no template for the document then the document section is a section of a document indicating just the type';
 
 
-comment on column gendox_core.document_section_template.section_options is 'If the section is a multi select section the options will go inside seperated by "option";"option"';
+comment on column gendox_core.document_section_metadata.section_options is 'If the section is a multi select section the options will go inside seperated by "option";"option"';
 
 
 CREATE TABLE IF NOT EXISTS gendox_core.document_instance
@@ -152,14 +152,14 @@ CREATE TABLE IF NOT EXISTS gendox_core.document_instance_sections
 (
     id                           uuid DEFAULT uuid_generate_v4(),
     document_instance_id         uuid not null,
-    document_section_template_id uuid not null,
+    document_section_metadata_id uuid not null,
     section_value                text,
     remote_url                   text,
     created_at                   timestamp,
     updated_at                   timestamp,
     PRIMARY KEY (id),
     FOREIGN KEY (document_instance_id) REFERENCES gendox_core.document_instance (id),
-    FOREIGN KEY (document_section_template_id) REFERENCES gendox_core.document_section_template (id)
+    FOREIGN KEY (document_section_metadata_id) REFERENCES gendox_core.document_section_metadata (id)
 );
 
 comment on column gendox_core.document_instance_sections.section_value is 'the value of the section, if the section is a multi select section the values will go inside seperated by "value";"value"';
