@@ -61,7 +61,7 @@ public class UserProfileConverter {
         List<OrganizationUserDTO> organizationUserDTOS = userOrganizations.stream()
                 .map(userOrganization -> userOrganization.getOrganization())
                 .map(organization -> {
-                    // TODO obtimize this to get all projects per Organization in one query
+                    // TODO optimize this to get all projects per Organization in one query
                     Page<Project> projects = new PageImpl<>(new ArrayList<>());
                     try {
                         projects = projectService.getAll(ProjectCriteria
