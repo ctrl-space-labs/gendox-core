@@ -37,7 +37,7 @@ public class User {
     @OneToMany(mappedBy = "user")
     private List<UserOrganization> userOrganizations;
 
-    @OneToMany(mappedBy = "project")
+    @OneToMany(mappedBy = "user")
     private List<ProjectMember> projectMembers;
 
     public UUID getId() {
