@@ -8,7 +8,7 @@ where not exists(SELECT *
                    and name = 'ROLE_SUPER_ADMIN');
 INSERT into gendox_core.types
 (type_category, name, description)
-select 'GLOBAL_APPLICATION_ROLE_TYPE', 'ROLE_USER', 'This is for Administrators'
+select 'GLOBAL_APPLICATION_ROLE_TYPE', 'ROLE_USER', 'This is a simple user'
 where not exists(SELECT *
                  FROM gendox_core.types
                  where type_category = 'GLOBAL_APPLICATION_ROLE_TYPE'
