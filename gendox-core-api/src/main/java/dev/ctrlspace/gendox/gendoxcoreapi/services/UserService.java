@@ -9,8 +9,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserDetailsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -18,7 +22,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.stereotype.Service;
 
-import java.awt.print.Pageable;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,9 +46,15 @@ public class UserService implements UserDetailsService {
 
     }
 
-    public List<User> getAllUsers(UserCriteria criteria, Pageable pageable) {
+    public Page<User> getAllUsers(UserCriteria criteria) {
 
-        return userRepository.findAll();
+        Pageable pageable = PageRequest.of(0, 100);
+        return this.getAllUsers(criteria, pageable);
+    }
+
+    public Page<User> getAllUsers(UserCriteria criteria, Pageable pageable) {
+
+        return userRepository.findAll(UserPredicate.build(criteria), pageable);
     }
 
     public User getById(UUID id) throws GendoxException {
