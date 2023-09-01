@@ -5,7 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.ProjectOrganizati
 import org.springframework.stereotype.Component;
 
 @Component
-public class ProjectUserConverter {
+public class ProjectUserConverter implements GendoxConverter<Project, ProjectOrganizationDTO> {
 
     public ProjectOrganizationDTO toDTO(Project project) {
         return ProjectOrganizationDTO
@@ -18,4 +18,10 @@ public class ProjectUserConverter {
                 .build();
 
     }
+
+    @Override
+    public Project toEntity(ProjectOrganizationDTO projectOrganizationDTO) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
 }
