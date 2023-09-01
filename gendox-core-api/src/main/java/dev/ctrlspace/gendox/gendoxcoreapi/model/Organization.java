@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -32,6 +33,7 @@ public class Organization {
     @Column(name = "updated_at", nullable = true)
     private Instant updatedAt;
 
+    @JsonBackReference
     @OneToMany(mappedBy = "organization")
     private List<UserOrganization> userOrganizations;
 

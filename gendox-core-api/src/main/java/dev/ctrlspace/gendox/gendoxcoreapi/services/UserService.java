@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.JwtDTOUserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -53,8 +54,9 @@ public class UserService implements UserDetailsService {
     }
 
     public Page<User> getAllUsers(UserCriteria criteria, Pageable pageable) {
+        Predicate whereUserPredicate = UserPredicate.build(criteria);
 
-        return userRepository.findAll(UserPredicate.build(criteria), pageable);
+        return userRepository.findAll(whereUserPredicate, pageable);
     }
 
     public User getById(UUID id) throws GendoxException {

@@ -1,6 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import jakarta.validation.Valid;
@@ -32,12 +34,15 @@ public class UserController {
     //    @Autowired
     private UserService userService;
     private JwtEncoder jwtEncoder;
+    private UserProfileConverter userProfileConverter;
 
     @Autowired
     public UserController(UserService userService,
-                          JwtEncoder jwtEncoder) {
+                          JwtEncoder jwtEncoder,
+                          UserProfileConverter userProfileConverter) {
         this.userService = userService;
         this.jwtEncoder = jwtEncoder;
+        this.userProfileConverter = userProfileConverter;
     }
 
 
@@ -59,6 +64,16 @@ public class UserController {
         User user = userService.getById(id);
 
         return user;
+    }
+
+    @GetMapping("/profile")
+    public UserProfile getUserUserProfile(@PathVariable UUID id, Authentication authentication) throws Exception {
+
+        // run code to get the user from the database
+        User user = userService.getById(id);
+        UserProfile userProfile = userProfileConverter.toDTO(user);
+
+        return userProfile;
     }
 
     // TODO this is just for demo purposes, need to be rewrite
