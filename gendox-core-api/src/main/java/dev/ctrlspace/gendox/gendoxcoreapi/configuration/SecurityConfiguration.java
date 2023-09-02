@@ -88,6 +88,7 @@ public class SecurityConfiguration {
                                 .requestMatchers("/actuator/health").permitAll()
                                 .requestMatchers("/auth/signup").permitAll()
                                 .requestMatchers("/users/login").permitAll()
+                                .requestMatchers("/api-documentation", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .exceptionHandling(httpExConfigurer-> httpExConfigurer.authenticationEntryPoint(authEntryPoint))
