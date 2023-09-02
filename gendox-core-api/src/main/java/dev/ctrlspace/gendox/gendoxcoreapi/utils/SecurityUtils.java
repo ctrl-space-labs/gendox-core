@@ -67,6 +67,9 @@ public class SecurityUtils {
     }
 
     public boolean hasAuthorityToRequestedProjectId() {
+        return hasAuthorityToRequestedProjectId(QueryParamNames.PROJECT_ID);
+    }
+    public boolean hasAuthorityToRequestedProjectId(String queryParamName) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt)authentication.getPrincipal());
         if (isSuperAdmin(authentication)) {
@@ -74,20 +77,58 @@ public class SecurityUtils {
         }
         HttpServletRequest request = getCurrentHttpRequest();
         //get request param with name "projectID"
-        String projectId = request.getParameter(QueryParamNames.PROJECT_ID);
+        String projectId = request.getParameter(queryParamName);
 
         if (projectId == null) {
             return false;
         }
 
-        if (!jwtDTO.getOrgProjectsMap()
+        if (jwtDTO.getOrgProjectsMap()
                 .entrySet()
                 .stream()
-                .anyMatch(entry -> entry.getValue().projectIds().contains(projectId))) {
+                .noneMatch(entry -> entry.getValue().projectIds().contains(projectId))) {
             return false;
         }
 
         return true;
+    }
+
+    /**
+     * Property projectIdIn is a list of projectIds provided in a request param like:
+     * projectIdIn=1,2,3,4,5
+     * @return
+     */
+    public boolean hasAuthorityToAllRequestedProjectId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt)authentication.getPrincipal());
+        if (isSuperAdmin(authentication)) {
+            return true; // Skip validation if user is an admin
+        }
+        HttpServletRequest request = getCurrentHttpRequest();
+        //get request param with name "projectID"
+        String projectIdIn = request.getParameter(QueryParamNames.PROJECT_ID_IN);
+
+        if (projectIdIn == null) {
+            return false;
+        }
+
+        String[] projectIds = projectIdIn.split(",");
+
+        if (projectIds.length == 0) {
+            return false;
+        }
+
+        for (String projectId : projectIds) {
+            if (jwtDTO.getOrgProjectsMap()
+                    .entrySet()
+                    .stream()
+                    .noneMatch(entry -> entry.getValue().projectIds().contains(projectId))) {
+                return false;
+            }
+        }
+
+        return true;
+
     }
 
     private HttpServletRequest getCurrentHttpRequest() {

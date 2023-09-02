@@ -1,5 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -30,8 +33,16 @@ public class Project {
     @Column(name = "updated_at", nullable = true)
     private Instant updatedAt;
 
+    @Schema(hidden = true)
+    @JsonBackReference
     @OneToMany(mappedBy = "project")
     private List<ProjectMember> projectMembers;
+
+    @JsonManagedReference
+    @OneToMany(mappedBy = "project")
+    private List<ProjectAgent> projectAgents;
+
+
 
     public UUID getId() {
         return id;
@@ -89,17 +100,44 @@ public class Project {
         this.projectMembers = projectMembers;
     }
 
+    public List<ProjectAgent> getProjectAgents() {
+        return projectAgents;
+    }
+
+    public void setProjectAgents(List<ProjectAgent> projectAgents) {
+        this.projectAgents = projectAgents;
+    }
+
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
+
         Project project = (Project) o;
-        return Objects.equals(id, project.id) && Objects.equals(organizationId, project.organizationId) && Objects.equals(name, project.name) && Objects.equals(description, project.description) && Objects.equals(createdAt, project.createdAt) && Objects.equals(updatedAt, project.updatedAt) && Objects.equals(projectMembers, project.projectMembers);
+
+        if (!Objects.equals(id, project.id)) return false;
+        if (!Objects.equals(organizationId, project.organizationId))
+            return false;
+        if (!Objects.equals(name, project.name)) return false;
+        if (!Objects.equals(description, project.description)) return false;
+        if (!Objects.equals(createdAt, project.createdAt)) return false;
+        if (!Objects.equals(updatedAt, project.updatedAt)) return false;
+        if (!Objects.equals(projectMembers, project.projectMembers))
+            return false;
+        return Objects.equals(projectAgents, project.projectAgents);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organizationId, name, description, createdAt, updatedAt, projectMembers);
+        int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (organizationId != null ? organizationId.hashCode() : 0);
+        result = 31 * result + (name != null ? name.hashCode() : 0);
+        result = 31 * result + (description != null ? description.hashCode() : 0);
+        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
+        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
+        result = 31 * result + (projectMembers != null ? projectMembers.hashCode() : 0);
+        result = 31 * result + (projectAgents != null ? projectAgents.hashCode() : 0);
+        return result;
     }
 }

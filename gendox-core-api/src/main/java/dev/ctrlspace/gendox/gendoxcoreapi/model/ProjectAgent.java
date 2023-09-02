@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -12,9 +13,12 @@ public class ProjectAgent {
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
-    @Basic
-    @Column(name = "project_id", nullable = false)
-    private UUID projectId;
+
+    @JsonBackReference
+    @ManyToOne
+    @JoinColumn(name = "project_id", referencedColumnName = "id", nullable = false)
+    private Project project;
+
     @Basic
     @Column(name = "semantic_search_model_id", nullable = true)
     private UUID semanticSearchModelId;
@@ -45,12 +49,12 @@ public class ProjectAgent {
         this.id = id;
     }
 
-    public UUID getProjectId() {
-        return projectId;
+    public Project getProject() {
+        return project;
     }
 
-    public void setProjectId(UUID projectId) {
-        this.projectId = projectId;
+    public void setProject(Project project) {
+        this.project = project;
     }
 
     public UUID getSemanticSearchModelId() {
@@ -117,7 +121,7 @@ public class ProjectAgent {
         ProjectAgent that = (ProjectAgent) o;
 
         if (id != null ? !id.equals(that.id) : that.id != null) return false;
-        if (projectId != null ? !projectId.equals(that.projectId) : that.projectId != null) return false;
+        if (project != null ? !project.equals(that.project) : that.project != null) return false;
         if (semanticSearchModelId != null ? !semanticSearchModelId.equals(that.semanticSearchModelId) : that.semanticSearchModelId != null)
             return false;
         if (completionModelId != null ? !completionModelId.equals(that.completionModelId) : that.completionModelId != null)
@@ -135,7 +139,7 @@ public class ProjectAgent {
     @Override
     public int hashCode() {
         int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (projectId != null ? projectId.hashCode() : 0);
+        result = 31 * result + (project != null ? project.hashCode() : 0);
         result = 31 * result + (semanticSearchModelId != null ? semanticSearchModelId.hashCode() : 0);
         result = 31 * result + (completionModelId != null ? completionModelId.hashCode() : 0);
         result = 31 * result + (agentName != null ? agentName.hashCode() : 0);
