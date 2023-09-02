@@ -36,15 +36,15 @@ public class OrganizationService {
      * @param criteria
      * @return
      */
-    public Page<Organization> getAll(OrganizationCriteria criteria) throws GendoxException {
+    public Page<Organization> getAllOrganizations(OrganizationCriteria criteria) throws GendoxException {
         Pageable pageable = PageRequest.of(0, 100);
-        return this.getAll(criteria, pageable);
+        return this.getAllOrganizations(criteria, pageable);
     }
 
-    public Page<Organization> getAll(OrganizationCriteria criteria, Pageable pageable) throws GendoxException {
-        if (pageable == null) {
-            throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
-        }
+    public Page<Organization> getAllOrganizations(OrganizationCriteria criteria, Pageable pageable) throws GendoxException {
+//        if (pageable == null) {
+//            throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
+//        }
 
         return organizationRepository.findAll(OrganizationPredicates.build(criteria), pageable);
     }
