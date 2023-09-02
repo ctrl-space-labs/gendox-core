@@ -24,6 +24,10 @@ spring:
     serialization:
       write-dates-as-timestamps: false
 
+springdoc:
+  swagger-ui:
+    path: /api-documentation
+
 rsa:
   private-key: classpath:.env/local/local-non-production-use-private_key.pem
 
