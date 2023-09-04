@@ -33,7 +33,8 @@ public class Organization {
     @Column(name = "updated_at", nullable = true)
     private Instant updatedAt;
 
-    //@JsonBackReference
+
+    @JsonBackReference
     @OneToMany(mappedBy = "organization")
     private List<UserOrganization> userOrganizations;
 
