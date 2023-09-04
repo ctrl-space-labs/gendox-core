@@ -1,8 +1,11 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -28,6 +31,10 @@ public class DocumentInstance {
     @Basic
     @Column(name = "updated_at", nullable = true)
     private Instant updatedAt;
+
+    @JsonManagedReference(value = "DocumentInstanceSection")
+    @OneToMany(mappedBy = "documentInstance")
+    private List<DocumentInstanceSection> documentInstanceSections;
 
     public UUID getId() {
         return id;
@@ -77,6 +84,14 @@ public class DocumentInstance {
         this.updatedAt = updatedAt;
     }
 
+    public List<DocumentInstanceSection> getDocumentInstanceSections() {
+        return documentInstanceSections;
+    }
+
+    public void setDocumentInstanceSections(List<DocumentInstanceSection> documentInstanceSections) {
+        this.documentInstanceSections = documentInstanceSections;
+    }
+
 
     @Override
     public boolean equals(Object o) {
@@ -92,7 +107,8 @@ public class DocumentInstance {
             return false;
         if (!Objects.equals(userId, that.userId)) return false;
         if (!Objects.equals(createdAt, that.createdAt)) return false;
-        return Objects.equals(updatedAt, that.updatedAt);
+        if (!Objects.equals(updatedAt, that.updatedAt)) return false;
+        return Objects.equals(documentInstanceSections, that.documentInstanceSections);
     }
 
     @Override
@@ -103,6 +119,7 @@ public class DocumentInstance {
         result = 31 * result + (userId != null ? userId.hashCode() : 0);
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
         result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
+        result = 31 * result + (documentInstanceSections != null ? documentInstanceSections.hashCode() : 0);
         return result;
     }
 }

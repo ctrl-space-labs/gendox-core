@@ -1,8 +1,11 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -12,12 +15,16 @@ public class DocumentInstanceSection {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", nullable = false)
     private UUID id;
-    @Basic
-    @Column(name = "document_instance_id", nullable = false)
-    private UUID documentInstanceId;
-    @Basic
-    @Column(name = "document_section_metadata_id", nullable = false)
-    private UUID documentSectionMetadataId;
+
+    @JsonBackReference(value = "DocumentInstanceSection")
+    @ManyToOne
+    @JoinColumn(name = "document_instance_id", referencedColumnName = "id", nullable = false)
+    private DocumentInstance documentInstance;
+
+    @JsonManagedReference(value = "DocumentSectionMetadata")
+    @ManyToOne
+    @JoinColumn(name = "document_section_metadata_id", referencedColumnName = "id", nullable = false)
+    private DocumentSectionMetadata documentSectionMetadata;
     @Basic
     @Column(name = "section_value", nullable = true, length = -1)
     private String sectionValue;
@@ -39,20 +46,20 @@ public class DocumentInstanceSection {
         this.id = id;
     }
 
-    public UUID getDocumentInstanceId() {
-        return documentInstanceId;
+    public DocumentInstance getDocumentInstance() {
+        return documentInstance;
     }
 
-    public void setDocumentInstanceId(UUID documentInstanceId) {
-        this.documentInstanceId = documentInstanceId;
+    public void setDocumentInstance(DocumentInstance documentInstance) {
+        this.documentInstance = documentInstance;
     }
 
-    public UUID getDocumentSectionMetadataId() {
-        return documentSectionMetadataId;
+    public DocumentSectionMetadata getDocumentSectionMetadata() {
+        return documentSectionMetadata;
     }
 
-    public void setDocumentSectionMetadataId(UUID documentSectionTemplateId) {
-        this.documentSectionMetadataId = documentSectionTemplateId;
+    public void setDocumentSectionMetadata(DocumentSectionMetadata documentSectionMetadata) {
+        this.documentSectionMetadata = documentSectionMetadata;
     }
 
     public String getSectionValue() {
@@ -87,6 +94,7 @@ public class DocumentInstanceSection {
         this.updatedAt = updatedAt;
     }
 
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -94,24 +102,22 @@ public class DocumentInstanceSection {
 
         DocumentInstanceSection that = (DocumentInstanceSection) o;
 
-        if (id != null ? !id.equals(that.id) : that.id != null) return false;
-        if (documentInstanceId != null ? !documentInstanceId.equals(that.documentInstanceId) : that.documentInstanceId != null)
+        if (!Objects.equals(id, that.id)) return false;
+        if (!Objects.equals(documentInstance, that.documentInstance))
             return false;
-        if (documentSectionMetadataId != null ? !documentSectionMetadataId.equals(that.documentSectionMetadataId) : that.documentSectionMetadataId != null)
+        if (!Objects.equals(documentSectionMetadata, that.documentSectionMetadata))
             return false;
-        if (sectionValue != null ? !sectionValue.equals(that.sectionValue) : that.sectionValue != null) return false;
-        if (remoteUrl != null ? !remoteUrl.equals(that.remoteUrl) : that.remoteUrl != null) return false;
-        if (createdAt != null ? !createdAt.equals(that.createdAt) : that.createdAt != null) return false;
-        if (updatedAt != null ? !updatedAt.equals(that.updatedAt) : that.updatedAt != null) return false;
-
-        return true;
+        if (!Objects.equals(sectionValue, that.sectionValue)) return false;
+        if (!Objects.equals(remoteUrl, that.remoteUrl)) return false;
+        if (!Objects.equals(createdAt, that.createdAt)) return false;
+        return Objects.equals(updatedAt, that.updatedAt);
     }
 
     @Override
     public int hashCode() {
         int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (documentInstanceId != null ? documentInstanceId.hashCode() : 0);
-        result = 31 * result + (documentSectionMetadataId != null ? documentSectionMetadataId.hashCode() : 0);
+        result = 31 * result + (documentInstance != null ? documentInstance.hashCode() : 0);
+        result = 31 * result + (documentSectionMetadata != null ? documentSectionMetadata.hashCode() : 0);
         result = 31 * result + (sectionValue != null ? sectionValue.hashCode() : 0);
         result = 31 * result + (remoteUrl != null ? remoteUrl.hashCode() : 0);
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);

@@ -69,20 +69,17 @@ public class OrganizationService {
         }
         organization=organizationRepository.save(organization);
         return organization;
-
     }
 
     public Organization updateOrganization(Organization organization) throws Exception{
         UUID organizationId = organization.getId();
-        Organization existingOrganization = organizationRepository.findById(organizationId)
-                .orElseThrow(() -> new GendoxException("ORGANIZATION_NOT_FOUND", "Organization not found with id: " + organizationId, HttpStatus.NOT_FOUND));
+        Organization existingOrganization = this.getById(organizationId);
 
         // Update the properties of the existingOrganization with the values from the updated organization
         existingOrganization.setName(organization.getName());
         existingOrganization.setDisplayName(organization.getDisplayName());
         existingOrganization.setAddress(organization.getAddress());
         existingOrganization.setPhone(organization.getPhone());
-        existingOrganization.setCreatedAt(organization.getCreatedAt());
         existingOrganization.setUpdatedAt(Instant.now());
 
         //save the update organization

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -35,13 +36,13 @@ public class User {
     private Instant updatedAt;
 
 
-    @JsonBackReference
+    @JsonBackReference(value = "userOrg")
     @OneToMany(mappedBy = "user")
     private List<UserOrganization> userOrganizations;
 
-    @JsonBackReference
+    @JsonBackReference(value = "user")
     @OneToMany(mappedBy = "user")
-    private List<ProjectMember> projectMembers;
+    private List<ProjectMember> projectMembers = new ArrayList<>();
 
     public UUID getId() {
         return id;
