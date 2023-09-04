@@ -15,7 +15,6 @@ import lombok.NoArgsConstructor;
 @Builder(toBuilder = true)
 @AtLeastOneFieldIsNotEmpty(fieldNames = {QueryParamNames.ORGANIZATION_ID, QueryParamNames.PROJECT_ID})
 public class UserCriteria {
-
     private String email;
     private String organizationId;
     private String projectId;
