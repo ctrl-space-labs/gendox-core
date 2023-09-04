@@ -13,6 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @Builder(toBuilder = true)
 public class OrganizationCriteria {
+
     private String organizationId;
     private String userId;
     private String name;
