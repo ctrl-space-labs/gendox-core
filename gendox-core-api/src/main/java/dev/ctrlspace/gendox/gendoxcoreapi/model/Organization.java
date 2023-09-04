@@ -34,7 +34,7 @@ public class Organization {
     private Instant updatedAt;
 
 
-    @JsonBackReference
+    @JsonBackReference(value = "organization")
     @OneToMany(mappedBy = "organization")
     private List<UserOrganization> userOrganizations;
 

@@ -34,11 +34,11 @@ public class Project {
     private Instant updatedAt;
 
     @Schema(hidden = true)
-    @JsonBackReference
+    @JsonBackReference(value = "project")
     @OneToMany(mappedBy = "project")
     private List<ProjectMember> projectMembers;
 
-    @JsonManagedReference
+    @JsonManagedReference(value = "agent")
     @OneToMany(mappedBy = "project")
     private List<ProjectAgent> projectAgents;
 

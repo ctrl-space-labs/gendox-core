@@ -14,7 +14,7 @@ public class ProjectAgent {
     @Column(name = "id", nullable = false)
     private UUID id;
 
-    @JsonBackReference
+    @JsonBackReference(value = "agent")
     @ManyToOne
     @JoinColumn(name = "project_id", referencedColumnName = "id", nullable = false)
     private Project project;

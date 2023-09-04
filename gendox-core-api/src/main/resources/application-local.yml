@@ -7,7 +7,7 @@ server:
 logging:
   level:
     dev.ctrlspace: DEBUG
-    org.springframework: INFO
+    org.springframework: DEBUG
 spring:
   mvc:
     format:
