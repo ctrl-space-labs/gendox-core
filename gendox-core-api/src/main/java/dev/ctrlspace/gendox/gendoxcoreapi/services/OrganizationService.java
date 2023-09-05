@@ -24,11 +24,15 @@ public class OrganizationService {
 
     private UserOrganizationRepository userOrganizationRepository;
     private OrganizationRepository organizationRepository;
+    private UserOrganizationService userOrganizationService;
 
     @Autowired
-    public OrganizationService(UserOrganizationRepository userOrganizationRepository, OrganizationRepository organizationRepository) {
+    public OrganizationService(UserOrganizationRepository userOrganizationRepository,
+                               OrganizationRepository organizationRepository,
+                               UserOrganizationService userOrganizationService) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.organizationRepository = organizationRepository;
+        this.userOrganizationService = userOrganizationService;
     }
 
     /**
@@ -60,11 +64,18 @@ public class OrganizationService {
     }
 
     public Organization createOrganization(Organization organization) throws Exception {
+        Instant now = Instant.now();
+
 
         if (organization.getId() != null) {
             throw new GendoxException("NEW_ORGANIZATION_ID_IS_NOT_NULL", "Organization id must be null", HttpStatus.BAD_REQUEST);
         }
+
+        organization.setCreatedAt(now);
+        organization.setUpdatedAt(now);
+
         organization = organizationRepository.save(organization);
+        userOrganizationService.setAdminRoleForOrganizationsOwner(organization);
         return organization;
     }
 
