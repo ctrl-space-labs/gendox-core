@@ -57,6 +57,7 @@ public class UserController {
 
 
     // TODO add authorization check if the user belongs to the same organization
+
     @GetMapping("/users/{id}")
     public User getUserById(@PathVariable UUID id, Authentication authentication) throws Exception {
 
@@ -78,7 +79,7 @@ public class UserController {
 
     // TODO this is just for demo purposes, need to be rewrite
     @GetMapping("/users/login")
-    public JwtResponse getUserByLogin(@RequestParam("email") String email ) throws Exception {
+    public JwtResponse getUserByLogin(@RequestParam("email") String email) throws Exception {
 
         // run code to get the user from the database
         JwtClaimsSet claims = userService.getJwtClaims(email);

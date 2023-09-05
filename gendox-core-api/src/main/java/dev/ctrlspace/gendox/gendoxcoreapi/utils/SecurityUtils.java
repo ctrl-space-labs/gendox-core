@@ -13,6 +13,8 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.UUID;
+
 @Component("securityUtils")
 public class SecurityUtils {
 
@@ -92,6 +94,7 @@ public class SecurityUtils {
 
         return true;
     }
+
 
     /**
      * Property projectIdIn is a list of projectIds provided in a request param like:
