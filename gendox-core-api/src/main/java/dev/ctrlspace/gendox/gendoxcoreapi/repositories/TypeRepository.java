@@ -10,4 +10,6 @@ import java.util.UUID;
 
 @Repository
 public interface TypeRepository extends JpaRepository<Type, Long>, QuerydslPredicateExecutor<Type>{
+
+    Type getByTypeCategoryAndName(String typeCategory, String name);
 }

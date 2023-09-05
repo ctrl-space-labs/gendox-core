@@ -36,17 +36,16 @@ public class OrganizationController {
     private OrganizationService organizationService;
     private JwtEncoder jwtEncoder;
     private OrganizationConverter organizationConverter;
-    private UserOrganizationService userOrganizationService;
+
 
     @Autowired
     public OrganizationController(OrganizationService organizationService,
                                   JwtEncoder jwtEncoder,
-                                  OrganizationConverter organizationConverter,
-                                  UserOrganizationService userOrganizationService) {
+                                  OrganizationConverter organizationConverter) {
         this.organizationService = organizationService;
         this.jwtEncoder = jwtEncoder;
         this.organizationConverter = organizationConverter;
-        this.userOrganizationService = userOrganizationService;
+
     }
 
 
@@ -70,12 +69,9 @@ public class OrganizationController {
     @ResponseStatus(value = HttpStatus.CREATED)
     public Organization createOrganization(@RequestBody OrganizationDTO organizationDTO) throws Exception {
         Organization organization = organizationConverter.toEntity(organizationDTO);
-        Instant now = Instant.now();
-        organization.setCreatedAt(now);
-        organization.setUpdatedAt(now);
         organization = organizationService.createOrganization(organization);
 
-        userOrganizationService.setAdminRoleForOrganizationsOwner(organization);
+
         return organization;
     }
 
@@ -104,10 +100,10 @@ public class OrganizationController {
 
 
     // TODO: Has Permission OP_DELETE_ORGANIZATION
-    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_DELETE_ORGANIZATION')")
+    //@PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_DELETE_ORGANIZATION')")
     @DeleteMapping("/organizations/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteOrganization(@PathVariable UUID id, @Valid OrganizationCriteria critetia) throws Exception {
+    public void deleteOrganization(@PathVariable UUID id) throws Exception {
         organizationService.deleteOrganization(id);
     }
 
