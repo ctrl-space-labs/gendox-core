@@ -6,10 +6,13 @@ import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.stereotype.Repository;
 
 
-import java.util.UUID;
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TypeRepository extends JpaRepository<Type, Long>, QuerydslPredicateExecutor<Type>{
 
-    Type getByTypeCategoryAndName(String typeCategory, String name);
+    Optional<Type> findByTypeCategoryAndName(String typeCategory, String name);
+    List<Type> findByTypeCategory(String typeCategory);
+    Optional<Type> findByName(String name);
 }

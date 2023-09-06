@@ -13,6 +13,6 @@ public interface UserOrganizationRepository extends JpaRepository<UserOrganizati
 
     public List<UserOrganization> findByUserId(UUID userId);
 
-    boolean existsByUserAndOrganizationId(User user, Organization organization);
+    boolean existsByUserAndOrganization(User user, Organization organization);
 
 }
