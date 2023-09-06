@@ -7,13 +7,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TypeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserOrganizationPredicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -30,8 +29,10 @@ import java.util.UUID;
 public class UserOrganizationService {
 
     private UserOrganizationRepository userOrganizationRepository;
+    private UserService userService;
+    private OrganizationService organizationService;
 
-    private TypeRepository typeRepository;
+    private TypeService typeService;
     private UserRepository userRepository;
 
     @Autowired
@@ -39,11 +40,15 @@ public class UserOrganizationService {
 
     @Autowired
     public UserOrganizationService(UserOrganizationRepository userOrganizationRepository,
-                                  TypeRepository typeRepository,
+                                   TypeService typeRepository,
+                                   @Lazy UserService userService,
+                                   @Lazy OrganizationService organizationService,
                                    UserRepository userRepository) {
         this.userOrganizationRepository = userOrganizationRepository;
-        this.typeRepository = typeRepository;
+        this.typeService = typeRepository;
         this.userRepository = userRepository;
+        this.userService = userService;
+        this.organizationService = organizationService;
 
     }
 
@@ -56,10 +61,26 @@ public class UserOrganizationService {
 
     }
 
+    public UserOrganization createUserOrganization(UUID userId, UUID organizationId, String roleName) throws Exception{
+
+        User user = userService.getById(userId);
+        Organization organization = organizationService.getById(organizationId);
+        Type role = typeService.getOrganizationRolesByName(roleName);
+
+        UserOrganization userOrganization = new UserOrganization();
+        userOrganization.setUser(user);
+        userOrganization.setOrganizationId(organization);
+        userOrganization.setRole(role);
+
+        return this.createUserOrganization(userOrganization);
+
+
+    }
+
     public UserOrganization createUserOrganization(UserOrganization userOrganization) throws Exception{
         Instant now = Instant.now();
 
-        if (userOrganizationRepository.existsByUserAndOrganizationId(userOrganization.getUser(), userOrganization.getOrganization())) {
+        if (userOrganizationRepository.existsByUserAndOrganization(userOrganization.getUser(), userOrganization.getOrganization())) {
             throw new GendoxException("USER_ORGANIZATION_ALREADY_EXISTS", "User-organization combination already exists", HttpStatus.BAD_REQUEST);
         }
 
@@ -75,26 +96,11 @@ public class UserOrganizationService {
     }
 
     public void setAdminRoleForOrganizationsOwner(Organization organization) throws Exception {
-        UserOrganization userOrganization = new UserOrganization();
-        Instant now = Instant.now();
-
         // user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt)authentication.getPrincipal());
-        String userIdString = jwtDTO.getUserId(); // Assuming you have the UUID as a string
-        UUID userId = UUID.fromString(userIdString);
-        User user = userRepository.getById(userId);
 
-        // role
-        Type role = typeRepository.getByTypeCategoryAndName("ORGANIZATION_ROLE_TYPE", "ROLE_ADMIN");
-
-        userOrganization.setUser(user);
-        userOrganization.setOrganizationId(organization);
-        userOrganization.setRole(role);
-
-        createUserOrganization(userOrganization);
-
-
+        createUserOrganization(UUID.fromString(jwtDTO.getUserId()), organization.getId(), "ROLE_ADMIN");
 
     }
 }

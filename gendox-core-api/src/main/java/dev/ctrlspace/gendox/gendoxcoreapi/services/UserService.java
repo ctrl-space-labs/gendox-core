@@ -36,7 +36,7 @@ public class UserService implements UserDetailsService {
 
 
     @Autowired
-    private UserService(UserRepository userRepository,
+    public UserService(UserRepository userRepository,
                         JWTUtils jwtUtils,
                         JwtDTOUserProfileConverter jwtDTOUserProfileConverter,
                         UserProfileConverter userProfileConverter) {
