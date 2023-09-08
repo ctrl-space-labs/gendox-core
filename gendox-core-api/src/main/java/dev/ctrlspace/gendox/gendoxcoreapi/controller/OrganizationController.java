@@ -12,14 +12,13 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCr
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import io.swagger.v3.oas.annotations.Operation;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,11 +26,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.time.Instant;
+
+
 import java.util.List;
 import java.util.UUID;
 
@@ -123,7 +120,14 @@ public class OrganizationController {
 
 
     @GetMapping("/organizations/{id}/users")
-    public List<UserOrganization> getUsersInOrganizationByOrgId(@PathVariable UUID id, Authentication authentication) throws Exception {
+    public List<UserOrganization> getUsersInOrganizationByOrgId(@PathVariable UUID id, Authentication authentication, Pageable pageable) throws GendoxException {
+
+        if (pageable == null) {
+            pageable = PageRequest.of(0, 100);
+        }
+        if (pageable.getPageSize() > 100) {
+            throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 100", HttpStatus.BAD_REQUEST);
+        }
 
         //run code to get the organization from the database
         List<UserOrganization> organizationUsers = userOrganizationService.getAll(UserOrganizationCriteria

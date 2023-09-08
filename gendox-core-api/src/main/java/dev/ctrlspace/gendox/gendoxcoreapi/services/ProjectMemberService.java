@@ -3,12 +3,16 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectMemberCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectMemberRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectMemberPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.RoleNamesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -42,14 +46,35 @@ public class ProjectMemberService {
         this.userOrganizationService = userOrganizationService;
     }
 
+   public List<ProjectMember> getAll(ProjectMemberCriteria criteria) throws GendoxException{
+       Pageable pageable = PageRequest.of(0, 100);
+       return getAll(criteria, pageable);
+   }
+
+   public List<ProjectMember> getAll(ProjectMemberCriteria criteria, Pageable pageable) throws GendoxException{
+       if (pageable == null) {
+           throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
+       }
+       return projectMemberRepository.findAll(ProjectMemberPredicates.build(criteria), pageable).toList();
+   }
+
+
+
+
 
     public ProjectMember createProjectMember(ProjectMember projectMember) throws Exception {
         Instant now = Instant.now();
 
-        // TODO check if the Project's Member exist
+        // Check if the user is already a member of the project
+        if(projectMemberRepository.findByProjectIdAndUserId(projectMember.getProject().getId(), projectMember.getUser().getId()) != null){
+            throw new GendoxException("DUPLICATE_PROJECT_MEMBER", "User is already a member of this project ", HttpStatus.BAD_REQUEST);
+        }
+
+
+
 
         if (projectMember.getId() != null) {
-            throw new GendoxException("NEW_USER_ORGANIZATION_ID_IS_NOT_NULL", "User Organization id must be null", HttpStatus.BAD_REQUEST);
+            throw new GendoxException("NEW_MEMBER_PROJECT_ID_IS_NOT_NULL", "Member-Project id must be null", HttpStatus.BAD_REQUEST);
         }
 
         projectMember.setCreatedAt(now);
@@ -67,7 +92,7 @@ public class ProjectMemberService {
 
 
         User user = userService.getById(userId);
-        Project project = projectService.getById(projectId);
+        Project project = projectService.getProjectById(projectId);
 
         ProjectMember projectMember = new ProjectMember();
         projectMember.setUser(user);
@@ -143,7 +168,7 @@ public class ProjectMemberService {
     }
 
 
-    public void deleteProjectMember(UUID id) throws Exception {
+    public void deleteAllProjectMembers(UUID id) throws Exception {
         ProjectMember projectMember = projectMemberRepository.findById(id).orElse(null);
 
         if (projectMember != null) {
@@ -156,13 +181,30 @@ public class ProjectMemberService {
 
     }
 
-    public void deleteProjectMember(Project project) throws Exception {
+    public void deleteAllProjectMembers(Project project) throws Exception {
         List<ProjectMember> projectMembers = projectMemberRepository.findByProjectId(project.getId());
 
         for (int i = 0; i < projectMembers.size(); i++) {
             projectMemberRepository.delete(projectMembers.get(i));
         }
 
+    }
+
+
+
+    public void removeMemberFromProject(UUID projectId, UUID userId) throws Exception {
+        User user = userService.getById(userId);
+        Project project = projectService.getProjectById(projectId);
+
+        ProjectMember projectMember = projectMemberRepository.findByProjectIdAndUserId(projectId, userId);
+
+        if (projectMember != null) {
+            projectMemberRepository.deleteById(projectMember.getId());
+        } else {
+            throw new GendoxException("PROJECT_MEMBER_NOT_FOUND", "Project not found with id: " + projectId +" or user with id: "+ userId, HttpStatus.NOT_FOUND);
+        }
+
 
     }
+
 }
