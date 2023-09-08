@@ -16,8 +16,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class ProjectMemberService {
@@ -79,6 +79,26 @@ public class ProjectMemberService {
 
     }
 
+    public List<ProjectMember> createAllProjectMembers(Set<UUID> userIds, UUID projectId) throws Exception {
+        List<ProjectMember> projectMembers = new ArrayList<>();
+        for (UUID userId: userIds) {
+            projectMembers.add(
+                    createProjectMember(userId, projectId));
+        }
+        return projectMembers;
+
+//        Alternative of the above code
+//        Stream.concat(userOrganizations.stream(), creator.stream())
+//                .map(userOrganization -> userOrganization.getUser().getId())
+//                .forEach(userId -> {
+//                    try {
+//                        createProjectMember(userId, project.getId());
+//                    } catch (Exception e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                });
+    }
+
 
     public void setMemberRoleForTheCreator(Project project) throws Exception {
         // user
@@ -89,7 +109,15 @@ public class ProjectMemberService {
 
     }
 
-    public void setMemberRoleToProjects(Project project, UUID organizationId) throws Exception {
+    /**
+     * Add the default members to the project
+     * The default members are the project's creator and the organization's admins
+     *
+     * @param project
+     * @param organizationId
+     * @throws Exception
+     */
+    public void addDefaultMembersToTheProject(Project project, UUID organizationId) throws Exception {
         // user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
@@ -98,18 +126,19 @@ public class ProjectMemberService {
         createProjectMember(UUID.fromString(jwtDTO.getUserId()), project.getId());
 
         // project's users
-        List<UserOrganization> userOrganizations = userOrganizationService.getAll(UserOrganizationCriteria
+        Set<UUID> userIds = userOrganizationService.getAll(UserOrganizationCriteria
                 .builder()
                 .organizationId(organizationId.toString())
-                .build());
+                .roleName(RoleNamesConstants.ADMIN)
+                .build())
+                .stream()
+                .map(userOrganization -> userOrganization.getUser().getId())
+                .collect(Collectors.toSet());
 
-        for (int i = 0; i < userOrganizations.size(); i++) {
-            if (userOrganizations.get(i).getRole().getName().equals(RoleNamesConstants.ADMIN)
-                    && !userOrganizations.get(i).getUser().getId().equals(UUID.fromString(jwtDTO.getUserId()))) {
-                // Project's Admin become member of the project
-                createProjectMember(userOrganizations.get(i).getUser().getId(), project.getId());
-            }
-        }
+        userIds.add(UUID.fromString(jwtDTO.getUserId()));
+
+        createAllProjectMembers(userIds, project.getId());
+
 
     }
 
