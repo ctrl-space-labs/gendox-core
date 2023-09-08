@@ -3,7 +3,6 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectPredicates;
@@ -71,7 +70,7 @@ public class ProjectService {
 
 
         // Project's Admins & Creator become members of the project
-        projectMemberService.setMemberRoleToProjects(project, project.getOrganizationId());
+        projectMemberService.addDefaultMembersToTheProject(project, project.getOrganizationId());
 
 
 
