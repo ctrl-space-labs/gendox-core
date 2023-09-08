@@ -64,7 +64,7 @@ public class UserProfileConverter {
                     // TODO optimize this to get all projects per Organization in one query
                     Page<Project> projects = new PageImpl<>(new ArrayList<>());
                     try {
-                        projects = projectService.getAll(ProjectCriteria
+                        projects = projectService.getAllProjects(ProjectCriteria
                                         .builder()
                                         .userId(user.getId().toString())
                                         .organizationId(organization.getId().toString())

@@ -13,6 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserOrgani
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -52,11 +53,15 @@ public class UserOrganizationService {
 
     }
 
-    public List<UserOrganization> getAll(UserOrganizationCriteria criteria) {
-        return getAll(criteria, Pageable.unpaged());
+    public List<UserOrganization> getAll(UserOrganizationCriteria criteria) throws GendoxException{
+        Pageable pageable = PageRequest.of(0, 100);
+        return getAll(criteria, pageable);
     }
 
-    public List<UserOrganization> getAll(UserOrganizationCriteria criteria, Pageable pageable) {
+    public List<UserOrganization> getAll(UserOrganizationCriteria criteria, Pageable pageable) throws GendoxException{
+        if (pageable == null) {
+            throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
+        }
         return userOrganizationRepository.findAll(UserOrganizationPredicate.build(criteria), pageable).toList();
 
     }
