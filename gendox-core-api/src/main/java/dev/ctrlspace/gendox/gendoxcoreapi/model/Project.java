@@ -39,8 +39,8 @@ public class Project {
     private List<ProjectMember> projectMembers;
 
     @JsonManagedReference(value = "agent")
-    @OneToMany(mappedBy = "project")
-    private List<ProjectAgent> projectAgents;
+    @OneToOne(mappedBy = "project")
+    private ProjectAgent projectAgent;
 
 
 
@@ -100,14 +100,13 @@ public class Project {
         this.projectMembers = projectMembers;
     }
 
-    public List<ProjectAgent> getProjectAgents() {
-        return projectAgents;
+    public ProjectAgent getProjectAgent() {
+        return projectAgent;
     }
 
-    public void setProjectAgents(List<ProjectAgent> projectAgents) {
-        this.projectAgents = projectAgents;
+    public void setProjectAgent(ProjectAgent projectAgents) {
+        this.projectAgent = projectAgents;
     }
-
 
     @Override
     public boolean equals(Object o) {
@@ -125,7 +124,7 @@ public class Project {
         if (!Objects.equals(updatedAt, project.updatedAt)) return false;
         if (!Objects.equals(projectMembers, project.projectMembers))
             return false;
-        return Objects.equals(projectAgents, project.projectAgents);
+        return Objects.equals(projectAgent, project.projectAgent);
     }
 
     @Override
@@ -137,7 +136,7 @@ public class Project {
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
         result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
         result = 31 * result + (projectMembers != null ? projectMembers.hashCode() : 0);
-        result = 31 * result + (projectAgents != null ? projectAgents.hashCode() : 0);
+        result = 31 * result + (projectAgent != null ? projectAgent.hashCode() : 0);
         return result;
     }
 }
