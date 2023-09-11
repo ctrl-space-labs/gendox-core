@@ -26,6 +26,9 @@ public class DocumentInstance {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
     @Basic
+    @Column(name = "remote_url", nullable = true, length = -1)
+    private String remoteUrl;
+    @Basic
     @Column(name = "created_at", nullable = true)
     private Instant createdAt;
     @Basic
@@ -92,6 +95,13 @@ public class DocumentInstance {
         this.documentInstanceSections = documentInstanceSections;
     }
 
+    public String getRemoteUrl() {
+        return remoteUrl;
+    }
+
+    public void setRemoteUrl(String remoteUrl) {
+        this.remoteUrl = remoteUrl;
+    }
 
     @Override
     public boolean equals(Object o) {
