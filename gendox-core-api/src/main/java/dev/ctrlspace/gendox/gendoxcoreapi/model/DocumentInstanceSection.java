@@ -28,9 +28,7 @@ public class DocumentInstanceSection {
     @Basic
     @Column(name = "section_value", nullable = true, length = -1)
     private String sectionValue;
-    @Basic
-    @Column(name = "remote_url", nullable = true, length = -1)
-    private String remoteUrl;
+
     @Basic
     @Column(name = "created_at", nullable = true)
     private Instant createdAt;
@@ -70,13 +68,6 @@ public class DocumentInstanceSection {
         this.sectionValue = sectionValue;
     }
 
-    public String getRemoteUrl() {
-        return remoteUrl;
-    }
-
-    public void setRemoteUrl(String remoteUrl) {
-        this.remoteUrl = remoteUrl;
-    }
 
     public Instant getCreatedAt() {
         return createdAt;
@@ -108,7 +99,6 @@ public class DocumentInstanceSection {
         if (!Objects.equals(documentSectionMetadata, that.documentSectionMetadata))
             return false;
         if (!Objects.equals(sectionValue, that.sectionValue)) return false;
-        if (!Objects.equals(remoteUrl, that.remoteUrl)) return false;
         if (!Objects.equals(createdAt, that.createdAt)) return false;
         return Objects.equals(updatedAt, that.updatedAt);
     }
@@ -119,7 +109,6 @@ public class DocumentInstanceSection {
         result = 31 * result + (documentInstance != null ? documentInstance.hashCode() : 0);
         result = 31 * result + (documentSectionMetadata != null ? documentSectionMetadata.hashCode() : 0);
         result = 31 * result + (sectionValue != null ? sectionValue.hashCode() : 0);
-        result = 31 * result + (remoteUrl != null ? remoteUrl.hashCode() : 0);
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
         result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
         return result;
