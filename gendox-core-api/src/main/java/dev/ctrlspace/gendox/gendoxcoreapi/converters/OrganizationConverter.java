@@ -25,7 +25,7 @@ public class OrganizationConverter implements GendoxConverter<Organization, Orga
         organizationDTO.setUpdatedAt(organization.getUpdatedAt());
 
 
-        return null;
+        return organizationDTO;
     }
 
     @Override
