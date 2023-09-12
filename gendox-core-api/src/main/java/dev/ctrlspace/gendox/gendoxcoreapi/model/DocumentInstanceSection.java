@@ -30,6 +30,13 @@ public class DocumentInstanceSection {
     private String sectionValue;
 
     @Basic
+    @Column(name="created_by", nullable = true)
+    private UUID createdBy;
+    @Basic
+    @Column(name="updated_by", nullable = true)
+    private UUID updatedBy;
+
+    @Basic
     @Column(name = "created_at", nullable = true)
     private Instant createdAt;
     @Basic
@@ -85,6 +92,21 @@ public class DocumentInstanceSection {
         this.updatedAt = updatedAt;
     }
 
+    public UUID getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(UUID createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public UUID getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(UUID updatedBy) {
+        this.updatedBy = updatedBy;
+    }
 
     @Override
     public boolean equals(Object o) {

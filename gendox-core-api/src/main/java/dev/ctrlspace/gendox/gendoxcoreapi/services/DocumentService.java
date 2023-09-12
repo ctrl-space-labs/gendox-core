@@ -4,16 +4,21 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionMetadata;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentSectionMetadataRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -28,6 +33,8 @@ public class DocumentService {
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private DocumentSectionMetadataRepository documentSectionMetadataRepository;
 
+    @Autowired
+    private JWTUtils jwtUtils;
 
     @Autowired
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
@@ -45,6 +52,18 @@ public class DocumentService {
 
     }
 
+    public DocumentSectionMetadata getMetadataById(UUID id) throws GendoxException {
+        return documentSectionMetadataRepository.findById(id)
+                .orElseThrow(() -> new GendoxException("METADATA_NOT_FOUND", "Metadata not found with id: " + id, HttpStatus.NOT_FOUND));
+
+    }
+
+    public DocumentInstanceSection getSectionById(UUID id) throws GendoxException {
+        return documentInstanceSectionRepository.findById(id)
+                .orElseThrow(() -> new GendoxException("SECTION_NOT_FOUND", "Section not found with id: " + id, HttpStatus.NOT_FOUND));
+
+    }
+
     public Page<DocumentInstance> getAllDocuments(DocumentCriteria criteria) throws GendoxException {
         return this.getAllDocuments(criteria, PageRequest.of(0, 100));
     }
@@ -58,9 +77,9 @@ public class DocumentService {
 
     }
 
+
     public DocumentInstance createDocumentInstance(DocumentInstance documentInstance) throws GendoxException {
         Instant now = Instant.now();
-
 
         if (documentInstance.getId() != null) {
             throw new GendoxException("NEW_DOCUMENT_ID_IS_NOT_NULL", "Document id must be null", HttpStatus.BAD_REQUEST);
@@ -68,52 +87,154 @@ public class DocumentService {
 
         documentInstance.setCreatedAt(now);
         documentInstance.setUpdatedAt(now);
+        documentInstance.setCreatedBy(getUserId());
+        documentInstance.setUpdatedBy(getUserId());
 
         // Save the DocumentInstance first to generate its ID
         documentInstance = documentInstanceRepository.save(documentInstance);
 
+        // Set the saved sections back to the document instance
+        documentInstance.setDocumentInstanceSections(createSections(documentInstance));
+
+        return documentInstance;
+    }
+
+    public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance) throws GendoxException {
         List<DocumentInstanceSection> documentInstanceSections = new ArrayList<>();
 
-
-        // Iterate through the list and save each item individually
         for (DocumentInstanceSection section : documentInstance.getDocumentInstanceSections()) {
-            // Set the document_instance_id for each section to the ID of the parent documentInstance
             section.setDocumentInstance(documentInstance);
-            section.setCreatedAt(now);
-            section.setUpdatedAt(now);
-
-//            DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
-//            metadata.setCreatedAt(now);
-//            metadata.setUpdatedAt(now);
-            DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
+            DocumentInstanceSection savedSection = createSection(section);
+            documentInstanceSections.add(savedSection);
+        }
+        return documentInstanceSections;
+    }
 
 
-            if (metadata.getDocumentSectionTypeId() == null || metadata.getSectionOrder() == null) {
+    public DocumentInstanceSection createSection(DocumentInstanceSection section) throws GendoxException {
 
-                metadata.setDocumentSectionTypeId(12L);
-                metadata.setSectionOrder(0);
-                metadata.setCreatedAt(now);
-                metadata.setUpdatedAt(now);
+        section.setCreatedAt(Instant.now());
+        section.setUpdatedAt(Instant.now());
+        section.setCreatedBy(getUserId());
+        section.setUpdatedBy(getUserId());
+        section.setDocumentSectionMetadata(createMetadata(section));
+        section = documentInstanceSectionRepository.save(section);
 
-            } else {
+        return section;
 
-                metadata.setCreatedAt(now);
-                metadata.setUpdatedAt(now);
-            }
-            metadata = documentSectionMetadataRepository.save(metadata);
-            section.setDocumentSectionMetadata(metadata);
+    }
 
-            DocumentInstanceSection savedSection = documentInstanceSectionRepository.save(section);
+
+    public DocumentSectionMetadata createMetadata(DocumentInstanceSection section) throws GendoxException {
+        DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
+
+
+        if (metadata.getDocumentSectionTypeId() == null || metadata.getSectionOrder() == null) {
+            throw new GendoxException("SECTION_TYPE_ID_AND_SECTION_ORDER_MUST_NOT_NULL", " SectionTypeId and SectionOrder must not be null", HttpStatus.BAD_REQUEST);
+        }
+
+        metadata.setCreatedAt(Instant.now());
+        metadata.setUpdatedAt(Instant.now());
+        metadata.setCreatedBy(getUserId());
+        metadata.setUpdatedBy(getUserId());
+        metadata = documentSectionMetadataRepository.save(metadata);
+
+        return metadata;
+    }
+
+    public DocumentInstance updateDocument(DocumentInstance documentInstance) throws GendoxException {
+        UUID documentId = documentInstance.getId();
+        DocumentInstance existingDocument = this.getDocumentInstanceById(documentId);
+
+        // Update the properties of the existingDocument with the values from the updated document
+        existingDocument.setDocumentTemplateId(documentInstance.getDocumentTemplateId());
+        existingDocument.setRemoteUrl(documentInstance.getRemoteUrl());
+        existingDocument.setDocumentInstanceSections(updateSections(documentInstance));
+        existingDocument.setUpdatedBy(getUserId());
+        existingDocument.setUpdatedAt(Instant.now());
+
+        existingDocument = documentInstanceRepository.save(existingDocument);
+
+        return existingDocument;
+
+    }
+
+    public List<DocumentInstanceSection> updateSections(DocumentInstance instance) throws GendoxException {
+        List<DocumentInstanceSection> documentInstanceSections = new ArrayList<>();
+
+        for (DocumentInstanceSection section : instance.getDocumentInstanceSections()) {
+            section.setDocumentInstance(instance);
+            DocumentInstanceSection savedSection = updateSection(section);
             documentInstanceSections.add(savedSection);
         }
 
-        // Set the saved sections back to the document instance
-        documentInstance.setDocumentInstanceSections(documentInstanceSections);
+        return documentInstanceSections;
+    }
+
+    public DocumentInstanceSection updateSection(DocumentInstanceSection section) throws GendoxException {
+        UUID sectionId = section.getId();
+        DocumentInstanceSection existingSection = this.getSectionById(sectionId);
+
+        existingSection.setSectionValue(section.getSectionValue());
+        existingSection.setUpdatedBy(getUserId());
+        existingSection.setUpdatedAt(Instant.now());
+
+        // Check if documentInstance.documentTemplateId is empty/null before updating metadata
+        if (section.getDocumentInstance().getDocumentTemplateId() == null) {
+            existingSection.setDocumentSectionMetadata(updateMetadata(section));
+        }
+
+        existingSection = documentInstanceSectionRepository.save(existingSection);
+
+        return existingSection;
+
+    }
+
+    public DocumentSectionMetadata updateMetadata(DocumentInstanceSection section) throws GendoxException {
+        UUID metadataId = section.getDocumentSectionMetadata().getId();
+        DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
+        DocumentSectionMetadata existingMetadata = this.getMetadataById(metadataId);
+
+        existingMetadata.setDocumentTemplateId(metadata.getDocumentTemplateId());
+        existingMetadata.setDocumentSectionTypeId(metadata.getDocumentSectionTypeId());
+        existingMetadata.setTitle(metadata.getTitle());
+        existingMetadata.setDescription(metadata.getDescription());
+        existingMetadata.setSectionOptions(metadata.getSectionOptions());
+        existingMetadata.setSectionOrder(metadata.getSectionOrder());
+        existingMetadata.setUpdatedBy(getUserId());
+        existingMetadata.setUpdatedAt(Instant.now());
+
+        existingMetadata = documentSectionMetadataRepository.save(existingMetadata);
+
+        return existingMetadata;
+
+    }
 
 
-        return documentInstance;
+    public void deleteDocument(UUID id) throws GendoxException {
+        DocumentInstance documentInstance = this.getDocumentInstanceById(id);
+        deleteSections(documentInstance.getDocumentInstanceSections());
+        documentInstanceRepository.delete(documentInstance);
+    }
+
+    public void deleteSections(List<DocumentInstanceSection> sections) throws GendoxException {
+        for (DocumentInstanceSection section : sections) {
+            DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
+            documentInstanceSectionRepository.delete(section);
+            deleteMetadata(metadata);
+        }
+    }
+
+    public void deleteMetadata(DocumentSectionMetadata metadata) throws GendoxException {
+        documentSectionMetadataRepository.delete(metadata);
+    }
 
 
+    // get user's id for createdBy and updatedBy properties
+    public UUID getUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
+        return UUID.fromString(jwtDTO.getUserId());
     }
 
 
