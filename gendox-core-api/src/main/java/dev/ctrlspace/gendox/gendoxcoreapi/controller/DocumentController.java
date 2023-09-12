@@ -89,12 +89,12 @@ public class DocumentController {
         documentInstance = documentService.createDocumentInstance(documentInstance);
 
         return documentInstance;
-
-
     }
 
+
+
     @PutMapping("/documents/{id}")
-    public DocumentInstance update(@PathVariable String id, @RequestBody DocumentInstance documentInstance) {
+    public DocumentInstance update(@PathVariable UUID id, @RequestBody DocumentInstanceSectionDTO documentInstanceDTO) {
         // TODO: Store the sections. The metadata should be updated only if documentTemplate is empty/null
         // TODO: Organization can't be changed
         throw new UnsupportedOperationException("Not implemented yet");

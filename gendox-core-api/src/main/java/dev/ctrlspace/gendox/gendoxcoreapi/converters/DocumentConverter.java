@@ -39,7 +39,7 @@ public class DocumentConverter implements GendoxConverter<DocumentInstance, Docu
             sectionDTOs.add(sectionDTO);        }
 
         // Set the list of section DTOs in the DTO
-        documentDTO.setDocumentInstanceSectionDTOS(sectionDTOs);
+        documentDTO.setDocumentInstanceSections(sectionDTOs);
 
         return documentDTO;
     }
@@ -58,7 +58,7 @@ public class DocumentConverter implements GendoxConverter<DocumentInstance, Docu
        // documentInstance.setDocumentInstanceSections();
 
         List <DocumentInstanceSection> sections = new ArrayList<>();
-        for (DocumentInstanceSectionDTO sectionDTO : documentDTO.getDocumentInstanceSectionDTOS()){
+        for (DocumentInstanceSectionDTO sectionDTO : documentDTO.getDocumentInstanceSections()){
             DocumentInstanceSection section = documentInstanceSectionConverter.toEntity(sectionDTO);
             sections.add(section);
         }

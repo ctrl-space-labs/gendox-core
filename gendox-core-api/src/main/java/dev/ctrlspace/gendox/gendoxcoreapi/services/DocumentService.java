@@ -2,8 +2,12 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionMetadata;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentSectionMetadataRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -13,17 +17,25 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class DocumentService {
 
     private DocumentInstanceRepository documentInstanceRepository;
+    private DocumentInstanceSectionRepository documentInstanceSectionRepository;
+    private DocumentSectionMetadataRepository documentSectionMetadataRepository;
 
 
     @Autowired
-    public DocumentService(DocumentInstanceRepository documentInstanceRepository) {
+    public DocumentService(DocumentInstanceRepository documentInstanceRepository,
+                           DocumentInstanceSectionRepository documentInstanceSectionRepository,
+                           DocumentSectionMetadataRepository documentSectionMetadataRepository) {
         this.documentInstanceRepository = documentInstanceRepository;
+        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
+        this.documentSectionMetadataRepository = documentSectionMetadataRepository;
     }
 
 
@@ -46,8 +58,9 @@ public class DocumentService {
 
     }
 
-    public DocumentInstance createDocumentInstance(DocumentInstance documentInstance) throws GendoxException{
+    public DocumentInstance createDocumentInstance(DocumentInstance documentInstance) throws GendoxException {
         Instant now = Instant.now();
+
 
         if (documentInstance.getId() != null) {
             throw new GendoxException("NEW_DOCUMENT_ID_IS_NOT_NULL", "Document id must be null", HttpStatus.BAD_REQUEST);
@@ -56,7 +69,47 @@ public class DocumentService {
         documentInstance.setCreatedAt(now);
         documentInstance.setUpdatedAt(now);
 
+        // Save the DocumentInstance first to generate its ID
         documentInstance = documentInstanceRepository.save(documentInstance);
+
+        List<DocumentInstanceSection> documentInstanceSections = new ArrayList<>();
+
+
+        // Iterate through the list and save each item individually
+        for (DocumentInstanceSection section : documentInstance.getDocumentInstanceSections()) {
+            // Set the document_instance_id for each section to the ID of the parent documentInstance
+            section.setDocumentInstance(documentInstance);
+            section.setCreatedAt(now);
+            section.setUpdatedAt(now);
+
+//            DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
+//            metadata.setCreatedAt(now);
+//            metadata.setUpdatedAt(now);
+            DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
+
+
+            if (metadata.getDocumentSectionTypeId() == null || metadata.getSectionOrder() == null) {
+
+                metadata.setDocumentSectionTypeId(12L);
+                metadata.setSectionOrder(0);
+                metadata.setCreatedAt(now);
+                metadata.setUpdatedAt(now);
+
+            } else {
+
+                metadata.setCreatedAt(now);
+                metadata.setUpdatedAt(now);
+            }
+            metadata = documentSectionMetadataRepository.save(metadata);
+            section.setDocumentSectionMetadata(metadata);
+
+            DocumentInstanceSection savedSection = documentInstanceSectionRepository.save(section);
+            documentInstanceSections.add(savedSection);
+        }
+
+        // Set the saved sections back to the document instance
+        documentInstance.setDocumentInstanceSections(documentInstanceSections);
+
 
         return documentInstance;
 

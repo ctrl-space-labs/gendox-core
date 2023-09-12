@@ -1,6 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,5 +26,7 @@ public class DocumentDTO {
 
     private List<UUID> documentInstanceSectionIds;
 
-    private List<DocumentInstanceSectionDTO> documentInstanceSectionDTOS;
+
+    private List<DocumentInstanceSectionDTO> documentInstanceSections = new ArrayList<>();
+
 }

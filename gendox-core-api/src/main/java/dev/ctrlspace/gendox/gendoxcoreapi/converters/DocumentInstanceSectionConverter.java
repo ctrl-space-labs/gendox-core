@@ -27,7 +27,7 @@ public class DocumentInstanceSectionConverter implements GendoxConverter<Documen
         documentInstanceSectionDTO.setUpdatedAt(documentInstanceSection.getUpdatedAt());
 
         DocumentSectionMetadataDTO metadataDTO = documentSectionMetadataConverter.toDTO(documentInstanceSection.getDocumentSectionMetadata());
-        documentInstanceSectionDTO.setDocumentSectionMetadataDTO(metadataDTO);
+        documentInstanceSectionDTO.setDocumentSectionMetadata(metadataDTO);
 
         return documentInstanceSectionDTO;
     }
@@ -41,7 +41,7 @@ public class DocumentInstanceSectionConverter implements GendoxConverter<Documen
         documentInstanceSection.setCreatedAt(documentInstanceSectionDTO.getCreatedAt());
         documentInstanceSection.setUpdatedAt(documentInstanceSectionDTO.getUpdatedAt());
 
-        DocumentSectionMetadata metadata = documentSectionMetadataConverter.toEntity(documentInstanceSectionDTO.getDocumentSectionMetadataDTO());
+        DocumentSectionMetadata metadata = documentSectionMetadataConverter.toEntity(documentInstanceSectionDTO.getDocumentSectionMetadata());
         documentInstanceSection.setDocumentSectionMetadata(metadata);
 
         return documentInstanceSection;
