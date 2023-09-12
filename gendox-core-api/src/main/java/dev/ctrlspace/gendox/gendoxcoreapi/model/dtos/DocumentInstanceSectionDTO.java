@@ -1,7 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionMetadata;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,7 +16,7 @@ public class DocumentInstanceSectionDTO {
 
     private UUID id;
     //private DocumentInstance documentInstance;
-    private DocumentSectionMetadataDTO documentSectionMetadataDTO;
+    private DocumentSectionMetadataDTO documentSectionMetadata;
     private String sectionValue;
     private Instant createdAt;
     private Instant updatedAt;
