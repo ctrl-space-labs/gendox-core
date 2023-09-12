@@ -21,6 +21,8 @@ public class DocumentSectionMetadataDTO {
     private String description;
     private String sectionOptions;
     private Integer sectionOrder;
+    private UUID createdBy;
+    private UUID updatedBy;
     private Instant createdAt;
     private Instant updatedAt;
 }

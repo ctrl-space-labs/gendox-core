@@ -18,6 +18,8 @@ public class DocumentInstanceSectionDTO {
     //private DocumentInstance documentInstance;
     private DocumentSectionMetadataDTO documentSectionMetadata;
     private String sectionValue;
+    private UUID createdBy;
+    private UUID updatedBy;
     private Instant createdAt;
     private Instant updatedAt;
 }

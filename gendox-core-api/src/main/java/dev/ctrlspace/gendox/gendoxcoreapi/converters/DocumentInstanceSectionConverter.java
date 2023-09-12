@@ -23,6 +23,8 @@ public class DocumentInstanceSectionConverter implements GendoxConverter<Documen
 
         documentInstanceSectionDTO.setId(documentInstanceSection.getId());
         documentInstanceSectionDTO.setSectionValue(documentInstanceSection.getSectionValue());
+        documentInstanceSectionDTO.setCreatedBy(documentInstanceSection.getCreatedBy());
+        documentInstanceSectionDTO.setUpdatedBy(documentInstanceSection.getUpdatedBy());
         documentInstanceSectionDTO.setCreatedAt(documentInstanceSection.getCreatedAt());
         documentInstanceSectionDTO.setUpdatedAt(documentInstanceSection.getUpdatedAt());
 
@@ -38,6 +40,8 @@ public class DocumentInstanceSectionConverter implements GendoxConverter<Documen
 
         documentInstanceSection.setId(documentInstanceSectionDTO.getId());
         documentInstanceSection.setSectionValue(documentInstanceSectionDTO.getSectionValue());
+        documentInstanceSection.setCreatedBy(documentInstanceSectionDTO.getCreatedBy());
+        documentInstanceSection.setUpdatedBy(documentInstanceSectionDTO.getUpdatedBy());
         documentInstanceSection.setCreatedAt(documentInstanceSectionDTO.getCreatedAt());
         documentInstanceSection.setUpdatedAt(documentInstanceSectionDTO.getUpdatedAt());
 

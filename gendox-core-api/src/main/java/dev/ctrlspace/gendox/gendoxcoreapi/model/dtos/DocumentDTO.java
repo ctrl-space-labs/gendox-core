@@ -21,12 +21,10 @@ public class DocumentDTO {
     private UUID documentTemplateId;
     private UUID userId;
     private String remoteUrl;
+    private UUID createdBy;
+    private UUID updatedBy;
     private Instant createAt;
     private Instant updateAt;
-
-    private List<UUID> documentInstanceSectionIds;
-
-
     private List<DocumentInstanceSectionDTO> documentInstanceSections = new ArrayList<>();
 
 }

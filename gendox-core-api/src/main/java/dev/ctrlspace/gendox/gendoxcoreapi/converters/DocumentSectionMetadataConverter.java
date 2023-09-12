@@ -17,6 +17,8 @@ public class DocumentSectionMetadataConverter implements GendoxConverter<Documen
         documentSectionMetadataDTO.setDescription(documentSectionMetadata.getDescription());
         documentSectionMetadataDTO.setSectionOptions(documentSectionMetadata.getSectionOptions());
         documentSectionMetadataDTO.setSectionOrder(documentSectionMetadata.getSectionOrder());
+        documentSectionMetadataDTO.setCreatedBy(documentSectionMetadata.getCreatedBy());
+        documentSectionMetadataDTO.setUpdatedBy(documentSectionMetadata.getUpdatedBy());
         documentSectionMetadataDTO.setCreatedAt(documentSectionMetadata.getCreatedAt());
         documentSectionMetadataDTO.setUpdatedAt(documentSectionMetadata.getUpdatedAt());
 
@@ -35,6 +37,8 @@ public class DocumentSectionMetadataConverter implements GendoxConverter<Documen
         documentSectionMetadata.setDescription(documentSectionMetadataDTO.getDescription());
         documentSectionMetadata.setSectionOptions(documentSectionMetadataDTO.getSectionOptions());
         documentSectionMetadata.setSectionOrder(documentSectionMetadataDTO.getSectionOrder());
+        documentSectionMetadata.setCreatedBy(documentSectionMetadataDTO.getCreatedBy());
+        documentSectionMetadata.setUpdatedBy(documentSectionMetadataDTO.getUpdatedBy());
         documentSectionMetadata.setCreatedAt(documentSectionMetadataDTO.getCreatedAt());
         documentSectionMetadata.setUpdatedAt(documentSectionMetadataDTO.getUpdatedAt());
 

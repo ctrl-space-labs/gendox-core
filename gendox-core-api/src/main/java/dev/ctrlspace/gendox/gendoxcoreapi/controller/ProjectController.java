@@ -76,8 +76,6 @@ public class ProjectController {
     @ResponseStatus(value = HttpStatus.CREATED)
     public Project createProject(@RequestBody ProjectDTO projectDTO) throws Exception {
 
-//        throw new UnsupportedOperationException("Not implemented yet");
-
         Project project = projectConverter.toEntity(projectDTO);
         project = projectService.createProject(project);
 
@@ -98,9 +96,6 @@ public class ProjectController {
     @PutMapping("/projects/{id}")
     public Project updateProject(@PathVariable UUID id, @RequestBody ProjectDTO projectDTO) throws GendoxException {
 
-//        throw new UnsupportedOperationException("Not implemented yet");
-
-
         Project project = new Project();
         project = projectConverter.toEntity(projectDTO);
 
@@ -120,7 +115,6 @@ public class ProjectController {
     // TODO: is member to the project
     @DeleteMapping("/projects/{id}")
     public void delete(@PathVariable UUID id) throws Exception {
-//        throw new UnsupportedOperationException("Not implemented yet");
         projectService.deleteProject(id);
     }
 

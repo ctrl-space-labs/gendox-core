@@ -1,7 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentConverter;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentWithOnlySectionsIdConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentOnlyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
@@ -19,23 +19,21 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
 public class DocumentController {
 
     private DocumentService documentService;
-    private DocumentWithOnlySectionsIdConverter documentWithOnlySectionsIdConverter;
+    private DocumentOnlyConverter documentOnlyConverter;
     private DocumentConverter documentConverter;
 
     @Autowired
     public DocumentController(DocumentService documentService,
-                              DocumentWithOnlySectionsIdConverter documentWithOnlySectionsIdConverter,
+                              DocumentOnlyConverter documentOnlyConverter,
                               DocumentConverter documentConverter) {
         this.documentService = documentService;
-        this.documentWithOnlySectionsIdConverter = documentWithOnlySectionsIdConverter;
+        this.documentOnlyConverter = documentOnlyConverter;
         this.documentConverter = documentConverter;
     }
 
@@ -74,7 +72,7 @@ public class DocumentController {
         Page<DocumentInstance> documentInstances = documentService.getAllDocuments(criteria, pageable);
 
         // Convert the Page of DocumentInstance to a Page of DocumentDTO using the converter
-        Page<DocumentDTO> documentDTOs = documentInstances.map(document -> documentWithOnlySectionsIdConverter.toDTO(document));
+        Page<DocumentDTO> documentDTOs = documentInstances.map(document -> documentOnlyConverter.toDTO(document));
 
 
         return documentDTOs;
@@ -94,15 +92,23 @@ public class DocumentController {
 
 
     @PutMapping("/documents/{id}")
-    public DocumentInstance update(@PathVariable UUID id, @RequestBody DocumentInstanceSectionDTO documentInstanceDTO) {
+    public DocumentInstance update(@PathVariable UUID id, @RequestBody DocumentDTO documentDTO) throws GendoxException {
         // TODO: Store the sections. The metadata should be updated only if documentTemplate is empty/null
         // TODO: Organization can't be changed
-        throw new UnsupportedOperationException("Not implemented yet");
+
+        DocumentInstance documentInstance = documentConverter.toEntity(documentDTO);
+
+        if (!id.equals(documentInstance.getId())){
+            throw new GendoxException("DOCUMENT_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
+        }
+
+        documentInstance = documentService.updateDocument(documentInstance);
+        return documentInstance;
     }
 
     @DeleteMapping("/documents/{id}")
-    public ResponseEntity<String> delete(@PathVariable String id) {
-        throw new UnsupportedOperationException("Not implemented yet");
+    public void delete(@PathVariable UUID id) throws GendoxException{
+        documentService.deleteDocument(id);
     }
 
 
