@@ -81,8 +81,8 @@ public class DocumentService {
     public DocumentInstance createDocumentInstance(DocumentInstance documentInstance) throws GendoxException {
         Instant now = Instant.now();
 
-        if (documentInstance.getId() != null) {
-            throw new GendoxException("NEW_DOCUMENT_ID_IS_NOT_NULL", "Document id must be null", HttpStatus.BAD_REQUEST);
+        if (documentInstance.getId() == null) {
+            documentInstance.setId(UUID.randomUUID());
         }
 
         documentInstance.setCreatedAt(now);
@@ -90,8 +90,9 @@ public class DocumentService {
         documentInstance.setCreatedBy(getUserId());
         documentInstance.setUpdatedBy(getUserId());
 
-        // Save the DocumentInstance first to generate its ID
-        documentInstance = documentInstanceRepository.save(documentInstance);
+
+        // Save the DocumentInstance first to save its ID
+        documentInstanceRepository.save(documentInstance);
 
         // Set the saved sections back to the document instance
         documentInstance.setDocumentInstanceSections(createSections(documentInstance));

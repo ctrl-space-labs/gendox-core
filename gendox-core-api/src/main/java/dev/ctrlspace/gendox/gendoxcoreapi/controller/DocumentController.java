@@ -5,9 +5,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentOnlyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.UploadService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -27,14 +30,18 @@ public class DocumentController {
     private DocumentService documentService;
     private DocumentOnlyConverter documentOnlyConverter;
     private DocumentConverter documentConverter;
+    private UploadService uploadService;
+
 
     @Autowired
     public DocumentController(DocumentService documentService,
                               DocumentOnlyConverter documentOnlyConverter,
-                              DocumentConverter documentConverter) {
+                              DocumentConverter documentConverter,
+                              UploadService uploadService) {
         this.documentService = documentService;
         this.documentOnlyConverter = documentOnlyConverter;
         this.documentConverter = documentConverter;
+        this.uploadService = uploadService;
     }
 
     @GetMapping("/documents/{id}")
@@ -90,7 +97,6 @@ public class DocumentController {
     }
 
 
-
     @PutMapping("/documents/{id}")
     public DocumentInstance update(@PathVariable UUID id, @RequestBody DocumentDTO documentDTO) throws GendoxException {
         // TODO: Store the sections. The metadata should be updated only if documentTemplate is empty/null
@@ -98,7 +104,7 @@ public class DocumentController {
 
         DocumentInstance documentInstance = documentConverter.toEntity(documentDTO);
 
-        if (!id.equals(documentInstance.getId())){
+        if (!id.equals(documentInstance.getId())) {
             throw new GendoxException("DOCUMENT_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
 
@@ -107,24 +113,48 @@ public class DocumentController {
     }
 
     @DeleteMapping("/documents/{id}")
-    public void delete(@PathVariable UUID id) throws GendoxException{
+    public void delete(@PathVariable UUID id) throws GendoxException {
         documentService.deleteDocument(id);
     }
 
 
-    @PostMapping("/documents/upload")
-    public ResponseEntity<String> handleFileUpload(@RequestParam("files") MultipartFile[] file) {
-        // TODO: upload to S3 using ResourceLoader or Local file system, no amazonS3 library should be used
-        // https://cloud.spring.io/spring-cloud-static/spring-cloud-aws/2.0.0.RELEASE/multi/multi__resource_handling.html
-        // https://www.baeldung.com/spring-cloud-aws-s3
-        // max total upload ~10MB configurable:
-        //spring.servlet.multipart.enabled=true
-        //spring.servlet.multipart.max-file-size=10MB
-        //spring.servlet.multipart.max-request-size=100MB
-        // Document section should be created for each file,
-        // different strategies should be supported, configurable from the DB
-        // https://www.digitalocean.com/community/tutorials/strategy-design-pattern-in-java-example-tutorial
+    // TODO: upload to S3 using ResourceLoader or Local file system, no amazonS3 library should be used
+    // https://cloud.spring.io/spring-cloud-static/spring-cloud-aws/2.0.0.RELEASE/multi/multi__resource_handling.html
+    // https://www.baeldung.com/spring-cloud-aws-s3
+    // max total upload ~10MB configurable:
+    //spring.servlet.multipart.enabled=true
+    //spring.servlet.multipart.max-file-size=10MB
+    //spring.servlet.multipart.max-request-size=100MB
+    // Document section should be created for each file,
+    // different strategies should be supported, configurable from the DB
+    // https://www.digitalocean.com/community/tutorials/strategy-design-pattern-in-java-example-tutorial
 
-        throw new UnsupportedOperationException("Not implemented yet");
+    @PostMapping("/documents/upload")
+    public ResponseEntity<Map<String, String>> handleFileUpload(@RequestParam("file") MultipartFile file,
+                                                                @RequestParam("organizationId") UUID organizationId,
+                                                                @RequestParam("projectId") UUID projectId) {
+        Map<String, String> response = new HashMap<>();
+
+        if (!file.isEmpty()) {
+            try {
+                String fileContent = uploadService.uploadFile(file, organizationId, projectId);
+
+                // File successfully uploaded and content read
+                response.put("message", "File uploaded successfully");
+                response.put("content", fileContent);
+                return ResponseEntity.ok(response); // 200 OK
+            } catch (IOException | GendoxException e) {
+                // Handle the exception (e.g., log the error or show an error message)
+                e.printStackTrace();
+                response.put("error", "Failed to upload or read the file: " + e.getMessage());
+                return ResponseEntity.status(500).body(response); // 500 Internal Server Error
+            }
+        } else {
+            // Handle the case where the file is empty
+            response.put("error", "File is empty");
+            return ResponseEntity.badRequest().body(response); // 400 Bad Request
+        }
     }
+
+
 }

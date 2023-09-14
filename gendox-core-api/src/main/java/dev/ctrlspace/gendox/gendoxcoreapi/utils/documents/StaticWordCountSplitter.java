@@ -1,11 +1,16 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils.documents;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
 import java.util.ArrayList;
 import java.util.List;
 
 
+@Component
 public class StaticWordCountSplitter implements DocumentSplitter {
 
+    @Value("${Gendox.file.wordCount}")
     private int wordCount;
 
     /**

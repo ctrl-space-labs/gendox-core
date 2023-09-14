@@ -1,6 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
@@ -12,7 +11,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "document_instance", schema = "gendox_core")
 public class DocumentInstance {
-    @GeneratedValue(strategy = GenerationType.UUID)
+    //@GeneratedValue(strategy = GenerationType.UUID)
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
