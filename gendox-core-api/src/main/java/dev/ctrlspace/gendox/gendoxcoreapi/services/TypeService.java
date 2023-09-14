@@ -30,6 +30,12 @@ public class TypeService {
                 .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "ROLE_NOT_FOUND", "Role not found with name: " + roleName));
     }
 
+    public Type getDocumentTypeByName(String documentName) {
+        return typeRepository.findByTypeCategoryAndName("DOCUMENT_FIELD_TYPE", documentName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "DOCUMENT_TYPE_NOT_FOUND", "Document field type not found with name: " + documentName));
+
+    }
+
 
     /**
      * Multiple handy service methods can go here like
