@@ -21,9 +21,7 @@ public class DocumentInstance {
     @Basic
     @Column(name = "document_template_id", nullable = true)
     private UUID documentTemplateId;
-    @Basic
-    @Column(name = "user_id", nullable = false)
-    private UUID userId;
+
     @Basic
     @Column(name = "remote_url", nullable = true, length = -1)
     private String remoteUrl;
@@ -68,13 +66,7 @@ public class DocumentInstance {
         this.documentTemplateId = documentTemplateId;
     }
 
-    public UUID getUserId() {
-        return userId;
-    }
 
-    public void setUserId(UUID userId) {
-        this.userId = userId;
-    }
 
     public Instant getCreatedAt() {
         return createdAt;
@@ -136,7 +128,7 @@ public class DocumentInstance {
             return false;
         if (!Objects.equals(documentTemplateId, that.documentTemplateId))
             return false;
-        if (!Objects.equals(userId, that.userId)) return false;
+
         if (!Objects.equals(createdAt, that.createdAt)) return false;
         if (!Objects.equals(updatedAt, that.updatedAt)) return false;
         return Objects.equals(documentInstanceSections, that.documentInstanceSections);
@@ -147,7 +139,7 @@ public class DocumentInstance {
         int result = id != null ? id.hashCode() : 0;
         result = 31 * result + (organizationId != null ? organizationId.hashCode() : 0);
         result = 31 * result + (documentTemplateId != null ? documentTemplateId.hashCode() : 0);
-        result = 31 * result + (userId != null ? userId.hashCode() : 0);
+
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
         result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
         result = 31 * result + (documentInstanceSections != null ? documentInstanceSections.hashCode() : 0);
