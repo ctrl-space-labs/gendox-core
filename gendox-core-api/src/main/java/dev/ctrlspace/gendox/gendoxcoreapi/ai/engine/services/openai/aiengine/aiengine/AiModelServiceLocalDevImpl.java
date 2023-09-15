@@ -25,20 +25,9 @@ public class AiModelServiceLocalDevImpl implements AiModelService {
     private static final RestTemplate restTemplate = new RestTemplate();
 
 
-    //    Generate response
-    public Ada2Response getResponse(HttpEntity<Ada2Request> chatRequestHttpEntity) {
-
-        logger.debug("Sending Embedding Request to Mock Service: {}", chatRequestHttpEntity);
-        ResponseEntity<Ada2Response> responseEntity = restTemplate.postForEntity(
-                OpenAIADA2.URL,
-                chatRequestHttpEntity,
-                Ada2Response.class);
-        logger.debug("Received Embedding Response from Mock Service.");
-
-        return responseEntity.getBody();
-    }
-
     public Ada2Response askEmbedding(BotRequest botRequest) {
+
+        logger.debug("Embedding Response from Mock Service.");
         return Ada2Response.builder()
                 .model("text-embedding-ada-002-v2")
                 .object("list")
@@ -56,12 +45,4 @@ public class AiModelServiceLocalDevImpl implements AiModelService {
                 .build();
     }
 }
-
-
-
-
-
-
-
-
 
