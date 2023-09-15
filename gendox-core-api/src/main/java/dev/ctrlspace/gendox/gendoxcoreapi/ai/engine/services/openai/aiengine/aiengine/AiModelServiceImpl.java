@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-@Profile({"prod", "integration", "local-integration"})
+@Profile({"prod", "integration", "openai-integration"})
 @Service
 public class AiModelServiceImpl implements AiModelService {
 
