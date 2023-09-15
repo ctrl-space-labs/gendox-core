@@ -27,7 +27,6 @@ public class DocumentConverter implements GendoxConverter<DocumentInstance, Docu
         documentDTO.setId(documentInstance.getId());
         documentDTO.setOrganizationId(documentInstance.getOrganizationId());
         documentDTO.setDocumentTemplateId(documentInstance.getDocumentTemplateId());
-        documentDTO.setUserId(documentInstance.getUserId());
         documentDTO.setRemoteUrl(documentInstance.getRemoteUrl());
         documentDTO.setRemoteUrl(documentInstance.getRemoteUrl());
         documentDTO.setCreatedBy(documentInstance.getCreatedBy());
@@ -53,7 +52,6 @@ public class DocumentConverter implements GendoxConverter<DocumentInstance, Docu
         documentInstance.setId(documentDTO.getId());
         documentInstance.setOrganizationId(documentDTO.getOrganizationId());
         documentInstance.setDocumentTemplateId(documentDTO.getDocumentTemplateId());
-        documentInstance.setUserId(documentDTO.getUserId());
         documentInstance.setRemoteUrl(documentDTO.getRemoteUrl());
         documentInstance.setCreatedBy(documentDTO.getCreatedBy());
         documentInstance.setUpdatedBy(documentDTO.getUpdatedBy());

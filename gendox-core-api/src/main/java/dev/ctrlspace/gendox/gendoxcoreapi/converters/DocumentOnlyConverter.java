@@ -13,7 +13,6 @@ public class DocumentOnlyConverter implements GendoxConverter<DocumentInstance, 
         documentDTO.setId(documentInstance.getId());
         documentDTO.setOrganizationId(documentInstance.getOrganizationId());
         documentDTO.setDocumentTemplateId(documentInstance.getDocumentTemplateId());
-        documentDTO.setUserId(documentInstance.getUserId());
         documentDTO.setRemoteUrl(documentInstance.getRemoteUrl());
         documentDTO.setCreatedBy(documentInstance.getCreatedBy());
         documentDTO.setUpdatedBy(documentInstance.getUpdatedBy());
@@ -30,7 +29,6 @@ public class DocumentOnlyConverter implements GendoxConverter<DocumentInstance, 
         documentInstance.setId(documentDTO.getId());
         documentInstance.setOrganizationId(documentDTO.getOrganizationId());
         documentInstance.setDocumentTemplateId(documentDTO.getDocumentTemplateId());
-        documentInstance.setUserId(documentDTO.getUserId());
         documentInstance.setRemoteUrl(documentDTO.getRemoteUrl());
         documentInstance.setCreatedBy(documentDTO.getCreatedBy());
         documentInstance.setUpdatedBy(documentDTO.getUpdatedBy());
