@@ -4,6 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentOnlyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
@@ -20,9 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 public class DocumentController {
@@ -85,6 +84,12 @@ public class DocumentController {
         return documentDTOs;
     }
 
+    @GetMapping("/documents/sections/projects/{id}")
+    public List<DocumentInstanceSection> getSectionsByProjectId(@PathVariable UUID id) throws GendoxException {
+        //throw new UnsupportedOperationException("Not implemented yet");
+        return documentService.getProjectSections(id);
+    }
+
 
     @PostMapping("/documents")
     public DocumentInstance create(@RequestBody DocumentDTO documentDTO) throws GendoxException {
@@ -130,31 +135,42 @@ public class DocumentController {
     // https://www.digitalocean.com/community/tutorials/strategy-design-pattern-in-java-example-tutorial
 
     @PostMapping("/documents/upload")
-    public ResponseEntity<Map<String, String>> handleFileUpload(@RequestParam("file") MultipartFile file,
-                                                                @RequestParam("organizationId") UUID organizationId,
-                                                                @RequestParam("projectId") UUID projectId) {
-        Map<String, String> response = new HashMap<>();
+    public ResponseEntity<Map<String, Object>> handleFilesUpload(@RequestParam("file") List<MultipartFile> files,
+                                                                 @RequestParam("organizationId") UUID organizationId,
+                                                                 @RequestParam("projectId") UUID projectId) {
+        Map<String, Object> response = new HashMap<>();
 
-        if (!file.isEmpty()) {
-            try {
-                String fileContent = uploadService.uploadFile(file, organizationId, projectId);
 
-                // File successfully uploaded and content read
-                response.put("message", "File uploaded successfully");
-                response.put("content", fileContent);
-                return ResponseEntity.ok(response); // 200 OK
-            } catch (IOException | GendoxException e) {
-                // Handle the exception (e.g., log the error or show an error message)
-                e.printStackTrace();
-                response.put("error", "Failed to upload or read the file: " + e.getMessage());
-                return ResponseEntity.status(500).body(response); // 500 Internal Server Error
-            }
-        } else {
-            // Handle the case where the file is empty
-            response.put("error", "File is empty");
+        if (files.isEmpty()) {
+            // Handle the case where no files are provided
+            response.put("error", "No files provided");
             return ResponseEntity.badRequest().body(response); // 400 Bad Request
         }
-    }
 
+        List<String> fileContents = new ArrayList<>();
+
+        for (MultipartFile file : files) {
+            if (!file.isEmpty()) {
+                try {
+                    String fileContent = uploadService.uploadFile(file, organizationId, projectId);
+                    fileContents.add(fileContent);
+                } catch (IOException | GendoxException e) {
+                    // Handle the exception (e.g., log the error or show an error message)
+                    e.printStackTrace();
+                    response.put("error", "Failed to upload or read the file: " + e.getMessage());
+                    return ResponseEntity.status(500).body(response); // 500 Internal Server Error
+                }
+            } else {
+                // Handle the case where the file is empty
+                response.put("error", "One or more files are empty");
+                return ResponseEntity.badRequest().body(response); // 400 Bad Request
+            }
+        }
+
+        // All files were successfully uploaded and their content read
+        response.put("message", "Files uploaded successfully");
+        response.put("fileContents", fileContents);
+        return ResponseEntity.ok(response); // 200 OK
+    }
 
 }

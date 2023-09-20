@@ -1,14 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionMetadata;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentSectionMetadataRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +28,8 @@ public class DocumentService {
     private DocumentInstanceRepository documentInstanceRepository;
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private DocumentSectionMetadataRepository documentSectionMetadataRepository;
+    private ProjectDocumentRepository projectDocumentRepository;
+
 
     @Autowired
     private JWTUtils jwtUtils;
@@ -39,10 +37,12 @@ public class DocumentService {
     @Autowired
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
                            DocumentInstanceSectionRepository documentInstanceSectionRepository,
-                           DocumentSectionMetadataRepository documentSectionMetadataRepository) {
+                           DocumentSectionMetadataRepository documentSectionMetadataRepository,
+                           ProjectDocumentRepository projectDocumentRepository) {
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.documentSectionMetadataRepository = documentSectionMetadataRepository;
+        this.projectDocumentRepository = projectDocumentRepository;
     }
 
 
@@ -78,6 +78,28 @@ public class DocumentService {
     }
 
 
+    public List<DocumentInstanceSection> getProjectSections(UUID projectId) throws GendoxException {
+        // First, retrieve all the project members associated with the given projectId
+        List<ProjectDocument> projectDocuments = projectDocumentRepository.findByProjectId(projectId);
+
+        // Initialize a list to store all the sections
+        List<DocumentInstanceSection> allSections = new ArrayList<>();
+
+        // Loop through project members to fetch sections for each document
+        for (ProjectDocument projectDocument : projectDocuments) {
+            UUID documentId = projectDocument.getDocumentId();
+
+            // Retrieve all sections for the document
+            List<DocumentInstanceSection> documentSections = documentInstanceSectionRepository.findByDocumentInstance(documentId);
+
+            // Add the sections to the overall list
+            allSections.addAll(documentSections);
+        }
+
+        return allSections;
+    }
+
+
     public DocumentInstance createDocumentInstance(DocumentInstance documentInstance) throws GendoxException {
         Instant now = Instant.now();
 
@@ -90,7 +112,6 @@ public class DocumentService {
         documentInstance.setCreatedBy(getUserId());
         documentInstance.setUpdatedBy(getUserId());
 
-
         // Save the DocumentInstance first to save its ID
         documentInstanceRepository.save(documentInstance);
 
@@ -99,6 +120,7 @@ public class DocumentService {
 
         return documentInstance;
     }
+
 
     public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance) throws GendoxException {
         List<DocumentInstanceSection> documentInstanceSections = new ArrayList<>();
@@ -122,7 +144,6 @@ public class DocumentService {
         section = documentInstanceSectionRepository.save(section);
 
         return section;
-
     }
 
 
@@ -143,6 +164,7 @@ public class DocumentService {
         return metadata;
     }
 
+
     public DocumentInstance updateDocument(DocumentInstance documentInstance) throws GendoxException {
         UUID documentId = documentInstance.getId();
         DocumentInstance existingDocument = this.getDocumentInstanceById(documentId);
@@ -157,7 +179,6 @@ public class DocumentService {
         existingDocument = documentInstanceRepository.save(existingDocument);
 
         return existingDocument;
-
     }
 
     public List<DocumentInstanceSection> updateSections(DocumentInstance instance) throws GendoxException {
@@ -171,6 +192,7 @@ public class DocumentService {
 
         return documentInstanceSections;
     }
+
 
     public DocumentInstanceSection updateSection(DocumentInstanceSection section) throws GendoxException {
         UUID sectionId = section.getId();
@@ -188,8 +210,8 @@ public class DocumentService {
         existingSection = documentInstanceSectionRepository.save(existingSection);
 
         return existingSection;
-
     }
+
 
     public DocumentSectionMetadata updateMetadata(DocumentInstanceSection section) throws GendoxException {
         UUID metadataId = section.getDocumentSectionMetadata().getId();
@@ -208,7 +230,6 @@ public class DocumentService {
         existingMetadata = documentSectionMetadataRepository.save(existingMetadata);
 
         return existingMetadata;
-
     }
 
 
@@ -218,6 +239,7 @@ public class DocumentService {
         documentInstanceRepository.delete(documentInstance);
     }
 
+
     public void deleteSections(List<DocumentInstanceSection> sections) throws GendoxException {
         for (DocumentInstanceSection section : sections) {
             DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
@@ -225,6 +247,7 @@ public class DocumentService {
             deleteMetadata(metadata);
         }
     }
+
 
     public void deleteMetadata(DocumentSectionMetadata metadata) throws GendoxException {
         documentSectionMetadataRepository.delete(metadata);

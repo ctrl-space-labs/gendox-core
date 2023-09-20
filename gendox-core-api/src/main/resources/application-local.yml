@@ -40,7 +40,7 @@ rsa:
 Gendox:
   file:
     location: c:\\Users\\Giannis\\Desktop\\gendox-files\\test
-    wordCount: 3
+    wordCount: 30
 
 # AWS
 

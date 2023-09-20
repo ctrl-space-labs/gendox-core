@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response;
 
+import com.pgvector.PGvector;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,7 +13,8 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class EmbeddingData {
-    private List<Double> embedding; //data type in Postgres - vector
+    //    private List<Double> embedding; //data type in Postgres - vector
+    private List<Double> embedding;
     private int index;
     private String object;
 }
