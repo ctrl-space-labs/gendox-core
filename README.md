@@ -43,7 +43,7 @@ To get started with the Gendox Core API project locally, you can follow the step
 ### Prerequisites
 Make sure you have the following prerequisites installed:
 
-- Java JDK (at least Java 11)
+- Java JDK (at least Java 17)
 - Maven
 - postgreSQL v.15
 
@@ -51,24 +51,34 @@ Make sure you have the following prerequisites installed:
 
 ### Clone the Repository 
 
-
-1) Clone the Gendox Core API repository from GitHub: 
+- Clone the Gendox Core API repository from GitHub: 
 ```
  
 git clone https://github.com/ctrl-space-labs/gendox-core.git
  
 ```
+### Set up the database
 
+- Install postgres pgvector extension according to [documentation](https://github.com/pgvector/pgvector#installation)
 
-2) Change the folder
+- Open a terminal and run:
+
+```
+cd ./database
+mvn clean install flyway:info -Durl=jdbc:postgresql://localhost:5432/postgres -Duser=[your_user] -Dpassword=[your_pass]
+
 ```
 
-cd gendox-core
+### Run the application
+
+- Change the folder
+```
+
+cd ./gendox-core-api
 
 ```
 
-
-3) Build the project using Maven
+- Build the project using Maven
 
 ```
 
@@ -77,7 +87,7 @@ mvn clean install
 ```
 
 
-4) Run the application
+- Run the application
 
 ```
 
@@ -85,95 +95,6 @@ mvn spring-boot:run
 
 ```
 
-
-### Set up the database
-<br>
-
-- After installing PostGreSQL server and the service is running on your machine (Windows may need restart) set the PATH enviroment variables to include:
-
- ```
-
-  {POSTGRESQL_INSTALLATION_DIRECTORY}\{VERSION}\bin
-
-  ```
-
-  
-- Then navigate to path:
-  
-```
-
-{CLONED_DIRECTORY_PATH}/src/main/resources/migrations/
-
-```
-
-
-- Open a terminal and run:
-  
-```
-
-psql -U postgres -d postgres -a -f V1_efant_db_schema.sql -W
-
-```
-
-
-
-### Restart the backend server
-
-
-- close running application and run again the command:
-
- ```
-
-  mvn spring-boot:run
-
-  ```
-
-### Maven depedencies
-
-Gendox leverages several essential Maven dependencies to streamline project development. Here are some key dependencies:
-
-- **Spring Boot**: A framework for rapid Java application development.
- ```
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter</artifactId>
-</dependency>
-```
-
-- **Spring Data JPA**: Simplifies database access and data manipulation.
- ```
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-data-jpa</artifactId>
-</dependency>
-```
-
-- **Spring Security**: Provides authentication and authorization capabilities.
- ```
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-security</artifactId>
-</dependency>
-```
-
-- **QueryDSL**: Allows type-safe SQL-like queries.
- ```
-<dependency>
-    <groupId>com.querydsl</groupId>
-    <artifactId>querydsl-core</artifactId>
-    <version>${querydsl.version}</version>
-</dependency>
-```
-
-- **Lombok**: Reduces boilerplate Java code through annotations.
- ```
-<dependency>
-    <groupId>org.projectlombok</groupId>
-    <artifactId>lombok</artifactId>
-</dependency>
-```
-
-These dependencies play a pivotal role in building and running the Gendox project, offering features like database access, security, and query capabilities. Additional dependencies and details can be found in the project's Maven pom.xml file.
 
 
 ## Join the Community
