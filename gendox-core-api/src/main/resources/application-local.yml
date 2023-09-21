@@ -1,0 +1,59 @@
+
+
+server:
+  port: 8080
+  servlet:
+    context-path: /gendox/api/v1
+logging:
+  level:
+    dev.ctrlspace: DEBUG
+    org.springframework: INFO
+spring:
+  mvc:
+    format:
+      date-time: yyyy-MM-dd'T'HH:mm:ss.SSSZ
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: none
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: 123456789
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 100MB
+
+springdoc:
+  swagger-ui:
+    path: /api-documentation
+
+rsa:
+  private-key: classpath:.env/local/local-non-production-use-private_key.pem
+
+
+Gendox:
+  file:
+    location: c:\\Users\\Giannis\\Desktop\\gendox-files\\test
+    wordCount: 30
+    allowed:
+      extensions: .txt,.md,.rst,.pdf
+
+
+# AWS
+
+cloud:
+  aws:
+    accessKeyId:
+    secretKey:
+    region: us-east-1
+
+s3:
+  bucket:
+    name: gendox-bucket-test
+
