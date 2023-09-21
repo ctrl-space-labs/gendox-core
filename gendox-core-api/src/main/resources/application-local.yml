@@ -41,6 +41,9 @@ Gendox:
   file:
     location: c:\\Users\\Giannis\\Desktop\\gendox-files\\test
     wordCount: 30
+    allowed:
+      extensions: .txt,.md,.rst,.pdf
+
 
 # AWS
 

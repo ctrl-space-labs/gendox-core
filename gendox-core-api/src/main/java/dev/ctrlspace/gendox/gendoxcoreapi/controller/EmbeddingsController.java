@@ -70,7 +70,7 @@ public class EmbeddingsController {
     }
 
     @PostMapping("/messages/semantic-search")
-    public List<DocumentInstanceSection> findCloserSections(@RequestBody MessageDto messageDto,
+    public List<DocumentInstanceSection> findCloserSections(@RequestBody Message message,
                                                             @RequestParam("size") Integer size,
                                                             Pageable pageable) throws GendoxException{
         if (pageable == null) {
@@ -80,9 +80,8 @@ public class EmbeddingsController {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 100", HttpStatus.BAD_REQUEST);
         }
 
-        messageDto.setId(UUID.randomUUID());
-        Message message = new Message();
-        message = embeddingService.createMessage(messageDto);
+        message.setId(UUID.randomUUID());
+        message = embeddingService.createMessage(message);
 
 
         List<DocumentInstanceSection> instanceSections = new ArrayList<>();

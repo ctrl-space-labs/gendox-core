@@ -99,7 +99,6 @@ public class EmbeddingService {
     }
 
 
-
     public Embedding createSectionsEmbedding(UUID sectionId) throws GendoxException {
 
         // Use Optional to handle the result of findById
@@ -111,7 +110,7 @@ public class EmbeddingService {
             Embedding embedding = new Embedding();
             embedding = createEmbedding(section.getSectionValue());
 
-            EmbeddingGroup embeddingGroup = embeddingGroupRepository.findEmbeddingGroupByEmbeddingId(embedding.getId());
+            EmbeddingGroup embeddingGroup = embeddingGroupRepository.findByEmbeddingId(embedding.getId());
             embeddingGroup.setSectionId(sectionId);
             embeddingGroup = embeddingGroupRepository.save(embeddingGroup);
 
@@ -159,16 +158,14 @@ public class EmbeddingService {
 
 
     public EmbeddingGroup createEmbeddingGroup(UUID embeddingId, AuditLogs auditLogs) throws GendoxException {
-        EmbeddingGroupDTO embeddingGroupDTO = new EmbeddingGroupDTO();
         EmbeddingGroup embeddingGroup = new EmbeddingGroup();
 
-        embeddingGroupDTO.setId(UUID.randomUUID());
-        embeddingGroupDTO.setEmbeddingId(embeddingId);
-        embeddingGroupDTO.setTokenCount(Double.valueOf(auditLogs.getTokenCount()));
-        embeddingGroupDTO.setGroupingStrategyTypeId(33L);
-        embeddingGroupDTO.setSemanticSearchModelId(33L);
+        embeddingGroup.setId(UUID.randomUUID());
+        embeddingGroup.setEmbeddingId(embeddingId);
+        embeddingGroup.setTokenCount(Double.valueOf(auditLogs.getTokenCount()));
+        embeddingGroup.setGroupingStrategyType(33L);
+        embeddingGroup.setSemanticSearchModel(33L);
 
-        embeddingGroup = embeddingGroupConverter.toEntity(embeddingGroupDTO);
         embeddingGroup.setCreatedAt(Instant.now());
         embeddingGroup.setUpdatedAt(Instant.now());
         embeddingGroup.setCreatedBy(getUserId());
@@ -179,15 +176,14 @@ public class EmbeddingService {
         return embeddingGroup;
     }
 
-    public Message createMessage(MessageDto messageDto) throws GendoxException{
-        Message message = new Message();
-        message = messageConverter.toEntity(messageDto);
+    public Message createMessage(Message message) throws GendoxException {
+
         message.setCreatedAt(Instant.now());
         message.setUpdatedAt(Instant.now());
         message.setCreatedBy(getUserId());
         message.setUpdatedBy(getUserId());
 
-        message= messageRepository.save(message);
+        message = messageRepository.save(message);
 
         return message;
     }
