@@ -113,44 +113,50 @@ public class DocumentController {
     public ResponseEntity<Map<String, Object>> handleFilesUpload(@RequestParam("file") List<MultipartFile> files,
                                                                  @RequestParam("organizationId") UUID organizationId,
                                                                  @RequestParam("projectId") UUID projectId) throws IOException, GendoxException {
-        Map<String, Object> response = new HashMap<>();
 
         // Get the allowed file extensions from application.properties
         List<String> allowedExtensionsList = Arrays.asList(allowedExtensions.split(","));
-//        List<String> allowedExtensionsList = Arrays.asList(new String[]{".txt"});
 
 
+        validateHasFiles(files);
+        validateFileExtensions(files, allowedExtensionsList);
+        files.removeIf(MultipartFile::isEmpty);
+
+        for (MultipartFile file : files) {
+            uploadService.uploadFile(file, organizationId, projectId);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Files uploaded successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    private static void validateHasFiles(List<MultipartFile> files) throws GendoxException {
         if (files.isEmpty()) {
             // Handle the case where no files are provided
             throw new GendoxException("NO_FILES_PROVIDED", "No files provided", HttpStatus.BAD_REQUEST);
         }
+    }
 
-        List<String> fileContents = new ArrayList<>();
-        List<String> emptyFile = new ArrayList<>();
+    private static List<String> getEmptyFileNames(List<MultipartFile> files) {
+        List<String> emptyFiles = new ArrayList<>();
+        //add empty files to the 'emptyFiles' list
+        files.stream()
+                .filter(MultipartFile::isEmpty)
+                .forEach(file -> emptyFiles.add(file.getOriginalFilename()));
+        return emptyFiles;
+    }
 
+    private void validateFileExtensions(List<MultipartFile> files, List<String> allowedExtensionsList) throws GendoxException {
+        // Check if the file extension is allowed
         for (MultipartFile file : files) {
-            if (!file.isEmpty()) {
-                // Check the file extension
-                String fileExtension = getFileExtension(file.getOriginalFilename());
-                if (!allowedExtensionsList.contains(fileExtension)) {
-                    response.put("error", "Unsupported file format. Please upload files in one of the following formats: .txt, .md, .rst, .pdf");
-                    return ResponseEntity.badRequest().body(response); // 400 Bad Request
-                }
-
-                String fileContent = uploadService.uploadFile(file, organizationId, projectId);
-                fileContents.add(fileContent);
-            }
-            else {
-                emptyFile.add(file.getOriginalFilename());
+            String fileExtension = getFileExtension(file.getOriginalFilename());
+            if (!allowedExtensionsList.contains(fileExtension)) {
+                throw new GendoxException("FILE_EXTENSION_NOT_ALLOWED",
+                        "Unsupported file format. Please upload files in one of the following formats: " + allowedExtensions,
+                        HttpStatus.BAD_REQUEST); // 400 Bad Request
             }
         }
-
-
-        // All files were successfully uploaded and their content read
-        response.put("message", "Files uploaded successfully");
-        response.put("fileContents", fileContents);
-        response.put("emptyFile", emptyFile);
-        return ResponseEntity.ok(response); // 200 OK
     }
 
     // Helper method to extract file extension from filename
