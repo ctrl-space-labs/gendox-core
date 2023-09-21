@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd"
+             version="3.0">
+  <persistence-unit name="default">
+
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionMetadata</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentTemplate</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.MessageLog</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.Organization</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectMember</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectTemplate</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.Project</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.RolePermission</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.Type</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.User</class>
+    <class>dev.ctrlspace.gendox.gendoxcoreapi.model.User</class>
+    <properties>
+      <property name="hibernate.connection.url" value="jdbc:postgresql://localhost:5432/postgres"/>
+      <property name="hibernate.connection.driver_class" value="org.postgresql.Driver"/>
+      <property name="hibernate.connection.username" value="postgres"/>
+      <property name="hibernate.connection.password" value="123456789"/>
+    </properties>
+  </persistence-unit>
+</persistence>
