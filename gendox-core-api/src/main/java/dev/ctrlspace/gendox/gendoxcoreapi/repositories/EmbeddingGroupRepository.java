@@ -15,8 +15,6 @@ public interface EmbeddingGroupRepository extends JpaRepository<EmbeddingGroup, 
     @Query("SELECT eg.sectionId FROM EmbeddingGroup eg WHERE eg.embeddingId = :embeddingId")
     UUID findSectionIdByEmbeddingId(@Param("embeddingId") UUID embeddingId);
 
-
-    @Query("SELECT eg FROM EmbeddingGroup eg WHERE eg.embeddingId = :embeddingId")
-    EmbeddingGroup findEmbeddingGroupByEmbeddingId(@Param("embeddingId") UUID embeddingId);
+    EmbeddingGroup findByEmbeddingId(@Param("embeddingId") UUID embeddingId);
 
 }
