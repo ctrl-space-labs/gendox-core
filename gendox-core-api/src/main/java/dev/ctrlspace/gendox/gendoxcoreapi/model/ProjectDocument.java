@@ -1,8 +1,11 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -12,9 +15,10 @@ public class ProjectDocument {
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
-    @Basic
-    @Column(name = "project_id", nullable = false)
-    private UUID projectId;
+    @JsonManagedReference(value = "agent")
+    @ManyToOne
+    @JoinColumn(name = "project_id", referencedColumnName = "id", nullable = false)
+    private Project project;
     @Basic
     @Column(name = "document_id", nullable = false)
     private UUID documentId;
@@ -33,12 +37,12 @@ public class ProjectDocument {
         this.id = id;
     }
 
-    public UUID getProjectId() {
-        return projectId;
+    public Project getProject() {
+        return project;
     }
 
-    public void setProjectId(UUID projectId) {
-        this.projectId = projectId;
+    public void setProject(Project project) {
+        this.project = project;
     }
 
     public UUID getDocumentId() {
@@ -68,26 +72,12 @@ public class ProjectDocument {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        ProjectDocument that = (ProjectDocument) o;
-
-        if (id != null ? !id.equals(that.id) : that.id != null) return false;
-        if (projectId != null ? !projectId.equals(that.projectId) : that.projectId != null) return false;
-        if (documentId != null ? !documentId.equals(that.documentId) : that.documentId != null) return false;
-        if (createdAt != null ? !createdAt.equals(that.createdAt) : that.createdAt != null) return false;
-        if (updatedAt != null ? !updatedAt.equals(that.updatedAt) : that.updatedAt != null) return false;
-
-        return true;
+        if (!(o instanceof ProjectDocument that)) return false;
+        return Objects.equals(getId(), that.getId()) && Objects.equals(getProject(), that.getProject()) && Objects.equals(getDocumentId(), that.getDocumentId()) && Objects.equals(getCreatedAt(), that.getCreatedAt()) && Objects.equals(getUpdatedAt(), that.getUpdatedAt());
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (projectId != null ? projectId.hashCode() : 0);
-        result = 31 * result + (documentId != null ? documentId.hashCode() : 0);
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        return result;
+        return Objects.hash(getId(), getProject(), getDocumentId(), getCreatedAt(), getUpdatedAt());
     }
 }

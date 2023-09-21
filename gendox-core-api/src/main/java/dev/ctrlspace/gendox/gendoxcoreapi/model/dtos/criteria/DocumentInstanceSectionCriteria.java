@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-@AtLeastOneFieldIsNotEmpty(fieldNames = {QueryParamNames.ORGANIZATION_ID})
-public class DocumentCriteria {
+@AtLeastOneFieldIsNotEmpty(fieldNames = {QueryParamNames.PROJECT_ID})
+public class DocumentInstanceSectionCriteria {
 
-    private String organizationId;
-    private String userId;
+    private String projectId;
+    private String documentId;
 }
