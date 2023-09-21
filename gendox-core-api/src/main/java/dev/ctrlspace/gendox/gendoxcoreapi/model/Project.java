@@ -42,6 +42,11 @@ public class Project {
     @OneToOne(mappedBy = "project")
     private ProjectAgent projectAgent;
 
+    @Schema(hidden = true)
+    @JsonBackReference(value = "project")
+    @OneToMany(mappedBy = "project")
+    private List<ProjectDocument> projectDocuments ;
+
 
 
     public UUID getId() {

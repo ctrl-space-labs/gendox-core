@@ -46,31 +46,26 @@ public class ProjectMemberService {
         this.userOrganizationService = userOrganizationService;
     }
 
-   public List<ProjectMember> getAll(ProjectMemberCriteria criteria) throws GendoxException{
-       Pageable pageable = PageRequest.of(0, 100);
-       return getAll(criteria, pageable);
-   }
+    public List<ProjectMember> getAll(ProjectMemberCriteria criteria) throws GendoxException {
+        Pageable pageable = PageRequest.of(0, 100);
+        return getAll(criteria, pageable);
+    }
 
-   public List<ProjectMember> getAll(ProjectMemberCriteria criteria, Pageable pageable) throws GendoxException{
-       if (pageable == null) {
-           throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
-       }
-       return projectMemberRepository.findAll(ProjectMemberPredicates.build(criteria), pageable).toList();
-   }
-
-
-
+    public List<ProjectMember> getAll(ProjectMemberCriteria criteria, Pageable pageable) throws GendoxException {
+        if (pageable == null) {
+            throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
+        }
+        return projectMemberRepository.findAll(ProjectMemberPredicates.build(criteria), pageable).toList();
+    }
 
 
     public ProjectMember createProjectMember(ProjectMember projectMember) throws Exception {
         Instant now = Instant.now();
 
         // Check if the user is already a member of the project
-        if(projectMemberRepository.findByProjectIdAndUserId(projectMember.getProject().getId(), projectMember.getUser().getId()) != null){
+        if (projectMemberRepository.findByProjectIdAndUserId(projectMember.getProject().getId(), projectMember.getUser().getId()) != null) {
             throw new GendoxException("DUPLICATE_PROJECT_MEMBER", "User is already a member of this project ", HttpStatus.BAD_REQUEST);
         }
-
-
 
 
         if (projectMember.getId() != null) {
@@ -106,7 +101,7 @@ public class ProjectMemberService {
 
     public List<ProjectMember> createAllProjectMembers(Set<UUID> userIds, UUID projectId) throws Exception {
         List<ProjectMember> projectMembers = new ArrayList<>();
-        for (UUID userId: userIds) {
+        for (UUID userId : userIds) {
             projectMembers.add(
                     createProjectMember(userId, projectId));
         }
@@ -152,10 +147,10 @@ public class ProjectMemberService {
 
         // project's users
         Set<UUID> userIds = userOrganizationService.getAll(UserOrganizationCriteria
-                .builder()
-                .organizationId(organizationId.toString())
-                .roleName(RoleNamesConstants.ADMIN)
-                .build())
+                        .builder()
+                        .organizationId(organizationId.toString())
+                        .roleName(RoleNamesConstants.ADMIN)
+                        .build())
                 .stream()
                 .map(userOrganization -> userOrganization.getUser().getId())
                 .collect(Collectors.toSet());
@@ -191,7 +186,6 @@ public class ProjectMemberService {
     }
 
 
-
     public void removeMemberFromProject(UUID projectId, UUID userId) throws Exception {
         User user = userService.getById(userId);
         Project project = projectService.getProjectById(projectId);
@@ -201,7 +195,7 @@ public class ProjectMemberService {
         if (projectMember != null) {
             projectMemberRepository.deleteById(projectMember.getId());
         } else {
-            throw new GendoxException("PROJECT_MEMBER_NOT_FOUND", "Project not found with id: " + projectId +" or user with id: "+ userId, HttpStatus.NOT_FOUND);
+            throw new GendoxException("PROJECT_MEMBER_NOT_FOUND", "Project not found with id: " + projectId + " or user with id: " + userId, HttpStatus.NOT_FOUND);
         }
 
 

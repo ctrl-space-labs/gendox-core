@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.controller.UserController;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -21,7 +22,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
         JWTUtils.class,
         GendoxException.class,
         UserService.class,
-        UserRepository.class})
+        UserRepository.class,
+        AiModelService.class})
 @EnableJpaRepositories(basePackageClasses = {UserRepository.class})
 @EntityScan(basePackageClasses = {User.class})
 public class GendoxCoreApiApplication {
