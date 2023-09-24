@@ -6,6 +6,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.A
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +20,9 @@ import org.springframework.web.client.RestTemplate;
 @Service
 public class AiModelServiceImpl implements AiModelService {
 
+    @Value("${gendox.models.openai.ada2.key}")
+    private String ada2key;
+
     Logger logger = LoggerFactory.getLogger(AiModelServiceImpl.class);
 
     private static final RestTemplate restTemplate = new RestTemplate();
@@ -26,7 +31,7 @@ public class AiModelServiceImpl implements AiModelService {
     public HttpEntity<Ada2Request> buildHttpEntity(Ada2Request chatRequest) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType(OpenAIADA2.MEDIA_TYPE));
-        headers.add(OpenAIADA2.AUTHORIZATION, OpenAIADA2.BEARER + OpenAIADA2.API_KEY);
+        headers.add(OpenAIADA2.AUTHORIZATION, OpenAIADA2.BEARER + ada2key);
         return new HttpEntity<>(chatRequest, headers);
     }
 
