@@ -26,14 +26,6 @@ public interface EmbeddingRepository extends JpaRepository<Embedding, UUID>, Que
     List<Embedding> findNearestNeighbors(String embedding);
 
 
-
-
-
-
-
-
-
-
     // Find nearest neighbors by a record in the same table
     @Query(nativeQuery = true, value = "SELECT * FROM embeddings WHERE id != :id ORDER BY embedding <-> (SELECT embedding FROM items WHERE id = :id) LIMIT 5")
     List<Embedding> findNearestNeighbors(UUID id);

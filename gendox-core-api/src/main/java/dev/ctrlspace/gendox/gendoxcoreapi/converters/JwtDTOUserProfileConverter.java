@@ -25,7 +25,7 @@ public class JwtDTOUserProfileConverter {
                 .iss("https://auth.gendox.com/")
                 .sub(userProfile.getId().toString())
                 .aud(List.of("https://auth.gendox.com/", "https://api.gendox.com/", "https://app.gendox.com/"))
-                .exp(now.plusSeconds(3600))
+                .exp(now.plusSeconds(36000))
                 .nbf(now)
                 .iat(now)
                 .jti(UUID.randomUUID().toString())
