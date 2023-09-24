@@ -50,7 +50,7 @@ gendox:
   models:
     openai:
       ada2:
-        key: ${OPENAI_ADA_KEY}
+        key: ${OPENAI_KEY}
 
 
 # AWS
