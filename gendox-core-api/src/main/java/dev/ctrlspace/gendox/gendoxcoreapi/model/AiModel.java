@@ -14,7 +14,7 @@ public class AiModel {
     @Column(name = "id", nullable = false)
     private UUID id;
     @Basic
-    @Column(name = "name", nullable = false, length = -1)
+    @Column(name = "model_name", nullable = false, length = -1)
     private String name;
     @Basic
     @Column(name = "url", nullable = true, length = -1)
