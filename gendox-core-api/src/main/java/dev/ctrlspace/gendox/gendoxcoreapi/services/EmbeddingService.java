@@ -188,7 +188,7 @@ public class EmbeddingService {
         return message;
     }
 
-    public List<DocumentInstanceSection> findCloserSections(Message message, Integer size) throws GendoxException {
+    public List<DocumentInstanceSection> findCloserSections(Message message, Pageable pageable) throws GendoxException {
         Embedding messageEmbedding = createEmbedding(message.getValue());
         List<Embedding> nearestEmbeddings = new ArrayList<>();
 

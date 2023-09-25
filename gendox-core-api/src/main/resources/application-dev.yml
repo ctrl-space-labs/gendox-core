@@ -17,9 +17,9 @@ spring:
     hibernate:
       ddl-auto: none
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: 123456789
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -37,12 +37,13 @@ rsa:
   private-key: classpath:.env/local/local-non-production-use-private_key.pem
 
 
+
 gendox:
   documents:
     upload-dir: /tmp/gendox/documents
   #    upload-dir: s3://gendox-ducuments-bucket
   file:
-    location: c:\\Users\\Giannis\\Desktop\\gendox-files\\test
+    location: c:\\Users\\sekas\\Desktop\\gendox-files\\test
     wordCount: 30
     allowed:
       extensions: .txt,.md,.rst,.pdf

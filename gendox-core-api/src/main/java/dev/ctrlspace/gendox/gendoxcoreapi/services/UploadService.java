@@ -54,7 +54,7 @@ public class UploadService {
     private String s3BucketPath;
 
     // Define the location where you want to save uploaded files
-    @Value("${Gendox.file.location}")
+    @Value("${gendox.file.location}")
     private String location;
 
     public String uploadFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException, GendoxException {

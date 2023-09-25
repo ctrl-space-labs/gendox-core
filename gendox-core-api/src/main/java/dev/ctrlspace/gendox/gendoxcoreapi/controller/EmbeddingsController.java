@@ -70,9 +70,7 @@ public class EmbeddingsController {
     }
 
     @PostMapping("/messages/semantic-search")
-    public List<DocumentInstanceSection> findCloserSections(@RequestBody Message message,
-                                                            @RequestParam("size") Integer size,
-                                                            Pageable pageable) throws GendoxException{
+    public List<DocumentInstanceSection> findCloserSections(@RequestBody Message message, Pageable pageable) throws GendoxException{
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
         }
@@ -85,7 +83,7 @@ public class EmbeddingsController {
 
 
         List<DocumentInstanceSection> instanceSections = new ArrayList<>();
-        instanceSections = embeddingService.findCloserSections(message, size);
+        instanceSections = embeddingService.findCloserSections(message, pageable);
 
         return instanceSections;
     }
