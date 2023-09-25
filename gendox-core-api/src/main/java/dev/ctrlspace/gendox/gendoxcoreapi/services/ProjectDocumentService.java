@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectDocumentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +21,7 @@ public class ProjectDocumentService {
     private ProjectRepository projectRepository;
     private DocumentInstanceRepository documentInstanceRepository;
 
-
+    @Autowired
     public ProjectDocumentService(ProjectDocumentRepository projectDocumentRepository,
                                   ProjectRepository projectRepository,
                                   DocumentInstanceRepository documentInstanceRepository) {
@@ -48,7 +49,7 @@ public class ProjectDocumentService {
         ProjectDocument projectDocument = new ProjectDocument();
         Project project = new Project();
         project = projectRepository.findById(projectID)
-                        .orElseThrow(() -> new GendoxException("PROJECT_NOT_FOUND", "Project not found with id: " + projectID, HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new GendoxException("PROJECT_NOT_FOUND", "Project not found with id: " + projectID, HttpStatus.NOT_FOUND));
 
         DocumentInstance documentInstance = new DocumentInstance();
         documentInstance = documentInstanceRepository.findById(documentId)

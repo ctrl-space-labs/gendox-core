@@ -24,6 +24,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
+import org.springframework.data.domain.Pageable;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.*;
@@ -45,11 +46,15 @@ public class EmbeddingService {
     //  private JdbcTemplate jdbcTemplate;
     private MessageConverter messageConverter;
     private MessageRepository messageRepository;
+    private TypeService typeService;
+    private AiModelRepository aiModelRepository;
+
 
 
     @Autowired
     private JWTUtils jwtUtils;
 
+    @Autowired
     public EmbeddingService(AiModelService aiModelService,
                             EmbeddingRepository embeddingRepository,
                             DocumentInstanceSectionRepository sectionRepository,
@@ -60,7 +65,9 @@ public class EmbeddingService {
                             DocumentInstanceSectionRepository documentInstanceSectionRepository/*,
                             JdbcTemplate jdbcTemplate*/,
                             MessageConverter messageConverter,
-                            MessageRepository messageRepository) {
+                            MessageRepository messageRepository,
+                            TypeService typeService,
+                            AiModelRepository aiModelRepository) {
         this.aiModelService = aiModelService;
         this.embeddingRepository = embeddingRepository;
         this.sectionRepository = sectionRepository;
@@ -72,6 +79,8 @@ public class EmbeddingService {
 //        this.jdbcTemplate = jdbcTemplate;
         this.messageConverter = messageConverter;
         this.messageRepository = messageRepository;
+        this.typeService = typeService;
+        this.aiModelRepository = aiModelRepository;
     }
 
     public Embedding createEmbedding(String value) throws GendoxException {
@@ -163,8 +172,8 @@ public class EmbeddingService {
         embeddingGroup.setId(UUID.randomUUID());
         embeddingGroup.setEmbeddingId(embeddingId);
         embeddingGroup.setTokenCount(Double.valueOf(auditLogs.getTokenCount()));
-        embeddingGroup.setGroupingStrategyType(33L);
-        embeddingGroup.setSemanticSearchModel(33L);
+        embeddingGroup.setGroupingStrategyType(typeService.getGroupingTypeByName("STRATEGY_TYPE").getId());
+        embeddingGroup.setSemanticSearchModelId(aiModelRepository.findByName("Ada2").getId());
 
         embeddingGroup.setCreatedAt(Instant.now());
         embeddingGroup.setUpdatedAt(Instant.now());
