@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 
 import java.sql.Timestamp;
@@ -7,18 +8,20 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.Type;
 import java.util.Vector;
 
 import com.pgvector.PGvector;
 
 @Entity
-@Table(name = "embedding", schema = "gendox_core", catalog = "postgres")
+@Table(name = "embedding", schema = "gendox_core")
 public class Embedding {
 //    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
     @Column(name = "id")
     private UUID id;
     @Basic
+    @Type(JsonType.class)
     @Column(name = "embedding_vector", columnDefinition = "vector")
     private List<Double> embeddingVector;
     @Basic

@@ -10,7 +10,7 @@ import java.util.List;
 @Component
 public class StaticWordCountSplitter implements DocumentSplitter {
 
-    @Value("${Gendox.file.wordCount}")
+    @Value("${gendox.file.wordCount}")
     private int wordCount;
 
     /**
