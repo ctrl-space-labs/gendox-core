@@ -56,7 +56,6 @@ public class ProjectService {
             throw new GendoxException("NEW_PROJECT_ID_IS_NOT_NULL", "Project id must be null", HttpStatus.BAD_REQUEST);
         }
 
-
         project.setCreatedAt(now);
         project.setUpdatedAt(now);
 
@@ -65,19 +64,12 @@ public class ProjectService {
         // set up default Agent
         ProjectAgent projectAgent = new ProjectAgent();
         projectAgent.setProject(project);
-        projectAgent.setAgentName(project.getName() + "Agent");
+        projectAgent.setAgentName(project.getName() + " Agent");
         projectAgent = projectAgentService.createProjectAgent(projectAgent);
         project.setProjectAgent(projectAgent);
 
-
-
-
-
         // Project's Admins & Creator become members of the project
         projectMemberService.addDefaultMembersToTheProject(project, project.getOrganizationId());
-
-
-
 
         return project;
 

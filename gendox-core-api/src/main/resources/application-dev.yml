@@ -20,6 +20,10 @@ spring:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
+#  datasource:
+#    url: jdbc:postgresql://localhost:5432/postgres
+#    username: postgres
+#    password: 123456789
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -43,7 +47,8 @@ gendox:
     upload-dir: /tmp/gendox/documents
   #    upload-dir: s3://gendox-ducuments-bucket
   file:
-    location: c:\\Users\\sekas\\Desktop\\gendox-files\\test
+#    location: c:\\Users\\sekas\\Desktop\\gendox-files\\test
+    location: c:\\Users\\Giannis\\Desktop\\gendox-files\\test
     wordCount: 30
     allowed:
       extensions: .txt,.md,.rst,.pdf
@@ -65,3 +70,10 @@ s3:
   bucket:
     name: gendox-bucket-test
 
+
+# Discord
+
+discord:
+  bots:
+    gendox-bot:
+      token: "MTE1NTkzMDM1OTk5NzkyNzU1NA.G5dhiP.GhQRnxdYCyRNCCZToZGIgDbT8oNGMHsYAnQKeI"

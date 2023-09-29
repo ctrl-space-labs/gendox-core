@@ -1,8 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
+import dev.ctrlspace.gendox.gendoxcoreapi.controller.EmbeddingsController;
 import dev.ctrlspace.gendox.gendoxcoreapi.controller.UserController;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.discord.Listener;
+import dev.ctrlspace.gendox.gendoxcoreapi.discord.ListenerService;
+import dev.ctrlspace.gendox.gendoxcoreapi.discord.commands.AskGendox;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
@@ -23,7 +27,10 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
         GendoxException.class,
         UserService.class,
         UserRepository.class,
-        AiModelService.class})
+        AiModelService.class,
+        Listener.class,
+        AskGendox.class
+        })
 @EnableJpaRepositories(basePackageClasses = {UserRepository.class})
 @EntityScan(basePackageClasses = {User.class})
 public class GendoxCoreApiApplication {

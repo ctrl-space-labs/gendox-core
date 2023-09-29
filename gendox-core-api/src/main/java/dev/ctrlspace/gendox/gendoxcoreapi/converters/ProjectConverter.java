@@ -1,9 +1,11 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectAgentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -11,10 +13,13 @@ import org.springframework.stereotype.Component;
 public class ProjectConverter implements GendoxConverter<Project, ProjectDTO> {
 
     private ProjectAgentConverter projectAgentConverter;
+    private ProjectAgentService projectAgentService;
 
     @Autowired
-    public ProjectConverter(ProjectAgentConverter projectAgentConverter) {
+    public ProjectConverter(ProjectAgentConverter projectAgentConverter,
+                            ProjectAgentService projectAgentService) {
         this.projectAgentConverter = projectAgentConverter;
+        this.projectAgentService = projectAgentService;
     }
 
     @Override
@@ -28,8 +33,8 @@ public class ProjectConverter implements GendoxConverter<Project, ProjectDTO> {
         projectDTO.setCreatedAt(project.getCreatedAt());
         projectDTO.setUpdatedAt(project.getUpdatedAt());
 
-        ProjectAgentDTO agentDTO = projectAgentConverter.toDTO(project.getProjectAgent());
-        projectDTO.setProjectAgentDTO(agentDTO);
+//        ProjectAgentDTO agentDTO = projectAgentConverter.toDTO(project.getProjectAgent());
+//        projectDTO.setProjectAgentDTO(agentDTO);
 
 
 
@@ -47,8 +52,13 @@ public class ProjectConverter implements GendoxConverter<Project, ProjectDTO> {
         project.setCreatedAt(projectDTO.getCreatedAt());
         project.setUpdatedAt(projectDTO.getUpdatedAt());
 
-        ProjectAgent agent = projectAgentConverter.toEntity(projectDTO.getProjectAgentDTO());
-        project.setProjectAgent(agent);
+//        ProjectAgent agent = projectAgentConverter.toEntity(projectDTO.getProjectAgentDTO());
+//        try {
+//            agent = projectAgentService.createProjectAgent(agent);
+//        } catch (Exception e){
+//            System.out.println("Exception");
+//        }
+//        project.setProjectAgent(agent);
 
 
 
