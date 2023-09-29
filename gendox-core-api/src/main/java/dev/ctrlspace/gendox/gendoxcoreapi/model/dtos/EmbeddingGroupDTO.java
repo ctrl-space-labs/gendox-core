@@ -19,6 +19,6 @@ public class EmbeddingGroupDTO {
     private UUID embeddingId;
     private Double tokenCount;
     private Long groupingStrategyTypeId;
-    private Long semanticSearchModelId;
+    private UUID semanticSearchModelId;
 
 }

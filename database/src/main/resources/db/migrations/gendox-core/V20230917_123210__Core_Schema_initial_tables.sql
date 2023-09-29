@@ -1,4 +1,4 @@
-CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS vector schema public;
 
 CREATE TABLE IF NOT EXISTS gendox_core.message
 (

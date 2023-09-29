@@ -41,7 +41,7 @@ public class EmbeddingGroup {
 
     @Basic
     @Column(name = "semantic_search_model_id")
-    private Long semanticSearchModel;
+    private UUID semanticSearchModelId;
 
     @Basic
     @Column(name = "created_at")
@@ -104,12 +104,12 @@ public class EmbeddingGroup {
         this.groupingStrategyType = groupingStrategyType;
     }
 
-    public Long getSemanticSearchModel() {
-        return semanticSearchModel;
+    public UUID getSemanticSearchModelId() {
+        return semanticSearchModelId;
     }
 
-    public void setSemanticSearchModel(Long semanticSearchModel) {
-        this.semanticSearchModel = semanticSearchModel;
+    public void setSemanticSearchModelId(UUID semanticSearchModelId) {
+        this.semanticSearchModelId = semanticSearchModelId;
     }
 
     public Instant getCreatedAt() {
@@ -148,11 +148,11 @@ public class EmbeddingGroup {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof EmbeddingGroup that)) return false;
-        return Objects.equals(getId(), that.getId()) && Objects.equals(getSectionId(), that.getSectionId()) && Objects.equals(getMessageId(), that.getMessageId()) && Objects.equals(getEmbeddingId(), that.getEmbeddingId()) && Objects.equals(getTokenCount(), that.getTokenCount()) && Objects.equals(getGroupingStrategyType(), that.getGroupingStrategyType()) && Objects.equals(getSemanticSearchModel(), that.getSemanticSearchModel()) && Objects.equals(getCreatedAt(), that.getCreatedAt()) && Objects.equals(getUpdatedAt(), that.getUpdatedAt()) && Objects.equals(getCreatedBy(), that.getCreatedBy()) && Objects.equals(getUpdatedBy(), that.getUpdatedBy());
+        return Objects.equals(getId(), that.getId()) && Objects.equals(getSectionId(), that.getSectionId()) && Objects.equals(getMessageId(), that.getMessageId()) && Objects.equals(getEmbeddingId(), that.getEmbeddingId()) && Objects.equals(getTokenCount(), that.getTokenCount()) && Objects.equals(getGroupingStrategyType(), that.getGroupingStrategyType()) && Objects.equals(getSemanticSearchModelId(), that.getSemanticSearchModelId()) && Objects.equals(getCreatedAt(), that.getCreatedAt()) && Objects.equals(getUpdatedAt(), that.getUpdatedAt()) && Objects.equals(getCreatedBy(), that.getCreatedBy()) && Objects.equals(getUpdatedBy(), that.getUpdatedBy());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getSectionId(), getMessageId(), getEmbeddingId(), getTokenCount(), getGroupingStrategyType(), getSemanticSearchModel(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy());
+        return Objects.hash(getId(), getSectionId(), getMessageId(), getEmbeddingId(), getTokenCount(), getGroupingStrategyType(), getSemanticSearchModelId(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy());
     }
 }

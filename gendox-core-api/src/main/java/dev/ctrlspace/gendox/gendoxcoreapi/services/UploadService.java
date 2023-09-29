@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentSectionMetadataDTO;
@@ -30,6 +31,8 @@ public class UploadService {
     private TypeService typeService;
     private StaticWordCountSplitter staticWordCountSplitter;
 
+    private ProjectDocumentService projectDocumentService;
+
     @Autowired
     private ResourceLoader resourceLoader;
 
@@ -37,11 +40,13 @@ public class UploadService {
     public UploadService(DocumentService documentService,
                          DocumentConverter documentConverter,
                          TypeService typeService,
-                         StaticWordCountSplitter staticWordCountSplitter) {
+                         StaticWordCountSplitter staticWordCountSplitter,
+                         ProjectDocumentService projectDocumentService) {
         this.documentService = documentService;
         this.documentConverter = documentConverter;
         this.typeService = typeService;
         this.staticWordCountSplitter = staticWordCountSplitter;
+        this.projectDocumentService = projectDocumentService;
     }
 
     // Define the S3 bucket path
@@ -49,7 +54,7 @@ public class UploadService {
     private String s3BucketPath;
 
     // Define the location where you want to save uploaded files
-    @Value("${Gendox.file.location}")
+    @Value("${gendox.file.location}")
     private String location;
 
     public String uploadFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException, GendoxException {
@@ -82,6 +87,9 @@ public class UploadService {
 
         // create document
         DocumentInstance instance = createFileDocument(instanceDTO, sectionDTOs);
+
+        ProjectDocument projectDocument = new ProjectDocument();
+        projectDocument = projectDocumentService.createProjectDocument(projectId, instance.getId());
 
 
         return content;

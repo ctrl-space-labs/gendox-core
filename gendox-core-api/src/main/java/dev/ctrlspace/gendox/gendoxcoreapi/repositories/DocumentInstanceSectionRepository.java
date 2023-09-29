@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -18,7 +19,18 @@ public interface DocumentInstanceSectionRepository extends JpaRepository<Documen
     public List<DocumentInstanceSection> findByDocumentInstance(UUID documentInstanceId);
 
     @Query("SELECT dis FROM DocumentInstanceSection dis " +
+            "INNER JOIN ProjectDocument pd ON dis.documentInstance.id = pd.documentId " +
+            "WHERE pd.project.id = :projectId")
+    public List<DocumentInstanceSection> findByProjectId(@Param("projectId") UUID projectId);
+
+    @Query("SELECT dis FROM DocumentInstanceSection dis " +
             "INNER JOIN EmbeddingGroup eg ON dis.id = eg.sectionId " + // Adjust the join condition as needed
             "WHERE eg.embeddingId IN :embeddingIds")
     public List<DocumentInstanceSection> findByEmbeddingIds(Set<UUID> embeddingIds);
+
+    @Query("SELECT dis FROM DocumentInstanceSection dis " +
+            "INNER JOIN ProjectDocument pd ON dis.documentInstance.id = pd.documentId " +
+            "INNER JOIN EmbeddingGroup eg ON dis.id = eg.sectionId " +
+            "WHERE pd.project.id = :projectId AND eg.embeddingId IN :embeddingIds")
+    public List<DocumentInstanceSection> findByProjectAndEmbeddingIds(UUID projectId, Set<UUID> embeddingIds);
 }

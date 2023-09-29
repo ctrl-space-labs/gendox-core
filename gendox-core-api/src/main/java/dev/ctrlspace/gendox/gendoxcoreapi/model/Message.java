@@ -1,6 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
 
 
 import java.time.Instant;
@@ -9,6 +12,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "message", schema = "gendox_core", catalog = "postgres")
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder(toBuilder = true)
 public class Message {
 //    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id

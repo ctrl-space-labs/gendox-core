@@ -3,27 +3,21 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.BotRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Ada2Response;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageDto;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -60,34 +54,64 @@ public class EmbeddingsController {
 
 
     @PostMapping("/embeddings/sections/{sectionId}")
-    public Embedding getSectionEmbedding(@PathVariable UUID sectionId) throws GendoxException {
-        return embeddingService.createSectionsEmbedding(sectionId);
+    public Embedding getSectionEmbedding(@PathVariable UUID sectionId, @RequestParam String projectId) throws GendoxException {
+        return embeddingService.runTrainingForSection(sectionId, UUID.fromString(projectId));
     }
 
     @PostMapping("/embeddings/projects/{projectId}")
     public List<Embedding> getProjectEmbeddings(@PathVariable UUID projectId) throws GendoxException {
-        return embeddingService.createProjectEmbeddings(projectId);
+        return embeddingService.runTrainingForProject(projectId);
     }
 
     @PostMapping("/messages/semantic-search")
     public List<DocumentInstanceSection> findCloserSections(@RequestBody Message message,
-                                                            @RequestParam("size") Integer size,
-                                                            Pageable pageable) throws GendoxException{
+                                                            @RequestParam String projectId,
+                                                            Pageable pageable) throws GendoxException {
         if (pageable == null) {
-            pageable = PageRequest.of(0, 100);
+            pageable = PageRequest.of(0, 5);
         }
-        if (pageable.getPageSize() > 100) {
-            throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 100", HttpStatus.BAD_REQUEST);
+        if (pageable.getPageSize() > 5) {
+            throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
         }
 
-        message.setId(UUID.randomUUID());
+
         message = embeddingService.createMessage(message);
 
 
+
         List<DocumentInstanceSection> instanceSections = new ArrayList<>();
-        instanceSections = embeddingService.findCloserSections(message, size);
+        instanceSections = embeddingService.findClosestSections(message,UUID.fromString(projectId));
 
         return instanceSections;
+    }
+
+
+    @PostMapping("/messages/semantic-completion")
+    public CompletionMessageDTO getCompletionSearch(@RequestBody Message message,
+                                                    @RequestParam String projectId,
+                                                    Pageable pageable) throws GendoxException {
+        if (pageable == null) {
+            pageable = PageRequest.of(0, 5);
+        }
+        if (pageable.getPageSize() > 5) {
+            throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
+        }
+
+
+        message = embeddingService.createMessage(message);
+
+        List<DocumentInstanceSection> instanceSections = embeddingService.findClosestSections(message,UUID.fromString(projectId));
+
+        Message completion = embeddingService.getCompletion(message, instanceSections, UUID.fromString(projectId));
+
+        CompletionMessageDTO completionMessageDTO = CompletionMessageDTO.builder()
+                .message(completion)
+                .sectionId(instanceSections.stream().map(DocumentInstanceSection::getId).toList())
+                .build();
+
+
+
+        return completionMessageDTO;
     }
 
 
