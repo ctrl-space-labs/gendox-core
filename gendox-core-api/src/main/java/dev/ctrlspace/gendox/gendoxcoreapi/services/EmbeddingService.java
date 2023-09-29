@@ -1,26 +1,33 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.BotRequest;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.Gpt35Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Ada2Response;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35Response;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelServiceImpl;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.EmbeddingGroupConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageGpt35MessageConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiEmbeddingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import org.apache.commons.text.StringSubstitutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.common.TemplateParserContext;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
-
-import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.util.*;
@@ -32,13 +39,15 @@ public class EmbeddingService {
     Logger logger = LoggerFactory.getLogger(AiModelServiceImpl.class);
 
     private AiModelService aiModelService;
+    private ProjectService projectService;
     private EmbeddingRepository embeddingRepository;
     private DocumentInstanceSectionRepository sectionRepository;
     private AuditLogsRepository auditLogsRepository;
     private EmbeddingGroupRepository embeddingGroupRepository;
+    private MessageGpt35MessageConverter messageGpt35MessageConverter;
     private EmbeddingGroupConverter embeddingGroupConverter;
     private ProjectDocumentRepository projectDocumentRepository;
-    private DocumentInstanceSectionRepository documentInstanceSectionRepository;
+    private DocumentService documentService;
     //  private JdbcTemplate jdbcTemplate;
     private MessageConverter messageConverter;
     private MessageRepository messageRepository;
@@ -46,63 +55,115 @@ public class EmbeddingService {
     private AiModelRepository aiModelRepository;
     private UserRepository userRepository;
 
+    private OpenAiEmbeddingConverter openAiEmbeddingConverter;
+
 
     @Autowired
     private JWTUtils jwtUtils;
 
     @Autowired
     public EmbeddingService(AiModelService aiModelService,
+                            ProjectService projectService,
                             EmbeddingRepository embeddingRepository,
+                            MessageGpt35MessageConverter messageGpt35MessageConverter,
                             DocumentInstanceSectionRepository sectionRepository,
                             AuditLogsRepository auditLogsRepository,
                             EmbeddingGroupRepository embeddingGroupRepository,
                             EmbeddingGroupConverter embeddingGroupConverter,
                             ProjectDocumentRepository projectDocumentRepository,
-                            DocumentInstanceSectionRepository documentInstanceSectionRepository/*,
+                            DocumentService documentService/*,
                             JdbcTemplate jdbcTemplate*/,
                             MessageConverter messageConverter,
                             MessageRepository messageRepository,
                             TypeService typeService,
+                            OpenAiEmbeddingConverter openAiEmbeddingConverter,
                             AiModelRepository aiModelRepository,
                             UserRepository userRepository) {
         this.aiModelService = aiModelService;
         this.embeddingRepository = embeddingRepository;
+        this.projectService = projectService;
         this.sectionRepository = sectionRepository;
         this.auditLogsRepository = auditLogsRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
         this.embeddingGroupConverter = embeddingGroupConverter;
         this.projectDocumentRepository = projectDocumentRepository;
-        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
+        this.documentService = documentService;
 //        this.jdbcTemplate = jdbcTemplate;
         this.messageConverter = messageConverter;
+        this.messageGpt35MessageConverter = messageGpt35MessageConverter;
         this.messageRepository = messageRepository;
         this.typeService = typeService;
         this.aiModelRepository = aiModelRepository;
         this.userRepository = userRepository;
+        this.openAiEmbeddingConverter = openAiEmbeddingConverter;
     }
 
-    public Embedding calculateEmbeddingForText(String value, UUID projectId) throws GendoxException {
-        BotRequest botRequest = new BotRequest();
-        botRequest.setMessage(value);
-        Ada2Response ada2Response = aiModelService.askEmbedding(botRequest);
-        Embedding embedding = new Embedding();
+    public Embedding createEmbedding(Embedding embedding) throws GendoxException {
+        Instant now = Instant.now();
 
-        embedding.setEmbeddingVector(ada2Response.getData().get(0).getEmbedding());
+
+        if (embedding.getId() != null) {
+            throw new GendoxException("NEW_EMBEDDING_ID_IS_NOT_NULL", "Embedding id must be null", HttpStatus.BAD_REQUEST);
+        }
         embedding.setId(UUID.randomUUID());
-        embedding.setCreatedAt(Instant.now());
-        embedding.setUpdatedAt(Instant.now());
+        embedding.setCreatedAt(now);
+        embedding.setUpdatedAt(now);
         embedding.setCreatedBy(getUserId());
         embedding.setUpdatedBy(getUserId());
 
         embedding = embeddingRepository.save(embedding);
+        return embedding;
+
+    }
+
+    /**
+     * Calculates the embedding for a message
+     * It created and stores the embedding and the embedding group
+     * Logs to audit logs
+     *
+     * @param value the text on which the embedding will be calculated
+     * @param projectId the project/Agent that is involved
+     * @return
+     * @throws GendoxException
+     */
+
+    public Embedding calculateEmbeddingForText(String value, UUID projectId) throws GendoxException {
+        Ada2Response ada2Response = getAda2EmbeddingForMessage(value);
+        Embedding embedding = openAiEmbeddingConverter.toEntity(ada2Response);
+        embedding = createEmbedding(embedding);
 
         AuditLogs auditLogs = new AuditLogs();
         auditLogs = createAuditLogs(projectId, (long) ada2Response.getUsage().getTotalTokens());
 
-        EmbeddingGroup group = new EmbeddingGroup();
-        group = createEmbeddingGroup(embedding.getId(), Double.valueOf(ada2Response.getUsage().getTotalTokens()));
+        EmbeddingGroup group = createEmbeddingGroup(embedding.getId(), Double.valueOf(ada2Response.getUsage().getTotalTokens()));
 
         return embedding;
+    }
+
+    private Ada2Response getAda2EmbeddingForMessage(String value) {
+        BotRequest botRequest = new BotRequest();
+        botRequest.setMessage(value);
+        Ada2Response ada2Response = aiModelService.askEmbedding(botRequest);
+
+        return ada2Response;
+    }
+
+    private Gpt35Response getCompletionForMessages(List<Message> messages, String agentRole) throws GendoxException {
+
+        //TODO add in DB table message, a field for the role of the message
+        // if the message is from a user it will have role: "user" (or the role: ${userName})
+        // if the message is from the agent it will have the role: ${agentName}
+        // for the time being only 1 message will be in the list, from the user
+
+        List<Gpt35Message> gpt35Messages = new ArrayList<>();
+        for (Message message : messages) {
+            Gpt35Message gpt35Message = messageGpt35MessageConverter.toDTO(message);
+            gpt35Messages.add(gpt35Message);
+        }
+
+        Gpt35Response ada2Response = aiModelService.askCompletion(gpt35Messages, agentRole);
+
+        return ada2Response;
     }
 
 
@@ -183,7 +244,7 @@ public class EmbeddingService {
         return embeddingGroup;
     }
 
-    public Message createMessage(Message message) throws GendoxException {
+    public Message createMessage(Message message) {
 
         message.setId(UUID.randomUUID());
         message.setCreatedAt(Instant.now());
@@ -196,23 +257,107 @@ public class EmbeddingService {
         return message;
     }
 
-    public List<DocumentInstanceSection> findClosestSections(Message message, UUID projectId) throws GendoxException {
-        Embedding messageEmbedding = calculateEmbeddingForText(message.getValue(), projectId);
+    /**
+     * Get an Embedding and returns the nearest Embeddings for this specific project
+     * @param embedding
+     * @param projectId
+     * @param pageRequest
+     * @return
+     * @throws GendoxException
+     */
+    public List<Embedding> findNearestEmbeddings(Embedding embedding, UUID projectId, PageRequest pageRequest) throws GendoxException {
         List<Embedding> nearestEmbeddings = new ArrayList<>();
 
         StringBuilder sb = new StringBuilder("[");
-        sb.append(messageEmbedding.getEmbeddingVector().stream()
+        sb.append(embedding.getEmbeddingVector().stream()
                 .map(String::valueOf)
                 .collect(Collectors.joining(",")));
         sb.append("]");
 
 
-        nearestEmbeddings = embeddingRepository.findClosestSections(projectId, sb.toString());
+        nearestEmbeddings = embeddingRepository.findClosestSections(projectId, sb.toString(), pageRequest.getPageSize());
+        return nearestEmbeddings;
+    }
+
+    public List<DocumentInstanceSection> findClosestSections(Message message, UUID projectId) throws GendoxException {
+        Embedding messageEmbedding = calculateEmbeddingForText(message.getValue(), projectId);
+
+        List<Embedding> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, PageRequest.of(0, 5));
+
+
         Set<UUID> nearestEmbeddingsIds = nearestEmbeddings.stream().map(emb -> emb.getId()).collect(Collectors.toSet());
-        List<DocumentInstanceSection> sections = new ArrayList<>();
-        sections = documentInstanceSectionRepository.findByEmbeddingIds(nearestEmbeddingsIds);
+        List<DocumentInstanceSection> sections = documentService.getSectionsByEmbeddingsIn(projectId, nearestEmbeddingsIds);
+
         return sections;
     }
+
+    public Message getCompletion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
+        String question = convertToGPTTextQuestion(message, nearestSections, projectId);
+        Project project = projectService.getProjectById(projectId);
+
+        // clone message to avoid changing the original message text in DB
+        Message promptMessage = message.toBuilder().value(question).build();
+
+
+        Gpt35Response gpt35Response = getCompletionForMessages(List.of(promptMessage), project.getProjectAgent().getAgentBehavior());
+
+        // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)
+        AuditLogs auditLogs = createAuditLogs(projectId, (long) gpt35Response.getUsage().getTotalTokens());
+        Message completionResponseMessage = messageGpt35MessageConverter.toEntity(gpt35Response.getChoices().get(0).getMessage());
+        // TODO save the above response message
+
+        return completionResponseMessage;
+
+    }
+
+    private String convertToGPTTextQuestion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) {
+        // TODO investigate if we want to split the context and question
+        //  to 2 different messages with role: "contextProvider" and role: "user"
+        String chatGptTemplate = """
+        Context:
+        ${context}
+        Question:
+        ${question}
+        """;
+
+        String sectionTemplate = """
+        Title: ${documentTitle}
+        ${sectionText}
+        Source: ${source}
+        User: ${user}
+        ----------------
+        """;
+        Map<String, String> sectionTemplateValues = toSectionValues(nearestSections.get(0), projectId);
+        StringBuilder sb = new StringBuilder();
+        sb.append(nearestSections.stream()
+                .map(section ->
+                        processTemplate(sectionTemplate, toSectionValues(section, projectId)))
+                .collect(Collectors.joining("\n")));
+
+        Map<String, String> questionTemplateValues = new HashMap<>();
+        questionTemplateValues.put("context", sb.toString());
+        questionTemplateValues.put("question", message.getValue());
+        String question = processTemplate(chatGptTemplate, questionTemplateValues);
+        return question;
+    }
+
+    private Map<String, String> toSectionValues(DocumentInstanceSection documentInstanceSection, UUID projectId) {
+        Map<String, String> values = new HashMap<>();
+        // TODO fix title
+        values.put("documentTitle", documentInstanceSection.getDocumentInstance().getRemoteUrl());
+        values.put("sectionText", documentInstanceSection.getSectionValue());
+        // TODO fix source
+        values.put("source", "gendox.ctrlspace.dev/sections/1");
+        values.put("user", "gendox admin");
+
+        return values;
+    }
+
+    public String processTemplate(String template, Map<String, String> values) {
+        String result = StringSubstitutor.replace(template, values);
+        return result;
+    }
+
 
     public UUID getUserId() {
         if (SecurityContextHolder.getContext().getAuthentication() == null) {

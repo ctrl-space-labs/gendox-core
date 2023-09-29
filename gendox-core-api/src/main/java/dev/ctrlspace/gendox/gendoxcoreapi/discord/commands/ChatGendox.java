@@ -2,13 +2,17 @@ package dev.ctrlspace.gendox.gendoxcoreapi.discord.commands;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.ListenerService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -16,28 +20,33 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-
 @Component
-public class AskGendox implements ICommand {
+public class ChatGendox implements ICommand {
+
+    Logger logger = org.slf4j.LoggerFactory.getLogger(ChatGendox.class);
 
     private ListenerService listenerService;
     private ProjectRepository projectRepository;
 
+    private EmbeddingService embeddingService;
+
     @Autowired
-    public AskGendox(ListenerService listenerService,
-                     ProjectRepository projectRepository) {
+    public ChatGendox(ListenerService listenerService,
+                      EmbeddingService embeddingService,
+                      ProjectRepository projectRepository) {
         this.listenerService = listenerService;
+        this.embeddingService = embeddingService;
         this.projectRepository = projectRepository;
     }
 
     @Override
     public String getName() {
-        return "ask";
+        return "chat";
     }
 
     @Override
     public String getDescription() {
-        return "Perform Semantic Search to the Knowledge Base";
+        return "Chat with Gendox AI Agent";
     }
 
     @Override
@@ -46,7 +55,7 @@ public class AskGendox implements ICommand {
         data.add(new OptionData(
                 OptionType.STRING,
                 "question",
-                "Ask Gendox",
+                "Chat with Gendox AI Agent",
                 true));
         return data;
     }
@@ -68,7 +77,7 @@ public class AskGendox implements ICommand {
             }
 
 
-            List<MessageEmbed> messageEmbeds = listenerService.semanticSearchForQuestion(event, channelName);
+            List<MessageEmbed> messageEmbeds = listenerService.completionForQuestion(event, channelName);
 
             // Get the message content from the event
             String question = listenerService.getTheQuestion(event);
@@ -82,21 +91,6 @@ public class AskGendox implements ICommand {
         } catch (GendoxException e) {
             System.err.println("An arithmetic exception occurred: " + e.getMessage());
         }
+
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
