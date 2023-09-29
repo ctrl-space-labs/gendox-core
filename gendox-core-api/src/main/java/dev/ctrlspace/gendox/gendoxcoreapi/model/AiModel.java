@@ -22,9 +22,9 @@ public class AiModel {
     @Basic
     @Column(name = "type", nullable = true, length = -1)
     private String type;
-    @Basic
-    @Column(name = "api_key", nullable = true, length = -1)
-    private String apiKey;
+//    @Basic
+//    @Column(name = "api_key", nullable = true, length = -1)
+//    private String apiKey;
     @Basic
     @Column(name = "price", nullable = false, precision = 12)
     private BigDecimal price;
@@ -67,13 +67,7 @@ public class AiModel {
         this.type = type;
     }
 
-    public String getApiKey() {
-        return apiKey;
-    }
 
-    public void setApiKey(String apiKey) {
-        this.apiKey = apiKey;
-    }
 
     public BigDecimal getPrice() {
         return price;
@@ -110,7 +104,6 @@ public class AiModel {
         if (name != null ? !name.equals(aiModel.name) : aiModel.name != null) return false;
         if (url != null ? !url.equals(aiModel.url) : aiModel.url != null) return false;
         if (type != null ? !type.equals(aiModel.type) : aiModel.type != null) return false;
-        if (apiKey != null ? !apiKey.equals(aiModel.apiKey) : aiModel.apiKey != null) return false;
         if (price != null ? !price.equals(aiModel.price) : aiModel.price != null) return false;
         if (createdAt != null ? !createdAt.equals(aiModel.createdAt) : aiModel.createdAt != null) return false;
         if (updatedAt != null ? !updatedAt.equals(aiModel.updatedAt) : aiModel.updatedAt != null) return false;
@@ -124,7 +117,6 @@ public class AiModel {
         result = 31 * result + (name != null ? name.hashCode() : 0);
         result = 31 * result + (url != null ? url.hashCode() : 0);
         result = 31 * result + (type != null ? type.hashCode() : 0);
-        result = 31 * result + (apiKey != null ? apiKey.hashCode() : 0);
         result = 31 * result + (price != null ? price.hashCode() : 0);
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
         result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);

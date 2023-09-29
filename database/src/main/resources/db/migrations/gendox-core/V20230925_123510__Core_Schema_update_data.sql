@@ -2,8 +2,8 @@
 -- Insert data for Grouping Strategy
 INSERT into gendox_core.types
 (type_category, name, description)
-select '"GROUPING_STRATEGY_TYPE"', '"SIMPLE_SECTION"', 'Simple section grouping strategy type'
-    where not exists(SELECT * FROM gendox_core.types where type_category = '"GROUPING_STRATEGY_TYPE"' and name = '"SIMPLE_SECTION"');
+select 'GROUPING_STRATEGY_TYPE', 'SIMPLE_SECTION', 'Simple section grouping strategy type'
+    where not exists(SELECT * FROM gendox_core.types where type_category = 'GROUPING_STRATEGY_TYPE' and name = 'SIMPLE_SECTION');
 
 INSERT into gendox_core.types
 (type_category, name, description)
@@ -23,11 +23,16 @@ END $$;
 
 -- Insert Data to table ai_models
 INSERT into gendox_core.ai_models
-(model_name, url, type, api_key, price)
-select 'Ada2', 'https://api.openai.com/v1/embeddings', 'text-embedding-ada-002', 'sk-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 12
-    where not exists(SELECT * FROM gendox_core.ai_models where model_name = 'Ada2' and api_key = 'sk-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+(model_name, url, type, price)
+select 'Ada2', 'https://api.openai.com/v1/embeddings', 'text-embedding-ada-002', 12
+    where not exists(SELECT * FROM gendox_core.ai_models where model_name = 'Ada2');
 
 
+-- Insert Data to table users
+INSERT into gendox_core.users
+(name, email, global_role_id)
+select 'Discord', 'discord@discord.com', 2
+    where not exists(SELECT * FROM gendox_core.users where name = 'Discord' and email = 'discord@discord.com');
 
 
 -- Change from table embedding_group, the column's semantic_search_model_id type and foreign key
