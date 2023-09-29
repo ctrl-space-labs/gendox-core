@@ -16,7 +16,7 @@ public class EmbeddingGroupConverter implements GendoxConverter<EmbeddingGroup, 
         embeddingGroupDTO.setEmbeddingId(embeddingGroup.getEmbeddingId());
         embeddingGroupDTO.setTokenCount(embeddingGroup.getTokenCount());
         embeddingGroupDTO.setGroupingStrategyTypeId(embeddingGroup.getGroupingStrategyType());
-        embeddingGroupDTO.setSemanticSearchModelId(embeddingGroup.getSemanticSearchModel());
+        embeddingGroupDTO.setSemanticSearchModelId(embeddingGroup.getSemanticSearchModelId());
 
         return embeddingGroupDTO;
     }
@@ -31,7 +31,7 @@ public class EmbeddingGroupConverter implements GendoxConverter<EmbeddingGroup, 
         embeddingGroup.setEmbeddingId(embeddingGroupDTO.getEmbeddingId());
         embeddingGroup.setTokenCount(embeddingGroupDTO.getTokenCount());
         embeddingGroup.setGroupingStrategyType(embeddingGroupDTO.getGroupingStrategyTypeId());
-        embeddingGroup.setSemanticSearchModel(embeddingGroupDTO.getSemanticSearchModelId());
+        embeddingGroup.setSemanticSearchModelId(embeddingGroupDTO.getSemanticSearchModelId());
 
         return embeddingGroup;
     }

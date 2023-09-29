@@ -36,6 +36,12 @@ public class TypeService {
 
     }
 
+    public Type getGroupingTypeByName(String groupingName){
+        return typeRepository.findByTypeCategoryAndName("GROUPING_STRATEGY_TYPE", groupingName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "GROUPING_STRATEGY_TYPE_NOT_FOUND", "Grouping strategy field type not found with name: " + groupingName));
+
+    }
+
 
     /**
      * Multiple handy service methods can go here like
