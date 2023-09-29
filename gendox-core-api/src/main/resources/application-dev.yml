@@ -56,7 +56,11 @@ gendox:
     openai:
       ada2:
         key: ${OPENAI_KEY}
-
+  domain:
+    base-url: https://gendox.ctrlspace.dev
+    document-sections:
+      get-document-sections: /documents/sections
+    sections: https://domain.com/context-path/documents/sections/
 
 # AWS
 
@@ -76,4 +80,4 @@ s3:
 discord:
   bots:
     gendox-bot:
-      token: "MTE1NTkzMDM1OTk5NzkyNzU1NA.G5dhiP.GhQRnxdYCyRNCCZToZGIgDbT8oNGMHsYAnQKeI"
+      token: ${DISCORD_TOKEN}

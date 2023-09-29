@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,10 +68,10 @@ public class EmbeddingsController {
                                                             @RequestParam String projectId,
                                                             Pageable pageable) throws GendoxException {
         if (pageable == null) {
-            pageable = PageRequest.of(0, 100);
+            pageable = PageRequest.of(0, 5);
         }
-        if (pageable.getPageSize() > 100) {
-            throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 100", HttpStatus.BAD_REQUEST);
+        if (pageable.getPageSize() > 5) {
+            throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
         }
 
 
@@ -82,6 +83,35 @@ public class EmbeddingsController {
         instanceSections = embeddingService.findClosestSections(message,UUID.fromString(projectId));
 
         return instanceSections;
+    }
+
+
+    @PostMapping("/messages/semantic-completion")
+    public CompletionMessageDTO getCompletionSearch(@RequestBody Message message,
+                                                    @RequestParam String projectId,
+                                                    Pageable pageable) throws GendoxException {
+        if (pageable == null) {
+            pageable = PageRequest.of(0, 5);
+        }
+        if (pageable.getPageSize() > 5) {
+            throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
+        }
+
+
+        message = embeddingService.createMessage(message);
+
+        List<DocumentInstanceSection> instanceSections = embeddingService.findClosestSections(message,UUID.fromString(projectId));
+
+        Message completion = embeddingService.getCompletion(message, instanceSections, UUID.fromString(projectId));
+
+        CompletionMessageDTO completionMessageDTO = CompletionMessageDTO.builder()
+                .message(completion)
+                .sectionId(instanceSections.stream().map(DocumentInstanceSection::getId).toList())
+                .build();
+
+
+
+        return completionMessageDTO;
     }
 
 

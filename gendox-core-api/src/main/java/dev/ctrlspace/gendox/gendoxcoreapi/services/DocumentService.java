@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -79,24 +80,17 @@ public class DocumentService {
 
 
     public List<DocumentInstanceSection> getProjectSections(UUID projectId) throws GendoxException {
-        // First, retrieve all the project members associated with the given projectId
-        List<ProjectDocument> projectDocuments = projectDocumentRepository.findByProjectId(projectId);
+        return documentInstanceSectionRepository.findByProjectId(projectId);
+    }
 
-        // Initialize a list to store all the sections
-        List<DocumentInstanceSection> allSections = new ArrayList<>();
-
-        // Loop through project members to fetch sections for each document
-        for (ProjectDocument projectDocument : projectDocuments) {
-            UUID documentId = projectDocument.getDocumentId();
-
-            // Retrieve all sections for the document
-            List<DocumentInstanceSection> documentSections = documentInstanceSectionRepository.findByDocumentInstance(documentId);
-
-            // Add the sections to the overall list
-            allSections.addAll(documentSections);
-        }
-
-        return allSections;
+    /**
+     * TODO merge this with the above to findSectionsByCriteria
+     * @param projectId
+     * @param embeddingIds
+     * @return
+     */
+    public List<DocumentInstanceSection> getSectionsByEmbeddingsIn(UUID projectId, Set<UUID> embeddingIds){
+        return documentInstanceSectionRepository.findByProjectAndEmbeddingIds(projectId, embeddingIds);
     }
 
 

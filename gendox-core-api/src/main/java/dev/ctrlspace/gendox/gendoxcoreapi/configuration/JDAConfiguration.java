@@ -2,10 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.Listener;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.ListenerService;
-import dev.ctrlspace.gendox.gendoxcoreapi.discord.commands.AskGendox;
-import dev.ctrlspace.gendox.gendoxcoreapi.discord.commands.ChatWithBot;
-import dev.ctrlspace.gendox.gendoxcoreapi.discord.commands.CommandManager;
-import dev.ctrlspace.gendox.gendoxcoreapi.discord.commands.Embed;
+import dev.ctrlspace.gendox.gendoxcoreapi.discord.commands.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
 import net.dv8tion.jda.api.JDA;
@@ -25,7 +22,7 @@ public class JDAConfiguration {
     private String token;
 
     @Bean
-    public JDA jda(List<Listener> listeners, AskGendox askGendox) throws LoginException {
+    public JDA jda(List<Listener> listeners, AskGendox askGendox, ChatGendox chatGendox) throws LoginException {
         JDA jda = JDABuilder
                 .createDefault(token)
                 .enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES, GatewayIntent.GUILD_MESSAGE_TYPING)
@@ -37,8 +34,9 @@ public class JDAConfiguration {
         // Commands
         CommandManager manager = new CommandManager();
         manager.add(new Embed());
-        manager.add(new ChatWithBot());
+//        manager.add(new ChatWithBot());
         manager.add(askGendox);
+        manager.add(chatGendox);
         jda.addEventListener(manager);
         return jda;
     }

@@ -29,9 +29,9 @@ public interface EmbeddingRepository extends JpaRepository<Embedding, UUID>, Que
             "    inner join gendox_core.document_instance_sections sec on eg.section_id = sec.id\n" +
             "    inner join gendox_core.document_instance di on di.id = sec.document_instance_id\n" +
             "    inner join gendox_core.project_documents pd on di.id = pd.document_id\n" +
-            "    where pd.project_id = ? AND eg.section_id is not null\n" +
-            "    ORDER BY emb.embedding_vector <-> cast(? as vector) LIMIT 5")
-    List<Embedding> findClosestSections(UUID projectId, String embedding);
+            "    where pd.project_id = :projectId AND eg.section_id is not null\n" +
+            "    ORDER BY emb.embedding_vector <-> cast(:embedding as vector) LIMIT :pageSize")
+    List<Embedding> findClosestSections(@Param("projectId") UUID projectId, @Param("embedding") String embedding, @Param("pageSize") int pageSize);
 
 
 
