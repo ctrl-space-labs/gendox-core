@@ -4,6 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.configuration.JDAConfiguration;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.Category;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -24,17 +25,21 @@ import java.util.UUID;
 @Controller
 public class Listener extends ListenerAdapter {
 
+    @Value("${discord.server.group-name}")
+    private String gendox_group;
 
     private JDAConfiguration jdaConfiguration;
     private ListenerService listenerService;
+    private ProjectRepository projectRepository;
 
 
     @Autowired
     public Listener(JDAConfiguration jdaConfiguration,
-                    ListenerService listenerService) {
+                    ListenerService listenerService,
+                    ProjectRepository projectRepository) {
         this.jdaConfiguration = jdaConfiguration;
         this.listenerService = listenerService;
-
+        this.projectRepository = projectRepository;
     }
 
 
@@ -45,6 +50,18 @@ public class Listener extends ListenerAdapter {
         String channelId = event.getChannel().getId();
         TextChannel channel = event.getJDA().getTextChannelById(channelId);
         String authorName = event.getAuthor().getName();
+
+        // Get the category of the channel
+        Category category = channel.getParentCategory(); // This will give you the category associated with the channel
+
+        // Check if the category is not null and then get its name
+        String categoryName = (category != null) ? category.getName() : "No Category"; // You can change "No Category" to a default value if needed
+
+
+        // check if the event is on the gendox group
+        if (!gendox_group.equals(categoryName)){
+            return;
+        }
 
         // Check if the message content is a question (you can define your criteria)
         String messageContent = event.getMessage().getContentRaw();
