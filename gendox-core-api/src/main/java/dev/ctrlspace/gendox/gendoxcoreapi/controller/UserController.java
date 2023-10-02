@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.List;
 import java.util.UUID;
@@ -49,6 +50,8 @@ public class UserController {
     @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_READ_DOCUMENT') " +
             "|| @securityUtils.hasAuthorityToRequestedProjectId()")
     @GetMapping("/users")
+    @Operation(summary = "Get all users",
+            description = "Retrieve a list of all users based on the provided criteria.")
     public Page<User> getAllUsers(@Valid UserCriteria criteria, Pageable pageable) throws Exception {
 
         // run code to get the user from the database
@@ -59,6 +62,8 @@ public class UserController {
     // TODO add authorization check if the user belongs to the same organization
 
     @GetMapping("/users/{id}")
+    @Operation(summary = "Get user by ID",
+            description = "Retrieve a user by their unique ID.")
     public User getUserById(@PathVariable UUID id, Authentication authentication) throws Exception {
 
         // run code to get the user from the database
@@ -68,6 +73,8 @@ public class UserController {
     }
 
     @GetMapping("/profile")
+    @Operation(summary = "Get user profile by ID",
+            description = "Retrieve a user's profile by their unique ID.")
     public UserProfile getUserUserProfile(@PathVariable UUID id, Authentication authentication) throws Exception {
 
         // run code to get the user from the database
@@ -79,6 +86,10 @@ public class UserController {
 
     // TODO this is just for demo purposes, need to be rewrite
     @GetMapping("/users/login")
+    @Operation(summary = "Get user by email",
+            description = "Retrieve user information based on their email address. " +
+                    "This method decodes the user's JWT based on the provided email " +
+                    "and returns a JWTResponse containing the user's JWT token.")
     public JwtResponse getUserByLogin(@RequestParam("email") String email) throws Exception {
 
         // run code to get the user from the database
