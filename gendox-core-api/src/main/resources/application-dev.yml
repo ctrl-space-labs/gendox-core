@@ -81,3 +81,5 @@ discord:
   bots:
     gendox-bot:
       token: ${DISCORD_TOKEN}
+  server:
+    group-name: gendox-agents
