@@ -1,7 +1,7 @@
 
 
 server:
-  port: 5000
+  port: 8080
   servlet:
     context-path: /gendox/api/v1
 logging:
@@ -82,4 +82,4 @@ discord:
     gendox-bot:
       token: ${DISCORD_TOKEN}
   server:
-    group-name: gendox-projects
+    group-name: gendox-agents
