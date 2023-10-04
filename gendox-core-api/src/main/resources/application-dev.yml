@@ -49,7 +49,7 @@ gendox:
   file:
 #    location: c:\\Users\\sekas\\Desktop\\gendox-files\\test
     location: c:\\Users\\Giannis\\Desktop\\gendox-files\\test
-    wordCount: 30
+    wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
   models:
