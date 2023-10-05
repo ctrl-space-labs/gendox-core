@@ -53,6 +53,9 @@ public class ProjectController {
 
     //        @PreAuthorize("@securityUtils.hasAuthorityToRequestedProjectId('id')")
     @GetMapping("/projects/{id}")
+    @Operation(summary = "Get project by ID",
+            description = "Retrieve project details by its unique ID. The user must have the appropriate permissions to access this project.")
+
     public Project getProjectById(@PathVariable UUID id) throws GendoxException {
         return projectService.getProjectById(id);
     }
@@ -61,6 +64,9 @@ public class ProjectController {
     //        @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_READ_DOCUMENT') " +
 //            "|| @securityUtils.hasAuthorityToAllRequestedProjectId()")
     @GetMapping("/projects")
+    @Operation(summary = "Get all projects",
+            description = "Retrieve a list of all projects based on the provided criteria. The user must have the necessary permissions to access these projects.")
+
     public Page<Project> getAllProjects(@Valid ProjectCriteria criteria, Pageable pageable) throws GendoxException {
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
@@ -74,6 +80,10 @@ public class ProjectController {
     // TODO: preauthorize has OP_CREATE_PROJECT for the requested organization
     @PostMapping(value = "/projects", consumes = {"application/json"})
     @ResponseStatus(value = HttpStatus.CREATED)
+    @Operation(summary = "Create a new project",
+            description = "Create a new project for the organization. " +
+                    "The user must have the necessary permissions to create projects for the organization. " +
+                    "This endpoint accepts a JSON payload describing the project details.")
     public Project createProject(@RequestBody ProjectDTO projectDTO) throws Exception {
 
         Project project = projectConverter.toEntity(projectDTO);
@@ -114,6 +124,9 @@ public class ProjectController {
     // TODO: preauthorize has OP_DELETE_PROJECT for the requested organization
     // TODO: is member to the project
     @DeleteMapping("/projects/{id}")
+    @Operation(summary = "Delete project by ID",
+            description = "Delete a project by its unique ID. To perform this operation, " +
+                    "the user must have the necessary permissions to delete the specified project.")
     public void delete(@PathVariable UUID id) throws Exception {
         projectService.deleteProject(id);
     }
@@ -122,6 +135,11 @@ public class ProjectController {
     // TODO validate that the user has permission to add a member to the project in the {{userMember}} object
     // TODO validate that the role level is not higher than the user's role level for this project
     @GetMapping(value = "/projects/{id}/users")
+    @Operation(summary = "Get all project members",
+            description = "Retrieve a list of all members associated with a project by its unique ID. " +
+                    "The user must have the necessary permissions to access these project members. Additionally, " +
+                    "the system should validate that the requesting user has the required permissions " +
+                    "and that the role level is appropriate for accessing the project members.")
     public List<ProjectMember> getAllProjectMembers(@PathVariable UUID id, Authentication authentication, Pageable pageable) throws GendoxException {
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
@@ -143,6 +161,8 @@ public class ProjectController {
     // didn't work
     @PostMapping(value = "/projects/{id}/users", consumes = {"application/json"})
     @ResponseStatus(value = HttpStatus.CREATED)
+    @Operation(summary = "Add a member to a project",
+            description = "Add a new member to a project by specifying the project ID. The user must have the necessary permissions to add members to this project.")
     public ProjectMember addMemberToProject(@PathVariable UUID id, @RequestBody ProjectMemberDTO projectMemberDTO, Authentication authentication) throws Exception {
 
         JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
@@ -155,6 +175,10 @@ public class ProjectController {
     }
 
     @PostMapping(value = "/projects/{projectId}/users/{userId}")
+    @Operation(summary = "Add a member to a project",
+            description = "Add a new member to a project by specifying both the project ID and the user ID. " +
+                    "The user must have the necessary permissions to add members to this project. " +
+                    "This method handles the addition of a user as a member to a project and returns the created ProjectMember entity.")
     public ProjectMember addMemberToProject(@PathVariable UUID projectId, @PathVariable UUID userId, Authentication authentication) throws Exception {
 
         JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
@@ -168,6 +192,9 @@ public class ProjectController {
 
     @DeleteMapping("/projects/{projectId}/users/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Remove a member from a project",
+            description = "Remove a member from a project by specifying both the project ID and the user ID. " +
+                    "The user must have the necessary permissions to remove members from this project.")
     public void removeMemberFromProject(@PathVariable UUID projectId, @PathVariable UUID userId) throws Exception {
         projectMemberService.removeMemberFromProject(projectId, userId);
     }
