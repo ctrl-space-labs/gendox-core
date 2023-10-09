@@ -77,7 +77,7 @@ public class ChatGendox implements ICommand {
             }
             // Get the message content from the event
             String question = listenerService.getTheQuestion(event);
-            channel.sendMessage(authorName + ", thank you for the question: \n- " + question + "\n\uD83E\uDD16Thinking...\uD83E\uDD16").queue();
+            channel.sendMessage(authorName + ", thank you for the question: \n- " + question + "\n\uD83E\uDD16 Thinking... \uD83E\uDD16").queue();
 
 
 
