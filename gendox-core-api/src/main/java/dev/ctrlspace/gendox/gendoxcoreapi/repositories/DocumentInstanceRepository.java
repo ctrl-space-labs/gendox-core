@@ -1,15 +1,14 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Set;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -19,6 +18,10 @@ public interface DocumentInstanceRepository extends JpaRepository<DocumentInstan
             "INNER JOIN gendox_core.document_instance_sections dis on di.id = dis.document_instance_id " +
             "WHERE dis.id = :sectionId")
     String findRemoteUrlBySectionId(@Param("sectionId") UUID sectionId);
+
+
+    @EntityGraph(attributePaths = {"documentInstanceSections.id"}, type= EntityGraph.EntityGraphType.LOAD)
+    Optional<DocumentInstance> findById(UUID documentInstanceId);
 
 
 

@@ -7,7 +7,10 @@ server:
 logging:
   level:
     dev.ctrlspace: DEBUG
-    org.springframework: INFO
+    org:
+      springframework: INFO
+      hibernate:
+        stat: debug
 spring:
   mvc:
     format:
@@ -16,15 +19,19 @@ spring:
     show-sql: true
     hibernate:
       ddl-auto: none
-#  datasource:
-#    url: jdbc:postgresql://localhost:5432/postgres
-#    username: postgres
-#    password: 123456789
-
+    properties:
+      hibernate:
+        format_sql: true
+        generate_statistics: true
   datasource:
-     url: ${DATABASE_URL}
-     username: ${DATABASE_USERNAME}
-     password: ${DATABASE_PASSWORD}
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: 123456789
+
+#  datasource:
+#     url: ${DATABASE_URL}
+#     username: ${DATABASE_USERNAME}
+#     password: ${DATABASE_PASSWORD}
 
   jackson:
     serialization:
@@ -83,3 +90,5 @@ discord:
       token: ${DISCORD_TOKEN}
   server:
     group-name: gendox-agents
+
+

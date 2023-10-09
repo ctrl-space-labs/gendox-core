@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 import com.pgvector.PGvector;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -9,10 +11,7 @@ import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Repository
 public interface EmbeddingRepository extends JpaRepository<Embedding, UUID>, QuerydslPredicateExecutor<Embedding> {
@@ -22,6 +21,8 @@ public interface EmbeddingRepository extends JpaRepository<Embedding, UUID>, Que
 
     @Query(nativeQuery = true, value = "SELECT * FROM gendox_core.embedding ORDER BY embedding_vector <-> cast(? as vector) LIMIT 5")
     List<Embedding> findNearestNeighbors(String embedding);
+
+
 
     @Query(nativeQuery = true, value = " SELECT emb.*\n" +
             "    FROM gendox_core.embedding emb\n" +
@@ -34,6 +35,18 @@ public interface EmbeddingRepository extends JpaRepository<Embedding, UUID>, Que
     List<Embedding> findClosestSections(@Param("projectId") UUID projectId, @Param("embedding") String embedding, @Param("pageSize") int pageSize);
 
 
+    @EntityGraph(value = "Embedding.closestSections", type =EntityGraph.EntityGraphType.LOAD)
+    @Query("SELECT emb FROM Embedding emb " +
+            "JOIN emb.embeddingGroups eg " +
+            "JOIN eg.section sec " +
+            "JOIN sec.documentInstance di " +
+            "JOIN di.projectDocuments pd " +
+            "WHERE pd.project.id = :projectId AND eg.section.id is not null " +
+            "ORDER BY emb.embeddingVector <-> cast(:embedding AS vector) LIMIT :pageSize) ")
+    List<Embedding> findClosestSections2(
+            @Param("projectId") UUID projectId,
+            @Param("embedding") String embedding,
+            @Param("pageSize") int pageSize);
 
 
 

@@ -202,10 +202,11 @@
             <version>3.5.3</version>
         </dependency>
 
-        <!--        <dependency>-->
-        <!--            <groupId>org.hibernate</groupId>-->
-        <!--            <artifactId>hibernate-core</artifactId>-->
-        <!--        </dependency>-->
+<!--                <dependency>-->
+<!--                    <groupId>org.hibernate</groupId>-->
+<!--                    <artifactId>hibernate-core</artifactId>-->
+<!--                    <version>5.2.2.Final</version>-->
+<!--                </dependency>-->
 
 
         <!--        &lt;!&ndash; https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-s3 &ndash;&gt;-->

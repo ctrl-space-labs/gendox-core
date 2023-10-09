@@ -275,6 +275,7 @@ public class EmbeddingService {
         sb.append("]");
 
 
+
         nearestEmbeddings = embeddingRepository.findClosestSections(projectId, sb.toString(), pageRequest.getPageSize());
         return nearestEmbeddings;
     }

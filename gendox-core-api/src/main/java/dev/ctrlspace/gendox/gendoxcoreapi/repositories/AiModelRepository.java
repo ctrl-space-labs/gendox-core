@@ -13,7 +13,4 @@ public interface AiModelRepository extends JpaRepository<AiModel, UUID>, Queryds
 
     AiModel findByName(@Param("name") String name);
 
-//    AiModel findAiModelByName
-
-
 }
