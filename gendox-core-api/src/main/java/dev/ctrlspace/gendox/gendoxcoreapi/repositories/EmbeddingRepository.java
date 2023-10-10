@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 import com.pgvector.PGvector;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -34,19 +35,20 @@ public interface EmbeddingRepository extends JpaRepository<Embedding, UUID>, Que
             "    ORDER BY emb.embedding_vector <-> cast(:embedding as vector) LIMIT :pageSize")
     List<Embedding> findClosestSections(@Param("projectId") UUID projectId, @Param("embedding") String embedding, @Param("pageSize") int pageSize);
 
+//    @Repository
+//    public interface ProjectRepository extends JpaRepository<Project, UUID> {
+//
+//        @EntityGraph(value = "project-with-related-entities", type = EntityGraph.EntityGraphType.LOAD)
+//        @Query(nativeQuery = true, value = "SELECT emb.* FROM gendox_core.embedding emb " +
+//                "INNER JOIN gendox_core.embedding_group eg ON emb.id = eg.embedding_id " +
+//                "INNER JOIN gendox_core.document_instance_sections sec ON eg.section_id = sec.id " +
+//                "INNER JOIN gendox_core.document_instance di ON di.id = sec.document_instance_id " +
+//                "INNER JOIN gendox_core.project_documents pd ON di.id = pd.document_id " +
+//                "WHERE pd.project_id = :projectId AND eg.section_id IS NOT NULL " +
+//                "ORDER BY emb.embedding_vector <-> cast(:embedding as vector) LIMIT :pageSize")
+//        List<Embedding> findClosestSections(@Param("projectId") UUID projectId, @Param("embedding") String embedding, @Param("pageSize") int pageSize);
+//    }
 
-    @EntityGraph(value = "Embedding.closestSections", type =EntityGraph.EntityGraphType.LOAD)
-    @Query("SELECT emb FROM Embedding emb " +
-            "JOIN emb.embeddingGroups eg " +
-            "JOIN eg.section sec " +
-            "JOIN sec.documentInstance di " +
-            "JOIN di.projectDocuments pd " +
-            "WHERE pd.project.id = :projectId AND eg.section.id is not null " +
-            "ORDER BY emb.embeddingVector <-> cast(:embedding AS vector) LIMIT :pageSize) ")
-    List<Embedding> findClosestSections2(
-            @Param("projectId") UUID projectId,
-            @Param("embedding") String embedding,
-            @Param("pageSize") int pageSize);
 
 
 

@@ -10,6 +10,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+//@NamedEntityGraph(
+//        name = "project-with-related-entities",
+//        attributeNodes = {
+//                @NamedAttributeNode("projectDocuments"),
+//                @NamedAttributeNode("projectDocument.documentId"),
+//                @NamedAttributeNode("projectDocuments.documentInstance.documentInstanceSections"),
+//                // Add other related entities as needed
+//        }
+//)
+
 @Entity
 @Table(name = "projects", schema = "gendox_core")
 public class Project {

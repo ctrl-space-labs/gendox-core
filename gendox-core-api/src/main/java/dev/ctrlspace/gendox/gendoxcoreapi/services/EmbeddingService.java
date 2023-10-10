@@ -54,8 +54,8 @@ public class EmbeddingService {
     private TypeService typeService;
     private AiModelRepository aiModelRepository;
     private UserRepository userRepository;
-
     private OpenAiEmbeddingConverter openAiEmbeddingConverter;
+    private ProjectRepository projectRepository;
 
 
     @Autowired
@@ -78,7 +78,8 @@ public class EmbeddingService {
                             TypeService typeService,
                             OpenAiEmbeddingConverter openAiEmbeddingConverter,
                             AiModelRepository aiModelRepository,
-                            UserRepository userRepository) {
+                            UserRepository userRepository,
+                            ProjectRepository projectRepository) {
         this.aiModelService = aiModelService;
         this.embeddingRepository = embeddingRepository;
         this.projectService = projectService;
@@ -96,6 +97,7 @@ public class EmbeddingService {
         this.aiModelRepository = aiModelRepository;
         this.userRepository = userRepository;
         this.openAiEmbeddingConverter = openAiEmbeddingConverter;
+        this.projectRepository = projectRepository;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -276,7 +278,7 @@ public class EmbeddingService {
 
 
 
-        nearestEmbeddings = embeddingRepository.findClosestSections(projectId, sb.toString(), pageRequest.getPageSize());
+        nearestEmbeddings = projectRepository.findClosestSections(projectId, sb.toString(), pageRequest.getPageSize());
         return nearestEmbeddings;
     }
 
