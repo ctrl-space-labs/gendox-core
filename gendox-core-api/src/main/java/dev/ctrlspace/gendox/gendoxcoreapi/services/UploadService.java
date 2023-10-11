@@ -3,10 +3,13 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentSectionMetadataDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.agents.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.agents.documents.DocumentSplitter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,9 +31,6 @@ import java.util.UUID;
 @Service
 public class UploadService {
 
-    @Value("${gendox.agents.splitter-type}")
-    private String splitterTypeName;
-
     // Define the S3 bucket path
     @Value("${s3.bucket.name}")
     private String s3BucketPath;
@@ -44,6 +44,7 @@ public class UploadService {
     private TypeService typeService;
     private ProjectDocumentService projectDocumentService;
     private ServiceSelector serviceSelector;
+    private ProjectAgentRepository projectAgentRepository;
 
 
     @Autowired
@@ -54,12 +55,14 @@ public class UploadService {
                          DocumentConverter documentConverter,
                          TypeService typeService,
                          ProjectDocumentService projectDocumentService,
-                         ServiceSelector serviceSelector) {
+                         ServiceSelector serviceSelector,
+                         ProjectAgentRepository projectAgentRepository) {
         this.documentService = documentService;
         this.documentConverter = documentConverter;
         this.typeService = typeService;
         this.projectDocumentService = projectDocumentService;
         this.serviceSelector = serviceSelector;
+        this.projectAgentRepository = projectAgentRepository;
     }
 
 
@@ -89,7 +92,7 @@ public class UploadService {
 
         // create DTOs
         DocumentDTO instanceDTO = createInstanceDTO(documentInstanceId, organizationId, localFilePath);
-        List<DocumentInstanceSectionDTO> sectionDTOs = createSectionDTOs(instanceDTO, content);
+        List<DocumentInstanceSectionDTO> sectionDTOs = createSectionDTOs(instanceDTO, content, projectId);
 
         // create document
         DocumentInstance instance = createFileDocument(instanceDTO, sectionDTOs);
@@ -159,8 +162,11 @@ public class UploadService {
     }
 
 
-    public List<DocumentInstanceSectionDTO> createSectionDTOs(DocumentDTO documentDTO, String fileContent) throws GendoxException{
+    public List<DocumentInstanceSectionDTO> createSectionDTOs(DocumentDTO documentDTO, String fileContent, UUID projectId) throws GendoxException{
         List<DocumentInstanceSectionDTO> sectionDTOS = new ArrayList<>();
+        // take the splitters type
+        ProjectAgent agent = projectAgentRepository.findByProjectId(projectId);
+        String splitterTypeName = agent.getDocumentSplitterType().getName();
 
         DocumentSplitter documentSplitter = serviceSelector.getDocumentSplitterByName(splitterTypeName);
         if (documentSplitter == null) {

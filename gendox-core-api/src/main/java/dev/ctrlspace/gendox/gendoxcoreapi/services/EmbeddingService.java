@@ -38,13 +38,6 @@ public class EmbeddingService {
 
     Logger logger = LoggerFactory.getLogger(AiModelServiceImpl.class);
 
-    @Value("${gendox.agents.chat-template}")
-    private String chatTemplateName;
-
-    @Value("${gendox.agents.section-template}")
-    private String sectionTemplateName;
-
-
     private AiModelService aiModelService;
     private ProjectService projectService;
     private EmbeddingRepository embeddingRepository;
@@ -63,6 +56,7 @@ public class EmbeddingService {
     private UserRepository userRepository;
     private OpenAiEmbeddingConverter openAiEmbeddingConverter;
     private ServiceSelector serviceSelector;
+    private ProjectAgentRepository projectAgentRepository;
 
 
     @Autowired
@@ -86,7 +80,8 @@ public class EmbeddingService {
                             OpenAiEmbeddingConverter openAiEmbeddingConverter,
                             AiModelRepository aiModelRepository,
                             UserRepository userRepository,
-                            ServiceSelector serviceSelector) {
+                            ServiceSelector serviceSelector,
+                            ProjectAgentRepository projectAgentRepository) {
         this.aiModelService = aiModelService;
         this.embeddingRepository = embeddingRepository;
         this.projectService = projectService;
@@ -105,6 +100,7 @@ public class EmbeddingService {
         this.userRepository = userRepository;
         this.openAiEmbeddingConverter = openAiEmbeddingConverter;
         this.serviceSelector = serviceSelector;
+        this.projectAgentRepository = projectAgentRepository;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -324,6 +320,11 @@ public class EmbeddingService {
 
         // TODO investigate if we want to split the context and question
         //  to 2 different messages with role: "contextProvider" and role: "user"
+
+        // take the types name
+        ProjectAgent agent = projectAgentRepository.findByProjectId(projectId);
+        String sectionTemplateName = agent.getSectionTemplateType().getName();
+        String chatTemplateName = agent.getSectionTemplateType().getName();
 
         // run sectionTemplate
         SectionTemplate sectionTemplate = serviceSelector.getSectionTemplateByName(sectionTemplateName);
