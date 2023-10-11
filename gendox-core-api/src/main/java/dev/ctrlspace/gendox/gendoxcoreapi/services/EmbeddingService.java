@@ -14,15 +14,15 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.agents.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
-import org.apache.commons.text.StringSubstitutor;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.agents.chat.templates.ChatTemplate;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.agents.section.templates.SectionTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.expression.ExpressionParser;
-import org.springframework.expression.common.TemplateParserContext;
-import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -37,6 +37,13 @@ import java.util.stream.Collectors;
 public class EmbeddingService {
 
     Logger logger = LoggerFactory.getLogger(AiModelServiceImpl.class);
+
+    @Value("${gendox.agents.chat-template}")
+    private String chatTemplateName;
+
+    @Value("${gendox.agents.section-template}")
+    private String sectionTemplateName;
+
 
     private AiModelService aiModelService;
     private ProjectService projectService;
@@ -54,8 +61,8 @@ public class EmbeddingService {
     private TypeService typeService;
     private AiModelRepository aiModelRepository;
     private UserRepository userRepository;
-
     private OpenAiEmbeddingConverter openAiEmbeddingConverter;
+    private ServiceSelector serviceSelector;
 
 
     @Autowired
@@ -78,7 +85,8 @@ public class EmbeddingService {
                             TypeService typeService,
                             OpenAiEmbeddingConverter openAiEmbeddingConverter,
                             AiModelRepository aiModelRepository,
-                            UserRepository userRepository) {
+                            UserRepository userRepository,
+                            ServiceSelector serviceSelector) {
         this.aiModelService = aiModelService;
         this.embeddingRepository = embeddingRepository;
         this.projectService = projectService;
@@ -96,6 +104,7 @@ public class EmbeddingService {
         this.aiModelRepository = aiModelRepository;
         this.userRepository = userRepository;
         this.openAiEmbeddingConverter = openAiEmbeddingConverter;
+        this.serviceSelector = serviceSelector;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -121,7 +130,7 @@ public class EmbeddingService {
      * It created and stores the embedding and the embedding group
      * Logs to audit logs
      *
-     * @param value the text on which the embedding will be calculated
+     * @param value     the text on which the embedding will be calculated
      * @param projectId the project/Agent that is involved
      * @return
      * @throws GendoxException
@@ -259,6 +268,7 @@ public class EmbeddingService {
 
     /**
      * Get an Embedding and returns the nearest Embeddings for this specific project
+     *
      * @param embedding
      * @param projectId
      * @param pageRequest
@@ -310,52 +320,30 @@ public class EmbeddingService {
 
     }
 
-    private String convertToGPTTextQuestion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) {
+    public String convertToGPTTextQuestion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
+
         // TODO investigate if we want to split the context and question
         //  to 2 different messages with role: "contextProvider" and role: "user"
-        String chatGptTemplate = """
-        Context:
-        ${context}
-        Question:
-        ${question}
-        """;
 
-        String sectionTemplate = """
-        Title: ${documentTitle}
-        ${sectionText}
-        Source: ${source}
-        User: ${user}
-        ----------------
-        """;
-        Map<String, String> sectionTemplateValues = toSectionValues(nearestSections.get(0), projectId);
-        StringBuilder sb = new StringBuilder();
-        sb.append(nearestSections.stream()
-                .map(section ->
-                        processTemplate(sectionTemplate, toSectionValues(section, projectId)))
-                .collect(Collectors.joining("\n")));
+        // run sectionTemplate
+        SectionTemplate sectionTemplate = serviceSelector.getSectionTemplateByName(sectionTemplateName);
+        if (sectionTemplate == null) {
+            // If sectionTemplate is not found, throw a GendoxException
+            throw new GendoxException("SECTION_TEMPLATE_NOT_FOUND", "Section template not found with name: " + sectionTemplateName, HttpStatus.NOT_FOUND);
+        }
+        String sectionValues = sectionTemplate.sectionValues(nearestSections, projectId);
 
-        Map<String, String> questionTemplateValues = new HashMap<>();
-        questionTemplateValues.put("context", sb.toString());
-        questionTemplateValues.put("question", message.getValue());
-        String question = processTemplate(chatGptTemplate, questionTemplateValues);
-        return question;
-    }
+        // run chatTemplate
+        ChatTemplate chatTemplate = serviceSelector.getChatTemplateByName(chatTemplateName);
+        if (chatTemplate == null) {
+            // If chatTemplate is not found, throw a GendoxException
+            throw new GendoxException("Chat_TEMPLATE_NOT_FOUND", "chat template not found with name: " + chatTemplateName, HttpStatus.NOT_FOUND);
+        }
 
-    private Map<String, String> toSectionValues(DocumentInstanceSection documentInstanceSection, UUID projectId) {
-        Map<String, String> values = new HashMap<>();
-        // TODO fix title
-        values.put("documentTitle", documentInstanceSection.getDocumentInstance().getRemoteUrl());
-        values.put("sectionText", documentInstanceSection.getSectionValue());
-        // TODO fix source
-        values.put("source", "gendox.ctrlspace.dev/sections/1");
-        values.put("user", "gendox admin");
+        String answer = chatTemplate.chatTemplate(message, sectionValues);
+        return answer;
 
-        return values;
-    }
 
-    public String processTemplate(String template, Map<String, String> values) {
-        String result = StringSubstitutor.replace(template, values);
-        return result;
     }
 
 

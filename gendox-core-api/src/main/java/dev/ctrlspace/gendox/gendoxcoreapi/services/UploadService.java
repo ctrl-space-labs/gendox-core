@@ -7,11 +7,13 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentSectionMetadataDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.documents.StaticWordCountSplitter;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.agents.ServiceSelector;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.agents.documents.DocumentSplitter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ResourceLoader;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,28 +28,8 @@ import java.util.UUID;
 @Service
 public class UploadService {
 
-    private DocumentService documentService;
-    private DocumentConverter documentConverter;
-    private TypeService typeService;
-    private StaticWordCountSplitter staticWordCountSplitter;
-
-    private ProjectDocumentService projectDocumentService;
-
-    @Autowired
-    private ResourceLoader resourceLoader;
-
-    @Autowired
-    public UploadService(DocumentService documentService,
-                         DocumentConverter documentConverter,
-                         TypeService typeService,
-                         StaticWordCountSplitter staticWordCountSplitter,
-                         ProjectDocumentService projectDocumentService) {
-        this.documentService = documentService;
-        this.documentConverter = documentConverter;
-        this.typeService = typeService;
-        this.staticWordCountSplitter = staticWordCountSplitter;
-        this.projectDocumentService = projectDocumentService;
-    }
+    @Value("${gendox.agents.splitter-type}")
+    private String splitterTypeName;
 
     // Define the S3 bucket path
     @Value("${s3.bucket.name}")
@@ -56,6 +38,30 @@ public class UploadService {
     // Define the location where you want to save uploaded files
     @Value("${gendox.file.location}")
     private String location;
+
+    private DocumentService documentService;
+    private DocumentConverter documentConverter;
+    private TypeService typeService;
+    private ProjectDocumentService projectDocumentService;
+    private ServiceSelector serviceSelector;
+
+
+    @Autowired
+    private ResourceLoader resourceLoader;
+
+    @Autowired
+    public UploadService(DocumentService documentService,
+                         DocumentConverter documentConverter,
+                         TypeService typeService,
+                         ProjectDocumentService projectDocumentService,
+                         ServiceSelector serviceSelector) {
+        this.documentService = documentService;
+        this.documentConverter = documentConverter;
+        this.typeService = typeService;
+        this.projectDocumentService = projectDocumentService;
+        this.serviceSelector = serviceSelector;
+    }
+
 
     public String uploadFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException, GendoxException {
         // Generate a unique file name to avoid conflicts
@@ -153,9 +159,15 @@ public class UploadService {
     }
 
 
-    public List<DocumentInstanceSectionDTO> createSectionDTOs(DocumentDTO documentDTO, String fileContent) {
+    public List<DocumentInstanceSectionDTO> createSectionDTOs(DocumentDTO documentDTO, String fileContent) throws GendoxException{
         List<DocumentInstanceSectionDTO> sectionDTOS = new ArrayList<>();
-        List<String> contentSections = staticWordCountSplitter.split(fileContent);
+
+        DocumentSplitter documentSplitter = serviceSelector.getDocumentSplitterByName(splitterTypeName);
+        if (documentSplitter == null) {
+            throw new GendoxException("DOCUMENT_SPLITTER_NOT_FOUND", "Document splitter not found with name: " + splitterTypeName, HttpStatus.NOT_FOUND);
+        }
+
+        List<String> contentSections = documentSplitter.split(fileContent);
 
         Integer sectionOrder = 0;
         for (String contentSection : contentSections) {
