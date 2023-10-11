@@ -42,6 +42,24 @@ public class TypeService {
 
     }
 
+    public Type getChatTemplateTypeByName(String templateName){
+        return typeRepository.findByTypeCategoryAndName("CHAT_TEMPLATE_TYPE", templateName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "CHAT_TEMPLATE_TYPE_NOT_FOUND", "Chat template field type not found with name: " + templateName));
+
+    }
+
+    public Type getSectionTemplateTypeByName(String templateName){
+        return typeRepository.findByTypeCategoryAndName("SECTION_TEMPLATE_TYPE", templateName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "SECTION_TEMPLATE_TYPE_NOT_FOUND", "Section template field type not found with name: " + templateName));
+
+    }
+
+    public Type getDocumentSplitterTypeByName(String splitterName){
+        return typeRepository.findByTypeCategoryAndName("DOCUMENT_SPLITTER_TYPE", splitterName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "DOCUMENT_SPLITTER_TYPE_NOT_FOUND", "Document splitter field type not found with name: " + splitterName));
+
+    }
+
 
     /**
      * Multiple handy service methods can go here like

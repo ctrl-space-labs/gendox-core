@@ -41,6 +41,12 @@ public class ProjectAgent {
     @Basic
     @Column(name = "updated_at", nullable = true)
     private Instant updatedAt;
+    @Basic
+    @Column(name = "created_by")
+    private UUID createdBy;
+    @Basic
+    @Column(name = "updated_by")
+    private UUID updatedBy;
     @ManyToOne
     @JoinColumn(name = "document_splitter_type", referencedColumnName = "id", nullable = false)
     private Type documentSplitterType;
@@ -123,6 +129,22 @@ public class ProjectAgent {
         this.updatedAt = updatedAt;
     }
 
+    public UUID getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(UUID createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public UUID getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(UUID updatedBy) {
+        this.updatedBy = updatedBy;
+    }
+
     public Type getDocumentSplitterType() {
         return documentSplitterType;
     }
@@ -151,11 +173,11 @@ public class ProjectAgent {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof ProjectAgent that)) return false;
-        return Objects.equals(getId(), that.getId()) && Objects.equals(getProject(), that.getProject()) && Objects.equals(getSemanticSearchModelId(), that.getSemanticSearchModelId()) && Objects.equals(getCompletionModelId(), that.getCompletionModelId()) && Objects.equals(getAgentName(), that.getAgentName()) && Objects.equals(getAgentBehavior(), that.getAgentBehavior()) && Objects.equals(getPrivateAgent(), that.getPrivateAgent()) && Objects.equals(getCreatedAt(), that.getCreatedAt()) && Objects.equals(getUpdatedAt(), that.getUpdatedAt()) && Objects.equals(getDocumentSplitterType(), that.getDocumentSplitterType()) && Objects.equals(getChatTemplateType(), that.getChatTemplateType()) && Objects.equals(getSectionTemplateType(), that.getSectionTemplateType());
+        return Objects.equals(getId(), that.getId()) && Objects.equals(getProject(), that.getProject()) && Objects.equals(getSemanticSearchModelId(), that.getSemanticSearchModelId()) && Objects.equals(getCompletionModelId(), that.getCompletionModelId()) && Objects.equals(getAgentName(), that.getAgentName()) && Objects.equals(getAgentBehavior(), that.getAgentBehavior()) && Objects.equals(getPrivateAgent(), that.getPrivateAgent()) && Objects.equals(getCreatedAt(), that.getCreatedAt()) && Objects.equals(getUpdatedAt(), that.getUpdatedAt()) && Objects.equals(getCreatedBy(), that.getCreatedBy()) && Objects.equals(getUpdatedBy(), that.getUpdatedBy()) && Objects.equals(getDocumentSplitterType(), that.getDocumentSplitterType()) && Objects.equals(getChatTemplateType(), that.getChatTemplateType()) && Objects.equals(getSectionTemplateType(), that.getSectionTemplateType());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getProject(), getSemanticSearchModelId(), getCompletionModelId(), getAgentName(), getAgentBehavior(), getPrivateAgent(), getCreatedAt(), getUpdatedAt(), getDocumentSplitterType(), getChatTemplateType(), getSectionTemplateType());
+        return Objects.hash(getId(), getProject(), getSemanticSearchModelId(), getCompletionModelId(), getAgentName(), getAgentBehavior(), getPrivateAgent(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy(), getDocumentSplitterType(), getChatTemplateType(), getSectionTemplateType());
     }
 }
