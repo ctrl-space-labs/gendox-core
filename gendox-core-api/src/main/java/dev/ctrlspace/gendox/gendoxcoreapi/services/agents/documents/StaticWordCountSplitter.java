@@ -1,13 +1,16 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.utils.documents;
+package dev.ctrlspace.gendox.gendoxcoreapi.services.agents.documents;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.services.agents.ServiceName;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.DocumentSplitterConstants;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 
 
-@Component
+@Service
+@ServiceName(DocumentSplitterConstants.STATIC_WORD_COUNT_SPLITTER)
 public class StaticWordCountSplitter implements DocumentSplitter {
 
     @Value("${gendox.file.wordCount}")
