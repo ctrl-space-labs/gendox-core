@@ -63,8 +63,7 @@ gendox:
     sections: https://domain.com/context-path/documents/sections/
   agents:
     splitter-type: "STATIC_WORD_COUNT_SPLITTER"
-    chat-template: "SIMPLE_TEMPLATE"
-    section-template: "SIMPLE_TEMPLATE"
+
 
 # AWS
 

@@ -8,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,11 +26,6 @@ import java.util.UUID;
 @Service
 public class ProjectAgentService {
 
-    @Value("${gendox.agents.chat-template}")
-    private String chatTemplateName;
-
-    @Value("${gendox.agents.section-template}")
-    private String sectionTemplateName;
 
     @Value("${gendox.agents.splitter-type}")
     private String splitterTypeName;
@@ -38,16 +34,19 @@ public class ProjectAgentService {
     private UserRepository userRepository;
     private JWTUtils jwtUtils;
     private TypeService typeService;
+    private TemplateRepository templateRepository;
 
     @Autowired
     public ProjectAgentService(ProjectAgentRepository projectAgentRepository,
                                UserRepository userRepository,
                                JWTUtils jwtUtils,
-                               TypeService typeService) {
+                               TypeService typeService,
+                               TemplateRepository templateRepository) {
         this.projectAgentRepository = projectAgentRepository;
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.typeService = typeService;
+        this.templateRepository = templateRepository;
     }
 
     public ProjectAgent createProjectAgent(ProjectAgent projectAgent) throws Exception {
@@ -62,8 +61,8 @@ public class ProjectAgentService {
         projectAgent.setUpdatedAt(now);
         projectAgent.setCreatedBy(getUserId());
         projectAgent.setUpdatedBy(getUserId());
-        projectAgent.setChatTemplateType(typeService.getChatTemplateTypeByName(chatTemplateName));
-        projectAgent.setSectionTemplateType(typeService.getSectionTemplateTypeByName(sectionTemplateName));
+        projectAgent.setChatTemplateId(templateRepository.findIdByIsDefaultTrueAndTemplateTypeName("CHAT_TEMPLATE"));
+        projectAgent.setSectionTemplateId(templateRepository.findIdByIsDefaultTrueAndTemplateTypeName("SECTION_TEMPLATE"));
         projectAgent.setDocumentSplitterType(typeService.getDocumentSplitterTypeByName(splitterTypeName));
 
         projectAgent = projectAgentRepository.save(projectAgent);

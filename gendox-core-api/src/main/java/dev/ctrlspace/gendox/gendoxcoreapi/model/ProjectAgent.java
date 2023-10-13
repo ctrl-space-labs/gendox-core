@@ -50,12 +50,14 @@ public class ProjectAgent {
     @ManyToOne
     @JoinColumn(name = "document_splitter_type", referencedColumnName = "id", nullable = false)
     private Type documentSplitterType;
-    @ManyToOne
-    @JoinColumn(name = "chat_template_type", referencedColumnName = "id", nullable = false)
-    private Type chatTemplateType;
-    @ManyToOne
-    @JoinColumn(name = "section_template_type", referencedColumnName = "id", nullable = false)
-    private Type sectionTemplateType;
+
+    @Basic
+    @Column(name = "chat_template_id", nullable = true)
+    private UUID chatTemplateId;
+
+    @Basic
+    @Column(name = "section_template_id", nullable = true)
+    private UUID sectionTemplateId;
 
     public UUID getId() {
         return id;
@@ -153,31 +155,31 @@ public class ProjectAgent {
         this.documentSplitterType = documentSplitterType;
     }
 
-    public Type getChatTemplateType() {
-        return chatTemplateType;
+    public UUID getChatTemplateId() {
+        return chatTemplateId;
     }
 
-    public void setChatTemplateType(Type chatTemplateType) {
-        this.chatTemplateType = chatTemplateType;
+    public void setChatTemplateId(UUID chatTemplateId) {
+        this.chatTemplateId = chatTemplateId;
     }
 
-    public Type getSectionTemplateType() {
-        return sectionTemplateType;
+    public UUID getSectionTemplateId() {
+        return sectionTemplateId;
     }
 
-    public void setSectionTemplateType(Type sectionTemplateType) {
-        this.sectionTemplateType = sectionTemplateType;
+    public void setSectionTemplateId(UUID sectionTemplateId) {
+        this.sectionTemplateId = sectionTemplateId;
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof ProjectAgent that)) return false;
-        return Objects.equals(getId(), that.getId()) && Objects.equals(getProject(), that.getProject()) && Objects.equals(getSemanticSearchModelId(), that.getSemanticSearchModelId()) && Objects.equals(getCompletionModelId(), that.getCompletionModelId()) && Objects.equals(getAgentName(), that.getAgentName()) && Objects.equals(getAgentBehavior(), that.getAgentBehavior()) && Objects.equals(getPrivateAgent(), that.getPrivateAgent()) && Objects.equals(getCreatedAt(), that.getCreatedAt()) && Objects.equals(getUpdatedAt(), that.getUpdatedAt()) && Objects.equals(getCreatedBy(), that.getCreatedBy()) && Objects.equals(getUpdatedBy(), that.getUpdatedBy()) && Objects.equals(getDocumentSplitterType(), that.getDocumentSplitterType()) && Objects.equals(getChatTemplateType(), that.getChatTemplateType()) && Objects.equals(getSectionTemplateType(), that.getSectionTemplateType());
+        return Objects.equals(getId(), that.getId()) && Objects.equals(getProject(), that.getProject()) && Objects.equals(getSemanticSearchModelId(), that.getSemanticSearchModelId()) && Objects.equals(getCompletionModelId(), that.getCompletionModelId()) && Objects.equals(getAgentName(), that.getAgentName()) && Objects.equals(getAgentBehavior(), that.getAgentBehavior()) && Objects.equals(getPrivateAgent(), that.getPrivateAgent()) && Objects.equals(getCreatedAt(), that.getCreatedAt()) && Objects.equals(getUpdatedAt(), that.getUpdatedAt()) && Objects.equals(getCreatedBy(), that.getCreatedBy()) && Objects.equals(getUpdatedBy(), that.getUpdatedBy()) && Objects.equals(getDocumentSplitterType(), that.getDocumentSplitterType()) && Objects.equals(getChatTemplateId(), that.getChatTemplateId()) && Objects.equals(getSectionTemplateId(), that.getSectionTemplateId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getProject(), getSemanticSearchModelId(), getCompletionModelId(), getAgentName(), getAgentBehavior(), getPrivateAgent(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy(), getDocumentSplitterType(), getChatTemplateType(), getSectionTemplateType());
+        return Objects.hash(getId(), getProject(), getSemanticSearchModelId(), getCompletionModelId(), getAgentName(), getAgentBehavior(), getPrivateAgent(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy(), getDocumentSplitterType(), getChatTemplateId(), getSectionTemplateId());
     }
 }

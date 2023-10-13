@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.services.agents;
+package dev.ctrlspace.gendox.gendoxcoreapi.utils.templates;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
