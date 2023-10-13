@@ -9,7 +9,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TrainingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +28,8 @@ public class EmbeddingsController {
 
     private EmbeddingRepository embeddingRepository;
     private EmbeddingService embeddingService;
+    private TrainingService trainingService;
+    private CompletionService completionService;
 
 
     @Autowired
@@ -34,10 +38,13 @@ public class EmbeddingsController {
 
     @Autowired
     public EmbeddingsController(EmbeddingRepository embeddingRepository,
-                                EmbeddingService embeddingService) {
+                                EmbeddingService embeddingService,
+                                TrainingService trainingService,
+                                CompletionService completionService) {
         this.embeddingRepository = embeddingRepository;
         this.embeddingService = embeddingService;
-
+        this.trainingService = trainingService;
+        this.completionService = completionService;
     }
 
     @PostMapping("/embeddings")
@@ -65,7 +72,7 @@ public class EmbeddingsController {
                     "This endpoint calculates and returns the embedding of the text content within the specified section. " +
                     "It also associates the calculated embedding with the section in the database for further analysis.")
     public Embedding getSectionEmbedding(@PathVariable UUID sectionId, @RequestParam String projectId) throws GendoxException {
-        return embeddingService.runTrainingForSection(sectionId, UUID.fromString(projectId));
+        return trainingService.runTrainingForSection(sectionId, UUID.fromString(projectId));
     }
 
     @PostMapping("/embeddings/projects/{projectId}")
@@ -75,14 +82,14 @@ public class EmbeddingsController {
                     "It performs the embedding calculation for each section and associates the results with the respective sections.")
 
     public List<Embedding> getProjectEmbeddings(@PathVariable UUID projectId) throws GendoxException {
-        return embeddingService.runTrainingForProject(projectId);
+        return trainingService.runTrainingForProject(projectId);
     }
 
     @PostMapping("/messages/semantic-search")
     @Operation(summary = "Semantic search for closer sections",
-    description = "Search for sections within a project that are semantically closer to a given message. " +
-            "This endpoint calculates the embedding for the input message and retrieves sections from the specified project " +
-            "that have similar semantic representations.")
+            description = "Search for sections within a project that are semantically closer to a given message. " +
+                    "This endpoint calculates the embedding for the input message and retrieves sections from the specified project " +
+                    "that have similar semantic representations.")
     public List<DocumentInstanceSection> findCloserSections(@RequestBody Message message,
                                                             @RequestParam String projectId,
                                                             Pageable pageable) throws GendoxException {
@@ -96,7 +103,7 @@ public class EmbeddingsController {
         message = embeddingService.createMessage(message);
 
         List<DocumentInstanceSection> instanceSections = new ArrayList<>();
-        instanceSections = embeddingService.findClosestSections(message,UUID.fromString(projectId));
+        instanceSections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
 
         return instanceSections;
     }
@@ -120,15 +127,14 @@ public class EmbeddingsController {
 
         message = embeddingService.createMessage(message);
 
-        List<DocumentInstanceSection> instanceSections = embeddingService.findClosestSections(message,UUID.fromString(projectId));
+        List<DocumentInstanceSection> instanceSections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
 
-        Message completion = embeddingService.getCompletion(message, instanceSections, UUID.fromString(projectId));
+        Message completion = completionService.getCompletion(message, instanceSections, UUID.fromString(projectId));
 
         CompletionMessageDTO completionMessageDTO = CompletionMessageDTO.builder()
                 .message(completion)
                 .sectionId(instanceSections.stream().map(DocumentInstanceSection::getId).toList())
                 .build();
-
 
 
         return completionMessageDTO;

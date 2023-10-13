@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.services.agents.documents;
+package dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents;
 
 import java.util.List;
 

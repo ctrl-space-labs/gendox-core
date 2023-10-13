@@ -1,6 +1,6 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.services.agents.documents;
+package dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.services.agents.ServiceName;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceName;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.DocumentSplitterConstants;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
