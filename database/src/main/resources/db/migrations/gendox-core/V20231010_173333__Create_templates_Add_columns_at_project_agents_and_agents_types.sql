@@ -27,6 +27,14 @@ ALTER TABLE IF EXISTS gendox_core.project_agent
     ADD FOREIGN KEY (chat_template_id) REFERENCES gendox_core.templates (id),
     ADD FOREIGN KEY (section_template_id) REFERENCES gendox_core.templates (id);
 
+-- update project agent add default values to document_splitter_type, chat_template_id, section_template_id
+UPDATE gendox_core.project_agent
+SET document_splitter_type = (SELECT id FROM gendox_core.types WHERE type_category = 'DOCUMENT_SPLITTER_TYPE' AND name = 'STATIC_WORD_COUNT_SPLITTER' LIMIT 1),
+    chat_template_id = (SELECT id FROM gendox_core.templates WHERE is_default = true AND name = 'Default Chat Template' LIMIT 1),
+    section_template_id = (SELECT id FROM gendox_core.templates WHERE is_default = true AND name = 'Default Section Template' LIMIT 1)
+WHERE document_splitter_type IS NULL;
+
+
 
 INSERT into gendox_core.types
     (type_category, name, description)
@@ -43,8 +51,8 @@ select 'TEMPLATE_TYPE',
        'CHAT_TEMPLATE',
        'This is a chat template' where not exists(SELECT *
                  FROM gendox_core.types
-                 where type_category = 'CHAT_TEMPLATE_TYPE'
-                   and name = 'SIMPLE_TEMPLATE');
+                 where type_category = 'TEMPLATE_TYPE'
+                   and name = 'CHAT_TEMPLATE');
 
 INSERT into gendox_core.types
     (type_category, name, description)
@@ -52,8 +60,8 @@ select 'TEMPLATE_TYPE',
        'SECTION_TEMPLATE',
        'This is a section template' where not exists(SELECT *
                  FROM gendox_core.types
-                 where type_category = 'SECTION_TEMPLATE_TYPE'
-                   and name = 'SIMPLE_TEMPLATE');
+                 where type_category = 'TEMPLATE_TYPE'
+                   and name = 'SECTION_TEMPLATE');
 
 
 -- insert default templates
@@ -62,7 +70,7 @@ INSERT into gendox_core.templates
 select 'Default Chat Template',
        'Context: ' || '$' || '{context}
         Question: ' || '$' || '{question}',
-       (SELECT id FROM gendox_core.types WHERE type_category = 'TEMPLATE_TYPE' AND name = 'CHAT_TEMPLATE' LIMIT 1),
+       (SELECT id FROM gendox_core.types WHERE type_category = 'TEMPLATE_TYPE' AND name = 'CHAT_TEMPLATE'),
        true
 WHERE not exists(
     SELECT *
@@ -80,7 +88,7 @@ select 'Default Section Template',
                 User: ' || '$' || '{user}
                 ----------------
                 """ ',
-       (SELECT id FROM gendox_core.types WHERE type_category = 'TEMPLATE_TYPE' AND name = 'SECTION_TEMPLATE' LIMIT 1),
+       (SELECT id FROM gendox_core.types WHERE type_category = 'TEMPLATE_TYPE' AND name = 'SECTION_TEMPLATE'),
        true
 WHERE not exists(
     SELECT *

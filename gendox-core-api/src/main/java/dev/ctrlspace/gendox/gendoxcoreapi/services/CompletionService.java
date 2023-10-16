@@ -9,8 +9,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplate;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplate;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAuthor;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -100,14 +100,14 @@ public class CompletionService {
         Template agentChatTemplate = templateRepository.findByIdIs(agent.getChatTemplateId());
 
         // run sectionTemplate
-        SectionTemplate sectionTemplate = new SectionTemplate();
+        SectionTemplateAuthor sectionTemplateAuthor = new SectionTemplateAuthor();
 
-        String sectionValues = sectionTemplate.sectionValues(nearestSections, agentSectionTemplate.getText());
+        String sectionValues = sectionTemplateAuthor.sectionValues(nearestSections, agentSectionTemplate.getText());
 
         // run chatTemplate
-        ChatTemplate chatTemplate = new ChatTemplate();
+        ChatTemplateAuthor chatTemplateAuthor = new ChatTemplateAuthor();
 
-        String answer = chatTemplate.chatTemplate(message, sectionValues, agentChatTemplate.getText());
+        String answer = chatTemplateAuthor.chatTemplate(message, sectionValues, agentChatTemplate.getText());
 
 
         return answer;
