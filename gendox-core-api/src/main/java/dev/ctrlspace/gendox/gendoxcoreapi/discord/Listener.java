@@ -3,10 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.discord;
 import dev.ctrlspace.gendox.gendoxcoreapi.configuration.JDAConfiguration;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Category;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -14,13 +11,8 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
-
-import java.net.URL;
-
-import java.awt.*;
-import java.util.List;
-import java.util.UUID;
 
 @Controller
 public class Listener extends ListenerAdapter {
@@ -57,9 +49,18 @@ public class Listener extends ListenerAdapter {
         // Check if the category is not null and then get its name
         String categoryName = (category != null) ? category.getName() : "No Category"; // You can change "No Category" to a default value if needed
 
+        // check if author is gendox user and if not, create new user
+        if (event.getAuthor().isBot()) return;
+        try {
+            if (!listenerService.IsUserExist(authorName)) {
+                listenerService.createDiscordUser(authorName);
+            }
+        } catch (GendoxException e) {
+            System.err.println("An An error occurred while checking/creating the user: " + e.getMessage());
+        }
 
         // check if the event is on the gendox group
-        if (!gendox_group.equals(categoryName)){
+        if (!gendox_group.equals(categoryName)) {
             return;
         }
 
