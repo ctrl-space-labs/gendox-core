@@ -1,14 +1,14 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageDto;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageDTO;
 import org.springframework.stereotype.Component;
 
 @Component
-public class MessageConverter implements GendoxConverter<Message, MessageDto> {
+public class MessageConverter implements GendoxConverter<Message, MessageDTO> {
     @Override
-    public MessageDto toDTO(Message message) {
-        MessageDto messageDto = new MessageDto();
+    public MessageDTO toDTO(Message message) {
+        MessageDTO messageDto = new MessageDTO();
 
         messageDto.setId(message.getId());
         messageDto.setValue(message.getValue());
@@ -17,7 +17,7 @@ public class MessageConverter implements GendoxConverter<Message, MessageDto> {
     }
 
     @Override
-    public Message toEntity(MessageDto messageDto) {
+    public Message toEntity(MessageDTO messageDto) {
         Message message = new Message();
 
         message.setId(messageDto.getId());
