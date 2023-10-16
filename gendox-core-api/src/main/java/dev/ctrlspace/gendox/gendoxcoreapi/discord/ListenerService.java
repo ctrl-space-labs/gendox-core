@@ -4,10 +4,13 @@ import dev.ctrlspace.gendox.gendoxcoreapi.controller.EmbeddingsController;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -38,24 +41,25 @@ public class ListenerService {
     @Value("${gendox.domain.document-sections.get-document-sections}")
     private String sectionByIdPath;
 
-    private EmbeddingService embeddingService;
 
     private ProjectRepository projectRepository;
     private DocumentInstanceRepository documentInstanceRepository;
-
     private EmbeddingsController embeddingsController;
+    private UserService userService;
+    private TypeService typeService;
 
 
     @Autowired
-    public ListenerService(EmbeddingService embeddingService,
-                           ProjectRepository projectRepository,
+    public ListenerService(ProjectRepository projectRepository,
                            EmbeddingsController embeddingsController,
-                           DocumentInstanceRepository documentInstanceRepository) {
-        this.embeddingService = embeddingService;
+                           DocumentInstanceRepository documentInstanceRepository,
+                           UserService userService,
+                           TypeService typeService) {
         this.projectRepository = projectRepository;
         this.embeddingsController = embeddingsController;
         this.documentInstanceRepository = documentInstanceRepository;
-
+        this.userService = userService;
+        this.typeService = typeService;
     }
 
 
@@ -68,7 +72,7 @@ public class ListenerService {
         UUID projectId = projectRepository.findIdByName(channelName);
 
 
-        List<DocumentInstanceSection> sectionList = embeddingsController.findCloserSections(message, projectId.toString(), PageRequest.of(0,5));
+        List<DocumentInstanceSection> sectionList = embeddingsController.findCloserSections(message, projectId.toString(), PageRequest.of(0, 5));
 
 
         // Make the EmbedBuilders
@@ -96,10 +100,9 @@ public class ListenerService {
         UUID projectId = projectRepository.findIdByName(channelName);
 
 
-        CompletionMessageDTO completionMessageDTO = embeddingsController.getCompletionSearch(message, projectId.toString(), PageRequest.of(0,5));
+        CompletionMessageDTO completionMessageDTO = embeddingsController.getCompletionSearch(message, projectId.toString(), PageRequest.of(0, 5));
 
         List<MessageEmbed> messageEmbeds = generateCompletionMessageEmbed(completionMessageDTO);
-
 
 
         // Return List of EmbedBuilders
@@ -128,17 +131,15 @@ public class ListenerService {
 
 
         List<MessageEmbed> messageEmbeds = answers.stream().map(answer -> {
-            EmbedBuilder builder = new EmbedBuilder();
-            builder.setTitle("Gendox AI Agent");
-            builder.setDescription("```" + answer + "```");
-            builder.setColor(Color.blue);
-            sourcesUrls.forEach(url -> builder.addField("Link: ", url, true));
+                    EmbedBuilder builder = new EmbedBuilder();
+                    builder.setTitle("Gendox AI Agent");
+                    builder.setDescription("```" + answer + "```");
+                    builder.setColor(Color.blue);
+                    sourcesUrls.forEach(url -> builder.addField("Link: ", url, true));
 
-            return builder.build();
-        })
-        .collect(Collectors.toList());
-
-
+                    return builder.build();
+                })
+                .collect(Collectors.toList());
 
 
         return messageEmbeds;
@@ -146,7 +147,7 @@ public class ListenerService {
 
 
     //TODO move this to a Converter, its ok to have more than one params
-    private MessageEmbed generateSectionMessageEmbed(DocumentInstanceSection section, UUID projectId, int count){
+    private MessageEmbed generateSectionMessageEmbed(DocumentInstanceSection section, UUID projectId, int count) {
         // Make new List with strings under 1900 characters by every sections value
         List<String> answers = splitTextToStringsOfMaxLength(section.getSectionValue(), 1900);
 
@@ -191,7 +192,7 @@ public class ListenerService {
         // Find the index of the first '_' character
         int firstIndexOfUnderscore = inputString.indexOf('_');
 
-        String result = inputString.substring( + firstIndexOfUnderscore + 1 );
+        String result = inputString.substring(+firstIndexOfUnderscore + 1);
         return result;
 
     }
@@ -202,6 +203,23 @@ public class ListenerService {
         String question = eventQuestion.getAsString();
 
         return question;
+    }
+
+    public boolean IsUserExist(String author) throws GendoxException{
+        return userService.isUserExistByUserName(author);
+    }
+
+    public User createDiscordUser(String author) throws GendoxException{
+        User user = new User();
+        user.setUserName(author);
+        user.setGlobalRole(typeService.getGlobalApplicationRoleTypeByName("ROLE_USER"));
+        user.setUserType(typeService.getUserTypeByName("DISCORD_USER"));
+        user.setEmail(author +"@email.com");
+
+        user = userService.createUser(user);
+
+        return user;
+
     }
 
 }

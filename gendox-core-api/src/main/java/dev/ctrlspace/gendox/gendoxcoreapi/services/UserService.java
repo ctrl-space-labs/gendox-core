@@ -8,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserDetailsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredicate;
@@ -23,6 +24,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,11 +37,13 @@ public class UserService implements UserDetailsService {
     private UserProfileConverter userProfileConverter;
 
 
+
     @Autowired
     public UserService(UserRepository userRepository,
                         JWTUtils jwtUtils,
                         JwtDTOUserProfileConverter jwtDTOUserProfileConverter,
-                        UserProfileConverter userProfileConverter) {
+                        UserProfileConverter userProfileConverter
+                       ) {
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
@@ -72,6 +76,25 @@ public class UserService implements UserDetailsService {
     public UserProfile getProfileByEmail(String email) throws GendoxException {
         User user = getByEmail(email);
         return userProfileConverter.toDTO(user);
+    }
+
+    public boolean isUserExistByUserName(String userName) throws GendoxException{
+        return userRepository.existsByUserName(userName);
+    }
+
+    public User createUser(User user) throws GendoxException{
+        Instant now = Instant.now();
+
+        if (user.getId() != null) {
+            throw new GendoxException("NEW_PROJECT_ID_IS_NOT_NULL", "Project id must be null", HttpStatus.BAD_REQUEST);
+        }
+
+        user.setCreatedAt(now);
+        user.setUpdatedAt(now);
+
+        user = userRepository.save(user);
+        return user;
+
     }
 
     public JwtClaimsSet getJwtClaims(String email) throws GendoxException {

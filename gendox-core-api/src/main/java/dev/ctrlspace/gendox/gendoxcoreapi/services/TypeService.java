@@ -42,6 +42,18 @@ public class TypeService {
 
     }
 
+    public Type getUserTypeByName(String userTypeName){
+        return typeRepository.findByTypeCategoryAndName("USER_TYPE", userTypeName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "USER_TYPE_NOT_FOUND", "User field type not found with name: " + userTypeName));
+
+    }
+
+    public Type getGlobalApplicationRoleTypeByName(String globalApplicationRoleTypeName){
+        return typeRepository.findByTypeCategoryAndName("GLOBAL_APPLICATION_ROLE_TYPE", globalApplicationRoleTypeName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "GLOBAL_APPLICATION_ROLE_TYPE_NOT_FOUND", "Global application role field type not found with name: " + globalApplicationRoleTypeName));
+
+    }
+
 
     /**
      * Multiple handy service methods can go here like
