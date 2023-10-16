@@ -61,10 +61,15 @@ public class ProjectAgentService {
         projectAgent.setUpdatedAt(now);
         projectAgent.setCreatedBy(getUserId());
         projectAgent.setUpdatedBy(getUserId());
-        projectAgent.setChatTemplateId(templateRepository.findIdByIsDefaultTrueAndTemplateTypeName("CHAT_TEMPLATE"));
-        projectAgent.setSectionTemplateId(templateRepository.findIdByIsDefaultTrueAndTemplateTypeName("SECTION_TEMPLATE"));
-        projectAgent.setDocumentSplitterType(typeService.getDocumentSplitterTypeByName(splitterTypeName));
-
+        if (projectAgent.getChatTemplateId() == null) {
+            projectAgent.setChatTemplateId(templateRepository.findIdByIsDefaultTrueAndTemplateTypeName("CHAT_TEMPLATE"));
+        }
+        if (projectAgent.getSectionTemplateId() == null) {
+            projectAgent.setSectionTemplateId(templateRepository.findIdByIsDefaultTrueAndTemplateTypeName("SECTION_TEMPLATE"));
+        }
+        if (projectAgent.getDocumentSplitterType() == null) {
+            projectAgent.setDocumentSplitterType(typeService.getDocumentSplitterTypeByName(splitterTypeName));
+        }
         projectAgent = projectAgentRepository.save(projectAgent);
 
         return projectAgent;

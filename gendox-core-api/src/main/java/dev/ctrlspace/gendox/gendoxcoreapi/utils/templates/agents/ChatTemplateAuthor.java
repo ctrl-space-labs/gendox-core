@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-public class ChatTemplate {
+public class ChatTemplateAuthor {
 
 
     public String chatTemplate(Message message, String sectionValues, String templateText) {
