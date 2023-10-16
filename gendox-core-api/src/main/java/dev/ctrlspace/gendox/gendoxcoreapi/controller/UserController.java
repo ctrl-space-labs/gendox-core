@@ -1,8 +1,11 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
@@ -13,15 +16,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.List;
@@ -38,14 +39,17 @@ public class UserController {
     private UserService userService;
     private JwtEncoder jwtEncoder;
     private UserProfileConverter userProfileConverter;
+    private UserConverter userConverter;
 
     @Autowired
     public UserController(UserService userService,
                           JwtEncoder jwtEncoder,
-                          UserProfileConverter userProfileConverter) {
+                          UserProfileConverter userProfileConverter,
+                          UserConverter userConverter) {
         this.userService = userService;
         this.jwtEncoder = jwtEncoder;
         this.userProfileConverter = userProfileConverter;
+        this.userConverter = userConverter;
     }
 
 
@@ -104,6 +108,14 @@ public class UserController {
 
         String jwt = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
         return new JwtResponse(jwt);
+    }
+
+    @PostMapping(value = "/users", consumes = {"application/json"})
+    @ResponseStatus(value = HttpStatus.CREATED)
+    public User createUser(@RequestBody UserDTO userDTO) throws GendoxException{
+        User user = userConverter.toEntity(userDTO);
+        user = userService.createUser(user);
+        return user;
     }
 
 //
