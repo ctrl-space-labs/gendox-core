@@ -12,8 +12,8 @@ create table if not exists gendox_core.types
     PRIMARY KEY (id)
 );
 
-CREATE INDEX types_type_category_name_idx ON gendox_core.types (type_category, name);
-CREATE INDEX types_name_idx ON gendox_core.types (name);
+CREATE INDEX IF NOT EXISTS types_type_category_name_idx ON gendox_core.types (type_category, name);
+CREATE INDEX IF NOT EXISTS types_name_idx ON gendox_core.types (name);
 
 
 
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS gendox_core.document_instance
     FOREIGN KEY (user_id) REFERENCES gendox_core.users (id)
 );
 
-comment on column gendox_core.document_instance.user_id is 'user that submitted the document';
+
 
 
 CREATE TABLE IF NOT EXISTS gendox_core.document_instance_sections
@@ -165,7 +165,6 @@ CREATE TABLE IF NOT EXISTS gendox_core.document_instance_sections
 );
 
 comment on column gendox_core.document_instance_sections.section_value is 'the value of the section, if the section is a multi select section the values will go inside seperated by "value";"value"';
-comment on column gendox_core.document_instance_sections.remote_url is 'if the value of the section is too big, the url will be stored here to retrieve the answer from the server';
 
 
 CREATE TABLE IF NOT EXISTS gendox_core.projects

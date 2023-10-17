@@ -1,6 +1,4 @@
 
-
-
 -- Insert Data to table ai_models
 INSERT into gendox_core.ai_models
 (model_name, url, type, price, created_at, updated_at)

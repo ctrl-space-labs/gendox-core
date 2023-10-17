@@ -10,4 +10,7 @@ import java.util.UUID;
 
 @Repository
 public interface ProjectAgentRepository extends JpaRepository<ProjectAgent, UUID>, QuerydslPredicateExecutor<ProjectAgent> {
+
+    ProjectAgent findByProjectId(UUID projectId);
+
 }

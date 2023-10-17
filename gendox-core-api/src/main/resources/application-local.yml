@@ -62,6 +62,8 @@ gendox:
     document-sections:
       get-document-sections: /documents/sections
     sections: https://domain.com/context-path/documents/sections/
+  agents:
+    splitter-type: "STATIC_WORD_COUNT_SPLITTER"
 
 # AWS
 

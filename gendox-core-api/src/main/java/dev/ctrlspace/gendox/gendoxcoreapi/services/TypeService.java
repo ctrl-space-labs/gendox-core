@@ -43,6 +43,13 @@ public class TypeService {
     }
 
 
+    public Type getDocumentSplitterTypeByName(String splitterName){
+        return typeRepository.findByTypeCategoryAndName("DOCUMENT_SPLITTER_TYPE", splitterName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "DOCUMENT_SPLITTER_TYPE_NOT_FOUND", "Document splitter field type not found with name: " + splitterName));
+
+    }
+
+
     /**
      * Multiple handy service methods can go here like
      * getOrganizationRoles()
