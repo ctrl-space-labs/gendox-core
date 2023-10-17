@@ -214,7 +214,7 @@ public class ListenerService {
         user.setUserName(author);
         user.setGlobalRole(typeService.getGlobalApplicationRoleTypeByName("ROLE_USER"));
         user.setUserType(typeService.getUserTypeByName("DISCORD_USER"));
-        user.setEmail(author +"@email.com");
+
 
         user = userService.createUser(user);
 
