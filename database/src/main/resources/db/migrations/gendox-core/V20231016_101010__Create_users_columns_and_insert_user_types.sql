@@ -43,3 +43,14 @@ SET users_type_id = (
     LIMIT 1
     )
 WHERE user_name IS NOT NULL;
+
+-- Remove the existing unique constraint
+ALTER TABLE gendox_core.users
+DROP CONSTRAINT IF EXISTS users_email_key;
+
+-- Then, delete the NOT NULL constraint to the email column
+ALTER TABLE gendox_core.users
+    ALTER COLUMN email DROP NOT NULL;
+
+-- Add a unique index that includes non-NULL values only
+CREATE UNIQUE INDEX users_email_unique ON gendox_core.users(email) WHERE email IS NOT NULL;
