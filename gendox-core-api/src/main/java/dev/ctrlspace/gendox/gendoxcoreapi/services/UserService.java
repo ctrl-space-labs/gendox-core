@@ -41,20 +41,20 @@ public class UserService implements UserDetailsService {
     private JwtDTOUserProfileConverter jwtDTOUserProfileConverter;
     private JWTUtils jwtUtils;
     private UserProfileConverter userProfileConverter;
-
+    private TypeService typeService;
 
 
     @Autowired
     public UserService(UserRepository userRepository,
-                        JWTUtils jwtUtils,
-                        JwtDTOUserProfileConverter jwtDTOUserProfileConverter,
-                        UserProfileConverter userProfileConverter
-                       ) {
+                       JWTUtils jwtUtils,
+                       JwtDTOUserProfileConverter jwtDTOUserProfileConverter,
+                       UserProfileConverter userProfileConverter,
+                       TypeService typeService) {
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
         this.jwtDTOUserProfileConverter = jwtDTOUserProfileConverter;
-
+        this.typeService = typeService;
     }
 
     public Page<User> getAllUsers(UserCriteria criteria) {
@@ -84,11 +84,11 @@ public class UserService implements UserDetailsService {
         return userProfileConverter.toDTO(user);
     }
 
-    public boolean isUserExistByUserName(String userName) throws GendoxException{
+    public boolean isUserExistByUserName(String userName) throws GendoxException {
         return userRepository.existsByUserName(userName);
     }
 
-    public User createUser(User user) throws GendoxException{
+    public User createUser(User user) throws GendoxException {
         Instant now = Instant.now();
 
         if (user.getId() != null) {
@@ -99,6 +99,18 @@ public class UserService implements UserDetailsService {
         user.setUpdatedAt(now);
 
         user = userRepository.save(user);
+        return user;
+
+    }
+
+    public User createDiscordUser(String author) throws GendoxException {
+        User user = new User();
+        user.setUserName(author);
+        user.setGlobalRole(typeService.getGlobalApplicationRoleTypeByName("ROLE_USER"));
+        user.setUserType(typeService.getUserTypeByName("DISCORD_USER"));
+
+        user = createUser(user);
+
         return user;
 
     }
