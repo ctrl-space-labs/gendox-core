@@ -3,19 +3,23 @@ package dev.ctrlspace.gendox.gendoxcoreapi.discord;
 import dev.ctrlspace.gendox.gendoxcoreapi.configuration.JDAConfiguration;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import net.dv8tion.jda.api.entities.Category;
 import net.dv8tion.jda.api.entities.TextChannel;
 
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 
 @Controller
 public class Listener extends ListenerAdapter {
+
+    Logger logger = LoggerFactory.getLogger(Listener.class);
 
     @Value("${discord.server.group-name}")
     private String gendox_group;
@@ -23,15 +27,18 @@ public class Listener extends ListenerAdapter {
     private JDAConfiguration jdaConfiguration;
     private ListenerService listenerService;
     private ProjectRepository projectRepository;
+    private UserService userService;
 
 
     @Autowired
     public Listener(JDAConfiguration jdaConfiguration,
                     ListenerService listenerService,
-                    ProjectRepository projectRepository) {
+                    ProjectRepository projectRepository,
+                    UserService userService) {
         this.jdaConfiguration = jdaConfiguration;
         this.listenerService = listenerService;
         this.projectRepository = projectRepository;
+        this.userService = userService;
     }
 
 
@@ -52,11 +59,11 @@ public class Listener extends ListenerAdapter {
         // check if author is gendox user and if not, create new user
         if (event.getAuthor().isBot()) return;
         try {
-            if (!listenerService.IsUserExist(authorName)) {
-                listenerService.createDiscordUser(authorName);
+            if (!userService.isUserExistByUserName(authorName)) {
+                userService.createDiscordUser(authorName);
             }
         } catch (GendoxException e) {
-            System.err.println("An An error occurred while checking/creating the user: " + e.getMessage());
+           logger.warn("An An error occurred while checking/creating the user: " + e.getMessage());
         }
 
         // check if the event is on the gendox group
