@@ -45,21 +45,16 @@ public class ListenerService {
     private ProjectRepository projectRepository;
     private DocumentInstanceRepository documentInstanceRepository;
     private EmbeddingsController embeddingsController;
-    private UserService userService;
-    private TypeService typeService;
 
 
     @Autowired
     public ListenerService(ProjectRepository projectRepository,
                            EmbeddingsController embeddingsController,
-                           DocumentInstanceRepository documentInstanceRepository,
-                           UserService userService,
-                           TypeService typeService) {
+                           DocumentInstanceRepository documentInstanceRepository
+    ) {
         this.projectRepository = projectRepository;
         this.embeddingsController = embeddingsController;
         this.documentInstanceRepository = documentInstanceRepository;
-        this.userService = userService;
-        this.typeService = typeService;
     }
 
 
@@ -205,21 +200,5 @@ public class ListenerService {
         return question;
     }
 
-    public boolean IsUserExist(String author) throws GendoxException{
-        return userService.isUserExistByUserName(author);
-    }
-
-    public User createDiscordUser(String author) throws GendoxException{
-        User user = new User();
-        user.setUserName(author);
-        user.setGlobalRole(typeService.getGlobalApplicationRoleTypeByName("ROLE_USER"));
-        user.setUserType(typeService.getUserTypeByName("DISCORD_USER"));
-
-
-        user = userService.createUser(user);
-
-        return user;
-
-    }
 
 }
