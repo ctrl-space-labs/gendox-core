@@ -20,7 +20,16 @@ public class User {
     @Column(name = "name", nullable = true)
     private String name;
     @Basic
-    @Column(name = "email", nullable = false)
+    @Column(name = "first_name", nullable = true)
+    private String firstName;
+    @Basic
+    @Column(name = "last_name", nullable = true)
+    private String lastName;
+    @Basic
+    @Column(name = "user_name", nullable = true)
+    private String userName;
+    @Basic
+    @Column(name = "email", nullable = true)
     private String email;
     @Basic
     @Column(name = "phone", nullable = true, length = 20)
@@ -28,6 +37,9 @@ public class User {
     @ManyToOne
     @JoinColumn(name = "global_role_id", referencedColumnName = "id", nullable = false)
     private Type globalRole;
+    @ManyToOne
+    @JoinColumn(name = "users_type_id", referencedColumnName = "id", nullable = false)
+    private Type userType;
     @Basic
     @Column(name = "created_at", nullable = true)
     private Instant createdAt;
@@ -116,37 +128,47 @@ public class User {
         this.projectMembers = projectMembers;
     }
 
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public Type getUserType() {
+        return userType;
+    }
+
+    public void setUserType(Type userType) {
+        this.userType = userType;
+    }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        User user = (User) o;
-
-        if (!Objects.equals(id, user.id)) return false;
-        if (!Objects.equals(name, user.name)) return false;
-        if (!Objects.equals(email, user.email)) return false;
-        if (!Objects.equals(phone, user.phone)) return false;
-        if (!Objects.equals(globalRole, user.globalRole)) return false;
-        if (!Objects.equals(createdAt, user.createdAt)) return false;
-        if (!Objects.equals(updatedAt, user.updatedAt)) return false;
-        if (!Objects.equals(userOrganizations, user.userOrganizations))
-            return false;
-        return Objects.equals(projectMembers, user.projectMembers);
+        if (!(o instanceof User user)) return false;
+        return Objects.equals(getId(), user.getId()) && Objects.equals(getName(), user.getName()) && Objects.equals(getFirstName(), user.getFirstName()) && Objects.equals(getLastName(), user.getLastName()) && Objects.equals(getUserName(), user.getUserName()) && Objects.equals(getEmail(), user.getEmail()) && Objects.equals(getPhone(), user.getPhone()) && Objects.equals(getGlobalRole(), user.getGlobalRole()) && Objects.equals(getUserType(), user.getUserType()) && Objects.equals(getCreatedAt(), user.getCreatedAt()) && Objects.equals(getUpdatedAt(), user.getUpdatedAt()) && Objects.equals(getUserOrganizations(), user.getUserOrganizations()) && Objects.equals(getProjectMembers(), user.getProjectMembers());
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (name != null ? name.hashCode() : 0);
-        result = 31 * result + (email != null ? email.hashCode() : 0);
-        result = 31 * result + (phone != null ? phone.hashCode() : 0);
-        result = 31 * result + (globalRole != null ? globalRole.hashCode() : 0);
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        result = 31 * result + (userOrganizations != null ? userOrganizations.hashCode() : 0);
-        result = 31 * result + (projectMembers != null ? projectMembers.hashCode() : 0);
-        return result;
+        return Objects.hash(getId(), getName(), getFirstName(), getLastName(), getUserName(), getEmail(), getPhone(), getGlobalRole(), getUserType(), getCreatedAt(), getUpdatedAt(), getUserOrganizations(), getProjectMembers());
     }
 }
