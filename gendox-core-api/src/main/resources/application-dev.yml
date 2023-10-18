@@ -32,6 +32,28 @@ spring:
       enabled: true
       max-file-size: 10MB
       max-request-size: 100MB
+  application:
+    name: gendox-core-api
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+  observations:
+    key-values:
+      application: gendox-core-api
 
 springdoc:
   swagger-ui:
