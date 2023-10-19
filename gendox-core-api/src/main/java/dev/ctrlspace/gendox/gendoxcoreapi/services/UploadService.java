@@ -11,10 +11,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentSectionMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ResourceLoader;
 
+import org.springframework.core.io.WritableResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,13 +32,10 @@ import java.util.UUID;
 @Service
 public class UploadService {
 
-    // Define the S3 bucket path
-    @Value("${s3.bucket.name}")
-    private String s3BucketPath;
 
     // Define the location where you want to save uploaded files
-    @Value("${gendox.file.location}")
-    private String location;
+    @Value("${gendox.documents.upload-dir}")
+    private String uploadDir;
 
     private DocumentService documentService;
     private DocumentConverter documentConverter;
@@ -67,30 +66,16 @@ public class UploadService {
 
     public String uploadFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException, GendoxException {
         // Generate a unique file name to avoid conflicts
-        String fileName = file.getOriginalFilename();
         UUID documentInstanceId = UUID.randomUUID();
-        String uniqueFileName = documentInstanceId.toString() + "_" + fileName;
-        String localFilePath = createLocalFilePath(uniqueFileName, organizationId);
 
-        // Save the file to the local location
-        try (OutputStream localOutputStream = new FileOutputStream(localFilePath)) {
-            byte[] bytes = file.getBytes();
-            localOutputStream.write(bytes);
-        }
 
-//        // Save the file to the S3 bucket
-//        String s3FilePath = s3BucketPath + "/" + uniqueFileName;
-//        WritableResource s3Resource = (WritableResource) resourceLoader.getResource(s3FilePath);
-//        try (OutputStream s3OutputStream = s3Resource.getOutputStream()) {
-//            byte[] bytes = file.getBytes();
-//            s3OutputStream.write(bytes);
-//        }
+        String fullFilePath = saveFile(file, organizationId, documentInstanceId);
 
         // files content
-        String content = readTxtFileContent(new File(localFilePath));
+        String content = readTxtFileContent(file);
 
         // create DTOs
-        DocumentDTO instanceDTO = createInstanceDTO(documentInstanceId, organizationId, localFilePath);
+        DocumentDTO instanceDTO = createInstanceDTO(documentInstanceId, organizationId, fullFilePath);
         List<DocumentInstanceSectionDTO> sectionDTOs = createSectionDTOs(instanceDTO, content, projectId);
 
         // create document
@@ -103,11 +88,37 @@ public class UploadService {
         return content;
     }
 
+    /**
+     * It saves the file to the File System
+     * It supports local file system and S3 bucket, depending the resource prefix in uploadDir ("file:" or "s3:")
+     *
+     * @param file
+     * @param organizationId
+     * @param documentInstanceId
+     * @return
+     * @throws IOException
+     */
+    private String saveFile(MultipartFile file, UUID organizationId, UUID documentInstanceId) throws IOException {
+        String fileName = file.getOriginalFilename();
+        String uniqueFileName = documentInstanceId.toString() + "_" + fileName;
 
-    private String readTxtFileContent(File file) throws IOException {
+        String filePathPrefix = calculateFilePathPrefix(organizationId);
+        String fullFilePath = uploadDir + "/" + filePathPrefix + "/" + fileName;
+
+        createLocalFileDirectory(filePathPrefix);
+
+        WritableResource writableResource = (WritableResource) resourceLoader.getResource(fullFilePath);
+        try (OutputStream outputStream = writableResource.getOutputStream()) {
+            byte[] bytes = file.getBytes();
+            outputStream.write(bytes);
+        }
+        return fullFilePath;
+    }
+
+    private String readTxtFileContent(MultipartFile file) throws IOException {
         StringBuilder fileContent = new StringBuilder();
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 fileContent.append(line).append(" \n ");
@@ -118,7 +129,22 @@ public class UploadService {
     }
 
 
-    public String createLocalFilePath(String fileName, UUID organizationId) {
+    public void createLocalFileDirectory(String filePath) {
+
+        // Create the directories if they don't exist in the local file system
+        if (uploadDir.startsWith("file:")) {
+            String basePath = uploadDir.substring(5);
+            File folder = new File(basePath, filePath);
+            if (!folder.exists()) {
+                folder.mkdirs(); // Create the folder and it's parent directories if needed
+            }
+        }
+
+
+    }
+
+    @NotNull
+    private static String calculateFilePathPrefix(UUID organizationId) {
         // Get the current date
         LocalDate currentDate = LocalDate.now();
 
@@ -128,17 +154,8 @@ public class UploadService {
         String day = String.format("%02d", currentDate.getDayOfMonth());   // Zero-padded day
 
         // Construct the folder structure
-        String folderStructure = organizationId.toString() + File.separator + year + File.separator + month + File.separator + day;
-        // Create the directories if they don't exist
-        File folder = new File(location, folderStructure);
-        if (!folder.exists()) {
-            folder.mkdirs(); // Create the folder and it's parent directories if needed
-        }
-
-        // Construct the localFilePath
-        String localFilePath = new File(folder, fileName).getPath();
-
-        return localFilePath;
+        String folderStructure = organizationId.toString() + "/" + year + "/" + month + "/" + day;
+        return folderStructure;
     }
 
 

@@ -13,6 +13,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import io.micrometer.observation.annotation.Observed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -30,6 +34,8 @@ import java.util.UUID;
 
 @Service
 public class UserService implements UserDetailsService {
+
+    Logger logger = LoggerFactory.getLogger(UserService.class);
 
     private UserRepository userRepository;
     private JwtDTOUserProfileConverter jwtDTOUserProfileConverter;
@@ -109,6 +115,14 @@ public class UserService implements UserDetailsService {
 
     }
 
+    @Observed(name = "get.jwt.claims",
+            contextualName = "get-jwt-claims",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "true"
+            })
     public JwtClaimsSet getJwtClaims(String email) throws GendoxException {
 
         UserProfile userProfile = this.getProfileByEmail(email);

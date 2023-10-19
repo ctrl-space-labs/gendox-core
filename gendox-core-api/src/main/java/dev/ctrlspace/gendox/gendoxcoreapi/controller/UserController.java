@@ -8,6 +8,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import io.micrometer.observation.annotation.Observed;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,6 +96,11 @@ public class UserController {
             description = "Retrieve user information based on their email address. " +
                     "This method decodes the user's JWT based on the provided email " +
                     "and returns a JWTResponse containing the user's JWT token.")
+    @Observed(name = "user.login",
+            contextualName = "user-login-method",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+            })
     public JwtResponse getUserByLogin(@RequestParam("email") String email) throws Exception {
 
         // run code to get the user from the database
