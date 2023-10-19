@@ -1,16 +1,13 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import io.awspring.cloud.core.io.s3.SimpleStorageProtocolResolver;
 import org.springframework.beans.factory.annotation.Value;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.DefaultResourceLoader;
-import org.springframework.core.io.ResourceLoader;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-//import path.to.SimpleStorageResourceLoader;
+
 
 
 
@@ -19,26 +16,21 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 @Configuration
 public class AWSConfig {
 
-    @Value("${cloud.aws.accessKeyId}")
-    private String accessKey;
-
-    @Value("${cloud.aws.secretKey}")
-    private String secretKey;
-
     @Value("${cloud.aws.region}")
     private String region;
 
     @Bean
-    public AmazonS3 amazonS3() {
-        return AmazonS3ClientBuilder.standard()
-                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey)))
+    public AmazonS3 amazonS3(DefaultResourceLoader resourceLoader) {
+        AmazonS3 amazonS3 = AmazonS3ClientBuilder
+                .standard()
                 .withRegion(region)
                 .build();
+        SimpleStorageProtocolResolver simpleStorageProtocolResolver = new SimpleStorageProtocolResolver(amazonS3);
+        // As we are calling it by hand, we must initialize it properly.
+        simpleStorageProtocolResolver.afterPropertiesSet();
+        resourceLoader.addProtocolResolver(simpleStorageProtocolResolver);
+        return amazonS3;
     }
 
-//    @Bean
-//    public ResourceLoader resourceLoader(AmazonS3 amazonS3) {
-//        return new DefaultResourceLoader(new SimpleStorageResourceLoader(amazonS3));
-//    }
 }
 

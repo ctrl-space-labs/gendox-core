@@ -28,7 +28,7 @@ import java.util.*;
 @RestController
 public class DocumentController {
 
-    @Value("${gendox.file.allowed.extensions}")
+    @Value("${gendox.documents.allowed.extensions}")
     private String allowedExtensions;
 
     private DocumentService documentService;
