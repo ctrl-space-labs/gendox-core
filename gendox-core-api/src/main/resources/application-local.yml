@@ -40,8 +40,8 @@ springdoc:
     path: /api-documentation
 
 rsa:
-  #private-key: classpath:.env/local/local-non-production-use-private_key.pem
-  private-key: classpath:/var/app/current/.env/local/local-non-production-use-private_key.pem
+  private-key: classpath:.env/local/local-non-production-use-private_key.pem
+#  private-key: classpath:/var/app/current/.env/local/local-non-production-use-private_key.pem
 
 
 gendox:
