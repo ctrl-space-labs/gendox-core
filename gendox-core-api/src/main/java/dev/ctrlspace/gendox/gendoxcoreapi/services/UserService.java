@@ -8,7 +8,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserDetailsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredicate;
@@ -25,7 +24,6 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -73,8 +71,22 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with email: " + email, HttpStatus.NOT_FOUND));
     }
 
-    public UserProfile getProfileByEmail(String email) throws GendoxException {
-        User user = getByEmail(email);
+    /**
+     *
+     * @param userIdentifier can be either the email or username or phone number
+     * @return
+     * @throws GendoxException
+     */
+    public UserProfile getUserProfileByUniqueIdentifier(String userIdentifier) throws GendoxException {
+
+        UserCriteria criteria = UserCriteria
+                .builder()
+                .userIdentifier(userIdentifier)
+                .build();
+
+        User user = getAllUsers(criteria).stream()
+                .findFirst()
+                .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with identifier: " + userIdentifier, HttpStatus.NOT_FOUND));
         return userProfileConverter.toDTO(user);
     }
 
@@ -111,7 +123,7 @@ public class UserService implements UserDetailsService {
 
     public JwtClaimsSet getJwtClaims(String email) throws GendoxException {
 
-        UserProfile userProfile = this.getProfileByEmail(email);
+        UserProfile userProfile = this.getUserProfileByUniqueIdentifier(email);
 
         JwtDTO jwtDTO = jwtDTOUserProfileConverter.jwtDTO(userProfile);
 
