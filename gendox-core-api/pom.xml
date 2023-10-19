@@ -200,11 +200,17 @@
         </dependency>
 
 
-        <!-- AWS dependencies  -->
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.springframework.batch/spring-batch-core -->
+        <dependency>
+            <groupId>org.springframework.batch</groupId>
+            <artifactId>spring-batch-core</artifactId>
+            <version>5.0.3</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-aws -->
@@ -213,6 +219,7 @@
             <artifactId>spring-cloud-starter-aws</artifactId>
             <version>2.2.1.RELEASE</version>
         </dependency>
+
 
         <!--        pg vector-->
         <dependency>
@@ -248,15 +255,20 @@
         <!--        </dependency>-->
 
 
-        <!--        &lt;!&ndash; https://mvnrepository.com/artifact/io.awspring.cloud/spring-cloud-aws-core &ndash;&gt;-->
-        <!--        <dependency>-->
-        <!--            <groupId>io.awspring.cloud</groupId>-->
-        <!--            <artifactId>spring-cloud-aws-core</artifactId>-->
-        <!--            <version>3.0.1</version>-->
-        <!--        </dependency>-->
 
 
-<!--                                           swagger2markup                                  -->
+        <!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-s3 -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-s3</artifactId>
+            <version>1.12.568</version>
+        </dependency>
+
+
+
+
+
+        <!--                                           swagger2markup                                  -->
 
         <!-- https://mvnrepository.com/artifact/io.github.swagger2markup/swagger2markup -->
 <!--        <dependency>-->

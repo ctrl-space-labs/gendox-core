@@ -66,11 +66,8 @@ rsa:
 
 gendox:
   documents:
-    upload-dir: /tmp/gendox/documents
-  #    upload-dir: s3://gendox-ducuments-bucket
-  file:
-#    location: c:\\Users\\sekas\\Desktop\\gendox-files\\test
-    location: c:\\Users\\Giannis\\Desktop\\gendox-files\\test
+    upload-dir: s3://gendox.organization.documents.dev
+#    upload-dir: file:c:\\Users\\sekas\\gendox-documents
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
@@ -91,14 +88,7 @@ gendox:
 
 cloud:
   aws:
-    accessKeyId:
-    secretKey:
-    region: us-east-1
-
-s3:
-  bucket:
-    name: gendox-bucket-test
-
+    region: eu-central-1
 
 # Discord
 

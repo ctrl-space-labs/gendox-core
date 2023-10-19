@@ -13,7 +13,7 @@ import java.util.List;
 @ServiceName(DocumentSplitterConstants.STATIC_WORD_COUNT_SPLITTER)
 public class StaticWordCountSplitter implements DocumentSplitter {
 
-    @Value("${gendox.file.wordCount}")
+    @Value("${gendox.documents.wordCount}")
     private int wordCount;
 
     /**
