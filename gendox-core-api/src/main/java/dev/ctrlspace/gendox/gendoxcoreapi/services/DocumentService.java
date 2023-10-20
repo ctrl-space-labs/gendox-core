@@ -74,7 +74,8 @@ public class DocumentService {
         if (pageable == null) {
             throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
         }
-        return documentInstanceRepository.findAll(DocumentPredicates.build(criteria), pageable);
+
+        return documentInstanceRepository.findAllByPredicate(DocumentPredicates.build(criteria), pageable);
 
     }
 
