@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Repository
-public interface DocumentInstanceRepository extends JpaRepository<DocumentInstance, UUID> , QuerydslPredicateExecutor<DocumentInstance> {
+public interface DocumentInstanceRepository extends JpaRepository<DocumentInstance, UUID> , QuerydslPredicateExecutor<DocumentInstance>, DocumentInstanceExtendedRepository {
 
     @Query(nativeQuery = true, value = "SELECT di.remote_url FROM gendox_core.document_instance di " +
             "INNER JOIN gendox_core.document_instance_sections dis on di.id = dis.document_instance_id " +

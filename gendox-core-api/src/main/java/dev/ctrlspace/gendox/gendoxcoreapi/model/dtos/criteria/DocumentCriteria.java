@@ -16,4 +16,5 @@ public class DocumentCriteria {
 
     private String organizationId;
     private String userId;
+    private String projectId;
 }

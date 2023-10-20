@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QDocumentInstance;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.QProjectDocument;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 
 
@@ -16,9 +17,14 @@ public class DocumentPredicates {
 
     public static Predicate build(DocumentCriteria criteria){
         return ExpressionUtils.allOf(
-                organizationId(criteria.getOrganizationId())
+                organizationId(criteria.getOrganizationId()),
+               projectId(criteria.getProjectId())
                // userId(criteria.getUserId())
         );
+    }
+
+    private static Predicate projectId(String projectId) {
+        return QProjectDocument.projectDocument.project.id.eq(UUID.fromString(projectId));
     }
 
     private static Predicate organizationId(String organizationId){
