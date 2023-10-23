@@ -14,6 +14,7 @@ import java.util.UUID;
 public class DocumentPredicates {
 
     private static QDocumentInstance documentInstance = QDocumentInstance.documentInstance;
+    private static QProjectDocument projectDocument = QProjectDocument.projectDocument;
 
     public static Predicate build(DocumentCriteria criteria){
         return ExpressionUtils.allOf(
@@ -24,7 +25,10 @@ public class DocumentPredicates {
     }
 
     private static Predicate projectId(String projectId) {
-        return QProjectDocument.projectDocument.project.id.eq(UUID.fromString(projectId));
+        if (projectId == null) {
+            return null;
+        }
+        return projectDocument.project.id.eq(UUID.fromString(projectId));
     }
 
     private static Predicate organizationId(String organizationId){
