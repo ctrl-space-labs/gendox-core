@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.RoleNamesConstants;
@@ -13,6 +14,7 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Component("securityUtils")
@@ -45,8 +47,6 @@ public class SecurityUtils {
         if (isSuperAdmin(authentication)) {
             return true; // Skip validation if user is an admin
         }
-
-
 
 //        authentication.ge
         HttpServletRequest request = getCurrentHttpRequest();
@@ -132,6 +132,12 @@ public class SecurityUtils {
 
         return true;
 
+    }
+
+    public UUID getUserId() {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
+            return UUID.fromString(jwtDTO.getUserId());
     }
 
     private HttpServletRequest getCurrentHttpRequest() {

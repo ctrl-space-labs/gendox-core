@@ -1,12 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.discord.commands;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.discord.Listener;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.ListenerService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -14,6 +11,9 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -27,16 +27,18 @@ public class ChatGendox implements ICommand {
 
     private ListenerService listenerService;
     private ProjectRepository projectRepository;
-
-    private EmbeddingService embeddingService;
+    private Listener listener;
+    private JwtEncoder jwtEncoder;
 
     @Autowired
     public ChatGendox(ListenerService listenerService,
-                      EmbeddingService embeddingService,
-                      ProjectRepository projectRepository) {
+                      Listener listener,
+                      ProjectRepository projectRepository,
+                      JwtEncoder jwtEncoder) {
         this.listenerService = listenerService;
-        this.embeddingService = embeddingService;
+        this.listener = listener;
         this.projectRepository = projectRepository;
+        this.jwtEncoder = jwtEncoder;
     }
 
     @Override
@@ -70,6 +72,14 @@ public class ChatGendox implements ICommand {
             String channelId = event.getChannel().getId();
             TextChannel channel = event.getJDA().getTextChannelById(channelId);
             String authorName = event.getUser().getName();
+            String jwtToken = "";
+
+            try {
+                JwtClaimsSet claims = listener.getJwtClaimsFromHttpRequest(authorName);
+                jwtToken = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+            } catch (GendoxException e) {
+                logger.warn("An An error occurred while take authorization of the user: " + e.getMessage());
+            }
 
             UUID projectId = projectRepository.findIdByName(channelName);
             if (projectId == null) {
@@ -81,7 +91,7 @@ public class ChatGendox implements ICommand {
 
 
 
-            List<MessageEmbed> messageEmbeds = listenerService.completionForQuestion(event, channelName);
+            List<MessageEmbed> messageEmbeds = listenerService.completionForQuestion(event, channelName, jwtToken);
 
 
             for (MessageEmbed messageEmbed : messageEmbeds) {
@@ -90,7 +100,7 @@ public class ChatGendox implements ICommand {
 
 
         } catch (GendoxException e) {
-            System.err.println("An arithmetic exception occurred: " + e.getMessage());
+            logger.warn("An arithmetic exception occurred: " + e.getMessage());
         }
 
     }

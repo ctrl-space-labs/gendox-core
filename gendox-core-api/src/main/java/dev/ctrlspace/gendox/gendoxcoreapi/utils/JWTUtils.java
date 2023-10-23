@@ -36,6 +36,7 @@ public class JWTUtils {
         Jwt jwt = jwtDecoder.decode(jwtString);
         return toJwtDTO(jwt);
     }
+
     public JwtDTO toJwtDTO(Jwt jwt) {
         //implement the commented constructor in JwtDTO class
         return JwtDTO.builder()
@@ -50,6 +51,7 @@ public class JWTUtils {
                 .jti(jwt.getClaimAsString(JwtClaimName.JWT_ID))
                 .userId(jwt.getClaimAsString(JwtClaimName.USER_ID))
                 .email(jwt.getClaimAsString(JwtClaimName.EMAIL))
+                .userName(jwt.getClaimAsString(JwtClaimName.USERNAME))
                 .globalRole(jwt.getClaimAsString(JwtClaimName.GLOBAL_ROLE))
                 .orgAuthoritiesMap(
                         jwt.getClaimAsStringList(JwtClaimName.SCOPE).stream()
@@ -87,7 +89,7 @@ public class JWTUtils {
 //    }
 
     public JwtClaimsSet toClaimsSet(JwtDTO jwtDTO) {
-        return JwtClaimsSet.builder()
+        JwtClaimsSet.Builder builder = JwtClaimsSet.builder()
                 .issuer(jwtDTO.getIss())
                 .subject(jwtDTO.getSub())
                 .audience(jwtDTO.getAud())
@@ -95,16 +97,25 @@ public class JWTUtils {
                 .notBefore(jwtDTO.getNbf())
                 .issuedAt(jwtDTO.getIat())
                 .id(jwtDTO.getJti())
-                .claim(JwtClaimName.USER_ID, jwtDTO.getUserId().toString())
-                .claim(JwtClaimName.EMAIL, jwtDTO.getEmail())
-                .claim(JwtClaimName.GLOBAL_ROLE, jwtDTO.getGlobalRole())
+                .claim(JwtClaimName.USER_ID, jwtDTO.getUserId().toString());
+
+        if (jwtDTO.getEmail() != null) {
+            builder.claim(JwtClaimName.EMAIL, jwtDTO.getEmail());
+        }
+
+        if (jwtDTO.getUserName() != null) {
+            builder.claim(JwtClaimName.USERNAME, jwtDTO.getUserName());
+        }
+
+        builder.claim(JwtClaimName.GLOBAL_ROLE, jwtDTO.getGlobalRole())
                 .claim(JwtClaimName.SCOPE, getAuthorities(jwtDTO))
                 .claim(JwtClaimName.PROJECTS_ORGANIZATION, jwtDTO.getOrgProjectsMap().entrySet().stream()
                         .flatMap(entry -> entry.getValue().projectIds().stream().map(s -> s + ":" + entry.getKey().toString()))
-                        .collect(Collectors.toList()))
-                .build();
+                        .collect(Collectors.toList()));
 
+        return builder.build();
     }
+
 
     private List<String> getAuthorities(JwtDTO jwtDTO) {
         List<String> authoritiesMap = jwtDTO.getOrgAuthoritiesMap().entrySet().stream()

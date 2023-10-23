@@ -6,17 +6,14 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aie
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiEmbeddingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -36,8 +33,8 @@ public class EmbeddingService {
     private MessageRepository messageRepository;
     private TypeService typeService;
     private AiModelRepository aiModelRepository;
-    private UserRepository userRepository;
     private OpenAiEmbeddingConverter openAiEmbeddingConverter;
+    private SecurityUtils securityUtils;
 
 
 
@@ -54,7 +51,7 @@ public class EmbeddingService {
                             TypeService typeService,
                             OpenAiEmbeddingConverter openAiEmbeddingConverter,
                             AiModelRepository aiModelRepository,
-                            UserRepository userRepository) {
+                            SecurityUtils securityUtils) {
         this.aiModelService = aiModelService;
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
@@ -63,8 +60,8 @@ public class EmbeddingService {
         this.messageRepository = messageRepository;
         this.typeService = typeService;
         this.aiModelRepository = aiModelRepository;
-        this.userRepository = userRepository;
         this.openAiEmbeddingConverter = openAiEmbeddingConverter;
+        this.securityUtils = securityUtils;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -77,8 +74,8 @@ public class EmbeddingService {
         embedding.setId(UUID.randomUUID());
         embedding.setCreatedAt(now);
         embedding.setUpdatedAt(now);
-        embedding.setCreatedBy(getUserId());
-        embedding.setUpdatedBy(getUserId());
+        embedding.setCreatedBy(securityUtils.getUserId());
+        embedding.setUpdatedBy(securityUtils.getUserId());
 
         embedding = embeddingRepository.save(embedding);
         return embedding;
@@ -119,11 +116,11 @@ public class EmbeddingService {
 
     public AuditLogs createAuditLogs(UUID projectId, Long tokenCount) {
         AuditLogs auditLog = new AuditLogs();
-        auditLog.setUserId(getUserId());
+        auditLog.setUserId(securityUtils.getUserId());
         auditLog.setCreatedAt(Instant.now());
         auditLog.setUpdatedAt(Instant.now());
-        auditLog.setCreatedBy(getUserId());
-        auditLog.setUpdatedBy(getUserId());
+        auditLog.setCreatedBy(securityUtils.getUserId());
+        auditLog.setUpdatedBy(securityUtils.getUserId());
         auditLog.setProjectId(projectId);
         auditLog.setTokenCount(tokenCount);
 
@@ -144,8 +141,8 @@ public class EmbeddingService {
 
         embeddingGroup.setCreatedAt(Instant.now());
         embeddingGroup.setUpdatedAt(Instant.now());
-        embeddingGroup.setCreatedBy(getUserId());
-        embeddingGroup.setUpdatedBy(getUserId());
+        embeddingGroup.setCreatedBy(securityUtils.getUserId());
+        embeddingGroup.setUpdatedBy(securityUtils.getUserId());
 
         embeddingGroup = embeddingGroupRepository.save(embeddingGroup);
 
@@ -157,8 +154,8 @@ public class EmbeddingService {
         message.setId(UUID.randomUUID());
         message.setCreatedAt(Instant.now());
         message.setUpdatedAt(Instant.now());
-        message.setCreatedBy(getUserId());
-        message.setUpdatedBy(getUserId());
+        message.setCreatedBy(securityUtils.getUserId());
+        message.setUpdatedBy(securityUtils.getUserId());
 
         message = messageRepository.save(message);
 
@@ -201,16 +198,7 @@ public class EmbeddingService {
     }
 
 
-    public UUID getUserId() {
-        if (SecurityContextHolder.getContext().getAuthentication() == null) {
-            Optional<User> user = userRepository.findByName("Discord");
-            return user.get().getId();
-        } else {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
-            return UUID.fromString(jwtDTO.getUserId());
-        }
-    }
+
 
 
 }

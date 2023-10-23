@@ -15,6 +15,7 @@ public class UserProfile {
 
     private String id;
     private String email;
+    private String userName;
     private String globalRoleName;
     private String name;
     private List<OrganizationUserDTO> organizations;
