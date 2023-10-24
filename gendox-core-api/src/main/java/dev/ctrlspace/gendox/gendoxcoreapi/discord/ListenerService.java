@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.discord;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.controller.EmbeddingsController;
+
+import dev.ctrlspace.gendox.gendoxcoreapi.discord.post.PostService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
@@ -16,10 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.stereotype.Service;
 
 import java.awt.*;
@@ -35,28 +32,27 @@ public class ListenerService {
 
     @Value("${gendox.domain.sections}")
     private String domain;
-
     @Value("${gendox.domain.base-url}")
     private String baseUrl;
-
     @Value("${server.servlet.context-path}")
     private String contextPath;
     @Value("${gendox.domain.document-sections.get-document-sections}")
     private String sectionByIdPath;
 
 
-    private static final RestTemplate restTemplate = new RestTemplate();
+
     private ProjectRepository projectRepository;
     private DocumentInstanceRepository documentInstanceRepository;
-
+    private PostService postService;
 
 
     @Autowired
     public ListenerService(ProjectRepository projectRepository,
-                           DocumentInstanceRepository documentInstanceRepository
-    ) {
+                           DocumentInstanceRepository documentInstanceRepository,
+                           PostService postService) {
         this.projectRepository = projectRepository;
         this.documentInstanceRepository = documentInstanceRepository;
+        this.postService = postService;
     }
 
 
@@ -68,18 +64,16 @@ public class ListenerService {
         message.setValue(question);
         UUID projectId = projectRepository.findIdByName(channelName);
 
-        List<DocumentInstanceSection> sectionList = findClosestSectionWithHttpRequest(token, message, projectId);
+        List<DocumentInstanceSection> sectionList = findClosestSectionRestClient(token, message, projectId);
 
         // Make the EmbedBuilders
         List<MessageEmbed> messageEmbeds = new ArrayList<>();
         int count = 0;
         for (DocumentInstanceSection section : sectionList) {
-
             count++;
             MessageEmbed embedMessage = generateSectionMessageEmbed(section, projectId, count);
 
             messageEmbeds.add(embedMessage);
-
         }
 
         // Return List of EmbedBuilders
@@ -94,7 +88,7 @@ public class ListenerService {
         message.setValue(question);
         UUID projectId = projectRepository.findIdByName(channelName);
 
-        CompletionMessageDTO completionMessageDTO = getCompletionSearchWithHttpRequest(token, message, projectId);
+        CompletionMessageDTO completionMessageDTO = getCompletionSearchRestClient(token, message, projectId);
 
         List<MessageEmbed> messageEmbeds = generateCompletionMessageEmbed(completionMessageDTO);
 
@@ -200,99 +194,40 @@ public class ListenerService {
     }
 
 
-    public List<DocumentInstanceSection> findClosestSectionWithHttpRequest(String token, Message message, UUID projectId) throws GendoxException {
+    public List<DocumentInstanceSection> findClosestSectionRestClient(String token, Message message, UUID projectId) throws GendoxException {
         List<DocumentInstanceSection> sectionList = new ArrayList<>();
-        // Prepare the HTTP headers with the bearer token
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(token);
 
+        List<LinkedHashMap> linkedHashMapList  = postService.searchMessagePosts(token, message, projectId);
 
-        // Prepare the request entity with the message and headers
-        HttpEntity<Message> requestEntity = new HttpEntity<>(message, headers);
+        // Iterate through the LinkedHashMap objects and extract values
+        for (LinkedHashMap linkedHashMap : linkedHashMapList) {
+            // Create a DocumentInstanceSection and set its properties from the LinkedHashMap
+            DocumentInstanceSection section = new DocumentInstanceSection();
+            // Convert the String ID to UUID
+            String idString = (String) linkedHashMap.get("id");
+            UUID id = UUID.fromString(idString);
 
-        // Create a RestTemplate
+            section.setId(id);
+            section.setSectionValue((String) linkedHashMap.get("sectionValue")); // Replace "name" with the actual key
 
-        String url = "http://localhost:8080/gendox/api/v1/messages/semantic-search?projectId=" + projectId.toString() + "&page=0&size=5";
-
-
-        ResponseEntity<List<LinkedHashMap>> responseEntity;
-        try {
-            ParameterizedTypeReference<List<LinkedHashMap>> responseType = new ParameterizedTypeReference<List<LinkedHashMap>>() {
-            };
-            responseEntity = restTemplate.exchange(url, HttpMethod.POST, requestEntity, responseType);
-        } catch (RestClientException e) {
-            // Handle any exceptions that occur during the request.
-            logger.error("Error sending HTTP request: " + e.getMessage(), e);
-            throw new GendoxException("ERROR_SENDING_REQUEST", "Error sending HTTP request", HttpStatus.BAD_REQUEST);
-        }
-
-        // Check if the request was successful
-        if (responseEntity.getStatusCode() == HttpStatus.OK) {
-            List<LinkedHashMap> linkedHashMapList = responseEntity.getBody();
-
-
-            // Iterate through the LinkedHashMap objects and extract values
-            for (LinkedHashMap linkedHashMap : linkedHashMapList) {
-                // Create a DocumentInstanceSection and set its properties from the LinkedHashMap
-                DocumentInstanceSection section = new DocumentInstanceSection();
-                // Convert the String ID to UUID
-                String idString = (String) linkedHashMap.get("id");
-                UUID id = UUID.fromString(idString);
-
-                section.setId(id);
-                section.setSectionValue((String) linkedHashMap.get("sectionValue")); // Replace "name" with the actual key
-
-                sectionList.add(section);
-            }
-        } else {
-            // Handle the error case, e.g., throw an exception or return an error response
-            throw new GendoxException("REQUEST_FAILED", "Request to /messages/semantic-search failed with status code: " + responseEntity.getStatusCode(), HttpStatus.BAD_REQUEST);
+            sectionList.add(section);
         }
 
         return sectionList;
     }
 
-    public CompletionMessageDTO getCompletionSearchWithHttpRequest(String token, Message message, UUID projectId) throws GendoxException {
+
+    public CompletionMessageDTO getCompletionSearchRestClient(String token, Message message, UUID projectId) throws GendoxException {
         CompletionMessageDTO completionMessageDTO = new CompletionMessageDTO();
-        // Prepare the HTTP headers with the bearer token
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(token);
 
-        // Prepare the request entity with the message and headers
-        HttpEntity<Message> requestEntity = new HttpEntity<>(message, headers);
+        CompletionMessageDTO responseDTO = postService.completionMessageDTO(token, message, projectId);
 
-        // Create a RestTemplate
-
-        String url = "http://localhost:8080/gendox/api/v1/messages/semantic-completion?projectId=" + projectId.toString() + "&page=0&size=5";
-
-        ResponseEntity<CompletionMessageDTO> responseEntity;
-        try {
-            ParameterizedTypeReference<CompletionMessageDTO> responseType = new ParameterizedTypeReference<CompletionMessageDTO>() {
-            };
-            responseEntity = restTemplate.exchange(url, HttpMethod.POST, requestEntity, responseType);
-        } catch (RestClientException e) {
-            // Handle any exceptions that occur during the request.
-            logger.error("Error sending HTTP request: " + e.getMessage(), e);
-            throw new GendoxException("ERROR_SENDING_REQUEST", "Error sending HTTP request", HttpStatus.BAD_REQUEST);
-        }
-
-        // Check if the request was successful
-        if (responseEntity.getStatusCode() == HttpStatus.OK) {
-            CompletionMessageDTO responseDTO = responseEntity.getBody();
-
-
-            // Extract values and set them in the completionMessageDTO
-            completionMessageDTO.setMessage(responseDTO.getMessage());
-            completionMessageDTO.setSectionId(responseDTO.getSectionId());
-
-        } else {
-            // Handle the error case, e.g., throw an exception or return an error response
-            throw new GendoxException("REQUEST_FAILED", "Request to /messages/semantic-search failed with status code: " + responseEntity.getStatusCode(), HttpStatus.BAD_REQUEST);
-        }
+        // Extract values and set them in the completionMessageDTO
+        completionMessageDTO.setMessage(responseDTO.getMessage());
+        completionMessageDTO.setSectionId(responseDTO.getSectionId());
 
         return completionMessageDTO;
     }
-
 
 
 }
