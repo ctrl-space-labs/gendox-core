@@ -11,9 +11,7 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -72,14 +70,15 @@ public class ChatGendox implements ICommand {
             String channelId = event.getChannel().getId();
             TextChannel channel = event.getJDA().getTextChannelById(channelId);
             String authorName = event.getUser().getName();
-            String jwtToken = "";
+            String jwtToken = listener.getJwtToken(authorName);;
 
-            try {
-                JwtClaimsSet claims = listener.getJwtClaimsFromHttpRequest(authorName);
-                jwtToken = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-            } catch (GendoxException e) {
-                logger.warn("An An error occurred while take authorization of the user: " + e.getMessage());
-            }
+//            try {
+//                JwtClaimsSet claims = listener.getJwtClaimsFromHttpRequest(authorName);
+//                jwtToken = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+//            } catch (GendoxException e) {
+//                logger.error("An An error occurred while take authorization of the user: " + e.getMessage());
+//                throw new RuntimeException(e);
+//            }
 
             UUID projectId = projectRepository.findIdByName(channelName);
             if (projectId == null) {
@@ -100,7 +99,8 @@ public class ChatGendox implements ICommand {
 
 
         } catch (GendoxException e) {
-            logger.warn("An arithmetic exception occurred: " + e.getMessage());
+            logger.error("An arithmetic exception occurred: " + e.getMessage());
+            throw new RuntimeException(e);
         }
 
     }
