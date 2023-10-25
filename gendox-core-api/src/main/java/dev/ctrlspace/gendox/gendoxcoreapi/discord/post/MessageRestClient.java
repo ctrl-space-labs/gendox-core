@@ -7,13 +7,17 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.service.annotation.PostExchange;
 
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 public interface MessageRestClient {
 
+    @PostExchange("/messages/semantic-search")
+    List<LinkedHashMap> searchMessage(@RequestHeader Map<String, String> headers, @RequestBody Message message, @RequestParam UUID projectId, @RequestParam Integer size);
 
-    @PostExchange("${gendox.domain.messages.search.post-search-message}")
-    CompletionMessageDTO completionMessageDTO(@RequestHeader Map<String, String> headers, @RequestBody Message message, @RequestParam UUID projectId);
+    @PostExchange("/messages/semantic-completion")
+    CompletionMessageDTO completionMessageDTO(@RequestHeader Map<String, String> headers, @RequestBody Message message, @RequestParam UUID projectId, @RequestParam Integer size);
 
 }

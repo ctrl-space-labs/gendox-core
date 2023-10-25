@@ -220,7 +220,7 @@ public class ListenerService {
     public CompletionMessageDTO getCompletionSearchRestClient(String token, Message message, UUID projectId) throws GendoxException {
         CompletionMessageDTO completionMessageDTO = new CompletionMessageDTO();
 
-        CompletionMessageDTO responseDTO = postService.completionMessageDTO(token, message, projectId);
+        CompletionMessageDTO responseDTO = postService.completionMessagePosts(token, message, projectId);
 
         // Extract values and set them in the completionMessageDTO
         completionMessageDTO.setMessage(responseDTO.getMessage());
