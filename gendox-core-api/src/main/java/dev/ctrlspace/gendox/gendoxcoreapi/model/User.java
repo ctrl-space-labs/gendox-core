@@ -35,9 +35,6 @@ public class User {
     @Column(name = "phone", nullable = true, length = 20)
     private String phone;
     @ManyToOne
-    @JoinColumn(name = "global_role_id", referencedColumnName = "id", nullable = false)
-    private Type globalRole;
-    @ManyToOne
     @JoinColumn(name = "users_type_id", referencedColumnName = "id", nullable = false)
     private Type userType;
     @Basic
@@ -46,12 +43,9 @@ public class User {
     @Basic
     @Column(name = "updated_at", nullable = true)
     private Instant updatedAt;
-
-
     @JsonBackReference(value = "userOrg")
     @OneToMany(mappedBy = "user")
     private List<UserOrganization> userOrganizations;
-
     @JsonBackReference(value = "user")
     @OneToMany(mappedBy = "user")
     private List<ProjectMember> projectMembers = new ArrayList<>();
@@ -86,14 +80,6 @@ public class User {
 
     public void setPhone(String phone) {
         this.phone = phone;
-    }
-
-    public Type getGlobalRole() {
-        return globalRole;
-    }
-
-    public void setGlobalRole(Type globalRole) {
-        this.globalRole = globalRole;
     }
 
     public Instant getCreatedAt() {
@@ -164,11 +150,11 @@ public class User {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof User user)) return false;
-        return Objects.equals(getId(), user.getId()) && Objects.equals(getName(), user.getName()) && Objects.equals(getFirstName(), user.getFirstName()) && Objects.equals(getLastName(), user.getLastName()) && Objects.equals(getUserName(), user.getUserName()) && Objects.equals(getEmail(), user.getEmail()) && Objects.equals(getPhone(), user.getPhone()) && Objects.equals(getGlobalRole(), user.getGlobalRole()) && Objects.equals(getUserType(), user.getUserType()) && Objects.equals(getCreatedAt(), user.getCreatedAt()) && Objects.equals(getUpdatedAt(), user.getUpdatedAt()) && Objects.equals(getUserOrganizations(), user.getUserOrganizations()) && Objects.equals(getProjectMembers(), user.getProjectMembers());
+        return Objects.equals(getId(), user.getId()) && Objects.equals(getName(), user.getName()) && Objects.equals(getFirstName(), user.getFirstName()) && Objects.equals(getLastName(), user.getLastName()) && Objects.equals(getUserName(), user.getUserName()) && Objects.equals(getEmail(), user.getEmail()) && Objects.equals(getPhone(), user.getPhone()) && Objects.equals(getUserType(), user.getUserType()) && Objects.equals(getCreatedAt(), user.getCreatedAt()) && Objects.equals(getUpdatedAt(), user.getUpdatedAt()) && Objects.equals(getUserOrganizations(), user.getUserOrganizations()) && Objects.equals(getProjectMembers(), user.getProjectMembers());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getName(), getFirstName(), getLastName(), getUserName(), getEmail(), getPhone(), getGlobalRole(), getUserType(), getCreatedAt(), getUpdatedAt(), getUserOrganizations(), getProjectMembers());
+        return Objects.hash(getId(), getName(), getFirstName(), getLastName(), getUserName(), getEmail(), getPhone(), getUserType(), getCreatedAt(), getUpdatedAt(), getUserOrganizations(), getProjectMembers());
     }
 }

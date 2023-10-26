@@ -3,9 +3,11 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -25,16 +27,19 @@ public class ProjectAgentService {
     private TypeService typeService;
     private TemplateRepository templateRepository;
     private SecurityUtils securityUtils;
+    private UserService userService;
 
     @Autowired
     public ProjectAgentService(ProjectAgentRepository projectAgentRepository,
                                TypeService typeService,
                                TemplateRepository templateRepository,
-                               SecurityUtils securityUtils) {
+                               SecurityUtils securityUtils,
+                               UserService userService) {
         this.projectAgentRepository = projectAgentRepository;
         this.typeService = typeService;
         this.templateRepository = templateRepository;
         this.securityUtils = securityUtils;
+        this.userService = userService;
     }
 
     public ProjectAgent createProjectAgent(ProjectAgent projectAgent) throws Exception {
@@ -58,6 +63,16 @@ public class ProjectAgentService {
         if (projectAgent.getDocumentSplitterType() == null) {
             projectAgent.setDocumentSplitterType(typeService.getDocumentSplitterTypeByName(splitterTypeName));
         }
+
+        // Enable Agent to become User
+        User user = new User();
+        user.setName(projectAgent.getAgentName());
+        user.setUserName(projectAgent.getAgentName());
+        user.setUserType(typeService.getUserRoleTypeByUserType(UserNamesConstants.GENDOX_AGENT));
+        user.setId(UUID.randomUUID());
+        user = userService.createUser(user);
+
+        projectAgent.setUserId(user.getId());
         projectAgent = projectAgentRepository.save(projectAgent);
 
         return projectAgent;

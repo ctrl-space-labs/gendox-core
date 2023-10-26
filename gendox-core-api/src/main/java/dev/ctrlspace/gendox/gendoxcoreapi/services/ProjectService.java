@@ -22,18 +22,15 @@ public class ProjectService {
 
     private ProjectRepository projectRepository;
     private ProjectMemberService projectMemberService;
-    private ProjectAgentService projectAgentService;
     private SecurityUtils securityUtils;
 
 
     @Autowired
     public ProjectService(ProjectRepository projectRepository,
                           ProjectMemberService projectMemberService,
-                          ProjectAgentService projectAgentService,
-                          SecurityUtils securityUtils){
+                          SecurityUtils securityUtils) {
         this.projectRepository = projectRepository;
         this.projectMemberService = projectMemberService;
-        this.projectAgentService = projectAgentService;
         this.securityUtils = securityUtils;
     }
 
@@ -56,10 +53,6 @@ public class ProjectService {
     public Project createProject(Project project) throws Exception {
         Instant now = Instant.now();
 
-        if (project.getId() != null) {
-            throw new GendoxException("NEW_PROJECT_ID_IS_NOT_NULL", "Project id must be null", HttpStatus.BAD_REQUEST);
-        }
-
         project.setCreatedAt(now);
         project.setUpdatedAt(now);
         project.setCreatedBy(securityUtils.getUserId());
@@ -67,12 +60,6 @@ public class ProjectService {
 
         project = projectRepository.save(project);
 
-        // set up default Agent
-        ProjectAgent projectAgent = new ProjectAgent();
-        projectAgent.setProject(project);
-        projectAgent.setAgentName(project.getName() + " Agent");
-        projectAgent = projectAgentService.createProjectAgent(projectAgent);
-        project.setProjectAgent(projectAgent);
 
         // Project's Admins & Creator become members of the project
         projectMemberService.addDefaultMembersToTheProject(project, project.getOrganizationId());
@@ -82,25 +69,15 @@ public class ProjectService {
     }
 
 
-
     public Project updateProject(Project project) throws GendoxException {
-        UUID projectId = project.getId();
-        Project existingProject = this.getProjectById(projectId);
 
-        // Update the properties of the existingProject with the values from the updated project
-        existingProject.setName(project.getName());
-        existingProject.setDescription(project.getDescription());
-        existingProject.setUpdatedAt(Instant.now());
-        existingProject.setUpdatedBy(securityUtils.getUserId());
-        existingProject.setProjectAgent(projectAgentService.updateProjectAgent(project.getProjectAgent()));
+        project.setUpdatedAt(Instant.now());
+        project.setUpdatedBy(securityUtils.getUserId());
+        project = projectRepository.save(project);
 
-        existingProject = projectRepository.save(existingProject);
-
-        return existingProject;
+        return project;
 
     }
-
-
 
 
     public void deleteProject(UUID id) throws Exception {
@@ -110,7 +87,6 @@ public class ProjectService {
         projectRepository.delete(project);
 
     }
-
 
 
 }
