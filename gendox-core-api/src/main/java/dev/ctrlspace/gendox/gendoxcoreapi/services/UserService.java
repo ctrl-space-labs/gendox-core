@@ -4,10 +4,12 @@ import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.JwtDTOUserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserDetailsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredicate;
@@ -18,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -28,6 +31,7 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -79,7 +83,6 @@ public class UserService implements UserDetailsService {
     }
 
     /**
-     *
      * @param userIdentifier can be either the email or username or phone number
      * @return
      * @throws GendoxException
@@ -104,10 +107,10 @@ public class UserService implements UserDetailsService {
     public User createUser(User user) throws GendoxException {
         Instant now = Instant.now();
 
-        if (user.getId() != null) {
-            throw new GendoxException("NEW_PROJECT_ID_IS_NOT_NULL", "Project id must be null", HttpStatus.BAD_REQUEST);
+        if (user.getUserType() == null) {
+            user.setUserType(typeService.getUserTypeByName("GENDOX_USER"));
         }
-
+        
         user.setCreatedAt(now);
         user.setUpdatedAt(now);
 
@@ -119,7 +122,6 @@ public class UserService implements UserDetailsService {
     public User createDiscordUser(String author) throws GendoxException {
         User user = new User();
         user.setUserName(author);
-        user.setGlobalRole(typeService.getGlobalApplicationRoleTypeByName("ROLE_USER"));
         user.setUserType(typeService.getUserTypeByName("DISCORD_USER"));
 
         user = createUser(user);
