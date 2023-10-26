@@ -1,9 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.RoleNamesConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -14,7 +13,6 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.util.Optional;
 import java.util.UUID;
 
 @Component("securityUtils")
@@ -31,13 +29,21 @@ public class SecurityUtils {
 
     public boolean isSuperAdmin(Authentication authentication) {
         return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith(RoleNamesConstants.SUPER_ADMIN));
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith(UserNamesConstants.GENDOX_SUPER_ADMIN));
     }
 
     public boolean isUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith(RoleNamesConstants.USER));
+                .anyMatch(grantedAuthority -> {
+                    String authority = grantedAuthority.getAuthority();
+                    return authority.endsWith("_USER");
+                });
+    }
+
+    public boolean isAgent(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith(UserNamesConstants.GENDOX_AGENT));
     }
 
 
