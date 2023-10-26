@@ -8,7 +8,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCr
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectMemberPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.RoleNamesConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.PageRequest;
@@ -143,7 +144,7 @@ public class ProjectMemberService {
         Set<UUID> userIds = userOrganizationService.getAll(UserOrganizationCriteria
                         .builder()
                         .organizationId(organizationId.toString())
-                        .roleName(RoleNamesConstants.ADMIN)
+                        .roleName(OrganizationRolesConstants.ADMIN)
                         .build())
                 .stream()
                 .map(userOrganization -> userOrganization.getUser().getId())
