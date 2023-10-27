@@ -72,13 +72,14 @@ public class ChatGendox implements ICommand {
             String channelId = event.getChannel().getId();
             TextChannel channel = event.getJDA().getTextChannelById(channelId);
             String authorName = event.getUser().getName();
-            String jwtToken = listener.getJwtToken(authorName);;
 
 
             UUID projectId = projectRepository.findIdByName(channelName);
             if (projectId == null) {
                 return;
             }
+
+            String jwtToken = listener.getJwtToken(authorName);
             // Get the message content from the event
             String question = listenerService.getTheQuestion(event);
             channel.sendMessage(authorName + ", thank you for the question: \n- " + question + "\n\uD83E\uDD16 Thinking... \uD83E\uDD16").queue();
