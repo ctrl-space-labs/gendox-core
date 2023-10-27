@@ -9,10 +9,12 @@ import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.stereotype.Component;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -72,13 +74,6 @@ public class ChatGendox implements ICommand {
             String authorName = event.getUser().getName();
             String jwtToken = listener.getJwtToken(authorName);;
 
-//            try {
-//                JwtClaimsSet claims = listener.getJwtClaimsFromHttpRequest(authorName);
-//                jwtToken = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-//            } catch (GendoxException e) {
-//                logger.error("An An error occurred while take authorization of the user: " + e.getMessage());
-//                throw new RuntimeException(e);
-//            }
 
             UUID projectId = projectRepository.findIdByName(channelName);
             if (projectId == null) {
@@ -90,8 +85,11 @@ public class ChatGendox implements ICommand {
 
 
 
-            List<MessageEmbed> messageEmbeds = listenerService.completionForQuestion(event, channelName, jwtToken);
+            List<MessageEmbed> messageEmbeds = listenerService.  completionForQuestion(event, channelName, jwtToken);
 
+
+//            Button replayButton = Button.danger("replay-button", "replay");
+//            Button button = Button.primary("replay-button", "replay").withLabel().
 
             for (MessageEmbed messageEmbed : messageEmbeds) {
                 channel.sendMessageEmbeds(messageEmbed).queue();
