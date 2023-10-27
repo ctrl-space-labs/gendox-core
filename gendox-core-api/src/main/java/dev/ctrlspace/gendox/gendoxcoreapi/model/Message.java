@@ -24,6 +24,9 @@ public class Message {
     @Column(name = "value")
     private String value;
     @Basic
+    @Column(name = "thread_id")
+    private UUID threadId;
+    @Basic
     @Column(name = "created_at")
     private Instant createdAt;
     @Basic
@@ -84,15 +87,23 @@ public class Message {
         this.updatedBy = updatedBy;
     }
 
+    public UUID getThreadId() {
+        return threadId;
+    }
+
+    public void setThreadId(UUID threadId) {
+        this.threadId = threadId;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Message message)) return false;
-        return Objects.equals(getId(), message.getId()) && Objects.equals(getValue(), message.getValue()) && Objects.equals(getCreatedAt(), message.getCreatedAt()) && Objects.equals(getUpdatedAt(), message.getUpdatedAt()) && Objects.equals(getCreatedBy(), message.getCreatedBy()) && Objects.equals(getUpdatedBy(), message.getUpdatedBy());
+        return Objects.equals(getId(), message.getId()) && Objects.equals(getValue(), message.getValue()) && Objects.equals(getThreadId(), message.getThreadId()) && Objects.equals(getCreatedAt(), message.getCreatedAt()) && Objects.equals(getUpdatedAt(), message.getUpdatedAt()) && Objects.equals(getCreatedBy(), message.getCreatedBy()) && Objects.equals(getUpdatedBy(), message.getUpdatedBy());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getValue(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy());
+        return Objects.hash(getId(), getValue(), getThreadId(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy());
     }
 }

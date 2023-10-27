@@ -37,7 +37,6 @@ public class EmbeddingService {
     private SecurityUtils securityUtils;
 
 
-
     @Autowired
     private JWTUtils jwtUtils;
 
@@ -152,6 +151,9 @@ public class EmbeddingService {
     public Message createMessage(Message message) {
 
         message.setId(UUID.randomUUID());
+        if (message.getThreadId() == null) {
+            message.setThreadId(UUID.randomUUID());
+        }
         message.setCreatedAt(Instant.now());
         message.setUpdatedAt(Instant.now());
         message.setCreatedBy(securityUtils.getUserId());
@@ -196,9 +198,6 @@ public class EmbeddingService {
 
         return sections;
     }
-
-
-
 
 
 }
