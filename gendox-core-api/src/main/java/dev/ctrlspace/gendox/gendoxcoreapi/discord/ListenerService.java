@@ -1,13 +1,14 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.discord;
 
 
-import dev.ctrlspace.gendox.gendoxcoreapi.discord.post.PostService;
+import dev.ctrlspace.gendox.gendoxcoreapi.discord.post.MessageRestClient;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.HttpUtils;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -43,16 +44,19 @@ public class ListenerService {
 
     private ProjectRepository projectRepository;
     private DocumentInstanceRepository documentInstanceRepository;
-    private PostService postService;
+    private HttpUtils httpUtils;
+    private MessageRestClient messageRestClientService;
 
 
     @Autowired
     public ListenerService(ProjectRepository projectRepository,
                            DocumentInstanceRepository documentInstanceRepository,
-                           PostService postService) {
+                           HttpUtils httpUtils,
+                           MessageRestClient messageRestClientService) {
         this.projectRepository = projectRepository;
         this.documentInstanceRepository = documentInstanceRepository;
-        this.postService = postService;
+        this.httpUtils = httpUtils;
+        this.messageRestClientService = messageRestClientService;
     }
 
 
@@ -197,18 +201,21 @@ public class ListenerService {
     public List<DocumentInstanceSection> findClosestSectionRestClient(String token, Message message, UUID projectId) throws GendoxException {
         List<DocumentInstanceSection> sectionList = new ArrayList<>();
 
-        List<LinkedHashMap> linkedHashMapList  = postService.searchMessagePosts(token, message, projectId);
+        var bearerHeader = httpUtils.getBearerTokenHeader(token);
+
+
+        List<LinkedHashMap> documentSectionsMap  = messageRestClientService.searchMessage(bearerHeader, message, projectId, 5);
 
         // Iterate through the LinkedHashMap objects and extract values
-        for (LinkedHashMap linkedHashMap : linkedHashMapList) {
+        for (LinkedHashMap documentSectionMap : documentSectionsMap) {
             // Create a DocumentInstanceSection and set its properties from the LinkedHashMap
             DocumentInstanceSection section = new DocumentInstanceSection();
             // Convert the String ID to UUID
-            String idString = (String) linkedHashMap.get("id");
+            String idString = (String) documentSectionMap.get("id");
             UUID id = UUID.fromString(idString);
 
             section.setId(id);
-            section.setSectionValue((String) linkedHashMap.get("sectionValue")); // Replace "name" with the actual key
+            section.setSectionValue((String) documentSectionMap.get("sectionValue")); // Replace "name" with the actual key
 
             sectionList.add(section);
         }
@@ -220,7 +227,10 @@ public class ListenerService {
     public CompletionMessageDTO getCompletionSearchRestClient(String token, Message message, UUID projectId) throws GendoxException {
         CompletionMessageDTO completionMessageDTO = new CompletionMessageDTO();
 
-        CompletionMessageDTO responseDTO = postService.completionMessagePosts(token, message, projectId);
+        var bearerHeader = httpUtils.getBearerTokenHeader(token);
+
+
+        CompletionMessageDTO responseDTO  = messageRestClientService.completionMessageDTO(bearerHeader, message, projectId, 5);
 
         // Extract values and set them in the completionMessageDTO
         completionMessageDTO.setMessage(responseDTO.getMessage());
