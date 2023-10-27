@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.controller.UserController;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.Listener;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.commands.AskGendox;
+import dev.ctrlspace.gendox.gendoxcoreapi.discord.post.MessageRestClient;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.observations.LoggingObservationHandler;
@@ -47,17 +48,6 @@ public class GendoxCoreApiApplication {
         SpringApplication.run(GendoxCoreApiApplication.class, args);
     }
 
-    @Value("${cloud.aws.region}")
-    String region;
-
-    @Bean
-    public OpenAiClient openAiService() {
-//return null;
-
-        RestClient restClient = RestClient.create("https://api.openai.com/v1");
-        HttpServiceProxyFactory httpServiceProxyFactory = HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient)).build();
-        return httpServiceProxyFactory.createClient(OpenAiClient.class);
-    }
 
 
 }

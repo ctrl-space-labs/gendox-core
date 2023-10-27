@@ -80,6 +80,13 @@ gendox:
     document-sections:
       get-document-sections: /documents/sections
     sections: https://domain.com/context-path/documents/sections/
+    messages:
+      completion:
+        post-completion-message: /messages/semantic-completion
+      search:
+        post-search-message: /messages/semantic-search
+  pages:
+    default: "&page=0&size=5"
   agents:
     splitter-type: "STATIC_WORD_COUNT_SPLITTER"
 

@@ -92,19 +92,19 @@ public class UserController {
 
     // TODO this is just for demo purposes, need to be rewrite
     @GetMapping("/users/login")
-    @Operation(summary = "Get user by email",
-            description = "Retrieve user information based on their email address. " +
-                    "This method decodes the user's JWT based on the provided email " +
+    @Operation(summary = "Get users token by email or user name",
+            description = "Retrieve user information based on their email address or username. " +
+                    "This method decodes the user's JWT based on the provided email or username " +
                     "and returns a JWTResponse containing the user's JWT token.")
     @Observed(name = "user.login",
             contextualName = "user-login-method",
             lowCardinalityKeyValues = {
                     ObservabilityTags.LOGGABLE, "true",
             })
-    public JwtResponse getUserByLogin(@RequestParam("email") String email) throws Exception {
+    public JwtResponse getUserByLogin(@RequestParam("userIdentifier") String userIdentifier) throws Exception {
 
         // run code to get the user from the database
-        JwtClaimsSet claims = userService.getJwtClaims(email);
+        JwtClaimsSet claims = userService.getJwtClaims(userIdentifier);
 
         String jwt = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
         return new JwtResponse(jwt);

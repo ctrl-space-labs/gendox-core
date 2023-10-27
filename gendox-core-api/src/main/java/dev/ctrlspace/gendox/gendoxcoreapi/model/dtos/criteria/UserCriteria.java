@@ -20,4 +20,7 @@ public class UserCriteria {
     private String projectId;
     private String orgRoleName;
 
+    private String userIdentifier; // email or username or phone
+
+
 }

@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectPredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,15 +23,18 @@ public class ProjectService {
     private ProjectRepository projectRepository;
     private ProjectMemberService projectMemberService;
     private ProjectAgentService projectAgentService;
+    private SecurityUtils securityUtils;
 
 
     @Autowired
     public ProjectService(ProjectRepository projectRepository,
                           ProjectMemberService projectMemberService,
-                          ProjectAgentService projectAgentService){
+                          ProjectAgentService projectAgentService,
+                          SecurityUtils securityUtils){
         this.projectRepository = projectRepository;
         this.projectMemberService = projectMemberService;
         this.projectAgentService = projectAgentService;
+        this.securityUtils = securityUtils;
     }
 
     public Project getProjectById(UUID id) throws GendoxException {
@@ -58,6 +62,8 @@ public class ProjectService {
 
         project.setCreatedAt(now);
         project.setUpdatedAt(now);
+        project.setCreatedBy(securityUtils.getUserId());
+        project.setUpdatedBy(securityUtils.getUserId());
 
         project = projectRepository.save(project);
 
@@ -85,6 +91,7 @@ public class ProjectService {
         existingProject.setName(project.getName());
         existingProject.setDescription(project.getDescription());
         existingProject.setUpdatedAt(Instant.now());
+        existingProject.setUpdatedBy(securityUtils.getUserId());
         existingProject.setProjectAgent(projectAgentService.updateProjectAgent(project.getProjectAgent()));
 
         existingProject = projectRepository.save(existingProject);

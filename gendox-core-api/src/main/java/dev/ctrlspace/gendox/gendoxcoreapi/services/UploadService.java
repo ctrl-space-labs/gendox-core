@@ -171,7 +171,6 @@ public class UploadService {
     public DocumentDTO createInstanceDTO(UUID documentInstanceId, UUID organizationId, String location) throws GendoxException {
         DocumentDTO instanceDTO = new DocumentDTO();
         instanceDTO.setId(documentInstanceId);
-        instanceDTO.setUserId(documentService.getUserId());
         instanceDTO.setOrganizationId(organizationId);
         instanceDTO.setRemoteUrl(location);
         return instanceDTO;

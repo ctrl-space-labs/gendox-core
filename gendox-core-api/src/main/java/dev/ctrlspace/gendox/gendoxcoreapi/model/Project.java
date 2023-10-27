@@ -32,6 +32,12 @@ public class Project {
     @Basic
     @Column(name = "updated_at", nullable = true)
     private Instant updatedAt;
+    @Basic
+    @Column(name = "created_by")
+    private UUID createdBy;
+    @Basic
+    @Column(name = "updated_by")
+    private UUID updatedBy;
 
     @Schema(hidden = true)
     @JsonBackReference(value = "project")
@@ -113,35 +119,31 @@ public class Project {
         this.projectAgent = projectAgents;
     }
 
+    public UUID getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(UUID createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public UUID getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(UUID updatedBy) {
+        this.updatedBy = updatedBy;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        Project project = (Project) o;
-
-        if (!Objects.equals(id, project.id)) return false;
-        if (!Objects.equals(organizationId, project.organizationId))
-            return false;
-        if (!Objects.equals(name, project.name)) return false;
-        if (!Objects.equals(description, project.description)) return false;
-        if (!Objects.equals(createdAt, project.createdAt)) return false;
-        if (!Objects.equals(updatedAt, project.updatedAt)) return false;
-        if (!Objects.equals(projectMembers, project.projectMembers))
-            return false;
-        return Objects.equals(projectAgent, project.projectAgent);
+        if (!(o instanceof Project project)) return false;
+        return Objects.equals(getId(), project.getId()) && Objects.equals(getOrganizationId(), project.getOrganizationId()) && Objects.equals(getName(), project.getName()) && Objects.equals(getDescription(), project.getDescription()) && Objects.equals(getCreatedAt(), project.getCreatedAt()) && Objects.equals(getUpdatedAt(), project.getUpdatedAt()) && Objects.equals(getCreatedBy(), project.getCreatedBy()) && Objects.equals(getUpdatedBy(), project.getUpdatedBy()) && Objects.equals(getProjectMembers(), project.getProjectMembers()) && Objects.equals(getProjectAgent(), project.getProjectAgent()) && Objects.equals(projectDocuments, project.projectDocuments);
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (organizationId != null ? organizationId.hashCode() : 0);
-        result = 31 * result + (name != null ? name.hashCode() : 0);
-        result = 31 * result + (description != null ? description.hashCode() : 0);
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        result = 31 * result + (projectMembers != null ? projectMembers.hashCode() : 0);
-        result = 31 * result + (projectAgent != null ? projectAgent.hashCode() : 0);
-        return result;
+        return Objects.hash(getId(), getOrganizationId(), getName(), getDescription(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy(), getProjectMembers(), getProjectAgent(), projectDocuments);
     }
 }
