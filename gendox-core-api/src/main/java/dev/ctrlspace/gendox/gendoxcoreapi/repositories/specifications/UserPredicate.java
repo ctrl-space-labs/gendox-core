@@ -16,6 +16,7 @@ public class UserPredicate {
                 email(criteria.getEmail()),
                 organizationId(criteria.getOrganizationId()),
                 projectId(criteria.getProjectId()),
+                userIdentifier(criteria.getUserIdentifier()),
                 roleName(criteria.getOrgRoleName())
         );
     }
@@ -36,6 +37,14 @@ public class UserPredicate {
         return roleName != null ? user.userOrganizations.any().role.name.eq(roleName) : null;
     }
 
+    private static Predicate userIdentifier(String userIdentifier) {
+        if (userIdentifier == null) {
+            return null;
+        }
+        return user.email.eq(userIdentifier)
+                .or(user.userName.eq(userIdentifier))
+                .or(user.phone.eq(userIdentifier));
+    }
 
 
 

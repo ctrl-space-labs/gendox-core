@@ -1,24 +1,23 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.discord;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.controller.EmbeddingsController;
+
+import dev.ctrlspace.gendox.gendoxcoreapi.discord.post.MessageRestClient;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.HttpUtils;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import org.apache.commons.text.StringSubstitutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.awt.*;
@@ -30,35 +29,38 @@ import java.util.stream.Collectors;
 @Service
 public class ListenerService {
 
+    Logger logger = LoggerFactory.getLogger(ListenerService.class);
+
     @Value("${gendox.domain.sections}")
     private String domain;
-
     @Value("${gendox.domain.base-url}")
     private String baseUrl;
-
     @Value("${server.servlet.context-path}")
     private String contextPath;
     @Value("${gendox.domain.document-sections.get-document-sections}")
     private String sectionByIdPath;
 
 
+
     private ProjectRepository projectRepository;
     private DocumentInstanceRepository documentInstanceRepository;
-    private EmbeddingsController embeddingsController;
+    private HttpUtils httpUtils;
+    private MessageRestClient messageRestClientService;
 
 
     @Autowired
     public ListenerService(ProjectRepository projectRepository,
-                           EmbeddingsController embeddingsController,
-                           DocumentInstanceRepository documentInstanceRepository
-    ) {
+                           DocumentInstanceRepository documentInstanceRepository,
+                           HttpUtils httpUtils,
+                           MessageRestClient messageRestClientService) {
         this.projectRepository = projectRepository;
-        this.embeddingsController = embeddingsController;
         this.documentInstanceRepository = documentInstanceRepository;
+        this.httpUtils = httpUtils;
+        this.messageRestClientService = messageRestClientService;
     }
 
 
-    public List<MessageEmbed> semanticSearchForQuestion(SlashCommandInteractionEvent event, String channelName) throws GendoxException {
+    public List<MessageEmbed> semanticSearchForQuestion(SlashCommandInteractionEvent event, String channelName, String token) throws GendoxException {
 
         // Get the message content from the event
         String question = getTheQuestion(event);
@@ -66,27 +68,23 @@ public class ListenerService {
         message.setValue(question);
         UUID projectId = projectRepository.findIdByName(channelName);
 
-
-        List<DocumentInstanceSection> sectionList = embeddingsController.findCloserSections(message, projectId.toString(), PageRequest.of(0, 5));
-
+        List<DocumentInstanceSection> sectionList = findClosestSectionRestClient(token, message, projectId);
 
         // Make the EmbedBuilders
         List<MessageEmbed> messageEmbeds = new ArrayList<>();
         int count = 0;
         for (DocumentInstanceSection section : sectionList) {
-
             count++;
             MessageEmbed embedMessage = generateSectionMessageEmbed(section, projectId, count);
 
             messageEmbeds.add(embedMessage);
-
         }
 
         // Return List of EmbedBuilders
         return messageEmbeds;
     }
 
-    public List<MessageEmbed> completionForQuestion(SlashCommandInteractionEvent event, String channelName) throws GendoxException {
+    public List<MessageEmbed> completionForQuestion(SlashCommandInteractionEvent event, String channelName, String token) throws GendoxException {
 
         // Get the message content from the event
         String question = getTheQuestion(event);
@@ -94,8 +92,7 @@ public class ListenerService {
         message.setValue(question);
         UUID projectId = projectRepository.findIdByName(channelName);
 
-
-        CompletionMessageDTO completionMessageDTO = embeddingsController.getCompletionSearch(message, projectId.toString(), PageRequest.of(0, 5));
+        CompletionMessageDTO completionMessageDTO = getCompletionSearchRestClient(token, message, projectId);
 
         List<MessageEmbed> messageEmbeds = generateCompletionMessageEmbed(completionMessageDTO);
 
@@ -198,6 +195,48 @@ public class ListenerService {
         String question = eventQuestion.getAsString();
 
         return question;
+    }
+
+
+    public List<DocumentInstanceSection> findClosestSectionRestClient(String token, Message message, UUID projectId) throws GendoxException {
+        List<DocumentInstanceSection> sectionList = new ArrayList<>();
+
+        var bearerHeader = httpUtils.getBearerTokenHeader(token);
+
+
+        List<LinkedHashMap> documentSectionsMap  = messageRestClientService.searchMessage(bearerHeader, message, projectId, 5);
+
+        // Iterate through the LinkedHashMap objects and extract values
+        for (LinkedHashMap documentSectionMap : documentSectionsMap) {
+            // Create a DocumentInstanceSection and set its properties from the LinkedHashMap
+            DocumentInstanceSection section = new DocumentInstanceSection();
+            // Convert the String ID to UUID
+            String idString = (String) documentSectionMap.get("id");
+            UUID id = UUID.fromString(idString);
+
+            section.setId(id);
+            section.setSectionValue((String) documentSectionMap.get("sectionValue")); // Replace "name" with the actual key
+
+            sectionList.add(section);
+        }
+
+        return sectionList;
+    }
+
+
+    public CompletionMessageDTO getCompletionSearchRestClient(String token, Message message, UUID projectId) throws GendoxException {
+        CompletionMessageDTO completionMessageDTO = new CompletionMessageDTO();
+
+        var bearerHeader = httpUtils.getBearerTokenHeader(token);
+
+
+        CompletionMessageDTO responseDTO  = messageRestClientService.completionMessageDTO(bearerHeader, message, projectId, 5);
+
+        // Extract values and set them in the completionMessageDTO
+        completionMessageDTO.setMessage(responseDTO.getMessage());
+        completionMessageDTO.setSectionId(responseDTO.getSectionId());
+
+        return completionMessageDTO;
     }
 
 

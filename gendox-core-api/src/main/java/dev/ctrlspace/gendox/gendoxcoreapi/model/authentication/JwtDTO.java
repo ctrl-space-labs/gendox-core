@@ -52,6 +52,7 @@ public class JwtDTO {
 
     private String userId;
     private String email;
+    private String userName;
     private String globalRole;
 
     // OrganizationId -> Authorities

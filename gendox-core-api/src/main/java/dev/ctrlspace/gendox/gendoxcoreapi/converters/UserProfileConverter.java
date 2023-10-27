@@ -84,6 +84,7 @@ public class UserProfileConverter {
         return UserProfile.builder()
                 .id(user.getId().toString())
                 .email(user.getEmail())
+                .userName(user.getUserName())
                 .globalRoleName(user.getGlobalRole().getName())
                 .name(user.getName())
                 .organizations(organizationUserDTOS)
