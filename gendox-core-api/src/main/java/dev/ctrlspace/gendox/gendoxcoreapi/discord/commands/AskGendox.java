@@ -72,13 +72,15 @@ public class AskGendox implements ICommand {
             String channelId = event.getChannel().getId();
             TextChannel channel = event.getJDA().getTextChannelById(channelId);
             String authorName = event.getUser().getName();
-            String jwtToken = listener.getJwtToken(authorName);
 
 
             UUID projectId = projectRepository.findIdByName(channelName);
             if (projectId == null) {
                 return;
             }
+
+
+            String jwtToken = listener.getJwtToken(authorName);
 
             List<MessageEmbed> messageEmbeds = listenerService.semanticSearchForQuestion(event, channelName, jwtToken);
 
