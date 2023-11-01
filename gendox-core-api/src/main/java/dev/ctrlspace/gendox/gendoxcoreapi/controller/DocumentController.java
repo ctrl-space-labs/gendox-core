@@ -95,6 +95,10 @@ public class DocumentController {
                     "incorporating the provided document information.")
     public DocumentInstance create(@RequestBody DocumentDTO documentDTO) throws GendoxException {
 
+        if (documentDTO.getId() != null){
+            throw new GendoxException("DOCUMENT_INSTANCE_ID_MUST_BE_NULL", "Document instant id is not null", HttpStatus.BAD_REQUEST);
+        }
+
         DocumentInstance documentInstance = documentConverter.toEntity(documentDTO);
         documentInstance = documentService.createDocumentInstance(documentInstance);
 

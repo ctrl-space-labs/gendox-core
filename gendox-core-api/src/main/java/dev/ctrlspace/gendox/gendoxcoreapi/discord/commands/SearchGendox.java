@@ -1,39 +1,39 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.discord.commands;
 
+
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.CommonCommandUtility;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.constants.DiscordGendoxConstants;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
 
 import java.util.ArrayList;
 import java.util.List;
 
+
 @Component
-public class ChatGendox implements ICommand {
+public class SearchGendox implements ICommand {
 
-    Logger logger = org.slf4j.LoggerFactory.getLogger(ChatGendox.class);
-
+    Logger logger = LoggerFactory.getLogger(SearchGendox.class);
     private CommonCommandUtility commonCommandUtility;
 
-
     @Autowired
-    public ChatGendox(CommonCommandUtility commonCommandUtility) {
+    public SearchGendox(CommonCommandUtility commonCommandUtility) {
         this.commonCommandUtility = commonCommandUtility;
     }
 
     @Override
     public String getName() {
-        return "chat";
+        return "search";
     }
 
     @Override
     public String getDescription() {
-        return "Chat with Gendox AI Agent";
+        return "Perform Semantic Search to the Knowledge Base";
     }
 
     @Override
@@ -42,18 +42,31 @@ public class ChatGendox implements ICommand {
         data.add(new OptionData(
                 OptionType.STRING,
                 "question",
-                "Chat with Gendox AI Agent",
+                "Search Gendox",
                 true));
         return data;
     }
 
     @Override
     public void execute(SlashCommandInteractionEvent event) {
-
-        commonCommandUtility.executeCommandCode(event, DiscordGendoxConstants.CHAT_GENDOX, null);
-
+        commonCommandUtility.executeCommandCode(event, DiscordGendoxConstants.SEARCH_GENDOX, null);
 
     }
 
-
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
