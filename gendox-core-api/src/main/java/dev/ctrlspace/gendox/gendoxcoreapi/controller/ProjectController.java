@@ -4,12 +4,14 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectMemberConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectMember;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectMemberDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectMemberCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectMemberService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
@@ -24,6 +26,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,23 +34,25 @@ import java.util.UUID;
 public class ProjectController {
 
     private ProjectService projectService;
-
     private ProjectConverter projectConverter;
     private ProjectMemberService projectMemberService;
     private JWTUtils jwtUtils;
     private ProjectMemberConverter projectMemberConverter;
+    private ProjectAgentService projectAgentService;
 
     @Autowired
     public ProjectController(ProjectService projectService,
                              ProjectConverter projectConverter,
                              ProjectMemberService projectMemberService,
                              JWTUtils jwtUtils,
-                             ProjectMemberConverter projectMemberConverter) {
+                             ProjectMemberConverter projectMemberConverter,
+                             ProjectAgentService projectAgentService) {
         this.projectService = projectService;
         this.projectConverter = projectConverter;
         this.projectMemberService = projectMemberService;
         this.jwtUtils = jwtUtils;
         this.projectMemberConverter = projectMemberConverter;
+        this.projectAgentService = projectAgentService;
     }
 
 
@@ -87,6 +92,13 @@ public class ProjectController {
     public Project createProject(@RequestBody ProjectDTO projectDTO) throws Exception {
 
         Project project = projectConverter.toEntity(projectDTO);
+        // create Project Agent
+        ProjectAgent projectAgent = new ProjectAgent();
+        projectAgent.setProject(project);
+        projectAgent.setAgentName(project.getName() + " Agent");
+        projectAgent = projectAgentService.createProjectAgent(projectAgent);
+
+        project.setProjectAgent(projectAgent);
         project = projectService.createProject(project);
 
         return project;
@@ -114,6 +126,13 @@ public class ProjectController {
             throw new GendoxException("PROJECT_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
 
+        UUID projectId = project.getId();
+        Project existingProject = this.getProjectById(projectId);
+
+        // Update the properties of the existingProject with the values from the updated project
+        existingProject.setName(project.getName());
+        existingProject.setDescription(project.getDescription());
+        existingProject.setProjectAgent(projectAgentService.updateProjectAgent(project.getProjectAgent()));
         project = projectService.updateProject(project);
 
         return project;

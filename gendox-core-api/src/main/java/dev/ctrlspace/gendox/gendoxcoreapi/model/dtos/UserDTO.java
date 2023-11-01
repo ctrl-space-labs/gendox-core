@@ -23,7 +23,6 @@ public class UserDTO {
     private String userName;
     private String email;
     private String phone;
-    private Type globalRole;
     private Type userType;
     private Instant createAt;
     private Instant updateAt;

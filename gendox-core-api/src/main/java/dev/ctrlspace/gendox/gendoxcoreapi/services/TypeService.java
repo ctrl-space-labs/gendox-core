@@ -61,6 +61,12 @@ public class TypeService {
 
     }
 
+    public Type getUserRoleTypeByUserType(String userType){
+        return typeRepository.findByTypeCategoryAndName("USER_TYPE", userType)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "USER_TYPE_NOT_FOUND", "User field type not found with name: " + userType));
+
+    }
+
 
     /**
      * Multiple handy service methods can go here like

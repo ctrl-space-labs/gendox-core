@@ -32,7 +32,7 @@ public class JwtDTOUserProfileConverter {
                 .userId(userProfile.getId())
                 .email(userProfile.getEmail())
                 .userName(userProfile.getUserName())
-                .globalRole(userProfile.getGlobalRoleName())
+                .globalRole(userProfile.getUserTypeId())
                 .orgAuthoritiesMap(organizationAuthoritiesMap)
                 .orgProjectsMap(organizationProjectMap)
                 .build();

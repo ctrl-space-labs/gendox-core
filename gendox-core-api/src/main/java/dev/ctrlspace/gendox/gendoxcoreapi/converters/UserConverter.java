@@ -17,7 +17,6 @@ public class UserConverter implements GendoxConverter<User, UserDTO> {
         userDTO.setUserName(user.getUserName());
         userDTO.setEmail(user.getEmail());
         userDTO.setPhone(user.getPhone());
-        userDTO.setGlobalRole(user.getGlobalRole());
         userDTO.setUserType(user.getUserType());
 
         return userDTO;
@@ -33,7 +32,6 @@ public class UserConverter implements GendoxConverter<User, UserDTO> {
         user.setUserName(userDTO.getUserName());
         user.setEmail(userDTO.getEmail());
         user.setPhone(userDTO.getPhone());
-        user.setGlobalRole(userDTO.getGlobalRole());
         user.setUserType(userDTO.getUserType());
 
         return user;
