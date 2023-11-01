@@ -16,5 +16,6 @@ public class MessageDTO {
     private UUID id;
     private String value;
     private UUID threadId;
+    private UUID projectId;
 
 }

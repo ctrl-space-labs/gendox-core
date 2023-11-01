@@ -73,8 +73,9 @@ rsa:
 
 gendox:
   documents:
-    upload-dir: s3://gendox.organization.documents.local
+#    upload-dir: s3://gendox.organization.documents.local
 #    upload-dir: file:c:\\Users\\sekas\\gendox-documents
+    upload-dir: file:C:\\Users\\Giannis\\Desktop\\gendox-files\test
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf

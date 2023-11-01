@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
@@ -141,9 +142,13 @@ public class SecurityUtils {
     }
 
     public UUID getUserId() {
+        try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
             return UUID.fromString(jwtDTO.getUserId());
+        } catch (Exception e){
+            return null;
+        }
     }
 
     private HttpServletRequest getCurrentHttpRequest() {

@@ -91,6 +91,10 @@ public class ProjectController {
                     "This endpoint accepts a JSON payload describing the project details.")
     public Project createProject(@RequestBody ProjectDTO projectDTO) throws Exception {
 
+        if (projectDTO.getId() != null) {
+            throw new GendoxException("PROJECT_ID_MUST_BE_NULL", "Project id is not null", HttpStatus.BAD_REQUEST);
+        }
+
         Project project = projectConverter.toEntity(projectDTO);
         // create Project Agent
         ProjectAgent projectAgent = new ProjectAgent();

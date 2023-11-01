@@ -42,6 +42,10 @@ public class ProjectAgentService {
         this.userService = userService;
     }
 
+    public ProjectAgent getByProjectId(UUID projectId){
+        return projectAgentRepository.findByProjectId(projectId);
+    }
+
     public ProjectAgent createProjectAgent(ProjectAgent projectAgent) throws Exception {
         Instant now = Instant.now();
 

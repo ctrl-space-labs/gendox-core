@@ -53,7 +53,7 @@ public class TrainingService {
             DocumentInstanceSection section = optionalSection.get();
 
             Embedding embedding = new Embedding();
-            embedding = embeddingService.calculateEmbeddingForText(section.getSectionValue(), projectId);
+            embedding = embeddingService.calculateEmbeddingForText(section.getSectionValue(), projectId, null);
 
             EmbeddingGroup embeddingGroup = embeddingGroupRepository.findByEmbeddingId(embedding.getId());
             embeddingGroup.setSectionId(sectionId);
