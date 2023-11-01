@@ -83,7 +83,7 @@ public class UserController {
         return user;
     }
 
-    @GetMapping("/profile/{id}")
+    @GetMapping("/profile")
     @Operation(summary = "Get user profile by ID",
             description = "Retrieve a user's profile by their unique ID.")
     public UserProfile getUserUserProfile(@PathVariable UUID id, Authentication authentication) throws Exception {
