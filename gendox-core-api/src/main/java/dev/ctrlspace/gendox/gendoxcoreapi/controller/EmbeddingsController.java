@@ -134,6 +134,7 @@ public class EmbeddingsController {
         CompletionMessageDTO completionMessageDTO = CompletionMessageDTO.builder()
                 .message(completion)
                 .sectionId(instanceSections.stream().map(DocumentInstanceSection::getId).toList())
+                .threadID(message.getThreadId())
                 .build();
 
 

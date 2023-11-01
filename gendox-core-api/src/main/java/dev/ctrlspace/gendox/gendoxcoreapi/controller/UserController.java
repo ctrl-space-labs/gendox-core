@@ -117,7 +117,10 @@ public class UserController {
 
     @PostMapping(value = "/users", consumes = {"application/json"})
     @ResponseStatus(value = HttpStatus.CREATED)
-    public User createUser(@RequestBody UserDTO userDTO) throws GendoxException{
+    public User createUser(@RequestBody UserDTO userDTO) throws GendoxException {
+        if (userDTO.getId() != null) {
+            throw new GendoxException("USER_ID_MUST_BE_NULL", "User id is not null", HttpStatus.BAD_REQUEST);
+        }
         User user = userConverter.toEntity(userDTO);
         user = userService.createUser(user);
         return user;

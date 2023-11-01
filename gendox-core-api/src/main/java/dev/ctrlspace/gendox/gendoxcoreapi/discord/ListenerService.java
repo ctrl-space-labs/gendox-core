@@ -1,23 +1,35 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.discord;
 
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.JwtDTOUserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.post.MessageRestClient;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.HttpUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.apache.commons.text.StringSubstitutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 
 import java.awt.*;
@@ -31,136 +43,76 @@ public class ListenerService {
 
     Logger logger = LoggerFactory.getLogger(ListenerService.class);
 
-    @Value("${gendox.domain.sections}")
-    private String domain;
-    @Value("${gendox.domain.base-url}")
-    private String baseUrl;
-    @Value("${server.servlet.context-path}")
-    private String contextPath;
-    @Value("${gendox.domain.document-sections.get-document-sections}")
-    private String sectionByIdPath;
-
-
 
     private ProjectRepository projectRepository;
     private DocumentInstanceRepository documentInstanceRepository;
     private HttpUtils httpUtils;
     private MessageRestClient messageRestClientService;
+    private JWTUtils jwtUtils;
+    private JwtDTOUserProfileConverter jwtDTOUserProfileConverter;
+    private JwtEncoder jwtEncoder;
+    private UserService userService;
+    private EmbeddingService embeddingService;
 
 
     @Autowired
     public ListenerService(ProjectRepository projectRepository,
                            DocumentInstanceRepository documentInstanceRepository,
                            HttpUtils httpUtils,
-                           MessageRestClient messageRestClientService) {
+                           MessageRestClient messageRestClientService,
+                           JWTUtils jwtUtils,
+                           JwtDTOUserProfileConverter jwtDTOUserProfileConverter,
+                           JwtEncoder jwtEncoder,
+                           UserService userService,
+                           EmbeddingService embeddingService) {
         this.projectRepository = projectRepository;
         this.documentInstanceRepository = documentInstanceRepository;
         this.httpUtils = httpUtils;
         this.messageRestClientService = messageRestClientService;
+        this.jwtUtils = jwtUtils;
+        this.jwtDTOUserProfileConverter = jwtDTOUserProfileConverter;
+        this.jwtEncoder = jwtEncoder;
+        this.userService = userService;
+        this.embeddingService = embeddingService;
     }
 
 
-    public List<MessageEmbed> semanticSearchForQuestion(SlashCommandInteractionEvent event, String channelName, String token) throws GendoxException {
+    public List<DocumentInstanceSection> semanticSearchForQuestion(String question, String channelName, String token, String threadId) throws GendoxException {
 
-        // Get the message content from the event
-        String question = getTheQuestion(event);
+
         Message message = new Message();
+        if(threadId != null){
+            message.setThreadId(UUID.fromString(threadId));
+        }
         message.setValue(question);
         UUID projectId = projectRepository.findIdByName(channelName);
+        message.setProjectId(projectId);
 
         List<DocumentInstanceSection> sectionList = findClosestSectionRestClient(token, message, projectId);
 
-        // Make the EmbedBuilders
-        List<MessageEmbed> messageEmbeds = new ArrayList<>();
-        int count = 0;
-        for (DocumentInstanceSection section : sectionList) {
-            count++;
-            MessageEmbed embedMessage = generateSectionMessageEmbed(section, projectId, count);
-
-            messageEmbeds.add(embedMessage);
-        }
-
-        // Return List of EmbedBuilders
-        return messageEmbeds;
+        return sectionList;
     }
 
-    public List<MessageEmbed> completionForQuestion(SlashCommandInteractionEvent event, String channelName, String token) throws GendoxException {
+    public CompletionMessageDTO completionForQuestion(String question, String channelName, String token, String threadId) throws GendoxException {
 
-        // Get the message content from the event
-        String question = getTheQuestion(event);
         Message message = new Message();
+        if(threadId != null){
+            message.setThreadId(UUID.fromString(threadId));
+        }
         message.setValue(question);
         UUID projectId = projectRepository.findIdByName(channelName);
+        message.setProjectId(projectId);
 
         CompletionMessageDTO completionMessageDTO = getCompletionSearchRestClient(token, message, projectId);
 
-        List<MessageEmbed> messageEmbeds = generateCompletionMessageEmbed(completionMessageDTO);
+        completionMessageDTO.getMessage().setThreadId(completionMessageDTO.getThreadID());
+        completionMessageDTO.getMessage().setProjectId(projectId);
+        //save the answer as message
+        embeddingService.createMessage(completionMessageDTO.getMessage());
 
 
-        // Return List of EmbedBuilders
-        return messageEmbeds;
-    }
 
-    private List<MessageEmbed> generateCompletionMessageEmbed(CompletionMessageDTO completionMessageDTO) {
-
-        List<String> answers = splitTextToStringsOfMaxLength(completionMessageDTO.getMessage().getValue(), 1900);
-
-        String pathTemplate = new StringBuilder()
-                .append("<")
-                .append(baseUrl)
-                .append(contextPath)
-                .append(sectionByIdPath)
-                .append("/${id}")
-                .append(">")
-                .toString();
-        Map<String, String> sectionIdMap = new HashMap<>();
-        List<String> sourcesUrls = completionMessageDTO.getSectionId().stream()
-                .map(sectionId -> {
-                    sectionIdMap.put("id", sectionId.toString());
-                    return StringSubstitutor.replace(pathTemplate, sectionIdMap);
-                })
-                .toList();
-
-
-        List<MessageEmbed> messageEmbeds = answers.stream().map(answer -> {
-                    EmbedBuilder builder = new EmbedBuilder();
-                    builder.setTitle("Gendox AI Agent");
-                    builder.setDescription("```" + answer + "```");
-                    builder.setColor(Color.blue);
-                    sourcesUrls.forEach(url -> builder.addField("Link: ", url, true));
-
-                    return builder.build();
-                })
-                .collect(Collectors.toList());
-
-
-        return messageEmbeds;
-    }
-
-
-    //TODO move this to a Converter, its ok to have more than one params
-    private MessageEmbed generateSectionMessageEmbed(DocumentInstanceSection section, UUID projectId, int count) {
-        // Make new List with strings under 1900 characters by every sections value
-        List<String> answers = splitTextToStringsOfMaxLength(section.getSectionValue(), 1900);
-
-        // Find sections document name
-        String documentName = getDocumentName(section.getId());
-        String finalUrl = "<" + domain + projectId + ">";
-        String finalAnswer = "";
-        // TODO what is this? why are you adding the answers to a string? since we already split them?
-        for (String answer : answers) {
-            finalAnswer = finalAnswer + answer;
-        }
-
-
-        EmbedBuilder builder = new EmbedBuilder();
-        builder.setTitle(count + ")  Document:  **" + documentName + "**");
-        builder.setDescription("```" + finalAnswer + "```");
-        builder.setColor(Color.blue);
-        builder.addField("Link: ", finalUrl, true);
-
-        MessageEmbed embedMessage = builder.build();
-        return embedMessage;
+        return completionMessageDTO;
     }
 
     public List<String> splitTextToStringsOfMaxLength(String text, int maxLength) {
@@ -189,13 +141,7 @@ public class ListenerService {
 
     }
 
-    public String getTheQuestion(SlashCommandInteractionEvent event) {
-        // Get the message content from the event
-        OptionMapping eventQuestion = event.getOption("question");
-        String question = eventQuestion.getAsString();
 
-        return question;
-    }
 
 
     public List<DocumentInstanceSection> findClosestSectionRestClient(String token, Message message, UUID projectId) throws GendoxException {
@@ -204,7 +150,7 @@ public class ListenerService {
         var bearerHeader = httpUtils.getBearerTokenHeader(token);
 
 
-        List<LinkedHashMap> documentSectionsMap  = messageRestClientService.searchMessage(bearerHeader, message, projectId, 5);
+        List<LinkedHashMap> documentSectionsMap = messageRestClientService.searchMessage(bearerHeader, message, projectId, 5);
 
         // Iterate through the LinkedHashMap objects and extract values
         for (LinkedHashMap documentSectionMap : documentSectionsMap) {
@@ -230,13 +176,27 @@ public class ListenerService {
         var bearerHeader = httpUtils.getBearerTokenHeader(token);
 
 
-        CompletionMessageDTO responseDTO  = messageRestClientService.completionMessageDTO(bearerHeader, message, projectId, 5);
+        CompletionMessageDTO responseDTO = messageRestClientService.completionMessageDTO(bearerHeader, message, projectId, 5);
 
         // Extract values and set them in the completionMessageDTO
         completionMessageDTO.setMessage(responseDTO.getMessage());
         completionMessageDTO.setSectionId(responseDTO.getSectionId());
+        completionMessageDTO.setThreadID(responseDTO.getThreadID());
+
 
         return completionMessageDTO;
+    }
+
+    public String getJwtToken(String userIdentifier) throws GendoxException {
+
+        UserProfile userProfile = userService.getUserProfileByUniqueIdentifier(userIdentifier);
+        JwtDTO jwtDTO = jwtDTOUserProfileConverter.jwtDTO(userProfile);
+        // Set the Authorization header with the bearer token
+        JwtClaimsSet claims = jwtUtils.toClaimsSet(jwtDTO);
+        String jwtToken = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+
+        return jwtToken;
+
     }
 
 

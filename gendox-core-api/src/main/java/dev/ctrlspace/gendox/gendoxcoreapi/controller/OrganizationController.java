@@ -84,6 +84,10 @@ public class OrganizationController {
     @Operation(summary = "Create organization",
             description = "Create a new organization based on the provided organization details.")
     public Organization createOrganization(@RequestBody OrganizationDTO organizationDTO) throws Exception {
+
+        if (organizationDTO.getId() != null) {
+            throw new GendoxException("ORGANIZATION_ID_MUST_BE_NULL", "Organization id is not null", HttpStatus.BAD_REQUEST);
+        }
         Organization organization = organizationConverter.toEntity(organizationDTO);
         organization = organizationService.createOrganization(organization);
 

@@ -16,6 +16,7 @@ import java.util.UUID;
 public class CompletionMessageDTO {
     private Message message;
     private List<UUID> sectionId;
+    private UUID threadID;
     // TODO review this to add more metadata about the sections involved in the response
 
 }
