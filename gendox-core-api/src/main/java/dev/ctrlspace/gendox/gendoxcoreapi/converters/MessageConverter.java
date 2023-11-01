@@ -12,6 +12,8 @@ public class MessageConverter implements GendoxConverter<Message, MessageDTO> {
 
         messageDto.setId(message.getId());
         messageDto.setValue(message.getValue());
+        messageDto.setThreadId(message.getThreadId());
+        messageDto.setProjectId(message.getProjectId());
 
         return messageDto;
     }
@@ -22,6 +24,8 @@ public class MessageConverter implements GendoxConverter<Message, MessageDTO> {
 
         message.setId(messageDto.getId());
         message.setValue(messageDto.getValue());
+        message.setThreadId(messageDto.getThreadId());
+        message.setProjectId(messageDto.getProjectId());
 
         return message;
     }

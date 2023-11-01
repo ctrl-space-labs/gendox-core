@@ -35,7 +35,7 @@ public class EmbeddingService {
     private AiModelRepository aiModelRepository;
     private OpenAiEmbeddingConverter openAiEmbeddingConverter;
     private SecurityUtils securityUtils;
-
+    private ProjectAgentService projectAgentService;
 
 
     @Autowired
@@ -51,7 +51,8 @@ public class EmbeddingService {
                             TypeService typeService,
                             OpenAiEmbeddingConverter openAiEmbeddingConverter,
                             AiModelRepository aiModelRepository,
-                            SecurityUtils securityUtils) {
+                            SecurityUtils securityUtils,
+                            ProjectAgentService projectAgentService) {
         this.aiModelService = aiModelService;
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
@@ -62,6 +63,7 @@ public class EmbeddingService {
         this.aiModelRepository = aiModelRepository;
         this.openAiEmbeddingConverter = openAiEmbeddingConverter;
         this.securityUtils = securityUtils;
+        this.projectAgentService = projectAgentService;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -93,7 +95,7 @@ public class EmbeddingService {
      * @throws GendoxException
      */
 
-    public Embedding calculateEmbeddingForText(String value, UUID projectId) throws GendoxException {
+    public Embedding calculateEmbeddingForText(String value, UUID projectId, UUID messageId) throws GendoxException {
         Ada2Response ada2Response = getAda2EmbeddingForMessage(value);
         Embedding embedding = openAiEmbeddingConverter.toEntity(ada2Response);
         embedding = createEmbedding(embedding);
@@ -101,7 +103,7 @@ public class EmbeddingService {
         AuditLogs auditLogs = new AuditLogs();
         auditLogs = createAuditLogs(projectId, (long) ada2Response.getUsage().getTotalTokens());
 
-        EmbeddingGroup group = createEmbeddingGroup(embedding.getId(), Double.valueOf(ada2Response.getUsage().getTotalTokens()));
+        EmbeddingGroup group = createEmbeddingGroup(embedding.getId(), Double.valueOf(ada2Response.getUsage().getTotalTokens()), messageId);
 
         return embedding;
     }
@@ -130,7 +132,7 @@ public class EmbeddingService {
     }
 
 
-    public EmbeddingGroup createEmbeddingGroup(UUID embeddingId, Double tokenCount) throws GendoxException {
+    public EmbeddingGroup createEmbeddingGroup(UUID embeddingId, Double tokenCount, UUID message_id) throws GendoxException {
         EmbeddingGroup embeddingGroup = new EmbeddingGroup();
 
         embeddingGroup.setId(UUID.randomUUID());
@@ -138,6 +140,10 @@ public class EmbeddingService {
         embeddingGroup.setTokenCount(tokenCount);
         embeddingGroup.setGroupingStrategyType(typeService.getGroupingTypeByName("SIMPLE_SECTION").getId());
         embeddingGroup.setSemanticSearchModelId(aiModelRepository.findByName("Ada2").getId());
+
+        if (message_id!= null){
+            embeddingGroup.setMessageId(message_id);
+        }
 
         embeddingGroup.setCreatedAt(Instant.now());
         embeddingGroup.setUpdatedAt(Instant.now());
@@ -152,11 +158,20 @@ public class EmbeddingService {
     public Message createMessage(Message message) {
 
         message.setId(UUID.randomUUID());
+        if (message.getThreadId() == null) {
+            message.setThreadId(UUID.randomUUID());
+        }
         message.setCreatedAt(Instant.now());
         message.setUpdatedAt(Instant.now());
-        message.setCreatedBy(securityUtils.getUserId());
-        message.setUpdatedBy(securityUtils.getUserId());
 
+        if (securityUtils.getUserId() == null) {
+            ProjectAgent agent = projectAgentService.getByProjectId(message.getProjectId());
+            message.setCreatedBy(agent.getUserId());
+            message.setUpdatedBy(agent.getUserId());
+        } else {
+            message.setCreatedBy(securityUtils.getUserId());
+            message.setUpdatedBy(securityUtils.getUserId());
+        }
         message = messageRepository.save(message);
 
         return message;
@@ -186,7 +201,7 @@ public class EmbeddingService {
 
 
     public List<DocumentInstanceSection> findClosestSections(Message message, UUID projectId) throws GendoxException {
-        Embedding messageEmbedding = calculateEmbeddingForText(message.getValue(), projectId);
+        Embedding messageEmbedding = calculateEmbeddingForText(message.getValue(), projectId, message.getId());
 
         List<Embedding> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, PageRequest.of(0, 5));
 
@@ -196,9 +211,6 @@ public class EmbeddingService {
 
         return sections;
     }
-
-
-
 
 
 }

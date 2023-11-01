@@ -42,6 +42,10 @@ public class ProjectAgentService {
         this.userService = userService;
     }
 
+    public ProjectAgent getByProjectId(UUID projectId){
+        return projectAgentRepository.findByProjectId(projectId);
+    }
+
     public ProjectAgent createProjectAgent(ProjectAgent projectAgent) throws Exception {
         Instant now = Instant.now();
 
@@ -68,7 +72,7 @@ public class ProjectAgentService {
         User user = new User();
         user.setName(projectAgent.getAgentName());
         user.setUserName(projectAgent.getAgentName());
-        user.setUserType(typeService.getUserRoleTypeByUserType(UserNamesConstants.GENDOX_AGENT));
+        user.setUserType(typeService.getUserTypeByName(UserNamesConstants.GENDOX_AGENT));
         user.setId(UUID.randomUUID());
         user = userService.createUser(user);
 
