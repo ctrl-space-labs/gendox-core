@@ -72,7 +72,7 @@ public class ProjectAgentService {
         User user = new User();
         user.setName(projectAgent.getAgentName());
         user.setUserName(projectAgent.getAgentName());
-        user.setUserType(typeService.getUserRoleTypeByUserType(UserNamesConstants.GENDOX_AGENT));
+        user.setUserType(typeService.getUserTypeByName(UserNamesConstants.GENDOX_AGENT));
         user.setId(UUID.randomUUID());
         user = userService.createUser(user);
 

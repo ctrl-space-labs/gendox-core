@@ -1,10 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.CommonCommandUtility;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,6 +20,8 @@ import java.util.UUID;
 
 @Component("securityUtils")
 public class SecurityUtils {
+
+    Logger logger = org.slf4j.LoggerFactory.getLogger(SecurityUtils.class);
 
     @Autowired
     private JWTUtils jwtUtils;
@@ -147,6 +151,7 @@ public class SecurityUtils {
             JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
             return UUID.fromString(jwtDTO.getUserId());
         } catch (Exception e){
+            logger.warn("An exception occurred while trying to get the user ID: " + e.getMessage());
             return null;
         }
     }
