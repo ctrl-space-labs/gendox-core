@@ -76,7 +76,7 @@ gendox:
       ada2:
         key: ${OPENAI_KEY}
   domain:
-    base-url: https://gendox.ctrlspace.dev
+    base-url: http://localhost:${server.port}
     document-sections:
       get-document-sections: /documents/sections
     sections: https://domain.com/context-path/documents/sections/
