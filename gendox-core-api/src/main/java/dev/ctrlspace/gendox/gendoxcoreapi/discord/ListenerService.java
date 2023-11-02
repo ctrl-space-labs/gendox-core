@@ -175,7 +175,7 @@ public class ListenerService {
 
         var bearerHeader = httpUtils.getBearerTokenHeader(token);
 
-
+        logger.debug("Start completionMessageDTO for chat command");
         CompletionMessageDTO responseDTO = messageRestClientService.completionMessageDTO(bearerHeader, message, projectId, 5);
         logger.debug("Received completionMessageDTO for chat command");
         // Extract values and set them in the completionMessageDTO
