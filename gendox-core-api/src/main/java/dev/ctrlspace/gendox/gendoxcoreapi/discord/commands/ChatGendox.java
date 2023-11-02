@@ -50,6 +50,8 @@ public class ChatGendox implements ICommand {
     @Override
     public void execute(SlashCommandInteractionEvent event) {
 
+        logger.debug("Received command chat");
+
         commonCommandUtility.executeCommandCode(event, DiscordGendoxConstants.CHAT_GENDOX, null);
 
 
