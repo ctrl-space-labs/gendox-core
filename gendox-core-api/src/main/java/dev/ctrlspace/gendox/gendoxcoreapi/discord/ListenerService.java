@@ -104,7 +104,7 @@ public class ListenerService {
         message.setProjectId(projectId);
 
         CompletionMessageDTO completionMessageDTO = getCompletionSearchRestClient(token, message, projectId);
-
+        logger.debug("Received getCompletionSearchRestClient for chat command");
         completionMessageDTO.getMessage().setThreadId(completionMessageDTO.getThreadID());
         completionMessageDTO.getMessage().setProjectId(projectId);
         //save the answer as message
@@ -177,7 +177,7 @@ public class ListenerService {
 
 
         CompletionMessageDTO responseDTO = messageRestClientService.completionMessageDTO(bearerHeader, message, projectId, 5);
-
+        logger.debug("Received completionMessageDTO for chat command");
         // Extract values and set them in the completionMessageDTO
         completionMessageDTO.setMessage(responseDTO.getMessage());
         completionMessageDTO.setSectionId(responseDTO.getSectionId());

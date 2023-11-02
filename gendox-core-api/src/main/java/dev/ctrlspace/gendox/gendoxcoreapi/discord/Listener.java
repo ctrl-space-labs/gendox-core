@@ -63,9 +63,11 @@ public class Listener extends ListenerAdapter {
 
         String messageContent = event.getMessage().getContentRaw();
 
+        logger.debug("Received message");
 
         // if user's message is reply
         if (event.getMessage().getReferencedMessage() != null) {
+            logger.debug("Received user's reply");
             MessageEmbed messageEmbed = event.getMessage().getReferencedMessage().getEmbeds().get(0);
             try {
                 replyGendoxMessage.replyMessage(messageEmbed, messageContent, authorName, channel);
@@ -98,14 +100,6 @@ public class Listener extends ListenerAdapter {
             // Respond with a default message for other messages
             String responseMessage = "I'm here to assist with questions. If you have any questions, just ask using the **/chat** command!";
             channel.sendMessage(responseMessage).queue();
-        }
-    }
-
-    @Override
-    public void onButtonInteraction(@Nonnull ButtonInteractionEvent event) {
-        if (event.getComponentId().equals("reply-button")) {
-            event.deferEdit().queue();
-            event.getChannel().sendMessage("Please press reply answer or use the /replay button, ").queue();
         }
     }
 

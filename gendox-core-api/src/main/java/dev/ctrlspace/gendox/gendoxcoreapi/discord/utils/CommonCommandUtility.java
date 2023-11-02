@@ -52,6 +52,7 @@ public class CommonCommandUtility {
     public void executeCommandCode(SlashCommandInteractionEvent event, String command, String threadId) {
         if (event.getUser().isBot()) return;
 
+        logger.debug("Start execute chat command");
         try {
             // Take channel and channel's name
             String channelName = event.getChannel().getName();
@@ -85,8 +86,9 @@ public class CommonCommandUtility {
 
             if (command.equals(DiscordGendoxConstants.CHAT_GENDOX)) {
                 CompletionMessageDTO completionMessageDTO = listenerService.completionForQuestion(question, channelName, jwtToken, threadId);
+                logger.debug("Received completionForQuestion for chat command");
                 chatGendoxMessage.chatMessage(channel, completionMessageDTO);
-                replyButton(channel);
+                logger.debug("Received chatMessage");
             } else if (command.equals(DiscordGendoxConstants.SEARCH_GENDOX)) {
                 List<DocumentInstanceSection> documentInstanceSections = listenerService.semanticSearchForQuestion(question, channelName, jwtToken, threadId);
                 searchGendoxMessage.searchMessage(channel, documentInstanceSections, projectId);
@@ -103,18 +105,6 @@ public class CommonCommandUtility {
         }
     }
 
-
-    public void replyButton(TextChannel channel) {
-        Button replayButton = Button.primary("reply-button", "reply");
-
-        MessageBuilder messageBuilder = new MessageBuilder()
-                .setContent("Reply answer:")
-                .setActionRows(ActionRow.of(replayButton));
-        Message replayMessage = messageBuilder.build();
-
-
-        channel.sendMessage(replayMessage).queue();
-    }
 
     public String getTheQuestion(SlashCommandInteractionEvent event) {
         // Get the message content from the event
