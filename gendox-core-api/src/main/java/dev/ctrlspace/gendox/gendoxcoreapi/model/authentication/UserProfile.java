@@ -15,7 +15,11 @@ public class UserProfile {
 
     private String id;
     private String email;
-    private String globalRoleName;
+    private String firstName;
+    private String lastName;
+    private String userName;
+    private String phone;
+    private String userTypeId;
     private String name;
     private List<OrganizationUserDTO> organizations;
 

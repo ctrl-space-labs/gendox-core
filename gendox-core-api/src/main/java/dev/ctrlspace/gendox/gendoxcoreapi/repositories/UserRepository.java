@@ -13,4 +13,7 @@ import java.util.UUID;
 public interface UserRepository extends JpaRepository<User, UUID>, QuerydslPredicateExecutor<User> {
 
     Optional<User> findByEmail(String email);
+    Optional<User> findByName(String name);
+
+    boolean existsByUserName(String userName);
 }

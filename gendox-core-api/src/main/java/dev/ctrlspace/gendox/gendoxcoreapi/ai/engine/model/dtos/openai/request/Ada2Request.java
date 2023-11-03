@@ -21,6 +21,7 @@ public class Ada2Request implements Serializable {
     private Integer maxTokens;
     @JsonProperty("top_p")
     private Double topP;
+
 }
 
 

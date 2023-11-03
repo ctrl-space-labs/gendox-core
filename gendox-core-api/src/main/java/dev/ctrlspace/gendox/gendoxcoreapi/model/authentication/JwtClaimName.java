@@ -49,6 +49,11 @@ public class JwtClaimName {
     public static final String EMAIL = "email";
 
     /**
+     * The "user_name" claim identifies the user.
+     */
+    public static final String USERNAME = "user_name";
+
+    /**
      * The "global_role" claim identifies the user.
      */
     public static final String GLOBAL_ROLE = "global_role";

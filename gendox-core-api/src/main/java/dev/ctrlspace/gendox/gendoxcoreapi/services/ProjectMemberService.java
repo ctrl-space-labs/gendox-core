@@ -8,7 +8,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCr
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectMemberPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.RoleNamesConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.PageRequest;
@@ -60,27 +61,21 @@ public class ProjectMemberService {
 
 
     public ProjectMember createProjectMember(ProjectMember projectMember) throws Exception {
-        Instant now = Instant.now();
 
         // Check if the user is already a member of the project
         if (projectMemberRepository.findByProjectIdAndUserId(projectMember.getProject().getId(), projectMember.getUser().getId()) != null) {
-            throw new GendoxException("DUPLICATE_PROJECT_MEMBER", "User is already a member of this project ", HttpStatus.BAD_REQUEST);
+            return projectMember;
         }
-
 
         if (projectMember.getId() != null) {
             throw new GendoxException("NEW_MEMBER_PROJECT_ID_IS_NOT_NULL", "Member-Project id must be null", HttpStatus.BAD_REQUEST);
         }
 
-        projectMember.setCreatedAt(now);
-        projectMember.setUpdatedAt(now);
-
         projectMember = projectMemberRepository.save(projectMember);
-
         return projectMember;
-
-
     }
+
+
 
     public ProjectMember createProjectMember(UUID userId, UUID projectId) throws Exception {
         Instant now = Instant.now();
@@ -145,11 +140,11 @@ public class ProjectMemberService {
         // The project's creator become member of the project
         createProjectMember(UUID.fromString(jwtDTO.getUserId()), project.getId());
 
-        // project's users
+        // project's users all the organization admins
         Set<UUID> userIds = userOrganizationService.getAll(UserOrganizationCriteria
                         .builder()
                         .organizationId(organizationId.toString())
-                        .roleName(RoleNamesConstants.ADMIN)
+                        .roleName(OrganizationRolesConstants.ADMIN)
                         .build())
                 .stream()
                 .map(userOrganization -> userOrganization.getUser().getId())

@@ -36,6 +36,33 @@ public class TypeService {
 
     }
 
+    public Type getGroupingTypeByName(String groupingName){
+        return typeRepository.findByTypeCategoryAndName("GROUPING_STRATEGY_TYPE", groupingName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "GROUPING_STRATEGY_TYPE_NOT_FOUND", "Grouping strategy field type not found with name: " + groupingName));
+
+    }
+
+    public Type getUserTypeByName(String userTypeName){
+        return typeRepository.findByTypeCategoryAndName("USER_TYPE", userTypeName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "USER_TYPE_NOT_FOUND", "User field type not found with name: " + userTypeName));
+
+    }
+
+    public Type getGlobalApplicationRoleTypeByName(String globalApplicationRoleTypeName){
+        return typeRepository.findByTypeCategoryAndName("GLOBAL_APPLICATION_ROLE_TYPE", globalApplicationRoleTypeName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "GLOBAL_APPLICATION_ROLE_TYPE_NOT_FOUND", "Global application role field type not found with name: " + globalApplicationRoleTypeName));
+
+    }
+
+
+    public Type getDocumentSplitterTypeByName(String splitterName){
+        return typeRepository.findByTypeCategoryAndName("DOCUMENT_SPLITTER_TYPE", splitterName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "DOCUMENT_SPLITTER_TYPE_NOT_FOUND", "Document splitter field type not found with name: " + splitterName));
+
+    }
+
+
+
 
     /**
      * Multiple handy service methods can go here like

@@ -4,16 +4,23 @@ import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.JwtDTOUserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserDetailsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import io.micrometer.observation.annotation.Observed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -23,28 +30,34 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 public class UserService implements UserDetailsService {
 
+    Logger logger = LoggerFactory.getLogger(UserService.class);
+
     private UserRepository userRepository;
     private JwtDTOUserProfileConverter jwtDTOUserProfileConverter;
     private JWTUtils jwtUtils;
     private UserProfileConverter userProfileConverter;
+    private TypeService typeService;
 
 
     @Autowired
     public UserService(UserRepository userRepository,
-                        JWTUtils jwtUtils,
-                        JwtDTOUserProfileConverter jwtDTOUserProfileConverter,
-                        UserProfileConverter userProfileConverter) {
+                       JWTUtils jwtUtils,
+                       JwtDTOUserProfileConverter jwtDTOUserProfileConverter,
+                       UserProfileConverter userProfileConverter,
+                       TypeService typeService) {
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
         this.jwtDTOUserProfileConverter = jwtDTOUserProfileConverter;
-
+        this.typeService = typeService;
     }
 
     public Page<User> getAllUsers(UserCriteria criteria) {
@@ -69,14 +82,66 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with email: " + email, HttpStatus.NOT_FOUND));
     }
 
-    public UserProfile getProfileByEmail(String email) throws GendoxException {
-        User user = getByEmail(email);
+    /**
+     * @param userIdentifier can be either the email or username or phone number
+     * @return
+     * @throws GendoxException
+     */
+    public UserProfile getUserProfileByUniqueIdentifier(String userIdentifier) throws GendoxException {
+
+        UserCriteria criteria = UserCriteria
+                .builder()
+                .userIdentifier(userIdentifier)
+                .build();
+
+        User user = getAllUsers(criteria).stream()
+                .findFirst()
+                .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with identifier: " + userIdentifier, HttpStatus.NOT_FOUND));
         return userProfileConverter.toDTO(user);
     }
 
-    public JwtClaimsSet getJwtClaims(String email) throws GendoxException {
+    public boolean isUserExistByUserName(String userName) throws GendoxException {
+        return userRepository.existsByUserName(userName);
+    }
 
-        UserProfile userProfile = this.getProfileByEmail(email);
+    public User createUser(User user) throws GendoxException {
+        Instant now = Instant.now();
+
+        if (user.getUserType() == null) {
+            user.setUserType(typeService.getUserTypeByName("GENDOX_USER"));
+        }
+        
+        user.setCreatedAt(now);
+        user.setUpdatedAt(now);
+
+        user = userRepository.save(user);
+        return user;
+
+    }
+
+    public User createDiscordUser(String author) throws GendoxException {
+        User user = new User();
+        user.setUserName(author);
+        user.setUserType(typeService.getUserTypeByName("DISCORD_USER"));
+
+        user = createUser(user);
+
+        return user;
+
+    }
+
+    @Observed(name = "get.jwt.claims",
+            contextualName = "get-jwt-claims",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "true"
+            })
+    public JwtClaimsSet getJwtClaims(String userIdentifier) throws GendoxException {
+
+        UserProfile userProfile = this.getUserProfileByUniqueIdentifier(userIdentifier);
+
 
         JwtDTO jwtDTO = jwtDTOUserProfileConverter.jwtDTO(userProfile);
 
