@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectPredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,16 +22,16 @@ public class ProjectService {
 
     private ProjectRepository projectRepository;
     private ProjectMemberService projectMemberService;
-    private ProjectAgentService projectAgentService;
+    private SecurityUtils securityUtils;
 
 
     @Autowired
     public ProjectService(ProjectRepository projectRepository,
                           ProjectMemberService projectMemberService,
-                          ProjectAgentService projectAgentService){
+                          SecurityUtils securityUtils) {
         this.projectRepository = projectRepository;
         this.projectMemberService = projectMemberService;
-        this.projectAgentService = projectAgentService;
+        this.securityUtils = securityUtils;
     }
 
     public Project getProjectById(UUID id) throws GendoxException {
@@ -52,56 +53,31 @@ public class ProjectService {
     public Project createProject(Project project) throws Exception {
         Instant now = Instant.now();
 
-        if (project.getId() != null) {
-            throw new GendoxException("NEW_PROJECT_ID_IS_NOT_NULL", "Project id must be null", HttpStatus.BAD_REQUEST);
-        }
-
-
         project.setCreatedAt(now);
         project.setUpdatedAt(now);
+        project.setCreatedBy(securityUtils.getUserId());
+        project.setUpdatedBy(securityUtils.getUserId());
 
         project = projectRepository.save(project);
-
-        // set up default Agent
-        ProjectAgent projectAgent = new ProjectAgent();
-        projectAgent.setProject(project);
-        projectAgent.setAgentName(project.getName() + "Agent");
-        projectAgent = projectAgentService.createProjectAgent(projectAgent);
-        project.setProjectAgent(projectAgent);
-
-
-
 
 
         // Project's Admins & Creator become members of the project
         projectMemberService.addDefaultMembersToTheProject(project, project.getOrganizationId());
-
-
-
 
         return project;
 
     }
 
 
-
     public Project updateProject(Project project) throws GendoxException {
-        UUID projectId = project.getId();
-        Project existingProject = this.getProjectById(projectId);
 
-        // Update the properties of the existingProject with the values from the updated project
-        existingProject.setName(project.getName());
-        existingProject.setDescription(project.getDescription());
-        existingProject.setUpdatedAt(Instant.now());
-        existingProject.setProjectAgent(projectAgentService.updateProjectAgent(project.getProjectAgent()));
+        project.setUpdatedAt(Instant.now());
+        project.setUpdatedBy(securityUtils.getUserId());
+        project = projectRepository.save(project);
 
-        existingProject = projectRepository.save(existingProject);
-
-        return existingProject;
+        return project;
 
     }
-
-
 
 
     public void deleteProject(UUID id) throws Exception {
@@ -111,7 +87,6 @@ public class ProjectService {
         projectRepository.delete(project);
 
     }
-
 
 
 }

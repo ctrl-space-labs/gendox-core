@@ -8,6 +8,11 @@ logging:
   level:
     dev.ctrlspace: DEBUG
     org.springframework: INFO
+#    This is how to change the micrometer tracing pattern, we'll use the default now
+#  pattern:
+#    correlation : "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+
+
 spring:
   mvc:
     format:
@@ -20,6 +25,12 @@ spring:
     url: jdbc:postgresql://localhost:5432/postgres
     username: postgres
     password: 123456789
+
+#  datasource:
+#     url: ${DATABASE_URL}
+#     username: ${DATABASE_USERNAME}
+#     password: ${DATABASE_PASSWORD}
+
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -28,6 +39,28 @@ spring:
       enabled: true
       max-file-size: 10MB
       max-request-size: 100MB
+  application:
+    name: gendox-core-api
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+  observations:
+    key-values:
+      application: gendox-core-api
 
 springdoc:
   swagger-ui:
@@ -35,25 +68,51 @@ springdoc:
 
 rsa:
   private-key: classpath:.env/local/local-non-production-use-private_key.pem
+#  private-key: classpath:/var/app/current/.env/local/local-non-production-use-private_key.pem
 
 
-Gendox:
-  file:
-    location: c:\\Users\\Giannis\\Desktop\\gendox-files\\test
-    wordCount: 30
+gendox:
+  documents:
+    upload-dir: s3://gendox.organization.documents.local
+#    upload-dir: file:c:\\Users\\sekas\\gendox-documents
+
+    wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
-
+  models:
+    openai:
+      ada2:
+        key: ${OPENAI_KEY}
+  domain:
+    base-url: http://localhost:8080
+    document-sections:
+      get-document-sections: /documents/sections
+    sections: https://domain.com/context-path/documents/sections/
+    messages:
+      completion:
+        post-completion-message: /messages/semantic-completion
+      search:
+        post-search-message: /messages/semantic-search
+  pages:
+    default: "&page=0&size=5"
+  agents:
+    splitter-type: "STATIC_WORD_COUNT_SPLITTER"
 
 # AWS
 
 cloud:
   aws:
-    accessKeyId:
-    secretKey:
-    region: us-east-1
+    region: eu-central-1
 
-s3:
-  bucket:
-    name: gendox-bucket-test
+
+
+# Discord
+
+discord:
+  bots:
+    gendox-bot:
+      token: ${DISCORD_TOKEN}
+  server:
+    group-name: gendox-agents
+
 

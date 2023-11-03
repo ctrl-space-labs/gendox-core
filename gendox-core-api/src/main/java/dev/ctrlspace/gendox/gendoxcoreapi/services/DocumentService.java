@@ -2,24 +2,22 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -28,7 +26,7 @@ public class DocumentService {
     private DocumentInstanceRepository documentInstanceRepository;
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private DocumentSectionMetadataRepository documentSectionMetadataRepository;
-    private ProjectDocumentRepository projectDocumentRepository;
+    private SecurityUtils securityUtils;
 
 
     @Autowired
@@ -38,11 +36,11 @@ public class DocumentService {
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
                            DocumentInstanceSectionRepository documentInstanceSectionRepository,
                            DocumentSectionMetadataRepository documentSectionMetadataRepository,
-                           ProjectDocumentRepository projectDocumentRepository) {
+                           SecurityUtils securityUtils) {
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.documentSectionMetadataRepository = documentSectionMetadataRepository;
-        this.projectDocumentRepository = projectDocumentRepository;
+        this.securityUtils = securityUtils;
     }
 
 
@@ -79,24 +77,17 @@ public class DocumentService {
 
 
     public List<DocumentInstanceSection> getProjectSections(UUID projectId) throws GendoxException {
-        // First, retrieve all the project members associated with the given projectId
-        List<ProjectDocument> projectDocuments = projectDocumentRepository.findByProjectId(projectId);
+        return documentInstanceSectionRepository.findByProjectId(projectId);
+    }
 
-        // Initialize a list to store all the sections
-        List<DocumentInstanceSection> allSections = new ArrayList<>();
-
-        // Loop through project members to fetch sections for each document
-        for (ProjectDocument projectDocument : projectDocuments) {
-            UUID documentId = projectDocument.getDocumentId();
-
-            // Retrieve all sections for the document
-            List<DocumentInstanceSection> documentSections = documentInstanceSectionRepository.findByDocumentInstance(documentId);
-
-            // Add the sections to the overall list
-            allSections.addAll(documentSections);
-        }
-
-        return allSections;
+    /**
+     * TODO merge this with the above to findSectionsByCriteria
+     * @param projectId
+     * @param embeddingIds
+     * @return
+     */
+    public List<DocumentInstanceSection> getSectionsByEmbeddingsIn(UUID projectId, Set<UUID> embeddingIds){
+        return documentInstanceSectionRepository.findByProjectAndEmbeddingIds(projectId, embeddingIds);
     }
 
 
@@ -109,8 +100,8 @@ public class DocumentService {
 
         documentInstance.setCreatedAt(now);
         documentInstance.setUpdatedAt(now);
-        documentInstance.setCreatedBy(getUserId());
-        documentInstance.setUpdatedBy(getUserId());
+        documentInstance.setCreatedBy(securityUtils.getUserId());
+        documentInstance.setUpdatedBy(securityUtils.getUserId());
 
         // Save the DocumentInstance first to save its ID
         documentInstanceRepository.save(documentInstance);
@@ -138,8 +129,8 @@ public class DocumentService {
 
         section.setCreatedAt(Instant.now());
         section.setUpdatedAt(Instant.now());
-        section.setCreatedBy(getUserId());
-        section.setUpdatedBy(getUserId());
+        section.setCreatedBy(securityUtils.getUserId());
+        section.setUpdatedBy(securityUtils.getUserId());
         section.setDocumentSectionMetadata(createMetadata(section));
         section = documentInstanceSectionRepository.save(section);
 
@@ -157,8 +148,8 @@ public class DocumentService {
 
         metadata.setCreatedAt(Instant.now());
         metadata.setUpdatedAt(Instant.now());
-        metadata.setCreatedBy(getUserId());
-        metadata.setUpdatedBy(getUserId());
+        metadata.setCreatedBy(securityUtils.getUserId());
+        metadata.setUpdatedBy(securityUtils.getUserId());
         metadata = documentSectionMetadataRepository.save(metadata);
 
         return metadata;
@@ -173,7 +164,7 @@ public class DocumentService {
         existingDocument.setDocumentTemplateId(documentInstance.getDocumentTemplateId());
         existingDocument.setRemoteUrl(documentInstance.getRemoteUrl());
         existingDocument.setDocumentInstanceSections(updateSections(documentInstance));
-        existingDocument.setUpdatedBy(getUserId());
+        existingDocument.setUpdatedBy(securityUtils.getUserId());
         existingDocument.setUpdatedAt(Instant.now());
 
         existingDocument = documentInstanceRepository.save(existingDocument);
@@ -199,7 +190,7 @@ public class DocumentService {
         DocumentInstanceSection existingSection = this.getSectionById(sectionId);
 
         existingSection.setSectionValue(section.getSectionValue());
-        existingSection.setUpdatedBy(getUserId());
+        existingSection.setUpdatedBy(securityUtils.getUserId());
         existingSection.setUpdatedAt(Instant.now());
 
         // Check if documentInstance.documentTemplateId is empty/null before updating metadata
@@ -224,7 +215,7 @@ public class DocumentService {
         existingMetadata.setDescription(metadata.getDescription());
         existingMetadata.setSectionOptions(metadata.getSectionOptions());
         existingMetadata.setSectionOrder(metadata.getSectionOrder());
-        existingMetadata.setUpdatedBy(getUserId());
+        existingMetadata.setUpdatedBy(securityUtils.getUserId());
         existingMetadata.setUpdatedAt(Instant.now());
 
         existingMetadata = documentSectionMetadataRepository.save(existingMetadata);
@@ -254,12 +245,7 @@ public class DocumentService {
     }
 
 
-    // get user's id for createdBy and updatedBy properties
-    public UUID getUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
-        return UUID.fromString(jwtDTO.getUserId());
-    }
+
 
 
 }

@@ -17,4 +17,5 @@ public interface EmbeddingGroupRepository extends JpaRepository<EmbeddingGroup, 
 
     EmbeddingGroup findByEmbeddingId(@Param("embeddingId") UUID embeddingId);
 
+
 }

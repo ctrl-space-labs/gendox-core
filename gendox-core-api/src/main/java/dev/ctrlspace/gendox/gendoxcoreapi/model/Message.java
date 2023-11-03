@@ -1,6 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
 
 
 import java.time.Instant;
@@ -9,6 +12,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "message", schema = "gendox_core", catalog = "postgres")
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder(toBuilder = true)
 public class Message {
 //    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
@@ -17,6 +23,12 @@ public class Message {
     @Basic
     @Column(name = "value")
     private String value;
+    @Basic
+    @Column(name = "project_id")
+    private UUID projectId;
+    @Basic
+    @Column(name = "thread_id")
+    private UUID threadId;
     @Basic
     @Column(name = "created_at")
     private Instant createdAt;
@@ -78,15 +90,31 @@ public class Message {
         this.updatedBy = updatedBy;
     }
 
+    public UUID getThreadId() {
+        return threadId;
+    }
+
+    public void setThreadId(UUID threadId) {
+        this.threadId = threadId;
+    }
+
+    public UUID getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(UUID projectId) {
+        this.projectId = projectId;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Message message)) return false;
-        return Objects.equals(getId(), message.getId()) && Objects.equals(getValue(), message.getValue()) && Objects.equals(getCreatedAt(), message.getCreatedAt()) && Objects.equals(getUpdatedAt(), message.getUpdatedAt()) && Objects.equals(getCreatedBy(), message.getCreatedBy()) && Objects.equals(getUpdatedBy(), message.getUpdatedBy());
+        return Objects.equals(getId(), message.getId()) && Objects.equals(getValue(), message.getValue()) && Objects.equals(getProjectId(), message.getProjectId()) && Objects.equals(getThreadId(), message.getThreadId()) && Objects.equals(getCreatedAt(), message.getCreatedAt()) && Objects.equals(getUpdatedAt(), message.getUpdatedAt()) && Objects.equals(getCreatedBy(), message.getCreatedBy()) && Objects.equals(getUpdatedBy(), message.getUpdatedBy());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getValue(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy());
+        return Objects.hash(getId(), getValue(), getProjectId(), getThreadId(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy());
     }
 }

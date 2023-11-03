@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -15,10 +16,12 @@ public class ProjectAgent {
     private UUID id;
 
     @JsonBackReference(value = "agent")
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "project_id", referencedColumnName = "id", nullable = false)
     private Project project;
-
+    @Basic
+    @Column(name = "user_id", nullable = true)
+    private UUID userId;
     @Basic
     @Column(name = "semantic_search_model_id", nullable = true)
     private UUID semanticSearchModelId;
@@ -40,6 +43,23 @@ public class ProjectAgent {
     @Basic
     @Column(name = "updated_at", nullable = true)
     private Instant updatedAt;
+    @Basic
+    @Column(name = "created_by")
+    private UUID createdBy;
+    @Basic
+    @Column(name = "updated_by")
+    private UUID updatedBy;
+    @ManyToOne
+    @JoinColumn(name = "document_splitter_type", referencedColumnName = "id", nullable = false)
+    private Type documentSplitterType;
+
+    @Basic
+    @Column(name = "chat_template_id", nullable = true)
+    private UUID chatTemplateId;
+
+    @Basic
+    @Column(name = "section_template_id", nullable = true)
+    private UUID sectionTemplateId;
 
     public UUID getId() {
         return id;
@@ -49,13 +69,6 @@ public class ProjectAgent {
         this.id = id;
     }
 
-    public Project getProject() {
-        return project;
-    }
-
-    public void setProject(Project project) {
-        this.project = project;
-    }
 
     public UUID getSemanticSearchModelId() {
         return semanticSearchModelId;
@@ -113,40 +126,71 @@ public class ProjectAgent {
         this.updatedAt = updatedAt;
     }
 
+    public UUID getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(UUID createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public UUID getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(UUID updatedBy) {
+        this.updatedBy = updatedBy;
+    }
+
+    public Type getDocumentSplitterType() {
+        return documentSplitterType;
+    }
+
+    public void setDocumentSplitterType(Type documentSplitterType) {
+        this.documentSplitterType = documentSplitterType;
+    }
+
+    public UUID getChatTemplateId() {
+        return chatTemplateId;
+    }
+
+    public void setChatTemplateId(UUID chatTemplateId) {
+        this.chatTemplateId = chatTemplateId;
+    }
+
+    public UUID getSectionTemplateId() {
+        return sectionTemplateId;
+    }
+
+    public void setSectionTemplateId(UUID sectionTemplateId) {
+        this.sectionTemplateId = sectionTemplateId;
+    }
+
+    public UUID getUserId() {
+        return userId;
+    }
+
+    public Project getProject() {
+        return project;
+    }
+
+    public void setProject(Project project) {
+        this.project = project;
+    }
+
+    public void setUserId(UUID userId) {
+        this.userId = userId;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        ProjectAgent that = (ProjectAgent) o;
-
-        if (id != null ? !id.equals(that.id) : that.id != null) return false;
-        if (project != null ? !project.equals(that.project) : that.project != null) return false;
-        if (semanticSearchModelId != null ? !semanticSearchModelId.equals(that.semanticSearchModelId) : that.semanticSearchModelId != null)
-            return false;
-        if (completionModelId != null ? !completionModelId.equals(that.completionModelId) : that.completionModelId != null)
-            return false;
-        if (agentName != null ? !agentName.equals(that.agentName) : that.agentName != null) return false;
-        if (agentBehavior != null ? !agentBehavior.equals(that.agentBehavior) : that.agentBehavior != null)
-            return false;
-        if (privateAgent != null ? !privateAgent.equals(that.privateAgent) : that.privateAgent != null) return false;
-        if (createdAt != null ? !createdAt.equals(that.createdAt) : that.createdAt != null) return false;
-        if (updatedAt != null ? !updatedAt.equals(that.updatedAt) : that.updatedAt != null) return false;
-
-        return true;
+        if (!(o instanceof ProjectAgent that)) return false;
+        return Objects.equals(getId(), that.getId()) && Objects.equals(getProject(), that.getProject()) && Objects.equals(getUserId(), that.getUserId()) && Objects.equals(getSemanticSearchModelId(), that.getSemanticSearchModelId()) && Objects.equals(getCompletionModelId(), that.getCompletionModelId()) && Objects.equals(getAgentName(), that.getAgentName()) && Objects.equals(getAgentBehavior(), that.getAgentBehavior()) && Objects.equals(getPrivateAgent(), that.getPrivateAgent()) && Objects.equals(getCreatedAt(), that.getCreatedAt()) && Objects.equals(getUpdatedAt(), that.getUpdatedAt()) && Objects.equals(getCreatedBy(), that.getCreatedBy()) && Objects.equals(getUpdatedBy(), that.getUpdatedBy()) && Objects.equals(getDocumentSplitterType(), that.getDocumentSplitterType()) && Objects.equals(getChatTemplateId(), that.getChatTemplateId()) && Objects.equals(getSectionTemplateId(), that.getSectionTemplateId());
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (project != null ? project.hashCode() : 0);
-        result = 31 * result + (semanticSearchModelId != null ? semanticSearchModelId.hashCode() : 0);
-        result = 31 * result + (completionModelId != null ? completionModelId.hashCode() : 0);
-        result = 31 * result + (agentName != null ? agentName.hashCode() : 0);
-        result = 31 * result + (agentBehavior != null ? agentBehavior.hashCode() : 0);
-        result = 31 * result + (privateAgent != null ? privateAgent.hashCode() : 0);
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        return result;
+        return Objects.hash(getId(), getProject(), getUserId(), getSemanticSearchModelId(), getCompletionModelId(), getAgentName(), getAgentBehavior(), getPrivateAgent(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy(), getDocumentSplitterType(), getChatTemplateId(), getSectionTemplateId());
     }
 }

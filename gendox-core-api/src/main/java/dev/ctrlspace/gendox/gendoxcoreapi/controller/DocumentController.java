@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import io.swagger.v3.oas.annotations.Operation;
 
 
 import java.io.IOException;
@@ -27,7 +28,7 @@ import java.util.*;
 @RestController
 public class DocumentController {
 
-    @Value("${Gendox.file.allowed.extensions}")
+    @Value("${gendox.documents.allowed.extensions}")
     private String allowedExtensions;
 
     private DocumentService documentService;
@@ -48,6 +49,8 @@ public class DocumentController {
     }
 
     @GetMapping("/documents/{id}")
+    @Operation(summary = "Get document by ID",
+            description = "Retrieve a document by its unique ID.")
     public DocumentInstance getById(@PathVariable UUID id) throws GendoxException {
         //throw new UnsupportedOperationException("Not implemented yet");
         return documentService.getDocumentInstanceById(id);
@@ -55,6 +58,8 @@ public class DocumentController {
 
 
     @GetMapping("/documents")
+    @Operation(summary = "Get all documents",
+            description = "Retrieve a list of all documents based on the provided criteria.")
     public Page<DocumentDTO> getAll(@Valid DocumentCriteria criteria, Pageable pageable) throws GendoxException {
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
@@ -73,6 +78,10 @@ public class DocumentController {
     }
 
     @GetMapping("/documents/sections/projects/{id}")
+    @Operation(summary = "Get document sections by project ID",
+            description = "Fetch a list of document sections associated with a particular project based on the provided project ID. " +
+                    "Document sections provide structured content within a project, such as chapters, sections, or segments. " +
+                    "This operation enables you to access the sections within the specified project.")
     public List<DocumentInstanceSection> getSectionsByProjectId(@PathVariable UUID id) throws GendoxException {
         //throw new UnsupportedOperationException("Not implemented yet");
         return documentService.getProjectSections(id);
@@ -80,7 +89,15 @@ public class DocumentController {
 
 
     @PostMapping("/documents")
+    @Operation(summary = "Create a new document",
+            description = "Create a new document based on the provided document details. " +
+                    "This operation creates a new document instance with associated sections and metadata, " +
+                    "incorporating the provided document information.")
     public DocumentInstance create(@RequestBody DocumentDTO documentDTO) throws GendoxException {
+
+        if (documentDTO.getId() != null){
+            throw new GendoxException("DOCUMENT_INSTANCE_ID_MUST_BE_NULL", "Document instant id is not null", HttpStatus.BAD_REQUEST);
+        }
 
         DocumentInstance documentInstance = documentConverter.toEntity(documentDTO);
         documentInstance = documentService.createDocumentInstance(documentInstance);
@@ -90,6 +107,10 @@ public class DocumentController {
 
 
     @PutMapping("/documents/{id}")
+    @Operation(summary = "Update document by ID",
+            description = "Update an existing document by specifying its unique ID and providing updated document details. " +
+                    "This operation allows you to modify the document's properties, sections, and metadata. " +
+                    "Ensure that the ID in the path matches the ID in the provided document details.")
     public DocumentInstance update(@PathVariable UUID id, @RequestBody DocumentDTO documentDTO) throws GendoxException {
         // TODO: Store the sections. The metadata should be updated only if documentTemplate is empty/null
 
@@ -104,12 +125,19 @@ public class DocumentController {
     }
 
     @DeleteMapping("/documents/{id}")
+    @Operation(summary = "Delete document by ID",
+            description = "Delete an existing document by specifying its unique ID. " +
+                    "This operation permanently removes the document and its associated sections and metadata.")
     public void delete(@PathVariable UUID id) throws GendoxException {
         documentService.deleteDocument(id);
     }
 
 
     @PostMapping("/documents/upload")
+    @Operation(summary = "Upload documents",
+            description = "Upload one or more documents to the system. " +
+                    "The allowed file extensions are defined in the application properties. " +
+                    "The uploaded files are associated with a specific organization and project.")
     public ResponseEntity<Map<String, Object>> handleFilesUpload(@RequestParam("file") List<MultipartFile> files,
                                                                  @RequestParam("organizationId") UUID organizationId,
                                                                  @RequestParam("projectId") UUID projectId) throws IOException, GendoxException {

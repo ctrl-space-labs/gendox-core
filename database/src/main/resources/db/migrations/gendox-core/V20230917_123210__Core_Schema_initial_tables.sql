@@ -1,4 +1,4 @@
-CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS vector schema public;
 
 CREATE TABLE IF NOT EXISTS gendox_core.message
 (
@@ -73,13 +73,19 @@ END $$;
 -- Rename the table message_logs to audit_logs
 DO $$
 BEGIN
-        IF EXISTS(SELECT *
-                  FROM information_schema.columns
-                  WHERE table_name='message_logs')
-        THEN
+    -- Check if the 'message_logs' table exists
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'message_logs') THEN
+        -- Check if the 'audit_logs' table exists
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'audit_logs') THEN
+            -- If both tables exist, delete 'message_logs'
+DROP TABLE "gendox_core"."message_logs";
+ELSE
+            -- If 'message_logs' exists but 'audit_logs' does not, rename 'message_logs' to 'audit_logs'
 ALTER TABLE "gendox_core"."message_logs" RENAME TO "audit_logs";
 END IF;
+END IF;
 END $$;
+
 
 
 ALTER TABLE IF EXISTS gendox_core.audit_logs

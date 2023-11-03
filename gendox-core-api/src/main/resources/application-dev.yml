@@ -1,0 +1,107 @@
+
+
+server:
+  port: 5000
+  servlet:
+    context-path: /gendox/api/v1
+logging:
+  level:
+    dev.ctrlspace: DEBUG
+    org.springframework: INFO
+spring:
+  mvc:
+    format:
+      date-time: yyyy-MM-dd'T'HH:mm:ss.SSSZ
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: none
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+#  datasource:
+#    url: jdbc:postgresql://localhost:5432/postgres
+#    username: postgres
+#    password: 123456789
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 100MB
+  application:
+    name: gendox-core-api
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+  observations:
+    key-values:
+      application: gendox-core-api
+
+springdoc:
+  swagger-ui:
+    path: /api-documentation
+
+rsa:
+  #private-key: classpath:.env/local/local-non-production-use-private_key.pem
+  private-key: ${RSA_KEY_PATH}
+
+
+gendox:
+  documents:
+    upload-dir: s3://gendox.organization.documents.dev
+#    upload-dir: file:c:\\Users\\sekas\\gendox-documents
+    wordCount: 300
+    allowed:
+      extensions: .txt,.md,.rst,.pdf
+  models:
+    openai:
+      ada2:
+        key: ${OPENAI_KEY}
+  domain:
+    base-url: http://localhost:${server.port}
+    document-sections:
+      get-document-sections: /documents/sections
+    sections: https://domain.com/context-path/documents/sections/
+    messages:
+      completion:
+        post-completion-message: /messages/semantic-completion
+      search:
+        post-search-message: /messages/semantic-search
+  pages:
+    default: "&page=0&size=5"
+  agents:
+    splitter-type: "STATIC_WORD_COUNT_SPLITTER"
+
+
+# AWS
+
+cloud:
+  aws:
+    region: eu-central-1
+
+# Discord
+
+discord:
+  bots:
+    gendox-bot:
+      token: ${DISCORD_TOKEN}
+  server:
+    group-name: gendox-agents

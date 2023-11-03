@@ -1,7 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.validators;
 
 import com.querydsl.core.util.StringUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.RoleNamesConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import org.springframework.security.core.Authentication;
@@ -31,6 +31,6 @@ public class NotEmptyOrSuperAdminValidator implements ConstraintValidator<NotEmp
         private boolean isSuperAdmin() {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             return authentication != null && authentication.getAuthorities().stream()
-                    .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith(RoleNamesConstants.SUPER_ADMIN));
+                    .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith(UserNamesConstants.GENDOX_SUPER_ADMIN));
         }
     }

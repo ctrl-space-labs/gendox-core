@@ -88,10 +88,17 @@ public class SecurityConfiguration {
                                 .requestMatchers("/actuator/health").permitAll()
                                 .requestMatchers("/auth/signup").permitAll()
                                 .requestMatchers("/users/login").permitAll()
-                                .requestMatchers("/api-documentation", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
+                                .requestMatchers("/api-documentation",
+                                        "/swagger-ui.html",
+                                        "/swagger-ui/**",
+                                        "/v3/api-docs",
+                                        "/v3/api-docs/**",
+                                        "/swagger-resources",
+                                        "/swagger-resources/**",
+                                        "/webjars/**").permitAll()
                                 .anyRequest().authenticated()
                 )
-                .exceptionHandling(httpExConfigurer-> httpExConfigurer.authenticationEntryPoint(authEntryPoint))
+                .exceptionHandling(httpExConfigurer -> httpExConfigurer.authenticationEntryPoint(authEntryPoint))
                 .httpBasic(Customizer.withDefaults())
                 .authenticationProvider(daoAuthenticationProvider)
                 .sessionManagement(session ->
@@ -167,8 +174,6 @@ public class SecurityConfiguration {
     public JwtEncoder jwtEncoder(JWKSource<SecurityContext> jwkSource) throws JOSEException {
         return new NimbusJwtEncoder(jwkSource);
     }
-
-
 
 
 }

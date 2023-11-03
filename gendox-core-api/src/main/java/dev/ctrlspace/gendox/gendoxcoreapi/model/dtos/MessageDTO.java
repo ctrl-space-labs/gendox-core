@@ -11,9 +11,11 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class MessageDto {
+public class MessageDTO {
 
     private UUID id;
     private String value;
+    private UUID threadId;
+    private UUID projectId;
 
 }

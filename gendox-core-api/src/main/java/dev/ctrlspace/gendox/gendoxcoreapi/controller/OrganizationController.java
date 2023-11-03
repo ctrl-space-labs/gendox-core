@@ -28,7 +28,6 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.web.bind.annotation.*;
 
 
-
 import java.util.List;
 import java.util.UUID;
 
@@ -62,6 +61,8 @@ public class OrganizationController {
 
     @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_READ_DOCUMENT')")
     @GetMapping("/organizations")
+    @Operation(summary = "Get all organizations",
+            description = "Retrieve a list of all organizations based on the provided criteria.")
     public Page<Organization> getAllOrganizations(@Valid OrganizationCriteria critetia, Pageable pageable) throws Exception {
 
         //run code to get the organization from database
@@ -69,6 +70,8 @@ public class OrganizationController {
     }
 
     @GetMapping("/organizations/{id}")
+    @Operation(summary = "Get organization by ID",
+            description = "Retrieve an organization by its unique ID.")
     public Organization getOrganizationById(@PathVariable UUID id, Authentication authentication) throws Exception {
 
         //run code to get the organization from the database
@@ -78,7 +81,13 @@ public class OrganizationController {
 
     @PostMapping(value = "/organizations", consumes = {"application/json"})
     @ResponseStatus(value = HttpStatus.CREATED)
+    @Operation(summary = "Create organization",
+            description = "Create a new organization based on the provided organization details.")
     public Organization createOrganization(@RequestBody OrganizationDTO organizationDTO) throws Exception {
+
+        if (organizationDTO.getId() != null) {
+            throw new GendoxException("ORGANIZATION_ID_MUST_BE_NULL", "Organization id is not null", HttpStatus.BAD_REQUEST);
+        }
         Organization organization = organizationConverter.toEntity(organizationDTO);
         organization = organizationService.createOrganization(organization);
 
@@ -87,11 +96,12 @@ public class OrganizationController {
     }
 
 
-
     // TODO: Has Permission OP_UPDATE_ORGANIZATION
 
-//    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_DELETE_ORGANIZATION')")
+    //    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_DELETE_ORGANIZATION')")
     @PutMapping("/organizations/{id}")
+    @Operation(summary = "Update organization by ID",
+            description = "Update an existing organization by specifying its unique ID and providing updated organization details.")
     public Organization updateOrganization(@PathVariable UUID id, @RequestBody OrganizationDTO organizationDTO) throws Exception {
         UUID organizationId = organizationDTO.getId();
         Organization organization = new Organization();
@@ -114,12 +124,18 @@ public class OrganizationController {
     //@PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_DELETE_ORGANIZATION')")
     @DeleteMapping("/organizations/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete organization by ID",
+            description = "Delete an existing organization by specifying its unique ID.")
     public void deleteOrganization(@PathVariable UUID id) throws Exception {
         organizationService.deleteOrganization(id);
     }
 
 
     @GetMapping("/organizations/{id}/users")
+    @Operation(summary = "Get users in organization by organization ID",
+            description = "Retrieve a list of users who are members of a specific organization, identified by the provided organization ID. " +
+                    "The organization's members are returned with details such as their roles and permissions within the organization. " +
+                    "The results can be paginated for large organizations to ensure efficient data retrieval.")
     public List<UserOrganization> getUsersInOrganizationByOrgId(@PathVariable UUID id, Authentication authentication, Pageable pageable) throws GendoxException {
 
         if (pageable == null) {
@@ -150,7 +166,7 @@ public class OrganizationController {
     @PostMapping(value = "/organizations/{id}/users", consumes = {"application/json"})
     public UserOrganization addUserToOrganization(@PathVariable UUID id, @RequestBody UserOrganizationDTO userOrganizationDTO, Authentication authentication) throws Exception {
 
-        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt)authentication.getPrincipal());
+        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
 
         return userOrganizationService.createUserOrganization(
                 userOrganizationDTO.getUser().getId(),
@@ -158,8 +174,6 @@ public class OrganizationController {
                 userOrganizationDTO.getRole().getName());
 
     }
-
-
 
 
 }
