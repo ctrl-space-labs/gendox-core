@@ -107,7 +107,7 @@ Want to help make Gendox even better? Fantastic! Get in touch with us by sending
 
 ### Report Issues
 
-If you encounter any bugs or have suggestions for improvements, please [create an issue](https://github.com/ctrl-space-labs/gendox-core/issues).
+If you encounter any bugs or have suggestions for improvements don't tell us! Kidding :) please [create an issue (https://github.com/ctrl-space-labs/gendox-core/issues).
 
 
 
