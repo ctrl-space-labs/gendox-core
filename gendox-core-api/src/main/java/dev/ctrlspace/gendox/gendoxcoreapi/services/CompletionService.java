@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.Gpt35Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35Response;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageGpt35MessageConverter;
@@ -71,6 +72,17 @@ public class CompletionService {
 
     public Message getCompletion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
         String question = convertToGPTTextQuestion(message, nearestSections, projectId);
+        // check moderation
+        Gpt35ModerationResponse moderationResponse = getModeration(question);
+        if (moderationResponse.getResults().get(0).isFlagged()){
+            Message moderationMessage = message.toBuilder()
+                    .value("This message contains hate, harassment, and violence.Please make your question without these elements.")
+                    .build();
+            return moderationMessage;
+        }
+
+
+
         Project project = projectService.getProjectById(projectId);
 
         // clone message to avoid changing the original message text in DB
@@ -113,5 +125,11 @@ public class CompletionService {
         return answer;
 
 
+    }
+
+
+    public Gpt35ModerationResponse getModeration(String message){
+        Gpt35ModerationResponse moderationResponse = aiModelService.moderationCheck(message);
+       return moderationResponse;
     }
 }
