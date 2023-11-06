@@ -7,6 +7,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionMetadata;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
@@ -31,6 +33,7 @@ public class SplitFileService {
     private ServiceSelector serviceSelector;
     private ProjectAgentRepository projectAgentRepository;
     private DocumentService documentService;
+    private ResourceLoader resourceLoader;
 
     @Autowired
     private AmazonS3 amazonS3;
@@ -40,12 +43,13 @@ public class SplitFileService {
     public SplitFileService(TypeService typeService,
                             ServiceSelector serviceSelector,
                             ProjectAgentRepository projectAgentRepository,
-                            DocumentService documentService) {
+                            DocumentService documentService,
+                            ResourceLoader resourceLoader) {
         this.typeService = typeService;
-
         this.serviceSelector = serviceSelector;
         this.projectAgentRepository = projectAgentRepository;
         this.documentService = documentService;
+        this.resourceLoader = resourceLoader;
     }
 
 
@@ -89,39 +93,14 @@ public class SplitFileService {
 
     public InputStream downloadFile(String fileUrl) throws GendoxException {
 
-//        fileUrl = fileUrl.replace("\\\\","/");
-
-        // Check if the URL points to an S3 file or a local file
-        if (fileUrl.startsWith("s3://")) {
-            // If it's an S3 URL, download the file from S3
-            String[] parts = fileUrl.replace("s3://", "").split("/", 2);
-            String bucketName = parts[0];
-            String objectKey = parts[1];
-            try {
-                S3Object s3Object = amazonS3.getObject(bucketName, objectKey);
-                return s3Object.getObjectContent();
-            } catch (Exception e) {
-                // Handle any exceptions
-                throw new GendoxException("ERROR_DOWNLOAD_FILE", "Error downloading file from S3", HttpStatus.NOT_FOUND);
-            }
-        } else if (fileUrl.startsWith("file:")) {
-            try {
-                File localFile = new File(new URI(fileUrl));
-                if (localFile.exists()) {
-                    return new FileInputStream(localFile);
-                } else {
-                    // Handle the case where the local file does not exist
-                    throw new GendoxException("LOCAL_FILE_NOT_FOUND", "Local file not found at: " + fileUrl, HttpStatus.NOT_FOUND);
-                }
-            } catch (Exception e) {
-                // Handle any exceptions
-                throw new GendoxException("ERROR_OPENING_LOCAL_FILE", "Error opening local file: " + fileUrl, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-        } else {
-            // Handle the case where the URL format is not recognized
-            throw new GendoxException("INVALID_FILE_URL_FORMAT", "Invalid file URL format: " + fileUrl, HttpStatus.BAD_REQUEST);
+        try {
+            Resource fileResource = resourceLoader.getResource(fileUrl);
+            InputStream inputStream = fileResource.getInputStream();
+            return inputStream;
+        } catch (Exception e) {
+            // Handle any exceptions
+            throw new GendoxException("ERROR_DOWNLOAD_FILE", "Error downloading file: " + fileUrl, HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
 
     }
 
