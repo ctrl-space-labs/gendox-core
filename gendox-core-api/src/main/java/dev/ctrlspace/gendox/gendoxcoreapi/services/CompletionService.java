@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aie
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageGpt35MessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
@@ -14,16 +15,18 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAut
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 import org.slf4j.Logger;
 
 @Service
 public class CompletionService {
+
+    @Value("${gendox.moderation.message}")
+    private String moderationFlaggedMessage;
 
     Logger logger = LoggerFactory.getLogger(CompletionService.class);
     private ProjectService projectService;
@@ -31,8 +34,8 @@ public class CompletionService {
     private AiModelService aiModelService;
     private EmbeddingService embeddingService;
     private ProjectAgentRepository projectAgentRepository;
-    private ServiceSelector serviceSelector;
     private TemplateRepository templateRepository;
+    private DocumentInstanceSectionRepository documentInstanceSectionRepository;
 
     @Autowired
     public CompletionService(ProjectService projectService,
@@ -40,15 +43,15 @@ public class CompletionService {
                              AiModelService aiModelService,
                              EmbeddingService embeddingService,
                              ProjectAgentRepository projectAgentRepository,
-                             ServiceSelector serviceSelector,
-                             TemplateRepository templateRepository) {
+                             TemplateRepository templateRepository,
+                             DocumentInstanceSectionRepository documentInstanceSectionRepository) {
         this.projectService = projectService;
         this.messageGpt35MessageConverter = messageGpt35MessageConverter;
         this.aiModelService = aiModelService;
         this.embeddingService = embeddingService;
         this.projectAgentRepository = projectAgentRepository;
-        this.serviceSelector = serviceSelector;
         this.templateRepository = templateRepository;
+        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
     }
 
     private Gpt35Response getCompletionForMessages(List<Message> messages, String agentRole) throws GendoxException {
@@ -74,13 +77,12 @@ public class CompletionService {
         String question = convertToGPTTextQuestion(message, nearestSections, projectId);
         // check moderation
         Gpt35ModerationResponse moderationResponse = getModeration(question);
-        if (moderationResponse.getResults().get(0).isFlagged()){
+        if (moderationResponse.getResults().get(0).isFlagged()) {
             Message moderationMessage = message.toBuilder()
-                    .value("This message contains hate, harassment, and violence.Please make your question without these elements.")
+                    .value(moderationFlaggedMessage)
                     .build();
             return moderationMessage;
         }
-
 
 
         Project project = projectService.getProjectById(projectId);
@@ -128,8 +130,21 @@ public class CompletionService {
     }
 
 
-    public Gpt35ModerationResponse getModeration(String message){
+    public Gpt35ModerationResponse getModeration(String message) {
         Gpt35ModerationResponse moderationResponse = aiModelService.moderationCheck(message);
-       return moderationResponse;
+        return moderationResponse;
+    }
+
+    public Map<Map<String,Boolean>, String> getModerationForDocumentSections(UUID documentInstanceId) throws GendoxException {
+        List<DocumentInstanceSection> documentInstanceSections = documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
+        Map<Map<String,Boolean>, String> isFlaggedSections = new HashMap<>();
+
+        for (DocumentInstanceSection section : documentInstanceSections) {
+            Gpt35ModerationResponse moderationResponse = getModeration(section.getSectionValue());
+            if (moderationResponse.getResults().get(0).isFlagged()) {
+                isFlaggedSections.put(moderationResponse.getResults().get(0).getCategories(), section.getSectionValue());
+            }
+        }
+        return isFlaggedSections;
     }
 }

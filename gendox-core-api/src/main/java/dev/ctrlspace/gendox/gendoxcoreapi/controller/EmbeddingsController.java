@@ -22,6 +22,7 @@ import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -146,5 +147,10 @@ public class EmbeddingsController {
     public Gpt35ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
         Gpt35ModerationResponse gpt35ModerationResponse = completionService.getModeration(message);
         return gpt35ModerationResponse;
+    }
+
+    @PostMapping("/messages/moderation/document")
+    public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
+        return completionService.getModerationForDocumentSections(documentId);
     }
 }
