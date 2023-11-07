@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
@@ -27,6 +28,8 @@ public class DocumentService {
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private DocumentSectionMetadataRepository documentSectionMetadataRepository;
     private SecurityUtils securityUtils;
+    private TrainingService trainingService;
+
 
 
     @Autowired
@@ -36,11 +39,13 @@ public class DocumentService {
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
                            DocumentInstanceSectionRepository documentInstanceSectionRepository,
                            DocumentSectionMetadataRepository documentSectionMetadataRepository,
-                           SecurityUtils securityUtils) {
+                           SecurityUtils securityUtils,
+                           TrainingService trainingService) {
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.documentSectionMetadataRepository = documentSectionMetadataRepository;
         this.securityUtils = securityUtils;
+        this.trainingService = trainingService;
     }
 
 
@@ -134,6 +139,10 @@ public class DocumentService {
         section.setUpdatedAt(Instant.now());
         section.setCreatedBy(securityUtils.getUserId());
         section.setUpdatedBy(securityUtils.getUserId());
+        // take moderation check
+        Gpt35ModerationResponse gpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
+        section.setModerationFlagged(gpt35ModerationResponse.getResults().get(0).isFlagged());
+        //create metadata
         section.setDocumentSectionMetadata(createMetadata(section));
         section = documentInstanceSectionRepository.save(section);
 

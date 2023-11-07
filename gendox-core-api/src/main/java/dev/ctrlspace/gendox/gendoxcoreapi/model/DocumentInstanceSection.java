@@ -30,6 +30,10 @@ public class DocumentInstanceSection {
     private String sectionValue;
 
     @Basic
+    @Column(name="is_moderation_flagged", nullable = true)
+    private Boolean isModerationFlagged;
+
+    @Basic
     @Column(name="created_by", nullable = true)
     private UUID createdBy;
     @Basic
@@ -108,31 +112,23 @@ public class DocumentInstanceSection {
         this.updatedBy = updatedBy;
     }
 
+    public Boolean getModerationFlagged() {
+        return isModerationFlagged;
+    }
+
+    public void setModerationFlagged(Boolean moderationFlagged) {
+        isModerationFlagged = moderationFlagged;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        DocumentInstanceSection that = (DocumentInstanceSection) o;
-
-        if (!Objects.equals(id, that.id)) return false;
-        if (!Objects.equals(documentInstance, that.documentInstance))
-            return false;
-        if (!Objects.equals(documentSectionMetadata, that.documentSectionMetadata))
-            return false;
-        if (!Objects.equals(sectionValue, that.sectionValue)) return false;
-        if (!Objects.equals(createdAt, that.createdAt)) return false;
-        return Objects.equals(updatedAt, that.updatedAt);
+        if (!(o instanceof DocumentInstanceSection section)) return false;
+        return Objects.equals(getId(), section.getId()) && Objects.equals(getDocumentInstance(), section.getDocumentInstance()) && Objects.equals(getDocumentSectionMetadata(), section.getDocumentSectionMetadata()) && Objects.equals(getSectionValue(), section.getSectionValue()) && Objects.equals(isModerationFlagged, section.isModerationFlagged) && Objects.equals(getCreatedBy(), section.getCreatedBy()) && Objects.equals(getUpdatedBy(), section.getUpdatedBy()) && Objects.equals(getCreatedAt(), section.getCreatedAt()) && Objects.equals(getUpdatedAt(), section.getUpdatedAt());
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (documentInstance != null ? documentInstance.hashCode() : 0);
-        result = 31 * result + (documentSectionMetadata != null ? documentSectionMetadata.hashCode() : 0);
-        result = 31 * result + (sectionValue != null ? sectionValue.hashCode() : 0);
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        return result;
+        return Objects.hash(getId(), getDocumentInstance(), getDocumentSectionMetadata(), getSectionValue(), isModerationFlagged, getCreatedBy(), getUpdatedBy(), getCreatedAt(), getUpdatedAt());
     }
 }
