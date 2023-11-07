@@ -35,8 +35,6 @@ public class SplitFileService {
     private DocumentService documentService;
     private ResourceLoader resourceLoader;
 
-    @Autowired
-    private AmazonS3 amazonS3;
 
 
     @Autowired
@@ -106,12 +104,12 @@ public class SplitFileService {
 
 
     // Extract the file name from the URL (e.g., "http://example.com/path/to/file.pdf" -> "file.pdf")
-    private String extractFileNameFromUrl(String url) {
+    private String extractFileNameFromUrl(String url) throws GendoxException {
         int lastSlashIndex = url.lastIndexOf("/");
         if (lastSlashIndex >= 0) {
             return url.substring(lastSlashIndex + 1);
         } else {
-            return "downloaded-file"; // Default file name if extraction fails
+            throw new GendoxException("ERROR_FILE_NAME", "Error Files name: ", HttpStatus.NOT_FOUND);
         }
     }
 
