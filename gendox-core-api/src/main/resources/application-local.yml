@@ -97,6 +97,8 @@ gendox:
     default: "&page=0&size=5"
   agents:
     splitter-type: "STATIC_WORD_COUNT_SPLITTER"
+  moderation:
+    message: "Sorry, I can't reply in this message, it contains inappropriate content. If this this not the case, please contact the support team."
 
 # AWS
 
