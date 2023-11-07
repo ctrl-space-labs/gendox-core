@@ -7,13 +7,17 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-@AtLeastOneFieldIsNotEmpty(fieldNames = {QueryParamNames.ORGANIZATION_ID})
+@AtLeastOneFieldIsNotEmpty(fieldNames = {QueryParamNames.PROJECT_ID, QueryParamNames.ORGANIZATION_ID, QueryParamNames.DOCUMENT_INSTANCE_ID, QueryParamNames.DOCUMENT_INSTANCE_IDS})
 public class DocumentCriteria {
 
+    private String projectId;
     private String organizationId;
-    private String userId;
+    private String documentInstanceId;
+    private List<String> documentInstanceIds;
 }

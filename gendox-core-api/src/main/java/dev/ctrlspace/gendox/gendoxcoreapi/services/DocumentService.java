@@ -82,11 +82,12 @@ public class DocumentService {
 
     /**
      * TODO merge this with the above to findSectionsByCriteria
+     *
      * @param projectId
      * @param embeddingIds
      * @return
      */
-    public List<DocumentInstanceSection> getSectionsByEmbeddingsIn(UUID projectId, Set<UUID> embeddingIds){
+    public List<DocumentInstanceSection> getSectionsByEmbeddingsIn(UUID projectId, Set<UUID> embeddingIds) {
         return documentInstanceSectionRepository.findByProjectAndEmbeddingIds(projectId, embeddingIds);
     }
 
@@ -107,7 +108,9 @@ public class DocumentService {
         documentInstanceRepository.save(documentInstance);
 
         // Set the saved sections back to the document instance
-        documentInstance.setDocumentInstanceSections(createSections(documentInstance));
+        if (documentInstance.getDocumentInstanceSections() != null) {
+            documentInstance.setDocumentInstanceSections(createSections(documentInstance));
+        }
 
         return documentInstance;
     }
@@ -243,9 +246,6 @@ public class DocumentService {
     public void deleteMetadata(DocumentSectionMetadata metadata) throws GendoxException {
         documentSectionMetadataRepository.delete(metadata);
     }
-
-
-
 
 
 }
