@@ -35,7 +35,8 @@ public class CompletionService {
     private EmbeddingService embeddingService;
     private ProjectAgentRepository projectAgentRepository;
     private TemplateRepository templateRepository;
-    private DocumentInstanceSectionRepository documentInstanceSectionRepository;
+    private TrainingService trainingService;
+
 
     @Autowired
     public CompletionService(ProjectService projectService,
@@ -44,14 +45,14 @@ public class CompletionService {
                              EmbeddingService embeddingService,
                              ProjectAgentRepository projectAgentRepository,
                              TemplateRepository templateRepository,
-                             DocumentInstanceSectionRepository documentInstanceSectionRepository) {
+                             TrainingService trainingService) {
         this.projectService = projectService;
         this.messageGpt35MessageConverter = messageGpt35MessageConverter;
         this.aiModelService = aiModelService;
         this.embeddingService = embeddingService;
         this.projectAgentRepository = projectAgentRepository;
         this.templateRepository = templateRepository;
-        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
+        this.trainingService = trainingService;
     }
 
     private Gpt35Response getCompletionForMessages(List<Message> messages, String agentRole) throws GendoxException {
@@ -76,7 +77,7 @@ public class CompletionService {
     public Message getCompletion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
         String question = convertToGPTTextQuestion(message, nearestSections, projectId);
         // check moderation
-        Gpt35ModerationResponse moderationResponse = getModeration(question);
+        Gpt35ModerationResponse moderationResponse = trainingService.getModeration(question);
         if (moderationResponse.getResults().get(0).isFlagged()) {
             Message moderationMessage = message.toBuilder()
                     .value(moderationFlaggedMessage)
@@ -130,21 +131,5 @@ public class CompletionService {
     }
 
 
-    public Gpt35ModerationResponse getModeration(String message) {
-        Gpt35ModerationResponse moderationResponse = aiModelService.moderationCheck(message);
-        return moderationResponse;
-    }
 
-    public Map<Map<String,Boolean>, String> getModerationForDocumentSections(UUID documentInstanceId) throws GendoxException {
-        List<DocumentInstanceSection> documentInstanceSections = documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
-        Map<Map<String,Boolean>, String> isFlaggedSections = new HashMap<>();
-
-        for (DocumentInstanceSection section : documentInstanceSections) {
-            Gpt35ModerationResponse moderationResponse = getModeration(section.getSectionValue());
-            if (moderationResponse.getResults().get(0).isFlagged()) {
-                isFlaggedSections.put(moderationResponse.getResults().get(0).getCategories(), section.getSectionValue());
-            }
-        }
-        return isFlaggedSections;
-    }
 }

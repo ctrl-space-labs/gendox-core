@@ -51,7 +51,7 @@ public class SplitFileService {
     }
 
 
-    public List<DocumentInstanceSection> splitDocumentToSections(DocumentCriteria criteria, UUID projectId) throws GendoxException, IOException {
+    public List<DocumentInstanceSection> splitDocumentToSections(DocumentCriteria criteria, UUID agentId) throws GendoxException, IOException {
 
         List<DocumentInstanceSection> sections = new ArrayList<>();
         Page<DocumentInstance> documentInstances = documentService.getAllDocuments(criteria);
@@ -65,7 +65,7 @@ public class SplitFileService {
             // files content
             String content = readTxtFileContent(inputStream);
 
-            List<DocumentInstanceSection> documentSections = createSections(documentInstance, content, projectId);
+            List<DocumentInstanceSection> documentSections = createSections(documentInstance, content, agentId);
 
             for (DocumentInstanceSection section : documentSections) {
                 sections.add(section);
@@ -114,10 +114,11 @@ public class SplitFileService {
     }
 
 
-    public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance, String fileContent, UUID projectId) throws GendoxException {
+    public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance, String fileContent, UUID agentId) throws GendoxException {
         List<DocumentInstanceSection> sections = new ArrayList<>();
-        // take the splitters type
-        ProjectAgent agent = projectAgentRepository.findByProjectId(projectId);
+        // take the splitters type from Agent
+        ProjectAgent agent = projectAgentRepository.findById(agentId)
+                .orElseThrow(() -> new GendoxException("PROJECT_AGENT_NOT_FOUND", "Project's Agent not found with id: " + agentId, HttpStatus.NOT_FOUND));
         String splitterTypeName = agent.getDocumentSplitterType().getName();
 
         DocumentSplitter documentSplitter = serviceSelector.getDocumentSplitterByName(splitterTypeName);
