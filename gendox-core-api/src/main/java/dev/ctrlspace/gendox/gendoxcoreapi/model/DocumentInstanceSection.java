@@ -30,8 +30,8 @@ public class DocumentInstanceSection {
     private String sectionValue;
 
     @Basic
-    @Column(name="is_moderation_flagged", nullable = true)
-    private Boolean isModerationFlagged;
+    @Column(name="has_content_warning", nullable = true)
+    private Boolean hasContentWarning;
 
     @Basic
     @Column(name="created_by", nullable = true)
@@ -113,22 +113,22 @@ public class DocumentInstanceSection {
     }
 
     public Boolean getModerationFlagged() {
-        return isModerationFlagged;
+        return hasContentWarning;
     }
 
     public void setModerationFlagged(Boolean moderationFlagged) {
-        isModerationFlagged = moderationFlagged;
+        hasContentWarning = moderationFlagged;
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof DocumentInstanceSection section)) return false;
-        return Objects.equals(getId(), section.getId()) && Objects.equals(getDocumentInstance(), section.getDocumentInstance()) && Objects.equals(getDocumentSectionMetadata(), section.getDocumentSectionMetadata()) && Objects.equals(getSectionValue(), section.getSectionValue()) && Objects.equals(isModerationFlagged, section.isModerationFlagged) && Objects.equals(getCreatedBy(), section.getCreatedBy()) && Objects.equals(getUpdatedBy(), section.getUpdatedBy()) && Objects.equals(getCreatedAt(), section.getCreatedAt()) && Objects.equals(getUpdatedAt(), section.getUpdatedAt());
+        return Objects.equals(getId(), section.getId()) && Objects.equals(getDocumentInstance(), section.getDocumentInstance()) && Objects.equals(getDocumentSectionMetadata(), section.getDocumentSectionMetadata()) && Objects.equals(getSectionValue(), section.getSectionValue()) && Objects.equals(hasContentWarning, section.hasContentWarning) && Objects.equals(getCreatedBy(), section.getCreatedBy()) && Objects.equals(getUpdatedBy(), section.getUpdatedBy()) && Objects.equals(getCreatedAt(), section.getCreatedAt()) && Objects.equals(getUpdatedAt(), section.getUpdatedAt());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getDocumentInstance(), getDocumentSectionMetadata(), getSectionValue(), isModerationFlagged, getCreatedBy(), getUpdatedBy(), getCreatedAt(), getUpdatedAt());
+        return Objects.hash(getId(), getDocumentInstance(), getDocumentSectionMetadata(), getSectionValue(), hasContentWarning, getCreatedBy(), getUpdatedBy(), getCreatedAt(), getUpdatedAt());
     }
 }
