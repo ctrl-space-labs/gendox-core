@@ -16,6 +16,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplate
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -25,8 +26,7 @@ import org.slf4j.Logger;
 @Service
 public class CompletionService {
 
-    @Value("${gendox.moderation.message}")
-    private String moderationFlaggedMessage;
+
 
     Logger logger = LoggerFactory.getLogger(CompletionService.class);
     private ProjectService projectService;
@@ -79,10 +79,7 @@ public class CompletionService {
         // check moderation
         Gpt35ModerationResponse moderationResponse = trainingService.getModeration(question);
         if (moderationResponse.getResults().get(0).isFlagged()) {
-            Message moderationMessage = message.toBuilder()
-                    .value(moderationFlaggedMessage)
-                    .build();
-            return moderationMessage;
+            throw new GendoxException("MODERATION_CHECK_FAILED", "The question did not pass moderation.", HttpStatus.NOT_ACCEPTABLE);
         }
 
 
