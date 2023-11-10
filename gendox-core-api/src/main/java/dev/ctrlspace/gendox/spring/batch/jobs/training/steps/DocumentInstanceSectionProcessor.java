@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.etljobs.training.steps;
+package dev.ctrlspace.gendox.spring.batch.jobs.training.steps;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Ada2Response;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
@@ -30,7 +30,13 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
     @Override
     public SectionEmbeddingDTO process(DocumentInstanceSection item) throws Exception {
         logger.debug("Start processing section: {}", item.getId());
-        Ada2Response ada2Response = embeddingService.getAda2EmbeddingForMessage(item.getSectionValue());
+        Ada2Response ada2Response;
+        try {
+            ada2Response = embeddingService.getAda2EmbeddingForMessage(item.getSectionValue());
+        } catch (Exception e) {
+            logger.warn("Error {} getting Embedding for section {}. Skipping...", e.getMessage(), item.getId());
+            return null;
+        }
         logger.debug("Section processed with cost: {} tokens", ada2Response.getUsage().getTotalTokens());
         return new SectionEmbeddingDTO(item, ada2Response);
     }

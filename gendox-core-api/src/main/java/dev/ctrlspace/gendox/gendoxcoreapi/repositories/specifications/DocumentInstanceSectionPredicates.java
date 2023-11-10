@@ -5,12 +5,10 @@ import com.querydsl.core.types.Predicate;
 import com.querydsl.core.util.StringUtils;
 import com.querydsl.jpa.JPAExpressions;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QDocumentInstanceSection;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.QProject;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QProjectDocument;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
 
-import java.time.Instant;
 import java.util.UUID;
 
 public class DocumentInstanceSectionPredicates {
@@ -20,7 +18,7 @@ public class DocumentInstanceSectionPredicates {
 
     public static Predicate build(DocumentInstanceSectionCriteria criteria) {
         return ExpressionUtils.allOf(
-                projectId(criteria.getProjectId()),
+                project(criteria),
                 createdBetween(criteria.getCreatedBetween()),
                 updatedBetween(criteria.getUpdatedBetween()),
                 documentId(criteria.getDocumentId())
@@ -49,8 +47,8 @@ public class DocumentInstanceSectionPredicates {
         return qDocumentInstanceSection.documentInstance.id.eq(UUID.fromString(documentId));
     }
 
-    private static Predicate projectId(String projectId) {
-        if (StringUtils.isNullOrEmpty(projectId)) {
+    private static Predicate project(DocumentInstanceSectionCriteria criteria) {
+        if (StringUtils.isNullOrEmpty(criteria.getProjectId()) && !criteria.getProjectAutoTraining()) {
             return null;
         }
 
@@ -60,8 +58,24 @@ public class DocumentInstanceSectionPredicates {
                         JPAExpressions
                                 .select(qProjectDocument.documentId)
                                 .from(qProjectDocument)
-                                .where(qProjectDocument.project.id.eq(UUID.fromString(projectId))
+                                .where(ExpressionUtils.allOf(
+                                        projectId(criteria.getProjectId()),
+                                        autoTraining(criteria.getProjectAutoTraining()))
                                 ));
+    }
+
+    private static Predicate projectId(String projectId) {
+        if (StringUtils.isNullOrEmpty(projectId)) {
+            return null;
+        }
+        return qProjectDocument.project.id.eq(UUID.fromString(projectId));
+    }
+
+    private static Predicate autoTraining(Boolean autoTraining) {
+        if (autoTraining == null) {
+            return null;
+        }
+        return qProjectDocument.project.autoTraining.eq(autoTraining);
     }
 
 

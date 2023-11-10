@@ -14,7 +14,7 @@ public class DocumentSectionCriteriaJobParamsConverter implements GendoxConverte
 
 
     @Override
-    public JobParameters toDTO(DocumentInstanceSectionCriteria criteria) throws GendoxException {
+    public JobParameters toDTO(DocumentInstanceSectionCriteria criteria) {
 
         JobParametersBuilder paramsBuilder = new JobParametersBuilder();
         if (criteria.getDocumentId() != null) {
@@ -35,6 +35,9 @@ public class DocumentSectionCriteriaJobParamsConverter implements GendoxConverte
         }
         if (criteria.getUpdatedBetween() != null && criteria.getUpdatedBetween().to() != null) {
             paramsBuilder.addString("updatedBetween.to", criteria.getUpdatedBetween().to().toString());
+        }
+        if (criteria.getProjectAutoTraining() != null) {
+            paramsBuilder.addString("projectAutoTraining", criteria.getProjectAutoTraining().toString());
         }
 
         return paramsBuilder.toJobParameters();
@@ -61,6 +64,7 @@ public class DocumentSectionCriteriaJobParamsConverter implements GendoxConverte
         return DocumentInstanceSectionCriteria.builder()
                 .documentId(jobParameters.getString("documentInstanceId"))
                 .projectId(jobParameters.getString("projectId"))
+                .projectAutoTraining(Boolean.valueOf(jobParameters.getString("projectAutoTraining")))
                 .createdBetween(createdBetween)
                 .updatedBetween(updatedBetween)
                 .build();

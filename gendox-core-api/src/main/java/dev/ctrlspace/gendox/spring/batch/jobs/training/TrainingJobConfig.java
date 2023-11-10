@@ -1,9 +1,9 @@
-package dev.ctrlspace.gendox.etljobs.training.jobs;
+package dev.ctrlspace.gendox.spring.batch.jobs.training;
 
-import dev.ctrlspace.gendox.etljobs.common.ObservabilityTaskDecorator;
-import dev.ctrlspace.gendox.etljobs.common.UniqueInstanceDecider;
-import dev.ctrlspace.gendox.etljobs.training.steps.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
+import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
+import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
+import dev.ctrlspace.gendox.spring.batch.jobs.training.steps.*;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.FlowBuilder;
@@ -13,6 +13,7 @@ import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -35,14 +36,29 @@ public class TrainingJobConfig {
     @Autowired
     private UniqueInstanceDecider uniqueInstanceDecider;
 
+    @Value("${gendox.batch-jobs.document-training.job.name}")
+    private String documentTrainingJobName;
+
+    @Value("${gendox.batch-jobs.document-training.job.thread-pool-size}")
+    private Integer threadPoolSize;
+
+    @Value("${gendox.batch-jobs.document-training.job.steps.document-training-step.name}")
+    private String documentTrainingStepName;
+
+    @Value("${gendox.batch-jobs.document-training.job.steps.document-training-step.throttle-limit}")
+    private Integer throttleLimit;
+
+    @Value("${gendox.batch-jobs.document-training.job.steps.document-training-step.chunk-size}")
+    private Integer chunkSize;
+
     @Bean
     public Job documentTrainingJob(Step documentTrainingStep) {
 
         // Build the job flow with the uniqueInstanceDecider
-        Flow documentTrainingFlow = new FlowBuilder<Flow>("documentTrainingFlow")
+        Flow documentTrainingFlow = new FlowBuilder<Flow>(documentTrainingJobName + "Flow")
                 .start(documentTrainingStep)
                 .build();
-        return new JobBuilder("documentTrainingJob", jobRepository)
+        return new JobBuilder(documentTrainingJobName, jobRepository)
                 .start(uniqueExecutionFlow(documentTrainingFlow))
                 .end()
                 .build();
@@ -66,15 +82,15 @@ public class TrainingJobConfig {
                                      DocumentSectionEmbeddingWriter documentSectionEmbeddingWriter,
                                      TaskExecutor asyncBatchTrainingExecutor,
                                      PlatformTransactionManager platformTransactionManager) {
-        StepBuilder documentTrainingStepBuilder = new StepBuilder("documentTrainingStep", jobRepository);
+        StepBuilder documentTrainingStepBuilder = new StepBuilder(documentTrainingStepName, jobRepository);
 
         return documentTrainingStepBuilder
-                .<DocumentInstanceSection, SectionEmbeddingDTO>chunk(10, platformTransactionManager) // Write in chunks of 10
+                .<DocumentInstanceSection, SectionEmbeddingDTO>chunk(chunkSize, platformTransactionManager) // Write in chunks of 10
                 .reader(documentInstanceSectionReader)
                 .processor(documentInstanceSectionProcessor)
                 .writer(documentSectionEmbeddingWriter)
                 .taskExecutor(asyncBatchTrainingExecutor)
-                .throttleLimit(10)
+                .throttleLimit(throttleLimit)
                 .build();
     }
 
@@ -82,9 +98,9 @@ public class TrainingJobConfig {
     public TaskExecutor asyncBatchTrainingExecutor() {
 
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(50); // This is the number of concurrent tasks you want to run
-        executor.setMaxPoolSize(50); // This allows the pool to grow under load, up to ten concurrent tasks
-        executor.setQueueCapacity(50); // This is the queue capacity. Once the queue is full, new tasks will wait.
+        executor.setCorePoolSize(threadPoolSize); // This is the number of concurrent tasks you want to run
+        executor.setMaxPoolSize(threadPoolSize); // This allows the pool to grow under load, up to ten concurrent tasks
+        executor.setQueueCapacity(threadPoolSize); // This is the queue capacity. Once the queue is full, new tasks will wait.
         executor.setThreadNamePrefix("b-training-");
 
         executor.setTaskDecorator(new ObservabilityTaskDecorator());

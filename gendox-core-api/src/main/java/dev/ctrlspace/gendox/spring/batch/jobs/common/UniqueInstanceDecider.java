@@ -1,10 +1,8 @@
-package dev.ctrlspace.gendox.etljobs.common;
+package dev.ctrlspace.gendox.spring.batch.jobs.common;
 
-import dev.ctrlspace.gendox.etljobs.model.BatchJobExecution;
-import dev.ctrlspace.gendox.etljobs.model.BatchJobInstance;
-import dev.ctrlspace.gendox.etljobs.repositories.BatchJobExecutionRepository;
+import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
+import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionRepository;
 import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.explore.JobExplorer;

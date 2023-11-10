@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 public class DocumentInstanceSectionCriteria {
 
     private String projectId;
+    private Boolean projectAutoTraining;
     private String documentId;
     private TimePeriodDTO createdBetween;
     private TimePeriodDTO updatedBetween;
