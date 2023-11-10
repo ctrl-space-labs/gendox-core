@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.etljobs.model;
+package dev.ctrlspace.gendox.spring.batch.model;
 
 import jakarta.persistence.*;
 

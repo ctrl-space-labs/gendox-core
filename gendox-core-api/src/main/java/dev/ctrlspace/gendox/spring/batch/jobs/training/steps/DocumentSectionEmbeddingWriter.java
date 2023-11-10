@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.etljobs.training.steps;
+package dev.ctrlspace.gendox.spring.batch.jobs.training.steps;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Ada2Response;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiEmbeddingConverter;

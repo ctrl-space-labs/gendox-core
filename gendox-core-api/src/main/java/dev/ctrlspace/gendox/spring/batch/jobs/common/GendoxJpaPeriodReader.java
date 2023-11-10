@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.etljobs.common;
+package dev.ctrlspace.gendox.spring.batch.jobs.common;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import org.jetbrains.annotations.Nullable;
@@ -41,11 +41,10 @@ public abstract class GendoxJpaPeriodReader<T> implements ItemStreamReader<T> {
     private int totalItemCounter;
     private int pageItemCounter;
 
+    protected Integer pageSize;
+
     @Value("#{jobParameters['now']}")
     protected Instant now;
-
-    @Value("#{jobParameters['pageSize']}")
-    protected int pageSize;
 
     @BeforeStep
     public ExitStatus beforeStep(StepExecution stepExecution) {
@@ -115,5 +114,11 @@ public abstract class GendoxJpaPeriodReader<T> implements ItemStreamReader<T> {
      * Subclasses will implement this method to define how to use the repository to fetch the page.
       */
     protected abstract Page<T> getPageFromRepository(Pageable pageable) throws GendoxException;
+
+    /**
+     * Each Reader should have its own pageSize
+     * @param pageSize
+     */
+    public abstract void setPageSize(Integer pageSize);
 
 }

@@ -1,8 +1,8 @@
-package dev.ctrlspace.gendox.etljobs.model;
+package dev.ctrlspace.gendox.spring.batch.model;
 
 import jakarta.persistence.*;
 
-import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
@@ -21,13 +21,13 @@ public class BatchJobExecution {
     private Long jobInstanceId;
     @Basic
     @Column(name = "create_time", nullable = false)
-    private Timestamp createTime;
+    private Instant createTime;
     @Basic
     @Column(name = "start_time", nullable = true)
-    private Timestamp startTime;
+    private Instant startTime;
     @Basic
     @Column(name = "end_time", nullable = true)
-    private Timestamp endTime;
+    private Instant endTime;
     @Basic
     @Column(name = "status", nullable = true, length = 10)
     private String status;
@@ -39,7 +39,7 @@ public class BatchJobExecution {
     private String exitMessage;
     @Basic
     @Column(name = "last_updated", nullable = true)
-    private Timestamp lastUpdated;
+    private Instant lastUpdated;
 
     @OneToMany(mappedBy = "batchJobExecution")
     private List<BatchJobExecutionParams> batchJobExecutionParams;
@@ -68,27 +68,27 @@ public class BatchJobExecution {
         this.jobInstanceId = jobInstanceId;
     }
 
-    public Timestamp getCreateTime() {
+    public Instant getCreateTime() {
         return createTime;
     }
 
-    public void setCreateTime(Timestamp createTime) {
+    public void setCreateTime(Instant createTime) {
         this.createTime = createTime;
     }
 
-    public Timestamp getStartTime() {
+    public Instant getStartTime() {
         return startTime;
     }
 
-    public void setStartTime(Timestamp startTime) {
+    public void setStartTime(Instant startTime) {
         this.startTime = startTime;
     }
 
-    public Timestamp getEndTime() {
+    public Instant getEndTime() {
         return endTime;
     }
 
-    public void setEndTime(Timestamp endTime) {
+    public void setEndTime(Instant endTime) {
         this.endTime = endTime;
     }
 
@@ -116,11 +116,11 @@ public class BatchJobExecution {
         this.exitMessage = exitMessage;
     }
 
-    public Timestamp getLastUpdated() {
+    public Instant getLastUpdated() {
         return lastUpdated;
     }
 
-    public void setLastUpdated(Timestamp lastUpdated) {
+    public void setLastUpdated(Instant lastUpdated) {
         this.lastUpdated = lastUpdated;
     }
 

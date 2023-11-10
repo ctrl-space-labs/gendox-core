@@ -137,6 +137,7 @@ public class ProjectController {
         existingProject.setName(project.getName());
         existingProject.setDescription(project.getDescription());
         existingProject.setProjectAgent(projectAgentService.updateProjectAgent(project.getProjectAgent()));
+        existingProject.setAutoTraining(project.getAutoTraining());
         project = projectService.updateProject(project);
 
         return project;

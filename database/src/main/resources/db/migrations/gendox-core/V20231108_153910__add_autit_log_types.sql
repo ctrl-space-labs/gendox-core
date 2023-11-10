@@ -15,6 +15,11 @@ DO $$
         END IF;
     END$$;
 
+-- add column automated_training if not exists in projects
+ALTER TABLE gendox_core.projects
+    ADD COLUMN IF NOT EXISTS auto_training boolean DEFAULT false;
+
+
 INSERT INTO gendox_core.types (type_category, name, description)
 SELECT 'AUDIT_LOG_TYPE', 'EMBEDDING_REQUEST', 'This is for embedding request auditing.'
 WHERE NOT EXISTS (

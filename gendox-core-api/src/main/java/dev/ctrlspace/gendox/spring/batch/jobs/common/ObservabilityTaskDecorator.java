@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.etljobs.common;
+package dev.ctrlspace.gendox.spring.batch.jobs.common;
 
 import org.slf4j.MDC;
 import org.springframework.core.task.TaskDecorator;

@@ -1,10 +1,9 @@
-package dev.ctrlspace.gendox.etljobs.training.steps;
+package dev.ctrlspace.gendox.spring.batch.jobs.training.steps;
 
-import dev.ctrlspace.gendox.etljobs.common.GendoxJpaPeriodReader;
+import dev.ctrlspace.gendox.spring.batch.jobs.common.GendoxJpaPeriodReader;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentSectionCriteriaJobParamsConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
 import org.slf4j.Logger;
@@ -12,15 +11,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.item.ItemStreamReader;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
-
-import java.time.Instant;
 
 @Component
 @StepScope
@@ -32,6 +29,12 @@ public class DocumentInstanceSectionReader extends GendoxJpaPeriodReader<Documen
     private Sort sort;
 
     private DocumentService documentService;
+
+    @Override
+    @Value("${gendox.batch-jobs.document-training.job.steps.document-training-step.pageable-size}")
+    public void setPageSize(Integer pageSize) {
+        super.pageSize = pageSize;
+    }
     private DocumentSectionCriteriaJobParamsConverter documentSectionCriteriaJobParamsConverter;
 
     @Autowired
@@ -54,13 +57,15 @@ public class DocumentInstanceSectionReader extends GendoxJpaPeriodReader<Documen
             return ExitStatus.FAILED;
         }
 
-        if (criteria.getUpdatedBetween().to() != null && criteria.getUpdatedBetween().to().isAfter(now)) {
+        if (criteria.getUpdatedBetween() != null && criteria.getUpdatedBetween().to() != null
+                && criteria.getUpdatedBetween().to().isAfter(now)) {
             logger.error("Job parameter 'to' must not be in the future");
             return ExitStatus.FAILED;
         }
 
-        if (criteria.getUpdatedBetween().from() != null && criteria.getUpdatedBetween().to() != null &&
-                criteria.getUpdatedBetween().from()
+        if (criteria.getUpdatedBetween() != null && criteria.getUpdatedBetween().from() != null
+                && criteria.getUpdatedBetween().to() != null
+                && criteria.getUpdatedBetween().from()
                         .isAfter(criteria.getUpdatedBetween().to())) {
             logger.error("Job parameter 'from' must be before 'to'");
             return ExitStatus.FAILED;
@@ -81,4 +86,6 @@ public class DocumentInstanceSectionReader extends GendoxJpaPeriodReader<Documen
         PageRequest sortedPageRequest = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         return documentService.getAllSections(criteria, sortedPageRequest);
     }
+
+
 }

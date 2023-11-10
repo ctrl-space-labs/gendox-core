@@ -1,12 +1,11 @@
-package dev.ctrlspace.gendox.etljobs.training.steps;
+package dev.ctrlspace.gendox.spring.batch.jobs.training.steps;
 
-import com.querydsl.core.types.Predicate;
-import dev.ctrlspace.gendox.etljobs.common.GendoxJpaPeriodReader;
+import dev.ctrlspace.gendox.spring.batch.jobs.common.GendoxJpaPeriodReader;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
+import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.NonTransientResourceException;
@@ -37,17 +36,23 @@ public class DocumentInstanceReader extends GendoxJpaPeriodReader<DocumentInstan
     }
 
     @Override
-    protected void initializeJpaPredicate(JobParameters jobParameters) {
+    protected ExitStatus initializeJpaPredicate(JobParameters jobParameters) {
         criteria = DocumentCriteria.builder()
                 .documentInstanceId(jobParameters.getString("documentInstanceId"))
 //                .documentInstanceIds(jobParameters.getString("documentInstanceIds"))
                 .organizationId(jobParameters.getString("organizationId"))
                 .projectId(jobParameters.getString("projectId"))
                 .build();
+        return null;
     }
 
     @Override
     protected Page<DocumentInstance> getPageFromRepository(Pageable pageable) throws GendoxException {
         return documentService.getAllDocuments(criteria, pageable);
+    }
+
+    @Override
+    public void setPageSize(Integer pageSize) {
+        super.pageSize = pageSize;
     }
 }
