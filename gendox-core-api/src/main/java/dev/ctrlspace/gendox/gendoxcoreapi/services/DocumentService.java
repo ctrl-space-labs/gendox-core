@@ -3,7 +3,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentInstanceSectionPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
@@ -78,6 +80,10 @@ public class DocumentService {
 
     public List<DocumentInstanceSection> getProjectSections(UUID projectId) throws GendoxException {
         return documentInstanceSectionRepository.findByProjectId(projectId);
+    }
+
+    public Page<DocumentInstanceSection> getAllSections(DocumentInstanceSectionCriteria criteria, Pageable pageable) throws GendoxException {
+        return documentInstanceSectionRepository.findAll(DocumentInstanceSectionPredicates.build(criteria),  pageable);
     }
 
     /**

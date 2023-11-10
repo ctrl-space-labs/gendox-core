@@ -35,6 +35,7 @@ public class CompletionService {
     private EmbeddingService embeddingService;
     private ProjectAgentRepository projectAgentRepository;
     private TemplateRepository templateRepository;
+    private TypeService typeService;
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
 
     @Autowired
@@ -44,6 +45,7 @@ public class CompletionService {
                              EmbeddingService embeddingService,
                              ProjectAgentRepository projectAgentRepository,
                              TemplateRepository templateRepository,
+                             TypeService typeService,
                              DocumentInstanceSectionRepository documentInstanceSectionRepository) {
         this.projectService = projectService;
         this.messageGpt35MessageConverter = messageGpt35MessageConverter;
@@ -52,6 +54,7 @@ public class CompletionService {
         this.projectAgentRepository = projectAgentRepository;
         this.templateRepository = templateRepository;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
+        this.typeService = typeService;
     }
 
     private Gpt35Response getCompletionForMessages(List<Message> messages, String agentRole) throws GendoxException {
@@ -93,8 +96,9 @@ public class CompletionService {
 
         Gpt35Response gpt35Response = getCompletionForMessages(List.of(promptMessage), project.getProjectAgent().getAgentBehavior());
 
+        Type completionType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
         // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)
-        AuditLogs auditLogs = embeddingService.createAuditLogs(projectId, (long) gpt35Response.getUsage().getTotalTokens());
+        AuditLogs auditLogs = embeddingService.createAuditLogs(projectId, (long) gpt35Response.getUsage().getTotalTokens(), completionType);
         Message completionResponseMessage = messageGpt35MessageConverter.toEntity(gpt35Response.getChoices().get(0).getMessage());
         // TODO save the above response message
 

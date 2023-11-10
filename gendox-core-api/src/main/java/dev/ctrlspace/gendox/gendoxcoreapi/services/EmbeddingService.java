@@ -9,6 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import io.swagger.models.auth.In;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -85,30 +87,60 @@ public class EmbeddingService {
     }
 
     /**
-     * Calculates the embedding for a message
-     * It created and stores the embedding and the embedding group
+     *
+     * It creates or update the embedding and the embedding group
      * Logs to audit logs
      *
-     * @param value     the text on which the embedding will be calculated
+     * @param ada2Response     the actual embedding
      * @param projectId the project/Agent that is involved
      * @return
      * @throws GendoxException
      */
 
-    public Embedding calculateEmbeddingForText(String value, UUID projectId, UUID messageId) throws GendoxException {
-        Ada2Response ada2Response = getAda2EmbeddingForMessage(value);
-        Embedding embedding = openAiEmbeddingConverter.toEntity(ada2Response);
-        embedding = createEmbedding(embedding);
+    public Embedding upsertEmbeddingForText(Ada2Response ada2Response, UUID projectId, @Nullable UUID messageId, @Nullable UUID sectionId) throws GendoxException {
 
+        Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_REQUEST");
         AuditLogs auditLogs = new AuditLogs();
-        auditLogs = createAuditLogs(projectId, (long) ada2Response.getUsage().getTotalTokens());
+        auditLogs = createAuditLogs(projectId, (long) ada2Response.getUsage().getTotalTokens(), embeddingType);
 
-        EmbeddingGroup group = createEmbeddingGroup(embedding.getId(), Double.valueOf(ada2Response.getUsage().getTotalTokens()), messageId);
+        Embedding embedding = null;
+        Optional<EmbeddingGroup> optionalEmbeddingGroup = embeddingGroupRepository.findBySectionIdOrMessageId(sectionId, messageId);
+
+        if (optionalEmbeddingGroup.isPresent()) {
+
+
+            Instant now = Instant.now();
+            EmbeddingGroup embeddingGroup = optionalEmbeddingGroup.get();
+            embedding = embeddingRepository.findById(embeddingGroup.getEmbeddingId()).get();
+
+            embedding.setEmbeddingVector(ada2Response.getData().get(0).getEmbedding());
+            embedding.setUpdatedBy(securityUtils.getUserId());
+            embedding.setUpdatedAt(now);
+
+
+            embeddingGroup.setEmbeddingId(embedding.getId());
+            embeddingGroup.setTokenCount((double) ada2Response.getUsage().getTotalTokens());
+            embeddingGroup.setGroupingStrategyType(typeService.getGroupingTypeByName("SIMPLE_SECTION").getId());
+            embeddingGroup.setSemanticSearchModelId(aiModelRepository.findByName("Ada2").getId());
+            embeddingGroup.setUpdatedBy(securityUtils.getUserId());
+            embeddingGroup.setUpdatedAt(now);
+
+
+            embeddingRepository.save(embedding);
+            embeddingGroupRepository.save(embeddingGroup);
+        } else {
+            embedding = openAiEmbeddingConverter.toEntity(ada2Response);
+            embedding = createEmbedding(embedding);
+
+
+            EmbeddingGroup group = createEmbeddingGroup(embedding.getId(), Double.valueOf(ada2Response.getUsage().getTotalTokens()), messageId, sectionId);
+
+        }
 
         return embedding;
     }
 
-    private Ada2Response getAda2EmbeddingForMessage(String value) {
+    public Ada2Response getAda2EmbeddingForMessage(String value) {
         BotRequest botRequest = new BotRequest();
         botRequest.setMessage(value);
         Ada2Response ada2Response = aiModelService.askEmbedding(botRequest);
@@ -116,7 +148,7 @@ public class EmbeddingService {
         return ada2Response;
     }
 
-    public AuditLogs createAuditLogs(UUID projectId, Long tokenCount) {
+    public AuditLogs createAuditLogs(UUID projectId, Long tokenCount, Type auditType) {
         AuditLogs auditLog = new AuditLogs();
         auditLog.setUserId(securityUtils.getUserId());
         auditLog.setCreatedAt(Instant.now());
@@ -125,6 +157,7 @@ public class EmbeddingService {
         auditLog.setUpdatedBy(securityUtils.getUserId());
         auditLog.setProjectId(projectId);
         auditLog.setTokenCount(tokenCount);
+        auditLog.setType(auditType);
 
         auditLog = auditLogsRepository.save(auditLog);
 
@@ -132,18 +165,17 @@ public class EmbeddingService {
     }
 
 
-    public EmbeddingGroup createEmbeddingGroup(UUID embeddingId, Double tokenCount, UUID message_id) throws GendoxException {
+    public EmbeddingGroup createEmbeddingGroup(UUID embeddingId, Double tokenCount, UUID message_id, UUID sectionId) throws GendoxException {
         EmbeddingGroup embeddingGroup = new EmbeddingGroup();
 
         embeddingGroup.setId(UUID.randomUUID());
         embeddingGroup.setEmbeddingId(embeddingId);
         embeddingGroup.setTokenCount(tokenCount);
+        embeddingGroup.setSectionId(sectionId);
         embeddingGroup.setGroupingStrategyType(typeService.getGroupingTypeByName("SIMPLE_SECTION").getId());
         embeddingGroup.setSemanticSearchModelId(aiModelRepository.findByName("Ada2").getId());
+        embeddingGroup.setMessageId(message_id);
 
-        if (message_id!= null){
-            embeddingGroup.setMessageId(message_id);
-        }
 
         embeddingGroup.setCreatedAt(Instant.now());
         embeddingGroup.setUpdatedAt(Instant.now());
@@ -201,7 +233,8 @@ public class EmbeddingService {
 
 
     public List<DocumentInstanceSection> findClosestSections(Message message, UUID projectId) throws GendoxException {
-        Embedding messageEmbedding = calculateEmbeddingForText(message.getValue(), projectId, message.getId());
+        Ada2Response ada2Response = getAda2EmbeddingForMessage(message.getValue());
+        Embedding messageEmbedding = upsertEmbeddingForText(ada2Response, projectId, message.getId(), null);
 
         List<Embedding> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, PageRequest.of(0, 5));
 

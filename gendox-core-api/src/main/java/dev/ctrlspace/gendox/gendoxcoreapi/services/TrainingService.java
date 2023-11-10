@@ -1,22 +1,20 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Ada2Response;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.EmbeddingGroup;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingGroupRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectDocumentRepository;
+import lombok.NonNull;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -27,6 +25,7 @@ public class TrainingService {
     Logger logger = LoggerFactory.getLogger(TrainingService.class);
 
     private DocumentInstanceSectionRepository sectionRepository;
+    private DocumentService documentService;
     private EmbeddingGroupRepository embeddingGroupRepository;
     private EmbeddingService embeddingService;
     private ProjectDocumentRepository projectDocumentRepository;
@@ -36,33 +35,26 @@ public class TrainingService {
     public TrainingService(DocumentInstanceSectionRepository sectionRepository,
                            EmbeddingGroupRepository embeddingGroupRepository,
                            EmbeddingService embeddingService,
+                           DocumentService documentService,
                            ProjectDocumentRepository projectDocumentRepository) {
         this.sectionRepository = sectionRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
         this.embeddingService = embeddingService;
         this.projectDocumentRepository = projectDocumentRepository;
+        this.documentService = documentService;
     }
 
-
     public Embedding runTrainingForSection(UUID sectionId, UUID projectId) throws GendoxException {
+        DocumentInstanceSection section = documentService.getSectionById(sectionId);
+        return this.runTrainingForSection(section, projectId);
+    }
 
-        // Use Optional to handle the result of findById
-        Optional<DocumentInstanceSection> optionalSection = sectionRepository.findById(sectionId);
+    public Embedding runTrainingForSection(@NonNull DocumentInstanceSection section, UUID projectId) throws GendoxException {
+        Ada2Response ada2Response = embeddingService.getAda2EmbeddingForMessage(section.getSectionValue());
+        Embedding embedding = embeddingService.upsertEmbeddingForText(ada2Response, projectId, null, section.getId());
 
-        if (optionalSection.isPresent()) {
-            DocumentInstanceSection section = optionalSection.get();
 
-            Embedding embedding = new Embedding();
-            embedding = embeddingService.calculateEmbeddingForText(section.getSectionValue(), projectId, null);
-
-            EmbeddingGroup embeddingGroup = embeddingGroupRepository.findByEmbeddingId(embedding.getId());
-            embeddingGroup.setSectionId(sectionId);
-            embeddingGroup = embeddingGroupRepository.save(embeddingGroup);
-
-            return embedding;
-        } else {
-            throw new GendoxException("SECTION_NOT_FOUND", "Section with ID" + sectionId + " not found", HttpStatus.NOT_FOUND);
-        }
+        return embedding;
     }
 
     public List<Embedding> runTrainingForProject(UUID projectId) throws GendoxException {
@@ -77,7 +69,7 @@ public class TrainingService {
             instanceSections = sectionRepository.findByDocumentInstance(instance.getId());
             for (DocumentInstanceSection section : instanceSections) {
                 Embedding embedding = new Embedding();
-                embedding = runTrainingForSection(section.getId(), projectId);
+                embedding = runTrainingForSection(section, projectId);
                 projectEmbeddings.add(embedding);
             }
         }

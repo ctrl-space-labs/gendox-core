@@ -7,7 +7,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Table(name = "audit_logs", schema = "gendox_core", catalog = "postgres")
+@Table(name = "audit_logs", schema = "gendox_core")
 public class AuditLogs {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
@@ -25,9 +25,9 @@ public class AuditLogs {
     @Basic
     @Column(name = "token_count")
     private Long tokenCount;
-    @Basic
-    @Column(name = "type")
-    private String type;
+    @ManyToOne
+    @JoinColumn(name = "type_id", referencedColumnName = "id", nullable = false)
+    private Type type;
     @Basic
     @Column(name = "created_at")
     private Instant createdAt;
@@ -82,11 +82,11 @@ public class AuditLogs {
         this.tokenCount = tokenCount;
     }
 
-    public String getType() {
+    public Type getType() {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(Type type) {
         this.type = type;
     }
 
@@ -122,15 +122,38 @@ public class AuditLogs {
         this.updatedBy = updatedBy;
     }
 
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof AuditLogs that)) return false;
-        return Objects.equals(getId(), that.getId()) && Objects.equals(getProjectId(), that.getProjectId()) && Objects.equals(getUserId(), that.getUserId()) && Objects.equals(getRequestId(), that.getRequestId()) && Objects.equals(getTokenCount(), that.getTokenCount()) && Objects.equals(getType(), that.getType()) && Objects.equals(getCreatedAt(), that.getCreatedAt()) && Objects.equals(getUpdatedAt(), that.getUpdatedAt()) && Objects.equals(getCreatedBy(), that.getCreatedBy()) && Objects.equals(getUpdatedBy(), that.getUpdatedBy());
+        if (o == null || getClass() != o.getClass()) return false;
+
+        AuditLogs auditLogs = (AuditLogs) o;
+
+        if (!Objects.equals(id, auditLogs.id)) return false;
+        if (!Objects.equals(projectId, auditLogs.projectId)) return false;
+        if (!Objects.equals(userId, auditLogs.userId)) return false;
+        if (!Objects.equals(requestId, auditLogs.requestId)) return false;
+        if (!Objects.equals(tokenCount, auditLogs.tokenCount)) return false;
+        if (!Objects.equals(type, auditLogs.type)) return false;
+        if (!Objects.equals(createdAt, auditLogs.createdAt)) return false;
+        if (!Objects.equals(updatedAt, auditLogs.updatedAt)) return false;
+        if (!Objects.equals(createdBy, auditLogs.createdBy)) return false;
+        return Objects.equals(updatedBy, auditLogs.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getProjectId(), getUserId(), getRequestId(), getTokenCount(), getType(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy());
+        int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (projectId != null ? projectId.hashCode() : 0);
+        result = 31 * result + (userId != null ? userId.hashCode() : 0);
+        result = 31 * result + (requestId != null ? requestId.hashCode() : 0);
+        result = 31 * result + (tokenCount != null ? tokenCount.hashCode() : 0);
+        result = 31 * result + (type != null ? type.hashCode() : 0);
+        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
+        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
+        result = 31 * result + (createdBy != null ? createdBy.hashCode() : 0);
+        result = 31 * result + (updatedBy != null ? updatedBy.hashCode() : 0);
+        return result;
     }
 }

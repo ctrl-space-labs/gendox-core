@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.validators.AtLeastOneFieldIsNotEmpty;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import lombok.AllArgsConstructor;
@@ -16,4 +17,6 @@ public class DocumentInstanceSectionCriteria {
 
     private String projectId;
     private String documentId;
+    private TimePeriodDTO createdBetween;
+    private TimePeriodDTO updatedBetween;
 }
