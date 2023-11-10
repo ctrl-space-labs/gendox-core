@@ -1,7 +1,11 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
+import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
@@ -14,6 +18,9 @@ import java.util.UUID;
 
 @Repository
 public interface DocumentInstanceSectionRepository extends JpaRepository<DocumentInstanceSection, UUID> , QuerydslPredicateExecutor<DocumentInstanceSection> {
+
+    @EntityGraph(attributePaths = {"documentSectionMetadata", "documentInstance"})
+    Page<DocumentInstanceSection> findAll(Predicate predicate, Pageable pageable);
 
     @Query("SELECT dis FROM DocumentInstanceSection dis WHERE dis.documentInstance.id = :documentInstanceId")
     public List<DocumentInstanceSection> findByDocumentInstance(UUID documentInstanceId);

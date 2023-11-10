@@ -30,7 +30,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
         AiModelService.class,
         Listener.class,
         SpringBatchConfiguration.class,
-        LoggingObservationHandler.class
+        LoggingObservationHandler.class,
+        SpringBatchConfiguration.class,
         })
 @EnableJpaRepositories(basePackageClasses = {UserRepository.class})
 @EntityScan(basePackageClasses = {User.class})
