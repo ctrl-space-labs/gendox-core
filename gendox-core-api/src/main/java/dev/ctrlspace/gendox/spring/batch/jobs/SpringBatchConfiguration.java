@@ -55,9 +55,8 @@ public class SpringBatchConfiguration implements ApplicationRunner {
 //                .toJobParameters();
 //        jobLauncher.run(documentTrainingJob, params);
 
-        JobExecution jobExecution = springBatchService.runTrainingWithParams();
+//        JobExecution jobExecution = springBatchService.runTrainingWithParams();
 
-        int x = 5;
 
 
     }
