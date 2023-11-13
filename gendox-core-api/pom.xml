@@ -341,6 +341,58 @@
             <version>5.0.0-alpha.14</version>
         </dependency>
 
+        <!--                              String Integration                           -->
+
+        <!-- https://mvnrepository.com/artifact/org.springframework.integration/spring-integration-core -->
+        <dependency>
+            <groupId>org.springframework.integration</groupId>
+            <artifactId>spring-integration-core</artifactId>
+            <version>6.1.4</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.springframework.integration/spring-integration-file -->
+        <dependency>
+            <groupId>org.springframework.integration</groupId>
+            <artifactId>spring-integration-file</artifactId>
+            <version>6.1.4</version>
+        </dependency>
+
+
+        <!--                              String cloud server                           -->
+        <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-config -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-config</artifactId>
+            <version>4.0.4</version>
+        </dependency>
+
+        <!--                              JGit                           -->
+        <!-- https://mvnrepository.com/artifact/org.eclipse.jgit/org.eclipse.jgit -->
+        <dependency>
+            <groupId>org.eclipse.jgit</groupId>
+            <artifactId>org.eclipse.jgit</artifactId>
+            <version>6.7.0.202309050840-r</version>
+        </dependency>
+
+        <!-- Spring Messaging -->
+        <!-- https://mvnrepository.com/artifact/org.springframework/spring-messaging -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-messaging</artifactId>
+            <version>6.0.13</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.springframework.integration/spring-integration-java-dsl -->
+        <dependency>
+            <groupId>org.springframework.integration</groupId>
+            <artifactId>spring-integration-java-dsl</artifactId>
+            <version>1.2.3.RELEASE</version>
+        </dependency>
+
+
+
+
+
     </dependencies>
 
     <pluginRepositories>
