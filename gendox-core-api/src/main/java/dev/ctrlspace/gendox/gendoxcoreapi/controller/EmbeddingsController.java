@@ -145,12 +145,13 @@ public class EmbeddingsController {
 
     @PostMapping("/messages/moderation")
     public Gpt35ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
-        Gpt35ModerationResponse gpt35ModerationResponse = completionService.getModeration(message);
+        Gpt35ModerationResponse gpt35ModerationResponse = trainingService.getModeration(message);
         return gpt35ModerationResponse;
     }
 
     @PostMapping("/messages/moderation/document")
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
-        return completionService.getModerationForDocumentSections(documentId);
+        return trainingService.getModerationForDocumentSections(documentId);
     }
+
 }
