@@ -70,10 +70,10 @@ public class UploadService {
      */
     private String saveFile(MultipartFile file, UUID organizationId, UUID documentInstanceId) throws IOException {
         String fileName = file.getOriginalFilename();
-        String uniqueFileName = documentInstanceId.toString() + "_" + fileName;
+//        String uniqueFileName = documentInstanceId.toString() + "_" + fileName;
 
         String filePathPrefix = calculateFilePathPrefix(organizationId);
-        String fullFilePath = uploadDir + "/" + filePathPrefix + "/" + uniqueFileName;
+        String fullFilePath = uploadDir + "/" + filePathPrefix + "/" + fileName;
 
         createLocalFileDirectory(filePathPrefix);
 

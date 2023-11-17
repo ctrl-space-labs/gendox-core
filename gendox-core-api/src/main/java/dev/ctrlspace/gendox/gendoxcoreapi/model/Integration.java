@@ -1,8 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import jakarta.persistence.*;
+import org.eclipse.jgit.lib.ObjectId;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -14,8 +16,8 @@ public class Integration {
     @Column(name = "id", nullable = false)
     private UUID id;
     @Basic
-    @Column(name = "agent_id", nullable = false)
-    private UUID agentId;
+    @Column(name = "project_id", nullable = false)
+    private UUID projectId;
     @ManyToOne
     @JoinColumn(name = "type_id", referencedColumnName = "id", nullable = false)
     private Type integrationType;
@@ -25,6 +27,12 @@ public class Integration {
     @Basic
     @Column(name = "url")
     private String url;
+    @Basic
+    @Column(name="directory_path")
+    private String directoryPath;
+    @Basic
+    @Column(name="repository_head")
+    private String repoHead;
     @Basic
     @Column(name = "user_name")
     private String userName;
@@ -52,12 +60,12 @@ public class Integration {
         this.id = id;
     }
 
-    public UUID getAgentId() {
-        return agentId;
+    public UUID getProjectId() {
+        return projectId;
     }
 
-    public void setAgentId(UUID agentId) {
-        this.agentId = agentId;
+    public void setProjectId(UUID agentId) {
+        this.projectId = agentId;
     }
 
     public Type getIntegrationType() {
@@ -132,17 +140,31 @@ public class Integration {
         this.password = password;
     }
 
+    public String getDirectoryPath() {
+        return directoryPath;
+    }
 
+    public void setDirectoryPath(String directoryPath) {
+        this.directoryPath = directoryPath;
+    }
+
+    public String getRepoHead() {
+        return repoHead;
+    }
+
+    public void setRepoHead(String repoHead) {
+        this.repoHead = repoHead;
+    }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Integration that)) return false;
-        return Objects.equals(getId(), that.getId()) && Objects.equals(getAgentId(), that.getAgentId()) && Objects.equals(getIntegrationType(), that.getIntegrationType()) && Objects.equals(isActive, that.isActive) && Objects.equals(getUrl(), that.getUrl()) && Objects.equals(getUserName(), that.getUserName()) && Objects.equals(getPassword(), that.getPassword()) && Objects.equals(getCreatedAt(), that.getCreatedAt()) && Objects.equals(getUpdatedAt(), that.getUpdatedAt()) && Objects.equals(getCreatedBy(), that.getCreatedBy()) && Objects.equals(getUpdatedBy(), that.getUpdatedBy());
+        return Objects.equals(getId(), that.getId()) && Objects.equals(getProjectId(), that.getProjectId()) && Objects.equals(getIntegrationType(), that.getIntegrationType()) && Objects.equals(isActive, that.isActive) && Objects.equals(getUrl(), that.getUrl()) && Objects.equals(getDirectoryPath(), that.getDirectoryPath()) && Objects.equals(getRepoHead(), that.getRepoHead()) && Objects.equals(getUserName(), that.getUserName()) && Objects.equals(getPassword(), that.getPassword()) && Objects.equals(getCreatedAt(), that.getCreatedAt()) && Objects.equals(getUpdatedAt(), that.getUpdatedAt()) && Objects.equals(getCreatedBy(), that.getCreatedBy()) && Objects.equals(getUpdatedBy(), that.getUpdatedBy());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getAgentId(), getIntegrationType(), isActive, getUrl(), getUserName(), getPassword(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy());
+        return Objects.hash(getId(), getProjectId(), getIntegrationType(), isActive, getUrl(), getDirectoryPath(), getRepoHead(), getUserName(), getPassword(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy());
     }
 }
