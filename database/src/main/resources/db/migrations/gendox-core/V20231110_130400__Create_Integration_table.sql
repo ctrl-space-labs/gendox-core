@@ -32,20 +32,23 @@ SELECT 'INTEGRATION_TYPE', 'AWS_S3_INTEGRATION', 'This is an integration for a A
 
 create table if not exists gendox_core.integrations
 (
-    id         bigserial not null,
+    id         uuid DEFAULT uuid_generate_v4(),
     type_id    bigint    not null,
-    agent_id uuid        not null,
+    project_id uuid        not null,
     is_active boolean,
-    url string,
-    user_name string,
-    paswword string,
+    url text,
+    directory_path text,
+    repository_head text,
+    user_name text,
+    password text,
     created_at    timestamp,
     updated_at    timestamp,
     created_by uuid,
     updated_by uuid,
     primary key (id),
-    FOREIGN KEY (type) REFERENCES gendox_core.types (id),
-    FOREIGN KEY (agent_id) REFERENCES gendox_core.project_agent (id),
+    FOREIGN KEY (type_id) REFERENCES gendox_core.types (id),
+    FOREIGN KEY (project_id) REFERENCES gendox_core.projects (id),
     FOREIGN KEY(created_by) REFERENCES gendox_core.users(id),
     FOREIGN KEY(updated_by) REFERENCES gendox_core.users(id)
+
 );
