@@ -7,13 +7,17 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingGroupRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectDocumentRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentInstanceSectionPredicates;
 import lombok.NonNull;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +34,7 @@ public class TrainingService {
     Logger logger = LoggerFactory.getLogger(TrainingService.class);
 
     private DocumentInstanceSectionRepository sectionRepository;
-    private DocumentService documentService;
+    private DocumentSectionService documentSectionService;
     private EmbeddingGroupRepository embeddingGroupRepository;
     private EmbeddingService embeddingService;
     private ProjectDocumentRepository projectDocumentRepository;
@@ -48,20 +52,21 @@ public class TrainingService {
     public TrainingService(DocumentInstanceSectionRepository sectionRepository,
                            EmbeddingGroupRepository embeddingGroupRepository,
                            EmbeddingService embeddingService,
-                           DocumentService documentService,
+                           DocumentSectionService documentSectionService,
                            ProjectDocumentRepository projectDocumentRepository,
                            DocumentInstanceSectionRepository documentInstanceSectionRepository,
                            AiModelService aiModelService) {
         this.sectionRepository = sectionRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
         this.projectDocumentRepository = projectDocumentRepository;
-        this.documentService = documentService;
+        this.documentSectionService = documentSectionService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.aiModelService = aiModelService;
     }
 
+
     public Embedding runTrainingForSection(UUID sectionId, UUID projectId) throws GendoxException {
-        DocumentInstanceSection section = documentService.getSectionById(sectionId);
+        DocumentInstanceSection section = documentSectionService.getSectionById(sectionId);
         return this.runTrainingForSection(section, projectId);
     }
 
