@@ -22,6 +22,12 @@ public class ProjectAgentService {
 
     @Value("${gendox.agents.splitter-type}")
     private String splitterTypeName;
+    @Value("${gendox.agents.max_token}")
+    private Long maxTokenValue;
+    @Value("${gendox.agents.temperature}")
+    private Float temperatureValue;
+    @Value("${gendox.agents.top_p}")
+    private Float topPValue;
 
     private ProjectAgentRepository projectAgentRepository;
     private TypeService typeService;
@@ -67,6 +73,18 @@ public class ProjectAgentService {
         if (projectAgent.getDocumentSplitterType() == null) {
             projectAgent.setDocumentSplitterType(typeService.getDocumentSplitterTypeByName(splitterTypeName));
         }
+        if (projectAgent.getMaxToken() == null) {
+            projectAgent.setMaxToken(maxTokenValue);
+        }
+
+        if (projectAgent.getTemperature() == null) {
+            projectAgent.setTemperature(temperatureValue);
+        }
+
+        if (projectAgent.getTopP() == null) {
+            projectAgent.setTopP(topPValue);
+        }
+
 
         // Enable Agent to become User
         User user = new User();

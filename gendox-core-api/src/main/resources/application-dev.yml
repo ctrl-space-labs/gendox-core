@@ -89,6 +89,9 @@ gendox:
     default: "&page=0&size=5"
   agents:
     splitter-type: "STATIC_WORD_COUNT_SPLITTER"
+    max_token: 500
+    temperature: 0.8
+    top_p: 0.4
 
 
 # AWS
