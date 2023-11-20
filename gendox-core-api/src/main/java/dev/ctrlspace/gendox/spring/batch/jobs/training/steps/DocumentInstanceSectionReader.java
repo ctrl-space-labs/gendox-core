@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.training.steps;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.GendoxJpaPeriodReader;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentSectionCriteriaJobParamsConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -28,7 +29,7 @@ public class DocumentInstanceSectionReader extends GendoxJpaPeriodReader<Documen
     private DocumentInstanceSectionCriteria criteria;
     private Sort sort;
 
-    private DocumentService documentService;
+    private DocumentSectionService documentSectionService;
 
     @Override
     @Value("${gendox.batch-jobs.document-training.job.steps.document-training-step.pageable-size}")
@@ -38,9 +39,9 @@ public class DocumentInstanceSectionReader extends GendoxJpaPeriodReader<Documen
     private DocumentSectionCriteriaJobParamsConverter documentSectionCriteriaJobParamsConverter;
 
     @Autowired
-    public DocumentInstanceSectionReader(DocumentService documentService,
+    public DocumentInstanceSectionReader(DocumentSectionService documentSectionService,
                                          DocumentSectionCriteriaJobParamsConverter documentSectionCriteriaJobParamsConverter) {
-        this.documentService = documentService;
+        this.documentSectionService = documentSectionService;
         this.documentSectionCriteriaJobParamsConverter = documentSectionCriteriaJobParamsConverter;
     }
 
@@ -84,7 +85,7 @@ public class DocumentInstanceSectionReader extends GendoxJpaPeriodReader<Documen
     protected Page<DocumentInstanceSection> getPageFromRepository(Pageable pageable) throws GendoxException {
 
         PageRequest sortedPageRequest = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
-        return documentService.getAllSections(criteria, sortedPageRequest);
+        return documentSectionService.getAllSections(criteria, sortedPageRequest);
     }
 
 

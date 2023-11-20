@@ -6,14 +6,18 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionMetadata;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentSectionMetadataRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentInstanceSectionPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -65,6 +69,11 @@ public class DocumentSectionService {
         return documentInstanceSectionRepository.findById(id)
                 .orElseThrow(() -> new GendoxException("SECTION_NOT_FOUND", "Section not found with id: " + id, HttpStatus.NOT_FOUND));
 
+    }
+
+
+    public Page<DocumentInstanceSection> getAllSections(DocumentInstanceSectionCriteria criteria, Pageable pageable) throws GendoxException {
+        return documentInstanceSectionRepository.findAll(DocumentInstanceSectionPredicates.build(criteria),  pageable);
     }
 
     /**
