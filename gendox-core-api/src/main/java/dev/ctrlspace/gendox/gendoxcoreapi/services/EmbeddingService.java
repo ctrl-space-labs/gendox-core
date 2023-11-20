@@ -31,13 +31,13 @@ public class EmbeddingService {
     private EmbeddingRepository embeddingRepository;
     private AuditLogsRepository auditLogsRepository;
     private EmbeddingGroupRepository embeddingGroupRepository;
-    private DocumentService documentService;
     private MessageRepository messageRepository;
     private TypeService typeService;
     private AiModelRepository aiModelRepository;
     private OpenAiEmbeddingConverter openAiEmbeddingConverter;
     private SecurityUtils securityUtils;
     private ProjectAgentService projectAgentService;
+    private DocumentSectionService documentSectionService;
 
 
     @Autowired
@@ -48,24 +48,24 @@ public class EmbeddingService {
                             EmbeddingRepository embeddingRepository,
                             AuditLogsRepository auditLogsRepository,
                             EmbeddingGroupRepository embeddingGroupRepository,
-                            DocumentService documentService,
                             MessageRepository messageRepository,
                             TypeService typeService,
                             OpenAiEmbeddingConverter openAiEmbeddingConverter,
                             AiModelRepository aiModelRepository,
                             SecurityUtils securityUtils,
-                            ProjectAgentService projectAgentService) {
+                            ProjectAgentService projectAgentService,
+                            DocumentSectionService documentSectionService) {
         this.aiModelService = aiModelService;
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
-        this.documentService = documentService;
         this.messageRepository = messageRepository;
         this.typeService = typeService;
         this.aiModelRepository = aiModelRepository;
         this.openAiEmbeddingConverter = openAiEmbeddingConverter;
         this.securityUtils = securityUtils;
         this.projectAgentService = projectAgentService;
+        this.documentSectionService = documentSectionService;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -176,7 +176,6 @@ public class EmbeddingService {
         embeddingGroup.setSemanticSearchModelId(aiModelRepository.findByName("Ada2").getId());
         embeddingGroup.setMessageId(message_id);
 
-
         embeddingGroup.setCreatedAt(Instant.now());
         embeddingGroup.setUpdatedAt(Instant.now());
         embeddingGroup.setCreatedBy(securityUtils.getUserId());
@@ -240,7 +239,7 @@ public class EmbeddingService {
 
 
         Set<UUID> nearestEmbeddingsIds = nearestEmbeddings.stream().map(emb -> emb.getId()).collect(Collectors.toSet());
-        List<DocumentInstanceSection> sections = documentService.getSectionsByEmbeddingsIn(projectId, nearestEmbeddingsIds);
+        List<DocumentInstanceSection> sections = documentSectionService.getSectionsByEmbeddingsIn(projectId, nearestEmbeddingsIds);
 
         return sections;
     }
