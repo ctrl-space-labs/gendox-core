@@ -52,36 +52,38 @@ public class ChatGendoxMessage {
                 .append("/${id}")
 //                .append(">")
                 .toString();
-        Map<String, String> sectionIdMap = new HashMap<>();
-        List<String> sourcesUrls = completionMessageDTO.getSectionId().stream()
-                .map(sectionId -> {
-                    sectionIdMap.put("id", sectionId.toString());
-                    return StringSubstitutor.replace(pathTemplate, sectionIdMap);
-                })
-                .toList();
 
         EmbedBuilder builder = new EmbedBuilder();
         builder.setTitle(DiscordGendoxConstants.MESSAGE_TITLE);
-
+        builder.setColor(Color.blue);
         for (String answer : answers) {
             builder.appendDescription("```").appendDescription(answer).appendDescription("```");
         }
-
-        builder.setColor(Color.blue);
-        builder.addField("thread: ", completionMessageDTO.getThreadID().toString(),true);
-
+        if (completionMessageDTO.getThreadID() != null) {
+            builder.addField("thread: ", completionMessageDTO.getThreadID().toString(), true);
+        }
         MessageEmbed messageEmbed = builder.build(); // Build the MessageEmbed
-
-
         MessageBuilder messageBuilder = new MessageBuilder()
                 .setEmbeds(messageEmbed);
 
-        List<net.dv8tion.jda.api.interactions.components.buttons.Button> linkButtons = new ArrayList<>();
-        for (int i = 0; i < sourcesUrls.size(); i++) {
-            linkButtons.add(Button.link(sourcesUrls.get(i), "Link " + (i + 1)));
+
+        // return message if pass the moderation check
+        if (completionMessageDTO.getSectionId() != null) {
+            Map<String, String> sectionIdMap = new HashMap<>();
+            List<String> sourcesUrls = completionMessageDTO.getSectionId().stream()
+                    .map(sectionId -> {
+                        sectionIdMap.put("id", sectionId.toString());
+                        return StringSubstitutor.replace(pathTemplate, sectionIdMap);
+                    })
+                    .toList();
+            List<Button> linkButtons = new ArrayList<>();
+            for (int i = 0; i < sourcesUrls.size(); i++) {
+                linkButtons.add(Button.link(sourcesUrls.get(i), "Link " + (i + 1)));
+            }
+            messageBuilder.setActionRows(ActionRow.of(linkButtons.toArray(new Button[0])));
         }
 
-        messageBuilder.setActionRows(ActionRow.of(linkButtons.toArray(new Button[0])));
+
         Message message = messageBuilder.build();
         channel.sendMessage(message).queue();
 

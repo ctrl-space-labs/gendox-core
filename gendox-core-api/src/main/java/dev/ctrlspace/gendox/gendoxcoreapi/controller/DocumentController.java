@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.SplitFileService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UploadService;
@@ -37,6 +38,7 @@ public class DocumentController {
     private DocumentConverter documentConverter;
     private UploadService uploadService;
     private SplitFileService splitFileService;
+    private DocumentSectionService documentSectionService;
 
 
     @Autowired
@@ -44,12 +46,14 @@ public class DocumentController {
                               DocumentOnlyConverter documentOnlyConverter,
                               DocumentConverter documentConverter,
                               UploadService uploadService,
-                              SplitFileService splitFileService) {
+                              SplitFileService splitFileService,
+                              DocumentSectionService documentSectionService) {
         this.documentService = documentService;
         this.documentOnlyConverter = documentOnlyConverter;
         this.documentConverter = documentConverter;
         this.uploadService = uploadService;
         this.splitFileService = splitFileService;
+        this.documentSectionService = documentSectionService;
     }
 
     @GetMapping("/documents/{id}")
@@ -88,7 +92,7 @@ public class DocumentController {
                     "This operation enables you to access the sections within the specified project.")
     public List<DocumentInstanceSection> getSectionsByProjectId(@PathVariable UUID id) throws GendoxException {
         //throw new UnsupportedOperationException("Not implemented yet");
-        return documentService.getProjectSections(id);
+        return documentSectionService.getProjectSections(id);
     }
 
 
@@ -167,10 +171,10 @@ public class DocumentController {
     @Operation(summary = "",
             description = " ")
     public List<DocumentInstanceSection> handleFileSplitter(@Valid DocumentCriteria criteria,
-                                                            @RequestParam("projectId") UUID projectId) throws IOException, GendoxException {
+                                                            @RequestParam("agentId") UUID agentId) throws IOException, GendoxException {
         List<DocumentInstanceSection> documentInstanceSections = new ArrayList<>();
 
-        documentInstanceSections = splitFileService.splitDocumentToSections(criteria, projectId);
+        documentInstanceSections = splitFileService.splitDocumentToSections(criteria, agentId);
         return documentInstanceSections;
     }
 
