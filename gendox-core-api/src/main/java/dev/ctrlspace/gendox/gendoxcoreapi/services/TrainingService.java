@@ -47,19 +47,22 @@ public class TrainingService {
         this.embeddingService = embeddingService;
     }
 
+    @Lazy
+    @Autowired
+    public void setEmbeddingService(DocumentSectionService documentSectionService) {
+        this.documentSectionService = documentSectionService;
+    }
+
 
     @Autowired
     public TrainingService(DocumentInstanceSectionRepository sectionRepository,
                            EmbeddingGroupRepository embeddingGroupRepository,
-                           EmbeddingService embeddingService,
-                           DocumentSectionService documentSectionService,
                            ProjectDocumentRepository projectDocumentRepository,
                            DocumentInstanceSectionRepository documentInstanceSectionRepository,
                            AiModelService aiModelService) {
         this.sectionRepository = sectionRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
         this.projectDocumentRepository = projectDocumentRepository;
-        this.documentSectionService = documentSectionService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.aiModelService = aiModelService;
     }
