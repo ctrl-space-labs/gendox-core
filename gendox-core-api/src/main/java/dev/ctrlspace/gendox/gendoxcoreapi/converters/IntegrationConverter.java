@@ -2,7 +2,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationDTO;
+import org.springframework.stereotype.Component;
 
+@Component
 public class IntegrationConverter implements GendoxConverter<Integration, IntegrationDTO> {
 
 

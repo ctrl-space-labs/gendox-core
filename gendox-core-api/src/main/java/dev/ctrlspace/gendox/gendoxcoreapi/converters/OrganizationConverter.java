@@ -1,7 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
 import org.springframework.stereotype.Component;
 
 
