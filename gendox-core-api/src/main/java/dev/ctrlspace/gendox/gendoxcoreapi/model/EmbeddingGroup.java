@@ -8,7 +8,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Table(name = "embedding_group", schema = "gendox_core", catalog = "postgres")
+@Table(name = "embedding_group", schema = "gendox_core")
 public class EmbeddingGroup {
 //    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id

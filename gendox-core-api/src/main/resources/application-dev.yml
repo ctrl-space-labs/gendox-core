@@ -20,6 +20,9 @@ spring:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 100
+      minimum-idle: 10
 #  datasource:
 #    url: jdbc:postgresql://localhost:5432/postgres
 #    username: postgres
@@ -95,6 +98,17 @@ gendox:
   moderation:
     message: "Sorry, I can't reply in this message, it contains inappropriate content. If this this not the case, please contact the support team."
 
+  batch-jobs:
+    document-training:
+      job:
+        name: documentTrainingJob
+        thread-pool-size: 50
+        steps:
+          document-training-step:
+            name: documentTrainingStep
+            throttle-limit: 10    # this should be around 10 to not hit the throttle limit of the OpenAI API
+            chunk-size: 10
+            pageable-size: 1000
 
 # AWS
 

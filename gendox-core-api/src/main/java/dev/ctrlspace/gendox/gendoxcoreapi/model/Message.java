@@ -11,7 +11,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Table(name = "message", schema = "gendox_core", catalog = "postgres")
+@Table(name = "message", schema = "gendox_core")
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)

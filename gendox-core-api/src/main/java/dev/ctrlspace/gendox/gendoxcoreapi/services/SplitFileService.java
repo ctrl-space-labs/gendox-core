@@ -2,11 +2,15 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3Object;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionMetadata;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentSectionMetadataRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
@@ -21,37 +25,34 @@ import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.net.URI;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class SplitFileService {
 
 
-    private TypeService typeService;
-    private ServiceSelector serviceSelector;
-    private ProjectAgentRepository projectAgentRepository;
+
     private DocumentService documentService;
     private ResourceLoader resourceLoader;
+    private DocumentSectionService documentSectionService;
 
 
 
     @Autowired
-    public SplitFileService(TypeService typeService,
-                            ServiceSelector serviceSelector,
-                            ProjectAgentRepository projectAgentRepository,
-                            DocumentService documentService,
-                            ResourceLoader resourceLoader) {
-        this.typeService = typeService;
-        this.serviceSelector = serviceSelector;
-        this.projectAgentRepository = projectAgentRepository;
+    public SplitFileService(DocumentService documentService,
+                            ResourceLoader resourceLoader,
+                            DocumentSectionService documentSectionService) {
         this.documentService = documentService;
         this.resourceLoader = resourceLoader;
+        this.documentSectionService = documentSectionService;
     }
 
 
-    public List<DocumentInstanceSection> splitDocumentToSections(DocumentCriteria criteria, UUID projectId) throws GendoxException, IOException {
+    public List<DocumentInstanceSection> splitDocumentToSections(DocumentCriteria criteria, UUID agentId) throws GendoxException, IOException {
 
         List<DocumentInstanceSection> sections = new ArrayList<>();
         Page<DocumentInstance> documentInstances = documentService.getAllDocuments(criteria);
@@ -65,7 +66,7 @@ public class SplitFileService {
             // files content
             String content = readTxtFileContent(inputStream);
 
-            List<DocumentInstanceSection> documentSections = createSections(documentInstance, content, projectId);
+            List<DocumentInstanceSection> documentSections = documentSectionService.createSections(documentInstance, content, agentId);
 
             for (DocumentInstanceSection section : documentSections) {
                 sections.add(section);
@@ -113,48 +114,6 @@ public class SplitFileService {
         }
     }
 
-
-    public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance, String fileContent, UUID projectId) throws GendoxException {
-        List<DocumentInstanceSection> sections = new ArrayList<>();
-        // take the splitters type
-        ProjectAgent agent = projectAgentRepository.findByProjectId(projectId);
-        String splitterTypeName = agent.getDocumentSplitterType().getName();
-
-        DocumentSplitter documentSplitter = serviceSelector.getDocumentSplitterByName(splitterTypeName);
-        if (documentSplitter == null) {
-            throw new GendoxException("DOCUMENT_SPLITTER_NOT_FOUND", "Document splitter not found with name: " + splitterTypeName, HttpStatus.NOT_FOUND);
-        }
-
-        List<String> contentSections = documentSplitter.split(fileContent);
-
-        Integer sectionOrder = 0;
-        for (String contentSection : contentSections) {
-            sectionOrder++;
-            DocumentInstanceSection section = createSection(documentInstance, contentSection, sectionOrder);
-            sections.add(section);
-        }
-
-
-        return sections;
-    }
-
-    public DocumentInstanceSection createSection(DocumentInstance documentInstance, String fileContent, Integer sectionOrder) throws GendoxException {
-        DocumentInstanceSection section = new DocumentInstanceSection();
-        // create section's metadata
-        DocumentSectionMetadata metadata = new DocumentSectionMetadata();
-        metadata.setDocumentSectionTypeId(typeService.getDocumentTypeByName("FIELD_TEXT").getId());
-        metadata.setTitle("Default Title");
-        metadata.setSectionOrder(sectionOrder);
-
-        section.setDocumentSectionMetadata(metadata);
-        section.setSectionValue(fileContent);
-        section.setDocumentInstance(documentInstance);
-
-        // sava section and metadata
-        section = documentService.createSection(section);
-
-        return section;
-    }
 
 
 }
