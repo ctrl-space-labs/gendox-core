@@ -1,13 +1,13 @@
 package dev.ctrlspace.gendox.spring.batch.jobs;
 
 import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
+import dev.ctrlspace.gendox.spring.batch.jobs.demojob.DemoJobConfig;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
 import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionRepository;
 import dev.ctrlspace.gendox.spring.batch.jobs.training.TrainingJobConfig;
 import dev.ctrlspace.gendox.spring.batch.services.SpringBatchService;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.launch.JobLauncher;
@@ -19,8 +19,6 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-import java.time.Instant;
-
 
 @Configuration
 @EnableBatchProcessing(
@@ -29,6 +27,7 @@ import java.time.Instant;
         isolationLevelForCreate = "ISOLATION_REPEATABLE_READ")
 @ComponentScan(basePackageClasses = {UniqueInstanceDecider.class,
         SpringBatchService.class,
+        DemoJobConfig.class,
         TrainingJobConfig.class})
 @EnableJpaRepositories(basePackageClasses = {BatchJobExecutionRepository.class})
 @EntityScan(basePackageClasses = {BatchJobExecution.class})
@@ -43,6 +42,9 @@ public class SpringBatchConfiguration implements ApplicationRunner {
     @Autowired
     private Job documentTrainingJob;
 
+    @Autowired
+    private Job demoJob;
+
     @Override
     public void run(ApplicationArguments args) throws Exception {
 //        JobParameters params = new JobParametersBuilder()
@@ -53,14 +55,11 @@ public class SpringBatchConfiguration implements ApplicationRunner {
 //                .addString("now", Instant.now().toString())
 //                .addLong("pageSize", 100L)
 //                .toJobParameters();
-//        jobLauncher.run(documentTrainingJob, params);
-
-//        JobExecution jobExecution = springBatchService.runTrainingWithParams();
-
-
+        jobLauncher.run(demoJob, new JobParametersBuilder().toJobParameters());
+        int x = 5;
+        JobExecution jobExecution = springBatchService.runAutoTraining();
 
     }
-
 
 
 }

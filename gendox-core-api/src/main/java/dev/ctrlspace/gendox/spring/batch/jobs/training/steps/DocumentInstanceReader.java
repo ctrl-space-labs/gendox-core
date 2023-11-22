@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.training.steps;
 
-import dev.ctrlspace.gendox.spring.batch.jobs.common.GendoxJpaPeriodReader;
+import dev.ctrlspace.gendox.spring.batch.jobs.common.GendoxJpaPageReader;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @StepScope
-public class DocumentInstanceReader extends GendoxJpaPeriodReader<DocumentInstance> {
+public class DocumentInstanceReader extends GendoxJpaPageReader<DocumentInstance> {
 
     private DocumentCriteria criteria;
 
