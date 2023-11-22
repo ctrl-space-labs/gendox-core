@@ -17,7 +17,7 @@ public class IntegrationDTO {
 
     private Type integrationType;
 
-    private Boolean isActive;
+    private Boolean Active;
 
     private String url;
 
