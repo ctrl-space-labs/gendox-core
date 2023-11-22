@@ -1,12 +1,11 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.training.steps;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
-import dev.ctrlspace.gendox.spring.batch.jobs.common.GendoxJpaPeriodReader;
+import dev.ctrlspace.gendox.spring.batch.jobs.common.GendoxJpaPageReader;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentSectionCriteriaJobParamsConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.ExitStatus;
@@ -22,7 +21,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @StepScope
-public class DocumentInstanceSectionReader extends GendoxJpaPeriodReader<DocumentInstanceSection> {
+public class DocumentInstanceSectionReader extends GendoxJpaPageReader<DocumentInstanceSection> {
 
     Logger logger = LoggerFactory.getLogger(getClass());
 

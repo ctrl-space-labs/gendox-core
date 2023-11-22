@@ -47,7 +47,26 @@ public class SpringBatchService {
     @Autowired
     private JobLauncher jobLauncher;
 
-    public JobExecution runTrainingWithParams() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
+//    public JobExecution runAutoSplit() {
+//
+//    }
+//
+//    public JobExecution runSplitWithParams(DocumentInstanceSectionCriteria criteria) {
+//        criteria.setProjectId(".....");
+//    }
+
+//    public JobExecution runTrainingWithParams(DocumentInstanceSectionCriteria criteria) {
+//        JobParameters params = documentSectionCriteriaJobParamsConverter.toDTO(criteria);
+//        params = new JobParametersBuilder(params)
+//                .addString("now", Instant.now().toString())
+//                .toJobParameters();
+//
+//        return jobLauncher.run(documentTrainingJob, params);
+//    }
+
+
+
+    public JobExecution runAutoTraining() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
 
 
         BatchExecutionCriteria criteria = BatchExecutionCriteria.builder()
