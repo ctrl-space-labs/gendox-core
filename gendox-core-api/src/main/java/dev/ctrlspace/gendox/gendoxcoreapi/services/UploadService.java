@@ -41,19 +41,26 @@ public class UploadService {
 
 
     public DocumentInstance uploadFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException, GendoxException {
-        // Generate a unique file name to avoid conflicts
-        UUID documentInstanceId = UUID.randomUUID();
-
-        String fullFilePath = saveFile(file, organizationId, documentInstanceId);
-
+        String fileName = file.getOriginalFilename();
         DocumentInstance instance = new DocumentInstance();
-        instance.setId(documentInstanceId);
-        instance.setOrganizationId(organizationId);
-        instance.setRemoteUrl(fullFilePath);
-        instance = documentService.createDocumentInstance(instance);
+        instance = documentService.getDocumentByFileName(projectId, organizationId, fileName);
 
-        // create project document
-        ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, instance.getId());
+
+        if (instance == null) {
+            // Generate a unique UUID
+            UUID documentInstanceId = UUID.randomUUID();
+            String fullFilePath = saveFile(file, organizationId, documentInstanceId);
+
+            instance.setId(documentInstanceId);
+            instance.setOrganizationId(organizationId);
+            instance.setRemoteUrl(fullFilePath);
+            instance = documentService.createDocumentInstance(instance);
+            // create project document
+            ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, instance.getId());
+        } else {
+            instance = documentService.updateDocument(instance);
+        }
+
 
         return instance;
     }

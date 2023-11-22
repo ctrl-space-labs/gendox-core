@@ -91,6 +91,11 @@ public class DocumentService {
         return documentInstanceSectionRepository.findByProjectAndEmbeddingIds(projectId, embeddingIds);
     }
 
+    public DocumentInstance getDocumentByFileName(UUID projectId, UUID organizationId, String fileName) throws GendoxException {
+        return documentInstanceRepository.findByProjectIdAndOrganizationIdAndFileName(projectId, organizationId, fileName)
+                .orElse(null);
+    }
+
 
     public DocumentInstance createDocumentInstance(DocumentInstance documentInstance) throws GendoxException {
         Instant now = Instant.now();
@@ -166,7 +171,10 @@ public class DocumentService {
         // Update the properties of the existingDocument with the values from the updated document
         existingDocument.setDocumentTemplateId(documentInstance.getDocumentTemplateId());
         existingDocument.setRemoteUrl(documentInstance.getRemoteUrl());
-        existingDocument.setDocumentInstanceSections(updateSections(documentInstance));
+        // TODO update sections
+//        if (existingDocument.getDocumentInstanceSections() != null) {
+//            existingDocument.setDocumentInstanceSections(updateSections(documentInstance));
+//        }
         existingDocument.setUpdatedBy(securityUtils.getUserId());
         existingDocument.setUpdatedAt(Instant.now());
 
