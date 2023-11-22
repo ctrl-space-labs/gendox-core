@@ -25,4 +25,6 @@ public interface ProjectDocumentRepository extends JpaRepository<ProjectDocument
     @Query("SELECT di FROM DocumentInstance di WHERE di.id IN :documentIds")
     List<DocumentInstance> findDocumentInstancesByDocumentIds(List<UUID> documentIds);
 
+    List<ProjectDocument> findByDocumentId(UUID documentId);
+
 }
