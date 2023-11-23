@@ -40,19 +40,22 @@ public class ProjectController {
     private ProjectMemberConverter projectMemberConverter;
     private ProjectAgentService projectAgentService;
 
+    private ProjectAgent projectAgent;
+
     @Autowired
     public ProjectController(ProjectService projectService,
                              ProjectConverter projectConverter,
                              ProjectMemberService projectMemberService,
                              JWTUtils jwtUtils,
                              ProjectMemberConverter projectMemberConverter,
-                             ProjectAgentService projectAgentService) {
+                             ProjectAgentService projectAgentService, ProjectAgent projectAgent) {
         this.projectService = projectService;
         this.projectConverter = projectConverter;
         this.projectMemberService = projectMemberService;
         this.jwtUtils = jwtUtils;
         this.projectMemberConverter = projectMemberConverter;
         this.projectAgentService = projectAgentService;
+        this.projectAgent = projectAgent;
     }
 
 
@@ -96,10 +99,11 @@ public class ProjectController {
         }
 
         Project project = projectConverter.toEntity(projectDTO);
-        // create Project Agent
         ProjectAgent projectAgent = new ProjectAgent();
+        // create Project Agent
         projectAgent.setProject(project);
         projectAgent.setAgentName(project.getName() + " Agent");
+
         projectAgent = projectAgentService.createProjectAgent(projectAgent);
 
         project.setProjectAgent(projectAgent);
@@ -125,6 +129,7 @@ public class ProjectController {
         Project project = new Project();
         project = projectConverter.toEntity(projectDTO);
 
+        project = projectConverter.toEntity(projectDTO);
 
         if (!id.equals(projectDTO.getId())) {
             throw new GendoxException("PROJECT_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
