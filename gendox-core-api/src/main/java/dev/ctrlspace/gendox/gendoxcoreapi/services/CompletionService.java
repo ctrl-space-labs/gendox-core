@@ -1,11 +1,13 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.Gpt35Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35Response;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageGpt35MessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
@@ -13,16 +15,18 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAut
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 import org.slf4j.Logger;
 
 @Service
 public class CompletionService {
+
+
 
     Logger logger = LoggerFactory.getLogger(CompletionService.class);
     private ProjectService projectService;
@@ -30,8 +34,9 @@ public class CompletionService {
     private AiModelService aiModelService;
     private EmbeddingService embeddingService;
     private ProjectAgentRepository projectAgentRepository;
-    private ServiceSelector serviceSelector;
     private TemplateRepository templateRepository;
+    private TypeService typeService;
+    private TrainingService trainingService;
 
     @Autowired
     public CompletionService(ProjectService projectService,
@@ -39,15 +44,18 @@ public class CompletionService {
                              AiModelService aiModelService,
                              EmbeddingService embeddingService,
                              ProjectAgentRepository projectAgentRepository,
-                             ServiceSelector serviceSelector,
-                             TemplateRepository templateRepository) {
+                             TemplateRepository templateRepository,
+                             TypeService typeService,
+                             DocumentInstanceSectionRepository documentInstanceSectionRepository,
+                             TrainingService trainingService) {
         this.projectService = projectService;
         this.messageGpt35MessageConverter = messageGpt35MessageConverter;
         this.aiModelService = aiModelService;
         this.embeddingService = embeddingService;
         this.projectAgentRepository = projectAgentRepository;
-        this.serviceSelector = serviceSelector;
         this.templateRepository = templateRepository;
+        this.trainingService = trainingService;
+        this.typeService = typeService;
     }
 
     private Gpt35Response getCompletionForMessages(List<Message> messages, String agentRole) throws GendoxException {
@@ -71,6 +79,13 @@ public class CompletionService {
 
     public Message getCompletion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
         String question = convertToGPTTextQuestion(message, nearestSections, projectId);
+        // check moderation
+        Gpt35ModerationResponse moderationResponse = trainingService.getModeration(question);
+        if (moderationResponse.getResults().get(0).isFlagged()) {
+            throw new GendoxException("MODERATION_CHECK_FAILED", "The question did not pass moderation.", HttpStatus.NOT_ACCEPTABLE);
+        }
+
+
         Project project = projectService.getProjectById(projectId);
 
         // clone message to avoid changing the original message text in DB
@@ -79,8 +94,9 @@ public class CompletionService {
 
         Gpt35Response gpt35Response = getCompletionForMessages(List.of(promptMessage), project.getProjectAgent().getAgentBehavior());
 
+        Type completionType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
         // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)
-        AuditLogs auditLogs = embeddingService.createAuditLogs(projectId, (long) gpt35Response.getUsage().getTotalTokens());
+        AuditLogs auditLogs = embeddingService.createAuditLogs(projectId, (long) gpt35Response.getUsage().getTotalTokens(), completionType);
         Message completionResponseMessage = messageGpt35MessageConverter.toEntity(gpt35Response.getChoices().get(0).getMessage());
         // TODO save the above response message
 
@@ -114,4 +130,7 @@ public class CompletionService {
 
 
     }
+
+
+
 }

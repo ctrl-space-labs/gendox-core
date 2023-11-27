@@ -22,11 +22,17 @@
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization</class>
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.User</class>
     <class>dev.ctrlspace.gendox.gendoxcoreapi.model.User</class>
+      <class>dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution</class>
+      <class>dev.ctrlspace.gendox.spring.batch.model.BatchJobExecutionContext</class>
+    <class>dev.ctrlspace.gendox.spring.batch.model.BatchJobExecutionParams</class>
+    <class>dev.ctrlspace.gendox.spring.batch.model.BatchJobInstance</class>
+    <class>dev.ctrlspace.gendox.spring.batch.model.BatchStepExecution</class>
+    <class>dev.ctrlspace.gendox.spring.batch.model.BatchStepExecutionContext</class>
     <properties>
-      <property name="hibernate.connection.url" value="jdbc:postgresql://localhost:5432/postgres"/>
+      <property name="hibernate.connection.url" value="jdbc:postgresql://gendox-database.clywgvjxsb6m.eu-central-1.rds.amazonaws.com:5432/postgres"/>
       <property name="hibernate.connection.driver_class" value="org.postgresql.Driver"/>
-      <property name="hibernate.connection.username" value="postgres"/>
-      <property name="hibernate.connection.password" value="123456789"/>
+      <property name="hibernate.connection.username" value="gendox_dev_adm"/>
+      <property name="hibernate.connection.password" value="SL82VTt8A6Hn2ew12WYE"/>
     </properties>
   </persistence-unit>
 </persistence>

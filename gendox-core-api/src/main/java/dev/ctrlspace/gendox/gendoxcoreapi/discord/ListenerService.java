@@ -27,10 +27,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.awt.*;
 import java.util.*;
@@ -40,6 +42,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class ListenerService {
+
+    @Value("${gendox.moderation.message}")
+    private String moderationFlaggedMessage;
 
     Logger logger = LoggerFactory.getLogger(ListenerService.class);
 
@@ -81,7 +86,7 @@ public class ListenerService {
 
 
         Message message = new Message();
-        if(threadId != null){
+        if (threadId != null) {
             message.setThreadId(UUID.fromString(threadId));
         }
         message.setValue(question);
@@ -96,7 +101,7 @@ public class ListenerService {
     public CompletionMessageDTO completionForQuestion(String question, String channelName, String token, String threadId) throws GendoxException {
 
         Message message = new Message();
-        if(threadId != null){
+        if (threadId != null) {
             message.setThreadId(UUID.fromString(threadId));
         }
         message.setValue(question);
@@ -109,7 +114,6 @@ public class ListenerService {
         completionMessageDTO.getMessage().setProjectId(projectId);
         //save the answer as message
         embeddingService.createMessage(completionMessageDTO.getMessage());
-
 
 
         return completionMessageDTO;
@@ -140,8 +144,6 @@ public class ListenerService {
         return result;
 
     }
-
-
 
 
     public List<DocumentInstanceSection> findClosestSectionRestClient(String token, Message message, UUID projectId) throws GendoxException {
@@ -176,8 +178,31 @@ public class ListenerService {
         var bearerHeader = httpUtils.getBearerTokenHeader(token);
 
         logger.debug("Start completionMessageDTO for chat command");
-        CompletionMessageDTO responseDTO = messageRestClientService.completionMessageDTO(bearerHeader, message, projectId, 5);
+        CompletionMessageDTO responseDTO = new CompletionMessageDTO();
+        try {
+            responseDTO = messageRestClientService.completionMessageDTO(bearerHeader, message, projectId, 5);
+        } catch (Exception e) {
+            if (((HttpStatus) ((HttpClientErrorException.NotAcceptable) e).getStatusCode()).name().equals(HttpStatus.NOT_ACCEPTABLE.name())) {
+                Message moderationMessage = message.toBuilder()
+                        .value(moderationFlaggedMessage)
+                        .build();
+                responseDTO = responseDTO.toBuilder()
+                        .message(moderationMessage)
+                        .threadID(null)
+                        .sectionId(null)
+                        .build();
+
+                logger.debug("GendoxException caught: " + e.getMessage());
+            } else {
+                // Handle other exceptions here if needed
+                throw new GendoxException("SOME_OTHER_ERROR", "Some other error occurred", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        }
+
+
         logger.debug("Received completionMessageDTO for chat command");
+
+
         // Extract values and set them in the completionMessageDTO
         completionMessageDTO.setMessage(responseDTO.getMessage());
         completionMessageDTO.setSectionId(responseDTO.getSectionId());
