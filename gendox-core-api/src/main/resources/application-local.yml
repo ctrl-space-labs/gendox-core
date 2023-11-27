@@ -24,7 +24,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/postgres
     username: postgres
-    password: 1234
+    password: 123456789
 
 #  datasource:
 #     url: ${DATABASE_URL}

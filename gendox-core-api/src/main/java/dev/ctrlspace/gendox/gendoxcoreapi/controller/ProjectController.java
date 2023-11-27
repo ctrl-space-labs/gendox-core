@@ -48,14 +48,13 @@ public class ProjectController {
                              ProjectMemberService projectMemberService,
                              JWTUtils jwtUtils,
                              ProjectMemberConverter projectMemberConverter,
-                             ProjectAgentService projectAgentService, ProjectAgent projectAgent) {
+                             ProjectAgentService projectAgentService) {
         this.projectService = projectService;
         this.projectConverter = projectConverter;
         this.projectMemberService = projectMemberService;
         this.jwtUtils = jwtUtils;
         this.projectMemberConverter = projectMemberConverter;
         this.projectAgentService = projectAgentService;
-        this.projectAgent = projectAgent;
     }
 
 
@@ -142,7 +141,7 @@ public class ProjectController {
         existingProject.setName(project.getName());
         existingProject.setDescription(project.getDescription());
         existingProject.setProjectAgent(projectAgentService.updateProjectAgent(project.getProjectAgent()));
-        project = projectService.updateProject(project);
+        project = projectService.updateProject(existingProject);
 
         return project;
 
