@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.BotRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Ada2Response;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
@@ -21,6 +22,7 @@ import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -141,5 +143,15 @@ public class EmbeddingsController {
         return completionMessageDTO;
     }
 
+    @PostMapping("/messages/moderation")
+    public Gpt35ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
+        Gpt35ModerationResponse gpt35ModerationResponse = trainingService.getModeration(message);
+        return gpt35ModerationResponse;
+    }
+
+    @PostMapping("/messages/moderation/document")
+    public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
+        return trainingService.getModerationForDocumentSections(documentId);
+    }
 
 }

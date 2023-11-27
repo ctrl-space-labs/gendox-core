@@ -64,5 +64,19 @@ public class AiModelServiceLocalDevImpl implements AiModelService {
                         .build()))
                 .build();
     }
+
+    @Override
+    public Gpt35ModerationResponse moderationCheck(String message) {
+        Gpt35ModerationResponse.ModerationResult defaultResult = Gpt35ModerationResponse.ModerationResult.builder()
+                .flagged(false)
+                .build();
+
+        return Gpt35ModerationResponse.builder()
+                .id("default-id")
+                .model("default-model")
+                .results(List.of(defaultResult))
+                .build();
+    }
+
 }
 
