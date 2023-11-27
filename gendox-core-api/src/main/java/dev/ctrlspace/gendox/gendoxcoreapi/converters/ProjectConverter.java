@@ -51,8 +51,8 @@ public class ProjectConverter implements GendoxConverter<Project, ProjectDTO> {
         project.setDescription(projectDTO.getDescription());
         project.setCreatedAt(projectDTO.getCreatedAt());
         project.setUpdatedAt(projectDTO.getUpdatedAt());
-        if (projectDTO.getProjectAgentDTO() != null) {
-            project.setProjectAgent(projectAgentConverter.toEntity(projectDTO.getProjectAgentDTO()));
+        if (projectDTO.getProjectAgent() != null) {
+            project.setProjectAgent(projectAgentConverter.toEntity(projectDTO.getProjectAgent()));
         }
 
 
