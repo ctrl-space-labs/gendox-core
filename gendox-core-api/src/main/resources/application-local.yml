@@ -21,6 +21,7 @@ spring:
     show-sql: true
     hibernate:
       ddl-auto: none
+
 #  datasource:
 #    url: jdbc:postgresql://localhost:5432/postgres
 #    username: postgres
@@ -76,8 +77,9 @@ rsa:
 
 gendox:
   documents:
-    upload-dir: s3://gendox.organization.documents.local
-#    upload-dir: file:c:\\Users\\sekas\\gendox-documents
+#    upload-dir: s3://gendox.organization.documents.local
+#    upload-dir: C:\Users\myrto\OneDrive\Documents\gendox-test
+    upload-dir: file:c:\Users\myrto\OneDrive\Documents\gendox-test
 
     wordCount: 300
     allowed:
@@ -100,6 +102,10 @@ gendox:
     default: "&page=0&size=5"
   agents:
     splitter-type: "STATIC_WORD_COUNT_SPLITTER"
+    max_token: 500
+    temperature: 0.8
+    top_p: 0.4
+
   moderation:
     message: "Sorry, I can't reply in this message, it contains inappropriate content. If this this not the case, please contact the support team."
 
@@ -115,6 +121,7 @@ gendox:
             chunk-size: 10
             pageable-size: 1000
 
+
 # AWS
 
 cloud:
@@ -129,6 +136,7 @@ discord:
   bots:
     gendox-bot:
       token: ${DISCORD_TOKEN}
+
   server:
     group-name: gendox-agents
 
