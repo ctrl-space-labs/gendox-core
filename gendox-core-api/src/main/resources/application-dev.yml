@@ -76,7 +76,7 @@ gendox:
       extensions: .txt,.md,.rst,.pdf
   integrations:
     storage:
-      temporary: s3://gendox.organization.documents.dev
+      temporary: /var/tmp
   models:
     openai:
       ada2:
@@ -109,6 +109,17 @@ gendox:
             throttle-limit: 10    # this should be around 10 to not hit the throttle limit of the OpenAI API
             chunk-size: 10
             pageable-size: 1000
+    document-splitter:
+      job:
+        name: documentSplitterJob
+        thread-pool-size: 50
+        steps:
+          document-splitter-step:
+            name: documentSplitterStep
+            throttle-limit: 10    # this should be around 10 to not hit the throttle limit of the OpenAI API
+            chunk-size: 10
+            pageable-size: 1000
+
 
 # AWS
 
