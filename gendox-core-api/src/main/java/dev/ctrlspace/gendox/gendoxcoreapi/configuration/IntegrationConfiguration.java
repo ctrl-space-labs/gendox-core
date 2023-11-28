@@ -1,12 +1,17 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 
+
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UploadService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.IntegrationManager;
+import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
+import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
+import org.springframework.batch.core.JobExecution;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,7 +31,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+
+
 
 
 @Configuration
@@ -36,14 +42,22 @@ public class IntegrationConfiguration {
     private IntegrationManager integrationManager;
     private UploadService uploadService;
     private ProjectService projectService;
+    private SplitterBatchService splitterBatchService;
+    private TrainingBatchService trainingBatchService;
+
 
     @Autowired
     public IntegrationConfiguration(IntegrationManager integrationManager,
                                     UploadService uploadService,
-                                    ProjectService projectService) {
+                                    ProjectService projectService,
+                                    SplitterBatchService splitterBatchService,
+                                    TrainingBatchService trainingBatchService) {
         this.integrationManager = integrationManager;
         this.uploadService = uploadService;
         this.projectService = projectService;
+        this.splitterBatchService = splitterBatchService;
+        this.trainingBatchService = trainingBatchService;
+
     }
 
 
@@ -69,17 +83,19 @@ public class IntegrationConfiguration {
     public MessageHandler gitHandler() {
         return new MessageHandler() {
             @Override
-            public void handleMessage(Message<?> message) throws MessagingException {
+            public void handleMessage(Message<?> message) throws MessagingException{
                 Map<Integration, List<MultipartFile>> map = (Map<Integration, List<MultipartFile>>) message.getPayload();
+                Boolean hasNewFiles = false;
 
                 for (Map.Entry<Integration, List<MultipartFile>> entry : map.entrySet()) {
                     Integration integration = entry.getKey();
                     List<MultipartFile> files = entry.getValue();
                     for (MultipartFile file : files) {
+                        hasNewFiles = true;
                         try {
-                            // TODO change the uploadFile with branch job
                             Project project = projectService.getProjectById(integration.getProjectId());
-                            uploadService.uploadFile(file, project.getOrganizationId(), project.getId());
+                            DocumentInstance documentInstance =
+                                    uploadService.uploadFile(file, project.getOrganizationId(), project.getId());
                             System.out.println("FILE:----------->" + file.getName());
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -88,6 +104,17 @@ public class IntegrationConfiguration {
                     // Delete all the directory files except the .git folder
                     deleteDirectoryFiles(integration.getDirectoryPath());
                 }
+
+                if (hasNewFiles) {
+                    try {
+                        JobExecution splitterJobExecution = splitterBatchService.runAutoSplitter();
+                        JobExecution trainingJobExecution = trainingBatchService.runAutoTraining();
+                    }
+                    catch (Exception e){
+                        throw new RuntimeException(e);
+                    }
+                }
+
             }
         };
     }

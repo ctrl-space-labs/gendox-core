@@ -1,8 +1,8 @@
 package dev.ctrlspace.gendox.spring.batch.services;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentSectionCriteriaJobParamsConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceCriteriaJobParamsConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecutionParams;
 import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionCriteria;
@@ -18,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -26,32 +25,27 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
 @Service
-public class SpringBatchService {
+public class SplitterBatchService {
+
+    @Value("${gendox.batch-jobs.document-splitter.job.name}")
+    private String documentSplitterJobName;
 
     @Autowired
     private BatchJobExecutionRepository batchJobExecutionRepository;
-
     @Autowired
     private BatchJobExecutionParamsRepository batchJobExecutionParamsRepository;
-
     @Autowired
-    private DocumentSectionCriteriaJobParamsConverter documentSectionCriteriaJobParamsConverter;
-
-    @Value("${gendox.batch-jobs.document-training.job.name}")
-    private String documentTrainingJobName;
-
+    private DocumentInstanceCriteriaJobParamsConverter documentInstanceCriteriaJobParamsConverter;
     @Autowired
-    private Job documentTrainingJob;
-
-
+    private Job documentSplitterJob;
     @Autowired
     private JobLauncher jobLauncher;
 
-    public JobExecution runTrainingWithParams() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
+    public JobExecution runAutoSplitter() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
 
 
         BatchExecutionCriteria criteria = BatchExecutionCriteria.builder()
-                .jobName(documentTrainingJobName)
+                .jobName(documentSplitterJobName)
                 .status("COMPLETED")
                 .build();
 
@@ -76,24 +70,17 @@ public class SpringBatchService {
 
 
 //      prepare Job execution params
-        DocumentInstanceSectionCriteria sectionCriteria = DocumentInstanceSectionCriteria.builder()
+        DocumentCriteria documentCriteria = DocumentCriteria.builder()
                 .updatedBetween(new TimePeriodDTO(start, to))
-                .projectAutoTraining(true)
                 .build();
 
-        JobParameters params = documentSectionCriteriaJobParamsConverter.toDTO(sectionCriteria);
+        JobParameters params = documentInstanceCriteriaJobParamsConverter.toDTO(documentCriteria);
         params = new JobParametersBuilder(params)
                 .addString("now", now.toString())
                 .toJobParameters();
 
-        return jobLauncher.run(documentTrainingJob, params);
+        return jobLauncher.run(documentSplitterJob, params);
 
 
     }
-
-    public Page<BatchJobExecution> getBatchExecutionByCriteria(BatchExecutionCriteria criteria, Pageable pageable) {
-        return batchJobExecutionRepository.findAll(BatchExecutionPredicates.build(criteria), pageable);
-    }
-
-
 }

@@ -9,7 +9,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
-import io.swagger.models.auth.In;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -196,7 +195,7 @@ public class EmbeddingService {
         message.setUpdatedAt(Instant.now());
 
         if (securityUtils.getUserId() == null) {
-            ProjectAgent agent = projectAgentService.getByProjectId(message.getProjectId());
+            ProjectAgent agent = projectAgentService.getAgentByProjectId(message.getProjectId());
             message.setCreatedBy(agent.getUserId());
             message.setUpdatedBy(agent.getUserId());
         } else {
