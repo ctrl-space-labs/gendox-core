@@ -11,10 +11,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectMemberDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectMemberCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectMemberService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,10 @@ public class ProjectController {
     private JWTUtils jwtUtils;
     private ProjectMemberConverter projectMemberConverter;
     private ProjectAgentService projectAgentService;
+    private ProjectAgent projectAgent;
+    private AiModelRepository aiModelRepository;
+
+
 
     @Autowired
     public ProjectController(ProjectService projectService,
@@ -46,13 +52,15 @@ public class ProjectController {
                              ProjectMemberService projectMemberService,
                              JWTUtils jwtUtils,
                              ProjectMemberConverter projectMemberConverter,
-                             ProjectAgentService projectAgentService) {
+                             ProjectAgentService projectAgentService,
+                             AiModelRepository aiModelRepository) {
         this.projectService = projectService;
         this.projectConverter = projectConverter;
         this.projectMemberService = projectMemberService;
         this.jwtUtils = jwtUtils;
         this.projectMemberConverter = projectMemberConverter;
         this.projectAgentService = projectAgentService;
+        this.aiModelRepository = aiModelRepository;
     }
 
 
@@ -96,13 +104,15 @@ public class ProjectController {
         }
 
         Project project = projectConverter.toEntity(projectDTO);
-        // create Project Agent
         ProjectAgent projectAgent = new ProjectAgent();
+        // create Project Agent
         projectAgent.setProject(project);
         projectAgent.setAgentName(project.getName() + " Agent");
-        projectAgent = projectAgentService.createProjectAgent(projectAgent);
 
+        projectAgent = projectAgentService.createProjectAgent(projectAgent);
         project.setProjectAgent(projectAgent);
+        projectAgent.setSemanticSearchModelId(aiModelRepository.findByName(AiModelConstants.ADA2_MODEL).getId());
+        projectAgent.setCompletionModelId(aiModelRepository.findByName(AiModelConstants.GPT_3_5_TURBO_MODEL).getId());
         project = projectService.createProject(project);
 
         return project;
@@ -125,6 +135,7 @@ public class ProjectController {
         Project project = new Project();
         project = projectConverter.toEntity(projectDTO);
 
+        project = projectConverter.toEntity(projectDTO);
 
         if (!id.equals(projectDTO.getId())) {
             throw new GendoxException("PROJECT_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
@@ -138,8 +149,8 @@ public class ProjectController {
         existingProject.setDescription(project.getDescription());
         existingProject.setProjectAgent(projectAgentService.updateProjectAgent(project.getProjectAgent()));
         existingProject.setAutoTraining(project.getAutoTraining());
-        project = projectService.updateProject(project);
 
+        project = projectService.updateProject(existingProject);
         return project;
 
     }

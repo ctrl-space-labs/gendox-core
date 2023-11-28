@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 
+
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
@@ -10,6 +11,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.IntegrationManag
 import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
 import org.springframework.batch.core.JobExecution;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +33,8 @@ import java.util.List;
 import java.util.Map;
 
 
+
+
 @Configuration
 @EnableIntegration
 public class IntegrationConfiguration {
@@ -40,6 +44,7 @@ public class IntegrationConfiguration {
     private ProjectService projectService;
     private SplitterBatchService splitterBatchService;
     private TrainingBatchService trainingBatchService;
+
 
     @Autowired
     public IntegrationConfiguration(IntegrationManager integrationManager,
@@ -52,6 +57,7 @@ public class IntegrationConfiguration {
         this.projectService = projectService;
         this.splitterBatchService = splitterBatchService;
         this.trainingBatchService = trainingBatchService;
+
     }
 
 
@@ -80,6 +86,7 @@ public class IntegrationConfiguration {
             public void handleMessage(Message<?> message) throws MessagingException{
                 Map<Integration, List<MultipartFile>> map = (Map<Integration, List<MultipartFile>>) message.getPayload();
                 Boolean hasNewFiles = false;
+
                 for (Map.Entry<Integration, List<MultipartFile>> entry : map.entrySet()) {
                     Integration integration = entry.getKey();
                     List<MultipartFile> files = entry.getValue();
@@ -107,6 +114,7 @@ public class IntegrationConfiguration {
                         throw new RuntimeException(e);
                     }
                 }
+
             }
         };
     }

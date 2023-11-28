@@ -9,6 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.IntegrationCriteri
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.IntegrationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
+
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -35,6 +36,7 @@ public class IntegrationController {
         this.integrationService = integrationService;
         this.integrationConverter = integrationConverter;
         this.projectService = projectService;
+
 
     }
 
@@ -79,13 +81,13 @@ public class IntegrationController {
         }
 
         Integration integration = integrationConverter.toEntity(integrationDTO);
-
         // make projects auto-training true
         if (integration.getProjectId() != null) {
             Project project = projectService.getProjectById(integration.getProjectId());
             project.setAutoTraining(true);
             projectService.updateProject(project);
         }
+
 
         integration = integrationService.createIntegration(integration);
 

@@ -76,7 +76,9 @@ gendox:
       extensions: .txt,.md,.rst,.pdf
   integrations:
     storage:
+
       temporary: /var/tmp
+
   models:
     openai:
       ada2:
@@ -95,8 +97,13 @@ gendox:
     default: "&page=0&size=5"
   agents:
     splitter-type: "STATIC_WORD_COUNT_SPLITTER"
+    max_token: 500
+    temperature: 0.8
+    top_p: 0.4
+
   moderation:
     message: "Sorry, I can't reply in this message, it contains inappropriate content. If this this not the case, please contact the support team."
+
 
   batch-jobs:
     document-training:
