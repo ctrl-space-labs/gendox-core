@@ -29,13 +29,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 @ComponentScan(basePackageClasses = {DocumentInstanceReader.class})
 public class TrainingJobConfig {
 
-    @Autowired
-    private JobRepository jobRepository;
-
-
-    @Autowired
-    private UniqueInstanceDecider uniqueInstanceDecider;
-
     @Value("${gendox.batch-jobs.document-training.job.name}")
     private String documentTrainingJobName;
 
@@ -50,6 +43,12 @@ public class TrainingJobConfig {
 
     @Value("${gendox.batch-jobs.document-training.job.steps.document-training-step.chunk-size}")
     private Integer chunkSize;
+
+    @Autowired
+    private JobRepository jobRepository;
+
+    @Autowired
+    private UniqueInstanceDecider uniqueInstanceDecider;
 
     @Bean
     public Job documentTrainingJob(Step documentTrainingStep) {

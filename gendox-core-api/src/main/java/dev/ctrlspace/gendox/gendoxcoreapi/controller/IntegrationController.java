@@ -3,9 +3,12 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.IntegrationConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.IntegrationCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.IntegrationService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -17,22 +20,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+
 @RestController
 public class IntegrationController {
 
     private IntegrationService integrationService;
-    private JWTUtils jwtUtils;
-
     private IntegrationConverter integrationConverter;
+    private ProjectService projectService;
 
     @Autowired
     public IntegrationController(IntegrationService integrationService,
-                                 JWTUtils jwtUtils,
-                                 IntegrationConverter integrationConverter) {
-
+                                 IntegrationConverter integrationConverter,
+                                 ProjectService projectService) {
         this.integrationService = integrationService;
-        this.jwtUtils = jwtUtils;
         this.integrationConverter = integrationConverter;
+        this.projectService = projectService;
 
     }
 
@@ -77,6 +79,14 @@ public class IntegrationController {
         }
 
         Integration integration = integrationConverter.toEntity(integrationDTO);
+
+        // make projects auto-training true
+        if (integration.getProjectId() != null) {
+            Project project = projectService.getProjectById(integration.getProjectId());
+            project.setAutoTraining(true);
+            projectService.updateProject(project);
+        }
+
         integration = integrationService.createIntegration(integration);
 
         return integration;
