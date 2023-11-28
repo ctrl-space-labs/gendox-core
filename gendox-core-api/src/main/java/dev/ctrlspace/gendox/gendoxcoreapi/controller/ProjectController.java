@@ -41,8 +41,9 @@ public class ProjectController {
     private JWTUtils jwtUtils;
     private ProjectMemberConverter projectMemberConverter;
     private ProjectAgentService projectAgentService;
-
+    private ProjectAgent projectAgent;
     private AiModelRepository aiModelRepository;
+
 
 
     @Autowired
@@ -103,10 +104,11 @@ public class ProjectController {
         }
 
         Project project = projectConverter.toEntity(projectDTO);
-        // create Project Agent
         ProjectAgent projectAgent = new ProjectAgent();
+        // create Project Agent
         projectAgent.setProject(project);
         projectAgent.setAgentName(project.getName() + " Agent");
+
         projectAgent = projectAgentService.createProjectAgent(projectAgent);
         project.setProjectAgent(projectAgent);
         projectAgent.setSemanticSearchModelId(aiModelRepository.findByName(AiModelConstants.ADA2_MODEL).getId());
@@ -133,6 +135,7 @@ public class ProjectController {
         Project project = new Project();
         project = projectConverter.toEntity(projectDTO);
 
+        project = projectConverter.toEntity(projectDTO);
 
         if (!id.equals(projectDTO.getId())) {
             throw new GendoxException("PROJECT_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
@@ -146,8 +149,8 @@ public class ProjectController {
         existingProject.setDescription(project.getDescription());
         existingProject.setProjectAgent(projectAgentService.updateProjectAgent(project.getProjectAgent()));
         existingProject.setAutoTraining(project.getAutoTraining());
-        project = projectService.updateProject(project);
 
+        project = projectService.updateProject(existingProject);
         return project;
 
     }

@@ -74,6 +74,9 @@ gendox:
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
+  integrations:
+    storage:
+      temporary: s3://gendox.organization.documents.dev
   models:
     openai:
       ada2:
