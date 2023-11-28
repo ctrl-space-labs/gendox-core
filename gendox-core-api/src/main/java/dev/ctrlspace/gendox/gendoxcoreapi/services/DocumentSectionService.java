@@ -22,10 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class DocumentSectionService {
@@ -91,6 +88,11 @@ public class DocumentSectionService {
     public List<DocumentInstanceSection> getProjectSections(UUID projectId) throws GendoxException {
         return documentInstanceSectionRepository.findByProjectId(projectId);
     }
+
+    public List<DocumentInstanceSection> getSectionsByDocument(UUID documentInstanceId) throws GendoxException{
+        return documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
+    }
+
 
 
     public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance, String fileContent, UUID agentId) throws GendoxException {
@@ -223,6 +225,12 @@ public class DocumentSectionService {
             documentInstanceSectionRepository.delete(section);
             deleteMetadata(metadata);
         }
+    }
+
+    public void deleteDocumentSections(UUID documentInstanceId) throws GendoxException{
+        List<DocumentInstanceSection> sections =
+                documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
+        deleteSections(sections);
     }
 
     public void deleteMetadata(DocumentSectionMetadata metadata) throws GendoxException {

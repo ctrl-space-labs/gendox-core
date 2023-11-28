@@ -26,6 +26,9 @@ spring:
 #    url: jdbc:postgresql://localhost:5432/postgres
 #    username: postgres
 #    password: 123456789
+#    hikari:
+#      maximum-pool-size: 100
+#      minimum-idle: 10
 
   datasource:
      url: ${DATABASE_URL}
@@ -127,6 +130,17 @@ gendox:
             throttle-limit: 10    # this should be around 10 to not hit the throttle limit of the OpenAI API
             chunk-size: 10
             pageable-size: 1000
+    document-splitter:
+      job:
+        name: documentSplitterJob
+        thread-pool-size: 50
+        steps:
+          document-splitter-step:
+            name: documentSplitterStep
+            throttle-limit: 10    # this should be around 10 to not hit the throttle limit of the OpenAI API
+            chunk-size: 10
+            pageable-size: 1000
+
 
 
 # AWS

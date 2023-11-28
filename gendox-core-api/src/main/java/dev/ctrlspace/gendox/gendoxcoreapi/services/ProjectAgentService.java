@@ -48,8 +48,13 @@ public class ProjectAgentService {
         this.userService = userService;
     }
 
-    public ProjectAgent getByProjectId(UUID projectId){
+    public ProjectAgent getAgentByProjectId(UUID projectId){
         return projectAgentRepository.findByProjectId(projectId);
+    }
+
+    public ProjectAgent getAgentByDocumentId(UUID documentId){
+        return projectAgentRepository.findAgentByDocumentInstanceId(documentId)
+                .orElse(null);
     }
 
     public ProjectAgent createProjectAgent(ProjectAgent projectAgent) throws Exception {

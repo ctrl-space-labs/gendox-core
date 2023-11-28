@@ -1,8 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.stereotype.Component;
@@ -10,20 +11,24 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 
 @Component
-public class DocumentSectionCriteriaJobParamsConverter implements GendoxConverter<DocumentInstanceSectionCriteria, JobParameters> {
-
+public class DocumentInstanceCriteriaJobParamsConverter implements GendoxConverter<DocumentCriteria, JobParameters> {
 
     @Override
-    public JobParameters toDTO(DocumentInstanceSectionCriteria criteria) {
+    public JobParameters toDTO(DocumentCriteria criteria) {
 
         JobParametersBuilder paramsBuilder = new JobParametersBuilder();
-        if (criteria.getDocumentId() != null) {
-            paramsBuilder.addString("documentInstanceId", criteria.getDocumentId());
-        }
         if (criteria.getProjectId() != null) {
             paramsBuilder.addString("projectId", criteria.getProjectId());
         }
-
+        if (criteria.getOrganizationId() != null) {
+            paramsBuilder.addString("organizationId", criteria.getOrganizationId());
+        }
+        if (criteria.getDocumentInstanceId() != null) {
+            paramsBuilder.addString("documentInstanceId", criteria.getDocumentInstanceId());
+        }
+//        if (criteria.getDocumentInstanceIds() != null) {
+//            paramsBuilder.add("documentInstanceIds", criteria.getDocumentInstanceIds());
+//        }
         if (criteria.getCreatedBetween() != null && criteria.getCreatedBetween().from() != null) {
             paramsBuilder.addString("createdBetween.from", criteria.getCreatedBetween().from().toString());
         }
@@ -36,15 +41,11 @@ public class DocumentSectionCriteriaJobParamsConverter implements GendoxConverte
         if (criteria.getUpdatedBetween() != null && criteria.getUpdatedBetween().to() != null) {
             paramsBuilder.addString("updatedBetween.to", criteria.getUpdatedBetween().to().toString());
         }
-        if (criteria.getProjectAutoTraining() != null) {
-            paramsBuilder.addString("projectAutoTraining", criteria.getProjectAutoTraining().toString());
-        }
-
         return paramsBuilder.toJobParameters();
     }
 
     @Override
-    public DocumentInstanceSectionCriteria toEntity(JobParameters jobParameters) {
+    public DocumentCriteria toEntity(JobParameters jobParameters) {
 
         TimePeriodDTO createdBetween = null;
         TimePeriodDTO updatedBetween = null;
@@ -61,12 +62,15 @@ public class DocumentSectionCriteriaJobParamsConverter implements GendoxConverte
             );
         }
 
-        return DocumentInstanceSectionCriteria.builder()
-                .documentId(jobParameters.getString("documentInstanceId"))
+        DocumentCriteria criteria = DocumentCriteria.builder()
                 .projectId(jobParameters.getString("projectId"))
-                .projectAutoTraining(Boolean.valueOf(jobParameters.getString("projectAutoTraining")))
+                .organizationId(jobParameters.getString("organizationId"))
+                .documentInstanceId(jobParameters.getString("documentInstanceId"))
                 .createdBetween(createdBetween)
                 .updatedBetween(updatedBetween)
                 .build();
+
+        return criteria;
+
     }
 }

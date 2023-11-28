@@ -35,38 +35,41 @@ import java.util.UUID;
 public class SplitFileService {
 
 
-
     private DocumentService documentService;
     private ResourceLoader resourceLoader;
     private DocumentSectionService documentSectionService;
-
+    private ProjectAgentService projectAgentService;
 
 
     @Autowired
     public SplitFileService(DocumentService documentService,
                             ResourceLoader resourceLoader,
-                            DocumentSectionService documentSectionService) {
+                            DocumentSectionService documentSectionService,
+                            ProjectAgentService projectAgentService) {
         this.documentService = documentService;
         this.resourceLoader = resourceLoader;
         this.documentSectionService = documentSectionService;
+        this.projectAgentService = projectAgentService;
     }
 
 
-    public List<DocumentInstanceSection> splitDocumentToSections(DocumentCriteria criteria, UUID agentId) throws GendoxException, IOException {
+    public List<DocumentInstanceSection> splitDocuments(DocumentCriteria criteria) throws GendoxException, IOException {
 
         List<DocumentInstanceSection> sections = new ArrayList<>();
         Page<DocumentInstance> documentInstances = documentService.getAllDocuments(criteria);
 
-
         for (DocumentInstance documentInstance : documentInstances) {
 
-            // get file
-            InputStream inputStream = downloadFile(documentInstance.getRemoteUrl());
+            String content = readDocumentContent(documentInstance);
 
-            // files content
-            String content = readTxtFileContent(inputStream);
+            ProjectAgent agent = projectAgentService.getAgentByDocumentId(documentInstance.getId());
 
-            List<DocumentInstanceSection> documentSections = documentSectionService.createSections(documentInstance, content, agentId);
+            // if there are sections for this document, delete them
+            if (documentSectionService.getSectionsByDocument(documentInstance.getId()) != null) {
+                documentSectionService.deleteDocumentSections(documentInstance.getId());
+            }
+
+            List<DocumentInstanceSection> documentSections = documentSectionService.createSections(documentInstance, content, agent.getId());
 
             for (DocumentInstanceSection section : documentSections) {
                 sections.add(section);
@@ -74,6 +77,17 @@ public class SplitFileService {
 
         }
         return sections;
+    }
+
+
+
+    public String readDocumentContent(DocumentInstance instance) throws GendoxException, IOException{
+        // get file
+        InputStream inputStream = downloadFile(instance.getRemoteUrl());
+        // files content
+        String content = readTxtFileContent(inputStream);
+
+        return content;
     }
 
     private String readTxtFileContent(InputStream inputStream) throws IOException {
@@ -113,7 +127,6 @@ public class SplitFileService {
             throw new GendoxException("ERROR_FILE_NAME", "Error Files name: ", HttpStatus.NOT_FOUND);
         }
     }
-
 
 
 }
