@@ -22,8 +22,9 @@ public class ProjectDTO {
     private String description;
     private Instant createdAt;
     private Instant updatedAt;
-//    private ProjectAgentDTO projectAgentDTO;
+    private ProjectAgentDTO projectAgent;
     private Boolean autoTraining;
+
 
 
 

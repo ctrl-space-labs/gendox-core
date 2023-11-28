@@ -21,6 +21,7 @@ spring:
     show-sql: true
     hibernate:
       ddl-auto: none
+
 #  datasource:
 #    url: jdbc:postgresql://localhost:5432/postgres
 #    username: postgres
@@ -83,6 +84,7 @@ gendox:
 #    upload-dir: file:c:\\Users\\sekas\\gendox-documents
     upload-dir: file:C:\Users\Giannis\Desktop\gendox-files\test
 
+
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
@@ -110,6 +112,10 @@ gendox:
     default: "&page=0&size=5"
   agents:
     splitter-type: "STATIC_WORD_COUNT_SPLITTER"
+    max_token: 500
+    temperature: 0.8
+    top_p: 0.4
+
   moderation:
     message: "Sorry, I can't reply in this message, it contains inappropriate content. If this this not the case, please contact the support team."
 
@@ -136,6 +142,7 @@ gendox:
             pageable-size: 1000
 
 
+
 # AWS
 
 cloud:
@@ -150,6 +157,7 @@ discord:
   bots:
     gendox-bot:
       token: ${DISCORD_TOKEN}
+
   server:
     group-name: gendox-agents
 

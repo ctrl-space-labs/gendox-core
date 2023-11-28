@@ -19,7 +19,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+
 import java.time.Instant;
+
 import java.util.*;
 
 @Component
@@ -84,6 +86,7 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
             if (shouldUpdateMap) {
                 integration.setDirectoryPath(directory.getPath());
                 integration.setUpdatedAt(Instant.now());
+
                 integration.setRepoHead(objectIdConverter.convertToDatabaseColumnString(git.getRepository().resolve("HEAD^{tree}")));
                 integration = integrationRepository.save(integration);
                 return fileList = createFileList(git);
