@@ -78,12 +78,19 @@ rsa:
 gendox:
   documents:
 #    upload-dir: s3://gendox.organization.documents.local
-#    upload-dir: C:\Users\myrto\OneDrive\Documents\gendox-test
-    upload-dir: file:c:\Users\myrto\OneDrive\Documents\gendox-test
+#    upload-dir: file:c:\\Users\\sekas\\gendox-documents
+    upload-dir: file:C:\Users\Giannis\Desktop\gendox-files\test
+
 
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
+
+  integrations:
+    storage:
+      temporary: C:\Users\Giannis\Desktop\gendox-files\test\temporary_integration_files
+#      temporary: s3://gendox.organization.documents.local/gendox_wiki
+
   models:
     openai:
       ada2:

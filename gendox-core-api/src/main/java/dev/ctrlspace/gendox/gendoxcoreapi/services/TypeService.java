@@ -61,10 +61,16 @@ public class TypeService {
 
     }
 
+
+    public Type getIntegrationTypeByName(String integrationName){
+        return typeRepository.findByTypeCategoryAndName("INTEGRATION_TYPE", integrationName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "INTEGRATION_TYPE_NOT_FOUND", "Integration field type not found with name: " + integrationName));
+
     //AUDIT_LOG_TYPES
     public Type getAuditLogTypeByName(String auditLogTypeName){
         return typeRepository.findByTypeCategoryAndName("AUDIT_LOG_TYPE", auditLogTypeName)
                 .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "AUDIT_LOG_TYPE_NOT_FOUND", "Audit log field type not found with name: " + auditLogTypeName));
+
 
     }
 
