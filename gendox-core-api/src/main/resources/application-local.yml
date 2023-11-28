@@ -21,15 +21,19 @@ spring:
     show-sql: true
     hibernate:
       ddl-auto: none
-  datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: 123456789
 
 #  datasource:
-#     url: ${DATABASE_URL}
-#     username: ${DATABASE_USERNAME}
-#     password: ${DATABASE_PASSWORD}
+#    url: jdbc:postgresql://localhost:5432/postgres
+#    username: postgres
+#    password: 123456789
+
+  datasource:
+     url: ${DATABASE_URL}
+     username: ${DATABASE_USERNAME}
+     password: ${DATABASE_PASSWORD}
+     hikari:
+       maximum-pool-size: 100
+       minimum-idle: 10
 
   jackson:
     serialization:
@@ -77,6 +81,7 @@ gendox:
 #    upload-dir: file:c:\\Users\\sekas\\gendox-documents
     upload-dir: file:C:\Users\Giannis\Desktop\gendox-files\test
 
+
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
@@ -104,8 +109,25 @@ gendox:
     default: "&page=0&size=5"
   agents:
     splitter-type: "STATIC_WORD_COUNT_SPLITTER"
+    max_token: 500
+    temperature: 0.8
+    top_p: 0.4
+
   moderation:
     message: "Sorry, I can't reply in this message, it contains inappropriate content. If this this not the case, please contact the support team."
+
+  batch-jobs:
+    document-training:
+      job:
+        name: documentTrainingJob
+        thread-pool-size: 50
+        steps:
+          document-training-step:
+            name: documentTrainingStep
+            throttle-limit: 10    # this should be around 10 to not hit the throttle limit of the OpenAI API
+            chunk-size: 10
+            pageable-size: 1000
+
 
 # AWS
 
@@ -121,7 +143,9 @@ discord:
   bots:
     gendox-bot:
       token: ${DISCORD_TOKEN}
+
   server:
     group-name: gendox-agents
+
 
 

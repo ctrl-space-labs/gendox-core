@@ -23,6 +23,8 @@ public class ProjectDTO {
     private Instant createdAt;
     private Instant updatedAt;
     private ProjectAgentDTO projectAgent;
+    private Boolean autoTraining;
+
 
 
 

@@ -11,10 +11,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectMemberDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectMemberCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectMemberService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,8 +41,10 @@ public class ProjectController {
     private JWTUtils jwtUtils;
     private ProjectMemberConverter projectMemberConverter;
     private ProjectAgentService projectAgentService;
-
     private ProjectAgent projectAgent;
+    private AiModelRepository aiModelRepository;
+
+
 
     @Autowired
     public ProjectController(ProjectService projectService,
@@ -48,13 +52,15 @@ public class ProjectController {
                              ProjectMemberService projectMemberService,
                              JWTUtils jwtUtils,
                              ProjectMemberConverter projectMemberConverter,
-                             ProjectAgentService projectAgentService) {
+                             ProjectAgentService projectAgentService,
+                             AiModelRepository aiModelRepository) {
         this.projectService = projectService;
         this.projectConverter = projectConverter;
         this.projectMemberService = projectMemberService;
         this.jwtUtils = jwtUtils;
         this.projectMemberConverter = projectMemberConverter;
         this.projectAgentService = projectAgentService;
+        this.aiModelRepository = aiModelRepository;
     }
 
 
@@ -104,8 +110,9 @@ public class ProjectController {
         projectAgent.setAgentName(project.getName() + " Agent");
 
         projectAgent = projectAgentService.createProjectAgent(projectAgent);
-
         project.setProjectAgent(projectAgent);
+        projectAgent.setSemanticSearchModelId(aiModelRepository.findByName(AiModelConstants.ADA2_MODEL).getId());
+        projectAgent.setCompletionModelId(aiModelRepository.findByName(AiModelConstants.GPT_3_5_TURBO_MODEL).getId());
         project = projectService.createProject(project);
 
         return project;
@@ -141,8 +148,9 @@ public class ProjectController {
         existingProject.setName(project.getName());
         existingProject.setDescription(project.getDescription());
         existingProject.setProjectAgent(projectAgentService.updateProjectAgent(project.getProjectAgent()));
-        project = projectService.updateProject(existingProject);
+        existingProject.setAutoTraining(project.getAutoTraining());
 
+        project = projectService.updateProject(existingProject);
         return project;
 
     }
