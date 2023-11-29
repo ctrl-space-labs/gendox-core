@@ -6,8 +6,11 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.Gp
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35TurboConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
@@ -24,12 +27,13 @@ public class AiModelServiceLocalDevImpl implements AiModelService {
 
     private static final RestTemplate restTemplate = new RestTemplate();
 
+    @Autowired
+    private AiModelRepository aiModelRepository;
 
-    public Ada2Response askEmbedding(BotRequest botRequest) {
-
+    public Ada2Response askEmbedding(BotRequest botRequest, String aiModelName) {
         logger.debug("Embedding Response from Mock Service.");
         return Ada2Response.builder()
-                .model("text-embedding-ada-002-v2")
+                .model(aiModelName)
                 .object("list")
                 .usage(Usage.builder()
                         .promptTokens(16)
@@ -46,9 +50,9 @@ public class AiModelServiceLocalDevImpl implements AiModelService {
     }
 
     @Override
-    public Gpt35Response askCompletion(List<Gpt35Message> messages, String agentRole) {
+    public Gpt35Response askCompletion(List<Gpt35Message> messages, String agentRole, String aiModelName) {
         return Gpt35Response.builder()
-                .model(GPT35TurboConfig.MODEL)
+                .model(aiModelName)
                 .usage(Usage.builder()
                         .completionTokens(110)
                         .promptTokens(16)

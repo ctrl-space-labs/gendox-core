@@ -7,9 +7,11 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.G
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35Moderation;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35TurboConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AuditLogs;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
@@ -25,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.UUID;
 
 @Profile({"prod", "integration", "openai-integration"})
 @Service
@@ -37,6 +40,11 @@ public class AiModelServiceImpl implements AiModelService {
 
     @Autowired
     private ProjectService projectService;
+
+    @Autowired
+    private AiModelRepository aiModelRepository;
+
+
     private static final RestTemplate restTemplate = new RestTemplate();
 
     //    Build headers
@@ -81,23 +89,23 @@ public class AiModelServiceImpl implements AiModelService {
         return responseEntity.getBody();
     }
 
-    public Ada2Response askEmbedding(BotRequest botRequest) {
+    public Ada2Response askEmbedding(BotRequest botRequest, String aiModelName) {
         return this.getEmbeddingResponse(Ada2Request.builder()
-                .model(OpenAIADA2.MODEL)
+                .model(aiModelName)
                 .input(botRequest.getMessage()).build());
     }
 
-    public Gpt35Response askCompletion(List<Gpt35Message> messages, String agentRole) {
-
+    public Gpt35Response askCompletion(List<Gpt35Message> messages, String agentRole, String aiModelName) {
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, Gpt35Message.builder().role("system").content(agentRole).build());
 
         }
-
         return this.getCompletionResponse(Gpt35Request.builder()
-                .model(GPT35TurboConfig.MODEL)
+                .model(aiModelName)
                 .messages(messages).build());
     }
+
+
 
     @Override
     public Gpt35ModerationResponse moderationCheck(String message) {
