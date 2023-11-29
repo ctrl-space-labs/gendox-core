@@ -62,7 +62,6 @@ public class EmbeddingsController {
                     "containing the embeddings for the input text. Additionally, it stores the embeddings in the database " +
                     "as an Embedding entity with a unique ID.")
     public Ada2Response getEmbeddings(@RequestBody BotRequest botRequest, @PathVariable String aiModelName) {
-        AiModel aiModel = aiModelRepository.findByName(aiModelName);
 
         Ada2Response ada2Response = aiModelService.askEmbedding(botRequest, aiModelName);
         Embedding embedding = new Embedding();

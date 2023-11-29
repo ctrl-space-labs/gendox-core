@@ -231,8 +231,8 @@ public class EmbeddingService {
 
 
     public List<DocumentInstanceSection> findClosestSections(Message message, UUID projectId) throws GendoxException {
-        ProjectAgent projectAgent = projectAgentService.getByProjectId(projectId);
-        Ada2Response ada2Response = getAda2EmbeddingForMessage(message.getValue(), projectAgent.getSemanticSearchModel().getName());
+        ProjectAgent projectAgent = projectAgentService.getAgentByProjectId(projectId);
+        Ada2Response ada2Response = getAda2EmbeddingForMessage(message.getValue(), projectAgent.getSemanticSearchModel().getType());
         Embedding messageEmbedding = upsertEmbeddingForText(ada2Response, projectId, message.getId(), null);
 
         List<Embedding> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, PageRequest.of(0, 5));
