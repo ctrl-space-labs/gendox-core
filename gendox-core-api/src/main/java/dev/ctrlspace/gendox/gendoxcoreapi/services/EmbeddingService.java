@@ -140,10 +140,10 @@ public class EmbeddingService {
         return embedding;
     }
 
-    public Ada2Response getAda2EmbeddingForMessage(String value) {
+    public Ada2Response getAda2EmbeddingForMessage(String value, String aiModelName) {
         BotRequest botRequest = new BotRequest();
         botRequest.setMessage(value);
-        Ada2Response ada2Response = aiModelService.askEmbedding(botRequest);
+        Ada2Response ada2Response = aiModelService.askEmbedding(botRequest, aiModelName);
 
         return ada2Response;
     }
@@ -232,7 +232,8 @@ public class EmbeddingService {
 
 
     public List<DocumentInstanceSection> findClosestSections(Message message, UUID projectId) throws GendoxException {
-        Ada2Response ada2Response = getAda2EmbeddingForMessage(message.getValue());
+        ProjectAgent projectAgent = projectAgentService.getByProjectId(projectId);
+        Ada2Response ada2Response = getAda2EmbeddingForMessage(message.getValue(), projectAgent.getSemanticSearchModel().getName());
         Embedding messageEmbedding = upsertEmbeddingForText(ada2Response, projectId, message.getId(), null);
 
         List<Embedding> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, PageRequest.of(0, 5));

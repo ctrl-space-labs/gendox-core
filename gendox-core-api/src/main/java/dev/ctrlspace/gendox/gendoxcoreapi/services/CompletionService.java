@@ -70,8 +70,7 @@ public class CompletionService {
             Gpt35Message gpt35Message = messageGpt35MessageConverter.toDTO(message);
             gpt35Messages.add(gpt35Message);
         }
-
-        Gpt35Response ada2Response = aiModelService.askCompletion(gpt35Messages, agentRole);
+        Gpt35Response ada2Response = aiModelService.askCompletion(gpt35Messages, agentRole, aiModelName);
 
         return ada2Response;
     }

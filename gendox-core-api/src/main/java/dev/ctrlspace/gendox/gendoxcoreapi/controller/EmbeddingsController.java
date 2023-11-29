@@ -5,10 +5,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.A
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
@@ -33,6 +35,8 @@ public class EmbeddingsController {
     private TrainingService trainingService;
     private CompletionService completionService;
 
+    private AiModelRepository aiModelRepository;
+
 
     @Autowired
     private AiModelService aiModelService;
@@ -42,11 +46,13 @@ public class EmbeddingsController {
     public EmbeddingsController(EmbeddingRepository embeddingRepository,
                                 EmbeddingService embeddingService,
                                 TrainingService trainingService,
-                                CompletionService completionService) {
+                                CompletionService completionService,
+                                AiModelRepository aiModelRepository) {
         this.embeddingRepository = embeddingRepository;
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
         this.completionService = completionService;
+        this.aiModelRepository = aiModelRepository;
     }
 
     @PostMapping("/embeddings")
@@ -55,8 +61,10 @@ public class EmbeddingsController {
                     "This endpoint accepts a BotRequest containing the text input and returns an Ada2Response " +
                     "containing the embeddings for the input text. Additionally, it stores the embeddings in the database " +
                     "as an Embedding entity with a unique ID.")
-    public Ada2Response getEmbeddings(@RequestBody BotRequest botRequest) {
-        Ada2Response ada2Response = aiModelService.askEmbedding(botRequest);
+    public Ada2Response getEmbeddings(@RequestBody BotRequest botRequest, @PathVariable String aiModelName) {
+        AiModel aiModel = aiModelRepository.findByName(aiModelName);
+
+        Ada2Response ada2Response = aiModelService.askEmbedding(botRequest, aiModelName);
         Embedding embedding = new Embedding();
 
         embedding.setEmbeddingVector(ada2Response.getData().get(0).getEmbedding());
