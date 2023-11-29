@@ -1,7 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 
-
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
@@ -12,6 +11,7 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.WritableResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.time.LocalDate;
 
 
@@ -42,21 +42,24 @@ public class UploadService {
 
     public DocumentInstance uploadFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException, GendoxException {
         String fileName = file.getOriginalFilename();
-        DocumentInstance instance = new DocumentInstance();
-        instance = documentService.getDocumentByFileName(projectId, organizationId, fileName);
+        DocumentInstance instance =
+                documentService.getDocumentByFileName(projectId, organizationId, fileName);
 
 
         if (instance == null) {
+            DocumentInstance documentInstance = new DocumentInstance();
             // Generate a unique UUID
             UUID documentInstanceId = UUID.randomUUID();
-            String fullFilePath = saveFile(file, organizationId, documentInstanceId);
+            String fullFilePath = saveFile(file, organizationId);
 
-            instance.setId(documentInstanceId);
-            instance.setOrganizationId(organizationId);
-            instance.setRemoteUrl(fullFilePath);
-            instance = documentService.createDocumentInstance(instance);
+            documentInstance.setId(documentInstanceId);
+            documentInstance.setOrganizationId(organizationId);
+            documentInstance.setRemoteUrl(fullFilePath);
+            documentInstance = documentService.createDocumentInstance(documentInstance);
             // create project document
-            ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, instance.getId());
+            ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, documentInstance.getId());
+            return documentInstance;
+
         } else {
             instance = documentService.updateDocument(instance);
         }
@@ -70,12 +73,11 @@ public class UploadService {
      * It supports local file system and S3 bucket, depending the resource prefix in uploadDir ("file:" or "s3:")
      *
      * @param file
-     * @param organizationId
-     * @param documentInstanceId
+     * @param organizationId //     * @param documentInstanceId
      * @return
      * @throws IOException
      */
-    private String saveFile(MultipartFile file, UUID organizationId, UUID documentInstanceId) throws IOException {
+    private String saveFile(MultipartFile file, UUID organizationId) throws IOException {
         String fileName = file.getOriginalFilename();
 //        String uniqueFileName = documentInstanceId.toString() + "_" + fileName;
 
