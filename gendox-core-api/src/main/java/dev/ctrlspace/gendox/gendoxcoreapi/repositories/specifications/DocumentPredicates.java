@@ -6,6 +6,7 @@ import com.querydsl.core.util.StringUtils;
 import com.querydsl.jpa.JPAExpressions;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QDocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QProjectDocument;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 
 
@@ -24,9 +25,26 @@ public class DocumentPredicates {
         return ExpressionUtils.allOf(
                 organizationsId(criteria.getOrganizationId()),
                 projectId(criteria.getProjectId()),
+                createdBetween(criteria.getCreatedBetween()),
+                updatedBetween(criteria.getUpdatedBetween()),
                 documentInstanceId(criteria.getDocumentInstanceId()),
                 documentInstanceIds(criteria.getDocumentInstanceIds())
         );
+    }
+
+    private static Predicate updatedBetween(TimePeriodDTO updatedBetween) {
+        if (updatedBetween == null) {
+            return null;
+        }
+        return qDocumentInstance.updatedAt.between(updatedBetween.from(), updatedBetween.to());
+    }
+
+    private static Predicate createdBetween(TimePeriodDTO createdBetween) {
+        if (createdBetween == null) {
+            return null;
+        }
+
+        return qDocumentInstance.createdAt.between(createdBetween.from(), createdBetween.to());
     }
 
     private static Predicate organizationsId(String organizationId) {

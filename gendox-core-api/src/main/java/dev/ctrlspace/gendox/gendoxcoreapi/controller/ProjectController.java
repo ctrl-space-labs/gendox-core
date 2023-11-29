@@ -41,7 +41,7 @@ public class ProjectController {
     private JWTUtils jwtUtils;
     private ProjectMemberConverter projectMemberConverter;
     private ProjectAgentService projectAgentService;
-
+    private ProjectAgent projectAgent;
     private AiModelRepository aiModelRepository;
 
 

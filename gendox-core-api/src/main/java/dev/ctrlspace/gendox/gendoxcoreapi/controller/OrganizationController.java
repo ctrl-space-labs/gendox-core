@@ -7,7 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserOrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
@@ -63,10 +63,10 @@ public class OrganizationController {
     @GetMapping("/organizations")
     @Operation(summary = "Get all organizations",
             description = "Retrieve a list of all organizations based on the provided criteria.")
-    public Page<Organization> getAllOrganizations(@Valid OrganizationCriteria critetia, Pageable pageable) throws Exception {
+    public Page<Organization> getAllOrganizations(@Valid OrganizationCriteria criteria, Pageable pageable) throws Exception {
 
         //run code to get the organization from database
-        return organizationService.getAllOrganizations(critetia, pageable);
+        return organizationService.getAllOrganizations(criteria, pageable);
     }
 
     @GetMapping("/organizations/{id}")

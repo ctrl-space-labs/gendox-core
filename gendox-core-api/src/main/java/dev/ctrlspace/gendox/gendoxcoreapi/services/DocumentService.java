@@ -27,21 +27,15 @@ import java.util.UUID;
 public class DocumentService {
 
     private DocumentInstanceRepository documentInstanceRepository;
-    private DocumentSectionMetadataRepository documentSectionMetadataRepository;
     private SecurityUtils securityUtils;
-    private TrainingService trainingService;
     private DocumentSectionService documentSectionService;
 
     @Autowired
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
-                           DocumentSectionMetadataRepository documentSectionMetadataRepository,
                            SecurityUtils securityUtils,
-                           TrainingService trainingService,
                            DocumentSectionService documentSectionService) {
         this.documentInstanceRepository = documentInstanceRepository;
-        this.documentSectionMetadataRepository = documentSectionMetadataRepository;
         this.securityUtils = securityUtils;
-        this.trainingService = trainingService;
         this.documentSectionService = documentSectionService;
     }
 
@@ -59,12 +53,18 @@ public class DocumentService {
 
 
     public Page<DocumentInstance> getAllDocuments(DocumentCriteria criteria, Pageable pageable) throws GendoxException {
-        if (pageable == null) {
-            throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
-        }
+//        if (pageable == null) {
+//            throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
+//        }
         return documentInstanceRepository.findAll(DocumentPredicates.build(criteria), pageable);
 
     }
+
+    public DocumentInstance getDocumentByFileName(UUID projectId, UUID organizationId, String fileName) throws GendoxException {
+        return documentInstanceRepository.findByProjectIdAndOrganizationIdAndFileName(projectId, organizationId, fileName)
+                .orElse(null);
+    }
+
 
     public DocumentInstance createDocumentInstance(DocumentInstance documentInstance) throws GendoxException {
         Instant now = Instant.now();
@@ -91,7 +91,10 @@ public class DocumentService {
         // Update the properties of the existingDocument with the values from the updated document
         existingDocument.setDocumentTemplateId(documentInstance.getDocumentTemplateId());
         existingDocument.setRemoteUrl(documentInstance.getRemoteUrl());
-        existingDocument.setDocumentInstanceSections(documentSectionService.updateSections(documentInstance));
+        // TODO update sections
+//        if (existingDocument.getDocumentInstanceSections() != null) {
+//            existingDocument.setDocumentInstanceSections(updateSections(documentInstance));
+//        }
         existingDocument.setUpdatedBy(securityUtils.getUserId());
         existingDocument.setUpdatedAt(Instant.now());
 

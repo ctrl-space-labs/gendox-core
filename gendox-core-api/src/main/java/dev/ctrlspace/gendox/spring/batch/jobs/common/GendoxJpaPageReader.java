@@ -28,7 +28,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * Different Gendox Readers will just extend this one to provide, reader-specific implementation.
  */
 @StepScope
-public abstract class GendoxJpaPeriodReader<T> implements ItemStreamReader<T> {
+public abstract class GendoxJpaPageReader<T> implements ItemStreamReader<T> {
     Logger logger = LoggerFactory.getLogger(getClass());
 
     private final Lock lock = new ReentrantLock();
@@ -83,9 +83,11 @@ public abstract class GendoxJpaPeriodReader<T> implements ItemStreamReader<T> {
                     currentPage.getNumber(), totalItemCounter, currentPage.getTotalPages());
         }
 
+        // end of Job
         if (!currentPageIterator.hasNext()) {
             return null;
         }
+
         totalItemCounter++;
         pageItemCounter++;
         logger.trace("Read item #{} from page #{} (item #{} from total of #{})",
