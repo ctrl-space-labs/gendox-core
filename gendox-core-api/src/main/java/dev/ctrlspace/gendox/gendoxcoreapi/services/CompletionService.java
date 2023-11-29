@@ -58,7 +58,7 @@ public class CompletionService {
         this.typeService = typeService;
     }
 
-    private Gpt35Response getCompletionForMessages(List<Message> messages, String agentRole) throws GendoxException {
+    private Gpt35Response getCompletionForMessages(List<Message> messages, String agentRole, String aiModelName) throws GendoxException {
 
         //TODO add in DB table message, a field for the role of the message
         // if the message is from a user it will have role: "user" (or the role: ${userName})
@@ -91,7 +91,9 @@ public class CompletionService {
         Message promptMessage = message.toBuilder().value(question).build();
 
 
-        Gpt35Response gpt35Response = getCompletionForMessages(List.of(promptMessage), project.getProjectAgent().getAgentBehavior());
+        Gpt35Response gpt35Response = getCompletionForMessages(List.of(promptMessage), project.getProjectAgent().
+                                                               getAgentBehavior(),project.getProjectAgent().
+                                                               getCompletionModel().getName());
 
         Type completionType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
         // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)
