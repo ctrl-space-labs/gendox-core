@@ -109,8 +109,11 @@ public class ProjectController {
         projectAgent.setAgentName(project.getName() + " Agent");
         projectAgent = projectAgentService.createProjectAgent(projectAgent);
         project.setProjectAgent(projectAgent);
-        projectAgent.setSemanticSearchModelId(aiModelRepository.findByName(AiModelConstants.ADA2_MODEL).getId());
-        projectAgent.setCompletionModelId(aiModelRepository.findByName(AiModelConstants.GPT_3_5_TURBO_MODEL).getId());
+
+//        aiModelRepository.findByName(projectAgent.getCompletionModel().getName()
+//        projectAgent.setSemanticSearchModel(aiModelRepository.findByName(AiModelConstants.ADA2_MODEL));
+        projectAgent.setSemanticSearchModel(aiModelRepository.findByName(AiModelConstants.ADA2_MODEL));
+        projectAgent.setCompletionModel(aiModelRepository.findByName(AiModelConstants.GPT_3_5_TURBO_MODEL));
         project = projectService.createProject(project);
 
         return project;
@@ -146,7 +149,7 @@ public class ProjectController {
         existingProject.setDescription(project.getDescription());
         existingProject.setProjectAgent(projectAgentService.updateProjectAgent(project.getProjectAgent()));
         existingProject.setAutoTraining(project.getAutoTraining());
-        project = projectService.updateProject(project);
+        project = projectService.updateProject(existingProject);
 
         return project;
 
