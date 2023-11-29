@@ -65,8 +65,6 @@ public class ProjectConverter implements GendoxConverter<Project, ProjectDTO> {
 //        project.setProjectAgent(agent);
 
 
-
-
-        return project;
+            return project;
+        }
     }
-}
