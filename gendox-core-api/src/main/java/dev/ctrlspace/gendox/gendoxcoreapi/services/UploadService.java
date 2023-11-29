@@ -41,19 +41,26 @@ public class UploadService {
 
 
     public DocumentInstance uploadFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException, GendoxException {
-        // Generate a unique file name to avoid conflicts
-        UUID documentInstanceId = UUID.randomUUID();
-
-        String fullFilePath = saveFile(file, organizationId, documentInstanceId);
-
+        String fileName = file.getOriginalFilename();
         DocumentInstance instance = new DocumentInstance();
-        instance.setId(documentInstanceId);
-        instance.setOrganizationId(organizationId);
-        instance.setRemoteUrl(fullFilePath);
-        instance = documentService.createDocumentInstance(instance);
+        instance = documentService.getDocumentByFileName(projectId, organizationId, fileName);
 
-        // create project document
-        ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, instance.getId());
+
+        if (instance == null) {
+            // Generate a unique UUID
+            UUID documentInstanceId = UUID.randomUUID();
+            String fullFilePath = saveFile(file, organizationId, documentInstanceId);
+
+            instance.setId(documentInstanceId);
+            instance.setOrganizationId(organizationId);
+            instance.setRemoteUrl(fullFilePath);
+            instance = documentService.createDocumentInstance(instance);
+            // create project document
+            ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, instance.getId());
+        } else {
+            instance = documentService.updateDocument(instance);
+        }
+
 
         return instance;
     }
@@ -70,10 +77,10 @@ public class UploadService {
      */
     private String saveFile(MultipartFile file, UUID organizationId, UUID documentInstanceId) throws IOException {
         String fileName = file.getOriginalFilename();
-        String uniqueFileName = documentInstanceId.toString() + "_" + fileName;
+//        String uniqueFileName = documentInstanceId.toString() + "_" + fileName;
 
         String filePathPrefix = calculateFilePathPrefix(organizationId);
-        String fullFilePath = uploadDir + "/" + filePathPrefix + "/" + uniqueFileName;
+        String fullFilePath = uploadDir + "/" + filePathPrefix + "/" + fileName;
 
         createLocalFileDirectory(filePathPrefix);
 
@@ -115,20 +122,3 @@ public class UploadService {
     }
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

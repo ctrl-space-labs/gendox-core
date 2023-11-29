@@ -170,11 +170,10 @@ public class DocumentController {
     @PostMapping("/documents/split")
     @Operation(summary = "",
             description = " ")
-    public List<DocumentInstanceSection> handleFileSplitter(@Valid DocumentCriteria criteria,
-                                                            @RequestParam("agentId") UUID agentId) throws IOException, GendoxException {
+    public List<DocumentInstanceSection> handleFileSplitter(@Valid DocumentCriteria criteria) throws IOException, GendoxException {
         List<DocumentInstanceSection> documentInstanceSections = new ArrayList<>();
 
-        documentInstanceSections = splitFileService.splitDocumentToSections(criteria, agentId);
+        documentInstanceSections = splitFileService.splitDocuments(criteria);
         return documentInstanceSections;
     }
 
