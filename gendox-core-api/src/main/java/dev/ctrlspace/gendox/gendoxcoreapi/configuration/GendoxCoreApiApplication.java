@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
+import dev.ctrlspace.gendox.authentication.GendoxJwtAuthenticationConverter;
 import dev.ctrlspace.gendox.spring.batch.jobs.SpringBatchConfiguration;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.controller.UserController;
@@ -23,7 +24,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-import java.lang.reflect.Method;
 import java.util.StringJoiner;
 
 @SpringBootApplication
@@ -40,6 +40,7 @@ import java.util.StringJoiner;
         SpringBatchConfiguration.class,
         LoggingObservationHandler.class,
         SpringBatchConfiguration.class,
+        GendoxJwtAuthenticationConverter.class,
         })
 @EnableCaching
 @EnableJpaRepositories(basePackageClasses = {UserRepository.class})

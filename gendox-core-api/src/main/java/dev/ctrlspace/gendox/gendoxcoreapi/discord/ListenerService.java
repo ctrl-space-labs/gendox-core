@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.discord;
 
 
+import dev.ctrlspace.gendox.authentication.AuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.JwtDTOUserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.post.MessageRestClient;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -15,29 +16,20 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.HttpUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
-import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.MessageBuilder;
-import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.interactions.components.ActionRow;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import org.apache.commons.text.StringSubstitutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 
-import java.awt.*;
 import java.util.*;
 import java.util.List;
-import java.util.stream.Collectors;
 
 
 @Service
@@ -55,10 +47,10 @@ public class ListenerService {
     private MessageRestClient messageRestClientService;
     private JWTUtils jwtUtils;
     private JwtDTOUserProfileConverter jwtDTOUserProfileConverter;
-    private JwtEncoder jwtEncoder;
     private UserService userService;
     private EmbeddingService embeddingService;
 
+    private AuthenticationService authenticationService;
 
     @Autowired
     public ListenerService(ProjectRepository projectRepository,
@@ -67,8 +59,8 @@ public class ListenerService {
                            MessageRestClient messageRestClientService,
                            JWTUtils jwtUtils,
                            JwtDTOUserProfileConverter jwtDTOUserProfileConverter,
-                           JwtEncoder jwtEncoder,
                            UserService userService,
+                           AuthenticationService authenticationService,
                            EmbeddingService embeddingService) {
         this.projectRepository = projectRepository;
         this.documentInstanceRepository = documentInstanceRepository;
@@ -76,9 +68,9 @@ public class ListenerService {
         this.messageRestClientService = messageRestClientService;
         this.jwtUtils = jwtUtils;
         this.jwtDTOUserProfileConverter = jwtDTOUserProfileConverter;
-        this.jwtEncoder = jwtEncoder;
         this.userService = userService;
         this.embeddingService = embeddingService;
+        this.authenticationService = authenticationService;
     }
 
 
@@ -214,13 +206,9 @@ public class ListenerService {
 
     public String getJwtToken(String userIdentifier) throws GendoxException {
 
-        UserProfile userProfile = userService.getUserProfileByUniqueIdentifier(userIdentifier);
-        JwtDTO jwtDTO = jwtDTOUserProfileConverter.jwtDTO(userProfile);
-        // Set the Authorization header with the bearer token
-        JwtClaimsSet claims = jwtUtils.toClaimsSet(jwtDTO);
-        String jwtToken = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+        Jwt jwt = authenticationService.impersonateUser(userIdentifier);
 
-        return jwtToken;
+        return jwt.getTokenValue();
 
     }
 
