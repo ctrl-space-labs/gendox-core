@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 
 import java.text.ParseException;
@@ -25,17 +26,6 @@ import java.util.stream.Collectors;
 @Component
 public class JWTUtils {
     private Logger logger = LoggerFactory.getLogger(JWTUtils.class);
-
-    @Autowired
-    private JwtDecoder jwtDecoder;
-
-    @Autowired
-    private JwtEncoder jwtEncoder;
-
-    public JwtDTO toJwtDTO(String jwtString) {
-        Jwt jwt = jwtDecoder.decode(jwtString);
-        return toJwtDTO(jwt);
-    }
 
     public JwtDTO toJwtDTO(Jwt jwt) {
         //implement the commented constructor in JwtDTO class
@@ -117,7 +107,7 @@ public class JWTUtils {
     }
 
 
-    private List<String> getAuthorities(JwtDTO jwtDTO) {
+    public List<String> getAuthorities(JwtDTO jwtDTO) {
         List<String> authoritiesMap = jwtDTO.getOrgAuthoritiesMap().entrySet().stream()
                 .flatMap(entry -> entry.getValue().orgAuthorities().stream().map(s -> s + ":" + entry.getKey().toString()))
                 .collect(Collectors.toList());
@@ -126,10 +116,14 @@ public class JWTUtils {
         return authoritiesMap;
     }
 
-    public String toJwtString(JwtDTO jwtDTO) {
-        var claims = toClaimsSet(jwtDTO);
-        return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-    }
+//    public String toJwtString(JwtDTO jwtDTO) {
+//        var claims = toClaimsSet(jwtDTO);
+//        return this.toJwtString(claims);
+//    }
+//
+//    public String toJwtString(JwtClaimsSet claims) {
+//        return gendoxJwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+//    }
 
     private boolean verifyJWTSignature(String jwtString, RSAKey rsaKey) throws JOSEException, ParseException {
         SignedJWT jwt = SignedJWT.parse(jwtString);
@@ -146,21 +140,6 @@ public class JWTUtils {
     private boolean isTokenRevoked(String jwtString) {
         return false;
     }
-
-    // Method to check if token is valid
-//    public boolean isTokenValid(String jwtString, RSAKey rsaKey) {
-//        JWTClaimsSet claims = null;
-//        try {
-//            claims = toClaims(jwtString);
-//            return verifyJWTSignature(jwtString, rsaKey) &&
-//                    !isTokenExpired(claims.getExpirationTime()) &&
-//                    !isTokenRevoked(jwtString);
-//        } catch (JOSEException | ParseException e) {
-//            logger.error("Error while parsing JWT", e);
-//            return false;
-//        }
-//
-//    }
 
 
     public JWT getJWT(String jwtString) throws JOSEException, ParseException {
