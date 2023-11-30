@@ -26,9 +26,9 @@ public class ProjectAgentService {
     @Value("${gendox.agents.max_token}")
     private Long maxTokenValue;
     @Value("${gendox.agents.temperature}")
-    private Float temperatureValue;
+    private Double temperatureValue;
     @Value("${gendox.agents.top_p}")
-    private Float topPValue;
+    private Double topPValue;
 
     private ProjectAgentRepository projectAgentRepository;
     private TypeService typeService;

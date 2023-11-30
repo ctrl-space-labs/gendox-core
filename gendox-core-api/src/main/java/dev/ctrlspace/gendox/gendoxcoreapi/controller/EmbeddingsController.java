@@ -61,9 +61,9 @@ public class EmbeddingsController {
                     "This endpoint accepts a BotRequest containing the text input and returns an Ada2Response " +
                     "containing the embeddings for the input text. Additionally, it stores the embeddings in the database " +
                     "as an Embedding entity with a unique ID.")
-    public Ada2Response getEmbeddings(@RequestBody BotRequest botRequest, @PathVariable String aiModelName) {
+    public Ada2Response getEmbeddings(@RequestBody BotRequest botRequest) {
 
-        Ada2Response ada2Response = aiModelService.askEmbedding(botRequest, aiModelName);
+        Ada2Response ada2Response = aiModelService.askEmbedding(botRequest);
         Embedding embedding = new Embedding();
 
         embedding.setEmbeddingVector(ada2Response.getData().get(0).getEmbedding());
