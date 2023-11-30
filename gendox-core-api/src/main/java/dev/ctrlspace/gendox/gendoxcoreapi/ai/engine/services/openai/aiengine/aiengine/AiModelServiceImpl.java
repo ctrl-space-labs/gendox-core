@@ -1,18 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Ada2Response;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35Response;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt4Response;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35Moderation;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35TurboConfig;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT4Config;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.AuditLogs;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import org.apache.logging.log4j.util.Strings;
@@ -29,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
-import java.util.UUID;
 
 @Profile({"prod", "integration", "openai-integration"})
 @Service
@@ -69,12 +58,12 @@ public class AiModelServiceImpl implements AiModelService {
         return responseEntity.getBody();
     }
 
-    public Gpt35Response getCompletionResponse(Gpt35Request chatRequestHttpEntity) {
+    public GptResponse getCompletionResponse(GptRequest chatRequestHttpEntity) {
         logger.debug("Sending completion Request to OpenAI: {}", chatRequestHttpEntity);
-        ResponseEntity<Gpt35Response> responseEntity = restTemplate.postForEntity(
+        ResponseEntity<GptResponse> responseEntity = restTemplate.postForEntity(
                 GPT35TurboConfig.URL,
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader()),
-                Gpt35Response.class);
+                GptResponse.class);
         logger.info("Received completion Response from OpenAI. Tokens billed: {}", responseEntity.getBody().getUsage().getTotalTokens());
 
         return responseEntity.getBody();
@@ -91,41 +80,23 @@ public class AiModelServiceImpl implements AiModelService {
         return responseEntity.getBody();
     }
 
-    public Gpt4Response getCompletionResponse(Gpt4Request chatRequestHttpEntity) {
-        logger.debug("Sending completion Request to OpenAI: {}", chatRequestHttpEntity);
-        ResponseEntity<Gpt4Response> responseEntity = restTemplate.postForEntity(
-                GPT4Config.URL,
-                new HttpEntity<>(chatRequestHttpEntity, buildHeader()),
-                Gpt4Response.class);
-        logger.info("Received completion Response from OpenAI. Tokens billed: {}", responseEntity.getBody().getUsage().getTotalTokens());
 
-        return responseEntity.getBody();
-    }
-
-
-    public Ada2Response askEmbedding(BotRequest botRequest, String aiModelName) {
+    public Ada2Response askEmbedding(BotRequest botRequest) {
         return this.getEmbeddingResponse(Ada2Request.builder()
-                .model(aiModelName)
+                .model(OpenAIADA2.MODEL)
                 .input(botRequest.getMessage()).build());
     }
 
-    public Gpt35Response askCompletion(List<Gpt35Message> messages, String agentRole, String aiModelName) {
+    public GptResponse askCompletionGpt(List<GptMessage> messages, String agentRole, String aiModelName, GptRequestParams gptRequestParams) {
         if (Strings.isNotEmpty(agentRole)) {
-            messages.add(0, Gpt35Message.builder().role("system").content(agentRole).build());
+            messages.add(0, GptMessage.builder().role("system").content(agentRole).build());
 
         }
-        return this.getCompletionResponse(Gpt35Request.builder()
+        return this.getCompletionResponse(GptRequest.builder()
                 .model(aiModelName)
-                .messages(messages).build());
-    }
-
-    public Gpt4Response askCompletion(List<Gpt4Message> messages, String agentRole, String aiModelName) {
-        if (Strings.isNotEmpty(agentRole)) {
-            messages.add(0, Gpt4Message.builder().role("system").content(agentRole).build());
-
-        }
-        return this.getCompletionResponse(Gpt4Request.builder()
-                .model(aiModelName)
+                .temperature(gptRequestParams.getTemperature())
+                .topP(gptRequestParams.getTopP())
+                .maxToken(gptRequestParams.getMaxToken())
                 .messages(messages).build());
     }
 

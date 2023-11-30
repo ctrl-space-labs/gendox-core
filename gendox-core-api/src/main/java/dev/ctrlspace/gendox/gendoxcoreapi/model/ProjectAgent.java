@@ -74,11 +74,11 @@ public class ProjectAgent {
     private Long maxToken;
     @Basic
     @Column(name = "temperature", nullable = true)
-    private Float temperature;
+    private Double temperature;
 
     @Basic
     @Column(name = "top_p", nullable = true)
-    private Float topP;
+    private Double topP;
 
     public UUID getId() {
         return id;
@@ -209,19 +209,19 @@ public class ProjectAgent {
         this.maxToken = maxToken;
     }
 
-    public Float getTemperature() {
+    public Double getTemperature() {
         return temperature;
     }
 
-    public void setTemperature(Float temperature) {
+    public void setTemperature(Double temperature) {
         this.temperature = temperature;
     }
 
-    public Float getTopP() {
+    public Double getTopP() {
         return topP;
     }
 
-    public void setTopP(Float topP) {
+    public void setTopP(Double topP) {
         this.topP = topP;
     }
 

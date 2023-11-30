@@ -1,21 +1,20 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.Gpt35Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.GptMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35Response;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.GptResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageGpt35MessageConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.GptRequestParams;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageGptMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAuthor;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +29,9 @@ public class CompletionService {
 
     Logger logger = LoggerFactory.getLogger(CompletionService.class);
     private ProjectService projectService;
-    private MessageGpt35MessageConverter messageGpt35MessageConverter;
+//    private MessageGpt35MessageConverter messageGpt35MessageConverter;
+    private MessageGptMessageConverter messageGptMessageConverter;
+
     private AiModelService aiModelService;
     private EmbeddingService embeddingService;
     private ProjectAgentRepository projectAgentRepository;
@@ -40,7 +41,7 @@ public class CompletionService {
 
     @Autowired
     public CompletionService(ProjectService projectService,
-                             MessageGpt35MessageConverter messageGpt35MessageConverter,
+                             MessageGptMessageConverter messageGptMessageConverter,
                              AiModelService aiModelService,
                              EmbeddingService embeddingService,
                              ProjectAgentRepository projectAgentRepository,
@@ -49,7 +50,7 @@ public class CompletionService {
                              DocumentInstanceSectionRepository documentInstanceSectionRepository,
                              TrainingService trainingService) {
         this.projectService = projectService;
-        this.messageGpt35MessageConverter = messageGpt35MessageConverter;
+        this.messageGptMessageConverter = messageGptMessageConverter;
         this.aiModelService = aiModelService;
         this.embeddingService = embeddingService;
         this.projectAgentRepository = projectAgentRepository;
@@ -58,19 +59,20 @@ public class CompletionService {
         this.typeService = typeService;
     }
 
-    private Gpt35Response getCompletionForMessages(List<Message> messages, String agentRole, String aiModelName) throws GendoxException {
+    private GptResponse getCompletionForMessages(List<Message> messages, String agentRole, String aiModelName,
+                                                 GptRequestParams gptRequestParams) throws GendoxException {
 
         //TODO add in DB table message, a field for the role of the message
         // if the message is from a user it will have role: "user" (or the role: ${userName})
         // if the message is from the agent it will have the role: ${agentName}
         // for the time being only 1 message will be in the list, from the user
 
-        List<Gpt35Message> gpt35Messages = new ArrayList<>();
+        List<GptMessage> gptMessages = new ArrayList<>();
         for (Message message : messages) {
-            Gpt35Message gpt35Message = messageGpt35MessageConverter.toDTO(message);
-            gpt35Messages.add(gpt35Message);
+            GptMessage gptMessage = messageGptMessageConverter.toDTO(message);
+            gptMessages.add(gptMessage);
         }
-        Gpt35Response ada2Response = aiModelService.askCompletion(gpt35Messages, agentRole, aiModelName);
+        GptResponse ada2Response = aiModelService.askCompletionGpt(gptMessages, agentRole, aiModelName, gptRequestParams);
 
         return ada2Response;
     }
@@ -90,15 +92,20 @@ public class CompletionService {
         // clone message to avoid changing the original message text in DB
         Message promptMessage = message.toBuilder().value(question).build();
 
+         GptRequestParams gptRequestParams = GptRequestParams.builder()
+                .maxToken(project.getProjectAgent().getMaxToken())
+                .temperature(project.getProjectAgent().getTemperature())
+                .topP(project.getProjectAgent().getTopP())
+                .build();
 
-        Gpt35Response gpt35Response = getCompletionForMessages(List.of(promptMessage), project.getProjectAgent().
+        GptResponse gptResponse = getCompletionForMessages(List.of(promptMessage), project.getProjectAgent().
                                                                getAgentBehavior(),project.getProjectAgent().
-                                                               getCompletionModel().getName());
+                                                               getCompletionModel().getModel(), gptRequestParams);
 
         Type completionType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
         // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)
-        AuditLogs auditLogs = embeddingService.createAuditLogs(projectId, (long) gpt35Response.getUsage().getTotalTokens(), completionType);
-        Message completionResponseMessage = messageGpt35MessageConverter.toEntity(gpt35Response.getChoices().get(0).getMessage());
+        AuditLogs auditLogs = embeddingService.createAuditLogs(projectId, (long) gptResponse.getUsage().getTotalTokens(), completionType);
+        Message completionResponseMessage = messageGptMessageConverter.toEntity(gptResponse.getChoices().get(0).getMessage());
         // TODO save the above response message
 
         return completionResponseMessage;

@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.Gpt35Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.GptMessage;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +16,8 @@ import java.io.Serializable;
 @NoArgsConstructor
 public class Choice implements Serializable {
     private Integer index;
-    private Gpt35Message message;
+//    private Gpt35Message message;
+    private GptMessage message;
     @JsonProperty("finish_reason")
     private String finishReason;
 }

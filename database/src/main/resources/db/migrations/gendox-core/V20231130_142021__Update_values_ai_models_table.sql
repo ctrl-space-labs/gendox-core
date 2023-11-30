@@ -1,12 +1,12 @@
-UPDATE TABLE  gendox_core.ai_models
+UPDATE  gendox_core.ai_models
 SET model = 'text-embedding-ada-002'
 WHERE url = 'https://api.openai.com/v1/embeddings';
 
-UPDATE TABLE  gendox_core.ai_models
+UPDATE  gendox_core.ai_models
 SET name = 'Ada2'
 WHERE url = 'https://api.openai.com/v1/embeddings';
 
-UPDATE TABLE  gendox_core.ai_models
+UPDATE  gendox_core.ai_models
 SET model = 'text-embedding-ada-002'
 WHERE url = 'https://api.openai.com/v1/embeddings';
 
