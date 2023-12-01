@@ -39,19 +39,16 @@ public class OrganizationController {
 
     private OrganizationService organizationService;
     private UserOrganizationService userOrganizationService;
-    private JwtEncoder jwtEncoder;
     private OrganizationConverter organizationConverter;
     private JWTUtils jwtUtils;
 
 
     @Autowired
     public OrganizationController(OrganizationService organizationService,
-                                  JwtEncoder jwtEncoder,
                                   JWTUtils jwtUtils,
                                   UserOrganizationService userOrganizationService,
                                   OrganizationConverter organizationConverter) {
         this.organizationService = organizationService;
-        this.jwtEncoder = jwtEncoder;
         this.organizationConverter = organizationConverter;
         this.userOrganizationService = userOrganizationService;
         this.jwtUtils = jwtUtils;
