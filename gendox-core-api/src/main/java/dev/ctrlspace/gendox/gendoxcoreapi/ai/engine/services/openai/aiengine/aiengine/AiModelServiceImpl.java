@@ -96,7 +96,7 @@ public class AiModelServiceImpl implements AiModelService {
                 .model(aiModelName)
                 .temperature(gptRequestParams.getTemperature())
                 .topP(gptRequestParams.getTopP())
-                .maxToken(gptRequestParams.getMaxToken())
+                .maxTokens(gptRequestParams.getMaxTokens())
                 .messages(messages).build());
     }
 
