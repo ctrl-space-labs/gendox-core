@@ -62,6 +62,7 @@ public class UploadService {
 
         } else {
             instance = documentService.updateDocument(instance);
+            instance = documentService.createDocumentInstance(instance);
         }
 
 
