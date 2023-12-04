@@ -51,7 +51,7 @@ public class AiModelServiceLocalDevImpl implements AiModelService {
                 .model(aiModelName)
                 .topP(gptRequestParams.getTopP())
                 .temperature(gptRequestParams.getTemperature())
-                .maxToken(gptRequestParams.getMaxToken())
+                .maxToken(gptRequestParams.getMaxTokens())
                 .usage(Usage.builder()
                         .completionTokens(110)
                         .promptTokens(16)

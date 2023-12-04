@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,9 +14,12 @@ import java.util.List;
 public class GptRequest {
     private String model;
     private List<GptMessage> messages;
+    @JsonProperty("temperature")
     private double temperature;
+    @JsonProperty("top_p")
     private double topP;
-    private Long maxToken;
+    @JsonProperty("max_tokens")
+    private Long maxTokens;
 
 
 }
