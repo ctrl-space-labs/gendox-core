@@ -6,6 +6,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.IntegrationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import io.micrometer.observation.annotation.Observed;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.errors.RepositoryNotFoundException;
@@ -44,6 +46,14 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
 
 
     @Override
+    @Observed(name = "gitIntegrationUpdateService.checkForUpdates",
+            contextualName = "checkForUpdates-gitIntegrationUpdateService",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_DEBUG,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public List<MultipartFile> checkForUpdates(Integration integration) {
         List<MultipartFile> fileList = new ArrayList<>();
 
@@ -52,7 +62,9 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
         boolean shouldUpdateMap = false;
 
         try {
+            logger.info("check if the integration's Directory is empty ");
             if (isDirectoryEmpty(directory)) {
+                logger.info("Git clone ");
                 git = Git.cloneRepository()
                         .setURI(integration.getUrl())
                         .setDirectory(directory)
@@ -60,6 +72,7 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
 
             } else {
                 try {
+                    logger.info("Git open ");
                     git = Git.open(directory);
                 } catch (RepositoryNotFoundException e) {
                     logger.error("The folder does not contain .git files : " + e.getMessage());
@@ -76,6 +89,7 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
                 ObjectId oldHeadCommitRepository = objectIdConverter.convertToEntityAttribute(integration.getRepoHead());
 
                 // Perform the pull
+                logger.info("Git pull ");
                 git.pull().call();
 
                 // Check if HEAD changed
@@ -84,6 +98,7 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
             }
 
             if (shouldUpdateMap) {
+                logger.info("Update integration ");
                 integration.setDirectoryPath(directory.getPath());
                 integration.setUpdatedAt(Instant.now());
 

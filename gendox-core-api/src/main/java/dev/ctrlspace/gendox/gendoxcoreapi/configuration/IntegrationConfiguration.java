@@ -8,8 +8,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UploadService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.IntegrationManager;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
+import io.micrometer.observation.annotation.Observed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.JobExecution;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +42,8 @@ import java.util.Map;
 @Configuration
 @EnableIntegration
 public class IntegrationConfiguration {
+
+    Logger logger = LoggerFactory.getLogger(IntegrationConfiguration.class);
 
     private IntegrationManager integrationManager;
     private UploadService uploadService;
@@ -80,6 +86,14 @@ public class IntegrationConfiguration {
     // Define the Service Activator
     @Bean
     @ServiceActivator(inputChannel = "integrationChannel")
+    @Observed(name = "integrationConfiguration.integrationHandler",
+            contextualName = "integrationHandler-integrationConfiguration",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_DEBUG,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public MessageHandler gitHandler() {
         return new MessageHandler() {
             @Override
@@ -94,9 +108,10 @@ public class IntegrationConfiguration {
                         hasNewFiles = true;
                         try {
                             Project project = projectService.getProjectById(integration.getProjectId());
+                            logger.info("Upload document " + file.getName());
                             DocumentInstance documentInstance =
                                     uploadService.uploadFile(file, project.getOrganizationId(), project.getId());
-                            System.out.println("FILE:----------->" + file.getName());
+                            logger.info("file : " + file.getName() +" uploaded");
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -107,7 +122,9 @@ public class IntegrationConfiguration {
 
                 if (hasNewFiles) {
                     try {
+                        logger.info("Start splitter job ");
                         JobExecution splitterJobExecution = splitterBatchService.runAutoSplitter();
+                        logger.info("Start training job ");
                         JobExecution trainingJobExecution = trainingBatchService.runAutoTraining();
                     }
                     catch (Exception e){
