@@ -13,11 +13,9 @@ import lombok.NoArgsConstructor;
 public class GptRequestParams {
 
     private String url;
-    @JsonProperty("max_token")
-    private Long maxToken;
-    @JsonProperty("temperature")
+    private Long maxTokens;
     private Double temperature;
-    @JsonProperty("top_p")
     private Double topP;
+    private String model;
 
 }

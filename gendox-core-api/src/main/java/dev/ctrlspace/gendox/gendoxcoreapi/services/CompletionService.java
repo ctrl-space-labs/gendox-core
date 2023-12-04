@@ -93,7 +93,7 @@ public class CompletionService {
         Message promptMessage = message.toBuilder().value(question).build();
 
          GptRequestParams gptRequestParams = GptRequestParams.builder()
-                .maxToken(project.getProjectAgent().getMaxToken())
+                .maxTokens(project.getProjectAgent().getMaxToken())
                 .temperature(project.getProjectAgent().getTemperature())
                 .topP(project.getProjectAgent().getTopP())
                 .build();
