@@ -4,13 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder(toBuilder = true)
-//@SuperBuilder
-public class GptMessage extends AiMessage {
-
+public class RequestParams {
+    private String url;
+    private Long maxTokens;
+    private Double temperature;
+    private Double topP;
+    private String model;
 }
-

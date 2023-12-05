@@ -16,7 +16,6 @@ import java.io.Serializable;
 @NoArgsConstructor
 public class Choice implements Serializable {
     private Integer index;
-//    private Gpt35Message message;
     private GptMessage message;
     @JsonProperty("finish_reason")
     private String finishReason;

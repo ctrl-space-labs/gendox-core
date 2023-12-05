@@ -1,11 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.BotRequest;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.GptMessage;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiMessage;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.RequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.GptRequestParams;
 
 import java.util.List;
+import java.util.Set;
 
 public interface AiModelService {
 //    Ada2Response askEmbedding(BotRequest botRequest);
@@ -17,8 +18,10 @@ public interface AiModelService {
 //    Gpt35ModerationResponse moderationCheck(String message);
 
     EmbeddingResponse askEmbedding(BotRequest botRequest);
-    CompletionResponse askCompletion(List<Message> messages, String agentRole, String aiModelName, RequestParams requestParams);
+    CompletionResponse askCompletion(List<AiMessage> messages, String agentRole, String aiModelName, RequestParams requestParams);
 
     ModerationResponse moderationCheck(String message);
+
+    boolean supports(String model);
 }
 

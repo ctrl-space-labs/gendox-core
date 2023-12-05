@@ -13,9 +13,15 @@ import java.util.List;
 @Builder(toBuilder = true)
 @AllArgsConstructor
 @NoArgsConstructor
-public class Ada2Response extends EmbeddingResponse {
+public class Ada2Response  {
 
+    private List<EmbeddingData> data;
+    private String model;
+    private String object;
+    private Usage usage;
 }
+
+
 
 
 
