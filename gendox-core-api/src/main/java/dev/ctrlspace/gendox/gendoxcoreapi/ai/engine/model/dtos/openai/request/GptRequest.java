@@ -13,7 +13,7 @@ import java.util.List;
 @Builder(toBuilder = true)
 public class GptRequest {
     private String model;
-    private List<GptMessage> messages;
+    private List<AiMessage> messages;
     @JsonProperty("temperature")
     private double temperature;
     @JsonProperty("top_p")
