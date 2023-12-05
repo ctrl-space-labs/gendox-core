@@ -7,7 +7,7 @@ server:
 logging:
   level:
     dev.ctrlspace: DEBUG
-    org.springframework: INFO
+    org.springframework: DEBUG
 spring:
   mvc:
     format:
@@ -93,8 +93,8 @@ gendox:
     allowed:
       extensions: .txt,.md,.rst,.pdf
   integrations:
+    poller: 1800000 # 30 minutes in milliseconds
     storage:
-
       temporary: /var/tmp
 
   models:

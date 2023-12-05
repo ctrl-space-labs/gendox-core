@@ -61,6 +61,8 @@ public class UploadService {
             return documentInstance;
 
         } else {
+            String fullFilePath = saveFile(file, organizationId);
+            instance.setRemoteUrl(fullFilePath);
             instance = documentService.updateDocument(instance);
             instance = documentService.createDocumentInstance(instance);
         }

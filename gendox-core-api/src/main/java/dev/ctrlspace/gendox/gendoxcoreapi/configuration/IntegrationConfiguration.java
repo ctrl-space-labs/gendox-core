@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.JobExecution;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.annotation.InboundChannelAdapter;
@@ -45,6 +46,9 @@ public class IntegrationConfiguration {
 
     Logger logger = LoggerFactory.getLogger(IntegrationConfiguration.class);
 
+    @Value("${gendox.integrations.poller}")
+    private long pollerDelay;
+
     private IntegrationManager integrationManager;
     private UploadService uploadService;
     private ProjectService projectService;
@@ -69,7 +73,7 @@ public class IntegrationConfiguration {
 
     //     Define the MessageSource
     @Bean
-    @InboundChannelAdapter(value = "integrationChannel", poller = @Poller(fixedDelay = "30000"))
+    @InboundChannelAdapter(value = "integrationChannel", poller = @Poller(fixedDelay = "${gendox.integrations.poller}"))
     public MessageSource<?> gitMessageSource() {
         MethodInvokingMessageSource source = new MethodInvokingMessageSource();
         source.setObject(integrationManager);
