@@ -1,20 +1,20 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.CompletionResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.GptResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGptResponse;
 
 public class CompletionResponseConverter {
-    public CompletionResponse toCompletionResponse(GptResponse gptResponse) {
+    public CompletionResponse toCompletionResponse(OpenAiGptResponse openAiGptResponse) {
         CompletionResponse completionResponse = CompletionResponse.builder()
-                .id(gptResponse.getId())
-                .object(gptResponse.getObject())
-                .created(gptResponse.getCreated())
-                .model(gptResponse.getModel())
-                .usage(gptResponse.getUsage())
-                .choices(gptResponse.getChoices())
-                .maxToken(gptResponse.getMaxToken())
-                .temperature(gptResponse.getTemperature())
-                .topP(gptResponse.getTopP())
+                .id(openAiGptResponse.getId())
+                .object(openAiGptResponse.getObject())
+                .created(openAiGptResponse.getCreated())
+                .model(openAiGptResponse.getModel())
+                .usage(openAiGptResponse.getUsage())
+                .choices(openAiGptResponse.getChoices())
+                .maxToken(openAiGptResponse.getMaxToken())
+                .temperature(openAiGptResponse.getTemperature())
+                .topP(openAiGptResponse.getTopP())
                 .build();
 
         return completionResponse;

@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class RequestParams {
+public class AiModelRequestParams {
     private String url;
     private Long maxTokens;
     private Double temperature;

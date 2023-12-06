@@ -1,14 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Ada2Response;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.CompletionResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.GptResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35Moderation;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35TurboConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.CompletionResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.EmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import org.apache.logging.log4j.util.Strings;
@@ -44,6 +42,8 @@ public class OpenAiServiceAdapter implements AiModelService{
     private AiModelRepository aiModelRepository;
 
     private  CompletionResponseConverter completionResponseConverter;
+
+    private EmbeddingResponseConverter embeddingResponseConverter;
     private static final RestTemplate restTemplate = new RestTemplate();
 
     public HttpHeaders buildHeader() {
@@ -54,67 +54,75 @@ public class OpenAiServiceAdapter implements AiModelService{
     }
 
 
-    public Ada2Response getEmbeddingResponse(Ada2Request embeddingRequestHttpEntity) {
+    public OpenAiAda2Response getEmbeddingResponse(OpenAiAda2Request embeddingRequestHttpEntity) {
         logger.debug("Sending Embedding Request to OpenAI: {}", embeddingRequestHttpEntity);
-        ResponseEntity<Ada2Response> responseEntity = restTemplate.postForEntity(
+        ResponseEntity<OpenAiAda2Response> responseEntity = restTemplate.postForEntity(
                 OpenAIADA2.URL,
                 new HttpEntity<>(embeddingRequestHttpEntity, buildHeader()),
-                Ada2Response.class);
+                OpenAiAda2Response.class);
         logger.info("Received Embedding Response from OpenAI. Tokens billed: {}", responseEntity.getBody().getUsage().getTotalTokens());
 
         return responseEntity.getBody();
     }
 
 
-    public GptResponse getCompletionResponse(GptRequest chatRequestHttpEntity) {
+    public OpenAiGptResponse getCompletionResponse(OpenAiGptRequest chatRequestHttpEntity) {
         logger.debug("Sending completion Request to OpenAI: {}", chatRequestHttpEntity);
-        ResponseEntity<GptResponse> responseEntity = restTemplate.postForEntity(
+        ResponseEntity<OpenAiGptResponse> responseEntity = restTemplate.postForEntity(
                 GPT35TurboConfig.URL,
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader()),
-                GptResponse.class);
+                OpenAiGptResponse.class);
         logger.info("Received completion Response from OpenAI. Tokens billed: {}", responseEntity.getBody().getUsage().getTotalTokens());
 
         return responseEntity.getBody();
     }
 
-    public Gpt35ModerationResponse getModerationResponse(Gpt35ModerationRequest moderationRequest) {
+    public OpenAiGpt35ModerationResponse getModerationResponse(Gpt35ModerationRequest moderationRequest) {
         logger.debug("Sending moderation Request to OpenAI: {}", moderationRequest);
-        ResponseEntity<Gpt35ModerationResponse> responseEntity = restTemplate.postForEntity(
+        ResponseEntity<OpenAiGpt35ModerationResponse> responseEntity = restTemplate.postForEntity(
                 GPT35Moderation.URL,
                 new HttpEntity<>(moderationRequest, buildHeader()),
-                Gpt35ModerationResponse.class);
+                OpenAiGpt35ModerationResponse.class);
         logger.info("Received moderation Response from OpenAI.");
 
         return responseEntity.getBody();
     }
 
 
-    public Ada2Response askEmbedding(BotRequest botRequest) {
-        return this.getEmbeddingResponse(Ada2Request.builder()
-                .model(OpenAIADA2.MODEL)
+    public EmbeddingResponse askEmbedding(BotRequest botRequest, String aiModelName) {
+
+        OpenAiAda2Response openAiAda2Response = this.getEmbeddingResponse(OpenAiAda2Request.builder()
+                .model(aiModelName)
                 .input(botRequest.getMessage()).build());
+
+        EmbeddingResponse embeddingResponse = embeddingResponseConverter.toEmbeddingResponse(openAiAda2Response);
+
+        return embeddingResponse;
+
     }
 
     @Override
-    public CompletionResponse askCompletion(List<AiMessage> messages, String agentRole, String aiModelName, RequestParams requestParams) {
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, String aiModelName, AiModelRequestParams aiModelRequestParams) {
         if (Strings.isNotEmpty(agentRole)) {
-            messages.add(0, AiMessage.builder().role("system").content(agentRole).build());
+            messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
 
         }
-        GptResponse gptResponse = this.getCompletionResponse(GptRequest.builder()
+        OpenAiGptResponse openAiGptResponse = this.getCompletionResponse(OpenAiGptRequest.builder()
                 .model(aiModelName)
-                .temperature(requestParams.getTemperature())
-                .topP(requestParams.getTopP())
-                .maxTokens(requestParams.getMaxTokens())
+                .temperature(aiModelRequestParams.getTemperature())
+                .topP(aiModelRequestParams.getTopP())
+                .maxTokens(aiModelRequestParams.getMaxTokens())
                 .messages(messages).build());
 
-        CompletionResponse completionResponse = completionResponseConverter.toCompletionResponse(gptResponse);
+        CompletionResponse completionResponse = completionResponseConverter.toCompletionResponse(openAiGptResponse);
 
         return completionResponse;
     }
+// mock method
+
 
     @Override
-    public Gpt35ModerationResponse moderationCheck(String message) {
+    public OpenAiGpt35ModerationResponse moderationCheck(String message) {
         return getModerationResponse(Gpt35ModerationRequest.builder()
                 .input(message)
                 .build());

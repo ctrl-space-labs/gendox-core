@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.training.steps;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Ada2Response;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiAda2Response;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiEmbeddingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectDocumentRepository;
@@ -51,12 +52,12 @@ public class DocumentSectionEmbeddingWriter implements ItemWriter<SectionEmbeddi
             // TODO - in the loop to update/create the Entities and the store them in the DB after the loop
 
             DocumentInstanceSection section = sectionEmbeddingDTO.section();
-            Ada2Response ada2Response = sectionEmbeddingDTO.ada2Response();
+            EmbeddingResponse embeddingResponse = sectionEmbeddingDTO.embeddingResponse();
             List<ProjectDocument> projectDocuments = projectDocumentRepository.findByDocumentId(section.getDocumentInstance().getId());
             //get first, actually there should be exactly one project per document
             UUID projectId = projectDocuments.get(0).getProject().getId();
 
-            embeddingService.upsertEmbeddingForText(ada2Response, projectId, null, section.getId());
+            embeddingService.upsertEmbeddingForText(embeddingResponse, projectId, null, section.getId());
 
 //            throw new RuntimeException("Not implemented yet");
 

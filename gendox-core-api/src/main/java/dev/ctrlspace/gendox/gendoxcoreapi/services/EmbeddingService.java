@@ -1,12 +1,15 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.BotRequest;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Ada2Response;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.OpenAiServiceAdapter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.AiModelEmbeddingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiEmbeddingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.slf4j.Logger;
@@ -34,13 +37,25 @@ public class EmbeddingService {
     private TypeService typeService;
     private AiModelRepository aiModelRepository;
     private OpenAiEmbeddingConverter openAiEmbeddingConverter;
+    private AiModelEmbeddingConverter aiModelEmbeddingConverter;
     private SecurityUtils securityUtils;
     private ProjectAgentService projectAgentService;
     private DocumentSectionService documentSectionService;
 
+    private OpenAiServiceAdapter openAiServiceAdapter;
+
+    private List<AiModelService> aiModelServices;
+
+    private AiModelUtils aiModelUtils;
+
+    private ProjectService projectService;
+
+    private ProjectAgentRepository projectAgentRepository;
 
     @Autowired
     private JWTUtils jwtUtils;
+
+
 
     @Autowired
     public EmbeddingService(AiModelService aiModelService,
@@ -50,10 +65,16 @@ public class EmbeddingService {
                             MessageRepository messageRepository,
                             TypeService typeService,
                             OpenAiEmbeddingConverter openAiEmbeddingConverter,
+                            List<AiModelService> aiModelServices,
                             AiModelRepository aiModelRepository,
                             SecurityUtils securityUtils,
                             ProjectAgentService projectAgentService,
-                            DocumentSectionService documentSectionService) {
+                            DocumentSectionService documentSectionService,
+                            OpenAiServiceAdapter openAiServiceAdapter,
+                            AiModelEmbeddingConverter aiModelEmbeddingConverter,
+                            AiModelUtils aiModelUtils,
+                            ProjectService projectService,
+                            ProjectAgentRepository projectAgentRepository) {
         this.aiModelService = aiModelService;
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
@@ -65,6 +86,11 @@ public class EmbeddingService {
         this.securityUtils = securityUtils;
         this.projectAgentService = projectAgentService;
         this.documentSectionService = documentSectionService;
+        this.openAiServiceAdapter = openAiServiceAdapter;
+        this.aiModelUtils = aiModelUtils;
+        this.projectService = projectService;
+        this.aiModelEmbeddingConverter = aiModelEmbeddingConverter;
+        this.projectAgentRepository = projectAgentRepository;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -90,17 +116,17 @@ public class EmbeddingService {
      * It creates or update the embedding and the embedding group
      * Logs to audit logs
      *
-     * @param ada2Response     the actual embedding
+     * @param embeddingResponse     the actual embedding
      * @param projectId the project/Agent that is involved
      * @return
      * @throws GendoxException
      */
 
-    public Embedding upsertEmbeddingForText(Ada2Response ada2Response, UUID projectId, @Nullable UUID messageId, @Nullable UUID sectionId) throws GendoxException {
+    public Embedding upsertEmbeddingForText(EmbeddingResponse embeddingResponse, UUID projectId, @Nullable UUID messageId, @Nullable UUID sectionId) throws GendoxException {
 
         Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_REQUEST");
         AuditLogs auditLogs = new AuditLogs();
-        auditLogs = createAuditLogs(projectId, (long) ada2Response.getUsage().getTotalTokens(), embeddingType);
+        auditLogs = createAuditLogs(projectId, (long) embeddingResponse.getUsage().getTotalTokens(), embeddingType);
 
         Embedding embedding = null;
         Optional<EmbeddingGroup> optionalEmbeddingGroup = embeddingGroupRepository.findBySectionIdOrMessageId(sectionId, messageId);
@@ -112,15 +138,22 @@ public class EmbeddingService {
             EmbeddingGroup embeddingGroup = optionalEmbeddingGroup.get();
             embedding = embeddingRepository.findById(embeddingGroup.getEmbeddingId()).get();
 
-            embedding.setEmbeddingVector(ada2Response.getData().get(0).getEmbedding());
+            embedding.setEmbeddingVector(embeddingResponse.getData().get(0).getEmbedding());
             embedding.setUpdatedBy(securityUtils.getUserId());
             embedding.setUpdatedAt(now);
 
 
             embeddingGroup.setEmbeddingId(embedding.getId());
-            embeddingGroup.setTokenCount((double) ada2Response.getUsage().getTotalTokens());
+            embeddingGroup.setTokenCount((double) embeddingResponse.getUsage().getTotalTokens());
             embeddingGroup.setGroupingStrategyType(typeService.getGroupingTypeByName("SIMPLE_SECTION").getId());
-            embeddingGroup.setSemanticSearchModelId(aiModelRepository.findByName("Ada2").getId());
+
+            Project project = projectService.getProjectById(projectId);
+//            AiModelService aiModelService = aiModelUtils.getAiModelServiceImplementation(project.getProjectAgent().
+//                    getSemanticSearchModel().getModel());
+            embeddingGroup.setSemanticSearchModelId(project.getProjectAgent().
+                    getSemanticSearchModel().getId());
+
+//            embeddingGroup.setSemanticSearchModelId(aiModelRepository.findByName("Ada2").getId());
             embeddingGroup.setUpdatedBy(securityUtils.getUserId());
             embeddingGroup.setUpdatedAt(now);
 
@@ -128,24 +161,45 @@ public class EmbeddingService {
             embeddingRepository.save(embedding);
             embeddingGroupRepository.save(embeddingGroup);
         } else {
-            embedding = openAiEmbeddingConverter.toEntity(ada2Response);
+            embedding = aiModelEmbeddingConverter.toEntity(embeddingResponse);
             embedding = createEmbedding(embedding);
 
 
-            EmbeddingGroup group = createEmbeddingGroup(embedding.getId(), Double.valueOf(ada2Response.getUsage().getTotalTokens()), messageId, sectionId);
+            EmbeddingGroup group = createEmbeddingGroup(embedding.getId(), Double.valueOf(embeddingResponse.getUsage().getTotalTokens()), messageId, sectionId);
 
         }
 
         return embedding;
     }
 
-    public Ada2Response getAda2EmbeddingForMessage(String value) {
-        BotRequest botRequest = new BotRequest();
-        botRequest.setMessage(value);
-        Ada2Response ada2Response = aiModelService.askEmbedding(botRequest);
+//    public OpenAiAda2Response getEmbeddingForMessage(String value) {
+//        BotRequest botRequest = new BotRequest();
+//        botRequest.setMessage(value);
+//        return this.getEmbeddingForMessage(botRequest);
+//    }
 
-        return ada2Response;
+
+        public EmbeddingResponse getEmbeddingForMessage(String value, String aiModelName) throws GendoxException {
+            BotRequest botRequest = new BotRequest();
+            botRequest.setMessage(value);
+            return this.getEmbeddingForMessage(botRequest, aiModelName);
     }
+
+
+//    public OpenAiAda2Response getEmbeddingForMessage(BotRequest botRequest) {
+//        OpenAiAda2Response openAiAda2Response = openAiServiceAdapter.askEmbedding(botRequest, );
+//
+//        return openAiAda2Response;
+//    }
+
+    public EmbeddingResponse getEmbeddingForMessage(BotRequest botRequest, String aiModel) throws GendoxException {
+        AiModelService aiModelService = aiModelUtils.getAiModelServiceImplementation(aiModel);
+        EmbeddingResponse embeddingResponse = aiModelService.askEmbedding(botRequest, aiModel);
+
+        return embeddingResponse;
+    }
+
+
 
     public AuditLogs createAuditLogs(UUID projectId, Long tokenCount, Type auditType) {
         AuditLogs auditLog = new AuditLogs();
@@ -171,8 +225,11 @@ public class EmbeddingService {
         embeddingGroup.setEmbeddingId(embeddingId);
         embeddingGroup.setTokenCount(tokenCount);
         embeddingGroup.setSectionId(sectionId);
+
         embeddingGroup.setGroupingStrategyType(typeService.getGroupingTypeByName("SIMPLE_SECTION").getId());
-        embeddingGroup.setSemanticSearchModelId(aiModelRepository.findByName("Ada2").getId());
+        ProjectAgent projectAgent = projectAgentRepository.findAgentByDocumentInstanceId(sectionId)
+                .orElse(null);
+        embeddingGroup.setSemanticSearchModelId(projectAgent.getSemanticSearchModel().getId());
         embeddingGroup.setMessageId(message_id);
 
         embeddingGroup.setCreatedAt(Instant.now());
@@ -231,8 +288,11 @@ public class EmbeddingService {
 
 
     public List<DocumentInstanceSection> findClosestSections(Message message, UUID projectId) throws GendoxException {
-        Ada2Response ada2Response = getAda2EmbeddingForMessage(message.getValue());
-        Embedding messageEmbedding = upsertEmbeddingForText(ada2Response, projectId, message.getId(), null);
+
+        Project project = projectService.getProjectById(projectId);
+        EmbeddingResponse embeddingResponse = getEmbeddingForMessage(message.getValue(),
+                                                        project.getProjectAgent().getSemanticSearchModel().getModel());
+        Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse, projectId, message.getId(), null);
 
         List<Embedding> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, PageRequest.of(0, 5));
 

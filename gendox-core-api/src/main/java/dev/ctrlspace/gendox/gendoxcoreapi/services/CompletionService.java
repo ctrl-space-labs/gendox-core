@@ -1,9 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiMessage;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.RequestParams;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelMessage;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.CompletionResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.GptResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.OpenAiServiceAdapter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
@@ -18,7 +17,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAut
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -32,8 +30,6 @@ public class CompletionService {
 
     Logger logger = LoggerFactory.getLogger(CompletionService.class);
     private ProjectService projectService;
-//    private MessageGpt35MessageConverter messageGpt35MessageConverter;
-//    private MessageGptMessageConverter messageGptMessageConverter;
 
     private MessageAiMessageConverter messageAiMessageConverter;
 
@@ -46,12 +42,12 @@ public class CompletionService {
     private List<AiModelService> aiModelServices;
 
     private OpenAiServiceAdapter openAiServiceAdapter;
-//    private TrainingService trainingService;
+
+    private TrainingService trainingService;
 
     private AiModelUtils aiModelUtils;
     @Autowired
     public CompletionService(ProjectService projectService,
-//                             MessageGptMessageConverter messageGptMessageConverter,
                              MessageAiMessageConverter messageAiMessageConverter,
                              AiModelService aiModelService,
                              OpenAiServiceAdapter openAiServiceAdapter,
@@ -61,44 +57,42 @@ public class CompletionService {
                              TypeService typeService,
                              List<AiModelService> aiModelServices,
                              DocumentInstanceSectionRepository documentInstanceSectionRepository,
-                             AiModelUtils aiModelUtils
-//                             TrainingService trainingService) {
-    ){
+                             AiModelUtils aiModelUtils,
+                             TrainingService trainingService) {
         this.projectService = projectService;
-//        this.messageGptMessageConverter = messageGptMessageConverter;
         this.messageAiMessageConverter = messageAiMessageConverter;
         this.aiModelService = aiModelService;
         this.embeddingService = embeddingService;
         this.projectAgentRepository = projectAgentRepository;
         this.templateRepository = templateRepository;
-//        this.trainingService = trainingService;
+        this.trainingService = trainingService;
         this.openAiServiceAdapter = openAiServiceAdapter;
         this.typeService = typeService;
         this.aiModelUtils = aiModelUtils;
     }
 
-    private CompletionResponse getCompletionForMessages(List<Message> messages, String agentRole, String aiModelName,
-                                                 RequestParams requestParams) throws GendoxException {
+    private CompletionResponse getCompletionForMessages(List<Message> messages, String agentRole, String aiModel,
+                                                 AiModelRequestParams aiModelRequestParams) throws GendoxException {
 
         //TODO add in DB table message, a field for the role of the message
         // if the message is from a user it will have role: "user" (or the role: ${userName})
         // if the message is from the agent it will have the role: ${agentName}
         // for the time being only 1 message will be in the list, from the user
 
-        List<AiMessage> aiMessages = new ArrayList<>();
+        List<AiModelMessage> aiModelMessages = new ArrayList<>();
         for (Message message : messages) {
-            AiMessage aiMessage = messageAiMessageConverter.toDTO(message);
-            aiMessages.add(aiMessage);
+            AiModelMessage aiModelMessage = messageAiMessageConverter.toDTO(message);
+            aiModelMessages.add(aiModelMessage);
         }
-        AiModelService aiModelService = aiModelUtils.getAiModelServiceImplementation(aiModelName);
-        CompletionResponse completionResponse = aiModelService.askCompletion(aiMessages, agentRole, aiModelName, requestParams);
+        AiModelService aiModelService = aiModelUtils.getAiModelServiceImplementation(aiModel);
+        CompletionResponse completionResponse = aiModelService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams);
 
         return completionResponse;
     }
 
 
     public Message getCompletion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
-        String question = convertToGPTTextQuestion(message, nearestSections, projectId);
+        String question = convertToAiModelTextQuestion(message, nearestSections, projectId);
         // check moderation
 //        Gpt35ModerationResponse moderationResponse = trainingService.getModeration(question);
 //        if (moderationResponse.getResults().get(0).isFlagged()) {
@@ -111,7 +105,7 @@ public class CompletionService {
         // clone message to avoid changing the original message text in DB
         Message promptMessage = message.toBuilder().value(question).build();
 
-         RequestParams requestParams= RequestParams.builder()
+         AiModelRequestParams aiModelRequestParams = AiModelRequestParams.builder()
                 .maxTokens(project.getProjectAgent().getMaxToken())
                 .temperature(project.getProjectAgent().getTemperature())
                 .topP(project.getProjectAgent().getTopP())
@@ -119,7 +113,7 @@ public class CompletionService {
 
         CompletionResponse completionResponse = getCompletionForMessages(List.of(promptMessage), project.getProjectAgent().
                                                                getAgentBehavior(),project.getProjectAgent().
-                                                               getCompletionModel().getModel(), requestParams);
+                                                               getCompletionModel().getModel(), aiModelRequestParams);
 
         Type completionType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
         // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)
@@ -132,7 +126,7 @@ public class CompletionService {
     }
 
 
-    public String convertToGPTTextQuestion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
+    public String convertToAiModelTextQuestion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
 
         // TODO investigate if we want to split the context and question
         //  to 2 different messages with role: "contextProvider" and role: "user"

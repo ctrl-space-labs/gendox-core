@@ -14,6 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class EmbeddingResponse implements Serializable {
+
     private List<EmbeddingData> data;
     private String model;
     private String object;
