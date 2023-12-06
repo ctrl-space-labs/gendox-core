@@ -1,11 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiMessage;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.BotRequest;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.RequestParams;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.CompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.ModerationResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,19 +20,20 @@ public class CohereAiServiceAdapter implements AiModelService{
 
 
     @Override
-    public EmbeddingResponse askEmbedding(BotRequest botRequest) {
+    public EmbeddingResponse askEmbedding(BotRequest botRequest, String aiModelName) {
         throw new UnsupportedOperationException("Not supported yet");
     }
 
     @Override
-    public CompletionResponse askCompletion(List<AiMessage> messages, String agentRole, String aiModelName, RequestParams requestParams) {
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, String aiModelName, AiModelRequestParams aiModelRequestParams) {
         throw new UnsupportedOperationException("Not supported yet");
     }
 
     @Override
-    public ModerationResponse moderationCheck(String message) {
-        throw new UnsupportedOperationException("Not supported yet");
+    public OpenAiGpt35ModerationResponse moderationCheck(String message) {
+        return null;
     }
+
 
     @Override
     public boolean supports(String model) {

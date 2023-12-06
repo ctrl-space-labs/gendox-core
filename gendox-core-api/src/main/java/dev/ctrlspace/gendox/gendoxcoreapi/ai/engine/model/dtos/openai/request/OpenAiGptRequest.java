@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -11,20 +11,16 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class GptResponse {
-
-    private String id;
-    private String object;
-    private long created;
+public class OpenAiGptRequest {
     private String model;
-    private Usage usage;
-    private List<Choice> choices;
+    private List<AiModelMessage> messages;
     @JsonProperty("temperature")
     private double temperature;
     @JsonProperty("top_p")
     private double topP;
-    @JsonProperty("max_token")
-    private Long maxToken;
-}
+    @JsonProperty("max_tokens")
+    private Long maxTokens;
 
+
+}
 

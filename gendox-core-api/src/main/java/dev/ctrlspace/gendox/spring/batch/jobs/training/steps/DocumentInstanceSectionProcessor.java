@@ -1,8 +1,12 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.training.steps;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Ada2Response;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiAda2Response;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -22,23 +26,32 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
 
     private EmbeddingService embeddingService;
 
+    private ProjectService projectService;
+
+    private ProjectAgentRepository projectAgentRepository;
     @Autowired
-    public DocumentInstanceSectionProcessor(EmbeddingService embeddingService) {
+    public DocumentInstanceSectionProcessor(EmbeddingService embeddingService,
+                                            ProjectAgentRepository projectAgentRepository) {
         this.embeddingService = embeddingService;
+        this.projectAgentRepository = projectAgentRepository;
     }
+
+
 
     @Override
     public SectionEmbeddingDTO process(DocumentInstanceSection item) throws Exception {
         logger.debug("Start processing section: {}", item.getId());
-        Ada2Response ada2Response;
+        ProjectAgent projectAgent = projectAgentRepository.findAgentByDocumentInstanceId(item.getDocumentInstance().getId())
+                .orElse(null);
+        EmbeddingResponse embeddingResponse;
         try {
-            ada2Response = embeddingService.getAda2EmbeddingForMessage(item.getSectionValue());
+            embeddingResponse = embeddingService.getEmbeddingForMessage(item.getSectionValue(), projectAgent.getSemanticSearchModel().getModel());
         } catch (Exception e) {
             logger.warn("Error {} getting Embedding for section {}. Skipping...", e.getMessage(), item.getId());
             return null;
         }
-        logger.debug("Section processed with cost: {} tokens", ada2Response.getUsage().getTotalTokens());
-        return new SectionEmbeddingDTO(item, ada2Response);
+        logger.debug("Section processed with cost: {} tokens", embeddingResponse.getUsage().getTotalTokens());
+        return new SectionEmbeddingDTO(item, embeddingResponse);
     }
 
 
