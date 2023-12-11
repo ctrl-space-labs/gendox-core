@@ -3,7 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.ai
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35Moderation;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35TurboConfig;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPTConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.CompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.EmbeddingResponseConverter;
@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -29,21 +30,26 @@ import java.util.Set;
 public class OpenAiServiceAdapter implements AiModelService{
 
 
-    private Set<String> supportedModels = Set.of("gpt-4", "gpt.3.5-turbo", "ada2");
+    private Set<String> supportedModels = Set.of("gpt-4", "gpt-3.5-turbo", "text-embedding-ada-002","openai-moderation");
     @Value("${gendox.models.openai.ada2.key}")
     private String ada2key;
 
     Logger logger = LoggerFactory.getLogger(OpenAiServiceAdapter.class);
 
-    @Autowired
-    private ProjectService projectService;
-
-    @Autowired
     private AiModelRepository aiModelRepository;
 
     private  CompletionResponseConverter completionResponseConverter;
 
     private EmbeddingResponseConverter embeddingResponseConverter;
+
+    @Autowired
+    public OpenAiServiceAdapter(AiModelRepository aiModelRepository,
+                                CompletionResponseConverter completionResponseConverter,
+                                EmbeddingResponseConverter embeddingResponseConverter){
+        this.aiModelRepository = aiModelRepository;
+        this.embeddingResponseConverter = embeddingResponseConverter;
+        this.completionResponseConverter = completionResponseConverter;
+    }
     private static final RestTemplate restTemplate = new RestTemplate();
 
     public HttpHeaders buildHeader() {
@@ -69,7 +75,7 @@ public class OpenAiServiceAdapter implements AiModelService{
     public OpenAiGptResponse getCompletionResponse(OpenAiGptRequest chatRequestHttpEntity) {
         logger.debug("Sending completion Request to OpenAI: {}", chatRequestHttpEntity);
         ResponseEntity<OpenAiGptResponse> responseEntity = restTemplate.postForEntity(
-                GPT35TurboConfig.URL,
+                GPTConfig.URL,
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader()),
                 OpenAiGptResponse.class);
         logger.info("Received completion Response from OpenAI. Tokens billed: {}", responseEntity.getBody().getUsage().getTotalTokens());
@@ -118,7 +124,6 @@ public class OpenAiServiceAdapter implements AiModelService{
 
         return completionResponse;
     }
-// mock method
 
 
     @Override

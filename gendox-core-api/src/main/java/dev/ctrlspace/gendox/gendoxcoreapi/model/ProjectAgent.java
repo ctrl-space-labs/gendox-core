@@ -22,16 +22,10 @@ public class ProjectAgent {
     @Basic
     @Column(name = "user_id", nullable = true)
     private UUID userId;
-//    @Basic
-//    @Column(name = "semantic_search_model_id", nullable = true)
-//    private UUID semanticSearchModelId;
 
     @ManyToOne
     @JoinColumn(name = "semantic_search_model_id", referencedColumnName = "id", nullable = true)
     private AiModel semanticSearchModel;
-//    @Basic
-//    @Column(name = "completion_model_id", nullable = true)
-//    private UUID completionModelId;
 
     @ManyToOne
     @JoinColumn(name = "completion_model_id", referencedColumnName = "id", nullable = true)

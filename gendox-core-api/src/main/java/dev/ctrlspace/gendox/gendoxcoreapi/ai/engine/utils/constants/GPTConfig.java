@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants;
 
-public class GPT35TurboConfig {
+public class GPTConfig {
 
     public static final String AUTHORIZATION = "Authorization";
     public static final String BEARER = "Bearer ";

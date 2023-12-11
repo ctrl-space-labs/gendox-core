@@ -34,10 +34,6 @@ public class ProjectConverter implements GendoxConverter<Project, ProjectDTO> {
         projectDTO.setUpdatedAt(project.getUpdatedAt());
         projectDTO.setAutoTraining(project.getAutoTraining());
 
-//        ProjectAgentDTO agentDTO = projectAgentConverter.toDTO(project.getProjectAgent());
-//        projectDTO.setProjectAgentDTO(agentDTO);
-
-
 
         return projectDTO;
     }
@@ -58,16 +54,6 @@ public class ProjectConverter implements GendoxConverter<Project, ProjectDTO> {
             if (projectDTO.getProjectAgent() != null) {
                 project.setProjectAgent(projectAgentConverter.toEntity(projectDTO.getProjectAgent()));
             }
-
-
-//        ProjectAgent agent = projectAgentConverter.toEntity(projectDTO.getProjectAgentDTO());
-//        try {
-//            agent = projectAgentService.createProjectAgent(agent);
-//        } catch (Exception e){
-//            System.out.println("Exception");
-//        }
-//        project.setProjectAgent(agent);
-
 
 
 
