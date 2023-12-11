@@ -18,7 +18,6 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         projectAgentDTO.setPrivateAgent(projectAgent.getPrivateAgent());
         projectAgentDTO.setCreateAt(projectAgent.getCreatedAt());
         projectAgentDTO.setUpdateAt(projectAgent.getUpdatedAt());
-//        projectAgentDTO.setProject(projectAgentDTO.getProject());
 
 
         return projectAgentDTO;
@@ -36,7 +35,6 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         projectAgent.setPrivateAgent(projectAgentDTO.getPrivateAgent());
         projectAgent.setCreatedAt(projectAgentDTO.getCreateAt());
         projectAgent.setUpdatedAt(projectAgentDTO.getUpdateAt());
-//        projectAgent.setProject(projectAgentDTO.getProject());
 
         return projectAgent;
     }

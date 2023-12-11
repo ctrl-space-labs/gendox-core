@@ -4,10 +4,14 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aie
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+@Component
 public class AiModelUtils {
+
+    @Autowired
     private List<AiModelService> aiModelServices;
 
     public AiModelService getAiModelServiceImplementation(String model) throws GendoxException {

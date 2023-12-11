@@ -3,10 +3,11 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.CompletionResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.CohereAiServiceAdapter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.OpenAiServiceAdapter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
-//import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageGptMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
@@ -17,6 +18,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAut
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -40,8 +43,13 @@ public class CompletionService {
     private TypeService typeService;
 
     private List<AiModelService> aiModelServices;
-
+    @Autowired
+    @Qualifier("openAiServiceAdapter")
     private OpenAiServiceAdapter openAiServiceAdapter;
+
+    @Autowired
+    @Qualifier("cohereAiServiceAdapter")
+    private CohereAiServiceAdapter cohereAiServiceAdapter;
 
     private TrainingService trainingService;
 
@@ -50,7 +58,8 @@ public class CompletionService {
     public CompletionService(ProjectService projectService,
                              MessageAiMessageConverter messageAiMessageConverter,
                              AiModelService aiModelService,
-                             OpenAiServiceAdapter openAiServiceAdapter,
+                              OpenAiServiceAdapter openAiServiceAdapter,
+                              CohereAiServiceAdapter cohereAiServiceAdapter,
                              EmbeddingService embeddingService,
                              ProjectAgentRepository projectAgentRepository,
                              TemplateRepository templateRepository,
@@ -67,6 +76,7 @@ public class CompletionService {
         this.templateRepository = templateRepository;
         this.trainingService = trainingService;
         this.openAiServiceAdapter = openAiServiceAdapter;
+        this.cohereAiServiceAdapter = cohereAiServiceAdapter;
         this.typeService = typeService;
         this.aiModelUtils = aiModelUtils;
     }
@@ -94,10 +104,10 @@ public class CompletionService {
     public Message getCompletion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
         String question = convertToAiModelTextQuestion(message, nearestSections, projectId);
         // check moderation
-//        Gpt35ModerationResponse moderationResponse = trainingService.getModeration(question);
-//        if (moderationResponse.getResults().get(0).isFlagged()) {
-//            throw new GendoxException("MODERATION_CHECK_FAILED", "The question did not pass moderation.", HttpStatus.NOT_ACCEPTABLE);
-//        }
+        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(question);
+        if (openAiGpt35ModerationResponse.getResults().get(0).isFlagged()) {
+            throw new GendoxException("MODERATION_CHECK_FAILED", "The question did not pass moderation.", HttpStatus.NOT_ACCEPTABLE);
+        }
 
 
         Project project = projectService.getProjectById(projectId);
