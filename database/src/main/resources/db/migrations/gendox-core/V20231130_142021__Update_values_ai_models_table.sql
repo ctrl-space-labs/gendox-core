@@ -1,23 +1,37 @@
-UPDATE  gendox_core.ai_models
-SET model = 'text-embedding-ada-002'
-WHERE url = 'https://api.openai.com/v1/embeddings';
 
-UPDATE  gendox_core.ai_models
-SET name = 'Ada2'
-WHERE url = 'https://api.openai.com/v1/embeddings';
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'gendox_core'
+        AND table_name = 'ai_models'
+        AND column_name = 'model_name'
+    ) THEN
+        ALTER TABLE gendox_core.ai_models RENAME COLUMN model_name TO model;
+    END IF;
 
-UPDATE  gendox_core.ai_models
-SET model = 'text-embedding-ada-002'
-WHERE url = 'https://api.openai.com/v1/embeddings';
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'gendox_core'
+        AND table_name = 'ai_models'
+        AND column_name = 'type'
+    ) THEN
+        ALTER TABLE gendox_core.ai_models RENAME COLUMN type TO name;
+    END IF;
 
-UPDATE gendox_core.ai_models
-SET description = 'GPT_3.5_TURBO'
-WHERE model = 'gpt-3.5-turbo';
+     IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'gendox_core'
+        AND table_name = 'ai_models'
+        AND column_name = 'description'
+    ) THEN
+        ALTER TABLE gendox_core.ai_models ADD COLUMN description TEXT;
+    END IF;
 
-UPDATE gendox_core.ai_models
-SET description = 'GPT_4'
-WHERE model = 'gpt-4';
 
-UPDATE gendox_core.ai_models
-SET description = 'ADA-002'
-WHERE model = 'text-embedding-ada-002';
+END $$;
+
+
