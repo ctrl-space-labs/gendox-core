@@ -6,7 +6,7 @@ WHERE url = 'https://api.openai.com/v1/embeddings'
 AND NOT EXISTS (
     SELECT 1
     FROM gendox_core.ai_models AS am_b
-    WHERE am_b.url = a.url AND am_a.model = 'text-embedding-ada-002'
+    WHERE am_b.url = am_a.url AND am_a.model = 'text-embedding-ada-002'
 );
 
 UPDATE gendox_core.ai_models AS am_a
