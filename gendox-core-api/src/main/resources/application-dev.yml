@@ -44,14 +44,14 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://idp-dev.gendox.ctrlspace.dev/realms/gendox-idp-dev
-          jwk-set-uri: https://idp-dev.gendox.ctrlspace.dev/realms/gendox-idp-dev/protocol/openid-connect/certs
+          issuer-uri: https://dev.gendox.ctrlspace.dev/idp/realms/gendox-idp-dev
+          jwk-set-uri: https://dev.gendox.ctrlspace.dev/idp/realms/gendox-idp-dev/protocol/openid-connect/certs
 
 
 
 keycloak:
-    base-url: https://idp-dev.gendox.ctrlspace.dev
-    token-uri: https://idp-dev.gendox.ctrlspace.dev/realms/gendox-idp-dev/protocol/openid-connect/token
+    base-url: https://dev.gendox.ctrlspace.dev/idp
+    token-uri: https://dev.gendox.ctrlspace.dev/idp/realms/gendox-idp-dev/protocol/openid-connect/token
     realm: gendox-idp-dev
     client-id: ${KEYCLOAK_CLIENT_ID}
     client-secret: ${KEYCLOAK_CLIENT_SECRET}
