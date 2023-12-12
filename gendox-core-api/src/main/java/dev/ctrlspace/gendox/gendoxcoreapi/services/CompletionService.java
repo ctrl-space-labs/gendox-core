@@ -35,21 +35,12 @@ public class CompletionService {
     private ProjectService projectService;
 
     private MessageAiMessageConverter messageAiMessageConverter;
-
-    private AiModelService aiModelService;
     private EmbeddingService embeddingService;
     private ProjectAgentRepository projectAgentRepository;
     private TemplateRepository templateRepository;
     private TypeService typeService;
 
     private List<AiModelService> aiModelServices;
-    @Autowired
-    @Qualifier("openAiServiceAdapter")
-    private OpenAiServiceAdapter openAiServiceAdapter;
-
-    @Autowired
-    @Qualifier("cohereAiServiceAdapter")
-    private CohereAiServiceAdapter cohereAiServiceAdapter;
 
     private TrainingService trainingService;
 
@@ -58,8 +49,6 @@ public class CompletionService {
     public CompletionService(ProjectService projectService,
                              MessageAiMessageConverter messageAiMessageConverter,
                              AiModelService aiModelService,
-                              OpenAiServiceAdapter openAiServiceAdapter,
-                              CohereAiServiceAdapter cohereAiServiceAdapter,
                              EmbeddingService embeddingService,
                              ProjectAgentRepository projectAgentRepository,
                              TemplateRepository templateRepository,
@@ -70,13 +59,10 @@ public class CompletionService {
                              TrainingService trainingService) {
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
-        this.aiModelService = aiModelService;
         this.embeddingService = embeddingService;
         this.projectAgentRepository = projectAgentRepository;
         this.templateRepository = templateRepository;
         this.trainingService = trainingService;
-        this.openAiServiceAdapter = openAiServiceAdapter;
-        this.cohereAiServiceAdapter = cohereAiServiceAdapter;
         this.typeService = typeService;
         this.aiModelUtils = aiModelUtils;
     }
