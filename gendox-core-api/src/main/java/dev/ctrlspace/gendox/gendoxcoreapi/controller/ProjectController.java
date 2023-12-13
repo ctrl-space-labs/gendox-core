@@ -45,7 +45,6 @@ public class ProjectController {
     private AiModelRepository aiModelRepository;
 
 
-
     @Autowired
     public ProjectController(ProjectService projectService,
                              ProjectConverter projectConverter,
@@ -104,15 +103,17 @@ public class ProjectController {
         }
 
         Project project = projectConverter.toEntity(projectDTO);
-        ProjectAgent projectAgent = new ProjectAgent();
         // create Project Agent
+        ProjectAgent projectAgent = new ProjectAgent();
         projectAgent.setProject(project);
         projectAgent.setAgentName(project.getName() + " Agent");
-
         projectAgent = projectAgentService.createProjectAgent(projectAgent);
         project.setProjectAgent(projectAgent);
-        projectAgent.setSemanticSearchModelId(aiModelRepository.findByName(AiModelConstants.ADA2_MODEL).getId());
-        projectAgent.setCompletionModelId(aiModelRepository.findByName(AiModelConstants.GPT_3_5_TURBO_MODEL).getId());
+
+//        aiModelRepository.findByName(projectAgent.getCompletionModel().getName()
+//        projectAgent.setSemanticSearchModel(aiModelRepository.findByName(AiModelConstants.ADA2_MODEL));
+        projectAgent.setSemanticSearchModel(aiModelRepository.findByName(AiModelConstants.ADA2_MODEL));
+        projectAgent.setCompletionModel(aiModelRepository.findByName(AiModelConstants.GPT_3_5_TURBO_MODEL));
         project = projectService.createProject(project);
 
         return project;
@@ -135,7 +136,6 @@ public class ProjectController {
         Project project = new Project();
         project = projectConverter.toEntity(projectDTO);
 
-        project = projectConverter.toEntity(projectDTO);
 
         if (!id.equals(projectDTO.getId())) {
             throw new GendoxException("PROJECT_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
@@ -149,8 +149,8 @@ public class ProjectController {
         existingProject.setDescription(project.getDescription());
         existingProject.setProjectAgent(projectAgentService.updateProjectAgent(project.getProjectAgent()));
         existingProject.setAutoTraining(project.getAutoTraining());
-
         project = projectService.updateProject(existingProject);
+
         return project;
 
     }

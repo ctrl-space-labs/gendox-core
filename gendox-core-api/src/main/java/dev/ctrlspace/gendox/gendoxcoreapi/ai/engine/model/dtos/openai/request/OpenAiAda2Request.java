@@ -6,14 +6,21 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
-import java.util.List;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class Gpt35Request implements Serializable {
+public class OpenAiAda2Request implements Serializable {
+
     private String model;
-    private List<Gpt35Message> messages;
-    private double temperature;
+    private String input;
+    private Double temperature;
+    private Integer maxTokens;
+    private Double topP;
+
 }
+
+
+
+

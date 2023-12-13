@@ -22,12 +22,14 @@ public class ProjectAgent {
     @Basic
     @Column(name = "user_id", nullable = true)
     private UUID userId;
-    @Basic
-    @Column(name = "semantic_search_model_id", nullable = true)
-    private UUID semanticSearchModelId;
-    @Basic
-    @Column(name = "completion_model_id", nullable = true)
-    private UUID completionModelId;
+
+    @ManyToOne
+    @JoinColumn(name = "semantic_search_model_id", referencedColumnName = "id", nullable = true)
+    private AiModel semanticSearchModel;
+
+    @ManyToOne
+    @JoinColumn(name = "completion_model_id", referencedColumnName = "id", nullable = true)
+    private AiModel completionModel;
     @Basic
     @Column(name = "agent_name", nullable = false, length = -1)
     private String agentName;
@@ -66,32 +68,35 @@ public class ProjectAgent {
     private Long maxToken;
     @Basic
     @Column(name = "temperature", nullable = true)
-    private Float temperature;
+    private Double temperature;
 
     @Basic
     @Column(name = "top_p", nullable = true)
-    private Float topP;
-    public UUID getId() {return id;}
+    private Double topP;
+
+    public UUID getId() {
+        return id;
+    }
 
     public void setId(UUID id) {
         this.id = id;
     }
 
 
-    public UUID getSemanticSearchModelId() {
-        return semanticSearchModelId;
+    public AiModel getSemanticSearchModel() {
+        return semanticSearchModel;
     }
 
-    public void setSemanticSearchModelId(UUID semanticSearchModelId) {
-        this.semanticSearchModelId = semanticSearchModelId;
+    public void setSemanticSearchModel(AiModel semanticSearchModel) {
+        this.semanticSearchModel = semanticSearchModel;
     }
 
-    public UUID getCompletionModelId() {
-        return completionModelId;
+    public AiModel getCompletionModel() {
+        return completionModel;
     }
 
-    public void setCompletionModelId(UUID completionModelId) {
-        this.completionModelId = completionModelId;
+    public void setCompletionModel(AiModel completionModel) {
+        this.completionModel = completionModel;
     }
 
     public String getAgentName() {
@@ -198,19 +203,19 @@ public class ProjectAgent {
         this.maxToken = maxToken;
     }
 
-    public Float getTemperature() {
+    public Double getTemperature() {
         return temperature;
     }
 
-    public void setTemperature(Float temperature) {
+    public void setTemperature(Double temperature) {
         this.temperature = temperature;
     }
 
-    public Float getTopP() {
+    public Double getTopP() {
         return topP;
     }
 
-    public void setTopP(Float topP) {
+    public void setTopP(Double topP) {
         this.topP = topP;
     }
 
@@ -220,11 +225,11 @@ public class ProjectAgent {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ProjectAgent that = (ProjectAgent) o;
-        return maxToken == that.maxToken && Float.compare(that.temperature, temperature) == 0 && Float.compare(that.topP, topP) == 0 && Objects.equals(id, that.id) && Objects.equals(project, that.project) && Objects.equals(userId, that.userId) && Objects.equals(semanticSearchModelId, that.semanticSearchModelId) && Objects.equals(completionModelId, that.completionModelId) && Objects.equals(agentName, that.agentName) && Objects.equals(agentBehavior, that.agentBehavior) && Objects.equals(privateAgent, that.privateAgent) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(documentSplitterType, that.documentSplitterType) && Objects.equals(chatTemplateId, that.chatTemplateId) && Objects.equals(sectionTemplateId, that.sectionTemplateId);
+        return Objects.equals(id, that.id) && Objects.equals(project, that.project) && Objects.equals(userId, that.userId) && Objects.equals(semanticSearchModel, that.semanticSearchModel) && Objects.equals(completionModel, that.completionModel) && Objects.equals(agentName, that.agentName) && Objects.equals(agentBehavior, that.agentBehavior) && Objects.equals(privateAgent, that.privateAgent) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(documentSplitterType, that.documentSplitterType) && Objects.equals(chatTemplateId, that.chatTemplateId) && Objects.equals(sectionTemplateId, that.sectionTemplateId) && Objects.equals(maxToken, that.maxToken) && Objects.equals(temperature, that.temperature) && Objects.equals(topP, that.topP);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getProject(), getUserId(), getSemanticSearchModelId(), getCompletionModelId(), getAgentName(), getAgentBehavior(), getPrivateAgent(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy(), getDocumentSplitterType(), getChatTemplateId(), getSectionTemplateId(), getMaxToken(),getTemperature(),getTopP());
+        return Objects.hash(id, project, userId, semanticSearchModel, completionModel, agentName, agentBehavior, privateAgent, createdAt, updatedAt, createdBy, updatedBy, documentSplitterType, chatTemplateId, sectionTemplateId, maxToken, temperature, topP);
     }
 }

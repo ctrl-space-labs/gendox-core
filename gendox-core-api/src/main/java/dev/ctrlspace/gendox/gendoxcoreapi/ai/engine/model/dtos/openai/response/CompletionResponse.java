@@ -5,21 +5,24 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.io.Serializable;
-import java.time.Instant;
 import java.util.List;
 
 @Data
-@Builder(toBuilder = true)
 @AllArgsConstructor
 @NoArgsConstructor
-public class Ada2Response implements Serializable {
-    private List<EmbeddingData> data;
-    private String model;
+@Builder(toBuilder = true)
+public class CompletionResponse {
+
+    private String id;
     private String object;
+    private long created;
+    private String model;
     private Usage usage;
+    private List<Choice> choices;
+    private Long maxToken;
+    private double temperature;
+    private double topP;
+
+
+
 }
-
-
-
-

@@ -1,14 +1,17 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.BotRequest;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Ada2Response;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35ModerationResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiAda2Response;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.OpenAiServiceAdapter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
@@ -33,6 +36,10 @@ public class EmbeddingsController {
     private TrainingService trainingService;
     private CompletionService completionService;
 
+    private AiModelRepository aiModelRepository;
+    private OpenAiServiceAdapter openAiServiceAdapter;
+
+
 
     @Autowired
     private AiModelService aiModelService;
@@ -42,11 +49,17 @@ public class EmbeddingsController {
     public EmbeddingsController(EmbeddingRepository embeddingRepository,
                                 EmbeddingService embeddingService,
                                 TrainingService trainingService,
-                                CompletionService completionService) {
+                                CompletionService completionService,
+                                AiModelRepository aiModelRepository,
+                                OpenAiServiceAdapter openAiServiceAdapter) {
         this.embeddingRepository = embeddingRepository;
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
         this.completionService = completionService;
+        this.aiModelRepository = aiModelRepository;
+        this.openAiServiceAdapter = openAiServiceAdapter;
+
+
     }
 
     @PostMapping("/embeddings")
@@ -55,16 +68,17 @@ public class EmbeddingsController {
                     "This endpoint accepts a BotRequest containing the text input and returns an Ada2Response " +
                     "containing the embeddings for the input text. Additionally, it stores the embeddings in the database " +
                     "as an Embedding entity with a unique ID.")
-    public Ada2Response getEmbeddings(@RequestBody BotRequest botRequest) {
-        Ada2Response ada2Response = aiModelService.askEmbedding(botRequest);
+    public EmbeddingResponse getEmbeddings(@RequestBody BotRequest botRequest, @RequestBody String aiModel) throws GendoxException {
+
+        EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(botRequest, aiModel);
         Embedding embedding = new Embedding();
 
-        embedding.setEmbeddingVector(ada2Response.getData().get(0).getEmbedding());
+        embedding.setEmbeddingVector(embeddingResponse.getData().get(0).getEmbedding());
         embedding.setId(UUID.randomUUID());
 
         embedding = embeddingRepository.save(embedding);
 
-        return ada2Response;
+        return embeddingResponse;
     }
 
 
@@ -144,11 +158,11 @@ public class EmbeddingsController {
     }
 
     @PostMapping("/messages/moderation")
-    public Gpt35ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
-        Gpt35ModerationResponse gpt35ModerationResponse = trainingService.getModeration(message);
-        return gpt35ModerationResponse;
+    public OpenAiGpt35ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
+        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(message);
+        return openAiGpt35ModerationResponse;
     }
-
+//
     @PostMapping("/messages/moderation/document")
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
         return trainingService.getModerationForDocumentSections(documentId);
