@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.CompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
@@ -11,6 +12,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingGroupRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectDocumentRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
 import lombok.NonNull;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +40,7 @@ public class TrainingService {
     private AiModelService aiModelService;
 
     private ProjectService projectService;
+
 
     @Lazy
     @Autowired
