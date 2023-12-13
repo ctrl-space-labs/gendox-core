@@ -116,7 +116,6 @@ public class ProjectAgentService {
         UUID projectAgentId = projectAgent.getId();
         ProjectAgent existingProjectAgent = projectAgentRepository.getById(projectAgentId);
 
-        // Update the properties         existingProjectAgent.setCompletionModelId(aiModelRepo.findByName(projectAgent.getCompletionModelId().getName()));
         existingProjectAgent.setAgentName(projectAgent.getAgentName());
         existingProjectAgent.setCompletionModel(aiModelRepository.findByName(projectAgent.getCompletionModel().getName()));
         existingProjectAgent.setSemanticSearchModel(aiModelRepository.findByName(projectAgent.getSemanticSearchModel().getName()));
