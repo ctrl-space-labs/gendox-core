@@ -1,36 +1,33 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelMessage;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.BotRequest;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.Ada2Request;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.Gpt35Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35TurboConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Profile;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
-@Profile({"mock-openai"})
 @Service
-public class AiModelServiceLocalDevImpl implements AiModelService {
-
-    Logger logger = LoggerFactory.getLogger(AiModelServiceLocalDevImpl.class);
+public class MockAiServiceAdapter {
+    Logger logger = LoggerFactory.getLogger(MockAiServiceAdapter.class);
 
     private static final RestTemplate restTemplate = new RestTemplate();
 
+    @Autowired
+    private AiModelRepository aiModelRepository;
 
-    public Ada2Response askEmbedding(BotRequest botRequest) {
-
+    public EmbeddingResponse askEmbedding(BotRequest botRequest) {
         logger.debug("Embedding Response from Mock Service.");
-        return Ada2Response.builder()
-                .model("text-embedding-ada-002-v2")
-                .object("list")
+        return EmbeddingResponse.builder()
+                .model(OpenAIADA2.MODEL)                .object("list")
                 .usage(Usage.builder()
                         .promptTokens(16)
                         .totalTokens(16)
@@ -45,10 +42,13 @@ public class AiModelServiceLocalDevImpl implements AiModelService {
                 .build();
     }
 
-    @Override
-    public Gpt35Response askCompletion(List<Gpt35Message> messages, String agentRole) {
-        return Gpt35Response.builder()
-                .model(GPT35TurboConfig.MODEL)
+    public CompletionResponse askCompletion(List<Message> messages, String agentRole, String aiModelName,
+                                           AiModelRequestParams aiModelRequestParams) {
+        return CompletionResponse.builder()
+                .model(aiModelName)
+                .topP(aiModelRequestParams.getTopP())
+                .temperature(aiModelRequestParams.getTemperature())
+                .maxToken(aiModelRequestParams.getMaxTokens())
                 .usage(Usage.builder()
                         .completionTokens(110)
                         .promptTokens(16)
@@ -57,21 +57,21 @@ public class AiModelServiceLocalDevImpl implements AiModelService {
                 .choices(List.of(Choice.builder()
                         .index(0)
                         .finishReason("stop")
-                        .message(Gpt35Message.builder()
+                        .message(AiModelMessage.builder()
                                 .role("assistant")
                                 .content("The NGI (Next Generation Internet) initiative is a research and innovation program with over €250 million in funding from the European Commission. Its goal is to address global sustainability challenges while creating a Human Internet that respects privacy, participation, and diversity. NGI supports projects in various areas such as cryptography, federated identity, search technology, and secure operating systems. The initiative aims to fund, mentor, and coordinate Next Generation Internet projects, providing financial support and business guidance to innovators and researchers. NGI also focuses on funding researchers and innovators in Europe through its system, which involves evaluating project potential, providing technical and business advice, and coordinating between projects. NGI has funded over 800 innovators and supports inclusive and trust-based technology building blocks, including blockchain, AI, machine learning, and open-source software and hardware. NGI projects cover a wide range of subjects, including private search, instant messaging, remote working tools, health, energy, finance, supply chains, research, knowledge management, and responsible media platforms. The NGI Community Map displays organizations participating in the NGI initiative, including companies, research centers, universities, SMEs, start-ups, and incubators. Users can view details about an organization by hovering over a pin on the map or clicking on it. The NGI initiative aims to shape the development of the Internet of tomorrow into an Internet of humans, prioritizing trust, security, inclusion, and reflecting European values and norms. It aims to build a human-centric Internet where end-users have control over their personal data and ensure secure and trustworthy access for all. The mission of NGI is to reimagine and reengineer the Internet to enable human potential.")
                                 .build())
                         .build()))
                 .build();
+
     }
 
-    @Override
-    public Gpt35ModerationResponse moderationCheck(String message) {
-        Gpt35ModerationResponse.ModerationResult defaultResult = Gpt35ModerationResponse.ModerationResult.builder()
+    public OpenAiGpt35ModerationResponse moderationCheck(String message) {
+        OpenAiGpt35ModerationResponse.OpenAiGpt35ModerationResult defaultResult = OpenAiGpt35ModerationResponse.OpenAiGpt35ModerationResult.builder()
                 .flagged(false)
                 .build();
-
-        return Gpt35ModerationResponse.builder()
+//
+        return OpenAiGpt35ModerationResponse.builder()
                 .id("default-id")
                 .model("default-model")
                 .results(List.of(defaultResult))
@@ -79,4 +79,3 @@ public class AiModelServiceLocalDevImpl implements AiModelService {
     }
 
 }
-

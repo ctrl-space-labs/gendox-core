@@ -8,14 +8,19 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 @Data
+@Builder(toBuilder = true)
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder(toBuilder = true)
-public class Gpt35Response {
-    private String id;
-    private String object;
-    private long created;
+public class OpenAiAda2Response {
+
+    private List<EmbeddingData> data;
     private String model;
+    private String object;
     private Usage usage;
-    private List<Choice> choices;
 }
+
+
+
+
+
+

@@ -4,6 +4,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
@@ -25,9 +26,9 @@ public class ProjectAgentService {
     @Value("${gendox.agents.max_token}")
     private Long maxTokenValue;
     @Value("${gendox.agents.temperature}")
-    private Float temperatureValue;
+    private Double temperatureValue;
     @Value("${gendox.agents.top_p}")
-    private Float topPValue;
+    private Double topPValue;
 
     private ProjectAgentRepository projectAgentRepository;
     private TypeService typeService;
@@ -35,17 +36,22 @@ public class ProjectAgentService {
     private SecurityUtils securityUtils;
     private UserService userService;
 
+    private AiModelRepository aiModelRepository;
+
     @Autowired
     public ProjectAgentService(ProjectAgentRepository projectAgentRepository,
                                TypeService typeService,
                                TemplateRepository templateRepository,
                                SecurityUtils securityUtils,
-                               UserService userService) {
+                               UserService userService,
+                               AiModelRepository aiModelRepository) {
         this.projectAgentRepository = projectAgentRepository;
         this.typeService = typeService;
         this.templateRepository = templateRepository;
         this.securityUtils = securityUtils;
         this.userService = userService;
+        this.aiModelRepository = aiModelRepository;
+
     }
 
     public ProjectAgent getAgentByProjectId(UUID projectId){
@@ -110,10 +116,10 @@ public class ProjectAgentService {
         UUID projectAgentId = projectAgent.getId();
         ProjectAgent existingProjectAgent = projectAgentRepository.getById(projectAgentId);
 
-        // Update the properties
+        // Update the properties         existingProjectAgent.setCompletionModelId(aiModelRepo.findByName(projectAgent.getCompletionModelId().getName()));
         existingProjectAgent.setAgentName(projectAgent.getAgentName());
-        existingProjectAgent.setSemanticSearchModelId(projectAgent.getSemanticSearchModelId());
-        existingProjectAgent.setCompletionModelId(projectAgent.getCompletionModelId());
+        existingProjectAgent.setCompletionModel(aiModelRepository.findByName(projectAgent.getCompletionModel().getName()));
+        existingProjectAgent.setSemanticSearchModel(aiModelRepository.findByName(projectAgent.getSemanticSearchModel().getName()));
         existingProjectAgent.setAgentName(projectAgent.getAgentName());
         existingProjectAgent.setAgentBehavior(projectAgent.getAgentBehavior());
         existingProjectAgent.setPrivateAgent(projectAgent.getPrivateAgent());

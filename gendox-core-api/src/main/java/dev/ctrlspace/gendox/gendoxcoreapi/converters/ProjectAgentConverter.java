@@ -11,14 +11,13 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         ProjectAgentDTO projectAgentDTO = new ProjectAgentDTO();
 
         projectAgentDTO.setId(projectAgent.getId()) ;
-        projectAgentDTO.setSemanticSearchModelId(projectAgent.getSemanticSearchModelId());
-        projectAgentDTO.setCompletionModelId(projectAgent.getCompletionModelId());
+        projectAgentDTO.setSemanticSearchModel(projectAgent.getSemanticSearchModel());
+        projectAgentDTO.setCompletionModel(projectAgent.getCompletionModel());
         projectAgentDTO.setAgentName(projectAgentDTO.getAgentName());
         projectAgentDTO.setAgentBehavior(projectAgentDTO.getAgentBehavior());
         projectAgentDTO.setPrivateAgent(projectAgent.getPrivateAgent());
         projectAgentDTO.setCreateAt(projectAgent.getCreatedAt());
         projectAgentDTO.setUpdateAt(projectAgent.getUpdatedAt());
-//        projectAgentDTO.setProject(projectAgentDTO.getProject());
 
 
         return projectAgentDTO;
@@ -29,14 +28,13 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         ProjectAgent projectAgent = new ProjectAgent();
 
         projectAgent.setId(projectAgentDTO.getId());
-        projectAgent.setSemanticSearchModelId(projectAgentDTO.getSemanticSearchModelId());
-        projectAgent.setCompletionModelId(projectAgentDTO.getCompletionModelId());
+        projectAgent.setSemanticSearchModel(projectAgentDTO.getSemanticSearchModel());
+        projectAgent.setCompletionModel(projectAgentDTO.getCompletionModel());
         projectAgent.setAgentName(projectAgentDTO.getAgentName());
         projectAgent.setAgentBehavior(projectAgentDTO.getAgentBehavior());
         projectAgent.setPrivateAgent(projectAgentDTO.getPrivateAgent());
         projectAgent.setCreatedAt(projectAgentDTO.getCreateAt());
         projectAgent.setUpdatedAt(projectAgentDTO.getUpdateAt());
-//        projectAgent.setProject(projectAgentDTO.getProject());
 
         return projectAgent;
     }

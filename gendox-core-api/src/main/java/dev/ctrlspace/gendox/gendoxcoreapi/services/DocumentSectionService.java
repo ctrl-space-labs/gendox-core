@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Gpt35ModerationResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
@@ -15,7 +15,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -137,8 +136,8 @@ public class DocumentSectionService {
         section.setUpdatedBy(securityUtils.getUserId());
 
         // take moderation check
-        Gpt35ModerationResponse gpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
-        section.setModerationFlagged(gpt35ModerationResponse.getResults().get(0).isFlagged());
+        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
+        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
 
         //create metadata
         section.setDocumentSectionMetadata(createMetadata(section));
