@@ -25,7 +25,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.Set;
 
-
+@Primary
 @Service
 public class OpenAiServiceAdapter implements AiModelService{
 
