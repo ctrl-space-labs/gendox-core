@@ -1,5 +1,4 @@
 
-
 UPDATE gendox_core.ai_models AS am_a
 SET model = 'text-embedding-ada-002'
 WHERE url = 'https://api.openai.com/v1/embeddings'
@@ -33,7 +32,7 @@ WHERE model = 'gpt-4'
 AND NOT EXISTS (
     SELECT 1
     FROM gendox_core.ai_models AS am_b
-    WHERE am_b.model = am_a.model AND am_a.model = 'gpt-4'
+    WHERE am_b.model = am_a.model AND am_a.description = 'GPT_4'
 );
 
 UPDATE gendox_core.ai_models AS am_a
@@ -42,5 +41,14 @@ WHERE model = 'text-embedding-ada-002'
 AND NOT EXISTS (
     SELECT 1
     FROM gendox_core.ai_models AS am_b
-    WHERE am_b.model = am_a.model AND am_a.model = 'text-embedding-ada-002'
+    WHERE am_b.model = am_a.model AND am_a.description = 'ADA-002'
+);
+
+UPDATE gendox_core.ai_models AS am_a
+SET description = 'OPEN-AI-MODERATION'
+WHERE model = 'openai-moderation'
+AND NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models AS am_b
+    WHERE am_b.model = am_a.model AND am_a.description = 'OPEN-AI-MODERATION'
 );
