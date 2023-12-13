@@ -5,6 +5,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.discord.commands.*;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,11 +23,21 @@ import java.util.concurrent.Executors;
 @EnableAsync
 public class JDAConfiguration {
 
+    Logger logger = LoggerFactory.getLogger(JDAConfiguration.class);
+
     @Value("${discord.bots.gendox-bot.token}")
     private String token;
 
+
     @Bean
     public JDA jda(List<Listener> listeners, SearchGendox searchGendox, ChatGendox chatGendox, ReplyGendox replyGendox) throws LoginException {
+
+        // Return null if token is null
+        if (token == null || token.trim().isEmpty() || token.equals("default-token")) {
+            logger.debug("Discord Token is missing");
+            return null;
+        }
+
         JDA jda = JDABuilder
                 .createDefault(token)
                 .enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MESSAGES, GatewayIntent.GUILD_MESSAGE_TYPING)
