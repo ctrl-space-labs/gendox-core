@@ -20,10 +20,11 @@ public class UserOrganization {
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     private User user;
 
-    @JsonManagedReference(value = "organization")
+    @JsonManagedReference(value = "organizationUser")
     @ManyToOne
     @JoinColumn(name = "organization_id", referencedColumnName = "id", nullable = false)
     private Organization organization;
+
     @ManyToOne
     @JoinColumn(name = "organization_role_id", referencedColumnName = "id", nullable = false)
     private Type role;
@@ -54,9 +55,6 @@ public class UserOrganization {
         return organization;
     }
 
-    public void setOrganizationId(Organization organization) {
-        this.organization = organization;
-    }
 
     public Type getRole() {
         return role;
@@ -81,6 +79,12 @@ public class UserOrganization {
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public void setOrganization(Organization organization) {
+        this.organization = organization;
+    }
+
+
 
     @Override
     public boolean equals(Object o) {
