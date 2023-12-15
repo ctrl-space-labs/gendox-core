@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import com.querydsl.core.types.Predicate;
+import dev.ctrlspace.gendox.authentication.AuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.JwtDTOUserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -40,11 +41,13 @@ public class UserService implements UserDetailsService {
 
     Logger logger = LoggerFactory.getLogger(UserService.class);
 
+
     private UserRepository userRepository;
     private JwtDTOUserProfileConverter jwtDTOUserProfileConverter;
     private JWTUtils jwtUtils;
     private UserProfileConverter userProfileConverter;
     private TypeService typeService;
+    private AuthenticationService authenticationService;
 
 
     @Autowired
@@ -52,12 +55,14 @@ public class UserService implements UserDetailsService {
                        JWTUtils jwtUtils,
                        JwtDTOUserProfileConverter jwtDTOUserProfileConverter,
                        UserProfileConverter userProfileConverter,
-                       TypeService typeService) {
+                       TypeService typeService,
+                       AuthenticationService authenticationService) {
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
         this.jwtDTOUserProfileConverter = jwtDTOUserProfileConverter;
         this.typeService = typeService;
+        this.authenticationService = authenticationService;
     }
 
     public Page<User> getAllUsers(UserCriteria criteria) {
@@ -82,6 +87,11 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with email: " + email, HttpStatus.NOT_FOUND));
     }
 
+    public User getByUsername(String username) throws GendoxException {
+        return userRepository.findByUserName(username)
+                .orElse(null);
+    }
+
     /**
      * @param userIdentifier can be either the email or username or phone number
      * @return
@@ -100,8 +110,15 @@ public class UserService implements UserDetailsService {
         return userProfileConverter.toDTO(user);
     }
 
-    public boolean isUserExistByUserName(String userName) throws GendoxException {
+    public Boolean isUserExistByUserName(String userName) throws GendoxException {
         return userRepository.existsByUserName(userName);
+    }
+
+    public Boolean isIdentifierUserExistsByUserName(String userName) throws GendoxException {
+        if (authenticationService.getUsersByUsername(userName).isEmpty()) {
+            return false;
+        }
+        return true;
     }
 
     public User createUser(User user) throws GendoxException {
@@ -110,7 +127,7 @@ public class UserService implements UserDetailsService {
         if (user.getUserType() == null) {
             user.setUserType(typeService.getUserTypeByName("GENDOX_USER"));
         }
-        
+
         user.setCreatedAt(now);
         user.setUpdatedAt(now);
 
@@ -128,6 +145,10 @@ public class UserService implements UserDetailsService {
 
         return user;
 
+    }
+
+    public String createIdentifierUser(User user) throws GendoxException {
+        return authenticationService.createUser(user, null, true, false);
     }
 
     @Observed(name = "get.jwt.claims",

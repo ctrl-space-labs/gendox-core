@@ -2,9 +2,11 @@ package dev.ctrlspace.gendox.authentication;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 import javax.annotation.Nullable;
+import java.util.Optional;
 
 /**
  * Interface for the Authentication Service.
@@ -26,5 +28,8 @@ public interface AuthenticationService {
 
     public Jwt impersonateUser(String username);
 
-    String createUser(User user, @Nullable String password, boolean emailVerified, boolean tempPassword) throws GendoxException;
+    String createUser(User user, @Nullable String password, Boolean emailVerified, Boolean tempPassword) throws GendoxException;
+
+    public Optional<UserRepresentation> getUsersByUsername(String userName);
+
 }

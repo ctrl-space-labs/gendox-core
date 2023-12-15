@@ -14,6 +14,7 @@ public interface UserRepository extends JpaRepository<User, UUID>, QuerydslPredi
 
     Optional<User> findByEmail(String email);
     Optional<User> findByName(String name);
+    Optional<User> findByUserName(String userName);
 
     boolean existsByUserName(String userName);
 }
