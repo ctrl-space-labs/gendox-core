@@ -34,6 +34,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -87,9 +88,31 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with email: " + email, HttpStatus.NOT_FOUND));
     }
 
-    public User getByUsername(String username) throws GendoxException {
-        return userRepository.findByUserName(username)
-                .orElse(null);
+    /**
+     * @param userIdentifier can be either the email or username or phone number
+     * @return
+     * @throws GendoxException
+     */
+    public Optional<User> getOptionalUserByUniqueIdentifier(String userIdentifier) throws GendoxException {
+
+        UserCriteria criteria = UserCriteria
+                .builder()
+                .userIdentifier(userIdentifier)
+                .build();
+
+        return getAllUsers(criteria).stream()
+                .findFirst();
+    }
+
+    /**
+     * @param userIdentifier can be either the email or username or phone number
+     * @return
+     * @throws GendoxException
+     */
+    public User getUserByUniqueIdentifier(String userIdentifier) throws GendoxException {
+
+        return this.getOptionalUserByUniqueIdentifier(userIdentifier)
+                .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with identifier: " + userIdentifier, HttpStatus.NOT_FOUND));
     }
 
     /**
@@ -99,14 +122,7 @@ public class UserService implements UserDetailsService {
      */
     public UserProfile getUserProfileByUniqueIdentifier(String userIdentifier) throws GendoxException {
 
-        UserCriteria criteria = UserCriteria
-                .builder()
-                .userIdentifier(userIdentifier)
-                .build();
-
-        User user = getAllUsers(criteria).stream()
-                .findFirst()
-                .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with identifier: " + userIdentifier, HttpStatus.NOT_FOUND));
+        User user = this.getUserByUniqueIdentifier(userIdentifier);
         return userProfileConverter.toDTO(user);
     }
 
