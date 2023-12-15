@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.messages.ChatGendoxMessa
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.messages.SearchGendoxMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
@@ -71,15 +72,26 @@ public class CommonCommandUtility {
             String channelId = event.getChannel().getId();
             TextChannel channel = event.getJDA().getTextChannelById(channelId);
             String authorName = event.getUser().getName();
+            User user = userService.getByUsername(authorName);
 
             // check if author is gendox user and if not, create new user
             if (event.getUser().isBot()) return;
             try {
-                if (!userService.isUserExistByUserName(authorName)) {
-                    userService.createDiscordUser(authorName);
+                if (user == null) {
+                    user = userService.createDiscordUser(authorName);
                 }
             } catch (GendoxException e) {
-                logger.error("An An error occurred while checking/creating the user: " + e.getMessage());
+                logger.error("An error occurred while checking/creating the user: " + e.getMessage());
+                throw new RuntimeException(e);
+            }
+
+            // check if identifier user exist and if no create identifier user
+            try {
+                if (!userService.isIdentifierUserExistsByUserName(authorName)) {
+                    userService.createIdentifierUser(user);
+                }
+            } catch (GendoxException e) {
+                logger.error("An error occurred while checking/creating user's identifier: " + e.getMessage());
                 throw new RuntimeException(e);
             }
 
