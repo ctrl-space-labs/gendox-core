@@ -51,15 +51,14 @@ public class KeycloakAuthenticationService implements AuthenticationService {
     private String clientSecret;
 
     private Keycloak keycloakClient;
-    private final UserRepository userRepository;
+
 
 
     public KeycloakAuthenticationService(@Value("${keycloak.base-url}") String keycloakServerUrl,
                                          @Value("${keycloak.token-uri}") String keycloakTokenUrl,
                                          @Value("${keycloak.realm}") String realm,
                                          @Value("${keycloak.client-id}") String clientId,
-                                         @Value("${keycloak.client-secret}") String clientSecret,
-                                         UserRepository userRepository) {
+                                         @Value("${keycloak.client-secret}") String clientSecret) {
 
         this.keycloakServerUrl = keycloakServerUrl;
         this.keycloakTokenUrl = keycloakTokenUrl;
@@ -74,7 +73,7 @@ public class KeycloakAuthenticationService implements AuthenticationService {
                 .clientId(clientId)
                 .clientSecret(clientSecret)
                 .build();
-        this.userRepository = userRepository;
+
     }
 
     @Override
