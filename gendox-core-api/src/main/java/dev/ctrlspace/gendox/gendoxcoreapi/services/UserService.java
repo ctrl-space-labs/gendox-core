@@ -114,13 +114,6 @@ public class UserService implements UserDetailsService {
         return userRepository.existsByUserName(userName);
     }
 
-    public Boolean isIdentifierUserExistsByUserName(String userName) throws GendoxException {
-        if (authenticationService.getUsersByUsername(userName).isEmpty()) {
-            return false;
-        }
-        return true;
-    }
-
     public User createUser(User user) throws GendoxException {
         Instant now = Instant.now();
 
@@ -147,9 +140,6 @@ public class UserService implements UserDetailsService {
 
     }
 
-    public String createIdentifierUser(User user) throws GendoxException {
-        return authenticationService.createUser(user, null, true, false);
-    }
 
     @Observed(name = "get.jwt.claims",
             contextualName = "get-jwt-claims",

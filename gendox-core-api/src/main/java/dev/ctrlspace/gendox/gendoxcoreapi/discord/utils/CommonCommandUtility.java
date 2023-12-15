@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.discord.utils;
 
 
+import dev.ctrlspace.gendox.authentication.AuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.ListenerService;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.constants.DiscordGendoxConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.messages.ChatGendoxMessage;
@@ -38,18 +39,21 @@ public class CommonCommandUtility {
     private ListenerService listenerService;
     private ChatGendoxMessage chatGendoxMessage;
     private SearchGendoxMessage searchGendoxMessage;
+    private AuthenticationService authenticationService;
 
     @Autowired
     public CommonCommandUtility(UserService userService,
                                 ProjectRepository projectRepository,
                                 ListenerService listenerService,
                                 ChatGendoxMessage chatGendoxMessage,
-                                SearchGendoxMessage searchGendoxMessage) {
+                                SearchGendoxMessage searchGendoxMessage,
+                                AuthenticationService authenticationService) {
         this.userService = userService;
         this.projectRepository = projectRepository;
         this.listenerService = listenerService;
         this.chatGendoxMessage = chatGendoxMessage;
         this.searchGendoxMessage = searchGendoxMessage;
+        this.authenticationService = authenticationService;
     }
 
 
@@ -87,8 +91,8 @@ public class CommonCommandUtility {
 
             // check if identifier user exist and if no create identifier user
             try {
-                if (!userService.isIdentifierUserExistsByUserName(authorName)) {
-                    userService.createIdentifierUser(user);
+                if (authenticationService.getUsersByUsername(authorName).isEmpty()) {
+                    authenticationService.createUser(user, null, true, false);
                 }
             } catch (GendoxException e) {
                 logger.error("An error occurred while checking/creating user's identifier: " + e.getMessage());
