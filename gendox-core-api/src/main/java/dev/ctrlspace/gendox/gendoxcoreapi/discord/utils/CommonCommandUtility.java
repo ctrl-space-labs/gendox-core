@@ -76,7 +76,9 @@ public class CommonCommandUtility {
             String channelId = event.getChannel().getId();
             TextChannel channel = event.getJDA().getTextChannelById(channelId);
             String authorName = event.getUser().getName();
-            User user = userService.getByUsername(authorName);
+            User user = userService
+                    .getOptionalUserByUniqueIdentifier(authorName)
+                    .orElse(null);
 
             // check if author is gendox user and if not, create new user
             if (event.getUser().isBot()) return;
