@@ -23,21 +23,21 @@ spring:
     hibernate:
       ddl-auto: none
 
-  datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: 123456789
-    hikari:
-      maximum-pool-size: 100
-      minimum-idle: 10
-
 #  datasource:
-#     url: ${DATABASE_URL}
-#     username: ${DATABASE_USERNAME}
-#     password: ${DATABASE_PASSWORD}
-#     hikari:
-#       maximum-pool-size: 100
-#       minimum-idle: 10
+#    url: jdbc:postgresql://localhost:5432/postgres
+#    username: postgres
+#    password: 123456789
+#    hikari:
+#      maximum-pool-size: 100
+#      minimum-idle: 10
+
+  datasource:
+     url: ${DATABASE_URL}
+     username: ${DATABASE_USERNAME}
+     password: ${DATABASE_PASSWORD}
+     hikari:
+       maximum-pool-size: 100
+       minimum-idle: 10
 
   jackson:
     serialization:
