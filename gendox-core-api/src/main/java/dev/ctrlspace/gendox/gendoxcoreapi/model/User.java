@@ -43,9 +43,11 @@ public class User {
     @Basic
     @Column(name = "updated_at", nullable = true)
     private Instant updatedAt;
+
     @JsonBackReference(value = "userOrg")
     @OneToMany(mappedBy = "user")
     private List<UserOrganization> userOrganizations;
+
     @JsonBackReference(value = "user")
     @OneToMany(mappedBy = "user")
     private List<ProjectMember> projectMembers = new ArrayList<>();

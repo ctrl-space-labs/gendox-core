@@ -8,7 +8,7 @@ logging:
   level:
     dev.ctrlspace: DEBUG
     org.springframework.security: INFO
-    org.springframework: DEBUG
+    org.springframework: INFO
 #    This is how to change the micrometer tracing pattern, we'll use the default now
 #  pattern:
 #    correlation : "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
