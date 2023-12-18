@@ -79,8 +79,6 @@ public class ProjectMemberService {
 
 
     public ProjectMember createProjectMember(UUID userId, UUID projectId) throws Exception {
-        Instant now = Instant.now();
-
 
         User user = userService.getById(userId);
         Project project = projectService.getProjectById(projectId);
@@ -88,8 +86,6 @@ public class ProjectMemberService {
         ProjectMember projectMember = new ProjectMember();
         projectMember.setUser(user);
         projectMember.setProject(project);
-        projectMember.setCreatedAt(now);
-        projectMember.setUpdatedAt(now);
 
         return this.createProjectMember(projectMember);
 
