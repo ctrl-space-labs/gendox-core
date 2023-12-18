@@ -6,7 +6,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationPredicates;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -15,7 +14,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,17 +24,16 @@ public class OrganizationService {
     private UserOrganizationRepository userOrganizationRepository;
     private OrganizationRepository organizationRepository;
     private UserOrganizationService userOrganizationService;
-    private final UserRepository userRepository;
+
 
     @Autowired
     public OrganizationService(UserOrganizationRepository userOrganizationRepository,
                                OrganizationRepository organizationRepository,
-                               UserOrganizationService userOrganizationService,
-                               UserRepository userRepository) {
+                               UserOrganizationService userOrganizationService) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.organizationRepository = organizationRepository;
         this.userOrganizationService = userOrganizationService;
-        this.userRepository = userRepository;
+
     }
 
     /**
@@ -68,15 +65,10 @@ public class OrganizationService {
     }
 
     public Organization createOrganization(Organization organization) throws Exception {
-        Instant now = Instant.now();
-
 
         if (organization.getId() != null) {
             throw new GendoxException("NEW_ORGANIZATION_ID_IS_NOT_NULL", "Organization id must be null", HttpStatus.BAD_REQUEST);
         }
-
-        organization.setCreatedAt(now);
-        organization.setUpdatedAt(now);
 
         organization = organizationRepository.save(organization);
         userOrganizationService.setAdminRoleForOrganizationsOwner(organization);
@@ -93,7 +85,7 @@ public class OrganizationService {
         existingOrganization.setAddress(organization.getAddress());
         existingOrganization.setPhone(organization.getPhone());
         existingOrganization.setDisplayName(organization.getDisplayName());
-        existingOrganization.setUpdatedAt(Instant.now());
+
 
 
         //save the update organization

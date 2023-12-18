@@ -132,14 +132,10 @@ public class UserService implements UserDetailsService {
     }
 
     public User createUser(User user) throws GendoxException {
-        Instant now = Instant.now();
 
         if (user.getUserType() == null) {
             user.setUserType(typeService.getUserTypeByName("GENDOX_USER"));
         }
-
-        user.setCreatedAt(now);
-        user.setUpdatedAt(now);
 
         user = userRepository.save(user);
         return user;
@@ -191,7 +187,6 @@ public class UserService implements UserDetailsService {
     public JwtClaimsSet getJwtClaims(String userIdentifier) throws GendoxException {
 
         UserProfile userProfile = this.getUserProfileByUniqueIdentifier(userIdentifier);
-
 
         JwtDTO jwtDTO = jwtDTOUserProfileConverter.jwtDTO(userProfile);
 

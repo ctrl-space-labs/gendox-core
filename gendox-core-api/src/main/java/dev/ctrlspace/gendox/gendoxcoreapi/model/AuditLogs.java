@@ -1,12 +1,18 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "audit_logs", schema = "gendox_core")
 public class AuditLogs {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,16 +36,20 @@ public class AuditLogs {
     private Type type;
     @Basic
     @Column(name = "created_at")
+    @CreatedDate
     private Instant createdAt;
     @Basic
     @Column(name = "updated_at")
+    @LastModifiedDate
     private Instant updatedAt;
 
     @Basic
     @Column(name = "created_by")
+    @CreatedBy
     private UUID createdBy;
     @Basic
     @Column(name = "updated_by")
+    @LastModifiedBy
     private UUID updatedBy;
 
     public UUID getId() {

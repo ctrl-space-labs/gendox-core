@@ -34,7 +34,6 @@ public class UserOrganizationService {
     private UserOrganizationRepository userOrganizationRepository;
     private UserService userService;
     private OrganizationService organizationService;
-
     private TypeService typeService;
     private UserRepository userRepository;
 
@@ -91,8 +90,7 @@ public class UserOrganizationService {
 
     }
 
-    public UserOrganization createUserOrganization(UserOrganization userOrganization) throws Exception {
-        Instant now = Instant.now();
+    public UserOrganization createUserOrganization(UserOrganization userOrganization) throws Exception{
 
         if (userOrganizationRepository.existsByUserAndOrganization(userOrganization.getUser(), userOrganization.getOrganization())) {
             throw new GendoxException("USER_ORGANIZATION_ALREADY_EXISTS", "User-organization combination already exists", HttpStatus.BAD_REQUEST);
@@ -101,8 +99,6 @@ public class UserOrganizationService {
         if (userOrganization.getId() != null) {
             throw new GendoxException("NEW_USER_ORGANIZATION_ID_IS_NOT_NULL", "User Organization id must be null", HttpStatus.BAD_REQUEST);
         }
-        userOrganization.setCreatedAt(now);
-        userOrganization.setUpdatedAt(now);
 
         userOrganization = userOrganizationRepository.save(userOrganization);
 
