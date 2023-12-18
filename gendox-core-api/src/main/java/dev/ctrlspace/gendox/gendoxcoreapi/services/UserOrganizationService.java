@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
@@ -115,9 +116,10 @@ public class UserOrganizationService {
     public void setAdminRoleForOrganizationsOwner(Organization organization) throws Exception {
         // user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
 
-        createUserOrganization(UUID.fromString(jwtDTO.getUserId()), organization.getId(), "ROLE_ADMIN");
+        String userId = ((UserProfile) authentication.getPrincipal()).getId();
+
+        createUserOrganization(UUID.fromString(userId), organization.getId(), "ROLE_ADMIN");
 
     }
 }
