@@ -6,7 +6,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserOrganizationPredicate;
@@ -38,27 +40,34 @@ public class UserOrganizationService {
 
     @Autowired
     private JWTUtils jwtUtils;
+    private final OrganizationRepository organizationRepository;
 
     @Autowired
     public UserOrganizationService(UserOrganizationRepository userOrganizationRepository,
                                    TypeService typeRepository,
                                    @Lazy UserService userService,
                                    @Lazy OrganizationService organizationService,
-                                   UserRepository userRepository) {
+                                   UserRepository userRepository,
+                                   OrganizationRepository organizationRepository) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.typeService = typeRepository;
         this.userRepository = userRepository;
         this.userService = userService;
         this.organizationService = organizationService;
 
+        this.organizationRepository = organizationRepository;
     }
 
-    public List<UserOrganization> getAll(UserOrganizationCriteria criteria) throws GendoxException{
+    public List<UserOrganization> getUserOrganizationByOrganizationId(UUID organizationId) throws GendoxException {
+        return userOrganizationRepository.findByOrganizationId(organizationId);
+    }
+
+    public List<UserOrganization> getAll(UserOrganizationCriteria criteria) throws GendoxException {
         Pageable pageable = PageRequest.of(0, 100);
         return getAll(criteria, pageable);
     }
 
-    public List<UserOrganization> getAll(UserOrganizationCriteria criteria, Pageable pageable) throws GendoxException{
+    public List<UserOrganization> getAll(UserOrganizationCriteria criteria, Pageable pageable) throws GendoxException {
         if (pageable == null) {
             throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
         }
@@ -66,7 +75,7 @@ public class UserOrganizationService {
 
     }
 
-    public UserOrganization createUserOrganization(UUID userId, UUID organizationId, String roleName) throws Exception{
+    public UserOrganization createUserOrganization(UUID userId, UUID organizationId, String roleName) throws Exception {
 
         User user = userService.getById(userId);
         Organization organization = organizationService.getById(organizationId);
@@ -74,7 +83,7 @@ public class UserOrganizationService {
 
         UserOrganization userOrganization = new UserOrganization();
         userOrganization.setUser(user);
-        userOrganization.setOrganizationId(organization);
+        userOrganization.setOrganization(organization);
         userOrganization.setRole(role);
 
         return this.createUserOrganization(userOrganization);
@@ -82,7 +91,7 @@ public class UserOrganizationService {
 
     }
 
-    public UserOrganization createUserOrganization(UserOrganization userOrganization) throws Exception{
+    public UserOrganization createUserOrganization(UserOrganization userOrganization) throws Exception {
         Instant now = Instant.now();
 
         if (userOrganizationRepository.existsByUserAndOrganization(userOrganization.getUser(), userOrganization.getOrganization())) {
@@ -100,12 +109,17 @@ public class UserOrganizationService {
         return userOrganization;
     }
 
+    public void deleteUserOrganization(UserOrganization userOrganization) throws GendoxException {
+        userOrganizationRepository.delete(userOrganization);
+    }
+
     public void setAdminRoleForOrganizationsOwner(Organization organization) throws Exception {
         // user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt)authentication.getPrincipal());
 
-        createUserOrganization(UUID.fromString(jwtDTO.getUserId()), organization.getId(), "ROLE_ADMIN");
+        String userId = ((UserProfile) authentication.getPrincipal()).getId();
+
+        createUserOrganization(UUID.fromString(userId), organization.getId(), "ROLE_ADMIN");
 
     }
 }

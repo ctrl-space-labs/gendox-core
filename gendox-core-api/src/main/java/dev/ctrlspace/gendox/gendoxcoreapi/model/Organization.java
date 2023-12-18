@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -34,7 +35,7 @@ public class Organization {
     private Instant updatedAt;
 
 
-    @JsonBackReference(value = "organization")
+    @JsonBackReference(value = "organizationUser")
     @OneToMany(mappedBy = "organization")
     private List<UserOrganization> userOrganizations;
 
@@ -94,22 +95,27 @@ public class Organization {
         this.updatedAt = updatedAt;
     }
 
+    public List<UserOrganization> getUserOrganizations() {
+        return userOrganizations;
+    }
+
+    public void setUserOrganizations(List<UserOrganization> userOrganizations) {
+        this.userOrganizations = userOrganizations;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof Organization that)) return false;
 
-        Organization that = (Organization) o;
-
-        if (id != null ? !id.equals(that.id) : that.id != null) return false;
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
-        if (displayName != null ? !displayName.equals(that.displayName) : that.displayName != null) return false;
-        if (address != null ? !address.equals(that.address) : that.address != null) return false;
-        if (phone != null ? !phone.equals(that.phone) : that.phone != null) return false;
-        if (createdAt != null ? !createdAt.equals(that.createdAt) : that.createdAt != null) return false;
-        if (updatedAt != null ? !updatedAt.equals(that.updatedAt) : that.updatedAt != null) return false;
-
-        return true;
+        if (!Objects.equals(id, that.id)) return false;
+        if (!Objects.equals(name, that.name)) return false;
+        if (!Objects.equals(displayName, that.displayName)) return false;
+        if (!Objects.equals(address, that.address)) return false;
+        if (!Objects.equals(phone, that.phone)) return false;
+        if (!Objects.equals(createdAt, that.createdAt)) return false;
+        if (!Objects.equals(updatedAt, that.updatedAt)) return false;
+        return Objects.equals(userOrganizations, that.userOrganizations);
     }
 
     @Override
@@ -121,6 +127,7 @@ public class Organization {
         result = 31 * result + (phone != null ? phone.hashCode() : 0);
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
         result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
+        result = 31 * result + (userOrganizations != null ? userOrganizations.hashCode() : 0);
         return result;
     }
 }

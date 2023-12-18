@@ -148,7 +148,19 @@ public class UserController {
 //    }
 
 
-    record JwtResponse(String token) {
+    @PutMapping("/users/{id}")
+    public User updateUser(@PathVariable UUID id, @RequestBody UserDTO userDTO) throws GendoxException {
+        User user = new User();
+        user = userConverter.toEntity(userDTO);
+
+        if (!id.equals(user.getId())) {
+            throw new GendoxException("User's_ID_MISMATCH", "User's ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
+        }
+
+        user = userService.updateUser(user);
+        return user;
+
+
     }
 
 }

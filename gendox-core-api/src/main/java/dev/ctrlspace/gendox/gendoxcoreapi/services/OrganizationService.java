@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationPredicates;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -25,14 +26,17 @@ public class OrganizationService {
     private UserOrganizationRepository userOrganizationRepository;
     private OrganizationRepository organizationRepository;
     private UserOrganizationService userOrganizationService;
+    private final UserRepository userRepository;
 
     @Autowired
     public OrganizationService(UserOrganizationRepository userOrganizationRepository,
                                OrganizationRepository organizationRepository,
-                               UserOrganizationService userOrganizationService) {
+                               UserOrganizationService userOrganizationService,
+                               UserRepository userRepository) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.organizationRepository = organizationRepository;
         this.userOrganizationService = userOrganizationService;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -99,13 +103,18 @@ public class OrganizationService {
 
     }
 
-    public void deleteOrganization(UUID id) throws Exception {
-        Organization organization = organizationRepository.findById(id).orElse(null);
+    public void deleteOrganization(UUID organizationId) throws Exception {
+        List<UserOrganization> userOrganizations = userOrganizationService.getUserOrganizationByOrganizationId(organizationId);
+        Organization organization = organizationRepository.findById(organizationId).orElse(null);
+
+        for(UserOrganization userOrganization: userOrganizations){
+            userOrganizationRepository.delete(userOrganization);
+        }
 
         if (organization != null) {
-            organizationRepository.deleteById(id);
+            organizationRepository.deleteById(organizationId);
         } else {
-            throw new GendoxException("ORGANIZATION_NOT_FOUND", "Organization not found with id: " + id, HttpStatus.NOT_FOUND);
+            throw new GendoxException("ORGANIZATION_NOT_FOUND", "Organization not found with id: " + organizationId, HttpStatus.NOT_FOUND);
         }
     }
 

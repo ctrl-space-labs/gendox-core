@@ -17,6 +17,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredic
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
+import io.swagger.models.auth.In;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -142,6 +143,28 @@ public class UserService implements UserDetailsService {
 
         user = userRepository.save(user);
         return user;
+
+    }
+
+    public User updateUser(User user) throws GendoxException{
+        Instant now = Instant.now();
+
+        User existingUser = this.getById(user.getId());
+        existingUser.setName(user.getName());
+        existingUser.setFirstName(user.getFirstName());
+        existingUser.setLastName(user.getLastName());
+        existingUser.setUserName(user.getUserName());
+        existingUser.setEmail(user.getEmail());
+        existingUser.setPhone(user.getPhone());
+        existingUser.setUserType(user.getUserType());
+        existingUser.setUpdatedAt(now);
+        existingUser.setUserOrganizations(user.getUserOrganizations());
+        existingUser.setProjectMembers(user.getProjectMembers());
+        user = userRepository.save(existingUser);
+
+        return user;
+
+
 
     }
 
