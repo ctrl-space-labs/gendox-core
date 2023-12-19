@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 
@@ -33,22 +34,18 @@ public class CompletionService {
 
     Logger logger = LoggerFactory.getLogger(CompletionService.class);
     private ProjectService projectService;
-
     private MessageAiMessageConverter messageAiMessageConverter;
     private EmbeddingService embeddingService;
     private ProjectAgentRepository projectAgentRepository;
     private TemplateRepository templateRepository;
     private TypeService typeService;
-
     private List<AiModelService> aiModelServices;
-
     private TrainingService trainingService;
 
     private AiModelUtils aiModelUtils;
     @Autowired
     public CompletionService(ProjectService projectService,
                              MessageAiMessageConverter messageAiMessageConverter,
-                             AiModelService aiModelService,
                              EmbeddingService embeddingService,
                              ProjectAgentRepository projectAgentRepository,
                              TemplateRepository templateRepository,
@@ -65,6 +62,7 @@ public class CompletionService {
         this.trainingService = trainingService;
         this.typeService = typeService;
         this.aiModelUtils = aiModelUtils;
+
     }
 
     private CompletionResponse getCompletionForMessages(List<Message> messages, String agentRole, String aiModel,
@@ -80,9 +78,9 @@ public class CompletionService {
             AiModelMessage aiModelMessage = messageAiMessageConverter.toDTO(message);
             aiModelMessages.add(aiModelMessage);
         }
+        //choose the correct aiModel adapter
         AiModelService aiModelService = aiModelUtils.getAiModelServiceImplementation(aiModel);
         CompletionResponse completionResponse = aiModelService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams);
-
         return completionResponse;
     }
 
@@ -147,8 +145,6 @@ public class CompletionService {
 
 
     }
-
-
 
 
 }

@@ -15,4 +15,7 @@ public class AiModelRequestParams {
     private Double temperature;
     private Double topP;
     private String model;
+    private String prompt;
+    private int k;
+
 }

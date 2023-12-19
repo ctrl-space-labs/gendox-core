@@ -1,5 +1,4 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
-
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35Moderation;
@@ -19,14 +18,16 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
-@Primary
 @Service
+
 public class OpenAiServiceAdapter implements AiModelService{
 
 
@@ -96,12 +97,12 @@ public class OpenAiServiceAdapter implements AiModelService{
 
 
     public EmbeddingResponse askEmbedding(BotRequest botRequest, String aiModelName) {
-
+        String message = botRequest.getMessages().get(0);
         OpenAiAda2Response openAiAda2Response = this.getEmbeddingResponse(OpenAiAda2Request.builder()
                 .model(aiModelName)
-                .input(botRequest.getMessage()).build());
+                .input(message).build());
 
-        EmbeddingResponse embeddingResponse = embeddingResponseConverter.toEmbeddingResponse(openAiAda2Response);
+        EmbeddingResponse embeddingResponse = embeddingResponseConverter.OpenAitoEmbeddingResponse(openAiAda2Response);
 
         return embeddingResponse;
 
@@ -120,13 +121,12 @@ public class OpenAiServiceAdapter implements AiModelService{
                 .maxTokens(aiModelRequestParams.getMaxTokens())
                 .messages(messages).build());
 
-        CompletionResponse completionResponse = completionResponseConverter.toCompletionResponse(openAiGptResponse);
+        CompletionResponse completionResponse = completionResponseConverter.OpenAitoCompletionResponse(openAiGptResponse);
 
         return completionResponse;
     }
 
 
-    @Override
     public OpenAiGpt35ModerationResponse moderationCheck(String message) {
         return getModerationResponse(Gpt35ModerationRequest.builder()
                 .input(message)

@@ -15,9 +15,6 @@ public class OpenAiAda2Request implements Serializable {
 
     private String model;
     private String input;
-    private Double temperature;
-    private Integer maxTokens;
-    private Double topP;
 
 }
 
