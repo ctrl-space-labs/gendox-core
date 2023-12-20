@@ -20,15 +20,12 @@ import java.util.UUID;
 public class DocumentService {
 
     private DocumentInstanceRepository documentInstanceRepository;
-    private SecurityUtils securityUtils;
     private DocumentSectionService documentSectionService;
 
     @Autowired
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
-                           SecurityUtils securityUtils,
                            DocumentSectionService documentSectionService) {
         this.documentInstanceRepository = documentInstanceRepository;
-        this.securityUtils = securityUtils;
         this.documentSectionService = documentSectionService;
     }
 
@@ -60,16 +57,13 @@ public class DocumentService {
 
 
     public DocumentInstance createDocumentInstance(DocumentInstance documentInstance) throws GendoxException {
-        Instant now = Instant.now();
+
 
         if (documentInstance.getId() == null) {
             documentInstance.setId(UUID.randomUUID());
         }
 
-        documentInstance.setCreatedAt(now);
-        documentInstance.setUpdatedAt(now);
-        documentInstance.setCreatedBy(securityUtils.getUserId());
-        documentInstance.setUpdatedBy(securityUtils.getUserId());
+
 
         // Save the DocumentInstance first to save its ID
         documentInstance = documentInstanceRepository.save(documentInstance);
@@ -88,6 +82,7 @@ public class DocumentService {
 
         existingDocument.setUpdatedBy(securityUtils.getUserId());
         existingDocument.setUpdatedAt(Instant.now());
+
 
         existingDocument = documentInstanceRepository.save(existingDocument);
 

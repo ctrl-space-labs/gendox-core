@@ -2,12 +2,18 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "project_agent", schema = "gendox_core")
 public class ProjectAgent {
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -41,15 +47,19 @@ public class ProjectAgent {
     private Boolean privateAgent;
     @Basic
     @Column(name = "created_at", nullable = true)
+    @CreatedDate
     private Instant createdAt;
     @Basic
     @Column(name = "updated_at", nullable = true)
+    @LastModifiedDate
     private Instant updatedAt;
     @Basic
     @Column(name = "created_by")
+    @CreatedBy
     private UUID createdBy;
     @Basic
     @Column(name = "updated_by")
+    @LastModifiedBy
     private UUID updatedBy;
     @ManyToOne
     @JoinColumn(name = "document_splitter_type", referencedColumnName = "id", nullable = false)
