@@ -31,14 +31,11 @@ public class ProjectDocumentService {
     }
 
     public ProjectDocument createProjectDocument(Project project, DocumentInstance documentInstance) {
-        Instant now = Instant.now();
 
         ProjectDocument projectDocument = new ProjectDocument();
 
         projectDocument.setProject(project);
         projectDocument.setDocumentId(documentInstance.getId());
-        projectDocument.setCreatedAt(now);
-        projectDocument.setUpdatedAt(now);
 
         projectDocument = projectDocumentRepository.save(projectDocument);
 

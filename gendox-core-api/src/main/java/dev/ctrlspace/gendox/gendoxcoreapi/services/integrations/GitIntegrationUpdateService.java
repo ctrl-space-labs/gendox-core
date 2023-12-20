@@ -100,7 +100,6 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
             if (shouldUpdateMap) {
                 logger.info("Update integration ");
                 integration.setDirectoryPath(directory.getPath());
-                integration.setUpdatedAt(Instant.now());
 
                 integration.setRepoHead(objectIdConverter.convertToDatabaseColumnString(git.getRepository().resolve("HEAD^{tree}")));
                 integration = integrationRepository.save(integration);

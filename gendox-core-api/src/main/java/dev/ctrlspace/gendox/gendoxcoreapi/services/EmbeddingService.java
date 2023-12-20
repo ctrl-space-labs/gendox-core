@@ -82,17 +82,12 @@ public class EmbeddingService {
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
-        Instant now = Instant.now();
-
 
         if (embedding.getId() != null) {
             throw new GendoxException("NEW_EMBEDDING_ID_IS_NOT_NULL", "Embedding id must be null", HttpStatus.BAD_REQUEST);
         }
         embedding.setId(UUID.randomUUID());
-        embedding.setCreatedAt(now);
-        embedding.setUpdatedAt(now);
-        embedding.setCreatedBy(securityUtils.getUserId());
-        embedding.setUpdatedBy(securityUtils.getUserId());
+
 
         embedding = embeddingRepository.save(embedding);
         return embedding;
@@ -121,14 +116,11 @@ public class EmbeddingService {
 
         if (optionalEmbeddingGroup.isPresent()) {
 
-
-            Instant now = Instant.now();
             EmbeddingGroup embeddingGroup = optionalEmbeddingGroup.get();
             embedding = embeddingRepository.findById(embeddingGroup.getEmbeddingId()).get();
 
             embedding.setEmbeddingVector(embeddingResponse.getData().get(0).getEmbedding());
-            embedding.setUpdatedBy(securityUtils.getUserId());
-            embedding.setUpdatedAt(now);
+
 
 
             embeddingGroup.setEmbeddingId(embedding.getId());
@@ -139,8 +131,7 @@ public class EmbeddingService {
             embeddingGroup.setSemanticSearchModelId(project.getProjectAgent().
                     getSemanticSearchModel().getId());
 
-            embeddingGroup.setUpdatedBy(securityUtils.getUserId());
-            embeddingGroup.setUpdatedAt(now);
+
 
 
             embeddingRepository.save(embedding);
@@ -178,10 +169,6 @@ public class EmbeddingService {
     public AuditLogs createAuditLogs(UUID projectId, Long tokenCount, Type auditType) {
         AuditLogs auditLog = new AuditLogs();
         auditLog.setUserId(securityUtils.getUserId());
-        auditLog.setCreatedAt(Instant.now());
-        auditLog.setUpdatedAt(Instant.now());
-        auditLog.setCreatedBy(securityUtils.getUserId());
-        auditLog.setUpdatedBy(securityUtils.getUserId());
         auditLog.setProjectId(projectId);
         auditLog.setTokenCount(tokenCount);
         auditLog.setType(auditType);
@@ -206,10 +193,7 @@ public class EmbeddingService {
         embeddingGroup.setSemanticSearchModelId(project.getProjectAgent().getSemanticSearchModel().getId());
         embeddingGroup.setMessageId(message_id);
 
-        embeddingGroup.setCreatedAt(Instant.now());
-        embeddingGroup.setUpdatedAt(Instant.now());
-        embeddingGroup.setCreatedBy(securityUtils.getUserId());
-        embeddingGroup.setUpdatedBy(securityUtils.getUserId());
+
 
         embeddingGroup = embeddingGroupRepository.save(embeddingGroup);
 
@@ -222,17 +206,14 @@ public class EmbeddingService {
         if (message.getThreadId() == null) {
             message.setThreadId(UUID.randomUUID());
         }
-        message.setCreatedAt(Instant.now());
-        message.setUpdatedAt(Instant.now());
+
 
         if (securityUtils.getUserId() == null) {
             ProjectAgent agent = projectAgentService.getAgentByProjectId(message.getProjectId());
             message.setCreatedBy(agent.getUserId());
             message.setUpdatedBy(agent.getUserId());
-        } else {
-            message.setCreatedBy(securityUtils.getUserId());
-            message.setUpdatedBy(securityUtils.getUserId());
         }
+
         message = messageRepository.save(message);
 
         return message;

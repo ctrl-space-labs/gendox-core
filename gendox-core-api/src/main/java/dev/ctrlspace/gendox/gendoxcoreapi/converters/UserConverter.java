@@ -24,7 +24,11 @@ public class UserConverter implements GendoxConverter<User, UserDTO> {
 
     @Override
     public User toEntity(UserDTO userDTO) {
-       User user = new User();
+        User user = new User();
+
+        if (userDTO.getId() != null) {
+            user.setId(userDTO.getId());
+        }
 
         user.setName(userDTO.getName());
         user.setFirstName(userDTO.getFirstName());

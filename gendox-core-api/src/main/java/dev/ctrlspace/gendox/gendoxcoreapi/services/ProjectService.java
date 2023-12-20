@@ -22,16 +22,14 @@ public class ProjectService {
 
     private ProjectRepository projectRepository;
     private ProjectMemberService projectMemberService;
-    private SecurityUtils securityUtils;
 
 
     @Autowired
     public ProjectService(ProjectRepository projectRepository,
-                          ProjectMemberService projectMemberService,
-                          SecurityUtils securityUtils) {
+                          ProjectMemberService projectMemberService) {
         this.projectRepository = projectRepository;
         this.projectMemberService = projectMemberService;
-        this.securityUtils = securityUtils;
+
     }
 
     public Project getProjectById(UUID id) throws GendoxException {
@@ -51,12 +49,6 @@ public class ProjectService {
     }
 
     public Project createProject(Project project) throws Exception {
-        Instant now = Instant.now();
-
-        project.setCreatedAt(now);
-        project.setUpdatedAt(now);
-        project.setCreatedBy(securityUtils.getUserId());
-        project.setUpdatedBy(securityUtils.getUserId());
 
         project = projectRepository.save(project);
 
@@ -71,8 +63,6 @@ public class ProjectService {
 
     public Project updateProject(Project project) throws GendoxException {
 
-        project.setUpdatedAt(Instant.now());
-        project.setUpdatedBy(securityUtils.getUserId());
         project = projectRepository.save(project);
 
         return project;
