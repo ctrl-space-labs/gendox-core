@@ -43,26 +43,9 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         ProjectAgent agent = new ProjectAgent();
         logger.debug("Start processing split: {}", item.getId());
 
-        try {
             String fileContent = splitFileService.readDocumentContent(item);
             agent = projectAgentService.getAgentByDocumentId(item.getId());
 
-            String splitterTypeName = agent.getDocumentSplitterType().getName();
-
-            DocumentSplitter documentSplitter = serviceSelector.getDocumentSplitterByName(splitterTypeName);
-            if (documentSplitter == null) {
-                throw new GendoxException("DOCUMENT_SPLITTER_NOT_FOUND", "Document splitter not found with name: " + splitterTypeName, HttpStatus.NOT_FOUND);
-            }
-
-            contentSections = documentSplitter.split(fileContent);
-
-
-        } catch (Exception e) {
-            logger.warn("Error {} split document to sections {}. Skipping...", e.getMessage(), item.getId());
-            return null;
-        }
-
-
-        return new DocumentSectionDTO(item, contentSections, agent);
+        return new DocumentSectionDTO(item, fileContent, agent);
     }
 }

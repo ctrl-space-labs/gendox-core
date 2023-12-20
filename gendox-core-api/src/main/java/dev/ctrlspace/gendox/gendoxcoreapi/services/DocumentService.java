@@ -84,10 +84,8 @@ public class DocumentService {
         // Update the properties of the existingDocument with the values from the updated document
         existingDocument.setDocumentTemplateId(documentInstance.getDocumentTemplateId());
         existingDocument.setRemoteUrl(documentInstance.getRemoteUrl());
-        // TODO update sections
-//        if (existingDocument.getDocumentInstanceSections() != null) {
-//            existingDocument.setDocumentInstanceSections(updateSections(documentInstance));
-//        }
+        existingDocument.setUpdatedBy(documentInstance.getUpdatedBy());
+
         existingDocument.setUpdatedBy(securityUtils.getUserId());
         existingDocument.setUpdatedAt(Instant.now());
 

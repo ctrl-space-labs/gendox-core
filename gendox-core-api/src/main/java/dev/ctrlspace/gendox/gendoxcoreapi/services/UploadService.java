@@ -28,15 +28,18 @@ public class UploadService {
 
     private DocumentService documentService;
     private ProjectDocumentService projectDocumentService;
+    private ProjectAgentService projectAgentService;
 
     @Autowired
     private ResourceLoader resourceLoader;
 
     @Autowired
     public UploadService(DocumentService documentService,
-                         ProjectDocumentService projectDocumentService) {
+                         ProjectDocumentService projectDocumentService,
+                         ProjectAgentService projectAgentService) {
         this.documentService = documentService;
         this.projectDocumentService = projectDocumentService;
+        this.projectAgentService = projectAgentService;
     }
 
 
@@ -45,26 +48,31 @@ public class UploadService {
         DocumentInstance instance =
                 documentService.getDocumentByFileName(projectId, organizationId, fileName);
 
+        // find agent's userID
+        UUID userId = projectAgentService.getAgentByProjectId(projectId).getUserId();
+
 
         if (instance == null) {
             DocumentInstance documentInstance = new DocumentInstance();
             // Generate a unique UUID
             UUID documentInstanceId = UUID.randomUUID();
-            String fullFilePath = saveFile(file, organizationId);
+            String fullFilePath = saveFile(file, organizationId, projectId);
 
             documentInstance.setId(documentInstanceId);
             documentInstance.setOrganizationId(organizationId);
             documentInstance.setRemoteUrl(fullFilePath);
+            documentInstance.setCreatedBy(userId);
+            documentInstance.setUpdatedBy(userId);
             documentInstance = documentService.createDocumentInstance(documentInstance);
             // create project document
             ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, documentInstance.getId());
             return documentInstance;
 
         } else {
-            String fullFilePath = saveFile(file, organizationId);
+            String fullFilePath = saveFile(file, organizationId, projectId);
             instance.setRemoteUrl(fullFilePath);
+            instance.setUpdatedBy(userId);
             instance = documentService.updateDocument(instance);
-            instance = documentService.createDocumentInstance(instance);
         }
 
 
@@ -80,11 +88,12 @@ public class UploadService {
      * @return
      * @throws IOException
      */
-    private String saveFile(MultipartFile file, UUID organizationId) throws IOException {
+    private String saveFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException {
         String fileName = file.getOriginalFilename();
 //        String uniqueFileName = documentInstanceId.toString() + "_" + fileName;
 
-        String filePathPrefix = calculateFilePathPrefix(organizationId);
+//        String filePathPrefix = calculateFilePathPrefix(organizationId);
+        String filePathPrefix = organizationId + "/" + projectId;
         String fullFilePath = uploadDir + "/" + filePathPrefix + "/" + fileName;
 
         createLocalFileDirectory(filePathPrefix);
