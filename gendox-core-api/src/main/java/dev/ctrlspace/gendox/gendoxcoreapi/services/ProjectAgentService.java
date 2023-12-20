@@ -33,7 +33,6 @@ public class ProjectAgentService {
     private ProjectAgentRepository projectAgentRepository;
     private TypeService typeService;
     private TemplateRepository templateRepository;
-    private SecurityUtils securityUtils;
     private UserService userService;
 
     private AiModelRepository aiModelRepository;
@@ -42,13 +41,11 @@ public class ProjectAgentService {
     public ProjectAgentService(ProjectAgentRepository projectAgentRepository,
                                TypeService typeService,
                                TemplateRepository templateRepository,
-                               SecurityUtils securityUtils,
                                UserService userService,
                                AiModelRepository aiModelRepository) {
         this.projectAgentRepository = projectAgentRepository;
         this.typeService = typeService;
         this.templateRepository = templateRepository;
-        this.securityUtils = securityUtils;
         this.userService = userService;
         this.aiModelRepository = aiModelRepository;
 
@@ -64,17 +61,11 @@ public class ProjectAgentService {
     }
 
     public ProjectAgent createProjectAgent(ProjectAgent projectAgent) throws Exception {
-        Instant now = Instant.now();
-
         if (projectAgent.getId() != null) {
             throw new GendoxException("NEW_PROJECT_AGENT_ID_IS_NOT_NULL", "Project - Agent id must be null", HttpStatus.BAD_REQUEST);
 
         }
 
-        projectAgent.setCreatedAt(now);
-        projectAgent.setUpdatedAt(now);
-        projectAgent.setCreatedBy(securityUtils.getUserId());
-        projectAgent.setUpdatedBy(securityUtils.getUserId());
         if (projectAgent.getChatTemplateId() == null) {
             projectAgent.setChatTemplateId(templateRepository.findIdByIsDefaultTrueAndTemplateTypeName("CHAT_TEMPLATE"));
         }
@@ -124,7 +115,6 @@ public class ProjectAgentService {
         existingProjectAgent.setAgentBehavior(projectAgent.getAgentBehavior());
         existingProjectAgent.setPrivateAgent(projectAgent.getPrivateAgent());
         existingProjectAgent.setCreatedAt(projectAgent.getCreatedAt());
-        existingProjectAgent.setUpdatedAt(Instant.now());
 
         existingProjectAgent = projectAgentRepository.save(existingProjectAgent);
         return existingProjectAgent;

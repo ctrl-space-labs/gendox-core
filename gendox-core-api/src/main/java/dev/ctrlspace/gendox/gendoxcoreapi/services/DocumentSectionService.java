@@ -35,6 +35,7 @@ public class DocumentSectionService {
     private SecurityUtils securityUtils;
 
 
+
     @Lazy
     @Autowired
     public void setEmbeddingService(EmbeddingService embeddingService) {
@@ -55,7 +56,6 @@ public class DocumentSectionService {
         this.trainingService = trainingService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.documentSectionMetadataRepository = documentSectionMetadataRepository;
-        this.securityUtils = securityUtils;
     }
 
 
@@ -136,10 +136,7 @@ public class DocumentSectionService {
         section.setDocumentSectionMetadata(metadata);
         section.setSectionValue(fileContent);
         section.setDocumentInstance(documentInstance);
-        section.setCreatedAt(Instant.now());
-        section.setUpdatedAt(Instant.now());
-        section.setCreatedBy(securityUtils.getUserId());
-        section.setUpdatedBy(securityUtils.getUserId());
+
 
         // take moderation check
         OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
@@ -162,10 +159,6 @@ public class DocumentSectionService {
             throw new GendoxException("SECTION_TYPE_ID_AND_SECTION_ORDER_MUST_NOT_NULL", " SectionTypeId and SectionOrder must not be null", HttpStatus.BAD_REQUEST);
         }
 
-        metadata.setCreatedAt(Instant.now());
-        metadata.setUpdatedAt(Instant.now());
-        metadata.setCreatedBy(securityUtils.getUserId());
-        metadata.setUpdatedBy(securityUtils.getUserId());
         metadata = documentSectionMetadataRepository.save(metadata);
 
         return metadata;
@@ -190,8 +183,6 @@ public class DocumentSectionService {
         DocumentInstanceSection existingSection = this.getSectionById(sectionId);
 
         existingSection.setSectionValue(section.getSectionValue());
-        existingSection.setUpdatedBy(securityUtils.getUserId());
-        existingSection.setUpdatedAt(Instant.now());
 
         // Check if documentInstance.documentTemplateId is empty/null before updating metadata
         if (section.getDocumentInstance().getDocumentTemplateId() == null) {
@@ -215,8 +206,7 @@ public class DocumentSectionService {
         existingMetadata.setDescription(metadata.getDescription());
         existingMetadata.setSectionOptions(metadata.getSectionOptions());
         existingMetadata.setSectionOrder(metadata.getSectionOrder());
-        existingMetadata.setUpdatedBy(securityUtils.getUserId());
-        existingMetadata.setUpdatedAt(Instant.now());
+
 
         existingMetadata = documentSectionMetadataRepository.save(existingMetadata);
 
