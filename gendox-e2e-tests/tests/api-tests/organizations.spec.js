@@ -23,7 +23,6 @@ test.describe('Organizations CRUD API', () => {
     test('Get Organization by id', async ({ page, request }) => {
 
 
-
         const response = await organizations.getOrganizationById(request, token, 'b76b59a3-eea4-476f-9d4b-f178ecf7eb86');
 
         expect(response.ok()).toBeTruthy();
@@ -41,7 +40,6 @@ test.describe('Organizations CRUD API', () => {
 
 
         await page.pause();
-        // https://gendox.ctrlspace.dev/gendox/api/v1/organizations/b76b59a3-eea4-476f-9d4b-f178ecf7eb86/users
         const response = await organizationUsers.getOrganizationUsersByOrgId(request, token, 'b76b59a3-eea4-476f-9d4b-f178ecf7eb86')
 
         expect(response.ok()).toBeTruthy();
