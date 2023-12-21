@@ -160,10 +160,12 @@ public class OrganizationController {
                     The only requered field is the {user.id, organization.id role.name}
                     All the other fields will be ignored.
                     """)
-    @PostMapping(value = "/organizations/{id}/users", consumes = {"application/json"})
-    public UserOrganization addUserToOrganization(@PathVariable UUID id, @RequestBody UserOrganizationDTO userOrganizationDTO, Authentication authentication) throws Exception {
+    @PostMapping(value = "/organizations/{organizationId}/users", consumes = {"application/json"})
+    public UserOrganization addUserToOrganization(@PathVariable UUID organizationId, @RequestBody UserOrganizationDTO userOrganizationDTO) throws Exception {
 
-        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
+        if (!organizationId.equals(userOrganizationDTO.getOrganization().getId())) {
+            throw new GendoxException("ORGANIZATION_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
+        }
 
         return userOrganizationService.createUserOrganization(
                 userOrganizationDTO.getUser().getId(),
