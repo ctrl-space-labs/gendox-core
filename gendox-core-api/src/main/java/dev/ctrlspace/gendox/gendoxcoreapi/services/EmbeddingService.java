@@ -216,9 +216,8 @@ public class EmbeddingService {
     }
 
     public void deleteEmbeddings(List<Embedding> embeddings) throws GendoxException {
-        for (Embedding embedding : embeddings) {
-            this.deleteEmbedding(embedding.getId());
-        }
+        embeddingRepository.deleteAll(embeddings);
+
     }
 
     public void deleteEmbedding(UUID embeddingId) throws GendoxException {
@@ -232,11 +231,11 @@ public class EmbeddingService {
     public void deleteEmbeddingGroupsBySection(UUID sectionId) throws GendoxException {
         List<EmbeddingGroup> embeddingGroups = embeddingGroupRepository.findBySectionId(sectionId);
 
-        for (EmbeddingGroup embeddingGroup : embeddingGroups) {
-            UUID embeddingId = embeddingGroup.getEmbeddingId();
-            deleteEmbeddingGroup(embeddingGroup.getId());
-            deleteEmbedding(embeddingId);
-        }
+        List<UUID> embeddingGroupIds = embeddingGroups.stream().map(emb -> emb.getId()).collect(Collectors.toList());
+        List<UUID> embeddingIds = embeddingGroups.stream().map(emb -> emb.getEmbeddingId()).collect(Collectors.toList());
+
+        embeddingGroupRepository.deleteAllById(embeddingGroupIds);
+        embeddingRepository.deleteAllById(embeddingIds);
     }
 
     /**
