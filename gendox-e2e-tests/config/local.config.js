@@ -4,9 +4,10 @@
 const localConfig = {
 
     use: {
-        baseURL: 'http://localhost:8080/gendox/api/v1',
+        baseURL: 'http://localhost:8080',
     },
     gendox: {
+        contextPath: '/gendox/api/v1',
         simpleUser: {
             username: 'simple-user@test.com',
             password: '123456789'
