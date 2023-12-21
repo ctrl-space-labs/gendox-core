@@ -1,34 +1,32 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35Moderation;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPTConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.CompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.EmbeddingResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 @Service
 
-public class OpenAiServiceAdapter implements AiModelService{
+public class OpenAiServiceAdapter implements AiModelService {
 
 
     private Set<String> supportedModels = Set.of("gpt-4", "gpt-3.5-turbo", "text-embedding-ada-002","openai-moderation");
@@ -39,17 +37,17 @@ public class OpenAiServiceAdapter implements AiModelService{
 
     private AiModelRepository aiModelRepository;
 
-    private  CompletionResponseConverter completionResponseConverter;
+    private OpenAiCompletionResponseConverter openAiCompletionResponseConverter;
 
     private EmbeddingResponseConverter embeddingResponseConverter;
 
     @Autowired
     public OpenAiServiceAdapter(AiModelRepository aiModelRepository,
-                                CompletionResponseConverter completionResponseConverter,
+                                OpenAiCompletionResponseConverter openAiCompletionResponseConverter,
                                 EmbeddingResponseConverter embeddingResponseConverter){
         this.aiModelRepository = aiModelRepository;
         this.embeddingResponseConverter = embeddingResponseConverter;
-        this.completionResponseConverter = completionResponseConverter;
+        this.openAiCompletionResponseConverter = openAiCompletionResponseConverter;
     }
     private static final RestTemplate restTemplate = new RestTemplate();
 
@@ -121,7 +119,7 @@ public class OpenAiServiceAdapter implements AiModelService{
                 .maxTokens(aiModelRequestParams.getMaxTokens())
                 .messages(messages).build());
 
-        CompletionResponse completionResponse = completionResponseConverter.OpenAitoCompletionResponse(openAiGptResponse);
+        CompletionResponse completionResponse = openAiCompletionResponseConverter.toCompletionResponse(openAiGptResponse);
 
         return completionResponse;
     }

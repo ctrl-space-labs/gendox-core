@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response;
 
 
 import lombok.AllArgsConstructor;

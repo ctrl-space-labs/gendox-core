@@ -1,8 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.BotRequest;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.BotRequest;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.AiModelEmbeddingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;

@@ -1,12 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelMessage;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelRequestParams;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.CompletionResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelRequestParams;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.CompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.CohereAiServiceAdapter;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.OpenAiServiceAdapter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -18,12 +16,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAut
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 
@@ -105,9 +101,10 @@ public class CompletionService {
                 .topP(project.getProjectAgent().getTopP())
                 .build();
 
-        CompletionResponse completionResponse = getCompletionForMessages(List.of(promptMessage), project.getProjectAgent().
-                                                               getAgentBehavior(),project.getProjectAgent().
-                                                               getCompletionModel().getModel(), aiModelRequestParams);
+        CompletionResponse completionResponse = getCompletionForMessages(List.of(promptMessage),
+                project.getProjectAgent().getAgentBehavior(),
+                project.getProjectAgent().getCompletionModel().getModel(),
+                aiModelRequestParams);
 
         Type completionType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
         // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)

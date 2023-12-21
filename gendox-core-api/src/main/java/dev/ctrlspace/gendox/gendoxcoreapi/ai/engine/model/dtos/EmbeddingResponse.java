@@ -1,5 +1,7 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingData;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Usage;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
