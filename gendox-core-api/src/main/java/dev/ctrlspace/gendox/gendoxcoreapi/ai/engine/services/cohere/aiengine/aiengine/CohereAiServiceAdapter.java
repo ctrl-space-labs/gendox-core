@@ -1,9 +1,15 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.cohere.aiengine.aiengine;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.request.CohereCommandRequest;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.request.CohereEmbedMultilingualRequest;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereCommandResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereEmbedMultilingualResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.Gpt35ModerationRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.CohereConfig;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.CompletionResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.CohereCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.EmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import org.apache.logging.log4j.util.Strings;
@@ -23,7 +29,7 @@ import java.util.List;
 import java.util.Set;
 
 @Service
-public class CohereAiServiceAdapter implements AiModelService{
+public class CohereAiServiceAdapter implements AiModelService {
 
     Logger logger = LoggerFactory.getLogger(CohereAiServiceAdapter.class);
 
@@ -31,7 +37,7 @@ public class CohereAiServiceAdapter implements AiModelService{
 
     private AiModelRepository aiModelRepository;
 
-    private  CompletionResponseConverter completionResponseConverter;
+    private CohereCompletionResponseConverter cohereCompletionResponseConverter;
 
     private EmbeddingResponseConverter embeddingResponseConverter;
     @Value("${gendox.models.cohere.key}")
@@ -40,11 +46,11 @@ public class CohereAiServiceAdapter implements AiModelService{
 
     @Autowired
     public CohereAiServiceAdapter(AiModelRepository aiModelRepository,
-                                CompletionResponseConverter completionResponseConverter,
+                                  CohereCompletionResponseConverter cohereCompletionResponseConverter,
                                 EmbeddingResponseConverter embeddingResponseConverter){
         this.aiModelRepository = aiModelRepository;
         this.embeddingResponseConverter = embeddingResponseConverter;
-        this.completionResponseConverter = completionResponseConverter;
+        this.cohereCompletionResponseConverter = cohereCompletionResponseConverter;
     }
 
     private static final RestTemplate restTemplate = new RestTemplate();
@@ -78,7 +84,7 @@ public class CohereAiServiceAdapter implements AiModelService{
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader()),
                 CohereCommandResponse.class);
         logger.info("Received completion Response from Cohere. Tokens billed: {}",
-                responseEntity.getBody().getCohereBilledUnits().getInputTokens(), responseEntity.getBody().getCohereBilledUnits().getOutputTokens());
+                responseEntity.getBody().getMeta().getBilledUnits().getInputTokens() + responseEntity.getBody().getMeta().getBilledUnits().getOutputTokens());
 
         return responseEntity.getBody();
     }
@@ -98,20 +104,20 @@ public class CohereAiServiceAdapter implements AiModelService{
 
     }
 
-
     @Override
     public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, String aiModelName, AiModelRequestParams aiModelRequestParams) {
-        List<String> messageContents = extractMessageContents(messages);
-        String inputString = Strings.isNotEmpty(agentRole) ? "system " + agentRole + " " + String.join(" ", messageContents) : String.join(" ", messageContents);
 
 
+        AiModelMessage message = messages.get(0);
+        StringBuilder sb = new StringBuilder();
 
-            if (Strings.isNotEmpty(agentRole)) {
-            messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
+        sb.append(message.getRole())
+                .append("\n\n")
+                .append(message.getContent());
 
-        }
+        String inputString = sb.toString();
 
-            CohereCommandResponse cohereCommandResponse = this.getCompletionResponse(CohereCommandRequest.builder()
+        CohereCommandResponse cohereCommandResponse = this.getCompletionResponse(CohereCommandRequest.builder()
                 .model(aiModelName)
                 .temperature(aiModelRequestParams.getTemperature())
                 .topP(aiModelRequestParams.getTopP())
@@ -119,18 +125,11 @@ public class CohereAiServiceAdapter implements AiModelService{
                 .maxTokens(aiModelRequestParams.getMaxTokens())
                 .prompt(inputString).build());
 
-        CompletionResponse completionResponse = completionResponseConverter.coheretoCompletionResponse(cohereCommandResponse);
+        CompletionResponse completionResponse = cohereCompletionResponseConverter.toCompletionResponse(cohereCommandResponse);
 
         return completionResponse;
     }
 
-    private List<String> extractMessageContents(List<AiModelMessage> messages) {
-        List<String> messageContents = new ArrayList<>();
-        for (AiModelMessage message : messages) {
-            messageContents.add(message.getContent());
-        }
-        return messageContents;
-    }
     @Override
     public OpenAiGpt35ModerationResponse moderationCheck(String message) {
         return null;

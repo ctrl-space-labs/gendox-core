@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,7 +13,6 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 public class BotRequest implements Serializable {
-//    private String message;
     private List<String> messages;
 }
 

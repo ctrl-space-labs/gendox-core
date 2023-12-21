@@ -1,8 +1,6 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelMessage;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelRequestParams;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.BotRequest;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
@@ -43,7 +41,7 @@ public class MockAiServiceAdapter {
     }
 
     public CompletionResponse askCompletion(List<Message> messages, String agentRole, String aiModelName,
-                                           AiModelRequestParams aiModelRequestParams) {
+                                            AiModelRequestParams aiModelRequestParams) {
         return CompletionResponse.builder()
                 .model(aiModelName)
                 .topP(aiModelRequestParams.getTopP())

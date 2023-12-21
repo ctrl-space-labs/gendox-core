@@ -1,6 +1,5 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelMessage;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,11 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CohereEmbedMultilingualResponse {
-//    private List<AiModelMessage> texts;
-//    private List<String> texts;
-//    private List<EmbeddingData> data;
-//    private String model;
-//    private BilledUnits billedUnits;
+
     private String id;
     private List<String> texts;
     private List<List<Double>> embeddings;
