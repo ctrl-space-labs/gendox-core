@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.SplitFileService;
@@ -39,6 +40,7 @@ public class DocumentController {
     private UploadService uploadService;
     private SplitFileService splitFileService;
     private DocumentSectionService documentSectionService;
+    private final DocumentInstanceSectionRepository documentInstanceSectionRepository;
 
 
     @Autowired
@@ -47,13 +49,15 @@ public class DocumentController {
                               DocumentConverter documentConverter,
                               UploadService uploadService,
                               SplitFileService splitFileService,
-                              DocumentSectionService documentSectionService) {
+                              DocumentSectionService documentSectionService,
+                              DocumentInstanceSectionRepository documentInstanceSectionRepository) {
         this.documentService = documentService;
         this.documentOnlyConverter = documentOnlyConverter;
         this.documentConverter = documentConverter;
         this.uploadService = uploadService;
         this.splitFileService = splitFileService;
         this.documentSectionService = documentSectionService;
+        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
     }
 
     @GetMapping("/documents/{id}")
@@ -173,7 +177,15 @@ public class DocumentController {
     public List<DocumentInstanceSection> handleFileSplitter(@Valid DocumentCriteria criteria) throws IOException, GendoxException {
         List<DocumentInstanceSection> documentInstanceSections = new ArrayList<>();
 
-        documentInstanceSections = splitFileService.splitDocuments(criteria);
+        Map<DocumentInstance, List<String>> contentSections = splitFileService.splitDocuments(criteria);
+        for (Map.Entry<DocumentInstance, List<String>> entry : contentSections.entrySet()) {
+            DocumentInstance documentInstance = entry.getKey();
+            List<String> sectionContent = entry.getValue();
+
+            List<DocumentInstanceSection> sections = documentSectionService.createSections(documentInstance, sectionContent);
+            documentInstanceSections.addAll(sections);
+        }
+
         return documentInstanceSections;
     }
 

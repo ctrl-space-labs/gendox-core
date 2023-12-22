@@ -5,5 +5,5 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 
 import java.util.List;
 
-public record DocumentSectionDTO(DocumentInstance documentInstance, String content, ProjectAgent agent) {
+public record DocumentSectionDTO(DocumentInstance documentInstance, List<String> contentSections) {
 }

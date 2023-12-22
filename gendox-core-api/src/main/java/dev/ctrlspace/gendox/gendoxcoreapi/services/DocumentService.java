@@ -80,7 +80,6 @@ public class DocumentService {
         existingDocument.setRemoteUrl(documentInstance.getRemoteUrl());
         existingDocument.setUpdatedBy(documentInstance.getUpdatedBy());
 
-        existingDocument.setUpdatedBy(securityUtils.getUserId());
         existingDocument.setUpdatedAt(Instant.now());
 
 
