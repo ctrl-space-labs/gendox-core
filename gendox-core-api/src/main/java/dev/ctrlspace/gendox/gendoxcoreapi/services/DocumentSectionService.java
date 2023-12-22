@@ -26,7 +26,6 @@ public class DocumentSectionService {
 
 
     private TypeService typeService;
-    private ServiceSelector serviceSelector;
     private ProjectAgentRepository projectAgentRepository;
     private TrainingService trainingService;
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
@@ -44,14 +43,12 @@ public class DocumentSectionService {
 
     @Autowired
     public DocumentSectionService(TypeService typeService,
-                                  ServiceSelector serviceSelector,
                                   ProjectAgentRepository projectAgentRepository,
                                   TrainingService trainingService,
                                   DocumentInstanceSectionRepository documentInstanceSectionRepository,
                                   DocumentSectionMetadataRepository documentSectionMetadataRepository,
                                   SecurityUtils securityUtils) {
         this.typeService = typeService;
-        this.serviceSelector = serviceSelector;
         this.projectAgentRepository = projectAgentRepository;
         this.trainingService = trainingService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
@@ -96,31 +93,16 @@ public class DocumentSectionService {
         return documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
     }
 
-
-    public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance, String fileContent, UUID agentId) throws GendoxException {
+    public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance, List<String> contentSections) throws GendoxException{
         // if the document instance already has sections in the database, delete it
         this.deleteDocumentSections(documentInstance.getId());
-
         List<DocumentInstanceSection> sections = new ArrayList<>();
-        // take the splitters type from Agent
-        ProjectAgent agent = projectAgentRepository.findById(agentId)
-                .orElseThrow(() -> new GendoxException("PROJECT_AGENT_NOT_FOUND", "Project's Agent not found with id: " + agentId, HttpStatus.NOT_FOUND));
-        String splitterTypeName = agent.getDocumentSplitterType().getName();
-
-        DocumentSplitter documentSplitter = serviceSelector.getDocumentSplitterByName(splitterTypeName);
-        if (documentSplitter == null) {
-            throw new GendoxException("DOCUMENT_SPLITTER_NOT_FOUND", "Document splitter not found with name: " + splitterTypeName, HttpStatus.NOT_FOUND);
-        }
-
-        List<String> contentSections = documentSplitter.split(fileContent);
-
         Integer sectionOrder = 0;
         for (String contentSection : contentSections) {
             sectionOrder++;
             DocumentInstanceSection section = createSection(documentInstance, contentSection, sectionOrder);
             sections.add(section);
         }
-
 
         return sections;
     }
@@ -136,7 +118,6 @@ public class DocumentSectionService {
         section.setDocumentSectionMetadata(metadata);
         section.setSectionValue(fileContent);
         section.setDocumentInstance(documentInstance);
-
 
         // take moderation check
         OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());

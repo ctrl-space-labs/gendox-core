@@ -33,10 +33,9 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
 
         for (DocumentSectionDTO documentSectionDTO : chunk.getItems()) {
 
-            List<DocumentInstanceSection> documentSections =
-                    documentSectionService.createSections(documentSectionDTO.documentInstance(), documentSectionDTO.content(), documentSectionDTO.agent().getId());
+                List<DocumentInstanceSection> documentSections =
+                        documentSectionService.createSections(documentSectionDTO.documentInstance(), documentSectionDTO.contentSections());
+
         }
-
-
     }
 }
