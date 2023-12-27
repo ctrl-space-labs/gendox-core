@@ -2,7 +2,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiAda2Response;
+import org.springframework.stereotype.Component;
 
+@Component
 public class OpenAiEmbeddingResponseConverter {
     public EmbeddingResponse openAitoEmbeddingResponse(OpenAiAda2Response openAiAda2Response) {
         EmbeddingResponse embeddingResponse = EmbeddingResponse.builder()
