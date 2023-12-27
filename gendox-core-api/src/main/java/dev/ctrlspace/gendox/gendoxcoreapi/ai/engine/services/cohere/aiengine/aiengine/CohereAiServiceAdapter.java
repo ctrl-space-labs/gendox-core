@@ -10,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.CohereConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.CohereCompletionResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.CohereEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.EmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import org.apache.logging.log4j.util.Strings;
@@ -39,7 +40,7 @@ public class CohereAiServiceAdapter implements AiModelService {
 
     private CohereCompletionResponseConverter cohereCompletionResponseConverter;
 
-    private EmbeddingResponseConverter embeddingResponseConverter;
+    private CohereEmbeddingResponseConverter cohereEmbeddingResponseConverter;
     @Value("${gendox.models.cohere.key}")
     private String coherekey;
 
@@ -49,7 +50,7 @@ public class CohereAiServiceAdapter implements AiModelService {
                                   CohereCompletionResponseConverter cohereCompletionResponseConverter,
                                 EmbeddingResponseConverter embeddingResponseConverter){
         this.aiModelRepository = aiModelRepository;
-        this.embeddingResponseConverter = embeddingResponseConverter;
+        this.cohereEmbeddingResponseConverter = cohereEmbeddingResponseConverter;
         this.cohereCompletionResponseConverter = cohereCompletionResponseConverter;
     }
 
@@ -98,7 +99,7 @@ public class CohereAiServiceAdapter implements AiModelService {
                 .input_type("search_query")
                 .build());
 
-        EmbeddingResponse embeddingResponse = embeddingResponseConverter.coheretoEmbeddingResponse(cohereEmbedMultilingualResponse, aiModelName);
+        EmbeddingResponse embeddingResponse = cohereEmbeddingResponseConverter.coheretoEmbeddingResponse(cohereEmbedMultilingualResponse, aiModelName);
 
         return embeddingResponse;
 
