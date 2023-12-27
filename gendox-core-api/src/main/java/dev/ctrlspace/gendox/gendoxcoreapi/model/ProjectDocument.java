@@ -3,12 +3,16 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "project_documents", schema = "gendox_core")
 public class ProjectDocument {
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -24,9 +28,11 @@ public class ProjectDocument {
     private UUID documentId;
     @Basic
     @Column(name = "created_at", nullable = true)
+    @CreatedDate
     private Instant createdAt;
     @Basic
     @Column(name = "updated_at", nullable = true)
+    @LastModifiedDate
     private Instant updatedAt;
 
     public UUID getId() {

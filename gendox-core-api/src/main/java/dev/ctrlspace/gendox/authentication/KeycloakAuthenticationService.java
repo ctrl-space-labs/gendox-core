@@ -6,6 +6,7 @@ import com.nimbusds.jwt.JWTParser;
 import com.nimbusds.jwt.SignedJWT;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import jakarta.ws.rs.core.Response;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.CreatedResponseUtil;
@@ -30,6 +31,7 @@ import java.text.ParseException;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 
 @Component
 public class KeycloakAuthenticationService implements AuthenticationService {
@@ -51,6 +53,7 @@ public class KeycloakAuthenticationService implements AuthenticationService {
     private Keycloak keycloakClient;
 
 
+
     public KeycloakAuthenticationService(@Value("${keycloak.base-url}") String keycloakServerUrl,
                                          @Value("${keycloak.token-uri}") String keycloakTokenUrl,
                                          @Value("${keycloak.realm}") String realm,
@@ -70,6 +73,7 @@ public class KeycloakAuthenticationService implements AuthenticationService {
                 .clientId(clientId)
                 .clientSecret(clientSecret)
                 .build();
+
     }
 
     @Override
@@ -143,8 +147,9 @@ public class KeycloakAuthenticationService implements AuthenticationService {
             }
         }
     }
+
     @Override
-    public String createUser(User user, @Nullable String password, boolean emailVerified, boolean tempPassword) throws GendoxException {
+    public String createUser(User user, @Nullable String password, Boolean emailVerified, Boolean tempPassword) throws GendoxException {
         String username = user.getEmail();
         if (username == null) {
             username = user.getUserName();
@@ -190,4 +195,17 @@ public class KeycloakAuthenticationService implements AuthenticationService {
 
         return userId;
     }
+
+
+
+    @Override
+    public Optional<UserRepresentation> getUsersByUsername(String userName) {
+        return keycloakClient.realm(realm)
+                .users()
+                .searchByUsername(userName, true)
+                .stream()
+                .findFirst();
+    }
+
+
 }

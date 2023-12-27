@@ -2,6 +2,11 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.List;
@@ -9,6 +14,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "document_instance", schema = "gendox_core")
 public class DocumentInstance {
     //@GeneratedValue(strategy = GenerationType.UUID)
@@ -27,15 +33,19 @@ public class DocumentInstance {
     private String remoteUrl;
     @Basic
     @Column(name="created_by", nullable = true)
+    @CreatedBy
     private UUID createdBy;
     @Basic
     @Column(name="updated_by", nullable = true)
+    @LastModifiedBy
     private UUID updatedBy;
     @Basic
     @Column(name = "created_at", nullable = true)
+    @CreatedDate
     private Instant createdAt;
     @Basic
     @Column(name = "updated_at", nullable = true)
+    @LastModifiedDate
     private Instant updatedAt;
 
     @JsonManagedReference(value = "DocumentInstanceSection")

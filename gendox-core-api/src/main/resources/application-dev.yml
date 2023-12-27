@@ -159,6 +159,6 @@ cloud:
 discord:
   bots:
     gendox-bot:
-      token: ${DISCORD_TOKEN}
+      token: ${DISCORD_TOKEN:default-token}
   server:
     group-name: gendox-agents
