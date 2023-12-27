@@ -48,7 +48,7 @@ public class CohereAiServiceAdapter implements AiModelService {
     @Autowired
     public CohereAiServiceAdapter(AiModelRepository aiModelRepository,
                                   CohereCompletionResponseConverter cohereCompletionResponseConverter,
-                                EmbeddingResponseConverter embeddingResponseConverter){
+                                  CohereEmbeddingResponseConverter cohereEmbeddingResponseConverter){
         this.aiModelRepository = aiModelRepository;
         this.cohereEmbeddingResponseConverter = cohereEmbeddingResponseConverter;
         this.cohereCompletionResponseConverter = cohereCompletionResponseConverter;
