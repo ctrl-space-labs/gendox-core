@@ -2,12 +2,16 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "user_organization", schema = "gendox_core")
 public class UserOrganization {
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -20,18 +24,21 @@ public class UserOrganization {
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     private User user;
 
-    @JsonManagedReference(value = "organization")
+    @JsonManagedReference(value = "organizationUser")
     @ManyToOne
     @JoinColumn(name = "organization_id", referencedColumnName = "id", nullable = false)
     private Organization organization;
+
     @ManyToOne
     @JoinColumn(name = "organization_role_id", referencedColumnName = "id", nullable = false)
     private Type role;
     @Basic
     @Column(name = "created_at", nullable = true)
+    @CreatedDate
     private Instant createdAt;
     @Basic
     @Column(name = "updated_at", nullable = true)
+    @LastModifiedDate
     private Instant updatedAt;
 
     public UUID getId() {
@@ -54,9 +61,6 @@ public class UserOrganization {
         return organization;
     }
 
-    public void setOrganizationId(Organization organization) {
-        this.organization = organization;
-    }
 
     public Type getRole() {
         return role;
@@ -81,6 +85,12 @@ public class UserOrganization {
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public void setOrganization(Organization organization) {
+        this.organization = organization;
+    }
+
+
 
     @Override
     public boolean equals(Object o) {
