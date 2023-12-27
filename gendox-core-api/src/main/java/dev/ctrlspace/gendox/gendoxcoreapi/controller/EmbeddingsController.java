@@ -1,11 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.BotRequest;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiAda2Response;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.BotRequest;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.OpenAiServiceAdapter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
@@ -37,28 +34,19 @@ public class EmbeddingsController {
     private CompletionService completionService;
 
     private AiModelRepository aiModelRepository;
-    private OpenAiServiceAdapter openAiServiceAdapter;
-
-
-
-    @Autowired
-    private AiModelService aiModelService;
-
 
     @Autowired
     public EmbeddingsController(EmbeddingRepository embeddingRepository,
                                 EmbeddingService embeddingService,
                                 TrainingService trainingService,
                                 CompletionService completionService,
-                                AiModelRepository aiModelRepository,
-                                OpenAiServiceAdapter openAiServiceAdapter) {
+                                AiModelRepository aiModelRepository
+                                ) {
         this.embeddingRepository = embeddingRepository;
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
         this.completionService = completionService;
         this.aiModelRepository = aiModelRepository;
-        this.openAiServiceAdapter = openAiServiceAdapter;
-
 
     }
 
@@ -68,7 +56,7 @@ public class EmbeddingsController {
                     "This endpoint accepts a BotRequest containing the text input and returns an Ada2Response " +
                     "containing the embeddings for the input text. Additionally, it stores the embeddings in the database " +
                     "as an Embedding entity with a unique ID.")
-    public EmbeddingResponse getEmbeddings(@RequestBody BotRequest botRequest, @RequestBody String aiModel) throws GendoxException {
+    public EmbeddingResponse getEmbeddings(@RequestBody BotRequest botRequest, @RequestParam String aiModel) throws GendoxException {
 
         EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(botRequest, aiModel);
         Embedding embedding = new Embedding();

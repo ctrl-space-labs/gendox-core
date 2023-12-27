@@ -1,11 +1,13 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.CompletionResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.CompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGptResponse;
 import org.springframework.stereotype.Component;
 
+
 @Component
-public class CompletionResponseConverter {
+public class OpenAiCompletionResponseConverter {
+
     public CompletionResponse toCompletionResponse(OpenAiGptResponse openAiGptResponse) {
         CompletionResponse completionResponse = CompletionResponse.builder()
                 .id(openAiGptResponse.getId())
@@ -21,5 +23,4 @@ public class CompletionResponseConverter {
 
         return completionResponse;
     }
-
 }

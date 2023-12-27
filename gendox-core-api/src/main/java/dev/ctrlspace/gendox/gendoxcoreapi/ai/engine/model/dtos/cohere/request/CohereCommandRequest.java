@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
@@ -8,20 +8,26 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class OpenAiGptRequest {
+public class CohereCommandRequest {
     private String model;
-    private List<AiModelMessage> messages;
     @JsonProperty("temperature")
     private double temperature;
-    @JsonProperty("top_p")
+    @JsonProperty("p")
     private double topP;
+    @JsonProperty("k")
+    private int k;
     @JsonProperty("max_tokens")
     private Long maxTokens;
+//    @JsonProperty("prompt")
+//
+    @JsonProperty("prompt")
+        private String prompt;
+//    private List<AiModelMessage> prompt;
 
 
 }
-

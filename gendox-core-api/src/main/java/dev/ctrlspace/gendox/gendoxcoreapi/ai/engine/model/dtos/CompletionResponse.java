@@ -1,5 +1,9 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereBilledUnits;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereGenerations;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Choice;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Usage;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,7 +26,8 @@ public class CompletionResponse {
     private Long maxToken;
     private double temperature;
     private double topP;
-
+    private String prompt;
+    private int k;
 
 
 }

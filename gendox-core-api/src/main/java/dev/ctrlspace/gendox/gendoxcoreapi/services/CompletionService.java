@@ -1,12 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelMessage;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.AiModelRequestParams;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.CompletionResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelRequestParams;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.CompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.CohereAiServiceAdapter;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.OpenAiServiceAdapter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -18,7 +16,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAut
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -33,22 +30,18 @@ public class CompletionService {
 
     Logger logger = LoggerFactory.getLogger(CompletionService.class);
     private ProjectService projectService;
-
     private MessageAiMessageConverter messageAiMessageConverter;
     private EmbeddingService embeddingService;
     private ProjectAgentRepository projectAgentRepository;
     private TemplateRepository templateRepository;
     private TypeService typeService;
-
     private List<AiModelService> aiModelServices;
-
     private TrainingService trainingService;
 
     private AiModelUtils aiModelUtils;
     @Autowired
     public CompletionService(ProjectService projectService,
                              MessageAiMessageConverter messageAiMessageConverter,
-                             AiModelService aiModelService,
                              EmbeddingService embeddingService,
                              ProjectAgentRepository projectAgentRepository,
                              TemplateRepository templateRepository,
@@ -65,6 +58,7 @@ public class CompletionService {
         this.trainingService = trainingService;
         this.typeService = typeService;
         this.aiModelUtils = aiModelUtils;
+
     }
 
     private CompletionResponse getCompletionForMessages(List<Message> messages, String agentRole, String aiModel,
@@ -80,9 +74,9 @@ public class CompletionService {
             AiModelMessage aiModelMessage = messageAiMessageConverter.toDTO(message);
             aiModelMessages.add(aiModelMessage);
         }
+        //choose the correct aiModel adapter
         AiModelService aiModelService = aiModelUtils.getAiModelServiceImplementation(aiModel);
         CompletionResponse completionResponse = aiModelService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams);
-
         return completionResponse;
     }
 
@@ -107,9 +101,10 @@ public class CompletionService {
                 .topP(project.getProjectAgent().getTopP())
                 .build();
 
-        CompletionResponse completionResponse = getCompletionForMessages(List.of(promptMessage), project.getProjectAgent().
-                                                               getAgentBehavior(),project.getProjectAgent().
-                                                               getCompletionModel().getModel(), aiModelRequestParams);
+        CompletionResponse completionResponse = getCompletionForMessages(List.of(promptMessage),
+                project.getProjectAgent().getAgentBehavior(),
+                project.getProjectAgent().getCompletionModel().getModel(),
+                aiModelRequestParams);
 
         Type completionType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
         // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)
@@ -147,8 +142,6 @@ public class CompletionService {
 
 
     }
-
-
 
 
 }
