@@ -56,13 +56,14 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
 
             contentSections = documentSplitter.split(fileContent);
 
-
-        } catch (Exception e) {
+        } catch (
+                Exception e) {
             logger.warn("Error {} split document to sections {}. Skipping...", e.getMessage(), item.getId());
             return null;
         }
 
 
-        return new DocumentSectionDTO(item, contentSections, agent);
+        return new DocumentSectionDTO(item, contentSections);
     }
 }
+

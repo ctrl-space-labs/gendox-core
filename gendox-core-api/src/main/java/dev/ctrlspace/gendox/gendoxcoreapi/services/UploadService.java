@@ -29,6 +29,7 @@ public class UploadService {
     private DocumentService documentService;
     private ProjectDocumentService projectDocumentService;
 
+
     @Autowired
     private ResourceLoader resourceLoader;
 
@@ -45,12 +46,11 @@ public class UploadService {
         DocumentInstance instance =
                 documentService.getDocumentByFileName(projectId, organizationId, fileName);
 
-
         if (instance == null) {
             DocumentInstance documentInstance = new DocumentInstance();
             // Generate a unique UUID
             UUID documentInstanceId = UUID.randomUUID();
-            String fullFilePath = saveFile(file, organizationId);
+            String fullFilePath = saveFile(file, organizationId, projectId);
 
             documentInstance.setId(documentInstanceId);
             documentInstance.setOrganizationId(organizationId);
@@ -61,10 +61,9 @@ public class UploadService {
             return documentInstance;
 
         } else {
-            String fullFilePath = saveFile(file, organizationId);
+            String fullFilePath = saveFile(file, organizationId, projectId);
             instance.setRemoteUrl(fullFilePath);
             instance = documentService.updateDocument(instance);
-            instance = documentService.createDocumentInstance(instance);
         }
 
 
@@ -80,11 +79,12 @@ public class UploadService {
      * @return
      * @throws IOException
      */
-    private String saveFile(MultipartFile file, UUID organizationId) throws IOException {
+    private String saveFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException {
         String fileName = file.getOriginalFilename();
 //        String uniqueFileName = documentInstanceId.toString() + "_" + fileName;
 
-        String filePathPrefix = calculateFilePathPrefix(organizationId);
+//        String filePathPrefix = calculateFilePathPrefix(organizationId);
+        String filePathPrefix = organizationId + "/" + projectId;
         String fullFilePath = uploadDir + "/" + filePathPrefix + "/" + fileName;
 
         createLocalFileDirectory(filePathPrefix);

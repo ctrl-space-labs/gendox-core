@@ -23,12 +23,7 @@ import org.springframework.stereotype.Service;
 
 
 import java.io.*;
-import java.net.URI;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class SplitFileService {
@@ -38,49 +33,59 @@ public class SplitFileService {
     private ResourceLoader resourceLoader;
     private DocumentSectionService documentSectionService;
     private ProjectAgentService projectAgentService;
+    private ServiceSelector serviceSelector;
 
 
     @Autowired
     public SplitFileService(DocumentService documentService,
                             ResourceLoader resourceLoader,
                             DocumentSectionService documentSectionService,
-                            ProjectAgentService projectAgentService) {
+                            ProjectAgentService projectAgentService,
+                            ServiceSelector serviceSelector) {
         this.documentService = documentService;
         this.resourceLoader = resourceLoader;
         this.documentSectionService = documentSectionService;
         this.projectAgentService = projectAgentService;
+        this.serviceSelector = serviceSelector;
     }
 
 
-    public List<DocumentInstanceSection> splitDocuments(DocumentCriteria criteria) throws GendoxException, IOException {
 
-        List<DocumentInstanceSection> sections = new ArrayList<>();
+
+    public Map<DocumentInstance, List<String>> splitDocuments(DocumentCriteria criteria) throws GendoxException, IOException {
+
+        Map<DocumentInstance, List<String>> contentSections = new HashMap<>();
+
         Page<DocumentInstance> documentInstances = documentService.getAllDocuments(criteria);
 
         for (DocumentInstance documentInstance : documentInstances) {
+            List<String> documentContent = splitDocument(documentInstance);
 
-            String content = readDocumentContent(documentInstance);
-
-            ProjectAgent agent = projectAgentService.getAgentByDocumentId(documentInstance.getId());
-
-            // if there are sections for this document, delete them
-            if (documentSectionService.getSectionsByDocument(documentInstance.getId()) != null) {
-                documentSectionService.deleteDocumentSections(documentInstance.getId());
-            }
-
-            List<DocumentInstanceSection> documentSections = documentSectionService.createSections(documentInstance, content, agent.getId());
-
-            for (DocumentInstanceSection section : documentSections) {
-                sections.add(section);
-            }
-
+            contentSections.put(documentInstance, documentContent);
         }
-        return sections;
+
+        return contentSections;
+    }
+
+    public List<String> splitDocument(DocumentInstance documentInstance) throws GendoxException, IOException {
+        String fileContent = readDocumentContent(documentInstance);
+
+        ProjectAgent agent = projectAgentService.getAgentByDocumentId(documentInstance.getId());
+
+        String splitterTypeName = agent.getDocumentSplitterType().getName();
+
+        DocumentSplitter documentSplitter = serviceSelector.getDocumentSplitterByName(splitterTypeName);
+        if (documentSplitter == null) {
+            throw new GendoxException("DOCUMENT_SPLITTER_NOT_FOUND", "Document splitter not found with name: " + splitterTypeName, HttpStatus.NOT_FOUND);
+        }
+
+        List<String> contentSections = documentSplitter.split(fileContent);
+
+        return contentSections;
     }
 
 
-
-    public String readDocumentContent(DocumentInstance instance) throws GendoxException, IOException{
+    public String readDocumentContent(DocumentInstance instance) throws GendoxException, IOException {
         // get file
         InputStream inputStream = downloadFile(instance.getRemoteUrl());
         // files content
