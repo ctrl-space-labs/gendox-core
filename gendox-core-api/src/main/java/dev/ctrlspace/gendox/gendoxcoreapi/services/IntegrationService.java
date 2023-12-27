@@ -21,13 +21,12 @@ import java.util.UUID;
 @Service
 public class IntegrationService {
     private IntegrationRepository integrationRepository;
-    private SecurityUtils securityUtils;
+
 
     @Autowired
-    public IntegrationService(IntegrationRepository integrationRepository,
-                              SecurityUtils securityUtils){
+    public IntegrationService(IntegrationRepository integrationRepository){
         this.integrationRepository = integrationRepository;
-        this.securityUtils = securityUtils;
+
     }
 
 
@@ -49,12 +48,6 @@ public class IntegrationService {
 
 
     public Integration createIntegration(Integration integration) throws Exception {
-        Instant now = Instant.now();
-
-        integration.setCreatedAt(now);
-        integration.setUpdatedAt(now);
-        integration.setCreatedBy(securityUtils.getUserId());
-        integration.setUpdatedBy(securityUtils.getUserId());
 
         integration = integrationRepository.save(integration);
 
@@ -64,8 +57,6 @@ public class IntegrationService {
 
     public Integration updateIntegration(Integration integration) throws GendoxException {
 
-        integration.setUpdatedAt(Instant.now());
-        integration.setUpdatedBy(securityUtils.getUserId());
         integration = integrationRepository.save(integration);
 
         return integration;

@@ -1,11 +1,15 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "document_template", schema = "gendox_core")
 public class DocumentTemplate {
     @Id
@@ -26,9 +30,11 @@ public class DocumentTemplate {
     private UUID userId;
     @Basic
     @Column(name = "created_at", nullable = true)
+    @CreatedDate
     private Instant createdAt;
     @Basic
     @Column(name = "updated_at", nullable = true)
+    @LastModifiedDate
     private Instant updatedAt;
 
     public UUID getId() {
