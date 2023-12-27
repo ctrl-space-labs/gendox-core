@@ -45,7 +45,7 @@ public class OpenAiServiceAdapter implements AiModelService {
     @Autowired
     public OpenAiServiceAdapter(AiModelRepository aiModelRepository,
                                 OpenAiCompletionResponseConverter openAiCompletionResponseConverter,
-                                EmbeddingResponseConverter embeddingResponseConverter){
+                                OpenAiEmbeddingResponseConverter openAiEmbeddingResponseConverter){
         this.aiModelRepository = aiModelRepository;
         this.openAiEmbeddingResponseConverter = openAiEmbeddingResponseConverter;
         this.openAiCompletionResponseConverter = openAiCompletionResponseConverter;
