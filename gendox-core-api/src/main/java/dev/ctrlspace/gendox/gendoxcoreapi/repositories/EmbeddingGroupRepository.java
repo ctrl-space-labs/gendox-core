@@ -7,6 +7,7 @@ import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,5 +26,6 @@ public interface EmbeddingGroupRepository extends JpaRepository<EmbeddingGroup, 
     Optional<EmbeddingGroup> findBySectionIdOrMessageId(@Param("sectionId") UUID sectionId, @Param("messageId") UUID messageId);
 
 
+    List<EmbeddingGroup> findBySectionId(UUID sectionId);
 
 }

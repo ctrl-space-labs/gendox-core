@@ -51,7 +51,6 @@ public class EmbeddingService {
     private JWTUtils jwtUtils;
 
 
-
     @Autowired
     public EmbeddingService(
                             EmbeddingRepository embeddingRepository,
@@ -98,12 +97,11 @@ public class EmbeddingService {
     }
 
     /**
-     *
      * It creates or update the embedding and the embedding group
      * Logs to audit logs
      *
-     * @param embeddingResponse     the actual embedding
-     * @param projectId the project/Agent that is involved
+     * @param embeddingResponse the actual embedding
+     * @param projectId         the project/Agent that is involved
      * @return
      * @throws GendoxException
      */
@@ -152,10 +150,11 @@ public class EmbeddingService {
     }
 
 
-        public EmbeddingResponse getEmbeddingForMessage(String value, String aiModelName) throws GendoxException {
 
+     public EmbeddingResponse getEmbeddingForMessage(String value, String aiModelName) throws GendoxException {
             return this.getEmbeddingForMessage(Arrays.asList(value), aiModelName);
     }
+
 
     public EmbeddingResponse getEmbeddingForMessage(List<String> value, String aiModelName) throws GendoxException {
         BotRequest botRequest = new BotRequest();
@@ -172,7 +171,6 @@ public class EmbeddingService {
     }
 
 
-
     public AuditLogs createAuditLogs(UUID projectId, Long tokenCount, Type auditType) {
         AuditLogs auditLog = new AuditLogs();
         auditLog.setUserId(securityUtils.getUserId());
@@ -186,7 +184,7 @@ public class EmbeddingService {
     }
 
 
-    public EmbeddingGroup createEmbeddingGroup(UUID embeddingId, Double tokenCount, UUID message_id, UUID sectionId, UUID projectId)  throws GendoxException {
+    public EmbeddingGroup createEmbeddingGroup(UUID embeddingId, Double tokenCount, UUID message_id, UUID sectionId, UUID projectId) throws GendoxException {
         EmbeddingGroup embeddingGroup = new EmbeddingGroup();
 
         embeddingGroup.setId(UUID.randomUUID());
@@ -226,6 +224,29 @@ public class EmbeddingService {
         return message;
     }
 
+    public void deleteEmbeddings(List<Embedding> embeddings) throws GendoxException {
+        embeddingRepository.deleteAll(embeddings);
+
+    }
+
+    public void deleteEmbedding(UUID embeddingId) throws GendoxException {
+        embeddingRepository.deleteById(embeddingId);
+    }
+
+    public void deleteEmbeddingGroup(UUID embeddingGroupId) throws GendoxException {
+        embeddingGroupRepository.deleteById(embeddingGroupId);
+    }
+
+    public void deleteEmbeddingGroupsBySection(UUID sectionId) throws GendoxException {
+        List<EmbeddingGroup> embeddingGroups = embeddingGroupRepository.findBySectionId(sectionId);
+
+        List<UUID> embeddingGroupIds = embeddingGroups.stream().map(emb -> emb.getId()).collect(Collectors.toList());
+        List<UUID> embeddingIds = embeddingGroups.stream().map(emb -> emb.getEmbeddingId()).collect(Collectors.toList());
+
+        embeddingGroupRepository.deleteAllById(embeddingGroupIds);
+        embeddingRepository.deleteAllById(embeddingIds);
+    }
+
     /**
      * Get an Embedding and returns the nearest Embeddings for this specific project
      *
@@ -253,7 +274,7 @@ public class EmbeddingService {
 
         Project project = projectService.getProjectById(projectId);
         EmbeddingResponse embeddingResponse = getEmbeddingForMessage(message.getValue(),
-                                                        project.getProjectAgent().getSemanticSearchModel().getModel());
+                project.getProjectAgent().getSemanticSearchModel().getModel());
         Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse, projectId, message.getId(), null);
 
         List<Embedding> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, PageRequest.of(0, 5));

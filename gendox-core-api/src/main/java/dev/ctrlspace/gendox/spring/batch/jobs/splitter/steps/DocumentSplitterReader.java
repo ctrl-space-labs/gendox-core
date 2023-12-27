@@ -41,7 +41,7 @@ public class DocumentSplitterReader extends GendoxJpaPageReader<DocumentInstance
     @Override
     protected ExitStatus initializeJpaPredicate(JobParameters jobParameters) {
         //sort by documentInstanceId desc and createdAt asc
-        sort = Sort.by(Sort.Direction.DESC, "organizationId").and(Sort.by(Sort.Direction.ASC, "createdAt"));
+        sort = Sort.by(Sort.Direction.DESC, "organizationId").and(Sort.by(Sort.Direction.ASC, "updatedAt"));
         criteria = documentInstanceCriteriaJobParamsConverter.toEntity(jobParameters);
         // validate criteria
         // now is mandatory for all readers before job execution

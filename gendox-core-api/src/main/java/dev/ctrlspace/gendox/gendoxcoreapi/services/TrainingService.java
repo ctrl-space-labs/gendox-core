@@ -49,7 +49,7 @@ public class TrainingService {
 
     @Lazy
     @Autowired
-    public void setEmbeddingService(DocumentSectionService documentSectionService) {
+    public void setDocumentSectionService(DocumentSectionService documentSectionService) {
         this.documentSectionService = documentSectionService;
     }
 
