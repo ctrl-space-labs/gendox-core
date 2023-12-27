@@ -8,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPTConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.EmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiCompletionResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
@@ -39,14 +40,14 @@ public class OpenAiServiceAdapter implements AiModelService {
 
     private OpenAiCompletionResponseConverter openAiCompletionResponseConverter;
 
-    private EmbeddingResponseConverter embeddingResponseConverter;
+    private OpenAiEmbeddingResponseConverter openAiEmbeddingResponseConverter;
 
     @Autowired
     public OpenAiServiceAdapter(AiModelRepository aiModelRepository,
                                 OpenAiCompletionResponseConverter openAiCompletionResponseConverter,
                                 EmbeddingResponseConverter embeddingResponseConverter){
         this.aiModelRepository = aiModelRepository;
-        this.embeddingResponseConverter = embeddingResponseConverter;
+        this.openAiEmbeddingResponseConverter = openAiEmbeddingResponseConverter;
         this.openAiCompletionResponseConverter = openAiCompletionResponseConverter;
     }
     private static final RestTemplate restTemplate = new RestTemplate();
@@ -100,7 +101,7 @@ public class OpenAiServiceAdapter implements AiModelService {
                 .model(aiModelName)
                 .input(message).build());
 
-        EmbeddingResponse embeddingResponse = embeddingResponseConverter.OpenAitoEmbeddingResponse(openAiAda2Response);
+        EmbeddingResponse embeddingResponse = openAiEmbeddingResponseConverter.openAitoEmbeddingResponse(openAiAda2Response);
 
         return embeddingResponse;
 
