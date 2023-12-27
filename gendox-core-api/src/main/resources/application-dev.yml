@@ -101,6 +101,8 @@ gendox:
     openai:
       ada2:
         key: ${OPENAI_KEY}
+    cohere:
+      key: ${COHERE_KEY}
   domain:
     base-url: http://localhost:${server.port}
     document-sections:

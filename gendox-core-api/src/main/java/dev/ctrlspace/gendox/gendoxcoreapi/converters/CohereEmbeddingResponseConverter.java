@@ -2,29 +2,16 @@ package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereEmbedMultilingualResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
-import org.springframework.stereotype.Component;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingData;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Usage;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-@Component
-public class EmbeddingResponseConverter {
+public class CohereEmbeddingResponseConverter {
 
     private static List<Double> zeros = Collections.nCopies(512, 0.0);
-
-    public EmbeddingResponse OpenAitoEmbeddingResponse(OpenAiAda2Response openAiAda2Response) {
-        EmbeddingResponse embeddingResponse = EmbeddingResponse.builder()
-                .object(openAiAda2Response.getObject())
-                .model(openAiAda2Response.getModel())
-                .usage(openAiAda2Response.getUsage())
-                .data(openAiAda2Response.getData())
-                .build();
-
-        return embeddingResponse;
-
-    }
 
     public EmbeddingResponse coheretoEmbeddingResponse(CohereEmbedMultilingualResponse cohereEmbedMultilingualResponse,
                                                        String aiModel) {
@@ -41,7 +28,7 @@ public class EmbeddingResponseConverter {
                 .completionTokens(cohereEmbedMultilingualResponse.getMeta().getBilledUnits().getOutputTokens())
                 .promptTokens(cohereEmbedMultilingualResponse.getMeta().getBilledUnits().getInputTokens())
                 .totalTokens(cohereEmbedMultilingualResponse.getMeta().getBilledUnits().getInputTokens() +
-                            cohereEmbedMultilingualResponse.getMeta().getBilledUnits().getOutputTokens())
+                        cohereEmbedMultilingualResponse.getMeta().getBilledUnits().getOutputTokens())
                 .build();
         EmbeddingResponse embeddingResponse = EmbeddingResponse.builder()
                 .model(aiModel)
@@ -52,6 +39,4 @@ public class EmbeddingResponseConverter {
         return embeddingResponse;
 
     }
-
-
 }

@@ -1,8 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.BotRequest;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.BotRequest;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.AiModelEmbeddingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -39,6 +39,7 @@ public class EmbeddingService {
     private ProjectAgentService projectAgentService;
     private DocumentSectionService documentSectionService;
 
+    private List<AiModelService> aiModelServices;
 
     private AiModelUtils aiModelUtils;
 
@@ -52,19 +53,21 @@ public class EmbeddingService {
 
     @Autowired
     public EmbeddingService(
-            EmbeddingRepository embeddingRepository,
-            AuditLogsRepository auditLogsRepository,
-            EmbeddingGroupRepository embeddingGroupRepository,
-            MessageRepository messageRepository,
-            TypeService typeService,
-            AiModelRepository aiModelRepository,
-            SecurityUtils securityUtils,
-            ProjectAgentService projectAgentService,
-            DocumentSectionService documentSectionService,
-            AiModelEmbeddingConverter aiModelEmbeddingConverter,
-            AiModelUtils aiModelUtils,
-            ProjectService projectService,
-            ProjectAgentRepository projectAgentRepository) {
+                            EmbeddingRepository embeddingRepository,
+                            AuditLogsRepository auditLogsRepository,
+                            EmbeddingGroupRepository embeddingGroupRepository,
+                            MessageRepository messageRepository,
+                            TypeService typeService,
+                            AiModelRepository aiModelRepository,
+                            SecurityUtils securityUtils,
+                            ProjectAgentService projectAgentService,
+                            DocumentSectionService documentSectionService,
+                            AiModelEmbeddingConverter aiModelEmbeddingConverter,
+                            AiModelUtils aiModelUtils,
+                            List<AiModelService> aiModelServices,
+                            ProjectService projectService,
+                            ProjectAgentRepository projectAgentRepository) {
+        this.aiModelServices = aiModelServices;
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
@@ -147,15 +150,21 @@ public class EmbeddingService {
     }
 
 
-    public EmbeddingResponse getEmbeddingForMessage(String value, String aiModelName) throws GendoxException {
-        BotRequest botRequest = new BotRequest();
-        botRequest.setMessage(value);
-        return this.getEmbeddingForMessage(botRequest, aiModelName);
+
+     public EmbeddingResponse getEmbeddingForMessage(String value, String aiModelName) throws GendoxException {
+            return this.getEmbeddingForMessage(Arrays.asList(value), aiModelName);
     }
 
 
+    public EmbeddingResponse getEmbeddingForMessage(List<String> value, String aiModelName) throws GendoxException {
+        BotRequest botRequest = new BotRequest();
+        botRequest.setMessages(value);
+        return this.getEmbeddingForMessage(botRequest, aiModelName);
+    }
+
     public EmbeddingResponse getEmbeddingForMessage(BotRequest botRequest, String aiModel) throws GendoxException {
         AiModelService aiModelService = aiModelUtils.getAiModelServiceImplementation(aiModel);
+         aiModelService = aiModelUtils.getAiModelServiceImplementation(aiModel);
         EmbeddingResponse embeddingResponse = aiModelService.askEmbedding(botRequest, aiModel);
 
         return embeddingResponse;

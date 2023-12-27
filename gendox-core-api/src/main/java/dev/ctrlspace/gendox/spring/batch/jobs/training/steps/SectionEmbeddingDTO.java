@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.training.steps;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 
 public record SectionEmbeddingDTO(DocumentInstanceSection section, EmbeddingResponse embeddingResponse) {

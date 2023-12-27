@@ -1,9 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.CompletionResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.AiModelService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
@@ -37,7 +36,7 @@ public class TrainingService {
     private EmbeddingService embeddingService;
     private ProjectDocumentRepository projectDocumentRepository;
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
-    private AiModelService aiModelService;
+    private AiModelUtils aiModelUtils;
 
     private ProjectService projectService;
 
@@ -60,14 +59,14 @@ public class TrainingService {
                            EmbeddingGroupRepository embeddingGroupRepository,
                            ProjectDocumentRepository projectDocumentRepository,
                            DocumentInstanceSectionRepository documentInstanceSectionRepository,
-                           AiModelService aiModelService,
+                           AiModelUtils aiModelUtils,
                            ProjectService projectService) {
         this.sectionRepository = sectionRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
         this.projectDocumentRepository = projectDocumentRepository;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
-        this.aiModelService = aiModelService;
         this.projectService = projectService;
+        this.aiModelUtils = aiModelUtils;
 
     }
 
@@ -106,7 +105,8 @@ public class TrainingService {
         return projectEmbeddings;
     }
 
-    public OpenAiGpt35ModerationResponse getModeration(String message) {
+    public OpenAiGpt35ModerationResponse getModeration(String message) throws GendoxException {
+        AiModelService aiModelService = aiModelUtils.getAiModelServiceImplementation("openai-moderation");
         OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = aiModelService.moderationCheck(message);
         return openAiGpt35ModerationResponse;
     }
