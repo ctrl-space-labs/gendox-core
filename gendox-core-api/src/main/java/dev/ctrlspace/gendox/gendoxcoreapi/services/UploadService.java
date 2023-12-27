@@ -28,18 +28,16 @@ public class UploadService {
 
     private DocumentService documentService;
     private ProjectDocumentService projectDocumentService;
-    private ProjectAgentService projectAgentService;
+
 
     @Autowired
     private ResourceLoader resourceLoader;
 
     @Autowired
     public UploadService(DocumentService documentService,
-                         ProjectDocumentService projectDocumentService,
-                         ProjectAgentService projectAgentService) {
+                         ProjectDocumentService projectDocumentService) {
         this.documentService = documentService;
         this.projectDocumentService = projectDocumentService;
-        this.projectAgentService = projectAgentService;
     }
 
 
@@ -47,10 +45,6 @@ public class UploadService {
         String fileName = file.getOriginalFilename();
         DocumentInstance instance =
                 documentService.getDocumentByFileName(projectId, organizationId, fileName);
-
-        // find agent's userID
-        UUID userId = projectAgentService.getAgentByProjectId(projectId).getUserId();
-
 
         if (instance == null) {
             DocumentInstance documentInstance = new DocumentInstance();
@@ -61,8 +55,6 @@ public class UploadService {
             documentInstance.setId(documentInstanceId);
             documentInstance.setOrganizationId(organizationId);
             documentInstance.setRemoteUrl(fullFilePath);
-            documentInstance.setCreatedBy(userId);
-            documentInstance.setUpdatedBy(userId);
             documentInstance = documentService.createDocumentInstance(documentInstance);
             // create project document
             ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, documentInstance.getId());
@@ -71,7 +63,6 @@ public class UploadService {
         } else {
             String fullFilePath = saveFile(file, organizationId, projectId);
             instance.setRemoteUrl(fullFilePath);
-            instance.setUpdatedBy(userId);
             instance = documentService.updateDocument(instance);
         }
 
