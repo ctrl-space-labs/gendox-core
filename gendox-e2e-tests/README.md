@@ -11,6 +11,16 @@ The tests **must** run before each PR to `dev` or `main` branches.
 The default configuration file is `local.config.json`. 
 To run the tests, you need to setup the database, the backend and the IdP first. Soon an docekr-compose file will be provided to do this. 
 
+Install dependencies:
+```bash
+npm install
+```
+
+Install Playwright Browsers:
+```bash
+npx playwright install
+```
+
 Then you can run the tests with the following command:
 ```bash
 npx playwright test
