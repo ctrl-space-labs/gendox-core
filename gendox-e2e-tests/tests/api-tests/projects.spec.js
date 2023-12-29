@@ -48,7 +48,7 @@ test.describe('Projects CRUD API', () => {
 
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
-        expect(respBody.totalElements).toBe(5);
+        expect(respBody.totalElements).toBe(6);
 
         let gendoxWikiProject = respBody.content.find(project => project.name === 'gendox-wiki');
 
