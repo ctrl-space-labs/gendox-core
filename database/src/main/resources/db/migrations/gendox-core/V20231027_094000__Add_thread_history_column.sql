@@ -6,3 +6,4 @@ ALTER TABLE gendox_core.message
 ALTER TABLE gendox_core.message
     ADD COLUMN IF NOT EXISTS project_id UUID,
     ADD FOREIGN KEY (project_id) REFERENCES gendox_core.projects (id);
+

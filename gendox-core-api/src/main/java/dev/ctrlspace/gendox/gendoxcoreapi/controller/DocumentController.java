@@ -7,7 +7,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.SplitFileService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UploadService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,17 +38,26 @@ public class DocumentController {
     private DocumentOnlyConverter documentOnlyConverter;
     private DocumentConverter documentConverter;
     private UploadService uploadService;
+    private SplitFileService splitFileService;
+    private DocumentSectionService documentSectionService;
+    private final DocumentInstanceSectionRepository documentInstanceSectionRepository;
 
 
     @Autowired
     public DocumentController(DocumentService documentService,
                               DocumentOnlyConverter documentOnlyConverter,
                               DocumentConverter documentConverter,
-                              UploadService uploadService) {
+                              UploadService uploadService,
+                              SplitFileService splitFileService,
+                              DocumentSectionService documentSectionService,
+                              DocumentInstanceSectionRepository documentInstanceSectionRepository) {
         this.documentService = documentService;
         this.documentOnlyConverter = documentOnlyConverter;
         this.documentConverter = documentConverter;
         this.uploadService = uploadService;
+        this.splitFileService = splitFileService;
+        this.documentSectionService = documentSectionService;
+        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
     }
 
     @GetMapping("/documents/{id}")
@@ -84,7 +96,7 @@ public class DocumentController {
                     "This operation enables you to access the sections within the specified project.")
     public List<DocumentInstanceSection> getSectionsByProjectId(@PathVariable UUID id) throws GendoxException {
         //throw new UnsupportedOperationException("Not implemented yet");
-        return documentService.getProjectSections(id);
+        return documentSectionService.getProjectSections(id);
     }
 
 
@@ -95,7 +107,7 @@ public class DocumentController {
                     "incorporating the provided document information.")
     public DocumentInstance create(@RequestBody DocumentDTO documentDTO) throws GendoxException {
 
-        if (documentDTO.getId() != null){
+        if (documentDTO.getId() != null) {
             throw new GendoxException("DOCUMENT_INSTANCE_ID_MUST_BE_NULL", "Document instant id is not null", HttpStatus.BAD_REQUEST);
         }
 
@@ -145,7 +157,6 @@ public class DocumentController {
         // Get the allowed file extensions from application.properties
         List<String> allowedExtensionsList = Arrays.asList(allowedExtensions.split(","));
 
-
         validateHasFiles(files);
         validateFileExtensions(files, allowedExtensionsList);
         files.removeIf(MultipartFile::isEmpty);
@@ -157,6 +168,25 @@ public class DocumentController {
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Files uploaded successfully");
         return ResponseEntity.ok(response);
+    }
+
+
+    @PostMapping("/documents/split")
+    @Operation(summary = "",
+            description = " ")
+    public List<DocumentInstanceSection> handleFileSplitter(@Valid DocumentCriteria criteria) throws IOException, GendoxException {
+        List<DocumentInstanceSection> documentInstanceSections = new ArrayList<>();
+
+        Map<DocumentInstance, List<String>> contentSections = splitFileService.splitDocuments(criteria);
+        for (Map.Entry<DocumentInstance, List<String>> entry : contentSections.entrySet()) {
+            DocumentInstance documentInstance = entry.getKey();
+            List<String> sectionContent = entry.getValue();
+
+            List<DocumentInstanceSection> sections = documentSectionService.createSections(documentInstance, sectionContent);
+            documentInstanceSections.addAll(sections);
+        }
+
+        return documentInstanceSections;
     }
 
     private static void validateHasFiles(List<MultipartFile> files) throws GendoxException {

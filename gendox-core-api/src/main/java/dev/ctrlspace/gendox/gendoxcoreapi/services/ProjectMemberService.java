@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectMemberCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectMemberRepository;
@@ -78,8 +79,6 @@ public class ProjectMemberService {
 
 
     public ProjectMember createProjectMember(UUID userId, UUID projectId) throws Exception {
-        Instant now = Instant.now();
-
 
         User user = userService.getById(userId);
         Project project = projectService.getProjectById(projectId);
@@ -87,8 +86,6 @@ public class ProjectMemberService {
         ProjectMember projectMember = new ProjectMember();
         projectMember.setUser(user);
         projectMember.setProject(project);
-        projectMember.setCreatedAt(now);
-        projectMember.setUpdatedAt(now);
 
         return this.createProjectMember(projectMember);
 
@@ -118,9 +115,9 @@ public class ProjectMemberService {
     public void setMemberRoleForTheCreator(Project project) throws Exception {
         // user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
+        String userId = ((UserProfile) authentication.getPrincipal()).getId();
 
-        createProjectMember(UUID.fromString(jwtDTO.getUserId()), project.getId());
+        createProjectMember(UUID.fromString(userId), project.getId());
 
     }
 
@@ -135,10 +132,10 @@ public class ProjectMemberService {
     public void addDefaultMembersToTheProject(Project project, UUID organizationId) throws Exception {
         // user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
+        String userId = ((UserProfile) authentication.getPrincipal()).getId();
 
         // The project's creator become member of the project
-        createProjectMember(UUID.fromString(jwtDTO.getUserId()), project.getId());
+        createProjectMember(UUID.fromString(userId), project.getId());
 
         // project's users all the organization admins
         Set<UUID> userIds = userOrganizationService.getAll(UserOrganizationCriteria
@@ -150,7 +147,7 @@ public class ProjectMemberService {
                 .map(userOrganization -> userOrganization.getUser().getId())
                 .collect(Collectors.toSet());
 
-        userIds.add(UUID.fromString(jwtDTO.getUserId()));
+        userIds.add(UUID.fromString(userId));
 
         createAllProjectMembers(userIds, project.getId());
 

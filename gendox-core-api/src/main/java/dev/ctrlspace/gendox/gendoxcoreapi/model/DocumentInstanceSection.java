@@ -3,12 +3,18 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "document_instance_sections", schema = "gendox_core")
 public class DocumentInstanceSection {
     @Id
@@ -30,17 +36,25 @@ public class DocumentInstanceSection {
     private String sectionValue;
 
     @Basic
+    @Column(name="has_content_warning", nullable = true)
+    private Boolean hasContentWarning;
+
+    @Basic
     @Column(name="created_by", nullable = true)
+    @CreatedBy
     private UUID createdBy;
     @Basic
     @Column(name="updated_by", nullable = true)
+    @LastModifiedBy
     private UUID updatedBy;
 
     @Basic
     @Column(name = "created_at", nullable = true)
+    @CreatedDate
     private Instant createdAt;
     @Basic
     @Column(name = "updated_at", nullable = true)
+    @LastModifiedDate
     private Instant updatedAt;
 
     public UUID getId() {
@@ -108,31 +122,26 @@ public class DocumentInstanceSection {
         this.updatedBy = updatedBy;
     }
 
+    public Boolean getModerationFlagged() {
+        return hasContentWarning;
+    }
+
+    public void setModerationFlagged(Boolean moderationFlagged) {
+        hasContentWarning = moderationFlagged;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        DocumentInstanceSection that = (DocumentInstanceSection) o;
-
-        if (!Objects.equals(id, that.id)) return false;
-        if (!Objects.equals(documentInstance, that.documentInstance))
-            return false;
-        if (!Objects.equals(documentSectionMetadata, that.documentSectionMetadata))
-            return false;
-        if (!Objects.equals(sectionValue, that.sectionValue)) return false;
-        if (!Objects.equals(createdAt, that.createdAt)) return false;
-        return Objects.equals(updatedAt, that.updatedAt);
+        if (!(o instanceof DocumentInstanceSection section)) return false;
+        return Objects.equals(getId(), section.getId()) && Objects.equals(getDocumentInstance(), section.getDocumentInstance()) && Objects.equals(getDocumentSectionMetadata(), section.getDocumentSectionMetadata()) && Objects.equals(getSectionValue(), section.getSectionValue()) && Objects.equals(hasContentWarning, section.hasContentWarning) && Objects.equals(getCreatedBy(), section.getCreatedBy()) && Objects.equals(getUpdatedBy(), section.getUpdatedBy()) && Objects.equals(getCreatedAt(), section.getCreatedAt()) && Objects.equals(getUpdatedAt(), section.getUpdatedAt());
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (documentInstance != null ? documentInstance.hashCode() : 0);
-        result = 31 * result + (documentSectionMetadata != null ? documentSectionMetadata.hashCode() : 0);
-        result = 31 * result + (sectionValue != null ? sectionValue.hashCode() : 0);
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        return result;
+        return Objects.hash(getId(), getDocumentInstance(), getDocumentSectionMetadata(), getSectionValue(), hasContentWarning, getCreatedBy(), getUpdatedBy(), getCreatedAt(), getUpdatedAt());
     }
+
+
+
 }

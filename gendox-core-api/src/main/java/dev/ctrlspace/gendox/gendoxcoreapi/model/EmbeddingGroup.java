@@ -1,6 +1,11 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -8,7 +13,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Table(name = "embedding_group", schema = "gendox_core", catalog = "postgres")
+@EntityListeners(AuditingEntityListener.class)
+@Table(name = "embedding_group", schema = "gendox_core")
 public class EmbeddingGroup {
 //    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
@@ -45,15 +51,19 @@ public class EmbeddingGroup {
 
     @Basic
     @Column(name = "created_at")
+    @CreatedDate
     private Instant createdAt;
     @Basic
     @Column(name = "updated_at")
+    @LastModifiedDate
     private Instant updatedAt;
     @Basic
     @Column(name = "created_by")
+    @CreatedBy
     private UUID createdBy;
     @Basic
     @Column(name = "updated_by")
+    @LastModifiedBy
     private UUID updatedBy;
 
     public UUID getId() {

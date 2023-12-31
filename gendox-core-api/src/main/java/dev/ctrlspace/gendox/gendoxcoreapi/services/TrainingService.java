@@ -1,23 +1,27 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.EmbeddingGroup;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingGroupRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectDocumentRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
+import lombok.NonNull;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
+import java.util.*;
 
 import org.slf4j.Logger;
 
@@ -27,42 +31,58 @@ public class TrainingService {
     Logger logger = LoggerFactory.getLogger(TrainingService.class);
 
     private DocumentInstanceSectionRepository sectionRepository;
+    private DocumentSectionService documentSectionService;
     private EmbeddingGroupRepository embeddingGroupRepository;
     private EmbeddingService embeddingService;
     private ProjectDocumentRepository projectDocumentRepository;
+    private DocumentInstanceSectionRepository documentInstanceSectionRepository;
+    private AiModelUtils aiModelUtils;
+
+    private ProjectService projectService;
+
+
+    @Lazy
+    @Autowired
+    public void setEmbeddingService(EmbeddingService embeddingService) {
+        this.embeddingService = embeddingService;
+    }
+
+    @Lazy
+    @Autowired
+    public void setDocumentSectionService(DocumentSectionService documentSectionService) {
+        this.documentSectionService = documentSectionService;
+    }
 
 
     @Autowired
     public TrainingService(DocumentInstanceSectionRepository sectionRepository,
                            EmbeddingGroupRepository embeddingGroupRepository,
-                           EmbeddingService embeddingService,
-                           ProjectDocumentRepository projectDocumentRepository) {
+                           ProjectDocumentRepository projectDocumentRepository,
+                           DocumentInstanceSectionRepository documentInstanceSectionRepository,
+                           AiModelUtils aiModelUtils,
+                           ProjectService projectService) {
         this.sectionRepository = sectionRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
-        this.embeddingService = embeddingService;
         this.projectDocumentRepository = projectDocumentRepository;
+        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
+        this.projectService = projectService;
+        this.aiModelUtils = aiModelUtils;
+
     }
 
 
     public Embedding runTrainingForSection(UUID sectionId, UUID projectId) throws GendoxException {
+        DocumentInstanceSection section = documentSectionService.getSectionById(sectionId);
+        return this.runTrainingForSection(section, projectId);
+    }
 
-        // Use Optional to handle the result of findById
-        Optional<DocumentInstanceSection> optionalSection = sectionRepository.findById(sectionId);
+    public Embedding runTrainingForSection(@NonNull DocumentInstanceSection section, UUID projectId) throws GendoxException {
+        Project project = projectService.getProjectById(projectId);
+        EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(section.getSectionValue(),
+                project.getProjectAgent().getSemanticSearchModel().getModel());
+        Embedding embedding = embeddingService.upsertEmbeddingForText(embeddingResponse, projectId, null, section.getId());
 
-        if (optionalSection.isPresent()) {
-            DocumentInstanceSection section = optionalSection.get();
-
-            Embedding embedding = new Embedding();
-            embedding = embeddingService.calculateEmbeddingForText(section.getSectionValue(), projectId, null);
-
-            EmbeddingGroup embeddingGroup = embeddingGroupRepository.findByEmbeddingId(embedding.getId());
-            embeddingGroup.setSectionId(sectionId);
-            embeddingGroup = embeddingGroupRepository.save(embeddingGroup);
-
-            return embedding;
-        } else {
-            throw new GendoxException("SECTION_NOT_FOUND", "Section with ID" + sectionId + " not found", HttpStatus.NOT_FOUND);
-        }
+        return embedding;
     }
 
     public List<Embedding> runTrainingForProject(UUID projectId) throws GendoxException {
@@ -77,12 +97,31 @@ public class TrainingService {
             instanceSections = sectionRepository.findByDocumentInstance(instance.getId());
             for (DocumentInstanceSection section : instanceSections) {
                 Embedding embedding = new Embedding();
-                embedding = runTrainingForSection(section.getId(), projectId);
+                embedding = runTrainingForSection(section, projectId);
                 projectEmbeddings.add(embedding);
             }
         }
 
         return projectEmbeddings;
+    }
+
+    public OpenAiGpt35ModerationResponse getModeration(String message) throws GendoxException {
+        AiModelService aiModelService = aiModelUtils.getAiModelServiceImplementation("openai-moderation");
+        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = aiModelService.moderationCheck(message);
+        return openAiGpt35ModerationResponse;
+    }
+
+    public Map<Map<String, Boolean>, String> getModerationForDocumentSections(UUID documentInstanceId) throws GendoxException {
+        List<DocumentInstanceSection> documentInstanceSections = documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
+        Map<Map<String, Boolean>, String> isFlaggedSections = new HashMap<>();
+
+        for (DocumentInstanceSection section : documentInstanceSections) {
+            OpenAiGpt35ModerationResponse moderationResponse = getModeration(section.getSectionValue());
+            if (moderationResponse.getResults().get(0).isFlagged()) {
+                isFlaggedSections.put(moderationResponse.getResults().get(0).getCategories(), section.getSectionValue());
+            }
+        }
+        return isFlaggedSections;
     }
 
 }

@@ -7,6 +7,7 @@ server:
 logging:
   level:
     dev.ctrlspace: DEBUG
+    org.springframework.security: INFO
     org.springframework: INFO
 #    This is how to change the micrometer tracing pattern, we'll use the default now
 #  pattern:
@@ -21,15 +22,23 @@ spring:
     show-sql: true
     hibernate:
       ddl-auto: none
+
+
   datasource:
     url: jdbc:postgresql://localhost:5432/postgres
     username: postgres
-    password: 123456789
+    password: 1234
+    hikari:
+      maximum-pool-size: 100
+      minimum-idle: 10
 
 #  datasource:
 #     url: ${DATABASE_URL}
 #     username: ${DATABASE_USERNAME}
 #     password: ${DATABASE_PASSWORD}
+#     hikari:
+#       maximum-pool-size: 100
+#       minimum-idle: 10
 
   jackson:
     serialization:
@@ -41,6 +50,24 @@ spring:
       max-request-size: 100MB
   application:
     name: gendox-core-api
+
+
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://dev.gendox.ctrlspace.dev/idp/realms/gendox-idp-dev
+          jwk-set-uri: https://dev.gendox.ctrlspace.dev/idp/realms/gendox-idp-dev/protocol/openid-connect/certs
+
+
+
+keycloak:
+    base-url: https://dev.gendox.ctrlspace.dev/idp
+    token-uri: https://dev.gendox.ctrlspace.dev/idp/realms/gendox-idp-dev/protocol/openid-connect/token
+    realm: gendox-idp-dev
+    client-id: ${KEYCLOAK_CLIENT_ID}
+    client-secret: ${KEYCLOAK_CLIENT_SECRET}
 
 management:
   tracing:
@@ -73,16 +100,28 @@ rsa:
 
 gendox:
   documents:
-    upload-dir: s3://gendox.organization.documents.local
+#    upload-dir: s3://gendox.organization.documents.local
 #    upload-dir: file:c:\\Users\\sekas\\gendox-documents
+    upload-dir: file:C:\ProgramData\\gendox\\documents
+
 
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
+
+  integrations:
+#    poller: 30000 # 30 seconds
+    poller: 86400000 # 24 hours in milliseconds
+    storage:
+      temporary: C:\ProgramData\\gendox\\temporary_integration_files
+#      temporary: s3://gendox.organization.documents.local/gendox_wiki
+
   models:
     openai:
       ada2:
         key: ${OPENAI_KEY}
+    cohere:
+        key: ${COHERE_KEY}
   domain:
     base-url: http://localhost:8080
     document-sections:
@@ -97,6 +136,36 @@ gendox:
     default: "&page=0&size=5"
   agents:
     splitter-type: "STATIC_WORD_COUNT_SPLITTER"
+    max_token: 500
+    temperature: 0.8
+    top_p: 0.4
+
+  moderation:
+    message: "Sorry, I can't reply in this message, it contains inappropriate content. If this this not the case, please contact the support team."
+
+  batch-jobs:
+    document-training:
+      job:
+        name: documentTrainingJob
+        thread-pool-size: 50
+        steps:
+          document-training-step:
+            name: documentTrainingStep
+            throttle-limit: 10    # this should be around 10 to not hit the throttle limit of the OpenAI API
+            chunk-size: 10
+            pageable-size: 1000
+    document-splitter:
+      job:
+        name: documentSplitterJob
+        thread-pool-size: 50
+        steps:
+          document-splitter-step:
+            name: documentSplitterStep
+            throttle-limit: 10    # this should be around 10 to not hit the throttle limit of the OpenAI API
+            chunk-size: 10
+            pageable-size: 1000
+
+
 
 # AWS
 
@@ -111,8 +180,13 @@ cloud:
 discord:
   bots:
     gendox-bot:
-      token: ${DISCORD_TOKEN}
+      token: ${DISCORD_TOKEN:default-token}
+
   server:
     group-name: gendox-agents
+
+
+
+
 
 

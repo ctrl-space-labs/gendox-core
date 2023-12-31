@@ -14,7 +14,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,6 +25,7 @@ public class OrganizationService {
     private OrganizationRepository organizationRepository;
     private UserOrganizationService userOrganizationService;
 
+
     @Autowired
     public OrganizationService(UserOrganizationRepository userOrganizationRepository,
                                OrganizationRepository organizationRepository,
@@ -33,6 +33,7 @@ public class OrganizationService {
         this.userOrganizationRepository = userOrganizationRepository;
         this.organizationRepository = organizationRepository;
         this.userOrganizationService = userOrganizationService;
+
     }
 
     /**
@@ -64,15 +65,10 @@ public class OrganizationService {
     }
 
     public Organization createOrganization(Organization organization) throws Exception {
-        Instant now = Instant.now();
-
 
         if (organization.getId() != null) {
             throw new GendoxException("NEW_ORGANIZATION_ID_IS_NOT_NULL", "Organization id must be null", HttpStatus.BAD_REQUEST);
         }
-
-        organization.setCreatedAt(now);
-        organization.setUpdatedAt(now);
 
         organization = organizationRepository.save(organization);
         userOrganizationService.setAdminRoleForOrganizationsOwner(organization);
@@ -89,7 +85,7 @@ public class OrganizationService {
         existingOrganization.setAddress(organization.getAddress());
         existingOrganization.setPhone(organization.getPhone());
         existingOrganization.setDisplayName(organization.getDisplayName());
-        existingOrganization.setUpdatedAt(Instant.now());
+
 
 
         //save the update organization
@@ -99,13 +95,18 @@ public class OrganizationService {
 
     }
 
-    public void deleteOrganization(UUID id) throws Exception {
-        Organization organization = organizationRepository.findById(id).orElse(null);
+    public void deleteOrganization(UUID organizationId) throws Exception {
+        List<UserOrganization> userOrganizations = userOrganizationService.getUserOrganizationByOrganizationId(organizationId);
+        Organization organization = organizationRepository.findById(organizationId).orElse(null);
+
+        for(UserOrganization userOrganization: userOrganizations){
+            userOrganizationRepository.delete(userOrganization);
+        }
 
         if (organization != null) {
-            organizationRepository.deleteById(id);
+            organizationRepository.deleteById(organizationId);
         } else {
-            throw new GendoxException("ORGANIZATION_NOT_FOUND", "Organization not found with id: " + id, HttpStatus.NOT_FOUND);
+            throw new GendoxException("ORGANIZATION_NOT_FOUND", "Organization not found with id: " + organizationId, HttpStatus.NOT_FOUND);
         }
     }
 

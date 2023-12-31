@@ -4,6 +4,11 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.List;
@@ -11,6 +16,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "projects", schema = "gendox_core")
 public class Project {
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -28,15 +34,19 @@ public class Project {
     private String description;
     @Basic
     @Column(name = "created_at", nullable = true)
+    @CreatedDate
     private Instant createdAt;
     @Basic
     @Column(name = "updated_at", nullable = true)
+    @LastModifiedDate
     private Instant updatedAt;
     @Basic
     @Column(name = "created_by")
+    @CreatedBy
     private UUID createdBy;
     @Basic
     @Column(name = "updated_by")
+    @LastModifiedBy
     private UUID updatedBy;
 
     @Schema(hidden = true)
@@ -52,6 +62,10 @@ public class Project {
     @JsonBackReference(value = "project")
     @OneToMany(mappedBy = "project")
     private List<ProjectDocument> projectDocuments ;
+
+    @Basic
+    @Column(name = "auto_training")
+    private Boolean autoTraining;
 
 
 
@@ -135,15 +149,62 @@ public class Project {
         this.updatedBy = updatedBy;
     }
 
+    public List<ProjectDocument> getProjectDocuments() {
+        return projectDocuments;
+    }
+
+    public void setProjectDocuments(List<ProjectDocument> projectDocuments) {
+        this.projectDocuments = projectDocuments;
+    }
+
+    public Boolean getAutoTraining() {
+        return autoTraining;
+    }
+
+    public void setAutoTraining(Boolean autoTraining) {
+        this.autoTraining = autoTraining;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Project project)) return false;
-        return Objects.equals(getId(), project.getId()) && Objects.equals(getOrganizationId(), project.getOrganizationId()) && Objects.equals(getName(), project.getName()) && Objects.equals(getDescription(), project.getDescription()) && Objects.equals(getCreatedAt(), project.getCreatedAt()) && Objects.equals(getUpdatedAt(), project.getUpdatedAt()) && Objects.equals(getCreatedBy(), project.getCreatedBy()) && Objects.equals(getUpdatedBy(), project.getUpdatedBy()) && Objects.equals(getProjectMembers(), project.getProjectMembers()) && Objects.equals(getProjectAgent(), project.getProjectAgent()) && Objects.equals(projectDocuments, project.projectDocuments);
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Project project = (Project) o;
+
+        if (!Objects.equals(id, project.id)) return false;
+        if (!Objects.equals(organizationId, project.organizationId))
+            return false;
+        if (!Objects.equals(name, project.name)) return false;
+        if (!Objects.equals(description, project.description)) return false;
+        if (!Objects.equals(createdAt, project.createdAt)) return false;
+        if (!Objects.equals(updatedAt, project.updatedAt)) return false;
+        if (!Objects.equals(createdBy, project.createdBy)) return false;
+        if (!Objects.equals(updatedBy, project.updatedBy)) return false;
+        if (!Objects.equals(projectMembers, project.projectMembers))
+            return false;
+        if (!Objects.equals(projectAgent, project.projectAgent))
+            return false;
+        if (!Objects.equals(projectDocuments, project.projectDocuments))
+            return false;
+        return Objects.equals(autoTraining, project.autoTraining);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getOrganizationId(), getName(), getDescription(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy(), getProjectMembers(), getProjectAgent(), projectDocuments);
+        int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (organizationId != null ? organizationId.hashCode() : 0);
+        result = 31 * result + (name != null ? name.hashCode() : 0);
+        result = 31 * result + (description != null ? description.hashCode() : 0);
+        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
+        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
+        result = 31 * result + (createdBy != null ? createdBy.hashCode() : 0);
+        result = 31 * result + (updatedBy != null ? updatedBy.hashCode() : 0);
+        result = 31 * result + (projectMembers != null ? projectMembers.hashCode() : 0);
+        result = 31 * result + (projectAgent != null ? projectAgent.hashCode() : 0);
+        result = 31 * result + (projectDocuments != null ? projectDocuments.hashCode() : 0);
+        result = 31 * result + (autoTraining != null ? autoTraining.hashCode() : 0);
+        return result;
     }
 }

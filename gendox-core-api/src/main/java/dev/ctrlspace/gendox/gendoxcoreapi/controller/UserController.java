@@ -3,14 +3,12 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
 import jakarta.validation.Valid;
@@ -18,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,8 +26,6 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -42,17 +37,17 @@ public class UserController {
 
     //    @Autowired
     private UserService userService;
-    private JwtEncoder jwtEncoder;
+    private JWTUtils jwtUtils;
     private UserProfileConverter userProfileConverter;
     private UserConverter userConverter;
 
     @Autowired
     public UserController(UserService userService,
-                          JwtEncoder jwtEncoder,
+                          JWTUtils jwtUtils,
                           UserProfileConverter userProfileConverter,
                           UserConverter userConverter) {
         this.userService = userService;
-        this.jwtEncoder = jwtEncoder;
+        this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
         this.userConverter = userConverter;
     }
@@ -96,24 +91,24 @@ public class UserController {
     }
 
     // TODO this is just for demo purposes, need to be rewrite
-    @GetMapping("/users/login")
-    @Operation(summary = "Get users token by email or user name",
-            description = "Retrieve user information based on their email address or username. " +
-                    "This method decodes the user's JWT based on the provided email or username " +
-                    "and returns a JWTResponse containing the user's JWT token.")
-    @Observed(name = "user.login",
-            contextualName = "user-login-method",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-            })
-    public JwtResponse getUserByLogin(@RequestParam("userIdentifier") String userIdentifier) throws Exception {
-
-        // run code to get the user from the database
-        JwtClaimsSet claims = userService.getJwtClaims(userIdentifier);
-
-        String jwt = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-        return new JwtResponse(jwt);
-    }
+//    @GetMapping("/users/login")
+//    @Operation(summary = "Get users token by email or user name",
+//            description = "Retrieve user information based on their email address or username. " +
+//                    "This method decodes the user's JWT based on the provided email or username " +
+//                    "and returns a JWTResponse containing the user's JWT token.")
+//    @Observed(name = "user.login",
+//            contextualName = "user-login-method",
+//            lowCardinalityKeyValues = {
+//                    ObservabilityTags.LOGGABLE, "true",
+//            })
+//    public JwtResponse getUserByLogin(@RequestParam("userIdentifier") String userIdentifier) throws Exception {
+//
+//        // run code to get the user from the database
+//        JwtClaimsSet claims = userService.getJwtClaims(userIdentifier);
+//
+//        String jwt = jwtUtils.toJwtString(claims);
+//        return new JwtResponse(jwt);
+//    }
 
     @PostMapping(value = "/users", consumes = {"application/json"})
     @ResponseStatus(value = HttpStatus.CREATED)
@@ -153,7 +148,19 @@ public class UserController {
 //    }
 
 
-    record JwtResponse(String token) {
+    @PutMapping("/users/{id}")
+    public User updateUser(@PathVariable UUID id, @RequestBody UserDTO userDTO) throws GendoxException {
+        User user = new User();
+        user = userConverter.toEntity(userDTO);
+
+        if (!id.equals(user.getId())) {
+            throw new GendoxException("User's_ID_MISMATCH", "User's ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
+        }
+
+        user = userService.updateUser(user);
+        return user;
+
+
     }
 
 }
