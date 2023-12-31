@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -21,5 +22,18 @@ public interface DocumentInstanceRepository extends JpaRepository<DocumentInstan
     String findRemoteUrlBySectionId(@Param("sectionId") UUID sectionId);
 
 
+
+    @Query(nativeQuery = true, value = "SELECT di.* " +
+            "FROM gendox_core.document_instance di " +
+            "INNER JOIN gendox_core.project_documents pd ON di.id = pd.document_id " +
+            "WHERE di.organization_id = :organizationId " +
+            "AND pd.project_id = :projectId " +
+            "AND RIGHT(di.remote_url, CHAR_LENGTH(:fileName)) = :fileName " +
+            "ORDER BY di.updated_at DESC " +
+            "LIMIT 1")
+    Optional<DocumentInstance> findByProjectIdAndOrganizationIdAndFileName(
+            @Param("projectId") UUID projectId,
+            @Param("organizationId") UUID organizationId,
+            @Param("fileName") String fileName);
 
 }

@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.CommonCommandUtility;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
@@ -54,7 +55,7 @@ public class SecurityUtils {
 
     public boolean hasAuthorityToRequestedOrgId(String authority) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt)authentication.getPrincipal());
+        //JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt)authentication.getPrincipal());
         if (isSuperAdmin(authentication)) {
             return true; // Skip validation if user is an admin
         }
@@ -68,13 +69,14 @@ public class SecurityUtils {
             return false;
         }
 
-        if (!jwtDTO.getOrgAuthoritiesMap().containsKey(organizationId)) {
-            return false;
-        }
+//        if (!jwtDTO.getOrgAuthoritiesMap().containsKey(organizationId)) {
+//            return false;
+//        }
 
-        if (!jwtDTO.getOrgAuthoritiesMap().get(organizationId).orgAuthorities().contains(authority)){
-            return false;
-        }
+//
+//        if (!jwtDTO.getOrgAuthoritiesMap().get(organizationId).orgAuthorities().contains(authority)){
+//            return false;
+//        }
 
         return true;
     }
@@ -148,8 +150,8 @@ public class SecurityUtils {
     public UUID getUserId() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
-            return UUID.fromString(jwtDTO.getUserId());
+            String userId = ((UserProfile) authentication.getPrincipal()).getId();
+            return UUID.fromString(userId);
         } catch (Exception e){
             logger.warn("An exception occurred while trying to get the user ID: " + e.getMessage());
             return null;

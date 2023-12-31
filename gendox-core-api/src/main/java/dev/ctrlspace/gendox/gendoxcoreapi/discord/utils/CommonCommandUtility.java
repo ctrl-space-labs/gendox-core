@@ -1,12 +1,14 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.discord.utils;
 
 
+import dev.ctrlspace.gendox.authentication.AuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.ListenerService;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.constants.DiscordGendoxConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.messages.ChatGendoxMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.messages.SearchGendoxMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
@@ -37,18 +39,21 @@ public class CommonCommandUtility {
     private ListenerService listenerService;
     private ChatGendoxMessage chatGendoxMessage;
     private SearchGendoxMessage searchGendoxMessage;
+    private AuthenticationService authenticationService;
 
     @Autowired
     public CommonCommandUtility(UserService userService,
                                 ProjectRepository projectRepository,
                                 ListenerService listenerService,
                                 ChatGendoxMessage chatGendoxMessage,
-                                SearchGendoxMessage searchGendoxMessage) {
+                                SearchGendoxMessage searchGendoxMessage,
+                                AuthenticationService authenticationService) {
         this.userService = userService;
         this.projectRepository = projectRepository;
         this.listenerService = listenerService;
         this.chatGendoxMessage = chatGendoxMessage;
         this.searchGendoxMessage = searchGendoxMessage;
+        this.authenticationService = authenticationService;
     }
 
 
@@ -71,15 +76,28 @@ public class CommonCommandUtility {
             String channelId = event.getChannel().getId();
             TextChannel channel = event.getJDA().getTextChannelById(channelId);
             String authorName = event.getUser().getName();
+            User user = userService
+                    .getOptionalUserByUniqueIdentifier(authorName)
+                    .orElse(null);
 
             // check if author is gendox user and if not, create new user
             if (event.getUser().isBot()) return;
             try {
-                if (!userService.isUserExistByUserName(authorName)) {
-                    userService.createDiscordUser(authorName);
+                if (user == null) {
+                    user = userService.createDiscordUser(authorName);
                 }
             } catch (GendoxException e) {
-                logger.error("An An error occurred while checking/creating the user: " + e.getMessage());
+                logger.error("An error occurred while checking/creating the user: " + e.getMessage());
+                throw new RuntimeException(e);
+            }
+
+            // check if identifier user exist and if no create identifier user
+            try {
+                if (authenticationService.getUsersByUsername(authorName).isEmpty()) {
+                    authenticationService.createUser(user, null, true, false);
+                }
+            } catch (GendoxException e) {
+                logger.error("An error occurred while checking/creating user's identifier: " + e.getMessage());
                 throw new RuntimeException(e);
             }
 

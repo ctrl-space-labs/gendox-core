@@ -1,4 +1,5 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria;
+
+package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

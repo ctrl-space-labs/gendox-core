@@ -1,12 +1,17 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "ai_models", schema = "gendox_core")
 public class AiModel {
     @Id
@@ -14,14 +19,14 @@ public class AiModel {
     @Column(name = "id", nullable = false)
     private UUID id;
     @Basic
-    @Column(name = "model_name", nullable = false, length = -1)
-    private String name;
+    @Column(name = "model", nullable = false, length = -1)
+    private String model;
     @Basic
     @Column(name = "url", nullable = true, length = -1)
     private String url;
     @Basic
-    @Column(name = "type", nullable = true, length = -1)
-    private String type;
+    @Column(name = "name", nullable = true, length = -1)
+    private String name;
 //    @Basic
 //    @Column(name = "api_key", nullable = true, length = -1)
 //    private String apiKey;
@@ -30,11 +35,15 @@ public class AiModel {
     private BigDecimal price;
     @Basic
     @Column(name = "created_at", nullable = true)
+    @CreatedDate
     private Instant createdAt;
     @Basic
     @Column(name = "updated_at", nullable = true)
+    @LastModifiedDate
     private Instant updatedAt;
-
+    @Basic
+    @Column(name = "description", nullable = false, length = -1)
+    private String description;
     public UUID getId() {
         return id;
     }
@@ -51,6 +60,23 @@ public class AiModel {
         this.name = name;
     }
 
+    public String getModel() {
+        return model;
+    }
+
+    public void setModel(String model) {
+        this.model = model;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+
     public String getUrl() {
         return url;
     }
@@ -58,15 +84,6 @@ public class AiModel {
     public void setUrl(String url) {
         this.url = url;
     }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
 
 
     public BigDecimal getPrice() {
@@ -97,29 +114,12 @@ public class AiModel {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         AiModel aiModel = (AiModel) o;
-
-        if (id != null ? !id.equals(aiModel.id) : aiModel.id != null) return false;
-        if (name != null ? !name.equals(aiModel.name) : aiModel.name != null) return false;
-        if (url != null ? !url.equals(aiModel.url) : aiModel.url != null) return false;
-        if (type != null ? !type.equals(aiModel.type) : aiModel.type != null) return false;
-        if (price != null ? !price.equals(aiModel.price) : aiModel.price != null) return false;
-        if (createdAt != null ? !createdAt.equals(aiModel.createdAt) : aiModel.createdAt != null) return false;
-        if (updatedAt != null ? !updatedAt.equals(aiModel.updatedAt) : aiModel.updatedAt != null) return false;
-
-        return true;
+        return Objects.equals(id, aiModel.id) && Objects.equals(model, aiModel.model) && Objects.equals(url, aiModel.url) && Objects.equals(name, aiModel.name) && Objects.equals(price, aiModel.price) && Objects.equals(createdAt, aiModel.createdAt) && Objects.equals(updatedAt, aiModel.updatedAt) && Objects.equals(description, aiModel.description);
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (name != null ? name.hashCode() : 0);
-        result = 31 * result + (url != null ? url.hashCode() : 0);
-        result = 31 * result + (type != null ? type.hashCode() : 0);
-        result = 31 * result + (price != null ? price.hashCode() : 0);
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        return result;
+        return Objects.hash(id, model, url, name, price, createdAt, updatedAt, description);
     }
 }

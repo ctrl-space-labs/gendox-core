@@ -7,7 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserOrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
@@ -39,19 +39,16 @@ public class OrganizationController {
 
     private OrganizationService organizationService;
     private UserOrganizationService userOrganizationService;
-    private JwtEncoder jwtEncoder;
     private OrganizationConverter organizationConverter;
     private JWTUtils jwtUtils;
 
 
     @Autowired
     public OrganizationController(OrganizationService organizationService,
-                                  JwtEncoder jwtEncoder,
                                   JWTUtils jwtUtils,
                                   UserOrganizationService userOrganizationService,
                                   OrganizationConverter organizationConverter) {
         this.organizationService = organizationService;
-        this.jwtEncoder = jwtEncoder;
         this.organizationConverter = organizationConverter;
         this.userOrganizationService = userOrganizationService;
         this.jwtUtils = jwtUtils;
@@ -63,10 +60,10 @@ public class OrganizationController {
     @GetMapping("/organizations")
     @Operation(summary = "Get all organizations",
             description = "Retrieve a list of all organizations based on the provided criteria.")
-    public Page<Organization> getAllOrganizations(@Valid OrganizationCriteria critetia, Pageable pageable) throws Exception {
+    public Page<Organization> getAllOrganizations(@Valid OrganizationCriteria criteria, Pageable pageable) throws Exception {
 
         //run code to get the organization from database
-        return organizationService.getAllOrganizations(critetia, pageable);
+        return organizationService.getAllOrganizations(criteria, pageable);
     }
 
     @GetMapping("/organizations/{id}")
@@ -163,10 +160,12 @@ public class OrganizationController {
                     The only requered field is the {user.id, organization.id role.name}
                     All the other fields will be ignored.
                     """)
-    @PostMapping(value = "/organizations/{id}/users", consumes = {"application/json"})
-    public UserOrganization addUserToOrganization(@PathVariable UUID id, @RequestBody UserOrganizationDTO userOrganizationDTO, Authentication authentication) throws Exception {
+    @PostMapping(value = "/organizations/{organizationId}/users", consumes = {"application/json"})
+    public UserOrganization addUserToOrganization(@PathVariable UUID organizationId, @RequestBody UserOrganizationDTO userOrganizationDTO) throws Exception {
 
-        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt) authentication.getPrincipal());
+        if (!organizationId.equals(userOrganizationDTO.getOrganization().getId())) {
+            throw new GendoxException("ORGANIZATION_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
+        }
 
         return userOrganizationService.createUserOrganization(
                 userOrganizationDTO.getUser().getId(),
