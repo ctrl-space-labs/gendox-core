@@ -89,60 +89,53 @@ test.describe('Users CRUD API', () => {
 
     test('Error in missing mandatory criteria', async ({ page, request }) => {
 
-            const response = await users.getUsersbyCriteria(request, token, {});
+        const response = await users.getUsersbyCriteria(request, token, {});
 
-            expect(response.ok()).toBeFalsy();
-            expect(response.status()).toBe(400);
-            let respBody = await response.json();
-            expect(respBody.metadata[0].field).toBe('userCriteria');
+        expect(response.ok()).toBeFalsy();
+        expect(response.status()).toBe(400);
+        let respBody = await response.json();
+        expect(respBody.metadata[0].field).toBe('userCriteria');
 
         });
 
 
     //test.skip to skip this test
     test('Create User', async ({ page, request }) => {
-            const newUserData = {
-                                 name: 'Test User',
-                                 email: 'testuserdeelete@test.com'
-                             };
+        const newUserData = {
+                             name: 'Test User',
+                             email: 'testuserdeelete@test.com'
+                         };
 
+        const response = await users.createUser(request, token, newUserData);
 
-            const response = await users.createUser(request, token, newUserData);
+        expect(response.ok()).toBeTruthy();
+        let respBody = await response.json();
+        expect(respBody.id).toBeDefined();
+        expect(respBody.name).toBe('Test User');
+        expect(respBody.email).toBe('testuserdeelete@test.com');
 
-
-
-            expect(response.ok()).toBeTruthy();
-            let respBody = await response.json();
-            expect(respBody.id).toBeDefined();
-            expect(respBody.name).toBe('Test User');
-            expect(respBody.email).toBe('testuserdeelete@test.com');
-
-
-            await page.pause();
-
+        await page.pause();
 
         });
 
 
     test('Update User', async ({ page, request }) => {
-            const updatedUserData = {
-                                id: 'a1d827bf-2973-442f-9b5a-27133ad408d2',
-                                name: 'Test User',
-                                email: 'testuserdelete@test.com'
-                             };
+        const updatedUserData = {
+                            id: 'a1d827bf-2973-442f-9b5a-27133ad408d2',
+                            name: 'Test User',
+                            email: 'testuserdelete@test.com'
+                         };
 
+        const response = await users.updateUser(request, token, updatedUserData, 'a1d827bf-2973-442f-9b5a-27133ad408d2');
 
-            const response = await users.updateUser(request, token, updatedUserData, 'a1d827bf-2973-442f-9b5a-27133ad408d2');
+        expect(response.ok()).toBeTruthy();
+        let respBody = await response.json();
+        console.log(JSON.stringify(respBody))
+        expect(respBody.id).toBe('a1d827bf-2973-442f-9b5a-27133ad408d2');
+        expect(respBody.name).toBe('Test User');
+        expect(respBody.email).toBe('testuserdelete@test.com');
 
-            expect(response.ok()).toBeTruthy();
-            let respBody = await response.json();
-            console.log(JSON.stringify(respBody))
-            expect(respBody.id).toBe('a1d827bf-2973-442f-9b5a-27133ad408d2');
-            expect(respBody.name).toBe('Test User');
-            expect(respBody.email).toBe('testuserdelete@test.com');
-
-
-            await page.pause();
+        await page.pause();
 
 
         });
