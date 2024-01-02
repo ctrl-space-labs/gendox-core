@@ -1,5 +1,6 @@
 const {test, expect} = require('@playwright/test');
 const projects = require('../../page-objects/apis/projects');
+const projectUsers = require('../../page-objects/apis/projectUsers');
 const exp = require("constants");
 
 test.describe('Projects CRUD API', () => {
@@ -40,6 +41,7 @@ test.describe('Projects CRUD API', () => {
 
     });
 
+
     test('Get Projects By Organization', async ({ page, request }) => {
 
         const response = await projects.getProjectByCriteria(request, token, {
@@ -74,11 +76,9 @@ test.describe('Projects CRUD API', () => {
     });
 
 
-        test('Get Project Members by id', async ({ page, request }) => {
+    test('Get Project Members by id', async ({ page, request }) => {
 
-
-
-            const response = await projects.getProjectMembers(request, token, '19319b2a-6230-4b13-9bb6-a0f02eac183a')
+            const response = await projectUsers.getProjectMembers(request, token, '19319b2a-6230-4b13-9bb6-a0f02eac183a')
             expect(response.ok()).toBeTruthy();
             let respBody = await response.json();
              if (respBody.length === 0 && response.ok()) {
