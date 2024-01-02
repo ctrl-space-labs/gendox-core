@@ -64,5 +64,26 @@ test.describe('Organizations CRUD API', () => {
 
     });
 
+
+     test('Create Organization', async ({ page, request }) => {
+        const newOrgData = {
+                             name: 'A Testing Organization',
+                             displayName: 'Delete Organization',
+                             address: 'Middle Of Nowhere'
+                         };
+
+        const response = await organizations.createOrganization(request, token, newOrgData);
+
+        expect(response.ok()).toBeTruthy();
+        let respBody = await response.json();
+        expect(respBody.id).toBeDefined();
+        expect(respBody.name).toBe('A Testing Organization');
+        expect(respBody.displayName).toBe('Delete Organization');
+
+        await page.pause();
+
+    });
+
+
 });
 

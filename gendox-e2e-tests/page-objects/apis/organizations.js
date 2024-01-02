@@ -27,7 +27,21 @@ const getOrganizationByCriteria = async (request, token, criteria) => {
 }
 
 
+const createOrganization = async (request, token, orgData ) => {
+
+    const response = await request.post(`${config.gendox.contextPath}/organizations`, {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        },
+        data: orgData
+    });
+    return response;
+}
+
+
 module.exports = {
     getOrganizationById,
-    getOrganizationByCriteria
+    getOrganizationByCriteria,
+    createOrganization
 }
