@@ -19,7 +19,7 @@ const createUser = async (request, token, userData ) => {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         },
-        body: userData
+        data: userData
     });
     return response;
 }
