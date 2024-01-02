@@ -16,6 +16,7 @@ const createUser = async (request, token, userData ) => {
     const response = await request.post(`${config.gendox.contextPath}/users`, {
         headers: {
             'Authorization': 'Bearer ' + token,
+            'Accept': 'application/json',
             'Content-Type': 'application/json'
         },
         body: userData
@@ -23,9 +24,21 @@ const createUser = async (request, token, userData ) => {
     return response;
 }
 
-
+//const updateUser = async (request, token, userData, userId ) => {
+//
+//    const response = await request.put(`${config.gendox.contextPath}/users/${userId}`, {
+//        headers: {
+//            'Authorization': 'Bearer ' + token,
+//            'Accept': 'application/json',
+//            'Content-Type': 'application/json'
+//        },
+//        body: JSON.stringify(userData)
+//    });
+//    return response;
+//}
 
 module.exports = {
     getUserById,
     createUser
+//    updateUser
 }
