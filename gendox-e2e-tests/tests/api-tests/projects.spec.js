@@ -1,6 +1,8 @@
 const {test, expect} = require('@playwright/test');
 const projects = require('../../page-objects/apis/projects');
 const projectUsers = require('../../page-objects/apis/projectUsers');
+const keycloak = require('../../page-objects/apis/keycloak');
+
 const exp = require("constants");
 
 test.describe('Projects CRUD API', () => {
@@ -8,24 +10,14 @@ test.describe('Projects CRUD API', () => {
     let token;
 
     test.beforeAll(async ({ request }) => {
+
         //x-www-form-urlencoded
-        const response = await request.post('https://dev.gendox.ctrlspace.dev/idp/realms/gendox-idp-dev/protocol/openid-connect/token', {
-            headers:{
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            form: {
-                grant_type: 'password',
-                client_id: 'gendox-public-client',
-                username: 'csekas@test.com',
-                password: '123456789',
-                scope: 'openid email'
-            }
-        });
+        const response = await keycloak.simpleUserLogin(request);
+
         let body = await response.json();
         token = body.access_token;
         expect(response.ok()).toBeTruthy();
     });
-
 
     test('Get Project by id', async ({ page, request }) => {
 
