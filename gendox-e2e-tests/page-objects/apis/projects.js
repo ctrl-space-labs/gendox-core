@@ -37,7 +37,23 @@ const getProjectByCriteria = async (request, token, criteria) => {
                 'Content-Type': 'application/json'
             }
         });
+       const responseBody =  JSON.parse(await response.text())
+        return response;
 
+
+}
+
+const getProjectMembers = async (request, token, projectId) => {
+
+
+        //add criteria (if any) as requests param key-value pairs
+        const response = await request.get(`${config.gendox.contextPath}/projects/${projectId}/users`, {
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            }
+        });
+       const responseBody =  JSON.parse(await response.text())
         return response;
 
 
@@ -46,5 +62,7 @@ const getProjectByCriteria = async (request, token, criteria) => {
 
 module.exports = {
     getProjectById,
-    getProjectByCriteria
+    getProjectByCriteria,
+    getProjectMembers
+
 }

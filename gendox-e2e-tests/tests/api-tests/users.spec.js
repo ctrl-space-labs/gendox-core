@@ -34,20 +34,21 @@ test.describe('Users CRUD API', () => {
 
     test('Create User', async ({ page, request }) => {
             const userData = {
-                                 name: 'Jane Doe',
-                                 email: 'janedoe@test.com',
-
-
+                                 name: 'Test User',
+                                 email: 'testuser@test.com',
                              };
 
 
             const response = await users.createUser(request, token, userData);
 
+
+
             expect(response.ok()).toBeTruthy();
             let respBody = await response.json();
+            console.log(JSON.stringify(respBody))
             expect(respBody.id).toBeDefined();
-            expect(respBody.name).toBe('Jane Doe');
-            expect(respBody.email).toBe('janedoe@test.com');
+            expect(respBody.name).toBe('Test User');
+            expect(respBody.email).toBe('testuser@test.com');
 
 
             await page.pause();
@@ -55,6 +56,27 @@ test.describe('Users CRUD API', () => {
 
         });
 
-
+//    test('Update User', async ({ page, request }) => {
+//            const userData = {
+//                                    "id": "5d80024f-ba4d-4ff8-988e-ae37b171d9e4",
+//                                    "name": "Myrto Potamity",
+//                                    "firstName": "Mirto"
+//                             };
+//
+//
+//            const response = await users.updateUser(request, token, userData, '5d80024f-ba4d-4ff8-988e-ae37b171d9e4');
+//
+//            expect(response.ok()).toBeTruthy();
+//            let respBody = await response.json();
+//            console.log(JSON.stringify(respBody))
+//            expect(respBody.id).toBe('5d80024f-ba4d-4ff8-988e-ae37b171d9e4');
+//            expect(respBody.name).toBe('Myrto Potamity');
+//            expect(respBody.firstName).toBe('Mirto');
+//
+//
+//            await page.pause();
+//
+//
+//        });
 
     });

@@ -74,4 +74,23 @@ test.describe('Projects CRUD API', () => {
     });
 
 
+        test('Get Project Members by id', async ({ page, request }) => {
+
+
+
+            const response = await projects.getProjectMembers(request, token, '19319b2a-6230-4b13-9bb6-a0f02eac183a')
+            expect(response.ok()).toBeTruthy();
+            let respBody = await response.json();
+             if (respBody.length === 0 && response.ok()) {
+                    console.log('The project has no members');
+                } else {
+            console.log('Response Body:', respBody);
+            expect(respBody[0]).toHaveProperty('project');
+            expect(respBody[0].project).toHaveProperty('id', '19319b2a-6230-4b13-9bb6-a0f02eac183a');
+            }
+            await page.pause();
+
+        });
+
+
 });
