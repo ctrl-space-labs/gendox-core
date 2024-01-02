@@ -1,0 +1,42 @@
+version: '3'
+
+services:
+  db:
+    image: ankane/pgvector:latest
+    container_name: postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    networks:
+      - flyway_postgres_network
+    expose:
+      - "5432"
+    ports:
+      - "${PORT}:5432"
+
+  flyway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    environment: # Flyway environment variables
+      - FLYWAY_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}
+      - FLYWAY_USER=${POSTGRES_USER}
+      - FLYWAY_PASSWORD=${POSTGRES_PASSWORD}
+    networks:
+      - flyway_postgres_network
+    volumes:
+      - ./:/flyway/sql  # Adjust the path to your actual migration scripts location
+
+networks:
+  flyway_postgres_network:
+
+
+
+
+
+
+
+
