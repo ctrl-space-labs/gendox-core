@@ -20,3 +20,42 @@ By default, the `local` configuration file is used, but you can override it by p
 ```bash
 mvn clean install flyway:migrate -Denv=dev -Durl=jdbc:postgresql://localhost:5432/postgres -Duser=your_username -Dpassword=your_password
 ```
+
+
+### Using Docker
+
+- Install Docker according to [Get Docker](https://docs.docker.com/get-docker/)
+
+- Create an `.env` file with the directory ./database with the required environment variables, for values ​​you can put your own, like this:
+
+```bash
+POSTGRES_DB=******
+POSTGRES_USER=******
+POSTGRES_PASSWORD=******
+PORT=****
+```
+
+Then you need to Build or rebuild services
+```bash
+docker-compose build
+```
+
+Create and start containers
+```bash
+docker-compose up
+```
+- or if you want to run containers in the background
+```bash
+docker-compose up -d
+```
+
+Stop and restart the conteiners with all data saved
+```bash
+docker-compose stop
+docker-compose start
+```
+
+Stop and remove containers, networks (all data will be deleted)
+```bash
+docker-compose down
+```
