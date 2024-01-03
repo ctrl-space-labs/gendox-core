@@ -18,7 +18,7 @@ services:
   flyway:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.flyway
     depends_on:
       - db
     environment: # Flyway environment variables
