@@ -19,12 +19,12 @@ test.describe('Users CRUD API', () => {
     test('Get User by id', async ({ page, request }) => {
 
 
-        const response = await users.getUserById(request, token, '5d80024f-ba4d-4ff8-988e-ae37b171d9e4');
+        const response = await users.getUserById(request, token, '19b6aa4a-48f4-4073-8b95-41039f090344');
 
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
-        expect(respBody.id).toBe('5d80024f-ba4d-4ff8-988e-ae37b171d9e4');
-        expect(respBody.name).toBe('Myrto Potamiti');
+        expect(respBody.id).toBe('19b6aa4a-48f4-4073-8b95-41039f090344');
+        expect(respBody.name).toBe('Test User1');
 
 
         await page.pause();
@@ -34,12 +34,12 @@ test.describe('Users CRUD API', () => {
 
 
     test('Get User Profile by ID', async ({ page, request }) => {
-        const userId = '5d80024f-ba4d-4ff8-988e-ae37b171d9e4';
+        const userId = '19b6aa4a-48f4-4073-8b95-41039f090344';
         const response = await users.getUserProfileById(request, token, userId);
 
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
-        expect(respBody.userId).toBe('5d80024f-ba4d-4ff8-988e-ae37b171d9e4');
+        expect(respBody.userId).toBe('19b6aa4a-48f4-4073-8b95-41039f090344');
 
         await page.pause();
     });
@@ -48,20 +48,20 @@ test.describe('Users CRUD API', () => {
     test('Get Users By Organization ID', async ({ page, request }) => {
 
             const response = await users.getUsersbyCriteria(request, token, {
-                organizationId: '9228b56c-1058-4b92-a2e2-5526bdc834af'
+                organizationId: '41ce6db7-70fd-411d-b3d8-f2d5775ed501'
             })
 
             expect(response.ok()).toBeTruthy();
             let respBody = await response.json();
-            expect(respBody.totalElements).toBe(1);
+            expect(respBody.totalElements).toBe(4);
 
-            let DefaultUser = respBody.content.find(user => user.name === 'Chris Sekas');
+            let DefaultUser = respBody.content.find(user => user.name === 'Test User1');
 
 //            respBody.content.forEach(user => {
 //                expect(user.organizationId).toBe('9228b56c-1058-4b92-a2e2-5526bdc834af');
 //            });
 
-            expect(DefaultUser.userType.name).toBe('GENDOX_USER');
+            expect(DefaultUser.userType.name).toBe('ROLE_USER');
 
         });
 
@@ -69,20 +69,20 @@ test.describe('Users CRUD API', () => {
     test('Get Users By Project ID', async ({ page, request }) => {
 
             const response = await users.getUsersbyCriteria(request, token, {
-                projectId: '06834369-a04a-4ca9-81f2-648e3e36cf95'
+                projectId: 'dda1148a-2251-4082-b838-6834251f59a0'
             })
 
             expect(response.ok()).toBeTruthy();
             let respBody = await response.json();
-            expect(respBody.totalElements).toBe(1);
+            expect(respBody.totalElements).toBe(2);
 
-            let DefaultUser = respBody.content.find(user => user.name === 'Chris Sekas');
+            let DefaultUser = respBody.content.find(user => user.name === 'Test User1');
 
 //            respBody.content.forEach(user => {
 //                expect(user.organizationId).toBe('9228b56c-1058-4b92-a2e2-5526bdc834af');
 //            });
 
-            expect(DefaultUser.userType.name).toBe('GENDOX_USER');
+            expect(DefaultUser.userType.name).toBe('ROLE_USER');
 
         });
 
@@ -130,7 +130,6 @@ test.describe('Users CRUD API', () => {
 
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
-        console.log(JSON.stringify(respBody))
         expect(respBody.id).toBe('a1d827bf-2973-442f-9b5a-27133ad408d2');
         expect(respBody.name).toBe('Test User');
         expect(respBody.email).toBe('testuserdelete@test.com');

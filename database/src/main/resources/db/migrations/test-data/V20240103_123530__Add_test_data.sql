@@ -2,7 +2,7 @@
 ----------------------------------  Create Test Users   --------------------------------
 
 INSERT into gendox_core.users
-    (name, email, global_role_id)
+    (name, email, users_type_id)
 select 'Test User1',
        'testuser1@test.com',
        (SELECT id
@@ -12,7 +12,7 @@ select 'Test User1',
 where not exists(SELECT * FROM gendox_core.users where email = 'testuser1@test.com');
 
 INSERT into gendox_core.users
-    (name, email, global_role_id)
+    (name, email, users_type_id)
 select 'Test User2',
        'testuser2@test.com',
        (SELECT id
@@ -22,7 +22,7 @@ select 'Test User2',
 where not exists(SELECT * FROM gendox_core.users where email = 'testuser2@test.com');
 
 INSERT into gendox_core.users
-    (name, email, global_role_id)
+    (name, email, users_type_id)
 select 'Test User3',
        'testuser3@test.com',
        (SELECT id
@@ -32,13 +32,13 @@ select 'Test User3',
 where not exists(SELECT * FROM gendox_core.users where email = 'testuser3@test.com');
 
 INSERT into gendox_core.users
-    (name, email, global_role_id)
+    (name, email, users_type_id)
 select 'Test User4',
        'testuser4@test.com',
        (SELECT id
         FROM gendox_core.types
         where type_category = 'GLOBAL_APPLICATION_ROLE_TYPE'
-          and name = 'ROLE_ADMIN')
+          and name = 'ROLE_USER')
 where not exists(SELECT * FROM gendox_core.users where email = 'testuser4@test.com');
 
 --------------------------------------------------------------------------------------------------------
