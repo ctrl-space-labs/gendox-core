@@ -45,7 +45,7 @@ docker run -d
   giannisy/gendox-database:1.0
 ```
 
-  - `-e`: Sets environment variables for configuring the MySQL instance.
+  - `-e`: Sets environment variables for configuring the PostgreSQL instance.
   - `-p`: Maps the host port to the container port (replace <HOST_PORT> with the desired host port).
   - `--name`: Assigns a name to the Docker container.
 
