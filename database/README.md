@@ -40,7 +40,7 @@ docker run -d
   -e POSTGRES_DB=<YOUR_DB_NAME> 
   -e POSTGRES_USER=<YOUR_DB_USER> 
   -e POSTGRES_PASSWORD=<YOUR_DB_PASSWORD> 
-  -p <HOST_PORT>:3306 
+  -p <HOST_PORT>:5432
   --name my_database_container 
   giannisy/gendox-database:1.0
 ```
