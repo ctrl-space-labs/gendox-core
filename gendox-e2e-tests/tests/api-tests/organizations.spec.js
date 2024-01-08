@@ -28,7 +28,7 @@ test.describe('Organizations CRUD API', () => {
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
         expect(respBody.id).toBe('41ce6db7-70fd-411d-b3d8-f2d5775ed501');
-        expect(respBody.name).toBe('Test User1');
+        expect(respBody.name).toBe('test organization1');
 
 
         await page.pause();
@@ -79,39 +79,62 @@ test.describe('Organizations CRUD API', () => {
         expect(respBody.id).toBeDefined();
         expect(respBody.name).toBe('A Testing Organization');
         expect(respBody.displayName).toBe('Delete Organization');
+//        store the organization ID
+        newOrganizationId = respBody.id;
 
 
         await page.pause();
 
     });
 
-//test if user has writing rights EDITOR_ROLE
-    test.only('Update Organization', async ({ page, request }) => {
-        const updatedOrganizationData = {
-                            id: '19c4a9b1-d9e7-4621-95f4-d006fef265c2',
-                            name: 'A Testing Organization',
-                            displayName: 'Delete this Organization'
+//This test tests the update organization endpoint. The user that updates is the Test User1.
+//This endpoint is tested with two different organizations.
+//updatedOrganizationData1 are the data of the organization that this user is an admin, therefore it is expected to succed.
+//updatedOrganizationData2 is another organization where the user is not an admin and is expected to fail.
+
+    test('Update Organization', async ({ page, request }) => {
+        const updatedOrganizationData1 = {
+                            id: '41ce6db7-70fd-411d-b3d8-f2d5775ed501',
+                            name: 'test organization1',
+                            displayName: 'Testing Organization1'
                          };
 
-        const response = await organizations.updateOrganization(request, token, updatedOrganizationData, '19c4a9b1-d9e7-4621-95f4-d006fef265c2');
+        const updatedOrganizationData2 = {
+                            id: 'feedcb3e-708a-4a8f-b39b-630b06f048b6',
+                            name: 'test organization2',
+                            displayName: 'Testing Organization2'
+                         };
 
-        expect(response.ok()).toBeTruthy();
-        let respBody = await response.json();
-        expect(respBody.id).toBe('19c4a9b1-d9e7-4621-95f4-d006fef265c2');
-        expect(respBody.name).toBe('A Testing Organization');
-        expect(respBody.displayName).toBe('Delete this Organization');
+        const response1 = await organizations.updateOrganization(request, token, updatedOrganizationData1, '41ce6db7-70fd-411d-b3d8-f2d5775ed501');
 
+        expect(response1.ok()).toBeTruthy();
+        let respBody1 = await response1.json();
+        expect(respBody1.id).toBe('41ce6db7-70fd-411d-b3d8-f2d5775ed501');
+        expect(respBody1.name).toBe('test organization1');
+        expect(respBody1.displayName).toBe('Testing Organization1');
+
+
+
+        const response2 = await organizations.updateOrganization(request, token, updatedOrganizationData2, 'feedcb3e-708a-4a8f-b39b-630b06f048b6');
+
+        expect(response2.ok()).not.toBeTruthy();
 
         await page.pause();
 
         });
 
-//test if user has ADMIN rights ADMIN_ROLE
+
 
     test('Delete Organization by id', async ({ page, request }) => {
-        const response = await organizations.deleteOrganization(request, token, '19c4a9b1-d9e7-4621-95f4-d006fef265c2');
+        const response1 = await organizations.deleteOrganization(request, token, newOrganizationId);
 
-        expect(response.ok()).toBeTruthy();
+        expect(organizationIdToDelete).toBeDefined();
+        expect(response1.ok()).toBeTruthy();
+
+        const response2 = await organizations.deleteOrganization(request, token, 'feedcb3e-708a-4a8f-b39b-630b06f048b6');
+
+        expect(response2.ok()).not.toBeTruthy();
+
 
         await page.pause();
 
