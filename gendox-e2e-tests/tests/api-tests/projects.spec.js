@@ -23,12 +23,12 @@ test.describe('Projects CRUD API', () => {
 
 
 
-        const response = await projects.getProjectById(request, token, '99f0a3dc-d64e-4acd-8cda-c57d8aa94a79')
+        const response = await projects.getProjectById(request, token, 'dda1148a-2251-4082-b838-6834251f59a0')
 
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
-        expect(respBody.id).toBe('99f0a3dc-d64e-4acd-8cda-c57d8aa94a79');
-        expect(respBody.name).toBe('demo_java_tutorial');
+        expect(respBody.id).toBe('dda1148a-2251-4082-b838-6834251f59a0');
+        expect(respBody.name).toBe('Test Project 1.1');
         await page.pause();
 
     });
@@ -37,17 +37,17 @@ test.describe('Projects CRUD API', () => {
     test('Get Projects By Organization', async ({ page, request }) => {
 
         const response = await projects.getProjectByCriteria(request, token, {
-            organizationId: '9228b56c-1058-4b92-a2e2-5526bdc834af'
+            organizationId: '41ce6db7-70fd-411d-b3d8-f2d5775ed501'
         })
 
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
-        expect(respBody.totalElements).toBe(6);
+        expect(respBody.totalElements).toBe(2);
 
-        let gendoxWikiProject = respBody.content.find(project => project.name === 'gendox-wiki');
+        let Project1 = respBody.content.find(project => project.name === 'Test Project 1.1');
 
         respBody.content.forEach(project => {
-            expect(project.organizationId).toBe('9228b56c-1058-4b92-a2e2-5526bdc834af');
+            expect(project.organizationId).toBe('41ce6db7-70fd-411d-b3d8-f2d5775ed501');
         });
 
         expect(gendoxWikiProject.autoTraining).toBeTruthy();
