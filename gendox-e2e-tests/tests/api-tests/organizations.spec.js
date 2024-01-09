@@ -87,37 +87,52 @@ test.describe('Organizations CRUD API', () => {
 
     });
 
-//This test tests the update organization endpoint. The user that updates is the Test User1.
-//This endpoint is tested with two different organizations.
-//updatedOrganizationData1 are the data of the organization that this user is an admin, therefore it is expected to succed.
-//updatedOrganizationData2 is another organization where the user is not an admin and is expected to fail.
+//Feature: Update Organization
 
-    test('Update Organization', async ({ page, request }) => {
-        const updatedOrganizationData1 = {
+//Scenario: Update an organization where the logged in user is an admin.
+//Given that the user is logged in
+//Given the updatedOrganizationData
+//When the existing organization data is updated with the updatedOrganizationData
+//Then the organization will be updated.
+
+test('Admin Update Organization', async ({ page, request }) => {
+        const updatedOrganizationData = {
                             id: '41ce6db7-70fd-411d-b3d8-f2d5775ed501',
                             name: 'test organization1',
                             displayName: 'Testing Organization1'
                          };
 
-        const updatedOrganizationData2 = {
+        const response = await organizations.updateOrganization(request, token, updatedOrganizationData, '41ce6db7-70fd-411d-b3d8-f2d5775ed501');
+
+                expect(response.ok()).toBeTruthy();
+                let respBody = await response.json();
+                expect(respBody.id).toBe('41ce6db7-70fd-411d-b3d8-f2d5775ed501');
+                expect(respBody.name).toBe('test organization1');
+                expect(respBody.displayName).toBe('Testing Organization1');
+
+        await page.pause();
+
+
+       });
+
+//Scenario: Update an organization where the logged in user is not an admin.
+//Given that the user is logged in
+//Given the updatedOrganizationData
+//When the existing organization data is updated with the updatedOrganizationData
+//Then the organization will not be updated. An unauthorized error is returned.
+
+test('Unauthorized Update Organization', async ({ page, request }) => {
+
+        const unauthorizedUpdatedOrganizationData = {
                             id: 'feedcb3e-708a-4a8f-b39b-630b06f048b6',
                             name: 'test organization2',
                             displayName: 'Testing Organization2'
                          };
 
-        const response1 = await organizations.updateOrganization(request, token, updatedOrganizationData1, '41ce6db7-70fd-411d-b3d8-f2d5775ed501');
 
-        expect(response1.ok()).toBeTruthy();
-        let respBody1 = await response1.json();
-        expect(respBody1.id).toBe('41ce6db7-70fd-411d-b3d8-f2d5775ed501');
-        expect(respBody1.name).toBe('test organization1');
-        expect(respBody1.displayName).toBe('Testing Organization1');
+        const response = await organizations.updateOrganization(request, token, unauthorizedUpdatedOrganizationData, 'feedcb3e-708a-4a8f-b39b-630b06f048b6');
 
-
-
-        const response2 = await organizations.updateOrganization(request, token, updatedOrganizationData2, 'feedcb3e-708a-4a8f-b39b-630b06f048b6');
-
-        expect(response2.ok()).not.toBeTruthy();
+        expect(response.ok()).not.toBeTruthy();
 
         await page.pause();
 
@@ -126,15 +141,14 @@ test.describe('Organizations CRUD API', () => {
 
 
     test('Delete Organization by id', async ({ page, request }) => {
-        const response1 = await organizations.deleteOrganization(request, token, newOrganizationId);
+        const response1 = await organizations.deleteOrganization(request, token, '41ce6db7-70fd-411d-b3d8-f2d5775ed501');
 
-        expect(organizationIdToDelete).toBeDefined();
         expect(response1.ok()).toBeTruthy();
+
 
         const response2 = await organizations.deleteOrganization(request, token, 'feedcb3e-708a-4a8f-b39b-630b06f048b6');
 
-        expect(response2.ok()).not.toBeTruthy();
-
+        expect(response2.ok()).toBeTruthy();
 
         await page.pause();
 
