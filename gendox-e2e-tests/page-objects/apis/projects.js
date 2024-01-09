@@ -44,9 +44,20 @@ const getProjectByCriteria = async (request, token, criteria) => {
 }
 
 
+const updateProject = async (request, token, projectData, projectId ) => {
 
+    const response = await request.put(`${config.gendox.contextPath}/projects/${projectId}`, {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        },
+        data: projectData
+    });
+    return response;
+}
 
 module.exports = {
     getProjectById,
-    getProjectByCriteria
+    getProjectByCriteria,
+    updateProject
 }

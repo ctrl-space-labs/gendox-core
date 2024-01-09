@@ -44,14 +44,14 @@ test.describe('Projects CRUD API', () => {
         let respBody = await response.json();
         expect(respBody.totalElements).toBe(2);
 
-        let Project1 = respBody.content.find(project => project.name === 'Test Project 1.1');
+        let project1 = respBody.content.find(project => project.name === 'Test Project 1.1');
 
         respBody.content.forEach(project => {
             expect(project.organizationId).toBe('41ce6db7-70fd-411d-b3d8-f2d5775ed501');
         });
 
-        expect(gendoxWikiProject.autoTraining).toBeTruthy();
-        expect(gendoxWikiProject.projectAgent.semanticSearchModel.model).toBe("text-embedding-ada-002");
+        expect(project1.projectAgent.agentName).toBe("test-project-1_1 Agent");
+        expect(project1.projectAgent.semanticSearchModel.model).toBe("embed-multilingual-v3.0");
 
     });
 
@@ -83,6 +83,37 @@ test.describe('Projects CRUD API', () => {
             await page.pause();
 
         });
+
+
+    //Feature: Update Project
+
+    //Scenario: Update a project where the logged in user is an admin of the corresponding organization.
+    //Given that the user is logged in
+    //Given the updatedProjectData
+    //When the existing project data is updated with the updatedProjectData
+    //Then the project will be updated.
+
+    test('Organization Admin Update Project', async ({ page, request }) => {
+            const updatedProjectData = {
+                                id: 'dda1148a-2251-4082-b838-6834251f59a0',
+                                name: 'Test Project 1.1',
+                                description: 'Test Project 1 for Organization 1'
+                             };
+
+            const response = await projects.updateProject(request, token, updatedProjectData, 'dda1148a-2251-4082-b838-6834251f59a0');
+
+                    expect(response.ok()).toBeTruthy();
+                    let respBody = await response.json();
+                    expect(respBody.id).toBe('dda1148a-2251-4082-b838-6834251f59a0');
+                    expect(respBody.name).toBe('Test Project 1.1');
+                    expect(respBody.description).toBe('Test Project 1 for Organization 1');
+
+            await page.pause();
+
+
+           });
+
+
 
 
 });
