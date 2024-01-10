@@ -1,7 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const keycloak = require('../../page-objects/apis/keycloak');
-const organizations = require('../../page-objects/apis/embeddings');
+const embeddings = require('../../page-objects/apis/embeddings');
 
 
 // Tests the Embeddings CRUD API, by performign API calls to the API server.
@@ -38,10 +38,12 @@ test('Get Embeddings', async ({ page, request }) => {
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
         expect(respBody).toHaveProperty('usage');
-        expect(respBody).toHaveProperty('embedding');
+        expect(respBody.data[0]).toHaveProperty('embedding');
         expect(respBody).toHaveProperty('model');
-        expect(respBody.usage).toHaveProperty('usage');
+        expect(respBody).toHaveProperty('usage');
 
         await page.pause();
 
     });
+
+     });
