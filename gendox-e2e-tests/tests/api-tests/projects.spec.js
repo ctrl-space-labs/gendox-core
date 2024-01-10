@@ -97,7 +97,19 @@ test.describe('Projects CRUD API', () => {
             const updatedProjectData = {
                                 id: 'dda1148a-2251-4082-b838-6834251f59a0',
                                 name: 'Test Project 1.1',
-                                description: 'Test Project 1 for Organization 1'
+                                description: 'Test Project 1 for Organization 1',
+                                projectAgent: {
+                                        id: "7d43bc6c-5365-4051-b7ff-f068b4f5b182",
+                                        semanticSearchModel: {
+                                            id: "e44d361e-7e40-47e5-a89c-36c0674a7e97",
+
+                                        },
+                                        completionModel: {
+                                            id: "5e83bfa2-1331-4d9f-aa41-fb804a16796c",
+
+                                        },
+                                        agentName: "test-project-1_1 Agent"
+                             }
                              };
 
             const response = await projects.updateProject(request, token, updatedProjectData, 'dda1148a-2251-4082-b838-6834251f59a0');
@@ -113,7 +125,64 @@ test.describe('Projects CRUD API', () => {
 
            });
 
+    //Scenario: Update a project where the logged in user has editing rights the corresponding organization.
+    //Given that the user is logged in
+    //Given the updatedProjectData
+    //When the existing project data is updated with the updatedProjectData
+    //Then the project will be updated.
+
+    test('Organization Editor Update Project', async ({ page, request }) => {
+            const updatedProjectData = {
+                                id: 'dda1148a-2251-4082-b838-6834251f59a0',
+                                name: 'Test Project 1.1',
+                                description: 'Test Project 1 for Organization 1',
+                                projectAgent: {
+                                                id: "7d43bc6c-5365-4051-b7ff-f068b4f5b182",
+                                                semanticSearchModel: {
+                                                    id: "e44d361e-7e40-47e5-a89c-36c0674a7e97",
+
+                                                },
+                                                completionModel: {
+                                                    id: "5e83bfa2-1331-4d9f-aa41-fb804a16796c",
+
+                                                },
+                                                agentName: "test-project-1_1 Agent"
+                                                     }
+                             };
+
+            const response = await projects.updateProject(request, token, updatedProjectData, 'dda1148a-2251-4082-b838-6834251f59a0');
+
+                    expect(response.ok()).toBeTruthy();
+                    let respBody = await response.json();
+                    expect(respBody.id).toBe('dda1148a-2251-4082-b838-6834251f59a0');
+                    expect(respBody.name).toBe('Test Project 1.1');
+                    expect(respBody.description).toBe('Test Project 1 for Organization 1');
+
+            await page.pause();
 
 
+           });
+
+    //Scenario: Update a project where the logged in user has reading rights the corresponding organization.
+    //Given that the user is logged in
+    //Given the updatedProjectData
+    //When the existing project data is updated with the updatedProjectData
+    //Then the project will not be updated. An unauthorized error is returned.
+
+    test('Organization Reader Update Project', async ({ page, request }) => {
+            const updatedProjectData = {
+                                id: 'dda1148a-2251-4082-b838-6834251f59a0',
+                                name: 'Test Project 1.1',
+                                description: 'Test Project 1 for Organization 1'
+                             };
+
+            const response = await projects.updateProject(request, token, updatedProjectData, 'dda1148a-2251-4082-b838-6834251f59a0');
+
+                    expect(response.ok()).not.toBeTruthy();
+
+            await page.pause();
+
+
+           });
 
 });
