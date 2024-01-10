@@ -38,7 +38,7 @@ where not exists(SELECT * FROM gendox_core.users where email = 'testuser3@test.c
 
 INSERT into gendox_core.users
     (id,name, email, users_type_id)
-select  '0644d778-b2fe-44d4-b8a9-ce9a63b15466'
+select  '0644d778-b2fe-44d4-b8a9-ce9a63b15466',
        'Test User4',
        'testuser4@test.com',
        (SELECT id
