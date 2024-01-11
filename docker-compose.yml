@@ -1,0 +1,58 @@
+version: '3'
+
+services:
+  gendox-database:
+    # download image from docker.hub
+#    image: giannisy/gendox-database:1.0
+    # build image from directory
+    build:
+      context: ./database
+      dockerfile: Dockerfile
+    container_name: gendox-database
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    networks:
+      - gendox_network
+    expose:
+      - "5432"
+    ports:
+      - "${DATABASE_PORT}:5432"
+
+
+  gendox-core-api:
+    # download image from docker.hub
+#    image: giannisy/gendox-core-api:1.0
+    # build image from directory
+    build:
+      context: ./gendox-core-api
+      dockerfile: Dockerfile
+    container_name: gendox-core-api
+    depends_on:
+      - gendox-database
+
+    environment: # Gendox environment variables
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - OPENAI_KEY=${OPENAI_KEY}
+      - COHERE_KEY=${COHERE_KEY}
+      - RSA_KEY_PATH=${RSA_KEY_PATH}
+    networks:
+      - gendox_network
+    ports:
+      - "${APIS_PORT}:8080"
+    restart: on-failure
+
+
+networks:
+  gendox_network:
+
+
+
+
