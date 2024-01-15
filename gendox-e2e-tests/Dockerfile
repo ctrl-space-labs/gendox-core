@@ -1,26 +1,20 @@
-# Stage 1: Build image
-FROM mcr.microsoft.com/playwright:v1.34.0-jammy AS builder
+# Base image
+FROM mcr.microsoft.com/playwright:v1.40.1-jammy
 
+# Set the working directory
 WORKDIR /app
 
-# Copy only package files
+# Copy package.json and package-lock.json
 COPY package*.json ./
 
-# Install dependencies and Playwright dependencies
-RUN npm install --production
+# Install dependencies
+RUN npm install
+
+# Install Playwright dependencies
 RUN npx playwright install
-
-# Stage 2: Create runtime image
-FROM mcr.microsoft.com/playwright:v1.34.0-jammy
-
-WORKDIR /app
-
-# Copy only necessary files from the builder stage
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
 
 # Copy the rest of the application files
 COPY . .
 
 # Set the entry point for the container
-CMD ["npx", "playwright", "test", "--ui"]
+CMD ["npx", "playwright", "test"]

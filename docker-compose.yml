@@ -31,7 +31,6 @@ services:
     container_name: gendox-core-api
     depends_on:
       - gendox-database
-
     environment: # Gendox environment variables
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_USERNAME=${DATABASE_USERNAME}
@@ -46,8 +45,26 @@ services:
     networks:
       - gendox_network
     ports:
-      - "${APIS_PORT}:8080"
+      - "${APIS_PORT}:5000"
     restart: on-failure
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z localhost 5000" ]
+      interval: 20s
+      timeout: 20s
+      retries: 300
+
+
+  gendox-e2e-tests:
+    build:
+      context: ./gendox-e2e-tests
+      dockerfile: Dockerfile
+    container_name: gendox-e2e-tests
+    depends_on:
+      gendox-core-api:
+        condition: service_healthy
+    networks:
+      - gendox_network
+
 
 
 networks:
