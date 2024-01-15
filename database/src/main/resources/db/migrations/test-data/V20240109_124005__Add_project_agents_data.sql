@@ -22,8 +22,7 @@ SELECT  '7d43bc6c-5365-4051-b7ff-f068b4f5b182',
                0.4
         WHERE NOT EXISTS(SELECT *
                          FROM gendox_core.project_agent
-                         WHERE agent_name = 'test-project-1_1 Agent');
---
+                         WHERE agent_name = 'test-project-1_1 Agent');--
 --
 INSERT INTO gendox_core.project_agent
     (id,project_id, semantic_search_model_id, completion_model_id, agent_name, created_at, updated_at,

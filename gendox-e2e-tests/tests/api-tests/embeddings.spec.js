@@ -46,4 +46,28 @@ test('Get Embeddings', async ({ page, request }) => {
 
     });
 
+
+test('Semantic Search', async ({ page, request }) => {
+        const botRequest = {
+                               messages: ["What are the drawbacks of Least Squares method?"]
+
+                           };
+        const criteria =   {
+                               size: '5',
+                               projectId:'dda1148a-2251-4082-b838-6834251f59a0'
+                           };
+
+        const response = await embeddings.semanticSearch(request, token, botRequest,criteria);
+
+
+        expect(response.ok()).toBeTruthy();
+//        let respBody = await response.json();
+//        expect(respBody).toHaveProperty('usage');
+//        expect(respBody.data[0]).toHaveProperty('embedding');
+//        expect(respBody).toHaveProperty('model');
+//        expect(respBody).toHaveProperty('usage');
+
+        await page.pause();
+
+    });
      });

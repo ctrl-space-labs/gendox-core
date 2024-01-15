@@ -4,7 +4,6 @@ const keycloak = require('../../page-objects/apis/keycloak');
 const organizations = require('../../page-objects/apis/organizations');
 const organizationUsers = require('../../page-objects/apis/organizationUsers');
 
-
 // Tests the Organizations CRUD API, by performign API calls to the API server.
 // Before all tests, an authentication JWT token is obtained from the API server.
 test.describe('Organizations CRUD API', () => {

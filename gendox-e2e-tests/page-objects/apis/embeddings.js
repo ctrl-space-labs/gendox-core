@@ -16,6 +16,22 @@ const getEmbeddings = async (request, token, botRequest, aiModel) => {
     return response;
 }
 
+
+const semanticSearch = async (request, token, botRequest, criteria) => {
+
+    let params = new URLSearchParams(criteria).toString();
+
+    const response = await request.post(`${config.gendox.contextPath}/messages/semantic-search?${params}`, {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        },
+        data: botRequest
+    });
+    return response;
+}
+
 module.exports = {
-    getEmbeddings
+    getEmbeddings,
+    semanticSearch
 }
