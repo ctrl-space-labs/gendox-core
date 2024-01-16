@@ -14,6 +14,32 @@ const getProjectMembers = async (request, token, projectId) => {
 
 }
 
+const addProjectMember = async (request, token, projectId, userId) => {
+
+        const response = await request.post(`${config.gendox.contextPath}/projects/${projectId}/users/${userId}`, {
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            }
+        });
+        return response;
+
+}
+
+
+const deleteProjectMember = async (request, token, projectId, userId) => {
+
+        const response = await request.delete(`${config.gendox.contextPath}/projects/${projectId}/users/${userId}`, {
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            }
+        });
+        return response;
+
+}
 module.exports = {
-    getProjectMembers
+    getProjectMembers,
+    addProjectMember,
+    deleteProjectMember
 }

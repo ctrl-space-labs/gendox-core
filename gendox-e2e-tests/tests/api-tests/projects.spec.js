@@ -19,11 +19,40 @@ test.describe('Projects CRUD API', () => {
         expect(response.ok()).toBeTruthy();
     });
 
+
+    let newProjectId;
+
+    const updatedProjectData = {
+        id: 'dda1148a-2251-4082-b838-6834251f59a0',
+        name: 'Test Project 1.1',
+        description: 'Test Project 1 for Organization 1',
+        projectAgent: {
+            id: "7d43bc6c-5365-4051-b7ff-f068b4f5b182",
+            semanticSearchModel: {
+                id: "e44d361e-7e40-47e5-a89c-36c0674a7e97",
+            },
+            completionModel: {
+                id: "5e83bfa2-1331-4d9f-aa41-fb804a16796c",
+            },
+            agentName: "test-project-1_1 Agent"
+        }
+    };
+
+   const projectId = 'dda1148a-2251-4082-b838-6834251f59a0'
+
+
+//Feature: Get Project by ID
+
+//  Scenario: Get Project by ID.
+//  Given that the user is logged in.
+//  Given the project ID.
+//  Then from the selected project is returned.
+
     test('Get Project by id', async ({ page, request }) => {
 
 
 
-        const response = await projects.getProjectById(request, token, 'dda1148a-2251-4082-b838-6834251f59a0')
+        const response = await projects.getProjectById(request, token, projectId)
 
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
@@ -33,6 +62,12 @@ test.describe('Projects CRUD API', () => {
 
     });
 
+//Feature: Get All Projects
+
+//  Scenario: Get All Projects by Organization ID.
+//  Given that the user is logged in.
+//  When the criteria given is the organization ID.
+//  Then all the Projects from the selected organization are returned.
 
     test('Get Projects By Organization', async ({ page, request }) => {
 
@@ -55,6 +90,10 @@ test.describe('Projects CRUD API', () => {
 
     });
 
+//  Scenario: Get All without Organization ID as a criterion.
+//  Given that the user is logged in.
+//  When different criteria is given without the organization ID.
+//  Then a bad request response is returned.
 
     test('Error in missing mandatory criteria', async ({ page, request }) => {
 
@@ -67,6 +106,12 @@ test.describe('Projects CRUD API', () => {
 
     });
 
+//Feature: Get Project Members
+
+//  Scenario: Get Project Members by id.
+//  Given that the user is logged in.
+//  When the project ID is provided.
+//  Then all the project members from the selected project are returned.
 
     test('Get Project Members by id', async ({ page, request }) => {
 
@@ -84,6 +129,116 @@ test.describe('Projects CRUD API', () => {
 
         });
 
+//Feature: Add Project Members
+
+//  Scenario: Add project members with admin rights.
+//  Given that the user is logged in.
+//  When the project ID is provided.
+//  When the user ID is provided.
+//  When the user has admin rights.
+//  Then the member is added to the project.
+
+   test('Admin Add Project Members by id', async ({ page, request }) => {
+
+            const response = await projectUsers.addProjectMember(request, token, projectId,
+                                                                                  '2fb9e526-f39f-4959-a51c-8148965bf03f')
+            expect(response.ok()).toBeTruthy();
+
+            await page.pause();
+
+        });
+
+//Feature: Add Project Members
+
+//  Scenario: Add project members without admin rights.
+//  Given that the user is logged in.
+//  When the project ID is provided.
+//  When the user ID is provided.
+//  When the user does not have admin rights.
+//  Then an unauthorized error occurs.
+
+   test('Non-Admin Add Project Members by id', async ({ page, request }) => {
+
+            const response = await projectUsers.addProjectMember(request, token, projectId,
+                                                                                  '2fb9e526-f39f-4959-a51c-8148965bf03f')
+            expect(response.ok()).not.toBeTruthy();
+
+            await page.pause();
+
+        });
+
+//Feature: Delete Project Members
+
+//  Scenario: Delete project members with admin rights.
+//  Given that the user is logged in.
+//  When the project ID is provided.
+//  When the user ID is provided.
+//  When the user has admin rights.
+//  Then the member is removed to the project.
+
+   test('Admin Delete Project Members by id', async ({ page, request }) => {
+
+            const response = await projectUsers.deleteProjectMember(request, token, projectId,
+                                                                                  '2fb9e526-f39f-4959-a51c-8148965bf03f')
+            expect(response.ok()).toBeTruthy();
+
+            await page.pause();
+
+        });
+
+//Feature: Delete Project Members
+
+//  Scenario: Delete project members without admin rights.
+//  Given that the user is logged in.
+//  When the project ID is provided.
+//  When the user ID is provided.
+//  When the user does not have admin rights.
+//  Then an unauthorized error occurs.
+
+   test('Non-Admin Delete Project Members by id', async ({ page, request }) => {
+
+            const response = await projectUsers.deleteProjectMember(request, token, projectId,
+                                                                                  '2fb9e526-f39f-4959-a51c-8148965bf03f')
+            expect(response.ok()).not.toBeTruthy();
+
+            await page.pause();
+
+        });
+
+//Feature: Create and Delete Project
+
+//  Scenario: Create a project.
+//  Given that the user is logged in.
+//  Given the newProjectData.
+//  Then the organization is created.
+//  Given a new project is created.
+//  Then the project will be deleted by its id.
+
+     test('Create and Delete Project', async ({ page, request }) => {
+        const newProjectData = {
+                             organizationId: '41ce6db7-70fd-411d-b3d8-f2d5775ed501',
+                             name: 'An example Testing Project',
+                             description: 'Delete Project',
+                         };
+
+        const response = await projects.createProject(request, token, newProjectData);
+
+        expect(response.ok()).toBeTruthy();
+        let respBody = await response.json();
+        expect(respBody.id).toBeDefined();
+        expect(respBody.name).toBe('An example Testing Project');
+        expect(respBody.description).toBe('Delete Project');
+//        store the project ID
+        newProjectId = respBody.id;
+        console.log(newProjectId)
+
+
+        const deleteResponse = await projects.deleteProject(request, token, newProjectId);
+
+        await page.pause();
+
+    });
+
 
     //Feature: Update Project
 
@@ -94,25 +249,8 @@ test.describe('Projects CRUD API', () => {
     //Then the project will be updated.
 
     test('Organization Admin Update Project', async ({ page, request }) => {
-            const updatedProjectData = {
-                                id: 'dda1148a-2251-4082-b838-6834251f59a0',
-                                name: 'Test Project 1.1',
-                                description: 'Test Project 1 for Organization 1',
-                                projectAgent: {
-                                        id: "7d43bc6c-5365-4051-b7ff-f068b4f5b182",
-                                        semanticSearchModel: {
-                                            id: "e44d361e-7e40-47e5-a89c-36c0674a7e97",
 
-                                        },
-                                        completionModel: {
-                                            id: "5e83bfa2-1331-4d9f-aa41-fb804a16796c",
-
-                                        },
-                                        agentName: "test-project-1_1 Agent"
-                             }
-                             };
-
-            const response = await projects.updateProject(request, token, updatedProjectData, 'dda1148a-2251-4082-b838-6834251f59a0');
+            const response = await projects.updateProject(request, token, updatedProjectData, projectId);
 
                     expect(response.ok()).toBeTruthy();
                     let respBody = await response.json();
@@ -132,25 +270,8 @@ test.describe('Projects CRUD API', () => {
     //Then the project will be updated.
 
     test('Organization Editor Update Project', async ({ page, request }) => {
-            const updatedProjectData = {
-                                id: 'dda1148a-2251-4082-b838-6834251f59a0',
-                                name: 'Test Project 1.1',
-                                description: 'Test Project 1 for Organization 1',
-                                projectAgent: {
-                                                id: "7d43bc6c-5365-4051-b7ff-f068b4f5b182",
-                                                semanticSearchModel: {
-                                                    id: "e44d361e-7e40-47e5-a89c-36c0674a7e97",
 
-                                                },
-                                                completionModel: {
-                                                    id: "5e83bfa2-1331-4d9f-aa41-fb804a16796c",
-
-                                                },
-                                                agentName: "test-project-1_1 Agent"
-                                                     }
-                             };
-
-            const response = await projects.updateProject(request, token, updatedProjectData, 'dda1148a-2251-4082-b838-6834251f59a0');
+            const response = await projects.updateProject(request, token, updatedProjectData, projectId);
 
                     expect(response.ok()).toBeTruthy();
                     let respBody = await response.json();
@@ -170,13 +291,8 @@ test.describe('Projects CRUD API', () => {
     //Then the project will not be updated. An unauthorized error is returned.
 
     test('Organization Reader Update Project', async ({ page, request }) => {
-            const updatedProjectData = {
-                                id: 'dda1148a-2251-4082-b838-6834251f59a0',
-                                name: 'Test Project 1.1',
-                                description: 'Test Project 1 for Organization 1'
-                             };
 
-            const response = await projects.updateProject(request, token, updatedProjectData, 'dda1148a-2251-4082-b838-6834251f59a0');
+            const response = await projects.updateProject(request, token, updatedProjectData, projectId);
 
                     expect(response.ok()).not.toBeTruthy();
 
