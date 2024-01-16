@@ -10,4 +10,5 @@ SELECT  'ea62ad10-5c03-4dfc-8040-32970b53bb8d',
 
         WHERE NOT EXISTS(SELECT *
                          FROM gendox_core.document_instance
-                         WHERE id = 'ea62ad10-5c03-4dfc-8040-32970b53bb8d');--
+                         WHERE id = 'ea62ad10-5c03-4dfc-8040-32970b53bb8d'
+                         );--

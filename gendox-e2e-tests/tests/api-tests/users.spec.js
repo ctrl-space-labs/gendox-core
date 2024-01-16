@@ -15,6 +15,12 @@ test.describe('Users CRUD API', () => {
         expect(response.ok()).toBeTruthy();
     });
 
+//Feature: Get User by ID
+
+//  Scenario: Delete created organization.
+//  Given that the user is logged in.
+//  Given a user ID.
+//  Then the user information is returned.
 
     test('Get User by id', async ({ page, request }) => {
 
@@ -32,6 +38,12 @@ test.describe('Users CRUD API', () => {
 
     });
 
+//Feature: Get User Profile
+
+//  Scenario: Delete created organization.
+//  Given that the user is logged in.
+//  Given a user ID.
+//  Then the user profile is returned.
 
     test('Get User Profile by ID', async ({ page, request }) => {
         const userId = '19b6aa4a-48f4-4073-8b95-41039f090344';
@@ -44,11 +56,17 @@ test.describe('Users CRUD API', () => {
         await page.pause();
     });
 
+//Feature: Get All Users
+
+//  Scenario: Get All Users by Organization ID.
+//  Given that the user is logged in.
+//  When the criteria given is the organization ID.
+//  Then all the users from the selected organization are returned.
 
     test('Get Users By Organization ID', async ({ page, request }) => {
 
             const response = await users.getUsersbyCriteria(request, token, {
-                organizationId: '41ce6db7-70fd-411d-b3d8-f2d5775ed501'
+                organizationId: 'feedcb3e-708a-4a8f-b39b-630b06f048b6'
             })
 
             expect(response.ok()).toBeTruthy();
@@ -57,14 +75,17 @@ test.describe('Users CRUD API', () => {
 
             let DefaultUser = respBody.content.find(user => user.name === 'Test User1');
 
-//            respBody.content.forEach(user => {
-//                expect(user.organizationId).toBe('9228b56c-1058-4b92-a2e2-5526bdc834af');
-//            });
-
             expect(DefaultUser.userType.name).toBe('ROLE_USER');
+
+
+            await page.pause();
 
         });
 
+//  Scenario: Get All Users by Project ID.
+//  Given that the user is logged in.
+//  When the criteria given is the project ID.
+//  Then all the users from the selected project are returned.
 
     test('Get Users By Project ID', async ({ page, request }) => {
 
@@ -78,14 +99,15 @@ test.describe('Users CRUD API', () => {
 
             let DefaultUser = respBody.content.find(user => user.name === 'Test User1');
 
-//            respBody.content.forEach(user => {
-//                expect(user.organizationId).toBe('9228b56c-1058-4b92-a2e2-5526bdc834af');
-//            });
 
             expect(DefaultUser.userType.name).toBe('ROLE_USER');
 
         });
 
+//  Scenario: Get All Users by criteria that is not Project ID or Project ID.
+//  Given that the user is logged in.
+//  When the criteria is given.
+//  Then a bad request error is returned.
 
     test('Error in missing mandatory criteria', async ({ page, request }) => {
 
@@ -98,12 +120,19 @@ test.describe('Users CRUD API', () => {
 
         });
 
+//Feature: Create User
+
+//  Scenario: Create a user.
+//  Given that the user is logged in.
+//  Given the newUserData.
+//  When the name and email are provided
+//  Then the user is created.
 
     //test.skip to skip this test
     test('Create User', async ({ page, request }) => {
         const newUserData = {
-                             name: 'Test User',
-                             email: 'testuserdeelete@test.com'
+                             name: 'Another Test User',
+                             email: 'atestuserdelete@test.com'
                          };
 
         const response = await users.createUser(request, token, newUserData);
@@ -111,32 +140,63 @@ test.describe('Users CRUD API', () => {
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
         expect(respBody.id).toBeDefined();
-        expect(respBody.name).toBe('Test User');
-        expect(respBody.email).toBe('testuserdeelete@test.com');
+        expect(respBody.name).toBe('Another Test User');
+        expect(respBody.email).toBe('atestuserdelete@test.com');
 
         await page.pause();
 
         });
 
+//Feature: Update Organization
+
+//  Scenario: Update user when the logged in user ID and the updated user ID match.
+//  Given that the user is logged in.
+//  Given the updatedUserData.
+//  When the provided ID matches the ID of the logged in user.
+//  Then the user will be updated.
 
     test('Update User', async ({ page, request }) => {
         const updatedUserData = {
-                            id: 'a1d827bf-2973-442f-9b5a-27133ad408d2',
-                            name: 'Test User',
-                            email: 'testuserdelete@test.com'
+                            id: '2fb9e526-f39f-4959-a51c-8148965bf03f',
+                            name: 'Test User3',
+                            email: 'testuser3@test.com'
                          };
 
-        const response = await users.updateUser(request, token, updatedUserData, 'a1d827bf-2973-442f-9b5a-27133ad408d2');
+        const response = await users.updateUser(request, token, updatedUserData, '2fb9e526-f39f-4959-a51c-8148965bf03f');
 
         expect(response.ok()).toBeTruthy();
         let respBody = await response.json();
-        expect(respBody.id).toBe('a1d827bf-2973-442f-9b5a-27133ad408d2');
-        expect(respBody.name).toBe('Test User');
-        expect(respBody.email).toBe('testuserdelete@test.com');
+        expect(respBody.id).toBe('2fb9e526-f39f-4959-a51c-8148965bf03f');
+        expect(respBody.name).toBe('Test User3');
+        expect(respBody.email).toBe('testuser3@test.com');
 
         await page.pause();
 
 
         });
+
+//  Scenario: Update user when the logged in user ID and the updated user ID do not match.
+//  Given that the user is logged in.
+//  Given the updatedUserData.
+//  When the provided ID does not match the ID of the logged in user.
+//  An unauthorized error occurs.
+
+    test('Unauthorized Update User', async ({ page, request }) => {
+        const updatedUserData2 = {
+                            id: '2fb9e526-f39f-4959-a51c-8148965bf03f',
+                            name: 'Test User3',
+                            email: 'testuser3@test.com'
+                         };
+
+        const response = await users.updateUser(request, token, updatedUserData2, '2fb9e526-f39f-4959-a51c-8148965bf03f');
+
+        expect(response.ok()).not.toBeTruthy();
+
+
+        await page.pause();
+
+
+        });
+
 
     });

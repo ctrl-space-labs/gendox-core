@@ -13,8 +13,9 @@ const formData = new FormData();
 // projectId, organizationId, file
     const response = await request.post(`${config.gendox.contextPath}/documents/upload`, formData, {
         headers: {
-             ...formData.getHeaders(),
-            'Authorization': 'Bearer ' + token
+//             ...formData.getHeaders(),
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'multipart/form-data; boundary=' + formData.getBoundary()
 //            'Content-Type':'multipart/form-data'
 
 }
@@ -22,6 +23,62 @@ const formData = new FormData();
     return response;
 }
 
+const splitDocumentSections = async (request, token, criteria) => {
+    let params = new URLSearchParams(criteria).toString();// Pass projectId as an object
+
+    const response = await request.post(`${config.gendox.contextPath}/documents/split?${params}`, {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        }
+    });
+
+    return response;
+}
+
+const createDocumentInstance = async (request, token, documentInstanceData ) => {
+
+    const response = await request.post(`${config.gendox.contextPath}/documents`, {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        },
+        data: documentInstanceData
+    });
+    return response;
+}
+
+
+const updateDocumentInstance = async (request, token, documentInstanceData, documentInstanceId ) => {
+
+    const response = await request.put(`${config.gendox.contextPath}/documents/${documentInstanceId}`, {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        },
+        data: organizationData
+    });
+    return response;
+}
+
+
+const deleteDocumentInstance = async (request, token, documentInstanceId ) => {
+
+    const response = await request.delete(`${config.gendox.contextPath}/documents/${documentInstanceId}`, {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        }
+
+    });
+    return response;
+}
+
 module.exports = {
-    uploadDocuments
+    uploadDocuments,
+    splitDocumentSections,
+    createDocumentInstance,
+    updateDocumentInstance,
+    deleteDocumentInstance
+
 }
