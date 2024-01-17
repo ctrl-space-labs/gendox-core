@@ -1,5 +1,5 @@
 # Base image
-FROM mcr.microsoft.com/playwright:v1.34.0-jammy
+FROM mcr.microsoft.com/playwright:v1.40.1-jammy
 
 # Set the working directory
 WORKDIR /app
@@ -17,4 +17,4 @@ RUN npx playwright install
 COPY . .
 
 # Set the entry point for the container
-CMD ["npx", "playwright", "test", "--ui"]
+CMD ["npx", "playwright", "test"]
