@@ -15,7 +15,7 @@ COPY src src
 RUN mvn clean install -DskipTests
 
 # Final image
-FROM eclipse-temurin:17-jdk-alpine
+FROM eclipse-temurin:17-jdk
 VOLUME /tmp
 
 # Copy the built JAR file from the builder stage
