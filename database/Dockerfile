@@ -13,4 +13,6 @@ COPY . /usr/gendox-database
 COPY docker-flyway-db-init.sh /docker-entrypoint-initdb.d/
 
 # Change ownership to the postgres user and group
+
 RUN chown -R postgres:postgres /usr/gendox-database
+
