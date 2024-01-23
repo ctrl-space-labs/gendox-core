@@ -82,6 +82,7 @@ test.describe('Projects CRUD API', () => {
         let project1 = respBody.content.find(project => project.name === 'Test Project 1.1');
 
         respBody.content.forEach(project => {
+            console.log(`Project ${index}:`, project);
             expect(project.organizationId).toBe('41ce6db7-70fd-411d-b3d8-f2d5775ed501');
         });
 
