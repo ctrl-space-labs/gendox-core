@@ -9,8 +9,8 @@ const localConfig = {
     gendox: {
         contextPath: '/gendox/api/v1',
         simpleUser: {
-            username: 'simple-user@test.com',
-            password: '123456789'
+            username: 'testuser1@test.com',
+            password: 'MCfikYOrlvlZnJ0'
         },
         adminUser: {
             username: 'admin-user@test.com',
@@ -18,9 +18,9 @@ const localConfig = {
         }
     },
     idp: {
-        baseURL: 'https://localhost:8443/idp',
+        baseURL: 'https://dev.gendox.ctrlspace.dev/idp',
         keycloak: {
-            realm: 'gendox-idp-local',
+            realm: 'gendox-idp-dev',
             clientId: 'gendox-public-client'
         },
     }
