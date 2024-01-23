@@ -18,3 +18,4 @@ pg_ctl -D "$PGDATA" \
 echo '-----------------    Restart complete    ---------------------'
 
 mvn clean install flyway:migrate
+
