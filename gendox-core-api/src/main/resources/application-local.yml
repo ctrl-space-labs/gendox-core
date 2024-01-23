@@ -28,6 +28,7 @@ spring:
 #    url: jdbc:postgresql://localhost:5432/postgres
 #    username: postgres
 #    password: 123456789
+
 #    hikari:
 #      maximum-pool-size: 100
 #      minimum-idle: 10

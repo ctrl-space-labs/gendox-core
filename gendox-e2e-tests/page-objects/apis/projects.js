@@ -37,14 +37,53 @@ const getProjectByCriteria = async (request, token, criteria) => {
                 'Content-Type': 'application/json'
             }
         });
-
+       const responseBody =  JSON.parse(await response.text())
         return response;
 
 
 }
 
+const createProject = async (request, token, projectData ) => {
+
+    const response = await request.post(`${config.gendox.contextPath}/projects`, {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        },
+        data: projectData
+    });
+    return response;
+}
+
+const updateProject = async (request, token, projectData, projectId ) => {
+
+    const response = await request.put(`${config.gendox.contextPath}/projects/${projectId}`, {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        },
+        data: projectData
+    });
+    return response;
+}
+
+const deleteProject = async (request, token, projectId ) => {
+
+    const response = await request.delete(`${config.gendox.contextPath}/projects/${projectId}`, {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        }
+
+    });
+    return response;
+}
+
 
 module.exports = {
     getProjectById,
-    getProjectByCriteria
+    getProjectByCriteria,
+    updateProject,
+    createProject,
+    deleteProject
 }
