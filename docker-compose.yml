@@ -9,6 +9,8 @@ services:
       context: ./database
       dockerfile: Dockerfile
     container_name: gendox-database
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: ${DATABASE_NAME}
       POSTGRES_USER: ${DATABASE_USERNAME}
@@ -58,6 +60,9 @@ services:
 
 networks:
   gendox_network:
+
+volumes:
+  postgres-data:
 
 
 
