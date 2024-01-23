@@ -59,11 +59,15 @@ public class OpenAiServiceAdapter implements AiModelService {
         return headers;
     }
 
+    public String getApiEndpointByAiModel(String model) {
+        return aiModelRepository.findUrlByModel(model);
+    }
 
-    public OpenAiAda2Response getEmbeddingResponse(OpenAiAda2Request embeddingRequestHttpEntity) {
+    public OpenAiAda2Response getEmbeddingResponse(OpenAiAda2Request embeddingRequestHttpEntity, String aiModelName) {
+        String embeddingsApiUrl = getApiEndpointByAiModel(aiModelName);
         logger.debug("Sending Embedding Request to OpenAI: {}", embeddingRequestHttpEntity);
         ResponseEntity<OpenAiAda2Response> responseEntity = restTemplate.postForEntity(
-                OpenAIADA2.URL,
+                embeddingsApiUrl,
                 new HttpEntity<>(embeddingRequestHttpEntity, buildHeader()),
                 OpenAiAda2Response.class);
         logger.info("Received Embedding Response from OpenAI. Tokens billed: {}", responseEntity.getBody().getUsage().getTotalTokens());
@@ -72,10 +76,11 @@ public class OpenAiServiceAdapter implements AiModelService {
     }
 
 
-    public OpenAiGptResponse getCompletionResponse(OpenAiGptRequest chatRequestHttpEntity) {
+    public OpenAiGptResponse getCompletionResponse(OpenAiGptRequest chatRequestHttpEntity, String aiModelName) {
+        String completionApiUrl = getApiEndpointByAiModel(aiModelName);
         logger.debug("Sending completion Request to OpenAI: {}", chatRequestHttpEntity);
         ResponseEntity<OpenAiGptResponse> responseEntity = restTemplate.postForEntity(
-                GPTConfig.URL,
+                completionApiUrl,
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader()),
                 OpenAiGptResponse.class);
         logger.info("Received completion Response from OpenAI. Tokens billed: {}", responseEntity.getBody().getUsage().getTotalTokens());
@@ -97,9 +102,10 @@ public class OpenAiServiceAdapter implements AiModelService {
 
     public EmbeddingResponse askEmbedding(BotRequest botRequest, String aiModelName) {
         String message = botRequest.getMessages().get(0);
-        OpenAiAda2Response openAiAda2Response = this.getEmbeddingResponse(OpenAiAda2Request.builder()
+        OpenAiAda2Response openAiAda2Response = this.getEmbeddingResponse((OpenAiAda2Request.builder()
                 .model(aiModelName)
-                .input(message).build());
+                .input(message).build()),
+                aiModelName);
 
         EmbeddingResponse embeddingResponse = openAiEmbeddingResponseConverter.openAitoEmbeddingResponse(openAiAda2Response);
 
@@ -113,12 +119,13 @@ public class OpenAiServiceAdapter implements AiModelService {
             messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
 
         }
-        OpenAiGptResponse openAiGptResponse = this.getCompletionResponse(OpenAiGptRequest.builder()
+        OpenAiGptResponse openAiGptResponse = this.getCompletionResponse((OpenAiGptRequest.builder()
                 .model(aiModelName)
                 .temperature(aiModelRequestParams.getTemperature())
                 .topP(aiModelRequestParams.getTopP())
                 .maxTokens(aiModelRequestParams.getMaxTokens())
-                .messages(messages).build());
+                .messages(messages).build()),
+                aiModelName);
 
         CompletionResponse completionResponse = openAiCompletionResponseConverter.toCompletionResponse(openAiGptResponse);
 

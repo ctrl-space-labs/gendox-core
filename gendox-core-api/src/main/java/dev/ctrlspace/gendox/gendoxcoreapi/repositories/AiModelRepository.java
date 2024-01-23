@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.UUID;
 
@@ -16,4 +17,6 @@ public interface AiModelRepository extends JpaRepository<AiModel, UUID>, Queryds
 //    AiModel findAiModelByName
 
 
+    @Query("SELECT a.url FROM AiModel a WHERE a.model = :model")
+    String findUrlByModel(String model);
 }
