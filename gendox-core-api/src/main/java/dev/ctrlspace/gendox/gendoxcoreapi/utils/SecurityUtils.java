@@ -1,8 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
+import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.CommonCommandUtility;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
@@ -17,7 +19,8 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component("securityUtils")
 public class SecurityUtils {
@@ -54,7 +57,7 @@ public class SecurityUtils {
 
 
     public boolean hasAuthorityToRequestedOrgId(String authority) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        GendoxAuthenticationToken authentication = (GendoxAuthenticationToken)SecurityContextHolder.getContext().getAuthentication();
         //JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt)authentication.getPrincipal());
         if (isSuperAdmin(authentication)) {
             return true; // Skip validation if user is an admin
@@ -64,10 +67,34 @@ public class SecurityUtils {
         HttpServletRequest request = getCurrentHttpRequest();
         //get request param with name "organizationId"
         String organizationId = request.getParameter(QueryParamNames.ORGANIZATION_ID);
+        String[] orgStrings= request.getParameterValues(QueryParamNames.ORGANIZATION_ID_IN);
 
-        if (organizationId == null) {
+
+        if (organizationId == null && orgStrings == null) {
             return false;
         }
+
+        Set<String> orgs = new HashSet<>();
+        if (orgStrings != null) {
+            orgs.addAll(Set.of(orgStrings));
+        }
+        if (organizationId != null) {
+            orgs.add(organizationId);
+        }
+
+        Set<String> orgIds = authentication
+                .getPrincipal()
+                .getOrganizations()
+                .stream()
+                .map(OrganizationUserDTO::getId)
+                .collect(Collectors.toSet());
+
+        if (!orgIds.containsAll(orgs)) {
+            return false;
+        }
+
+        return true;
+
 
 //        if (!jwtDTO.getOrgAuthoritiesMap().containsKey(organizationId)) {
 //            return false;
@@ -77,8 +104,6 @@ public class SecurityUtils {
 //        if (!jwtDTO.getOrgAuthoritiesMap().get(organizationId).orgAuthorities().contains(authority)){
 //            return false;
 //        }
-
-        return true;
     }
 
     public boolean hasAuthorityToRequestedProjectId() {

@@ -102,3 +102,6 @@ buildNumber.properties
 **/.env*
 .env
 .env*
+**/.env*
+.env
+.env*

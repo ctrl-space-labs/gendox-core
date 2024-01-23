@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.utils.constants;
 public class QueryParamNames {
 
     public static final String ORGANIZATION_ID = "organizationId";
+    public static final String ORGANIZATION_ID_IN = "organizationIdIn";
     public static final String PROJECT_ID = "projectId";
     public static final String PROJECT_ID_IN = "projectIdIn";
     public static final String USER_ID = "userId";
