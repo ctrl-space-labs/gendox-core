@@ -438,7 +438,7 @@ where not exists(SELECT *
                                   where email = 'testuser2@test.com'));
 
 
-INSERT INTO gendox_core.project_documents
+INSERT INTO gendox_core.project_members
     (project_id, user_id)
 select (select id
         from gendox_core.projects
