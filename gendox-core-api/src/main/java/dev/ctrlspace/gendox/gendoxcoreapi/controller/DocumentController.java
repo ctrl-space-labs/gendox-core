@@ -8,10 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.SplitFileService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.UploadService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,6 +39,7 @@ public class DocumentController {
     private DocumentSectionService documentSectionService;
     private final DocumentInstanceSectionRepository documentInstanceSectionRepository;
 
+    private IsccCodeService isccCodeService;
 
     @Autowired
     public DocumentController(DocumentService documentService,
@@ -50,7 +48,8 @@ public class DocumentController {
                               UploadService uploadService,
                               SplitFileService splitFileService,
                               DocumentSectionService documentSectionService,
-                              DocumentInstanceSectionRepository documentInstanceSectionRepository) {
+                              DocumentInstanceSectionRepository documentInstanceSectionRepository,
+                              IsccCodeService isccCodeService) {
         this.documentService = documentService;
         this.documentOnlyConverter = documentOnlyConverter;
         this.documentConverter = documentConverter;
@@ -58,6 +57,7 @@ public class DocumentController {
         this.splitFileService = splitFileService;
         this.documentSectionService = documentSectionService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
+        this.isccCodeService = isccCodeService;
     }
 
     @GetMapping("/documents/{id}")
@@ -188,6 +188,9 @@ public class DocumentController {
 
         return documentInstanceSections;
     }
+
+
+
 
     private static void validateHasFiles(List<MultipartFile> files) throws GendoxException {
         if (files.isEmpty()) {
