@@ -40,6 +40,10 @@ public class DocumentInstanceSection {
     private Boolean hasContentWarning;
 
     @Basic
+    @Column(name = "section_iscc_code", nullable = false)
+    private String documentSectionIsccCode;
+
+    @Basic
     @Column(name="created_by", nullable = true)
     @CreatedBy
     private UUID createdBy;
@@ -89,6 +93,13 @@ public class DocumentInstanceSection {
         this.sectionValue = sectionValue;
     }
 
+    public String getDocumentSectionIsccCode() {
+        return documentSectionIsccCode;
+    }
+
+    public void setDocumentSectionIsccCode(String documentSectionIsccCode) {
+        this.documentSectionIsccCode = documentSectionIsccCode;
+    }
 
     public Instant getCreatedAt() {
         return createdAt;
@@ -133,15 +144,13 @@ public class DocumentInstanceSection {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof DocumentInstanceSection section)) return false;
-        return Objects.equals(getId(), section.getId()) && Objects.equals(getDocumentInstance(), section.getDocumentInstance()) && Objects.equals(getDocumentSectionMetadata(), section.getDocumentSectionMetadata()) && Objects.equals(getSectionValue(), section.getSectionValue()) && Objects.equals(hasContentWarning, section.hasContentWarning) && Objects.equals(getCreatedBy(), section.getCreatedBy()) && Objects.equals(getUpdatedBy(), section.getUpdatedBy()) && Objects.equals(getCreatedAt(), section.getCreatedAt()) && Objects.equals(getUpdatedAt(), section.getUpdatedAt());
+        if (o == null || getClass() != o.getClass()) return false;
+        DocumentInstanceSection that = (DocumentInstanceSection) o;
+        return Objects.equals(id, that.id) && Objects.equals(documentInstance, that.documentInstance) && Objects.equals(documentSectionMetadata, that.documentSectionMetadata) && Objects.equals(sectionValue, that.sectionValue) && Objects.equals(hasContentWarning, that.hasContentWarning) && Objects.equals(documentSectionIsccCode, that.documentSectionIsccCode) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getDocumentInstance(), getDocumentSectionMetadata(), getSectionValue(), hasContentWarning, getCreatedBy(), getUpdatedBy(), getCreatedAt(), getUpdatedAt());
+        return Objects.hash(id, documentInstance, documentSectionMetadata, sectionValue, hasContentWarning, documentSectionIsccCode, createdBy, updatedBy, createdAt, updatedAt);
     }
-
-
-
 }
