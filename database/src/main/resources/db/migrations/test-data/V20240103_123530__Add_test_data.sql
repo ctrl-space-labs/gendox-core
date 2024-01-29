@@ -439,12 +439,12 @@ where not exists(SELECT *
 
 
 INSERT INTO gendox_core.project_documents
-    (project_id, document_id)
+    (project_id, user_id)
 select (select id
         from gendox_core.projects
         where name = 'Test Project 1.1'),
        (select id
-        from gendox_core.documents
+        from gendox_core.users
         where email = 'testuser4@test.com')
 
 where not exists(SELECT *
