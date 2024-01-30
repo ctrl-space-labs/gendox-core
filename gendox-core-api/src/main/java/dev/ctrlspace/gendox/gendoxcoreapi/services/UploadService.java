@@ -29,15 +29,19 @@ public class UploadService {
     private DocumentService documentService;
     private ProjectDocumentService projectDocumentService;
 
+    private IsccCodeService isccCodeService;
+
 
     @Autowired
     private ResourceLoader resourceLoader;
 
     @Autowired
     public UploadService(DocumentService documentService,
-                         ProjectDocumentService projectDocumentService) {
+                         ProjectDocumentService projectDocumentService,
+                         IsccCodeService isccCodeService) {
         this.documentService = documentService;
         this.projectDocumentService = projectDocumentService;
+        this.isccCodeService = isccCodeService;
     }
 
 
@@ -45,6 +49,8 @@ public class UploadService {
         String fileName = file.getOriginalFilename();
         DocumentInstance instance =
                 documentService.getDocumentByFileName(projectId, organizationId, fileName);
+
+        IsccApiResponse isccApiResponse = isccCodeService.getDocumentIsccCode(file,fileName);
 
         if (instance == null) {
             DocumentInstance documentInstance = new DocumentInstance();
@@ -55,6 +61,7 @@ public class UploadService {
             documentInstance.setId(documentInstanceId);
             documentInstance.setOrganizationId(organizationId);
             documentInstance.setRemoteUrl(fullFilePath);
+            documentInstance.setDocumentIsccCode(isccApiResponse.getIscc());
             documentInstance = documentService.createDocumentInstance(documentInstance);
             // create project document
             ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, documentInstance.getId());
@@ -63,6 +70,7 @@ public class UploadService {
         } else {
             String fullFilePath = saveFile(file, organizationId, projectId);
             instance.setRemoteUrl(fullFilePath);
+            instance.setDocumentIsccCode(isccApiResponse.getIscc());
             instance = documentService.updateDocument(instance);
         }
 
