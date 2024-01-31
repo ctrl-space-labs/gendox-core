@@ -4,6 +4,8 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
+import dev.ctrlspace.gendox.provenAi.utils.IsccCodeServiceAdapter;
+import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,7 +31,8 @@ public class UploadService {
     private DocumentService documentService;
     private ProjectDocumentService projectDocumentService;
 
-    private IsccCodeService isccCodeService;
+    private IsccCodeServiceAdapter isccCodeServiceAdapter;
+
 
 
     @Autowired
@@ -38,10 +41,11 @@ public class UploadService {
     @Autowired
     public UploadService(DocumentService documentService,
                          ProjectDocumentService projectDocumentService,
-                         IsccCodeService isccCodeService) {
+                         IsccCodeServiceAdapter isccCodeServiceAdapter
+                         ) {
         this.documentService = documentService;
         this.projectDocumentService = projectDocumentService;
-        this.isccCodeService = isccCodeService;
+        this.isccCodeServiceAdapter = isccCodeServiceAdapter;
     }
 
 
@@ -49,9 +53,7 @@ public class UploadService {
         String fileName = file.getOriginalFilename();
         DocumentInstance instance =
                 documentService.getDocumentByFileName(projectId, organizationId, fileName);
-
-        IsccApiResponse isccApiResponse = isccCodeService.getDocumentIsccCode(file,fileName);
-
+        UniqueIdentifierCodeResponse uniqueIdentifierCodeResponse = isccCodeServiceAdapter.getDocumentUniqueIdentifier(file, fileName);
         if (instance == null) {
             DocumentInstance documentInstance = new DocumentInstance();
             // Generate a unique UUID
@@ -61,7 +63,7 @@ public class UploadService {
             documentInstance.setId(documentInstanceId);
             documentInstance.setOrganizationId(organizationId);
             documentInstance.setRemoteUrl(fullFilePath);
-            documentInstance.setDocumentIsccCode(isccApiResponse.getIscc());
+            documentInstance.setDocumentIsccCode(uniqueIdentifierCodeResponse.getIscc());
             documentInstance = documentService.createDocumentInstance(documentInstance);
             // create project document
             ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, documentInstance.getId());
@@ -70,7 +72,7 @@ public class UploadService {
         } else {
             String fullFilePath = saveFile(file, organizationId, projectId);
             instance.setRemoteUrl(fullFilePath);
-            instance.setDocumentIsccCode(isccApiResponse.getIscc());
+            instance.setDocumentIsccCode(uniqueIdentifierCodeResponse.getIscc());
             instance = documentService.updateDocument(instance);
         }
 

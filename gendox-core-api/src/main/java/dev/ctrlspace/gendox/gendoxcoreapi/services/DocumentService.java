@@ -13,6 +13,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -34,6 +36,14 @@ public class DocumentService {
         return documentInstanceRepository.findById(id)
                 .orElseThrow(() -> new GendoxException("DOCUMENT_NOT_FOUND", "Document not found with id: " + id, HttpStatus.NOT_FOUND));
 
+    }
+    public String getFileNameFromUrl(String url) {
+        // Replace backslashes with forward slashes to handle Windows paths
+        String normalizedUrl = url.replace('\\', '/');
+
+        // Use Paths to extract just the file name
+        Path path = Paths.get(normalizedUrl);
+        return path.getFileName().toString();
     }
 
 

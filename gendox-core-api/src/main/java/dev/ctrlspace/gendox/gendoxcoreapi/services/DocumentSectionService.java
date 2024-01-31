@@ -9,8 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentSectionMetadataRe
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentInstanceSectionPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
+import dev.ctrlspace.gendox.provenAi.utils.IsccCodeServiceAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
@@ -18,7 +17,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.*;
 
 @Service
@@ -32,6 +30,8 @@ public class DocumentSectionService {
     private DocumentSectionMetadataRepository documentSectionMetadataRepository;
     private EmbeddingService embeddingService;
     private SecurityUtils securityUtils;
+    private IsccCodeServiceAdapter isccCodeServiceAdapter;
+
 
 
 
@@ -47,12 +47,14 @@ public class DocumentSectionService {
                                   TrainingService trainingService,
                                   DocumentInstanceSectionRepository documentInstanceSectionRepository,
                                   DocumentSectionMetadataRepository documentSectionMetadataRepository,
-                                  SecurityUtils securityUtils) {
+                                  SecurityUtils securityUtils,
+                                  IsccCodeServiceAdapter isccCodeServiceAdapter) {
         this.typeService = typeService;
         this.projectAgentRepository = projectAgentRepository;
         this.trainingService = trainingService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.documentSectionMetadataRepository = documentSectionMetadataRepository;
+        this.isccCodeServiceAdapter = isccCodeServiceAdapter;
     }
 
 
@@ -109,12 +111,13 @@ public class DocumentSectionService {
 
     public DocumentInstanceSection createSection(DocumentInstance documentInstance, String fileContent, Integer sectionOrder) throws GendoxException {
         DocumentInstanceSection section = new DocumentInstanceSection();
+//        documentInstance.
         // create section's metadata
         DocumentSectionMetadata metadata = new DocumentSectionMetadata();
         metadata.setDocumentSectionTypeId(typeService.getDocumentTypeByName("FIELD_TEXT").getId());
         metadata.setTitle("Default Title");
         metadata.setSectionOrder(sectionOrder);
-
+//        section.setDocumentSectionIsccCode(isccCodeServiceAdapter.getDocumentIsccCode(fileContent,));
         section.setDocumentSectionMetadata(metadata);
         section.setSectionValue(fileContent);
         section.setDocumentInstance(documentInstance);

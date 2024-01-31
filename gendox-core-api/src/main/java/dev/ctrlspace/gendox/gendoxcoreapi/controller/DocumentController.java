@@ -9,6 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
+import dev.ctrlspace.gendox.provenAi.utils.IsccCodeServiceAdapter;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,7 +40,6 @@ public class DocumentController {
     private DocumentSectionService documentSectionService;
     private final DocumentInstanceSectionRepository documentInstanceSectionRepository;
 
-    private IsccCodeService isccCodeService;
 
     @Autowired
     public DocumentController(DocumentService documentService,
@@ -48,8 +48,7 @@ public class DocumentController {
                               UploadService uploadService,
                               SplitFileService splitFileService,
                               DocumentSectionService documentSectionService,
-                              DocumentInstanceSectionRepository documentInstanceSectionRepository,
-                              IsccCodeService isccCodeService) {
+                              DocumentInstanceSectionRepository documentInstanceSectionRepository) {
         this.documentService = documentService;
         this.documentOnlyConverter = documentOnlyConverter;
         this.documentConverter = documentConverter;
@@ -57,7 +56,6 @@ public class DocumentController {
         this.splitFileService = splitFileService;
         this.documentSectionService = documentSectionService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
-        this.isccCodeService = isccCodeService;
     }
 
     @GetMapping("/documents/{id}")
