@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.services;
+package dev.ctrlspace.gendox.provenAi.utils;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder(toBuilder = true)
 @AllArgsConstructor
 @NoArgsConstructor
-public class IsccApiResponse {
+public class IsccCodeResponse {
 
     private String context;
     private String type;
