@@ -1,6 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 import dev.ctrlspace.gendox.authentication.GendoxJwtAuthenticationConverter;
+import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
+import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeService;
 import dev.ctrlspace.gendox.spring.batch.jobs.SpringBatchConfiguration;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.controller.UserController;
@@ -41,6 +43,7 @@ import java.util.StringJoiner;
         LoggingObservationHandler.class,
         SpringBatchConfiguration.class,
         GendoxJwtAuthenticationConverter.class,
+        UniqueIdentifierCodeService.class
         })
 @EnableCaching
 @EnableJpaRepositories(basePackageClasses = {UserRepository.class})
