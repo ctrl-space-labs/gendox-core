@@ -37,14 +37,6 @@ public class DocumentService {
                 .orElseThrow(() -> new GendoxException("DOCUMENT_NOT_FOUND", "Document not found with id: " + id, HttpStatus.NOT_FOUND));
 
     }
-    public String getFileNameFromUrl(String url) {
-        // Replace backslashes with forward slashes to handle Windows paths
-        String normalizedUrl = url.replace('\\', '/');
-
-        // Use Paths to extract just the file name
-        Path path = Paths.get(normalizedUrl);
-        return path.getFileName().toString();
-    }
 
 
     public Page<DocumentInstance> getAllDocuments(DocumentCriteria criteria) throws GendoxException {

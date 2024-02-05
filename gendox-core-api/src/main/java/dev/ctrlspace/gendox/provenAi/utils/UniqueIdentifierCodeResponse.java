@@ -26,4 +26,7 @@ public class UniqueIdentifierCodeResponse {
     private int characters;
     private String metahash;
     private String datahash;
+    private String uuid;
+
+
 }
