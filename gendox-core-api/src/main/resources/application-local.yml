@@ -24,22 +24,22 @@ spring:
       ddl-auto: none
 
 
-#  datasource:
-#    url: jdbc:postgresql://localhost:5432/postgres
-#    username: postgres
-#    password: 123456789
-
-#    hikari:
-#      maximum-pool-size: 100
-#      minimum-idle: 10
-
   datasource:
-     url: ${DATABASE_URL}
-     username: ${DATABASE_USERNAME}
-     password: ${DATABASE_PASSWORD}
-     hikari:
-       maximum-pool-size: 100
-       minimum-idle: 10
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: 1234
+
+    hikari:
+      maximum-pool-size: 100
+      minimum-idle: 10
+
+#  datasource:
+#     url: ${DATABASE_URL}
+#     username: ${DATABASE_USERNAME}
+#     password: ${DATABASE_PASSWORD}
+#     hikari:
+#       maximum-pool-size: 100
+#       minimum-idle: 10
 
   jackson:
     serialization:
@@ -101,8 +101,8 @@ rsa:
 
 gendox:
   documents:
-    upload-dir: s3://gendox.organization.documents.local
-#    upload-dir: file:c:\\Users\\sekas\\gendox-documents
+#    upload-dir: s3://gendox.organization.documents.local
+    upload-dir: file:c:\\Users\\myrto\\gendox-documents
 #    upload-dir: file:C:\ProgramData\\gendox\\documents
 
 
@@ -111,11 +111,11 @@ gendox:
       extensions: .txt,.md,.rst,.pdf
 
   integrations:
-#    poller: 30000 # 30 seconds
-    poller: 86400000 # 24 hours in milliseconds
+    poller: 30000 # 30 seconds
+#    poller: 86400000 # 24 hours in milliseconds
     storage:
-#      temporary: C:\ProgramData\\gendox\\temporary_integration_files
-      temporary: s3://gendox.organization.documents.local/gendox_wiki
+      temporary: C:\ProgramData\\gendox\\temporary_integration_files
+#      temporary: s3://gendox.organization.documents.local/gendox_wiki
 
   models:
     openai:
