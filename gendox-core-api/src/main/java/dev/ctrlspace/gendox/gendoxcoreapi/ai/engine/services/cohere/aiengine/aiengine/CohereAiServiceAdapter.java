@@ -102,7 +102,7 @@ public class CohereAiServiceAdapter implements AiModelService {
         CohereEmbedMultilingualResponse cohereEmbedMultilingualResponse = this.getEmbeddingResponse((CohereEmbedMultilingualRequest.builder()
                 .model(aiModelName)
                 .texts(botRequest.getMessages())
-                .input_type("search_query")
+                .input_type("search-document")
                 .build()),
                 aiModelName);
 
