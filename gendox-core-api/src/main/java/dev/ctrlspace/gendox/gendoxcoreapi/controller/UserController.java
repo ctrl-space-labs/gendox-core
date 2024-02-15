@@ -78,10 +78,16 @@ public class UserController {
         return user;
     }
 
+
     @GetMapping("/profile")
     @Operation(summary = "Get user profile by ID",
             description = "Retrieve a user's profile by their unique ID.")
-    public UserProfile getUserUserProfile(@PathVariable UUID id, Authentication authentication) throws Exception {
+    public UserProfile getUserUserProfile(@PathVariable(required = false) UUID id, Authentication authentication) throws Exception {
+
+        UserProfile loginUserProfile = (UserProfile) authentication.getPrincipal();
+        if (id == null) {
+            return loginUserProfile;
+        }
 
         // run code to get the user from the database
         User user = userService.getById(id);
