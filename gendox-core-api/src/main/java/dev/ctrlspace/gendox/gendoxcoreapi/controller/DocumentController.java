@@ -13,6 +13,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.SplitFileService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UploadService;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -30,6 +32,8 @@ import java.util.*;
 
 @RestController
 public class DocumentController {
+
+    Logger logger = LoggerFactory.getLogger(DocumentController.class);
 
     @Value("${gendox.documents.allowed.extensions}")
     private String allowedExtensions;
