@@ -11,6 +11,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentIn
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
@@ -24,6 +26,7 @@ import java.util.*;
 @Service
 public class DocumentSectionService {
 
+    Logger logger = LoggerFactory.getLogger(DocumentSectionService.class);
 
     private TypeService typeService;
     private ProjectAgentRepository projectAgentRepository;
@@ -93,7 +96,8 @@ public class DocumentSectionService {
         return documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
     }
 
-    public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance, List<String> contentSections) throws GendoxException{
+    public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance, List<String> contentSections) throws GendoxException {
+
         // if the document instance already has sections in the database, delete it
         this.deleteDocumentSections(documentInstance.getId());
         List<DocumentInstanceSection> sections = new ArrayList<>();
