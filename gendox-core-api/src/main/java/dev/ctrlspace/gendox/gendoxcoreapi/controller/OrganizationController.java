@@ -67,13 +67,13 @@ public class OrganizationController {
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
-    @GetMapping("/organizations/{id}")
+    @GetMapping("/organizations/{organizationId}")
     @Operation(summary = "Get organization by ID",
             description = "Retrieve an organization by its unique ID.")
-    public Organization getOrganizationById(@PathVariable UUID id, Authentication authentication) throws Exception {
+    public Organization getOrganizationById(@PathVariable UUID organizationId, Authentication authentication) throws Exception {
 
         //run code to get the organization from the database
-        Organization organization = organizationService.getById(id);
+        Organization organization = organizationService.getById(organizationId);
         return organization;
     }
 
@@ -97,17 +97,17 @@ public class OrganizationController {
     // TODO: Has Permission OP_UPDATE_ORGANIZATION
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_DELETE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
-    @PutMapping("/organizations/{id}")
+    @PutMapping("/organizations/{organizationId}")
     @Operation(summary = "Update organization by ID",
             description = "Update an existing organization by specifying its unique ID and providing updated organization details.")
-    public Organization updateOrganization(@PathVariable UUID id, @RequestBody OrganizationDTO organizationDTO) throws Exception {
-        UUID organizationId = organizationDTO.getId();
+    public Organization updateOrganization(@PathVariable UUID organizationId, @RequestBody OrganizationDTO organizationDTO) throws Exception {
+        UUID updatedOrganizationId = organizationDTO.getId();
         Organization organization = new Organization();
         organization = organizationConverter.toEntity(organizationDTO);
-        organization.setId(organizationId);
+        organization.setId(updatedOrganizationId);
 
 
-        if (!id.equals(organizationDTO.getId())) {
+        if (!organizationId.equals(organizationDTO.getId())) {
             throw new GendoxException("ORGANIZATION_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
 
@@ -118,22 +118,22 @@ public class OrganizationController {
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_DELETE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
-    @DeleteMapping("/organizations/{id}")
+    @DeleteMapping("/organizations/{organizationId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete organization by ID",
             description = "Delete an existing organization by specifying its unique ID.")
-    public void deleteOrganization(@PathVariable UUID id) throws Exception {
-        organizationService.deleteOrganization(id);
+    public void deleteOrganization(@PathVariable UUID organizationId) throws Exception {
+        organizationService.deleteOrganization(organizationId);
     }
 
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
-    @GetMapping("/organizations/{id}/users")
+    @GetMapping("/organizations/{organizationId}/users")
     @Operation(summary = "Get users in organization by organization ID",
             description = "Retrieve a list of users who are members of a specific organization, identified by the provided organization ID. " +
                     "The organization's members are returned with details such as their roles and permissions within the organization. " +
                     "The results can be paginated for large organizations to ensure efficient data retrieval.")
-    public List<UserOrganization> getUsersInOrganizationByOrgId(@PathVariable UUID id, Authentication authentication, Pageable pageable) throws GendoxException {
+    public List<UserOrganization> getUsersInOrganizationByOrgId(@PathVariable UUID organizationId, Authentication authentication, Pageable pageable) throws GendoxException {
 
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
@@ -145,7 +145,7 @@ public class OrganizationController {
         //run code to get the organization from the database
         List<UserOrganization> organizationUsers = userOrganizationService.getAll(UserOrganizationCriteria
                 .builder()
-                .organizationId(id.toString())
+                .organizationId(organizationId.toString())
                 .build());
         return organizationUsers;
     }
