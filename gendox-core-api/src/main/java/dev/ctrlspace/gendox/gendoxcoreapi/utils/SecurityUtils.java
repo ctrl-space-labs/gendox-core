@@ -173,7 +173,7 @@ public class SecurityUtils {
         Map<String, String> uriTemplateVariables = (Map<String, String>) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
         String organizationId = null;
         if (uriTemplateVariables != null) {
-            organizationId = uriTemplateVariables.get("id");
+            organizationId = uriTemplateVariables.get("organizationId");
         }
         Set<String> requestedOrgIds = new HashSet<>();
 
