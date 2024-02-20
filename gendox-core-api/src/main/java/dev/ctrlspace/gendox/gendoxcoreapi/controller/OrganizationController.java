@@ -56,7 +56,7 @@ public class OrganizationController {
     }
 
 
-    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_READ_DOCUMENT')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgsFromRequestParams')")
     @GetMapping("/organizations")
     @Operation(summary = "Get all organizations",
             description = "Retrieve a list of all organizations based on the provided criteria.")
@@ -66,6 +66,7 @@ public class OrganizationController {
         return organizationService.getAllOrganizations(criteria, pageable);
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
     @GetMapping("/organizations/{id}")
     @Operation(summary = "Get organization by ID",
             description = "Retrieve an organization by its unique ID.")
@@ -95,7 +96,7 @@ public class OrganizationController {
 
     // TODO: Has Permission OP_UPDATE_ORGANIZATION
 
-    //    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_DELETE_ORGANIZATION')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_DELETE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
     @PutMapping("/organizations/{id}")
     @Operation(summary = "Update organization by ID",
             description = "Update an existing organization by specifying its unique ID and providing updated organization details.")
@@ -116,9 +117,7 @@ public class OrganizationController {
 
     }
 
-
-    // TODO: Has Permission OP_DELETE_ORGANIZATION
-    //@PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_DELETE_ORGANIZATION')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_DELETE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
     @DeleteMapping("/organizations/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete organization by ID",
@@ -128,6 +127,7 @@ public class OrganizationController {
     }
 
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
     @GetMapping("/organizations/{id}/users")
     @Operation(summary = "Get users in organization by organization ID",
             description = "Retrieve a list of users who are members of a specific organization, identified by the provided organization ID. " +

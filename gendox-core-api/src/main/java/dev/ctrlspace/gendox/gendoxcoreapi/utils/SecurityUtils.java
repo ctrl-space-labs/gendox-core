@@ -6,9 +6,11 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.servlet.HandlerMapping;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -56,14 +59,73 @@ public class SecurityUtils {
     }
 
 
-    public boolean hasAuthorityToRequestedOrgId(String authority) {
-        GendoxAuthenticationToken authentication = (GendoxAuthenticationToken)SecurityContextHolder.getContext().getAuthentication();
-        //JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt)authentication.getPrincipal());
-        if (isSuperAdmin(authentication)) {
-            return true; // Skip validation if user is an admin
+
+    private static boolean can(String authority, GendoxAuthenticationToken authentication, AccessCriteria accessCriteria) {
+
+        if (! accessCriteria.getOrgIds().isEmpty()) {
+            return canAccessOrganizations(authority, authentication, accessCriteria.getOrgIds());
         }
 
-//        authentication.ge
+        if (! accessCriteria.getProjectIds().isEmpty()) {
+            return canAccessProjects(authority, authentication, accessCriteria.getProjectIds());
+
+        }
+
+        return false;
+    }
+    private static boolean canAccessProjects(String authority, GendoxAuthenticationToken authentication, Set<String> requestedProjectIds) {
+        Set<String> authorizedProjectIds = authentication
+                .getPrincipal()
+                .getOrganizations()
+                .stream()
+                .filter(org -> org.getAuthorities().contains(authority))
+                .flatMap(org -> org.getProjects().stream())
+                .filter(project -> requestedProjectIds.contains(project.getId()))
+                .map(proj -> proj.getId())
+                .collect(Collectors.toSet());
+
+        if (!authorizedProjectIds.containsAll(requestedProjectIds)) {
+            return false;
+        }
+
+        return true;
+    }
+    private static boolean canAccessOrganizations(String authority, GendoxAuthenticationToken authentication, Set<String> requestedOrgIds) {
+        Set<String> authorizedOrgIds = authentication
+                .getPrincipal()
+                .getOrganizations()
+                .stream()
+                .filter(org -> requestedOrgIds.contains(org.getId()))
+                .filter(org -> org.getAuthorities().contains(authority))
+                .map(OrganizationUserDTO::getId)
+                .collect(Collectors.toSet());
+
+        if (!authorizedOrgIds.containsAll(requestedOrgIds)) {
+            return false;
+        }
+
+        return true;
+    }
+
+
+    // TODO delete this, use `hasAuthority` instead
+//    public boolean hasAuthorityToRequestedOrgId(String authority) {
+//        GendoxAuthenticationToken authentication = (GendoxAuthenticationToken)SecurityContextHolder.getContext().getAuthentication();
+//        //JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt)authentication.getPrincipal());
+//        if (isSuperAdmin(authentication)) {
+//            return true; // Skip validation if user is an admin
+//        }
+//
+////        authentication.ge
+//        AccessCriteria accessCriteria = getRequestedOrgsFromRequestParams();
+//
+//        if (accessCriteria.getOrgIds().isEmpty()) return false;
+//
+//        return can(authority, authentication, accessCriteria);
+//
+//    }
+
+    private AccessCriteria getRequestedOrgsFromRequestParams() {
         HttpServletRequest request = getCurrentHttpRequest();
         //get request param with name "organizationId"
         String organizationId = request.getParameter(QueryParamNames.ORGANIZATION_ID);
@@ -71,39 +133,96 @@ public class SecurityUtils {
 
 
         if (organizationId == null && orgStrings == null) {
-            return false;
+            return new AccessCriteria();
         }
 
-        Set<String> orgs = new HashSet<>();
+        Set<String> requestedOrgIds = new HashSet<>();
         if (orgStrings != null) {
-            orgs.addAll(Set.of(orgStrings));
+            requestedOrgIds.addAll(Set.of(orgStrings));
         }
         if (organizationId != null) {
-            orgs.add(organizationId);
+            requestedOrgIds.add(organizationId);
+        }
+        return AccessCriteria.builder().orgIds(requestedOrgIds).build();
+    }
+
+
+    // TODO delete this, use `hasAuthority` instead
+//    public boolean hasAuthorityToUpdateOrgId(String authority) {
+//        GendoxAuthenticationToken authentication = (GendoxAuthenticationToken)SecurityContextHolder.getContext().getAuthentication();
+//
+//        if (isSuperAdmin(authentication)) {
+//            return true; // Skip validation if user is an admin
+//        }
+//
+//        AccessCriteria accessCriteria = getRequestedOrgIdFromPathVariable();
+//
+//        // If organizationId is still null, return false
+//        if (accessCriteria == null) {
+//            return false;
+//        }
+//
+//        return can(authority, authentication, accessCriteria);
+//
+//    }
+
+    @Nullable
+    private AccessCriteria getRequestedOrgIdFromPathVariable() {
+        // Extract organizationId from the request path
+        HttpServletRequest request = getCurrentHttpRequest();
+        Map<String, String> uriTemplateVariables = (Map<String, String>) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+        String organizationId = null;
+        if (uriTemplateVariables != null) {
+            organizationId = uriTemplateVariables.get("id");
+        }
+        Set<String> requestedOrgIds = new HashSet<>();
+
+        if (organizationId != null) {
+            requestedOrgIds.add(organizationId);
         }
 
-        Set<String> orgIds = authentication
-                .getPrincipal()
-                .getOrganizations()
-                .stream()
-                .map(OrganizationUserDTO::getId)
-                .collect(Collectors.toSet());
+        return AccessCriteria
+                .builder()
+                .orgIds(requestedOrgIds)
+                .build();
+    }
 
-        if (!orgIds.containsAll(orgs)) {
+
+    public class AccessCriteriaGetterFunction {
+
+        public static final String ORG_IDS_FROM_REQUEST_PARAMS = "getRequestedOrgsFromRequestParams";
+        public static final String ORG_ID_FROM_PATH_VARIABLE = "getRequestedOrgIdFromPathVariable";
+    }
+
+
+    /**
+     * This is a general method to check for Authorization
+     *
+     * @param authority the authority that the user should have
+     * @param getterFunction this is used to find the appropriate function, that will extract the {@link AccessCriteria}
+     *                       from path variables or requstparams or ....
+     * @return
+     */
+    public boolean hasAuthority(String authority, String getterFunction) {
+        GendoxAuthenticationToken authentication = (GendoxAuthenticationToken)SecurityContextHolder.getContext().getAuthentication();
+
+        if (isSuperAdmin(authentication)) {
+            return true; // Skip validation if user is an admin
+        }
+
+        AccessCriteria accessCriteria = null;
+
+        if (AccessCriteriaGetterFunction.ORG_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)){
+            accessCriteria = getRequestedOrgsFromRequestParams();
+        }
+        if (AccessCriteriaGetterFunction.ORG_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
+            accessCriteria = getRequestedOrgIdFromPathVariable();
+        }
+
+        if (accessCriteria == null) {
             return false;
         }
-
-        return true;
-
-
-//        if (!jwtDTO.getOrgAuthoritiesMap().containsKey(organizationId)) {
-//            return false;
-//        }
-
-//
-//        if (!jwtDTO.getOrgAuthoritiesMap().get(organizationId).orgAuthorities().contains(authority)){
-//            return false;
-//        }
+        return can(authority, authentication, accessCriteria);
     }
 
     public boolean hasAuthorityToRequestedProjectId() {
