@@ -151,8 +151,9 @@ public class OrganizationController {
     }
 
 
-    //TODO validate that the user has permission to add a user to the organization in the {{userOrganization}} object
     //TODO validate that the role level is not higher than the user's role level for this organization
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_ADD_USERS', 'getRequestedOrgIdFromPathVariable')")
     @Operation(summary = "Create a User - Organization association",
             description = """
                     Create a User - Organization association, if the user has right to add a user to the organization.

@@ -24,6 +24,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -63,18 +64,18 @@ public class ProjectController {
     }
 
 
-    //        @PreAuthorize("@securityUtils.hasAuthorityToRequestedProjectId('id')")
-    @GetMapping("/projects/{id}")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
+    @GetMapping("/projects/{projectId}")
     @Operation(summary = "Get project by ID",
             description = "Retrieve project details by its unique ID. The user must have the appropriate permissions to access this project.")
 
-    public Project getProjectById(@PathVariable UUID id) throws GendoxException {
-        return projectService.getProjectById(id);
+    public Project getProjectById(@PathVariable UUID projectId) throws GendoxException {
+        return projectService.getProjectById(projectId);
     }
 
 
-    //        @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_READ_DOCUMENT') " +
-//            "|| @securityUtils.hasAuthorityToAllRequestedProjectId()")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgsFromRequestParams')" +
+    "|| @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
     @GetMapping("/projects")
     @Operation(summary = "Get all projects",
             description = "Retrieve a list of all projects based on the provided criteria. The user must have the necessary permissions to access these projects.")
