@@ -9,6 +9,7 @@ import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -26,5 +27,8 @@ public interface ProjectDocumentRepository extends JpaRepository<ProjectDocument
     List<DocumentInstance> findDocumentInstancesByDocumentIds(List<UUID> documentIds);
 
     List<ProjectDocument> findByDocumentId(UUID documentId);
+
+    Optional<ProjectDocument> findByDocumentIdAndProjectId(UUID documentId, UUID projectId);
+
 
 }

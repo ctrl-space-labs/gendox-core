@@ -6,8 +6,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UploadService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.IntegrationManager;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
@@ -54,6 +56,7 @@ public class IntegrationConfiguration {
     private ProjectService projectService;
     private SplitterBatchService splitterBatchService;
     private TrainingBatchService trainingBatchService;
+    private TypeService typeService;
 
 
     @Autowired
@@ -61,13 +64,14 @@ public class IntegrationConfiguration {
                                     UploadService uploadService,
                                     ProjectService projectService,
                                     SplitterBatchService splitterBatchService,
-                                    TrainingBatchService trainingBatchService) {
+                                    TrainingBatchService trainingBatchService,
+                                    TypeService typeService) {
         this.integrationManager = integrationManager;
         this.uploadService = uploadService;
         this.projectService = projectService;
         this.splitterBatchService = splitterBatchService;
         this.trainingBatchService = trainingBatchService;
-
+        this.typeService = typeService;
     }
 
 
@@ -120,8 +124,10 @@ public class IntegrationConfiguration {
                             e.printStackTrace();
                         }
                     }
-                    // Delete all the directory files except the .git folder
-                    deleteDirectoryFiles(integration.getDirectoryPath());
+                    if (integration.getIntegrationType().equals(typeService.getIntegrationTypeByName(IntegrationTypesConstants.GIT_INTEGRATION))) {
+                        // Delete all the directory files except the .git folder
+                        deleteDirectoryFiles(integration.getDirectoryPath());
+                    }
                 }
 
                 if (hasNewFiles) {

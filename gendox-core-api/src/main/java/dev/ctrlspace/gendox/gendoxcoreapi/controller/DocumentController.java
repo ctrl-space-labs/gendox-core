@@ -140,8 +140,9 @@ public class DocumentController {
     @Operation(summary = "Delete document by ID",
             description = "Delete an existing document by specifying its unique ID. " +
                     "This operation permanently removes the document and its associated sections and metadata.")
-    public void delete(@PathVariable UUID id) throws GendoxException {
-        documentService.deleteDocument(id);
+    public void delete(@PathVariable UUID id,
+                       @RequestParam("projectId") UUID projectId) throws GendoxException {
+        documentService.deleteDocument(id, projectId);
     }
 
 

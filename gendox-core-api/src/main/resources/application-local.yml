@@ -114,8 +114,8 @@ gendox:
 #    poller: 30000 # 30 seconds
     poller: 86400000 # 24 hours in milliseconds
     storage:
-#      temporary: C:\ProgramData\\gendox\\temporary_integration_files
-      temporary: s3://gendox.organization.documents.local/gendox_wiki
+      temporary: C:\ProgramData\\gendox\\temporary_integration_files
+#      temporary: s3://gendox.organization.documents.local/gendox_wiki
 
   models:
     openai:
@@ -172,7 +172,10 @@ gendox:
 
 cloud:
   aws:
-    region: eu-central-1
+    s3:
+      region: eu-central-1
+    SQS:
+      region: eu-central-1
 
 
 
