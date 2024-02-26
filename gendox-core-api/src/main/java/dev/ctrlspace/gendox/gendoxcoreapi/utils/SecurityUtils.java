@@ -1,9 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
-import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.CommonCommandUtility;
-import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
@@ -15,13 +13,13 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.HandlerMapping;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,6 +30,9 @@ public class SecurityUtils {
 
     @Autowired
     private JWTUtils jwtUtils;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     public boolean isSuperAdmin() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -71,10 +72,9 @@ public class SecurityUtils {
             return canAccessOrganizations(authority, authentication, accessCriteria.getOrgIds());
         }
 
-
-
         return false;
     }
+
     private static boolean canAccessProjects(String authority, GendoxAuthenticationToken authentication, Set<String> requestedProjectIds) {
         Set<String> authorizedProjectIds = authentication
                 .getPrincipal()
@@ -146,7 +146,7 @@ public class SecurityUtils {
         String organizationId = new String();
 
         if (uriTemplateVariables != null) {
-            organizationId = uriTemplateVariables.get("organizationId");
+            organizationId = uriTemplateVariables.get(QueryParamNames.ORGANIZATION_ID);
         }
         Set<String> requestedOrgIds = new HashSet<>();
 
@@ -162,9 +162,10 @@ public class SecurityUtils {
     }
 
 
+
     private AccessCriteria getRequestedProjectsFromRequestParams() {
         HttpServletRequest request = getCurrentHttpRequest();
-        //get request param with name "organizationId"
+        //get request param with name "projectId"
         String projectId = request.getParameter(QueryParamNames.PROJECT_ID);
         String[] projectStrings = request.getParameterValues(QueryParamNames.PROJECT_ID_IN);
 
@@ -187,7 +188,6 @@ public class SecurityUtils {
                 .build();
     }
 
-
     @Nullable
     private AccessCriteria getRequestedProjectIdFromPathVariable() {
         // Extract organizationId from the request path
@@ -196,7 +196,7 @@ public class SecurityUtils {
 
         String projectId = new String();
         if (uriTemplateVariables != null) {
-            projectId = uriTemplateVariables.get("projectId");
+            projectId = uriTemplateVariables.get(QueryParamNames.PROJECT_ID);
         }
         Set<String> requestedProjectIds = new HashSet<>();
 
@@ -220,6 +220,7 @@ public class SecurityUtils {
 
         public static final String PROJECT_IDS_FROM_REQUEST_PARAMS = "getRequestedProjectsFromRequestParams";
         public static final String PROJECT_ID_FROM_PATH_VARIABLE = "getRequestedProjectIdFromPathVariable";
+
     }
 
 
@@ -228,10 +229,10 @@ public class SecurityUtils {
      *
      * @param authority the authority that the user should have
      * @param getterFunction this is used to find the appropriate function, that will extract the {@link AccessCriteria}
-     *                       from path variables or requstparams or ....
+     *                       from path variables or requstparams or JSON body
      * @return
      */
-    public boolean hasAuthority(String authority, String getterFunction) {
+    public boolean hasAuthority(String authority, String getterFunction) throws IOException {
         GendoxAuthenticationToken authentication = (GendoxAuthenticationToken)SecurityContextHolder.getContext().getAuthentication();
 
         if (isSuperAdmin(authentication)) {
@@ -247,6 +248,7 @@ public class SecurityUtils {
         if (AccessCriteriaGetterFunction.ORG_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
             accessCriteria = getRequestedOrgIdFromPathVariable();
         }
+
 
         if (AccessCriteriaGetterFunction.PROJECT_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)){
             accessCriteria = getRequestedProjectsFromRequestParams();

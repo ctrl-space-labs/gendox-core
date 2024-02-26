@@ -94,9 +94,7 @@ public class OrganizationController {
     }
 
 
-    // TODO: Has Permission OP_UPDATE_ORGANIZATION
-
-    @PreAuthorize("@securityUtils.hasAuthority('OP_DELETE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
     @PutMapping("/organizations/{organizationId}")
     @Operation(summary = "Update organization by ID",
             description = "Update an existing organization by specifying its unique ID and providing updated organization details.")

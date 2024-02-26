@@ -18,6 +18,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import io.swagger.v3.oas.annotations.Operation;
@@ -58,7 +59,9 @@ public class DocumentController {
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
     }
 
-    @GetMapping("/documents/{id}")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
+    @GetMapping("organizations/{organizationId}/projects/{projectId}/documents/{id}")
     @Operation(summary = "Get document by ID",
             description = "Retrieve a document by its unique ID.")
     public DocumentInstance getById(@PathVariable UUID id) throws GendoxException {
@@ -142,15 +145,16 @@ public class DocumentController {
         documentService.deleteDocument(id);
     }
 
-
-    @PostMapping("/documents/upload")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable') " +
+            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
+    @PostMapping("organizations/{organizationId}/projects/{projectId}/documents/upload")
     @Operation(summary = "Upload documents",
             description = "Upload one or more documents to the system. " +
                     "The allowed file extensions are defined in the application properties. " +
                     "The uploaded files are associated with a specific organization and project.")
     public ResponseEntity<Map<String, Object>> handleFilesUpload(@RequestParam("file") List<MultipartFile> files,
-                                                                 @RequestParam("organizationId") UUID organizationId,
-                                                                 @RequestParam("projectId") UUID projectId) throws IOException, GendoxException {
+                                                                 @PathVariable UUID organizationId,
+                                                                 @PathVariable UUID projectId) throws IOException, GendoxException {
 
         // Get the allowed file extensions from application.properties
         List<String> allowedExtensionsList = Arrays.asList(allowedExtensions.split(","));
