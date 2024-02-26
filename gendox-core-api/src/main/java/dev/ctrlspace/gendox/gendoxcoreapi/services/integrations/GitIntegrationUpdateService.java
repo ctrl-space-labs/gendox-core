@@ -4,8 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.ObjectIdConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.Listener;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.IntegrationRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.gitIntegration.FileSystemMultipartFile;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
 import org.eclipse.jgit.api.Git;
@@ -21,8 +20,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
-
-import java.time.Instant;
 
 import java.util.*;
 
@@ -82,6 +79,7 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
             }
 
             if (integration.getRepoHead() == null) {
+                logger.info("should-update = true ");
                 shouldUpdateMap = true;
 
             } else {

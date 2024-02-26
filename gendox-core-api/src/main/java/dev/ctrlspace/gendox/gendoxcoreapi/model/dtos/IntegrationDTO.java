@@ -21,6 +21,8 @@ public class IntegrationDTO {
 
     private String url;
 
+    private String queueName;
+
     private String directoryPath;
 
     private String repoHead;

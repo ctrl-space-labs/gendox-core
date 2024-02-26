@@ -16,7 +16,7 @@ import org.springframework.core.io.DefaultResourceLoader;
 @Configuration
 public class AWSConfig {
 
-    @Value("${cloud.aws.region}")
+    @Value("${cloud.aws.s3.region}")
     private String region;
 
     @Bean
