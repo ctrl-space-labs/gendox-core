@@ -59,18 +59,22 @@ public class DocumentController {
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')" +
-            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
-    @GetMapping("organizations/{organizationId}/projects/{projectId}/documents/{id}")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @GetMapping("organizations/{organizationId}/projects/{projectId}/documents/{documentId}")
     @Operation(summary = "Get document by ID",
             description = "Retrieve a document by its unique ID.")
-    public DocumentInstance getById(@PathVariable UUID id) throws GendoxException {
+    public DocumentInstance getById(@PathVariable UUID documentId) throws GendoxException {
         //throw new UnsupportedOperationException("Not implemented yet");
-        return documentService.getDocumentInstanceById(id);
+
+
+        return documentService.getDocumentInstanceById(documentId);
     }
 
 
-    @GetMapping("/documents")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @GetMapping("organizations/{organizationId}/projects/{projectId}/documents")
     @Operation(summary = "Get all documents",
             description = "Retrieve a list of all documents based on the provided criteria.")
     public Page<DocumentDTO> getAll(@Valid DocumentCriteria criteria, Pageable pageable) throws GendoxException {
@@ -90,63 +94,84 @@ public class DocumentController {
         return documentDTOs;
     }
 
-    @GetMapping("/documents/sections/projects/{id}")
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @GetMapping("/organizations/{organizationId}/projects/{projectId}/documents/sections")
     @Operation(summary = "Get document sections by project ID",
             description = "Fetch a list of document sections associated with a particular project based on the provided project ID. " +
                     "Document sections provide structured content within a project, such as chapters, sections, or segments. " +
                     "This operation enables you to access the sections within the specified project.")
-    public List<DocumentInstanceSection> getSectionsByProjectId(@PathVariable UUID id) throws GendoxException {
+    public List<DocumentInstanceSection> getSectionsByProjectId(@PathVariable UUID projectId) throws GendoxException {
         //throw new UnsupportedOperationException("Not implemented yet");
-        return documentSectionService.getProjectSections(id);
+        return documentSectionService.getProjectSections(projectId);
     }
 
 
-    @PostMapping("/documents")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @PostMapping("/organizations/{organizationId}/projects/{projectId}/documents")
     @Operation(summary = "Create a new document",
             description = "Create a new document based on the provided document details. " +
                     "This operation creates a new document instance with associated sections and metadata, " +
                     "incorporating the provided document information.")
-    public DocumentInstance create(@RequestBody DocumentDTO documentDTO) throws GendoxException {
+    public DocumentInstance create(@RequestBody DocumentDTO documentDTO, @PathVariable UUID organizationId) throws GendoxException {
 
         if (documentDTO.getId() != null) {
             throw new GendoxException("DOCUMENT_INSTANCE_ID_MUST_BE_NULL", "Document instant id is not null", HttpStatus.BAD_REQUEST);
         }
 
         DocumentInstance documentInstance = documentConverter.toEntity(documentDTO);
+
+        if (!organizationId.equals(documentDTO.getOrganizationId())) {
+            throw new GendoxException("ORGANIZATION_ID_MISMATCH", "Organization ID in path and Organization ID in body are not the same", HttpStatus.BAD_REQUEST);
+        }
+
+
         documentInstance = documentService.createDocumentInstance(documentInstance);
 
         return documentInstance;
     }
 
 
-    @PutMapping("/documents/{id}")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @PutMapping("/organizations/{organizationId}/projects/{projectId}/documents/{documentId}")
     @Operation(summary = "Update document by ID",
             description = "Update an existing document by specifying its unique ID and providing updated document details. " +
                     "This operation allows you to modify the document's properties, sections, and metadata. " +
                     "Ensure that the ID in the path matches the ID in the provided document details.")
-    public DocumentInstance update(@PathVariable UUID id, @RequestBody DocumentDTO documentDTO) throws GendoxException {
+    public DocumentInstance update(@PathVariable UUID documentId, @PathVariable UUID organizationId, @RequestBody DocumentDTO documentDTO) throws GendoxException {
         // TODO: Store the sections. The metadata should be updated only if documentTemplate is empty/null
 
         DocumentInstance documentInstance = documentConverter.toEntity(documentDTO);
 
-        if (!id.equals(documentInstance.getId())) {
+        if (!documentId.equals(documentInstance.getId())) {
             throw new GendoxException("DOCUMENT_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
+        }
+
+        if (!organizationId.equals(documentDTO.getOrganizationId())) {
+            throw new GendoxException("ORGANIZATION_ID_MISMATCH", "Organization ID in path and Organization ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
 
         documentInstance = documentService.updateDocument(documentInstance);
         return documentInstance;
     }
 
-    @DeleteMapping("/documents/{id}")
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @DeleteMapping("/organizations/{organizationId}/projects/{projectId}/documents/{documentId}")
     @Operation(summary = "Delete document by ID",
             description = "Delete an existing document by specifying its unique ID. " +
                     "This operation permanently removes the document and its associated sections and metadata.")
-    public void delete(@PathVariable UUID id) throws GendoxException {
-        documentService.deleteDocument(id);
+    public void delete(@PathVariable UUID documentId) throws GendoxException {
+        documentService.deleteDocument(documentId);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable') " +
-            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("organizations/{organizationId}/projects/{projectId}/documents/upload")
     @Operation(summary = "Upload documents",
             description = "Upload one or more documents to the system. " +
@@ -172,8 +197,9 @@ public class DocumentController {
         return ResponseEntity.ok(response);
     }
 
-
-    @PostMapping("/documents/split")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @PostMapping("/organizations/{organizationId}/projects/{projectId}/documents/split")
     @Operation(summary = "",
             description = " ")
     public List<DocumentInstanceSection> handleFileSplitter(@Valid DocumentCriteria criteria) throws IOException, GendoxException {

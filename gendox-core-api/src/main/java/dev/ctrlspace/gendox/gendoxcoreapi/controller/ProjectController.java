@@ -76,13 +76,15 @@ public class ProjectController {
     }
 
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgsFromRequestParams') " +
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable') " +
             "|| @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
     @GetMapping("organizations/{organizationId}/projects")
     @Operation(summary = "Get all projects",
             description = "Retrieve a list of all projects based on the provided criteria. The user must have the necessary permissions to access these projects.")
 
-    public Page<Project> getAllProjects(@Valid ProjectCriteria criteria, Pageable pageable) throws GendoxException {
+    public Page<Project> getAllProjects(@Valid ProjectCriteria criteria,@PathVariable("organizationId") String organizationId, Pageable pageable) throws GendoxException {
+        // override requested org id with the path variable
+        criteria.setOrganizationId(organizationId);
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
         }
@@ -127,8 +129,6 @@ public class ProjectController {
     }
 
 
-    // TODO: is member to the project
-
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @Operation(summary = "Update a project by id",
             //as technical writer add description by the above and below TODOs
@@ -167,7 +167,6 @@ public class ProjectController {
 
     }
 
-    // TODO: is member to the project
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_DELETE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @DeleteMapping("organizations/{organizationId}/projects/{projectId}")
@@ -179,7 +178,6 @@ public class ProjectController {
     }
 
 
-    // TODO validate that the user has permission to add a member to the project in the {{userMember}} object
     // TODO validate that the role level is not higher than the user's role level for this project
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
     @GetMapping(value = "organizations/{organizationId}/projects/{projectId}/users")
