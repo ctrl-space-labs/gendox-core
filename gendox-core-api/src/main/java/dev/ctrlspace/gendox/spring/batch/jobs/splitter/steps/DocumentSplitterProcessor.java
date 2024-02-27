@@ -3,7 +3,7 @@ package dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentContent;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.DownloadService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
@@ -26,15 +26,15 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
     Logger logger = LoggerFactory.getLogger(DocumentSplitterProcessor.class);
     private ServiceSelector serviceSelector;
     private ProjectAgentService projectAgentService;
-    private DocumentContent documentContent;
+    private DownloadService downloadService;
 
     @Autowired
     public DocumentSplitterProcessor(ServiceSelector serviceSelector,
                                      ProjectAgentService projectAgentService,
-                                     DocumentContent documentContent) {
+                                     DownloadService downloadService) {
         this.serviceSelector = serviceSelector;
         this.projectAgentService = projectAgentService;
-        this.documentContent = documentContent;
+        this.downloadService = downloadService;
     }
 
     @Override
@@ -44,7 +44,7 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         logger.debug("Start processing split: {}", item.getId());
 
         try {
-            String fileContent = documentContent.readDocumentContent(item.getRemoteUrl());
+            String fileContent = downloadService.readDocumentContent(item.getRemoteUrl());
             agent = projectAgentService.getAgentByDocumentId(item.getId());
 
             String splitterTypeName = agent.getDocumentSplitterType().getName();

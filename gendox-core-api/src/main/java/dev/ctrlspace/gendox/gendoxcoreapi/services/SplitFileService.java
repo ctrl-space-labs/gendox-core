@@ -21,18 +21,18 @@ public class SplitFileService {
 
 
     private DocumentService documentService;
-    private DocumentContent documentContent;
+    private DownloadService downloadService;
     private ProjectAgentService projectAgentService;
     private ServiceSelector serviceSelector;
 
 
     @Autowired
     public SplitFileService(DocumentService documentService,
-                            DocumentContent documentContent,
+                            DownloadService downloadService,
                             ProjectAgentService projectAgentService,
                             ServiceSelector serviceSelector) {
         this.documentService = documentService;
-        this.documentContent = documentContent;
+        this.downloadService = downloadService;
         this.projectAgentService = projectAgentService;
         this.serviceSelector = serviceSelector;
     }
@@ -56,7 +56,7 @@ public class SplitFileService {
     }
 
     public List<String> splitDocument(DocumentInstance documentInstance) throws GendoxException, IOException {
-        String fileContent = documentContent.readDocumentContent(documentInstance.getRemoteUrl());
+        String fileContent = downloadService.readDocumentContent(documentInstance.getRemoteUrl());
 
         ProjectAgent agent = projectAgentService.getAgentByDocumentId(documentInstance.getId());
 

@@ -8,12 +8,13 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import com.amazonaws.services.sqs.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentContent;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.DownloadService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.s3BucketIntegration.ResourceMultipartFile;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.s3BucketIntegration.SQSListener;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.S3BucketIntegrationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,91 +32,111 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
     Logger logger = LoggerFactory.getLogger(S3BucketIntegrationUpdateService.class);
 
     private SQSListener sqsListener;
-    private DocumentContent documentContent;
+    private DownloadService downloadService;
     private DocumentService documentService;
     private ProjectService projectService;
     private DocumentSectionService documentSectionService;
 
     @Autowired
     public S3BucketIntegrationUpdateService(SQSListener sqsListener,
-                                            DocumentContent documentContent,
+                                            DownloadService downloadService,
                                             DocumentService documentService,
                                             ProjectService projectService,
                                             DocumentSectionService documentSectionService) {
         this.sqsListener = sqsListener;
-        this.documentContent = documentContent;
+        this.downloadService = downloadService;
         this.documentService = documentService;
         this.projectService = projectService;
         this.documentSectionService = documentSectionService;
     }
 
-
+    /**
+     * Checks for updates in the specified integration.
+     * Retrieves messages from SQS and processes them accordingly.
+     * @param integration The integration to check for updates.
+     * @return A list of multipart files representing the updated documents.
+     */
     @Override
     public List<MultipartFile> checkForUpdates(Integration integration) {
 
-
         String queueName = integration.getQueueName();
-
         List<MultipartFile> fileList = new ArrayList<>();
-        List<Message> sqsMessages = sqsListener.receiveMessages(queueName);
 
+        try {
+            List<Message> sqsMessages = sqsListener.receiveMessages(queueName);
 
-        for (Message sqsMessage : sqsMessages) {
-            try {
-                ObjectMapper objectMapper = new ObjectMapper();
-                JsonNode rootNode = objectMapper.readTree(sqsMessage.getBody());
-
-                // Extracting event, the bucket name and object key from the JSON structure
-                String event = rootNode.at("/Records/0/eventName").asText();
-                String bucketName = rootNode.at("/Records/0/s3/bucket/name").asText();
-                String objectKey = rootNode.at("/Records/0/s3/object/key").asText();
-
-                // if event is upload new document
-                if (event.equals("ObjectCreated:Put")) {
-                    // Constructing the S3 URL
-                    String s3Url = "s3://" + bucketName + "/" + objectKey;
-
-                    // Read content from the S3 URL
-                    String content = documentContent.readDocumentContent(s3Url);
-
-                    // Convert content to byte array
-                    byte[] contentBytes = content.getBytes();
-
-                    // Create a MultipartFile using ByteArrayResource
-                    MultipartFile multipartFile = new ResourceMultipartFile(
-                            contentBytes,
-                            objectKey,
-                            "application/octet-stream"
-                    );
-
-
-                    fileList.add(multipartFile);
-                }
-
-                // if event is deleted document, will handle the deletes in the future
-                if (event.equals("ObjectRemoved:Delete")) {
-                    // take the file name
-                    String fileName = objectKey.substring(objectKey.lastIndexOf('/') + 1);
-                    // get project
-                    Project project = projectService.getProjectById(integration.getProjectId());
-                    DocumentInstance documentInstance = documentService.getDocumentByFileName(project.getId(), project.getOrganizationId(), fileName);
-                    List<DocumentInstanceSection> documentInstanceSections = documentSectionService.getSectionsByDocument(documentInstance.getId());
-                    documentInstance.setDocumentInstanceSections(documentInstanceSections);
-                    documentService.deleteDocument(documentInstance, project.getId());
-                }
-
-            } catch (IOException e) {
-                logger.error("An error occurred while processing SQS message: " + e.getMessage());
-                throw new RuntimeException(e);
-            } catch (GendoxException e) {
-                logger.error("An error occurred while processing SQS message: " + e.getMessage());
-                throw new RuntimeException(e);
+            for (Message sqsMessage : sqsMessages) {
+                handleSqsMessage(sqsMessage, fileList, integration);
+                sqsListener.deleteMessage(sqsMessage, queueName);
             }
-
+        } catch (Exception e) {
+            logger.error("An error occurred while checking for updates: " + e.getMessage(), e);
         }
 
         return fileList;
     }
+
+    /**
+     * Handles a single SQS message received from the integration queue.
+     * Parses the message and takes appropriate actions based on the event.
+     * @param sqsMessage The SQS message to handle.
+     * @param fileList The list to store updated multipart files.
+     * @param integration The integration associated with the message.
+     */
+    private void handleSqsMessage(Message sqsMessage, List<MultipartFile> fileList, Integration integration) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(sqsMessage.getBody());
+
+            String event = rootNode.at(S3BucketIntegrationConstants.OBJECT_ROOT_EVENT).asText();
+            String bucketName = rootNode.at(S3BucketIntegrationConstants.OBJECT_ROOT_BUCKET_NAME).asText();
+            String objectKey = rootNode.at(S3BucketIntegrationConstants.OBJECT_ROOT_KEY).asText();
+
+            if (event.equals(S3BucketIntegrationConstants.EVENT_PUT_DOCUMENT)) {
+                logger.debug("Upload file from S3 bucket");
+                MultipartFile multipartFile = convertToMultipartFile(bucketName, objectKey);
+                fileList.add(multipartFile);
+            } else if (event.equals(S3BucketIntegrationConstants.EVENT_DELETE_DOCUMENT)) {
+                logger.debug("Deleted file from S3 bucket");
+                handleDeletedDocuments(integration, objectKey);
+            }
+        } catch (IOException | GendoxException e) {
+            logger.error("An error occurred while processing SQS message: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Converts a file from an S3 bucket to a multipart file.
+     * @param bucketName The name of the S3 bucket.
+     * @param objectKey The key of the object in the S3 bucket.
+     * @return The multipart file representing the content of the S3 object.
+     */
+    private MultipartFile convertToMultipartFile(String bucketName, String objectKey) throws GendoxException, IOException {
+        String s3Url = "s3://" + bucketName + "/" + objectKey;
+        String content = downloadService.readDocumentContent(s3Url);
+        byte[] contentBytes = content.getBytes();
+
+        return new ResourceMultipartFile(
+                contentBytes,
+                objectKey,
+                "application/octet-stream"
+        );
+    }
+
+    /**
+     * Deletes a document from the database based on the integration information and object key.
+     * @param integration The integration associated with the document.
+     * @param objectKey The key of the object to delete from the database.
+     */
+    private void handleDeletedDocuments(Integration integration, String objectKey) throws GendoxException {
+        String fileName = objectKey.substring(objectKey.lastIndexOf('/') + 1);
+        Project project = projectService.getProjectById(integration.getProjectId());
+        DocumentInstance documentInstance = documentService.getDocumentByFileName(project.getId(), project.getOrganizationId(), fileName);
+        List<DocumentInstanceSection> documentInstanceSections = documentSectionService.getSectionsByDocument(documentInstance.getId());
+        documentInstance.setDocumentInstanceSections(documentInstanceSections);
+        documentService.deleteDocument(documentInstance, project.getId());
+    }
+
 }
 
 

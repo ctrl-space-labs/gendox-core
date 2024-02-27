@@ -1,7 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 
-
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
@@ -78,7 +77,7 @@ public class IntegrationConfiguration {
     //     Define the MessageSource
     @Bean
     @InboundChannelAdapter(value = "integrationChannel", poller = @Poller(fixedDelay = "${gendox.integrations.poller}"))
-    public MessageSource<?> gitMessageSource() {
+    public MessageSource<?> integrationMessageSource() {
         MethodInvokingMessageSource source = new MethodInvokingMessageSource();
         source.setObject(integrationManager);
         source.setMethodName("dispatchToIntegrationServices");
@@ -102,10 +101,14 @@ public class IntegrationConfiguration {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public MessageHandler gitHandler() {
+    public MessageHandler integrationHandler() {
         return new MessageHandler() {
             @Override
-            public void handleMessage(Message<?> message) throws MessagingException{
+            public void handleMessage(Message<?> message) throws MessagingException {
+
+                // Integration handling logic
+                logger.debug("Received integration message for processing: {}", message);
+
                 Map<Integration, List<MultipartFile>> map = (Map<Integration, List<MultipartFile>>) message.getPayload();
                 Boolean hasNewFiles = false;
 
@@ -116,28 +119,30 @@ public class IntegrationConfiguration {
                         hasNewFiles = true;
                         try {
                             Project project = projectService.getProjectById(integration.getProjectId());
-                            logger.info("Upload document " + file.getName());
+                            logger.debug("Uploading document: {} for project: {}", file.getName(), project.getId());
                             DocumentInstance documentInstance =
                                     uploadService.uploadFile(file, project.getOrganizationId(), project.getId());
-                            logger.info("file : " + file.getName() +" uploaded");
+                            logger.debug("Uploaded document: {} successfully", file.getName());
                         } catch (Exception e) {
+                            logger.error("Error uploading document: {}", e.getMessage(), e);
                             e.printStackTrace();
                         }
                     }
                     if (integration.getIntegrationType().equals(typeService.getIntegrationTypeByName(IntegrationTypesConstants.GIT_INTEGRATION))) {
                         // Delete all the directory files except the .git folder
                         deleteDirectoryFiles(integration.getDirectoryPath());
+                        logger.debug("Deleted files in directory: {}", integration.getDirectoryPath());
                     }
                 }
 
                 if (hasNewFiles) {
                     try {
-                        logger.info("Start splitter job ");
+                        logger.debug("Starting splitter and training jobs");
                         JobExecution splitterJobExecution = splitterBatchService.runAutoSplitter();
-                        logger.info("Start training job ");
                         JobExecution trainingJobExecution = trainingBatchService.runAutoTraining();
-                    }
-                    catch (Exception e){
+                        logger.debug("Splitter job status: {}, Training job status: {}", splitterJobExecution.getStatus(), trainingJobExecution.getStatus());
+                    } catch (Exception e) {
+                        logger.error("Error handling integration message: {}", e.getMessage(), e);
                         throw new RuntimeException(e);
                     }
                 }
