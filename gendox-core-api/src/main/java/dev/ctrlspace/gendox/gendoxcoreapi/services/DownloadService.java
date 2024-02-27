@@ -13,7 +13,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 
 @Service
-public class DocumentContent {
+public class DownloadService {
 
 
     private ResourceLoader resourceLoader;
@@ -21,7 +21,7 @@ public class DocumentContent {
 
 
     @Autowired
-    public DocumentContent(ResourceLoader resourceLoader
+    public DownloadService(ResourceLoader resourceLoader
                             ) {
         this.resourceLoader = resourceLoader;
 

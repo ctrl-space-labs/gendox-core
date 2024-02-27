@@ -29,6 +29,7 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
 
     @Value("${gendox.integrations.storage.temporary}")
     private String temporaryStorage;
+
     private IntegrationRepository integrationRepository;
     private ObjectIdConverter objectIdConverter;
 
@@ -56,12 +57,14 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
 
         String path = temporaryStorage + "/" + integration.getId().toString();
         File directory = new File(path);
+
         boolean shouldUpdateMap = false;
 
         try {
-            logger.info("check if the integration's Directory is empty ");
+            logger.debug("Checking for updates for integration: " + integration);
+
             if (isDirectoryEmpty(directory)) {
-                logger.info("Git clone ");
+                logger.debug("Cloning repository: " + integration.getUrl());
                 git = Git.cloneRepository()
                         .setURI(integration.getUrl())
                         .setDirectory(directory)
@@ -69,7 +72,7 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
 
             } else {
                 try {
-                    logger.info("Git open ");
+                    logger.debug("Opening existing repository ");
                     git = Git.open(directory);
                 } catch (RepositoryNotFoundException e) {
                     logger.error("The folder does not contain .git files : " + e.getMessage());
@@ -79,7 +82,6 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
             }
 
             if (integration.getRepoHead() == null) {
-                logger.info("should-update = true ");
                 shouldUpdateMap = true;
 
             } else {
@@ -87,7 +89,7 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
                 ObjectId oldHeadCommitRepository = objectIdConverter.convertToEntityAttribute(integration.getRepoHead());
 
                 // Perform the pull
-                logger.info("Git pull ");
+                logger.debug("Pulling changes from the repository");
                 git.pull().call();
 
                 // Check if HEAD changed
@@ -96,7 +98,7 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
             }
 
             if (shouldUpdateMap) {
-                logger.info("Update integration ");
+                logger.debug("Updating integration information");
                 integration.setDirectoryPath(directory.getPath());
 
                 integration.setRepoHead(objectIdConverter.convertToDatabaseColumnString(git.getRepository().resolve("HEAD^{tree}")));
@@ -133,3 +135,4 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
 
 
 }
+

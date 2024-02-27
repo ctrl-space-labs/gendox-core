@@ -18,22 +18,38 @@ public class SQSListener {
     @Autowired
     private MessageRepository messageRepository;
 
-
-
+    /**
+     * Receives messages from the specified SQS queue.
+     *
+     * @param queueName The name of the SQS queue.
+     * @return A list of messages received from the queue.
+     */
     public List<Message> receiveMessages(String queueName) {
+        // Get the URL of the queue
         String queueUrl = amazonSQS.getQueueUrl(queueName).getQueueUrl();
+        // Create a request to receive messages with a wait time of 20 seconds
         ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
                 .withQueueUrl(queueUrl)
                 .withWaitTimeSeconds(20);
-
+        // Receive messages from the queue
         List<Message> messages = amazonSQS.receiveMessage(receiveMessageRequest).getMessages();
-
-        for (Message message: messages) {
-            // Delete the message from the queue
-            amazonSQS.deleteMessage(queueUrl, message.getReceiptHandle());
-        }
 
         return messages;
     }
+
+    /**
+     * Deletes a message from the specified SQS queue.
+     *
+     * @param message   The message to delete.
+     * @param queueName The name of the SQS queue.
+     */
+    public void deleteMessage(Message message, String queueName) {
+        // Get the URL of the queue
+        String queueUrl = amazonSQS.getQueueUrl(queueName).getQueueUrl();
+        // Delete the message from the queue using its receipt handle
+        amazonSQS.deleteMessage(queueUrl, message.getReceiptHandle());
+    }
+
+
 }
 
