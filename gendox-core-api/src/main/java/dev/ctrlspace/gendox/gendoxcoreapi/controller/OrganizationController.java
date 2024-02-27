@@ -149,7 +149,7 @@ public class OrganizationController {
     }
 
 
-    //TODO validate that the role level is not higher than the user's role level for this organization
+//    TODO validate that the role level is not higher than the user's role level for this organization
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_ADD_USERS', 'getRequestedOrgIdFromPathVariable')")
     @Operation(summary = "Create a User - Organization association",

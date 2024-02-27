@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 
@@ -70,6 +71,7 @@ public class EmbeddingsController {
     }
 
 
+    @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
     @PostMapping("/embeddings/sections/{sectionId}")
     @Operation(summary = "Get section embedding",
             description = "Retrieve the embedding for a specific section in a project based on the provided section ID and project ID. " +
@@ -79,6 +81,8 @@ public class EmbeddingsController {
         return trainingService.runTrainingForSection(sectionId, UUID.fromString(projectId));
     }
 
+
+    @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
     @PostMapping("/embeddings/projects/{projectId}")
     @Operation(summary = "Get project embeddings",
             description = "Retrieve embeddings for all sections in a project based on the provided project ID. " +
@@ -89,6 +93,8 @@ public class EmbeddingsController {
         return trainingService.runTrainingForProject(projectId);
     }
 
+
+    @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
     @PostMapping("/messages/semantic-search")
     @Operation(summary = "Semantic search for closer sections",
             description = "Search for sections within a project that are semantically closer to a given message. " +
@@ -113,6 +119,7 @@ public class EmbeddingsController {
     }
 
 
+    @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
     @PostMapping("/messages/semantic-completion")
     @Operation(summary = "Semantic completion of message",
             description = "Find a message within a project that semantically completes the given input message. " +
@@ -144,6 +151,7 @@ public class EmbeddingsController {
 
         return completionMessageDTO;
     }
+
 
     @PostMapping("/messages/moderation")
     public OpenAiGpt35ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
