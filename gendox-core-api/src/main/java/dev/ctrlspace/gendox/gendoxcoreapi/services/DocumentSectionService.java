@@ -37,12 +37,9 @@ public class DocumentSectionService {
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private DocumentSectionMetadataRepository documentSectionMetadataRepository;
     private EmbeddingService embeddingService;
-    private SecurityUtils securityUtils;
     private IsccCodeServiceAdapter isccCodeServiceAdapter;
-
     private MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter;
 
-    private DocumentService documentService;
 
 
 
@@ -54,14 +51,11 @@ public class DocumentSectionService {
 
     @Autowired
     public DocumentSectionService(TypeService typeService,
-                                  ProjectAgentRepository projectAgentRepository,
                                   TrainingService trainingService,
                                   DocumentInstanceSectionRepository documentInstanceSectionRepository,
                                   DocumentSectionMetadataRepository documentSectionMetadataRepository,
-                                  SecurityUtils securityUtils,
                                   IsccCodeServiceAdapter isccCodeServiceAdapter,
-                                  MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter,
-                                  DocumentService documentService
+                                  MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter
                                   ) {
         this.typeService = typeService;
         this.trainingService = trainingService;
@@ -69,7 +63,6 @@ public class DocumentSectionService {
         this.documentSectionMetadataRepository = documentSectionMetadataRepository;
         this.isccCodeServiceAdapter = isccCodeServiceAdapter;
         this.mockUniqueIdentifierServiceAdapter = mockUniqueIdentifierServiceAdapter;
-        this.documentService = documentService;
     }
 
 
@@ -90,6 +83,16 @@ public class DocumentSectionService {
 
     public Page<DocumentInstanceSection> getAllSections(DocumentInstanceSectionCriteria criteria, Pageable pageable) throws GendoxException {
         return documentInstanceSectionRepository.findAll(DocumentInstanceSectionPredicates.build(criteria), pageable);
+    }
+
+    public String getFileNameFromUrl(String url) {
+        String normalizedUrl = url.startsWith("file:") ? url.substring(5) : url;
+
+        // Replace backslashes with forward slashes
+        normalizedUrl = normalizedUrl.replace('\\', '/');
+
+        Path path = Paths.get(normalizedUrl);
+        return path.getFileName().toString();
     }
 
     /**
@@ -138,7 +141,7 @@ public class DocumentSectionService {
         section.setSectionValue(fileContent);
         section.setDocumentInstance(documentInstance);
 
-        String fileName = documentService.getFileNameFromUrl( section.getDocumentInstance().getRemoteUrl());
+        String fileName = getFileNameFromUrl( section.getDocumentInstance().getRemoteUrl());
         UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeServiceAdapter.getDocumentUniqueIdentifier(
                                                                                             fileContent.getBytes(), fileName);
 
@@ -189,7 +192,7 @@ public class DocumentSectionService {
         DocumentInstanceSection existingSection = this.getSectionById(sectionId);
 
         existingSection.setSectionValue(section.getSectionValue());
-        String fileName = documentService.getFileNameFromUrl( existingSection.getDocumentInstance().getRemoteUrl());
+        String fileName = getFileNameFromUrl( existingSection.getDocumentInstance().getRemoteUrl());
 //      ISCC code
 //        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeServiceAdapter.getDocumentUniqueIdentifier(
 //                                                                existingSection.getSectionValue().getBytes(), fileName);

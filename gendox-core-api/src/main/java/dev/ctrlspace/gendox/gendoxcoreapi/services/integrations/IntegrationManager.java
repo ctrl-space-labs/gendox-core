@@ -62,9 +62,11 @@ public class IntegrationManager {
     }
 
 
-    private List<Integration> findActiveIntegrations() {
+    private List<Integration> findActiveIntegrations() throws GendoxException{
         logger.debug("Searching for active integrations...");
-        return integrationRepository.findActiveIntegrations();
+        return integrationRepository.findActiveIntegrations()
+                .orElseThrow(() -> new GendoxException("ACTIVE_INTEGRATIONS_NOT_FOUND", "Active Integrations not founds", HttpStatus.NOT_FOUND));
+
     }
 
     private void processIntegration(Integration integration, Map<Integration, List<MultipartFile>> map) throws GendoxException {

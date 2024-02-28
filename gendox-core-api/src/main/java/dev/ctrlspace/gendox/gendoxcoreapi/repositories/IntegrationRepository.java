@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 @Repository
 public interface IntegrationRepository extends JpaRepository<Integration, UUID>, QuerydslPredicateExecutor<Integration> {
@@ -16,5 +17,5 @@ public interface IntegrationRepository extends JpaRepository<Integration, UUID>,
     List<Integration> findActiveIntegrationsByType(Long typeId);
 
     @Query("SELECT i FROM Integration i WHERE i.isActive = true")
-    List<Integration> findActiveIntegrations();
+    Optional<List<Integration>> findActiveIntegrations();
 }

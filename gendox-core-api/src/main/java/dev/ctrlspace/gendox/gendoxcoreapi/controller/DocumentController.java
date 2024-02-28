@@ -7,9 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
-import dev.ctrlspace.gendox.provenAi.utils.IsccCodeServiceAdapter;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +41,7 @@ public class DocumentController {
     private UploadService uploadService;
     private SplitFileService splitFileService;
     private DocumentSectionService documentSectionService;
-    private final DocumentInstanceSectionRepository documentInstanceSectionRepository;
+
 
 
     @Autowired
@@ -52,15 +50,13 @@ public class DocumentController {
                               DocumentConverter documentConverter,
                               UploadService uploadService,
                               SplitFileService splitFileService,
-                              DocumentSectionService documentSectionService,
-                              DocumentInstanceSectionRepository documentInstanceSectionRepository) {
+                              DocumentSectionService documentSectionService) {
         this.documentService = documentService;
         this.documentOnlyConverter = documentOnlyConverter;
         this.documentConverter = documentConverter;
         this.uploadService = uploadService;
         this.splitFileService = splitFileService;
         this.documentSectionService = documentSectionService;
-        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
