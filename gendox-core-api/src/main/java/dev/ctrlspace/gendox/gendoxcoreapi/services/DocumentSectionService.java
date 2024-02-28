@@ -42,6 +42,8 @@ public class DocumentSectionService {
 
     private MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter;
 
+    private DocumentService documentService;
+
 
 
     @Lazy
@@ -58,7 +60,8 @@ public class DocumentSectionService {
                                   DocumentSectionMetadataRepository documentSectionMetadataRepository,
                                   SecurityUtils securityUtils,
                                   IsccCodeServiceAdapter isccCodeServiceAdapter,
-                                  MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter
+                                  MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter,
+                                  DocumentService documentService
                                   ) {
         this.typeService = typeService;
         this.trainingService = trainingService;
@@ -66,17 +69,10 @@ public class DocumentSectionService {
         this.documentSectionMetadataRepository = documentSectionMetadataRepository;
         this.isccCodeServiceAdapter = isccCodeServiceAdapter;
         this.mockUniqueIdentifierServiceAdapter = mockUniqueIdentifierServiceAdapter;
+        this.documentService = documentService;
     }
 
-    public String getFileNameFromUrl(String url) {
-        String normalizedUrl = url.startsWith("file:") ? url.substring(5) : url;
 
-        // Replace backslashes with forward slashes
-        normalizedUrl = normalizedUrl.replace('\\', '/');
-
-        Path path = Paths.get(normalizedUrl);
-        return path.getFileName().toString();
-    }
 
 
     public DocumentSectionMetadata getMetadataById(UUID id) throws GendoxException {
@@ -142,7 +138,7 @@ public class DocumentSectionService {
         section.setSectionValue(fileContent);
         section.setDocumentInstance(documentInstance);
 
-        String fileName = getFileNameFromUrl( section.getDocumentInstance().getRemoteUrl());
+        String fileName = documentService.getFileNameFromUrl( section.getDocumentInstance().getRemoteUrl());
         UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeServiceAdapter.getDocumentUniqueIdentifier(
                                                                                             fileContent.getBytes(), fileName);
 
@@ -193,7 +189,7 @@ public class DocumentSectionService {
         DocumentInstanceSection existingSection = this.getSectionById(sectionId);
 
         existingSection.setSectionValue(section.getSectionValue());
-        String fileName = getFileNameFromUrl( existingSection.getDocumentInstance().getRemoteUrl());
+        String fileName = documentService.getFileNameFromUrl( existingSection.getDocumentInstance().getRemoteUrl());
 //      ISCC code
 //        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeServiceAdapter.getDocumentUniqueIdentifier(
 //                                                                existingSection.getSectionValue().getBytes(), fileName);
