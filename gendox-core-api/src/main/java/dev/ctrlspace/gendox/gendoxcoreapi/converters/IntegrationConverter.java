@@ -17,6 +17,7 @@ public class IntegrationConverter implements GendoxConverter<Integration, Integr
         integrationDTO.setIntegrationType(integration.getIntegrationType());
         integrationDTO.setActive(integration.getActive());
         integrationDTO.setUrl(integration.getUrl());
+        integrationDTO.setQueueName(integration.getQueueName());
         integrationDTO.setDirectoryPath(integration.getDirectoryPath());
         integrationDTO.setRepoHead(integration.getRepoHead());
         integrationDTO.setUserName(integration.getUserName());
@@ -39,6 +40,7 @@ public class IntegrationConverter implements GendoxConverter<Integration, Integr
         integration.setIntegrationType(integrationDTO.getIntegrationType());
         integration.setActive(integrationDTO.getActive());
         integration.setUrl(integrationDTO.getUrl());
+        integration.setQueueName(integrationDTO.getQueueName());
         integration.setDirectoryPath(integrationDTO.getDirectoryPath());
         integration.setRepoHead(integrationDTO.getRepoHead());
         integration.setUserName(integrationDTO.getUserName());
