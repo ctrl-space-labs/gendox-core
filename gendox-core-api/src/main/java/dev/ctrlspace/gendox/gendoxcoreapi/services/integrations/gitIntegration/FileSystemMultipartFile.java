@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.services.integrations;
+package dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.gitIntegration;
 
 import org.springframework.web.multipart.MultipartFile;
 import java.io.*;

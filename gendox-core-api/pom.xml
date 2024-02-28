@@ -401,6 +401,14 @@
             <version>6.0.13</version>
         </dependency>
 
+        <!-- AWS SDK SQS -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-sqs</artifactId>
+            <version>1.12.662</version>
+        </dependency>
+
+
     </dependencies>
 
     <pluginRepositories>
