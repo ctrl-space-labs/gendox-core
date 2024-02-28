@@ -12,6 +12,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -56,6 +58,16 @@ public class DocumentService {
     public DocumentInstance getDocumentByFileName(UUID projectId, UUID organizationId, String fileName) throws GendoxException {
         return documentInstanceRepository.findByProjectIdAndOrganizationIdAndFileName(projectId, organizationId, fileName)
                 .orElse(null);
+    }
+
+    public String getFileNameFromUrl(String url) {
+        String normalizedUrl = url.startsWith("file:") ? url.substring(5) : url;
+
+        // Replace backslashes with forward slashes
+        normalizedUrl = normalizedUrl.replace('\\', '/');
+
+        Path path = Paths.get(normalizedUrl);
+        return path.getFileName().toString();
     }
 
 
