@@ -5,7 +5,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -13,6 +12,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -21,6 +22,7 @@ public class DocumentService {
 
     private DocumentInstanceRepository documentInstanceRepository;
     private DocumentSectionService documentSectionService;
+
     private ProjectDocumentService projectDocumentService;
 
     @Autowired
@@ -56,6 +58,16 @@ public class DocumentService {
     public DocumentInstance getDocumentByFileName(UUID projectId, UUID organizationId, String fileName) throws GendoxException {
         return documentInstanceRepository.findByProjectIdAndOrganizationIdAndFileName(projectId, organizationId, fileName)
                 .orElse(null);
+    }
+
+    public String getFileNameFromUrl(String url) {
+        String normalizedUrl = url.startsWith("file:") ? url.substring(5) : url;
+
+        // Replace backslashes with forward slashes
+        normalizedUrl = normalizedUrl.replace('\\', '/');
+
+        Path path = Paths.get(normalizedUrl);
+        return path.getFileName().toString();
     }
 
 

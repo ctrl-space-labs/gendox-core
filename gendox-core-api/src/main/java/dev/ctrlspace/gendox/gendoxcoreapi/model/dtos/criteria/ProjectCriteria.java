@@ -14,7 +14,6 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-@AtLeastOneFieldIsNotEmpty(fieldNames = {QueryParamNames.ORGANIZATION_ID, QueryParamNames.PROJECT_ID_IN})
 public class ProjectCriteria {
 
         private String name;
