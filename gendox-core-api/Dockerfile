@@ -21,4 +21,7 @@ VOLUME /tmp
 # Copy the built JAR file from the builder stage
 COPY --from=builder /app/target/*.jar /app.jar
 
+# Copy AWS credentials
+COPY /root/.aws /root/.aws
+
 ENTRYPOINT ["java","-jar","/app.jar"]

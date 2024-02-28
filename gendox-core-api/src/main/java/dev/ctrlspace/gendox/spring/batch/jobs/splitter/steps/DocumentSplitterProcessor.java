@@ -3,8 +3,8 @@ package dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.DownloadService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.SplitFileService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
 import org.slf4j.Logger;
@@ -24,17 +24,17 @@ import java.util.List;
 public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance, DocumentSectionDTO> {
 
     Logger logger = LoggerFactory.getLogger(DocumentSplitterProcessor.class);
-    private SplitFileService splitFileService;
     private ServiceSelector serviceSelector;
     private ProjectAgentService projectAgentService;
+    private DownloadService downloadService;
 
     @Autowired
-    public DocumentSplitterProcessor(SplitFileService splitFileService,
-                                     ServiceSelector serviceSelector,
-                                     ProjectAgentService projectAgentService) {
-        this.splitFileService = splitFileService;
+    public DocumentSplitterProcessor(ServiceSelector serviceSelector,
+                                     ProjectAgentService projectAgentService,
+                                     DownloadService downloadService) {
         this.serviceSelector = serviceSelector;
         this.projectAgentService = projectAgentService;
+        this.downloadService = downloadService;
     }
 
     @Override
@@ -44,7 +44,7 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         logger.debug("Start processing split: {}", item.getId());
 
         try {
-            String fileContent = splitFileService.readDocumentContent(item);
+            String fileContent = downloadService.readDocumentContent(item.getRemoteUrl());
             agent = projectAgentService.getAgentByDocumentId(item.getId());
 
             String splitterTypeName = agent.getDocumentSplitterType().getName();

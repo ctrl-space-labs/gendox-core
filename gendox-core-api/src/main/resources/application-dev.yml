@@ -152,7 +152,11 @@ gendox:
 
 cloud:
   aws:
-    region: eu-central-1
+    s3:
+      region: eu-central-1
+    SQS:
+      region: eu-central-1
+
 
 # Discord
 
