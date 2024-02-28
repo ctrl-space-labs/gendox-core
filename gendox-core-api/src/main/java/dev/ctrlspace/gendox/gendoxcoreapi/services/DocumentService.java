@@ -60,15 +60,7 @@ public class DocumentService {
                 .orElse(null);
     }
 
-    public String getFileNameFromUrl(String url) {
-        String normalizedUrl = url.startsWith("file:") ? url.substring(5) : url;
 
-        // Replace backslashes with forward slashes
-        normalizedUrl = normalizedUrl.replace('\\', '/');
-
-        Path path = Paths.get(normalizedUrl);
-        return path.getFileName().toString();
-    }
 
 
     public DocumentInstance createDocumentInstance(DocumentInstance documentInstance) throws GendoxException {
