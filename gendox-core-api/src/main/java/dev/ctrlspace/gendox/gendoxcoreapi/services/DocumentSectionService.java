@@ -9,6 +9,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentSectionMetadataRe
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentInstanceSectionPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import dev.ctrlspace.gendox.provenAi.utils.IsccCodeServiceAdapter;
+import dev.ctrlspace.gendox.provenAi.utils.MockUniqueIdentifierServiceAdapter;
+import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
 import org.slf4j.Logger;
@@ -20,7 +23,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 @Service
@@ -29,12 +33,16 @@ public class DocumentSectionService {
     Logger logger = LoggerFactory.getLogger(DocumentSectionService.class);
 
     private TypeService typeService;
-    private ProjectAgentRepository projectAgentRepository;
     private TrainingService trainingService;
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private DocumentSectionMetadataRepository documentSectionMetadataRepository;
     private EmbeddingService embeddingService;
     private SecurityUtils securityUtils;
+    private IsccCodeServiceAdapter isccCodeServiceAdapter;
+
+    private MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter;
+
+    private DocumentService documentService;
 
 
 
@@ -50,13 +58,21 @@ public class DocumentSectionService {
                                   TrainingService trainingService,
                                   DocumentInstanceSectionRepository documentInstanceSectionRepository,
                                   DocumentSectionMetadataRepository documentSectionMetadataRepository,
-                                  SecurityUtils securityUtils) {
+                                  SecurityUtils securityUtils,
+                                  IsccCodeServiceAdapter isccCodeServiceAdapter,
+                                  MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter,
+                                  DocumentService documentService
+                                  ) {
         this.typeService = typeService;
-        this.projectAgentRepository = projectAgentRepository;
         this.trainingService = trainingService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.documentSectionMetadataRepository = documentSectionMetadataRepository;
+        this.isccCodeServiceAdapter = isccCodeServiceAdapter;
+        this.mockUniqueIdentifierServiceAdapter = mockUniqueIdentifierServiceAdapter;
+        this.documentService = documentService;
     }
+
+
 
 
     public DocumentSectionMetadata getMetadataById(UUID id) throws GendoxException {
@@ -96,8 +112,7 @@ public class DocumentSectionService {
         return documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
     }
 
-    public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance, List<String> contentSections) throws GendoxException {
-
+    public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance, List<String> contentSections) throws GendoxException{
         // if the document instance already has sections in the database, delete it
         this.deleteDocumentSections(documentInstance.getId());
         List<DocumentInstanceSection> sections = new ArrayList<>();
@@ -122,6 +137,12 @@ public class DocumentSectionService {
         section.setDocumentSectionMetadata(metadata);
         section.setSectionValue(fileContent);
         section.setDocumentInstance(documentInstance);
+
+        String fileName = documentService.getFileNameFromUrl( section.getDocumentInstance().getRemoteUrl());
+        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeServiceAdapter.getDocumentUniqueIdentifier(
+                                                                                            fileContent.getBytes(), fileName);
+
+        section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getIscc());
 
         // take moderation check
         OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
@@ -168,6 +189,16 @@ public class DocumentSectionService {
         DocumentInstanceSection existingSection = this.getSectionById(sectionId);
 
         existingSection.setSectionValue(section.getSectionValue());
+        String fileName = documentService.getFileNameFromUrl( existingSection.getDocumentInstance().getRemoteUrl());
+//      ISCC code
+//        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeServiceAdapter.getDocumentUniqueIdentifier(
+//                                                                existingSection.getSectionValue().getBytes(), fileName);
+//      Mock Unique Identifier Code: UUID
+        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
+                existingSection.getSectionValue().getBytes(), fileName);
+
+//        existingSection.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getIscc());
+        existingSection.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
 
         // Check if documentInstance.documentTemplateId is empty/null before updating metadata
         if (section.getDocumentInstance().getDocumentTemplateId() == null) {

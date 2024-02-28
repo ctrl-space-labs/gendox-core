@@ -31,6 +31,10 @@ public class DocumentInstance {
     @Basic
     @Column(name = "remote_url", nullable = true, length = -1)
     private String remoteUrl;
+
+    @Basic
+    @Column(name = "document_iscc_code", nullable = false)
+    private String documentIsccCode;
     @Basic
     @Column(name="created_by", nullable = true)
     @CreatedBy
@@ -47,6 +51,8 @@ public class DocumentInstance {
     @Column(name = "updated_at", nullable = true)
     @LastModifiedDate
     private Instant updatedAt;
+
+
 
     @JsonManagedReference(value = "DocumentInstanceSection")
     @OneToMany(mappedBy = "documentInstance")
@@ -76,7 +82,13 @@ public class DocumentInstance {
         this.documentTemplateId = documentTemplateId;
     }
 
+    public String getDocumentIsccCode() {
+        return documentIsccCode;
+    }
 
+    public void setDocumentIsccCode(String documentIsccCode) {
+        this.documentIsccCode = documentIsccCode;
+    }
 
     public Instant getCreatedAt() {
         return createdAt;
@@ -130,29 +142,12 @@ public class DocumentInstance {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         DocumentInstance that = (DocumentInstance) o;
-
-        if (!Objects.equals(id, that.id)) return false;
-        if (!Objects.equals(organizationId, that.organizationId))
-            return false;
-        if (!Objects.equals(documentTemplateId, that.documentTemplateId))
-            return false;
-
-        if (!Objects.equals(createdAt, that.createdAt)) return false;
-        if (!Objects.equals(updatedAt, that.updatedAt)) return false;
-        return Objects.equals(documentInstanceSections, that.documentInstanceSections);
+        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(documentTemplateId, that.documentTemplateId) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(documentIsccCode, that.documentIsccCode) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(documentInstanceSections, that.documentInstanceSections);
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (organizationId != null ? organizationId.hashCode() : 0);
-        result = 31 * result + (documentTemplateId != null ? documentTemplateId.hashCode() : 0);
-
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        result = 31 * result + (documentInstanceSections != null ? documentInstanceSections.hashCode() : 0);
-        return result;
+        return Objects.hash(id, organizationId, documentTemplateId, remoteUrl, documentIsccCode, createdBy, updatedBy, createdAt, updatedAt, documentInstanceSections);
     }
 }

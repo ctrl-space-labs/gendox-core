@@ -56,7 +56,7 @@ public class OrganizationController {
     }
 
 
-    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_READ_DOCUMENT')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgsFromRequestParams')")
     @GetMapping("/organizations")
     @Operation(summary = "Get all organizations",
             description = "Retrieve a list of all organizations based on the provided criteria.")
@@ -66,13 +66,14 @@ public class OrganizationController {
         return organizationService.getAllOrganizations(criteria, pageable);
     }
 
-    @GetMapping("/organizations/{id}")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @GetMapping("/organizations/{organizationId}")
     @Operation(summary = "Get organization by ID",
             description = "Retrieve an organization by its unique ID.")
-    public Organization getOrganizationById(@PathVariable UUID id, Authentication authentication) throws Exception {
+    public Organization getOrganizationById(@PathVariable UUID organizationId, Authentication authentication) throws Exception {
 
         //run code to get the organization from the database
-        Organization organization = organizationService.getById(id);
+        Organization organization = organizationService.getById(organizationId);
         return organization;
     }
 
@@ -93,20 +94,18 @@ public class OrganizationController {
     }
 
 
-    // TODO: Has Permission OP_UPDATE_ORGANIZATION
-
-    //    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_DELETE_ORGANIZATION')")
-    @PutMapping("/organizations/{id}")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
+    @PutMapping("/organizations/{organizationId}")
     @Operation(summary = "Update organization by ID",
             description = "Update an existing organization by specifying its unique ID and providing updated organization details.")
-    public Organization updateOrganization(@PathVariable UUID id, @RequestBody OrganizationDTO organizationDTO) throws Exception {
-        UUID organizationId = organizationDTO.getId();
+    public Organization updateOrganization(@PathVariable UUID organizationId, @RequestBody OrganizationDTO organizationDTO) throws Exception {
+        UUID updatedOrganizationId = organizationDTO.getId();
         Organization organization = new Organization();
         organization = organizationConverter.toEntity(organizationDTO);
-        organization.setId(organizationId);
+        organization.setId(updatedOrganizationId);
 
 
-        if (!id.equals(organizationDTO.getId())) {
+        if (!organizationId.equals(organizationDTO.getId())) {
             throw new GendoxException("ORGANIZATION_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
 
@@ -116,24 +115,23 @@ public class OrganizationController {
 
     }
 
-
-    // TODO: Has Permission OP_DELETE_ORGANIZATION
-    //@PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_DELETE_ORGANIZATION')")
-    @DeleteMapping("/organizations/{id}")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_DELETE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
+    @DeleteMapping("/organizations/{organizationId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete organization by ID",
             description = "Delete an existing organization by specifying its unique ID.")
-    public void deleteOrganization(@PathVariable UUID id) throws Exception {
-        organizationService.deleteOrganization(id);
+    public void deleteOrganization(@PathVariable UUID organizationId) throws Exception {
+        organizationService.deleteOrganization(organizationId);
     }
 
 
-    @GetMapping("/organizations/{id}/users")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @GetMapping("/organizations/{organizationId}/users")
     @Operation(summary = "Get users in organization by organization ID",
             description = "Retrieve a list of users who are members of a specific organization, identified by the provided organization ID. " +
                     "The organization's members are returned with details such as their roles and permissions within the organization. " +
                     "The results can be paginated for large organizations to ensure efficient data retrieval.")
-    public List<UserOrganization> getUsersInOrganizationByOrgId(@PathVariable UUID id, Authentication authentication, Pageable pageable) throws GendoxException {
+    public List<UserOrganization> getUsersInOrganizationByOrgId(@PathVariable UUID organizationId, Authentication authentication, Pageable pageable) throws GendoxException {
 
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
@@ -145,14 +143,15 @@ public class OrganizationController {
         //run code to get the organization from the database
         List<UserOrganization> organizationUsers = userOrganizationService.getAll(UserOrganizationCriteria
                 .builder()
-                .organizationId(id.toString())
+                .organizationId(organizationId.toString())
                 .build());
         return organizationUsers;
     }
 
 
-    //TODO validate that the user has permission to add a user to the organization in the {{userOrganization}} object
-    //TODO validate that the role level is not higher than the user's role level for this organization
+//    TODO validate that the role level is not higher than the user's role level for this organization
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_ADD_USERS', 'getRequestedOrgIdFromPathVariable')")
     @Operation(summary = "Create a User - Organization association",
             description = """
                     Create a User - Organization association, if the user has right to add a user to the organization.
