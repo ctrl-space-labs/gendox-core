@@ -12,6 +12,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.provenAi.utils.IsccCodeServiceAdapter;
 import dev.ctrlspace.gendox.provenAi.utils.MockUniqueIdentifierServiceAdapter;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
@@ -26,6 +30,7 @@ import java.util.*;
 @Service
 public class DocumentSectionService {
 
+    Logger logger = LoggerFactory.getLogger(DocumentSectionService.class);
 
     private TypeService typeService;
     private TrainingService trainingService;
@@ -111,9 +116,6 @@ public class DocumentSectionService {
         return documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
     }
 
-
-
-
     public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance, List<String> contentSections) throws GendoxException{
         // if the document instance already has sections in the database, delete it
         this.deleteDocumentSections(documentInstance.getId());
@@ -128,10 +130,8 @@ public class DocumentSectionService {
         return sections;
     }
 
-
     public DocumentInstanceSection createSection(DocumentInstance documentInstance, String fileContent, Integer sectionOrder) throws GendoxException {
         DocumentInstanceSection section = new DocumentInstanceSection();
-//        documentInstance.
         // create section's metadata
         DocumentSectionMetadata metadata = new DocumentSectionMetadata();
         metadata.setDocumentSectionTypeId(typeService.getDocumentTypeByName("FIELD_TEXT").getId());
@@ -161,8 +161,7 @@ public class DocumentSectionService {
         return section;
     }
 
-
-        public DocumentSectionMetadata createMetadata(DocumentInstanceSection section) throws GendoxException {
+    public DocumentSectionMetadata createMetadata(DocumentInstanceSection section) throws GendoxException {
         DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
 
 

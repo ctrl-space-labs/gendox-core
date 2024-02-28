@@ -1,19 +1,13 @@
 
 
 server:
-  port: 8080
+  port: 5000
   servlet:
     context-path: /gendox/api/v1
 logging:
   level:
     dev.ctrlspace: DEBUG
-    org.springframework.security: INFO
     org.springframework: INFO
-#    This is how to change the micrometer tracing pattern, we'll use the default now
-#  pattern:
-#    correlation : "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
-
-
 spring:
   mvc:
     format:
@@ -22,25 +16,17 @@ spring:
     show-sql: true
     hibernate:
       ddl-auto: none
-
-
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: 1234
-
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
     hikari:
       maximum-pool-size: 100
       minimum-idle: 10
-
-#  datasource:
-#     url: ${DATABASE_URL}
-#     username: ${DATABASE_USERNAME}
-#     password: ${DATABASE_PASSWORD}
-#     hikari:
-#       maximum-pool-size: 100
-#       minimum-idle: 10
-
+  #  datasource:
+  #    url: jdbc:postgresql://localhost:5432/postgres
+  #    username: postgres
+  #    password: 123456789
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -64,11 +50,11 @@ spring:
 
 
 keycloak:
-    base-url: https://dev.gendox.ctrlspace.dev/idp
-    token-uri: https://dev.gendox.ctrlspace.dev/idp/realms/gendox-idp-dev/protocol/openid-connect/token
-    realm: gendox-idp-dev
-    client-id: ${KEYCLOAK_CLIENT_ID}
-    client-secret: ${KEYCLOAK_CLIENT_SECRET}
+  base-url: https://dev.gendox.ctrlspace.dev/idp
+  token-uri: https://dev.gendox.ctrlspace.dev/idp/realms/gendox-idp-dev/protocol/openid-connect/token
+  realm: gendox-idp-dev
+  client-id: ${KEYCLOAK_CLIENT_ID}
+  client-secret: ${KEYCLOAK_CLIENT_SECRET}
 
 management:
   tracing:
@@ -95,36 +81,30 @@ springdoc:
     path: /api-documentation
 
 rsa:
-#  private-key: classpath:.env/local/local-non-production-use-private_key.pem
-#  private-key: classpath:/var/app/current/.env/local/local-non-production-use-private_key.pem
+  #private-key: classpath:.env/local/local-non-production-use-private_key.pem
   private-key: ${RSA_KEY_PATH}
+
 
 gendox:
   documents:
-#    upload-dir: s3://gendox.organization.documents.local
-    upload-dir: file:c:\\Users\\myrto\\gendox-documents
-#    upload-dir: file:C:\ProgramData\\gendox\\documents
-
-
+    upload-dir: s3://gendox.organization.documents.dev
+    #    upload-dir: file:c:\\Users\\sekas\\gendox-documents
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
-
   integrations:
-    poller: 30000 # 30 seconds
-#    poller: 86400000 # 24 hours in milliseconds
+    poller: 1800000 # 30 minutes in milliseconds
     storage:
-      temporary: C:\ProgramData\\gendox\\temporary_integration_files
-#      temporary: s3://gendox.organization.documents.local/gendox_wiki
+      temporary: /var/tmp
 
   models:
     openai:
       ada2:
         key: ${OPENAI_KEY}
     cohere:
-        key: ${COHERE_KEY}
+      key: ${COHERE_KEY}
   domain:
-    base-url: http://localhost:8080
+    base-url: http://localhost:${server.port}
     document-sections:
       get-document-sections: /documents/sections
     sections: https://domain.com/context-path/documents/sections/
@@ -143,6 +123,7 @@ gendox:
 
   moderation:
     message: "Sorry, I can't reply in this message, it contains inappropriate content. If this this not the case, please contact the support team."
+
 
   batch-jobs:
     document-training:
@@ -167,7 +148,6 @@ gendox:
             pageable-size: 1000
 
 
-
 # AWS
 
 cloud:
@@ -177,20 +157,13 @@ cloud:
     SQS:
       region: eu-central-1
 
-
-
 # Discord
 
 discord:
   bots:
     gendox-bot:
       token: ${DISCORD_TOKEN:default-token}
-
   server:
     group-name: gendox-agents
-
-
-
-
 
 

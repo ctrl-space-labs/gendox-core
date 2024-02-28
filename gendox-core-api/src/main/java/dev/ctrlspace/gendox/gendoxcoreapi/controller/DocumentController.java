@@ -11,6 +11,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRe
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.provenAi.utils.IsccCodeServiceAdapter;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -29,6 +31,8 @@ import java.util.*;
 
 @RestController
 public class DocumentController {
+
+    Logger logger = LoggerFactory.getLogger(DocumentController.class);
 
     @Value("${gendox.documents.allowed.extensions}")
     private String allowedExtensions;
@@ -165,8 +169,9 @@ public class DocumentController {
     @Operation(summary = "Delete document by ID",
             description = "Delete an existing document by specifying its unique ID. " +
                     "This operation permanently removes the document and its associated sections and metadata.")
-    public void delete(@PathVariable UUID documentId) throws GendoxException {
-        documentService.deleteDocument(documentId);
+    public void delete(@PathVariable UUID documentId,
+                       @PathVariable UUID projectId) throws GendoxException {
+        documentService.deleteDocument(documentId, projectId);
     }
 
 
@@ -216,9 +221,6 @@ public class DocumentController {
 
         return documentInstanceSections;
     }
-
-
-
 
     private static void validateHasFiles(List<MultipartFile> files) throws GendoxException {
         if (files.isEmpty()) {

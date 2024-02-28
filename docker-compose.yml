@@ -37,6 +37,8 @@ services:
        context: ./gendox-core-api
        dockerfile: Dockerfile
     container_name: gendox-core-api
+    volumes:
+      - ~/.aws/:/root/.aws:ro
     depends_on:
          gendox-database:
            condition: service_healthy

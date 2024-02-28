@@ -23,12 +23,15 @@ public class DocumentService {
 
     private DocumentInstanceRepository documentInstanceRepository;
     private DocumentSectionService documentSectionService;
+    private ProjectDocumentService projectDocumentService;
 
     @Autowired
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
-                           DocumentSectionService documentSectionService) {
+                           DocumentSectionService documentSectionService,
+                           ProjectDocumentService projectDocumentService) {
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentSectionService = documentSectionService;
+        this.projectDocumentService = projectDocumentService;
     }
 
 
@@ -93,9 +96,17 @@ public class DocumentService {
 
 
 
-    public void deleteDocument(UUID id) throws GendoxException {
-        DocumentInstance documentInstance = this.getDocumentInstanceById(id);
+    public void deleteDocument(UUID documentIid, UUID projectId) throws GendoxException {
+        DocumentInstance documentInstance = getDocumentInstanceById(documentIid);
         documentSectionService.deleteSections(documentInstance.getDocumentInstanceSections());
+        projectDocumentService.deleteProjectDocument(documentIid, projectId);
+        documentInstanceRepository.delete(documentInstance);
+    }
+
+    public void deleteDocument(DocumentInstance documentInstance, UUID projectId) throws GendoxException {
+        documentSectionService.deleteSections(documentInstance.getDocumentInstanceSections());
+        projectDocumentService.deleteProjectDocument(documentInstance.getId(), projectId);
+        documentInstance.setDocumentInstanceSections(null);
         documentInstanceRepository.delete(documentInstance);
     }
 
