@@ -41,8 +41,6 @@ public class DocumentSectionService {
     private MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter;
 
 
-
-
     @Lazy
     @Autowired
     public void setEmbeddingService(EmbeddingService embeddingService) {
@@ -56,7 +54,7 @@ public class DocumentSectionService {
                                   DocumentSectionMetadataRepository documentSectionMetadataRepository,
                                   IsccCodeServiceAdapter isccCodeServiceAdapter,
                                   MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter
-                                  ) {
+    ) {
         this.typeService = typeService;
         this.trainingService = trainingService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
@@ -64,8 +62,6 @@ public class DocumentSectionService {
         this.isccCodeServiceAdapter = isccCodeServiceAdapter;
         this.mockUniqueIdentifierServiceAdapter = mockUniqueIdentifierServiceAdapter;
     }
-
-
 
 
     public DocumentSectionMetadata getMetadataById(UUID id) throws GendoxException {
@@ -87,7 +83,7 @@ public class DocumentSectionService {
 
     public String getFileNameFromUrl(String url) {
         String normalizedUrl = url.startsWith("file:") ? url.substring(5) : url;
-
+        normalizedUrl = url.startsWith("s3:") ? url.substring(3) : url;
         // Replace backslashes with forward slashes
         normalizedUrl = normalizedUrl.replace('\\', '/');
 
@@ -115,7 +111,7 @@ public class DocumentSectionService {
         return documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
     }
 
-    public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance, List<String> contentSections) throws GendoxException{
+    public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance, List<String> contentSections) throws GendoxException {
         // if the document instance already has sections in the database, delete it
         this.deleteDocumentSections(documentInstance.getId());
         List<DocumentInstanceSection> sections = new ArrayList<>();
@@ -141,9 +137,9 @@ public class DocumentSectionService {
         section.setSectionValue(fileContent);
         section.setDocumentInstance(documentInstance);
 
-        String fileName = getFileNameFromUrl( section.getDocumentInstance().getRemoteUrl());
+        String fileName = getFileNameFromUrl(section.getDocumentInstance().getRemoteUrl());
         UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeServiceAdapter.getDocumentUniqueIdentifier(
-                                                                                            fileContent.getBytes(), fileName);
+                fileContent.getBytes(), fileName);
 
         section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getIscc());
 
@@ -192,7 +188,7 @@ public class DocumentSectionService {
         DocumentInstanceSection existingSection = this.getSectionById(sectionId);
 
         existingSection.setSectionValue(section.getSectionValue());
-        String fileName = getFileNameFromUrl( existingSection.getDocumentInstance().getRemoteUrl());
+        String fileName = getFileNameFromUrl(existingSection.getDocumentInstance().getRemoteUrl());
 //      ISCC code
 //        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeServiceAdapter.getDocumentUniqueIdentifier(
 //                                                                existingSection.getSectionValue().getBytes(), fileName);
