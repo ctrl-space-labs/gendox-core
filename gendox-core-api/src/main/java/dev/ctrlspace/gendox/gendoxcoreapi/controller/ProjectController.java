@@ -123,9 +123,8 @@ public class ProjectController {
 
         projectAgent = projectAgentService.createProjectAgent(projectAgent);
 
-        project.setAutoTraining(true);
-        project.setProjectAgent(projectAgent);
 
+        project.setProjectAgent(projectAgent);
 
         project = projectService.createProject(project);
 

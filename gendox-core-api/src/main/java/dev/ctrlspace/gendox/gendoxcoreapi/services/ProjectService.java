@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,14 +23,16 @@ public class ProjectService {
 
     private ProjectRepository projectRepository;
     private ProjectMemberService projectMemberService;
+    private UserOrganizationService userOrganizationService;
 
 
     @Autowired
     public ProjectService(ProjectRepository projectRepository,
-                          ProjectMemberService projectMemberService) {
+                          ProjectMemberService projectMemberService,
+                          UserOrganizationService userOrganizationService) {
         this.projectRepository = projectRepository;
         this.projectMemberService = projectMemberService;
-
+        this.userOrganizationService = userOrganizationService;
     }
 
     public Project getProjectById(UUID id) throws GendoxException {
@@ -50,8 +53,15 @@ public class ProjectService {
 
     public Project createProject(Project project) throws Exception {
 
+        project.setAutoTraining(true);
+
         project = projectRepository.save(project);
 
+        // Project agent become user of organization
+        userOrganizationService.createUserOrganization(project.getProjectAgent().getUserId(), project.getOrganizationId(), OrganizationRolesConstants.READER);
+
+        // Project Agent become members of the project
+        projectMemberService.createProjectMember(project.getProjectAgent().getUserId(), project.getId());
 
         // Project's Admins & Creator become members of the project
         projectMemberService.addDefaultMembersToTheProject(project, project.getOrganizationId());
