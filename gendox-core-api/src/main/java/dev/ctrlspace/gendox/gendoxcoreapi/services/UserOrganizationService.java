@@ -96,7 +96,7 @@ public class UserOrganizationService {
 
     public UserOrganization createUserOrganization(UserOrganization userOrganization) throws GendoxException {
 
-        if (userOrganizationRepository.existsByUserAndOrganization(userOrganization.getUser(), userOrganization.getOrganization())) {
+        if (userOrganizationRepository.existsByUserIdAndOrganizationId(userOrganization.getUser().getId(), userOrganization.getOrganization().getId())) {
             throw new GendoxException("USER_ORGANIZATION_ALREADY_EXISTS", "User-organization combination already exists", HttpStatus.BAD_REQUEST);
         }
 

@@ -18,20 +18,15 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import io.micrometer.observation.annotation.Observed;
-import net.dv8tion.jda.api.MessageBuilder;
-import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.interactions.components.ActionRow;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
 import java.util.List;
 
 @Component
@@ -88,7 +83,7 @@ public class CommonCommandUtility {
             String channelId = event.getChannel().getId();
             TextChannel channel = event.getJDA().getTextChannelById(channelId);
             String authorName = event.getUser().getName();
-            Project project = projectRepository.findProjectByName(channelName);
+            Project project = projectRepository.findByName(channelName);
             User user = userService
                     .getOptionalUserByUniqueIdentifier(authorName)
                     .orElse(null);

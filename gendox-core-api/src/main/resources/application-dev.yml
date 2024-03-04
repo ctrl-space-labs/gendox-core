@@ -96,6 +96,9 @@ gendox:
     poller: 1800000 # 30 minutes in milliseconds
     storage:
       temporary: /var/tmp
+    s3:
+      sqs:
+        wait-time-seconds: 1
 
   models:
     openai:
