@@ -34,8 +34,8 @@ public class ProjectAgentService {
     private TypeService typeService;
     private TemplateRepository templateRepository;
     private UserService userService;
-
     private AiModelRepository aiModelRepository;
+
 
     @Autowired
     public ProjectAgentService(ProjectAgentRepository projectAgentRepository,
@@ -48,14 +48,13 @@ public class ProjectAgentService {
         this.templateRepository = templateRepository;
         this.userService = userService;
         this.aiModelRepository = aiModelRepository;
-
     }
 
-    public ProjectAgent getAgentByProjectId(UUID projectId){
+    public ProjectAgent getAgentByProjectId(UUID projectId) {
         return projectAgentRepository.findByProjectId(projectId);
     }
 
-    public ProjectAgent getAgentByDocumentId(UUID documentId){
+    public ProjectAgent getAgentByDocumentId(UUID documentId) {
         return projectAgentRepository.findAgentByDocumentInstanceId(documentId)
                 .orElse(null);
     }
