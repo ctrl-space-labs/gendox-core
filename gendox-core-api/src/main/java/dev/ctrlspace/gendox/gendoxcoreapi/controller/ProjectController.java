@@ -82,7 +82,7 @@ public class ProjectController {
     @Operation(summary = "Get all projects",
             description = "Retrieve a list of all projects based on the provided criteria. The user must have the necessary permissions to access these projects.")
 
-    public Page<Project> getAllProjects(@Valid ProjectCriteria criteria,@PathVariable("organizationId") String organizationId, Pageable pageable) throws GendoxException {
+    public Page<Project> getAllProjects(@Valid ProjectCriteria criteria, @PathVariable("organizationId") String organizationId, Pageable pageable) throws GendoxException {
         // override requested org id with the path variable
         criteria.setOrganizationId(organizationId);
         if (pageable == null) {
@@ -118,11 +118,15 @@ public class ProjectController {
         ProjectAgent projectAgent = new ProjectAgent();
         projectAgent.setProject(project);
         projectAgent.setAgentName(project.getName() + " Agent");
-        projectAgent = projectAgentService.createProjectAgent(projectAgent);
-        project.setProjectAgent(projectAgent);
-
         projectAgent.setSemanticSearchModel(aiModelRepository.findByName(AiModelConstants.ADA2_MODEL));
         projectAgent.setCompletionModel(aiModelRepository.findByName(AiModelConstants.GPT_3_5_TURBO_MODEL));
+
+        projectAgent = projectAgentService.createProjectAgent(projectAgent);
+
+        project.setAutoTraining(true);
+        project.setProjectAgent(projectAgent);
+
+
         project = projectService.createProject(project);
 
         return project;

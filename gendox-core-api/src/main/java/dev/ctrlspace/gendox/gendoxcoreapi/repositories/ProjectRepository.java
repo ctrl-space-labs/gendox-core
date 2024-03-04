@@ -12,7 +12,9 @@ import java.util.UUID;
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, UUID>, QuerydslPredicateExecutor<Project> {
 
+    @Query("SELECT p FROM Project p WHERE p.name = :name")
     Project findByName(@Param("name") String name);
+
     @Query("SELECT p.id FROM Project p WHERE p.name = :name")
     UUID findIdByName(@Param("name") String name);
 
