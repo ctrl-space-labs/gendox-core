@@ -96,7 +96,7 @@ public class CommonCommandUtility {
                 user = userService.createDiscordUser(authorName);
             }
 
-            // If the identifier user does not exist, create one
+            // If the identifier user does not exist, create one (for Keycloak)
             if (authenticationService.getUsersByUsername(authorName).isEmpty()) {
                 authenticationService.createUser(user, null, true, false);
             }
