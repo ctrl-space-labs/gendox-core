@@ -116,7 +116,9 @@ gendox:
     storage:
       temporary: C:\ProgramData\\gendox\\temporary_integration_files
 #      temporary: s3://gendox.organization.documents.local/gendox_wiki
-
+    s3:
+      sqs:
+        wait-time-seconds: 1
   models:
     openai:
       ada2:
