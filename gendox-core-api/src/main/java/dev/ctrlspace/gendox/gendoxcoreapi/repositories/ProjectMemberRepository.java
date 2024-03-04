@@ -21,4 +21,7 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, UU
     ProjectMember findByProjectIdAndUserId(UUID projectId, UUID userId);
 
     //   public ProjectMember findByProjectId(UUID projectId);
+
+    boolean existsByProjectIdAndUserId(UUID projectId, UUID userId);
+
 }

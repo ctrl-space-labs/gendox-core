@@ -30,7 +30,7 @@ public class SQSListener {
         // Create a request to receive messages with a wait time of 20 seconds
         ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
                 .withQueueUrl(queueUrl)
-                .withWaitTimeSeconds(20);
+                .withWaitTimeSeconds(3);
         // Receive messages from the queue
         List<Message> messages = amazonSQS.receiveMessage(receiveMessageRequest).getMessages();
 
