@@ -68,7 +68,7 @@ public class ChatGendoxMessage {
 
 
         // return message if pass the moderation check
-        if (completionMessageDTO.getSectionId() != null) {
+        if (!completionMessageDTO.getSectionId().isEmpty()) {
             Map<String, String> sectionIdMap = new HashMap<>();
             List<String> sourcesUrls = completionMessageDTO.getSectionId().stream()
                     .map(sectionId -> {

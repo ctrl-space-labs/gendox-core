@@ -74,7 +74,11 @@ public class UserOrganizationService {
 
     }
 
-    public UserOrganization createUserOrganization(UUID userId, UUID organizationId, String roleName) throws Exception {
+    public boolean isUserOrganizationMember(UUID userId, UUID organizationID){
+        return userOrganizationRepository.existsByUserIdAndOrganizationId(userId, organizationID);
+    }
+
+    public UserOrganization createUserOrganization(UUID userId, UUID organizationId, String roleName) throws GendoxException {
 
         User user = userService.getById(userId);
         Organization organization = organizationService.getById(organizationId);
@@ -90,9 +94,9 @@ public class UserOrganizationService {
 
     }
 
-    public UserOrganization createUserOrganization(UserOrganization userOrganization) throws Exception{
+    public UserOrganization createUserOrganization(UserOrganization userOrganization) throws GendoxException {
 
-        if (userOrganizationRepository.existsByUserAndOrganization(userOrganization.getUser(), userOrganization.getOrganization())) {
+        if (userOrganizationRepository.existsByUserIdAndOrganizationId(userOrganization.getUser().getId(), userOrganization.getOrganization().getId())) {
             throw new GendoxException("USER_ORGANIZATION_ALREADY_EXISTS", "User-organization combination already exists", HttpStatus.BAD_REQUEST);
         }
 
@@ -109,7 +113,7 @@ public class UserOrganizationService {
         userOrganizationRepository.delete(userOrganization);
     }
 
-    public void setAdminRoleForOrganizationsOwner(Organization organization) throws Exception {
+    public void setAdminRoleForOrganizationsOwner(Organization organization) throws GendoxException {
         // user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 

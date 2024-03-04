@@ -5,6 +5,7 @@ import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -12,6 +13,9 @@ import java.util.List;
 
 @Component
 public class SQSListener {
+
+    @Value("${gendox.integrations.s3.sqs.wait-time-seconds}")
+    private Integer waitTime;
 
     @Autowired
     private AmazonSQS amazonSQS;
@@ -30,7 +34,7 @@ public class SQSListener {
         // Create a request to receive messages with a wait time of 20 seconds
         ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
                 .withQueueUrl(queueUrl)
-                .withWaitTimeSeconds(20);
+                .withWaitTimeSeconds(waitTime);
         // Receive messages from the queue
         List<Message> messages = amazonSQS.receiveMessage(receiveMessageRequest).getMessages();
 

@@ -55,7 +55,7 @@ public class OrganizationService {
         return organizationRepository.findAll(OrganizationPredicates.build(criteria), pageable);
     }
 
-    public Organization getById(UUID id) throws Exception {
+    public Organization getById(UUID id) throws GendoxException {
         return organizationRepository.findById(id)
                 .orElseThrow(() -> new GendoxException("ORGANIZATION_NOT_FOUND", "Organization not found with id: " + id, HttpStatus.NOT_FOUND));
     }
@@ -64,7 +64,7 @@ public class OrganizationService {
         return userOrganizationRepository.findByUserId(UUID.fromString(userId));
     }
 
-    public Organization createOrganization(Organization organization) throws Exception {
+    public Organization createOrganization(Organization organization) throws GendoxException {
 
         if (organization.getId() != null) {
             throw new GendoxException("NEW_ORGANIZATION_ID_IS_NOT_NULL", "Organization id must be null", HttpStatus.BAD_REQUEST);

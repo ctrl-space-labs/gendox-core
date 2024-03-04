@@ -2,15 +2,12 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectMemberCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectMemberPredicates;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.PageRequest;
@@ -18,10 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,9 +28,6 @@ public class ProjectMemberService {
     private ProjectService projectService;
 
     private UserOrganizationService userOrganizationService;
-
-    @Autowired
-    private JWTUtils jwtUtils;
 
     @Autowired
     public ProjectMemberService(ProjectMemberRepository projectMemberRepository,
@@ -60,8 +52,12 @@ public class ProjectMemberService {
         return projectMemberRepository.findAll(ProjectMemberPredicates.build(criteria), pageable).toList();
     }
 
+    public boolean isUserProjectMember(UUID projectId, UUID userId) {
+        return projectMemberRepository.existsByProjectIdAndUserId(projectId, userId);
+    }
 
-    public ProjectMember createProjectMember(ProjectMember projectMember) throws Exception {
+
+    public ProjectMember createProjectMember(ProjectMember projectMember) throws GendoxException {
 
         // Check if the user is already a member of the project
         if (projectMemberRepository.findByProjectIdAndUserId(projectMember.getProject().getId(), projectMember.getUser().getId()) != null) {
@@ -77,8 +73,7 @@ public class ProjectMemberService {
     }
 
 
-
-    public ProjectMember createProjectMember(UUID userId, UUID projectId) throws Exception {
+    public ProjectMember createProjectMember(UUID userId, UUID projectId) throws GendoxException {
 
         User user = userService.getById(userId);
         Project project = projectService.getProjectById(projectId);
@@ -91,7 +86,7 @@ public class ProjectMemberService {
 
     }
 
-    public List<ProjectMember> createAllProjectMembers(Set<UUID> userIds, UUID projectId) throws Exception {
+    public List<ProjectMember> createAllProjectMembers(Set<UUID> userIds, UUID projectId) throws GendoxException {
         List<ProjectMember> projectMembers = new ArrayList<>();
         for (UUID userId : userIds) {
             projectMembers.add(
@@ -112,7 +107,7 @@ public class ProjectMemberService {
     }
 
 
-    public void setMemberRoleForTheCreator(Project project) throws Exception {
+    public void setMemberRoleForTheCreator(Project project) throws GendoxException {
         // user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = ((UserProfile) authentication.getPrincipal()).getId();
@@ -129,7 +124,7 @@ public class ProjectMemberService {
      * @param organizationId
      * @throws Exception
      */
-    public void addDefaultMembersToTheProject(Project project, UUID organizationId) throws Exception {
+    public void addDefaultMembersToTheProject(Project project, UUID organizationId) throws GendoxException {
         // user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userId = ((UserProfile) authentication.getPrincipal()).getId();
@@ -155,7 +150,7 @@ public class ProjectMemberService {
     }
 
 
-    public void deleteAllProjectMembers(UUID id) throws Exception {
+    public void deleteAllProjectMembers(UUID id) throws GendoxException {
         ProjectMember projectMember = projectMemberRepository.findById(id).orElse(null);
 
         if (projectMember != null) {
@@ -168,7 +163,7 @@ public class ProjectMemberService {
 
     }
 
-    public void deleteAllProjectMembers(Project project) throws Exception {
+    public void deleteAllProjectMembers(Project project) throws GendoxException {
         List<ProjectMember> projectMembers = projectMemberRepository.findByProjectId(project.getId());
 
         for (int i = 0; i < projectMembers.size(); i++) {
@@ -178,7 +173,7 @@ public class ProjectMemberService {
     }
 
 
-    public void removeMemberFromProject(UUID projectId, UUID userId) throws Exception {
+    public void removeMemberFromProject(UUID projectId, UUID userId) throws GendoxException {
         User user = userService.getById(userId);
         Project project = projectService.getProjectById(projectId);
 
