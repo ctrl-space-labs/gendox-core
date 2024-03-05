@@ -22,6 +22,6 @@ VOLUME /tmp
 COPY --from=builder /app/target/*.jar /app.jar
 
 # Copy AWS credentials
-COPY /root/.aws/* /root/.aws/
+COPY /root/.aws/credentials /root/.aws/credentials
 
 ENTRYPOINT ["java","-jar","/app.jar"]
