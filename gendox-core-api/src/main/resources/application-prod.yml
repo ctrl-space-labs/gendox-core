@@ -93,7 +93,7 @@ gendox:
     allowed:
       extensions: .txt,.md,.rst,.pdf
   integrations:
-    poller: 30000 # 30 minutes in milliseconds
+    poller: 1800000 # 30 minutes in milliseconds
     storage:
       temporary: /var/tmp
     s3:
