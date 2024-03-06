@@ -19,6 +19,9 @@ public class SQSListener {
 
     Logger logger = LoggerFactory.getLogger(SQSListener.class);
 
+    @Value("${cloud.aws.SQS.region}")
+    private String region;
+
     @Value("${gendox.integrations.s3.sqs.wait-time-seconds}")
     private Integer waitTime;
 
@@ -27,7 +30,7 @@ public class SQSListener {
     private MessageRepository messageRepository;
 
     public SQSListener(AmazonSQS amazonSQS,
-                       MessageRepository messageRepository){
+                       MessageRepository messageRepository) {
         this.amazonSQS = amazonSQS;
         this.messageRepository = messageRepository;
     }
@@ -39,13 +42,19 @@ public class SQSListener {
      * @return A list of messages received from the queue.
      */
     public List<Message> receiveMessages(String queueName) {
+        logger.debug("Creating SQS client");
+        amazonSQS = SQSClientFactory.createSQSClient(region);
+        logger.debug("SQS client created" + amazonSQS);
         // Get the URL of the queue
+        logger.debug("Retrieving URL of the queue: {}", queueName);
         String queueUrl = amazonSQS.getQueueUrl(queueName).getQueueUrl();
         // Create a request to receive messages with a wait time of 20 seconds
+        logger.debug("Creating ReceiveMessageRequest with wait time of {} seconds", waitTime);
         ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
                 .withQueueUrl(queueUrl)
                 .withWaitTimeSeconds(waitTime);
         // Receive messages from the queue
+        logger.debug("Receiving messages from the queue...");
         List<Message> messages = amazonSQS.receiveMessage(receiveMessageRequest).getMessages();
 
         return messages;
