@@ -1,9 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.s3BucketIntegration;
 
 import com.amazonaws.services.sqs.AmazonSQS;
+import dev.ctrlspace.gendox.gendoxcoreapi.configuration.SQSConfig;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -14,13 +17,20 @@ import java.util.List;
 @Component
 public class SQSListener {
 
+    Logger logger = LoggerFactory.getLogger(SQSListener.class);
+
     @Value("${gendox.integrations.s3.sqs.wait-time-seconds}")
     private Integer waitTime;
 
-    @Autowired
+
     private AmazonSQS amazonSQS;
-    @Autowired
     private MessageRepository messageRepository;
+
+    public SQSListener(AmazonSQS amazonSQS,
+                       MessageRepository messageRepository){
+        this.amazonSQS = amazonSQS;
+        this.messageRepository = messageRepository;
+    }
 
     /**
      * Receives messages from the specified SQS queue.

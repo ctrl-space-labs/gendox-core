@@ -15,7 +15,8 @@ public class SQSConfig {
 
     @Bean
     public AmazonSQS amazonSQS(){
-        return AmazonSQSClientBuilder.standard()
+        return AmazonSQSClientBuilder
+                .standard()
                 .withRegion(region)
                 .build();
     }
