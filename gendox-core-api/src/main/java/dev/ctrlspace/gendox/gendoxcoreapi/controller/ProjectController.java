@@ -120,7 +120,7 @@ public class ProjectController {
         projectAgent.setAgentName(project.getName() + " Agent");
         projectAgent.setSemanticSearchModel(aiModelRepository.findByName(AiModelConstants.ADA2_MODEL));
         projectAgent.setCompletionModel(aiModelRepository.findByName(AiModelConstants.GPT_3_5_TURBO_MODEL));
-
+        projectAgent.setModerationModel(aiModelRepository.findByName(AiModelConstants.OPEN_AI_MODERATION));
         projectAgent = projectAgentService.createProjectAgent(projectAgent);
 
 
