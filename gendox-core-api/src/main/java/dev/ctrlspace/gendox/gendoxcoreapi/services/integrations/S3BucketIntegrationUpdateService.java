@@ -1,6 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services.integrations;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -14,7 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.s3BucketIntegration.ResourceMultipartFile;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.s3BucketIntegration.SQSListener;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.s3BucketIntegration.SQSService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.S3BucketIntegrationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,19 +31,19 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
 
     Logger logger = LoggerFactory.getLogger(S3BucketIntegrationUpdateService.class);
 
-    private SQSListener sqsListener;
+    private SQSService sqsService;
     private DownloadService downloadService;
     private DocumentService documentService;
     private ProjectService projectService;
     private DocumentSectionService documentSectionService;
 
     @Autowired
-    public S3BucketIntegrationUpdateService(SQSListener sqsListener,
+    public S3BucketIntegrationUpdateService(SQSService sqsService,
                                             DownloadService downloadService,
                                             DocumentService documentService,
                                             ProjectService projectService,
                                             DocumentSectionService documentSectionService) {
-        this.sqsListener = sqsListener;
+        this.sqsService = sqsService;
         this.downloadService = downloadService;
         this.documentService = documentService;
         this.projectService = projectService;
@@ -64,12 +63,12 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
         String queueName = integration.getQueueName();
         List<MultipartFile> fileList = new ArrayList<>();
 
-        List<Message> sqsMessages = sqsListener.receiveMessages(queueName);
+        List<Message> sqsMessages = sqsService.receiveMessages(queueName);
 
         for (Message sqsMessage : sqsMessages) {
             try {
                 handleSqsMessage(sqsMessage, fileList, integration);
-                sqsListener.deleteMessage(sqsMessage, queueName);
+                sqsService.deleteMessage(sqsMessage, queueName);
             } catch (Exception e) {
                 logger.error("An error occurred while checking for updates: " + e.getMessage(), e);
             }

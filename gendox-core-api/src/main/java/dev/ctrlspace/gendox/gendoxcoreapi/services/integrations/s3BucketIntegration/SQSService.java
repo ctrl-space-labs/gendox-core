@@ -1,7 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.s3BucketIntegration;
 
 import com.amazonaws.services.sqs.AmazonSQS;
-import dev.ctrlspace.gendox.gendoxcoreapi.configuration.SQSConfig;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
@@ -15,9 +14,9 @@ import java.util.List;
 
 
 @Component
-public class SQSListener {
+public class SQSService {
 
-    Logger logger = LoggerFactory.getLogger(SQSListener.class);
+    Logger logger = LoggerFactory.getLogger(SQSService.class);
 
     @Value("${cloud.aws.SQS.region}")
     private String region;
@@ -25,14 +24,16 @@ public class SQSListener {
     @Value("${gendox.integrations.s3.sqs.wait-time-seconds}")
     private Integer waitTime;
 
-    private Integer visibilityTimeout = 300;
+    @Value("${gendox.integrations.s3.sqs.visibility-timeout-seconds}")
+    private Integer visibilityTimeout;
 
 
     private AmazonSQS amazonSQS;
     private MessageRepository messageRepository;
 
-    public SQSListener(AmazonSQS amazonSQS,
-                       MessageRepository messageRepository) {
+    @Autowired
+    public SQSService(AmazonSQS amazonSQS,
+                      MessageRepository messageRepository) {
         this.amazonSQS = amazonSQS;
         this.messageRepository = messageRepository;
     }
