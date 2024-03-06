@@ -84,9 +84,15 @@ public class ProjectAgent {
     @Column(name = "top_p", nullable = true)
     private Double topP;
 
-    public UUID getId() {
-        return id;
-    }
+    @ManyToOne
+    @JoinColumn(name = "moderation_model_id", referencedColumnName = "id", nullable = true)
+    private AiModel moderationModel;
+
+    @Basic
+    @Column(name = "moderation_check", nullable = true)
+    private Boolean moderationCheck;
+
+    public UUID getId() { return id; }
 
     public void setId(UUID id) {
         this.id = id;
@@ -229,17 +235,32 @@ public class ProjectAgent {
         this.topP = topP;
     }
 
+    public AiModel getModerationModel() {
+        return moderationModel;
+    }
+
+    public void setModerationModel(AiModel moderationModel) {
+        this.moderationModel = moderationModel;
+    }
+
+    public Boolean getModerationCheck() {
+        return moderationCheck;
+    }
+
+    public void setModerationCheck(Boolean moderationCheck) {
+        this.moderationCheck = moderationCheck;
+    }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ProjectAgent that = (ProjectAgent) o;
-        return Objects.equals(id, that.id) && Objects.equals(project, that.project) && Objects.equals(userId, that.userId) && Objects.equals(semanticSearchModel, that.semanticSearchModel) && Objects.equals(completionModel, that.completionModel) && Objects.equals(agentName, that.agentName) && Objects.equals(agentBehavior, that.agentBehavior) && Objects.equals(privateAgent, that.privateAgent) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(documentSplitterType, that.documentSplitterType) && Objects.equals(chatTemplateId, that.chatTemplateId) && Objects.equals(sectionTemplateId, that.sectionTemplateId) && Objects.equals(maxToken, that.maxToken) && Objects.equals(temperature, that.temperature) && Objects.equals(topP, that.topP);
+        return Objects.equals(id, that.id) && Objects.equals(project, that.project) && Objects.equals(userId, that.userId) && Objects.equals(semanticSearchModel, that.semanticSearchModel) && Objects.equals(completionModel, that.completionModel) && Objects.equals(agentName, that.agentName) && Objects.equals(agentBehavior, that.agentBehavior) && Objects.equals(privateAgent, that.privateAgent) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(documentSplitterType, that.documentSplitterType) && Objects.equals(chatTemplateId, that.chatTemplateId) && Objects.equals(sectionTemplateId, that.sectionTemplateId) && Objects.equals(maxToken, that.maxToken) && Objects.equals(temperature, that.temperature) && Objects.equals(topP, that.topP) && Objects.equals(moderationModel, that.moderationModel) && Objects.equals(moderationCheck, that.moderationCheck);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, project, userId, semanticSearchModel, completionModel, agentName, agentBehavior, privateAgent, createdAt, updatedAt, createdBy, updatedBy, documentSplitterType, chatTemplateId, sectionTemplateId, maxToken, temperature, topP);
+        return Objects.hash(id, project, userId, semanticSearchModel, completionModel, agentName, agentBehavior, privateAgent, createdAt, updatedAt, createdBy, updatedBy, documentSplitterType, chatTemplateId, sectionTemplateId, maxToken, temperature, topP, moderationModel, moderationCheck);
     }
 }
