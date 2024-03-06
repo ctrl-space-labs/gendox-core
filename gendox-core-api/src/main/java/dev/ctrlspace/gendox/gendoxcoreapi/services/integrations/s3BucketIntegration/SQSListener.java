@@ -42,7 +42,7 @@ public class SQSListener {
      * @return A list of messages received from the queue.
      */
     public List<Message> receiveMessages(String queueName) {
-        logger.debug("Creating SQS client");
+        logger.debug("Creating SQS client for regions: {}", region);
         amazonSQS = SQSClientFactory.createSQSClient(region);
         logger.debug("SQS client created" + amazonSQS);
         // Get the URL of the queue
