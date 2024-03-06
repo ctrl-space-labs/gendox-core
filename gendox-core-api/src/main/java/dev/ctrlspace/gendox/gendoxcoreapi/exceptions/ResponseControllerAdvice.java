@@ -48,14 +48,14 @@ public class ResponseControllerAdvice extends ResponseEntityExceptionHandler {
             error.setErrorMessage(gendoxException.getErrorMessage());
             error.setErrorCode(gendoxException.getErrorCode());
             error.setTimestamp(gendoxException.getTime());
-        } else if (ex instanceof AccessDeniedException){
+        } else if (ex instanceof AccessDeniedException) {
             //returning 404 for access denied to hide the existence of the resource
             error.setHttpStatus(HttpStatus.NOT_FOUND.value());
             error.setHttpMessage(HttpStatus.NOT_FOUND.getReasonPhrase());
             error.setErrorMessage("Resource not found");
             error.setErrorCode("RESOURCE_NOT_FOUND");
             error.setTimestamp(Instant.now());
-        }else {
+        } else {
             error.setHttpStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
             error.setHttpMessage(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase());
             error.setErrorMessage(ex.getMessage());
