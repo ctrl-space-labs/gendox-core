@@ -111,8 +111,8 @@ gendox:
       extensions: .txt,.md,.rst,.pdf
 
   integrations:
-    poller: 30000 # 30 seconds
-#    poller: 86400000 # 24 hours in milliseconds
+#    poller: 30000 # 30 seconds
+    poller: 86400000 # 24 hours in milliseconds
     storage:
       temporary: C:\ProgramData\\gendox\\temporary_integration_files
 #      temporary: s3://gendox.organization.documents.local/gendox_wiki
