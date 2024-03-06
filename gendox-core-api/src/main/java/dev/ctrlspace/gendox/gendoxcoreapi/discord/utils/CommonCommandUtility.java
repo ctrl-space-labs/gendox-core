@@ -90,19 +90,23 @@ public class CommonCommandUtility {
             User user = userService
                     .getOptionalUserByUniqueIdentifier(authorName)
                     .orElse(null);
+            logger.debug("got user: {}", user);
 
             logger.debug("check if project exists and if user is bot");
             // Check if the event user is a bot or if the project ID is null
             if (event.getUser().isBot() || project.getId() == null) return;
-
+            logger.debug("check pass");
             // If the user does not exist, create a new user
             if (user == null) {
                 user = userService.createDiscordUser(authorName);
+                logger.debug("created new user from discord: {}" ,user);
             }
 
             // If the identifier user does not exist, create one (for Keycloak)
             if (authenticationService.getUsersByUsername(authorName).isEmpty()) {
+                logger.debug("Creating new keycloak user");
                 authenticationService.createUser(user, null, true, false);
+                logger.debug("created new keycloak user: {}" ,user);
             }
 
             // If the user is not a project member, add them to the project
@@ -116,12 +120,12 @@ public class CommonCommandUtility {
             }
 
             // Retrieve JWT token for the user
-            logger.debug("Retrieve JWT token for the user {}",authorName );
+            logger.debug("Retrieve JWT token for the user {}", authorName);
             String jwtToken = listenerService.getJwtToken(authorName);
 
             // Get the message content from the event
             String question = getTheQuestion(event);
-            logger.debug("Get the message content from the event --> {}",question );
+            logger.debug("Get the message content from the event --> {}", question);
             channel.sendMessage(authorName + ", thank you for the question: \n- " + question + "\n\uD83E\uDD16 Thinking... \uD83E\uDD16").queue();
 
             // Perform actions based on the command type
