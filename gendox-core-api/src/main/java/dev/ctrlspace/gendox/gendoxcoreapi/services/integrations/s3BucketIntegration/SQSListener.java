@@ -25,6 +25,8 @@ public class SQSListener {
     @Value("${gendox.integrations.s3.sqs.wait-time-seconds}")
     private Integer waitTime;
 
+    private Integer visibilityTimeout = 300;
+
 
     private AmazonSQS amazonSQS;
     private MessageRepository messageRepository;
@@ -42,21 +44,19 @@ public class SQSListener {
      * @return A list of messages received from the queue.
      */
     public List<Message> receiveMessages(String queueName) {
-        logger.debug("Creating SQS client for regions: {}", region);
-        amazonSQS = SQSClientFactory.createSQSClient(region);
-        logger.debug("SQS client created" + amazonSQS);
-        // Get the URL of the queue
-        logger.debug("Retrieving URL of the queue: {}", queueName);
+        logger.debug("Getting SQS messages from queue: {}, in regions: {} with wait time: {}", queueName, region, waitTime);
+
         String queueUrl = amazonSQS.getQueueUrl(queueName).getQueueUrl();
-        // Create a request to receive messages with a wait time of 20 seconds
-        logger.debug("Creating ReceiveMessageRequest with wait time of {} seconds", waitTime);
+
+        logger.trace("Queue URL: {}", queueUrl);
         ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
                 .withQueueUrl(queueUrl)
+                .withVisibilityTimeout(visibilityTimeout)
                 .withWaitTimeSeconds(waitTime);
         // Receive messages from the queue
-        logger.debug("Receiving messages from the queue...");
         List<Message> messages = amazonSQS.receiveMessage(receiveMessageRequest).getMessages();
 
+        logger.debug("Received {} messages from the queue", messages.size());
         return messages;
     }
 
@@ -67,10 +67,12 @@ public class SQSListener {
      * @param queueName The name of the SQS queue.
      */
     public void deleteMessage(Message message, String queueName) {
+        logger.debug("Deleting message {} from queue: {}", message.getMessageId(), queueName);
         // Get the URL of the queue
         String queueUrl = amazonSQS.getQueueUrl(queueName).getQueueUrl();
         // Delete the message from the queue using its receipt handle
         amazonSQS.deleteMessage(queueUrl, message.getReceiptHandle());
+        logger.debug("Deleted message {} from queue: {}", message.getMessageId(), queueName);
     }
 
 
