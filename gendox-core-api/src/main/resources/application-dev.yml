@@ -99,6 +99,7 @@ gendox:
     s3:
       sqs:
         wait-time-seconds: 1
+        visibility-timeout-seconds: 300
 
   models:
     openai:
@@ -159,6 +160,7 @@ cloud:
       region: eu-central-1
     SQS:
       region: eu-central-1
+
 
 
 # Discord
