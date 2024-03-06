@@ -29,6 +29,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+import static dev.ctrlspace.gendox.gendoxcoreapi.model.QUser.user;
+
 @Component
 public class CommonCommandUtility {
 
@@ -84,10 +86,12 @@ public class CommonCommandUtility {
             TextChannel channel = event.getJDA().getTextChannelById(channelId);
             String authorName = event.getUser().getName();
             Project project = projectRepository.findByName(channelName);
+            logger.debug("get user: {}", authorName);
             User user = userService
                     .getOptionalUserByUniqueIdentifier(authorName)
                     .orElse(null);
 
+            logger.debug("check if project exists and if user is bot");
             // Check if the event user is a bot or if the project ID is null
             if (event.getUser().isBot() || project.getId() == null) return;
 
@@ -112,10 +116,12 @@ public class CommonCommandUtility {
             }
 
             // Retrieve JWT token for the user
+            logger.debug("Retrieve JWT token for the user {}",authorName );
             String jwtToken = listenerService.getJwtToken(authorName);
 
             // Get the message content from the event
             String question = getTheQuestion(event);
+            logger.debug("Get the message content from the event --> {}",question );
             channel.sendMessage(authorName + ", thank you for the question: \n- " + question + "\n\uD83E\uDD16 Thinking... \uD83E\uDD16").queue();
 
             // Perform actions based on the command type
@@ -138,6 +144,7 @@ public class CommonCommandUtility {
             logger.error("An error occurred: " + e.getMessage());
             throw new RuntimeException(e);
         }
+        logger.debug("Complete executed command: " + command);
     }
 
 
