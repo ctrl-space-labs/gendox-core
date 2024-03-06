@@ -97,12 +97,14 @@ public class CommonCommandUtility {
             if (event.getUser().isBot() || project.getId() == null) return;
             logger.debug("check pass");
             // If the user does not exist, create a new user
+            logger.debug("check If the user does not exists ");
             if (user == null) {
                 user = userService.createDiscordUser(authorName);
                 logger.debug("created new user from discord: {}" ,user);
             }
 
             // If the identifier user does not exist, create one (for Keycloak)
+            logger.debug("check If the identifier user does not exists");
             if (authenticationService.getUsersByUsername(authorName).isEmpty()) {
                 logger.debug("Creating new keycloak user");
                 authenticationService.createUser(user, null, true, false);
@@ -110,11 +112,13 @@ public class CommonCommandUtility {
             }
 
             // If the user is not a project member, add them to the project
+            logger.debug("check If the user is not a project member");
             if (!projectMemberService.isUserProjectMember(project.getId(), user.getId())) {
                 projectMemberService.createProjectMember(user.getId(), project.getId());
             }
 
             // If the user is not a member of the organization, add them with reader role
+            logger.debug("check If the user is not a member of the organization");
             if (!userOrganizationService.isUserOrganizationMember(user.getId(), project.getOrganizationId())) {
                 userOrganizationService.createUserOrganization(user.getId(), project.getOrganizationId(), OrganizationRolesConstants.READER);
             }
