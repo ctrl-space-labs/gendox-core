@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -18,15 +19,8 @@ public class SQSService {
 
     Logger logger = LoggerFactory.getLogger(SQSService.class);
 
-    @Value("${cloud.aws.SQS.region}")
-    private String region;
-
-    @Value("${gendox.integrations.s3.sqs.wait-time-seconds}")
-    private Integer waitTime;
-
     @Value("${gendox.integrations.s3.sqs.visibility-timeout-seconds}")
     private Integer visibilityTimeout;
-
 
     private AmazonSQS amazonSQS;
     private MessageRepository messageRepository;
@@ -45,19 +39,30 @@ public class SQSService {
      * @return A list of messages received from the queue.
      */
     public List<Message> receiveMessages(String queueName) {
-        logger.debug("Getting SQS messages from queue: {}, in regions: {} with wait time: {}", queueName, region, waitTime);
+        logger.debug("Getting SQS messages from queue: {} ", queueName);
 
         String queueUrl = amazonSQS.getQueueUrl(queueName).getQueueUrl();
 
         logger.trace("Queue URL: {}", queueUrl);
         ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
                 .withQueueUrl(queueUrl)
-                .withVisibilityTimeout(visibilityTimeout)
-                .withWaitTimeSeconds(waitTime);
-        // Receive messages from the queue
-        List<Message> messages = amazonSQS.receiveMessage(receiveMessageRequest).getMessages();
+                .withVisibilityTimeout(visibilityTimeout);
 
-        logger.debug("Received {} messages from the queue", messages.size());
+        // Receive messages from the queue
+        List<Message> messages = new ArrayList<>();
+        int maxMessages = 100;
+
+        while (messages.size() < maxMessages) {
+            List<Message> receivedMessages = amazonSQS.receiveMessage(receiveMessageRequest).getMessages();
+
+            if (receivedMessages.isEmpty()){
+                break;
+            }
+            logger.debug("Received message from the queue {}", receivedMessages);
+            messages.addAll(receivedMessages);
+        }
+
+        logger.debug("Received total {} messages from the queue", messages.size());
         return messages;
     }
 
@@ -68,7 +73,6 @@ public class SQSService {
      * @param queueName The name of the SQS queue.
      */
     public void deleteMessage(Message message, String queueName) {
-        logger.debug("Deleting message {} from queue: {}", message.getMessageId(), queueName);
         // Get the URL of the queue
         String queueUrl = amazonSQS.getQueueUrl(queueName).getQueueUrl();
         // Delete the message from the queue using its receipt handle
