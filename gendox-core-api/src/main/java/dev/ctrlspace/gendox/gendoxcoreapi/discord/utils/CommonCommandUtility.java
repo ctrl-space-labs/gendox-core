@@ -86,41 +86,36 @@ public class CommonCommandUtility {
             TextChannel channel = event.getJDA().getTextChannelById(channelId);
             String authorName = event.getUser().getName();
             Project project = projectRepository.findByName(channelName);
-            logger.debug("get user: {}", authorName);
+
             User user = userService
                     .getOptionalUserByUniqueIdentifier(authorName)
                     .orElse(null);
-            logger.debug("got user: {}", user);
 
-            logger.debug("check if project exists and if user is bot");
             // Check if the event user is a bot or if the project ID is null
             if (event.getUser().isBot() || project.getId() == null) return;
-            logger.debug("check pass");
+
             // If the user does not exist, create a new user
-            logger.debug("check If the user does not exists ");
             if (user == null) {
                 user = userService.createDiscordUser(authorName);
-                logger.debug("created new user from discord: {}" ,user);
+                logger.debug("created new user from discord: {}", user);
             }
 
             // If the identifier user does not exist, create one (for Keycloak)
-            logger.debug("check If the identifier user does not exists");
             if (authenticationService.getUsersByUsername(authorName).isEmpty()) {
-                logger.debug("Creating new keycloak user");
                 authenticationService.createUser(user, null, true, false);
-                logger.debug("created new keycloak user: {}" ,user);
+                logger.debug("created new keycloak user: {}", user);
             }
 
             // If the user is not a project member, add them to the project
-            logger.debug("check If the user is not a project member");
             if (!projectMemberService.isUserProjectMember(project.getId(), user.getId())) {
                 projectMemberService.createProjectMember(user.getId(), project.getId());
+                logger.debug("user {} becomes project {} member ", user.getName(), project.getName());
             }
 
             // If the user is not a member of the organization, add them with reader role
-            logger.debug("check If the user is not a member of the organization");
             if (!userOrganizationService.isUserOrganizationMember(user.getId(), project.getOrganizationId())) {
                 userOrganizationService.createUserOrganization(user.getId(), project.getOrganizationId(), OrganizationRolesConstants.READER);
+                logger.debug("user {} becomes organizations {} member ", user.getName(), project.getOrganizationId());
             }
 
             // Retrieve JWT token for the user
@@ -129,7 +124,7 @@ public class CommonCommandUtility {
 
             // Get the message content from the event
             String question = getTheQuestion(event);
-            logger.debug("Get the message content from the event --> {}", question);
+            logger.debug("Get the message content from the event {}", question);
             channel.sendMessage(authorName + ", thank you for the question: \n- " + question + "\n\uD83E\uDD16 Thinking... \uD83E\uDD16").queue();
 
             // Perform actions based on the command type
@@ -140,7 +135,9 @@ public class CommonCommandUtility {
                 logger.debug("Received chatMessage");
             } else if (command.equals(DiscordGendoxConstants.SEARCH_GENDOX)) {
                 List<DocumentInstanceSection> documentInstanceSections = listenerService.semanticSearchForQuestion(question, channelName, jwtToken, threadId);
+                logger.debug("Received for search command");
                 searchGendoxMessage.searchMessage(channel, documentInstanceSections, project.getId());
+                logger.debug("Received searchMessage");
             } else if (command.equals(DiscordGendoxConstants.REPLY_GENDOX)) {
                 CompletionMessageDTO completionMessageDTO = listenerService.completionForQuestion(question, channelName, jwtToken, threadId);
                 chatGendoxMessage.chatMessage(channel, completionMessageDTO);
