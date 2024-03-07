@@ -23,6 +23,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -113,13 +115,15 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
      * @return The multipart file representing the content of the S3 object.
      */
     private MultipartFile convertToMultipartFile(String bucketName, String objectKey) throws GendoxException, IOException {
-        String s3Url = "s3://" + bucketName + "/" + objectKey;
+        String encodedFilename = objectKey;
+        String originalFilename = URLDecoder.decode(encodedFilename, StandardCharsets.UTF_8.toString());
+        String s3Url = "s3://" + bucketName + "/" + originalFilename;
         String content = downloadService.readDocumentContent(s3Url);
         byte[] contentBytes = content.getBytes();
 
         return new ResourceMultipartFile(
                 contentBytes,
-                objectKey,
+                originalFilename,
                 "application/octet-stream"
         );
     }

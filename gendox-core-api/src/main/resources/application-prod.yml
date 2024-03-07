@@ -99,7 +99,7 @@ gendox:
       temporary: /var/tmp
     s3:
       sqs:
-        wait-time-seconds: 1
+        wait-time-seconds: 1 #not in use
         visibility-timeout-seconds: 300
 
   models:
