@@ -10,6 +10,7 @@
 
 # production
 /build
+/out
 
 # misc
 .DS_Store
@@ -25,3 +26,4 @@ yarn-error.log*
 
 # Next js git ignore
 .next
+
