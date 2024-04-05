@@ -107,6 +107,18 @@ public class DocumentController {
         return documentSectionService.getProjectSections(projectId);
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @GetMapping("/organizations/{organizationId}/projects/{projectId}/documents/{documentId}/sections")
+    @Operation(summary = "Get document sections by document ID",
+            description = "Fetch a list of document sections associated with a particular document based on the provided document ID. " +
+                    "Document sections provide structured content within a project, such as chapters, sections, or segments. " +
+                    "This operation enables you to access the sections within the specified document.")
+    public List<DocumentInstanceSection> getSectionsByDocumentId(@PathVariable UUID documentId) throws GendoxException {
+        //throw new UnsupportedOperationException("Not implemented yet");
+        return documentSectionService.getSectionsByDocument(documentId);
+    }
+
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
             "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
