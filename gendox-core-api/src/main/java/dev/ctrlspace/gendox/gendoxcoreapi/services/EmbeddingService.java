@@ -18,7 +18,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nullable;
-import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -47,6 +46,8 @@ public class EmbeddingService {
 
     private ProjectAgentRepository projectAgentRepository;
 
+    private ChatThreadService chatThreadService;
+
     @Autowired
     private JWTUtils jwtUtils;
 
@@ -55,6 +56,7 @@ public class EmbeddingService {
     public EmbeddingService(
                             EmbeddingRepository embeddingRepository,
                             AuditLogsRepository auditLogsRepository,
+                            ChatThreadService chatThreadService,
                             EmbeddingGroupRepository embeddingGroupRepository,
                             MessageRepository messageRepository,
                             TypeService typeService,
@@ -70,6 +72,7 @@ public class EmbeddingService {
         this.aiModelServices = aiModelServices;
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
+        this.chatThreadService = chatThreadService;
         this.embeddingGroupRepository = embeddingGroupRepository;
         this.messageRepository = messageRepository;
         this.typeService = typeService;
@@ -208,13 +211,19 @@ public class EmbeddingService {
     public Message createMessage(Message message) {
 
         message.setId(UUID.randomUUID());
+        ProjectAgent agent = null;
         if (message.getThreadId() == null) {
-            message.setThreadId(UUID.randomUUID());
+            agent = projectAgentService.getAgentByProjectId(message.getProjectId());
+            ChatThread chatThread = createThreadForMessage(securityUtils.getUserId(), agent.getUserId(), message.getProjectId());
+            message.setThreadId(chatThread.getId());
         }
 
 
         if (securityUtils.getUserId() == null) {
-            ProjectAgent agent = projectAgentService.getAgentByProjectId(message.getProjectId());
+            if (agent == null) {
+                agent = projectAgentService.getAgentByProjectId(message.getProjectId());
+            }
+
             message.setCreatedBy(agent.getUserId());
             message.setUpdatedBy(agent.getUserId());
         }
@@ -287,4 +296,26 @@ public class EmbeddingService {
     }
 
 
+    private ChatThread createThreadForMessage(UUID userId, UUID agentId, UUID projectId) {
+
+        // create the members
+        ChatThreadMember userMember = new ChatThreadMember();
+        userMember.setUserId(userId);
+        ChatThreadMember agentMember = new ChatThreadMember();
+        agentMember.setUserId(agentId);
+
+        // create the chat thread
+        ChatThread chatThread = new ChatThread();
+        chatThread.setName("Chat Thread");
+        chatThread.setProjectId(projectId);
+
+        // connect the objects
+        chatThread.getChatThreadMembers().add(userMember);
+        chatThread.getChatThreadMembers().add(agentMember);
+        userMember.setChatThread(chatThread);
+        agentMember.setChatThread(chatThread);
+
+        return chatThreadService.create(chatThread);
+
+    }
 }
