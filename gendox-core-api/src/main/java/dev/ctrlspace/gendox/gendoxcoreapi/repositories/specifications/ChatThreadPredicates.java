@@ -14,8 +14,8 @@ public class ChatThreadPredicates {
 
     public static Predicate build(ChatThreadCriteria criteria) {
         return ExpressionUtils.allOf(
-                projectIdIn(criteria.getProjectIds()),
-                memberIdIn(criteria.getMemberIds())
+                projectIdIn(criteria.getProjectIdIn()),
+                memberIdIn(criteria.getMemberIdIn())
         );
     }
 

@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ChatThreadCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ChatThreadPredicates;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,12 +32,12 @@ public class ChatThreadService {
     // getChatThreads (by criteria)
     // createChatThread
 
-    public Optional<ChatThread> getOptionalChatThreadById(UUID id) {
+    public Optional<ChatThread> getOptionalById(UUID id) {
         return chatThreadRepository.findById(id);
     }
 
-    public ChatThread getChatThreadById(UUID id) throws GendoxException {
-        return this.getOptionalChatThreadById(id)
+    public ChatThread getById(UUID id) throws GendoxException {
+        return this.getOptionalById(id)
                 .orElseThrow(() -> new GendoxException("CHAT_THREAD_NOT_FOUND", "Chat Thread not found with id: " + id, HttpStatus.NOT_FOUND));
     }
 
@@ -44,14 +45,14 @@ public class ChatThreadService {
         if (pageable == null) {
             throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
         }
-//        return chatThreadRepository.findAll(criteria.toSpecification(), criteria.toPageable();
-        return null;
+        return chatThreadRepository.findAll(ChatThreadPredicates.build(criteria), pageable);
 
     }
 
     public ChatThread create(ChatThread chatThread) {
 
+        chatThread = chatThreadRepository.save(chatThread);
         chatThreadMemberRepository.saveAll(chatThread.getChatThreadMembers());
-        return chatThreadRepository.save(chatThread);
+        return chatThread;
     }
 }
