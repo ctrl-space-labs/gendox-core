@@ -126,16 +126,10 @@ public class EmbeddingsController {
                     "This endpoint calculates the embedding for the input message and searches for a complementary message " +
                     "in the context of the provided project.")
     public CompletionMessageDTO getCompletionSearch(@RequestBody Message message,
-                                                    @RequestParam String projectId,
-                                                    Pageable pageable) throws GendoxException {
-        if (pageable == null) {
-            pageable = PageRequest.of(0, 5);
-        }
-        if (pageable.getPageSize() > 5) {
-            throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
-        }
+                                                    @RequestParam String projectId) throws GendoxException {
 
 
+        message.setProjectId(UUID.fromString(projectId));
         message = embeddingService.createMessage(message);
 
         List<DocumentInstanceSection> instanceSections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
