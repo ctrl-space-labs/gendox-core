@@ -2,7 +2,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ChatThreadCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.MessageCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ChatThreadService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -62,6 +64,16 @@ public class ChatThreadController {
         return chatThreadService.getAllChatThreads(criteria, pageable);
     }
 
+
+    @GetMapping("threads/{threadId}/messages")
+    @Operation(summary = "Get the messages in a Thread",
+            description = "Retrieve the messages from a thread. Pagination is supported. The user should have the rights to access this chat.")
+
+    public Page<Message> getMessagesById(@PathVariable UUID threadId, MessageCriteria criteria, Pageable pageable) throws GendoxException {
+
+        criteria.setThreadId(threadId);
+        return chatThreadService.getAllMessagesByCriteria(criteria, pageable);
+    }
 
 
 }
