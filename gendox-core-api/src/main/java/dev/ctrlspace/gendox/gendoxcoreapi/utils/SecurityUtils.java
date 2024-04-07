@@ -168,7 +168,15 @@ public class SecurityUtils {
         //get request param with name "projectId"
         String projectId = request.getParameter(QueryParamNames.PROJECT_ID);
         String[] projectStrings = request.getParameterValues(QueryParamNames.PROJECT_ID_IN);
+        // 'splitProjectStrings' now contains individual elements, split by commas
+        // You can now use 'splitProjectStrings' as required
+        if (projectStrings != null) {
+            projectStrings = Arrays.stream(projectStrings)
+                    .flatMap(s -> Arrays.stream(s.split(",")))
+                    .toArray(String[]::new);
 
+
+        }
 
         if (projectId == null && projectStrings == null) {
             return new AccessCriteria();

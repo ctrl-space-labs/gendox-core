@@ -75,6 +75,7 @@ public class ChatThreadController {
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
         }
+        // TODO add default sorting by message createdAt, desc
         if (pageable.getPageSize() > 100) {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 100", HttpStatus.BAD_REQUEST);
         }
