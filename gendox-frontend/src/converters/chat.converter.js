@@ -29,7 +29,9 @@ const toChatUserProfile = (gendoxUserProfile) => {
 const projectToContact = (project) => {
 
     return {
-        id: project.projectAgent.id,
+        id: project.projectAgent.userId,
+        userId: project.projectAgent.userId,
+        agentId: project.projectAgent.id,
         fullName: project.projectAgent.agentName,
         role: "Agent",
         about: project.description,
@@ -39,10 +41,58 @@ const projectToContact = (project) => {
 
 }
 
+/**
+ * Converts a Gendox thread to a chat entry. get the array of Chat Contacts
+ * @param {GendoxThread} thread - The thread to convert.
+ * @param {ChatContact[]} contacts - The array of chat contacts.
+ * @returns {ChatContact} The converted chat entry.
+ */
+const gendoxThreadToChatEntry = (thread, contacts) => {
+// find the contact where the id is in any member of the thread
+    let contact = contacts.find(contact => thread.chatThreadMembers.some(member => member.userId === contact.userId));
+
+        return {
+            id: thread.id,
+            fullName: contact.fullName,
+            role: contact.role,
+            about: contact.about,
+            avatar: contact.avatar,
+            status: contact.status,
+            chat: {
+                lastMessage: {
+                    message: 'A message',
+                    time: thread.updatedAt,
+                },
+                "unseenMsgs": 2
+            }
+        }
+}
+
+/**
+ * Converts a Gendox message to a chat message.
+ * @param {GendoxMessage} message - The message to convert.
+ * @returns {ChatMessage} The converted chat message.
+ */
+const gendoxMessageToChatMessage = (message) => {
+    return {
+        senderId: message.createdBy,
+        message: message.value,
+        time: message.createdAt,
+        feedback: {
+            isSent: true,
+            isDelivered: true,
+            isSeen: true
+        }
+
+    }
+}
+
 const chatConverters = {
 
     toChatUserProfile,
-    projectToContact
+    projectToContact,
+    gendoxThreadToChatEntry,
+    gendoxMessageToChatMessage
 }
 
 export default chatConverters;

@@ -287,83 +287,75 @@ export const fetchChatsContacts = createAsyncThunk('appChat/fetchChatsContacts',
 
 
     const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
-    const resp = await axios.get(apiRequests.getProjectsByOrganization('c83a1c61-4c79-4c49-8b3e-249e8c40a39f'), {
+    const projectsByOrgResponse = await axios.get(apiRequests.getProjectsByOrganization('c83a1c61-4c79-4c49-8b3e-249e8c40a39f'), {
         headers: {
             'Content-Type': 'application/json',
             Authorization: 'Bearer ' + storedToken
         }
     })
     // map each project in resp.data.content to a chat contact
-    const contacts = resp.data.content.map(project => chatConverters.projectToContact(project))
+    const contacts = projectsByOrgResponse.data.content.map(project => chatConverters.projectToContact(project))
+
+    let hardcodedProjects = ['0c154e6e-04b3-492a-94bf-61b8c5ad1644','5ffbc620-c246-49ca-b7c7-7df0728f8d32','4fd12adf-763b-4d17-a72b-df9f71b50e0d','32c78481-510d-4d11-8269-4469c63a4be9','2ae17bf3-333f-40ca-8840-f3736b9b324c','1bc3b6d9-2d24-471c-9ef2-de9376d6fa12','25e20a08-1019-4118-a0d7-e68fd812d766']
+    const threadsResponse = await axios.get(
+        apiRequests.getThreadsByCriteria(
+            // projectsByOrgResponse.data.content.map(project => project.id)
+            hardcodedProjects
+        ), {
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + storedToken
+        }
+    })
+
+    const chatEntries = threadsResponse.data.content.map(thread => chatConverters.gendoxThreadToChatEntry(thread, contacts))
 
 
+    console.log("fetchChatsContacts contacts: ", contacts)
+    console.log("fetchChatsContacts chatEntries: ", chatEntries)
     return {
-        chatsContacts: [{
-            id: 1,
-            fullName: 'Felecia Rower',
-            role: 'Frontend Developer',
-            about: 'Cake pie jelly jelly beans. Marzipan lemon drops halvah cake. Pudding cookie lemon drops icing',
-            avatar: '/images/avatars/2.png',
-            status: 'online',
-            "chat": {
-                "lastMessage": {
-                    "message": "Hello, how are you?",
-                    "time": "2022-03-01T10:30:00Z"
-                },
-                "unseenMsgs": 2
-            }
-        }],
+        chatsContacts: chatEntries,
         contacts: contacts,
     }
 })
 
 // ** Select Chat
-export const selectChat = createAsyncThunk('appChat/selectChat', async (id, {dispatch}) => {
-    // const response = await axios.get('/apps/chat/get-chat', {
-    //   params: {
-    //     id
-    //   }
-    // })
+export const selectChat = createAsyncThunk('appChat/selectChat', async (id, {dispatch, getState}) => {
+
+    const state = getState()
+
+    let contacts = state.chat.contacts
+    let chatContacts = state.chat.chats
+    console.log("app state chat contacts: ", state.chat.contacts)
+    console.log("app state chat chatContacts: ", state.chat.chats)
+    const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
+    const messagesResponse = await axios.get(apiRequests.getThreadMessagesByCriteria(id, 0, 100), {
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + storedToken
+        }
+    })
+
+    const chatMessages = messagesResponse.data.content.map(message => chatConverters.gendoxMessageToChatMessage(message))
+
+    // sort messages by time ascending
+    chatMessages.sort((a, b) => new Date(a.time) - new Date(b.time))
     await dispatch(fetchChatsContacts())
+
+    let contact = contacts.find(contact => chatMessages.some(message => message.senderId === contact.userId));
+
 
     // return response.data
     return {
-        "contact": {
-            id: 1,
-            fullName: 'Felecia Rower',
-            role: 'Frontend Developer',
-            about: 'Cake pie jelly jelly beans. Marzipan lemon drops halvah cake. Pudding cookie lemon drops icing',
-            avatar: '/images/avatars/2.png',
-            status: 'offline'
-        },
+        "contact": contact,
         "chat": {
-            "lastMessage": {
-                "message": "Hello, how are you?",
-                "time": "2022-03-01T10:30:00Z"
-            },
-            "unseenMsgs": 2,
-            "chat": [
-                {
-                    "senderId": "1",
-                    "message": "Hello, how are you?",
-                    "time": "2022-03-01T10:30:00Z",
-                    "feedback": {
-                        "isSent": true,
-                        "isDelivered": true,
-                        "isSeen": true
-                    }
-                },
-                {
-                    "senderId": "2",
-                    "message": "I'm good, thanks!",
-                    "time": "2022-03-01T10:31:00Z",
-                    "feedback": {
-                        "isSent": true,
-                        "isDelivered": true,
-                        "isSeen": false
-                    }
-                }
-            ]
+            // "lastMessage": {
+            //     "message": "Hello, how are you?",
+            //     "time": "2022-03-01T10:30:00Z"
+            // },
+            // "unseenMsgs": 2,
+            "chat": chatMessages
+
         }
     }
 })
