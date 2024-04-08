@@ -18,6 +18,9 @@ export default {
 
     updateProject: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}`,
 
+
+    postCompletionModel: (projectId) => `${url}messages/semantic-completion?projectId=${projectId}`,
+
     getThreadsByCriteria: (projectIdIn) => {
         const projectIds = projectIdIn.join(',');
         return `${url}threads?projectIdIn=${projectIds}`;

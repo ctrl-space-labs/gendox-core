@@ -32,6 +32,7 @@ const projectToContact = (project) => {
         id: project.projectAgent.userId,
         userId: project.projectAgent.userId,
         agentId: project.projectAgent.id,
+        projectId: project.id,
         fullName: project.projectAgent.agentName,
         role: "Agent",
         about: project.description,
