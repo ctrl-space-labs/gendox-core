@@ -16,5 +16,11 @@ export default {
   getAllProjectMembers: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/users`,
 
-  updateProject: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}`
+  updateProject: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}`,
+
+  documentSections:  (organizationId, projectId, documentId) =>
+  `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}/sections`,
+
+  uploadDocument: (organizationId, projectId) =>
+  `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,
 }
