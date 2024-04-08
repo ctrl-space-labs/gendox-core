@@ -219,13 +219,11 @@ public class EmbeddingService {
         }
 
 
-        if (securityUtils.getUserId() == null) {
-            if (agent == null) {
-                agent = projectAgentService.getAgentByProjectId(message.getProjectId());
-            }
-
-            message.setCreatedBy(agent.getUserId());
-            message.setUpdatedBy(agent.getUserId());
+        // @CreatedBy and @LastModifiedBy are not set in the Message entity
+        // because some messages will have custom values, so we need to control this manually
+        if (message.getCreatedBy() == null) {
+            message.setCreatedBy(securityUtils.getUserId());
+            message.setUpdatedBy(securityUtils.getUserId());
         }
 
         message = messageRepository.save(message);

@@ -105,9 +105,9 @@ public class ListenerService {
         completionMessageDTO.getMessage().setThreadId(completionMessageDTO.getThreadID());
         completionMessageDTO.getMessage().setProjectId(projectId);
         //save the answer as message
-        // TODO answer must be saved in the Completion Controller
+
         // https://github.com/ctrl-space-labs/gendox-core/issues/213
-        embeddingService.createMessage(completionMessageDTO.getMessage());
+//        embeddingService.createMessage(completionMessageDTO.getMessage());
 
 
         return completionMessageDTO;
