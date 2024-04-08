@@ -7,6 +7,12 @@ import CardContent from '@mui/material/CardContent'
 import Grid from '@mui/material/Grid'
 import { styled, useTheme } from '@mui/material/styles'
 
+// ** Next Import
+import { useRouter } from 'next/router'
+
+import { useDispatch } from 'react-redux'
+import { activeDocumentActions } from 'src/store/apps/activeDocument/activeDocument'
+
 // Styled Grid component
 const StyledGrid = styled(Grid)(({ theme }) => ({
   [theme.breakpoints.down('sm')]: {
@@ -28,9 +34,39 @@ const Img = styled('img')(({ theme }) => ({
   }
 }))
 
+const formatDocumentTitle = (remoteUrl) => {
+  if (!remoteUrl) return ''; // Return an empty string if remoteUrl is undefined or null
+
+  // Extract the file name after the last slash
+  const fileName = remoteUrl.split('/').pop();
+
+  // Check if the file name contains underscores
+  if (fileName.includes('_')) {
+    // If it contains underscores, follow the original logic
+    return fileName
+      .split('_') // Split the string by underscore
+      .slice(1) // Exclude the first part before the first underscore
+      .join('_'); // Join the remaining parts with underscore
+  } else {
+    // If there are no underscores, return the file name without extension
+    return fileName.split('.').slice(0, -1).join('.'); // Remove the file extension
+  }
+};
+
+
+
 const DocumentComponent = props => {
   // ** Hook
   const theme = useTheme()
+  const dispatch = useDispatch();
+  const router = useRouter()
+  const { organizationId, projectId } = router.query
+
+  const handleNavigation = () => {
+    dispatch(activeDocumentActions.getActiveDocument(props.document))
+    const path = `/gendox/document-sections?organizationId=${organizationId}&projectId=${projectId}`
+    router.push(path)
+  }
 
   return (
     <Card sx={{ position: 'relative' }}>
@@ -40,15 +76,7 @@ const DocumentComponent = props => {
             <Typography variant='h5' sx={{ mb: 4.5 }}>
               {/* Document: {' '} */}
               <Box component='span' sx={{ fontWeight: 'bold' }}>
-                {
-                  props.document.remoteUrl &&
-                    props.document.remoteUrl
-                      .split('\\') // Split the string by backslash
-                      .pop() // Get the last element from the resulting array
-                      .split('_') // Split the string by underscore
-                      .slice(1) // Exclude the first part before the first underscore
-                      .join('_') // Join the remaining parts with underscore
-                }
+              {formatDocumentTitle(props.document.remoteUrl)}
               </Box>
               ! 🎉
             </Typography>
@@ -61,7 +89,7 @@ const DocumentComponent = props => {
 
             </Grid>
             <Grid>
-            <Button variant='contained' loadingPosition='center'>View Sections</Button>
+            <Button variant='contained' onClick={handleNavigation} loadingPosition='center'>View Sections</Button>
             </Grid>
         </Grid>
       </CardContent>

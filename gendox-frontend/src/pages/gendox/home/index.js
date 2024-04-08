@@ -21,16 +21,15 @@ import authConfig from 'src/configs/auth'
 import apiRequests from 'src/configs/apiRequest'
 
 // ** Demo Components Imports
-import DocAndTemplButtons from 'src/views/gendox-components/DocAndTemplButtons'
+import ProjectButtons from 'src/views/gendox-components/project-buttons-components/ProjectButtons'
 import DocumentComponent from 'src/views/gendox-components/DocumentComponent'
 import { useAuth } from 'src/hooks/useAuth'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 
-const GendoxDashboard = () => {
-  const routerFromUrl = useRouter()
-  const { query } = routerFromUrl
-  const { organizationId, projectId } = query
+const GendoxDashboard = () => {  
+  const router = useRouter()
+  const { organizationId, projectId } = router.query
 
   const auth = useAuth()
   
@@ -76,7 +75,7 @@ const GendoxDashboard = () => {
       }
     }
     initDocuments()
-  }, [auth, organizationId, projectId, routerFromUrl, activeProject])
+  }, [auth, organizationId, projectId, router, activeProject])
 
 
 
@@ -85,7 +84,7 @@ const GendoxDashboard = () => {
     <ApexChartWrapper>
       <Grid container spacing={6} className='match-height'>
         <Grid item xs={12} md={12}>
-          <DocAndTemplButtons  project={activeProject}/>
+          <ProjectButtons  project={activeProject}/>
         </Grid>
         {documents.map(document => (
           <Grid key={document.id} item xs={6} md={4}>

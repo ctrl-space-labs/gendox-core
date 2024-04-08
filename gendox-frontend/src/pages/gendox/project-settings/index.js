@@ -5,7 +5,7 @@ import Grid from '@mui/material/Grid'
 import Icon from 'src/@core/components/icon'
 
 // ** project settings components import
-import ProjectSettingsComponent from 'src/views/gendox-components/project-settings-components/ProjectSettingsCard'
+import ProjectSettingsCard from 'src/views/gendox-components/project-settings-components/ProjectSettingsCard'
 
 // ** Axios
 import axios from 'axios'
@@ -95,7 +95,7 @@ const ProjectSettings = () => {
   return (
     <>
       {project ? (
-        <ProjectSettingsComponent project={project} />
+        <ProjectSettingsCard project={project} />
       ) : (
         <div>Loading...</div>  // Or any other loading state representation
       )}

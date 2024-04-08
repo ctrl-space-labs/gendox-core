@@ -29,10 +29,7 @@ import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 
 const GeneralProjectSettings = () => {
-  const project = useSelector((state) => state.activeProject.activeProject);
-  const stat = useSelector((state) => state);
-  console.log("Project--->", project)
-  console.log("State--->", stat)
+  const project = useSelector((state) => state.activeProject.activeProject); 
   const router = useRouter()
   const { organizationId, projectId } = router.query
   const token = window.localStorage.getItem(authConfig.storageTokenKeyName)
