@@ -8,7 +8,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
@@ -34,21 +33,16 @@ public class EmbeddingsController {
     private TrainingService trainingService;
     private CompletionService completionService;
 
-    private AiModelRepository aiModelRepository;
-
     @Autowired
     public EmbeddingsController(EmbeddingRepository embeddingRepository,
                                 EmbeddingService embeddingService,
                                 TrainingService trainingService,
-                                CompletionService completionService,
-                                AiModelRepository aiModelRepository
-                                ) {
+                                CompletionService completionService
+    ) {
         this.embeddingRepository = embeddingRepository;
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
         this.completionService = completionService;
-        this.aiModelRepository = aiModelRepository;
-
     }
 
     @PostMapping("/embeddings")
@@ -152,7 +146,7 @@ public class EmbeddingsController {
         OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(message);
         return openAiGpt35ModerationResponse;
     }
-//
+
     @PostMapping("/messages/moderation/document")
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
         return trainingService.getModerationForDocumentSections(documentId);

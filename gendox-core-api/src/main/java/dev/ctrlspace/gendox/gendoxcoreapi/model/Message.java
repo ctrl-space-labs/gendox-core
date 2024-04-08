@@ -45,11 +45,9 @@ public class Message {
     private Instant updatedAt;
     @Basic
     @Column(name = "created_by")
-    @CreatedBy
     private UUID createdBy;
     @Basic
     @Column(name = "updated_by")
-    @LastModifiedBy
     private UUID updatedBy;
 
     public UUID getId() {
