@@ -1,6 +1,7 @@
 // const url = 'http://localhost:5000/gendox/api/v1/'  // Local Environment
 //const url= 'https://gendox.ctrlspace.dev/gendox/api/v1/' // Production Environment (AWS)
-const url= 'http://localhost:8080/gendox/api/v1/' // Development Environment (Hetzner)
+// const url= 'http://localhost:8080/gendox/api/v1/' // Local Environment
+const url = 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/' // Development Environment (Hetzner)
 
 export default {
     getProfile: url + 'profile',
@@ -28,4 +29,10 @@ export default {
 
     getThreadMessagesByCriteria: (threadId, page = 0, size = 10, sort = 'createdAt,desc') =>
         `${url}threads/${threadId}/messages?page=${page}&size=${size}&sort=${sort}`,
+
+    documentSections: (organizationId, projectId, documentId) =>
+        `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}/sections`,
+
+    uploadDocument: (organizationId, projectId) =>
+        `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,
 }
