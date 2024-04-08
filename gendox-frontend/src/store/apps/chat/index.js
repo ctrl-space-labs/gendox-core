@@ -11,9 +11,10 @@ import apiRequests from "../../../configs/apiRequest";
 import authConfig from "src/configs/auth";
 
 
+
+
 // ** Fetch Chats & Contacts
 export const fetchChatsContacts = createAsyncThunk('appChat/fetchChatsContacts', async () => {
-
 
     const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
     const projectsByOrgResponse = await axios.get(apiRequests.getProjectsByOrganization('c83a1c61-4c79-4c49-8b3e-249e8c40a39f'), {
@@ -41,10 +42,8 @@ export const fetchChatsContacts = createAsyncThunk('appChat/fetchChatsContacts',
     const contacts = projectsByOrgResponse.data.content.map(project => chatConverters.projectToContact(project))
 
     const chatEntries = threadsResponse.data.content.map(thread => chatConverters.gendoxThreadToChatEntry(thread, contacts))
+    chatEntries.sort((a, b) => new Date(b.chat.lastMessage.time) - new Date(a.chat.lastMessage.time))
 
-
-    console.log("fetchChatsContacts contacts: ", contacts)
-    console.log("fetchChatsContacts chatEntries: ", chatEntries)
     return {
         chatsContacts: chatEntries,
         contacts: contacts,
@@ -52,53 +51,31 @@ export const fetchChatsContacts = createAsyncThunk('appChat/fetchChatsContacts',
 })
 
 // ** Select Chat
-export const selectChat = createAsyncThunk('appChat/selectChat', async (id, {dispatch, getState}) => {
-
+export const selectChat = createAsyncThunk('appChat/selectChat', async ({ id, keepChatContent = false }, {dispatch, getState}) => {
     const state = getState()
 
-    let contacts = state.chat.contacts
-    const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
-    const messagesResponse = await axios.get(apiRequests.getThreadMessagesByCriteria(id, 0, 100), {
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer ' + storedToken
-        }
-    })
+    let thread = state.chat.chats.find(thread => thread.id === id);
+    let newThread = !thread;
 
-    const chatMessages = messagesResponse.data.content.map(message => chatConverters.gendoxMessageToChatMessage(message))
+    if (newThread) {
+        return _createNewThreadChat(state, id);
+    }
 
-    // sort messages by time ascending
-    chatMessages.sort((a, b) => new Date(a.time) - new Date(b.time))
+    let selectedChat = await _fetchExistingChatWithMessages(id, dispatch, thread);
+
     dispatch(fetchChatsContacts())
 
-    let contact = contacts.find(contact => chatMessages.some(message => message.senderId === contact.userId));
-
-
-    // return response.data
-    return {
-        "contact": {...contact, threadId: id},
-        "chat": {
-            // "lastMessage": {
-            //     "message": "Hello, how are you?",
-            //     "time": "2022-03-01T10:30:00Z"
-            // },
-            // "unseenMsgs": 2,
-            "chat": chatMessages
-
-        }
-    }
+    return selectedChat
 })
 
 // ** Send Msg
 export const sendMsg = createAsyncThunk('appChat/sendMsg', async (obj, {dispatch, getState}) => {
 
     const state = getState();
+    let storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
 
     //chat append string
     dispatch(addMessage({senderId: state.chat.userProfile.id, text: obj.message, time: new Date()}))
-
-
-    let storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
 
     console.log("sendMsg chat2: ", obj.chat)
     const response = await axios.post(apiRequests.postCompletionModel(obj.contact.projectId), {
@@ -111,16 +88,16 @@ export const sendMsg = createAsyncThunk('appChat/sendMsg', async (obj, {dispatch
         }
     });
 
-    dispatch(addMessage({
-        senderId: obj.contact.userId,
-        text: response.data.message.value,
-        time: new Date()
-    }))
+    dispatch(addMessage({senderId: obj.contact.userId, text: response.data.message.value, time: new Date()}))
 
-    // if (obj.contact) {
-    //     await dispatch(selectChat(obj.contact.id))
-    // }
-    // await dispatch(fetchChatsContacts())
+    // if threadId is null, then it is a new thread
+    let newThread = !obj.contact.threadId;
+    if (newThread) {
+        let newThreadId = response.data.message.threadId;
+        await dispatch(fetchChatsContacts()) // await to load the new thread before selecting it
+        //select the newly created thread, keep the chat content instead of showing the message loader
+        dispatch(selectChat({id: newThreadId, keepChatContent: true}))
+    }
 
     return response.data
 })
@@ -171,7 +148,10 @@ export const appChatSlice = createSlice({
             console.log("fetchChatsContacts rejected: ", action)
         })
         builder.addCase(selectChat.pending, (state, action) => {
-            state.selectedChat = null
+            console.log("selectChat pending: ", action)
+            if (!action.meta.arg.keepChatContent) {
+                state.selectedChat = null;
+            }
         })
         builder.addCase(selectChat.fulfilled, (state, action) => {
             state.selectedChat = action.payload
@@ -185,3 +165,43 @@ export const appChatSlice = createSlice({
 export const {removeSelectedChat, setUserProfile} = appChatSlice.actions
 
 export default appChatSlice.reducer
+
+
+function _createNewThreadChat(state, id) {
+    let contact = state.chat.contacts.find(contact => contact.id === id)
+    let newThreadChat = {
+        "contact": {...contact, id: null, threadId: null},
+        "chat": {
+            "chat": []
+        }
+    }
+    return newThreadChat;
+}
+
+async function _fetchExistingChatWithMessages(id, dispatch, thread) {
+    const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
+    const messagesResponse = await axios.get(apiRequests.getThreadMessagesByCriteria(id, 0, 100), {
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + storedToken
+        }
+    })
+
+    const chatMessages = messagesResponse.data.content.map(message => chatConverters.gendoxMessageToChatMessage(message))
+
+    // sort messages by time ascending
+    chatMessages.sort((a, b) => new Date(a.time) - new Date(b.time))
+
+    let selectedChat = {
+        "contact": {...thread, threadId: id},
+        "chat": {
+            // "lastMessage": {
+            //     "message": "Hello, how are you?",
+            //     "time": "2022-03-01T10:30:00Z"
+            // },
+            // "unseenMsgs": 2,
+            "chat": chatMessages
+        }
+    }
+    return selectedChat;
+}

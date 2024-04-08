@@ -80,7 +80,7 @@ const SidebarLeft = props => {
     const router = useRouter()
 
     const handleChatClick = (type, id) => {
-        dispatch(selectChat(id))
+        dispatch(selectChat({id: id}))
         setActive({type, id})
         if (!mdAbove) {
             handleLeftSidebarToggle()
@@ -90,8 +90,8 @@ const SidebarLeft = props => {
         console.log("Store", store)
         if (store && store.chats) {
             if (active !== null) {
-                if (active.type === 'contact' && active.id === store.chats[0].id) {
-                    setActive({type: 'chat', id: active.id})
+                if (active.type === 'contact' && store?.selectedChat?.contact?.id != null) {
+                    setActive({type: 'chat', id: store.selectedChat.contact.id})
                 }
             }
         }

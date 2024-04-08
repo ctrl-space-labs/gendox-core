@@ -27,12 +27,15 @@
  * @typedef {Object} ChatContact
  * @property {string} id - The contact's ID - Gendox Agent Id.
  * @property {string} userId - The user ID for this Gendox Agent.
+ * @property {string} agentId - The agent ID.
+ * @property {string} projectId - The project ID.
  * @property {string} fullName - The contact's full name.
  * @property {string} role - The contact's role.
  * @property {string} about - The contact's about section.
  * @property {string|null} avatar - The contact's avatar.
  * @property {string} status - The contact's status.
  * @property {Chat?} chat - The chat details. This property is optional.*
+ * @property {string?} threadId - The ID of the thread. This property is optional.*
  */
 
 /**

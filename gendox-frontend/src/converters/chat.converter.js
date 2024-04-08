@@ -53,12 +53,9 @@ const gendoxThreadToChatEntry = (thread, contacts) => {
     let contact = contacts.find(contact => thread.chatThreadMembers.some(member => member.userId === contact.userId));
 
         return {
+            ...contact,
             id: thread.id,
-            fullName: contact.fullName,
-            role: contact.role,
-            about: contact.about,
-            avatar: contact.avatar,
-            status: contact.status,
+            threadId: thread.id,
             chat: {
                 lastMessage: {
                     message: 'A message',
