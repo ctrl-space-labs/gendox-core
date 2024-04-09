@@ -9,7 +9,7 @@ import axios from 'axios'
 import {uid} from "chart.js/helpers";
 import apiRequests from "../../../configs/apiRequest";
 import authConfig from "src/configs/auth";
-
+import projectService from "src/gendox-sdk/projectService";
 
 
 
@@ -17,12 +17,7 @@ import authConfig from "src/configs/auth";
 export const fetchChatsContacts = createAsyncThunk('appChat/fetchChatsContacts', async () => {
 
     const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
-    const projectsByOrgResponse = await axios.get(apiRequests.getProjectsByOrganization('c83a1c61-4c79-4c49-8b3e-249e8c40a39f'), {
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer ' + storedToken
-        }
-    })
+    const projectsByOrgResponse = await projectService.getProjectsByOrganization('c83a1c61-4c79-4c49-8b3e-249e8c40a39f', storedToken)
 
     //TODO remove this hardcoded projects
     let hardcodedProjects = ['0c154e6e-04b3-492a-94bf-61b8c5ad1644','5ffbc620-c246-49ca-b7c7-7df0728f8d32','4fd12adf-763b-4d17-a72b-df9f71b50e0d','32c78481-510d-4d11-8269-4469c63a4be9','2ae17bf3-333f-40ca-8840-f3736b9b324c','1bc3b6d9-2d24-471c-9ef2-de9376d6fa12','25e20a08-1019-4118-a0d7-e68fd812d766']
