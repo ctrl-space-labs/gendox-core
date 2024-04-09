@@ -3,6 +3,10 @@
 // const url= 'http://localhost:8080/gendox/api/v1/' // Local Environment
 const url = 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/' // Development Environment (Hetzner)
 
+
+
+
+
 export default {
     getProfile: url + 'profile',
 
@@ -33,6 +37,11 @@ export default {
     documentSections: (organizationId, projectId, documentId) =>
         `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}/sections`,
 
+
     uploadDocument: (organizationId, projectId) =>
-        `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,
+        `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,  
+
+    triggerJobs: (organizationId, projectId) =>
+      `${url}organizations/${organizationId}/projects/${projectId}/splitting/training`,
+
 }
