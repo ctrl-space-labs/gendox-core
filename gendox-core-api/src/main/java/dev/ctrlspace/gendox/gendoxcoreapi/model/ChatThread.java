@@ -1,40 +1,34 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-
+import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "message", schema = "gendox_core")
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder(toBuilder = true)
-public class Message {
-//    @GeneratedValue(strategy = GenerationType.IDENTITY)
+@Table(name = "chat_thread", schema = "gendox_core")
+public class ChatThread {
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id")
     private UUID id;
     @Basic
-    @Column(name = "value")
-    private String value;
+    @Column(name = "name")
+    private String name;
     @Basic
     @Column(name = "project_id")
     private UUID projectId;
-    @Basic
-    @Column(name = "thread_id")
-    private UUID threadId;
     @Basic
     @Column(name = "created_at")
     @CreatedDate
@@ -45,10 +39,16 @@ public class Message {
     private Instant updatedAt;
     @Basic
     @Column(name = "created_by")
+    @CreatedBy
     private UUID createdBy;
     @Basic
     @Column(name = "updated_by")
+    @LastModifiedBy
     private UUID updatedBy;
+
+    @JsonManagedReference(value = "chatThread")
+    @OneToMany(mappedBy = "chatThread")
+    private List<ChatThreadMember> chatThreadMembers = new ArrayList<>();
 
     public UUID getId() {
         return id;
@@ -58,12 +58,20 @@ public class Message {
         this.id = id;
     }
 
-    public String getValue() {
-        return value;
+    public String getName() {
+        return name;
     }
 
-    public void setValue(String value) {
-        this.value = value;
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public UUID getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(UUID projectId) {
+        this.projectId = projectId;
     }
 
     public Instant getCreatedAt() {
@@ -98,31 +106,25 @@ public class Message {
         this.updatedBy = updatedBy;
     }
 
-    public UUID getThreadId() {
-        return threadId;
+
+    public List<ChatThreadMember> getChatThreadMembers() {
+        return chatThreadMembers;
     }
 
-    public void setThreadId(UUID threadId) {
-        this.threadId = threadId;
-    }
-
-    public UUID getProjectId() {
-        return projectId;
-    }
-
-    public void setProjectId(UUID projectId) {
-        this.projectId = projectId;
+    public void setChatThreadMembers(List<ChatThreadMember> chatThreadMembers) {
+        this.chatThreadMembers = chatThreadMembers;
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Message message)) return false;
-        return Objects.equals(getId(), message.getId()) && Objects.equals(getValue(), message.getValue()) && Objects.equals(getProjectId(), message.getProjectId()) && Objects.equals(getThreadId(), message.getThreadId()) && Objects.equals(getCreatedAt(), message.getCreatedAt()) && Objects.equals(getUpdatedAt(), message.getUpdatedAt()) && Objects.equals(getCreatedBy(), message.getCreatedBy()) && Objects.equals(getUpdatedBy(), message.getUpdatedBy());
+        if (o == null || getClass() != o.getClass()) return false;
+        ChatThread that = (ChatThread) o;
+        return Objects.equals(id, that.id) && Objects.equals(name, that.name) && Objects.equals(projectId, that.projectId) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(chatThreadMembers, that.chatThreadMembers);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getValue(), getProjectId(), getThreadId(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy());
+        return Objects.hash(id, name, projectId, createdAt, updatedAt, createdBy, updatedBy, chatThreadMembers);
     }
 }

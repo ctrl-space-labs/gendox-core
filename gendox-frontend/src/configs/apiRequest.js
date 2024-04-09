@@ -1,29 +1,47 @@
-const url = 'http://localhost:5000/gendox/api/v1/'  // Local Environment
+// const url = 'http://localhost:5000/gendox/api/v1/'  // Local Environment
 //const url= 'https://gendox.ctrlspace.dev/gendox/api/v1/' // Production Environment (AWS)
-// const url= 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/' // Development Environment (Hetzner)
+// const url= 'http://localhost:8080/gendox/api/v1/' // Local Environment
+const url = 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/' // Development Environment (Hetzner)
+
+
+
 
 
 export default {
-  getProfile: url + 'profile',
+    getProfile: url + 'profile',
 
-  getProjectById: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}`,
+    getProjectById: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}`,
+    getProjectsByOrganization: (organizationId) => `${url}organizations/${organizationId}/projects`,
 
-  getDocumentsByProject: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/documents`,
+    getDocumentsByProject: (organizationId, projectId) =>
+        `${url}organizations/${organizationId}/projects/${projectId}/documents`,
 
-  getUsersInOrganizationByOrgId: (organizationId, projectId) => `${url}organizations/${organizationId}/users`,
+    getUsersInOrganizationByOrgId: (organizationId, projectId) => `${url}organizations/${organizationId}/users`,
 
-  getAllProjectMembers: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/users`,
+    getAllProjectMembers: (organizationId, projectId) =>
+        `${url}organizations/${organizationId}/projects/${projectId}/users`,
 
-  updateProject: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}`,
+    updateProject: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}`,
 
-  documentSections:  (organizationId, projectId, documentId) =>
-  `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}/sections`,
 
-  uploadDocument: (organizationId, projectId) =>
-  `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,
+    postCompletionModel: (projectId) => `${url}messages/semantic-completion?projectId=${projectId}`,
 
-  triggerJobs: (organizationId, projectId) =>
-  `${url}organizations/${organizationId}/projects/${projectId}/splitting/training`,
+    getThreadsByCriteria: (projectIdIn) => {
+        const projectIds = projectIdIn.join(',');
+        return `${url}threads?projectIdIn=${projectIds}`;
+    },
+
+    getThreadMessagesByCriteria: (threadId, page = 0, size = 10, sort = 'createdAt,desc') =>
+        `${url}threads/${threadId}/messages?page=${page}&size=${size}&sort=${sort}`,
+
+    documentSections: (organizationId, projectId, documentId) =>
+        `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}/sections`,
+
+
+    uploadDocument: (organizationId, projectId) =>
+        `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,  
+
+    triggerJobs: (organizationId, projectId) =>
+      `${url}organizations/${organizationId}/projects/${projectId}/splitting/training`,
+
 }
