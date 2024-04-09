@@ -3,7 +3,6 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.s3BucketIntegra
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,13 +22,10 @@ public class SQSService {
     private Integer visibilityTimeout;
 
     private AmazonSQS amazonSQS;
-    private MessageRepository messageRepository;
 
     @Autowired
-    public SQSService(AmazonSQS amazonSQS,
-                      MessageRepository messageRepository) {
+    public SQSService(AmazonSQS amazonSQS) {
         this.amazonSQS = amazonSQS;
-        this.messageRepository = messageRepository;
     }
 
     /**

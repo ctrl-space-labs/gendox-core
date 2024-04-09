@@ -37,6 +37,7 @@ public class CompletionService {
     private TypeService typeService;
     private List<AiModelService> aiModelServices;
     private TrainingService trainingService;
+    private ProjectAgentService projectAgentService;
 
     private AiModelUtils aiModelUtils;
     @Autowired
@@ -49,6 +50,7 @@ public class CompletionService {
                              List<AiModelService> aiModelServices,
                              DocumentInstanceSectionRepository documentInstanceSectionRepository,
                              AiModelUtils aiModelUtils,
+                             ProjectAgentService projectAgentService,
                              TrainingService trainingService) {
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
@@ -58,6 +60,7 @@ public class CompletionService {
         this.trainingService = trainingService;
         this.typeService = typeService;
         this.aiModelUtils = aiModelUtils;
+        this.projectAgentService = projectAgentService;
 
     }
 
@@ -110,7 +113,14 @@ public class CompletionService {
         // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)
         AuditLogs auditLogs = embeddingService.createAuditLogs(projectId, (long) completionResponse.getUsage().getTotalTokens(), completionType);
         Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
+
         // TODO save the above response message
+        ProjectAgent agent = projectAgentService.getAgentByProjectId(projectId);
+        completionResponseMessage.setProjectId(projectId);
+        completionResponseMessage.setThreadId(message.getThreadId());
+        completionResponseMessage.setCreatedBy(agent.getUserId());
+        completionResponseMessage.setUpdatedBy(agent.getUserId());
+        completionResponseMessage = embeddingService.createMessage(completionResponseMessage);
 
         return completionResponseMessage;
 
