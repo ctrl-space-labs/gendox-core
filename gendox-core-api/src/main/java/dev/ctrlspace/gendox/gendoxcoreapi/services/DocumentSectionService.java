@@ -138,10 +138,14 @@ public class DocumentSectionService {
         section.setDocumentInstance(documentInstance);
 
         String fileName = getFileNameFromUrl(section.getDocumentInstance().getRemoteUrl());
-        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeServiceAdapter.getDocumentUniqueIdentifier(
-                fileContent.getBytes(), fileName);
+//        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeServiceAdapter.getDocumentUniqueIdentifier(
+//                fileContent.getBytes(), fileName);
 
-        section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getIscc());
+        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
+                fileContent.getBytes(), fileName);
+//
+//        section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getIscc());
+        section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
 
         // take moderation check
         OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
