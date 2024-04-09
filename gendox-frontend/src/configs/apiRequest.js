@@ -1,6 +1,6 @@
-// const url = 'http://localhost:5000/gendox/api/v1/'  // Local Environment
+const url = 'http://localhost:5000/gendox/api/v1/'  // Local Environment
 //const url= 'https://gendox.ctrlspace.dev/gendox/api/v1/' // Production Environment (AWS)
-const url= 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/' // Development Environment (Hetzner)
+// const url= 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/' // Development Environment (Hetzner)
 
 
 export default {
@@ -23,4 +23,7 @@ export default {
 
   uploadDocument: (organizationId, projectId) =>
   `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,
+
+  triggerJobs: (organizationId, projectId) =>
+  `${url}organizations/${organizationId}/projects/${projectId}/splitting/training`,
 }
