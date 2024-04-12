@@ -3,15 +3,28 @@
 // ** To use core palette, uncomment the below import
 // import corePalette from 'src/@core/theme/palette'
 // ** To use mode (light/dark/semi-dark), skin(default/bordered), direction(ltr/rtl), etc. for conditional styles, uncomment below line
-// import { useSettings } from 'src/@core/hooks/useSettings'
+import { useSettings } from 'src/@core/hooks/useSettings'
 const UserThemeOptions = () => {
   // ** To use mode (light/dark/semi-dark), skin(default/bordered), direction(ltr/rtl), etc. for conditional styles, uncomment below line
-  // const { settings } = useSettings()
+  const { settings } = useSettings()
   // ** To use mode (light/dark/semi-dark), skin(default/bordered), direction(ltr/rtl), etc. for conditional styles, uncomment below line
-  // const { mode, skin } = settings
+  const { mode, skin } = settings
   // ** To use core palette, uncomment the below line
   // const palette = corePalette(mode as PaletteMode, skin)
   return {
+    components: {
+      MuiCssBaseline: {
+        styleOverrides: {
+          '.layout-content-wrapper': {
+            backgroundImage: mode === 'light' ? `url('/images/gendox-background-light.webp')` : `url('/images/gendox-background-dark.webp')`,
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: 'cover',
+            backgroundPosition: 'right top',
+            backgroundAttachment: 'fixed',
+          },
+        },
+      },
+    }
     /*
     palette:{
       primary: {
