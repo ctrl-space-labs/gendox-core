@@ -6,14 +6,13 @@ const ButtonComponent = ({ text, onClick }) => {
   return (
     <Button
       size='large'
-      variant='contained'
+      variant='outlined'
+      color='primary'
       sx={{
-        borderRadius: '20px',
-        borderColor: '#01989F',
+        borderRadius: '8px',
         textTransform: 'none',
         '&:hover': {
-          bgcolor: 'transparent',
-          color: '#01989F'
+          bgcolor: 'transparent'
         }
       }}
       startIcon={<Icon icon="mdi:plus" />}

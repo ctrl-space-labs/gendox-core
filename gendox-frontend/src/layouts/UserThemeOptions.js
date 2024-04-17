@@ -24,6 +24,13 @@ const UserThemeOptions = () => {
           },
         },
       },
+    },
+    palette: {
+      primary: {
+        light: '#0CD4A5',
+        main: '#08B68D',
+        dark: '#15A784'
+      },
     }
     /*
     palette:{

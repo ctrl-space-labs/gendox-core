@@ -16,10 +16,10 @@ const ProjectButtons = props => {
   const handleCloseUploader = () => setShowUploader(false);
 
   const buttons = [
-    { text: "New Document" },
-    { text: "Upload Document", action: handleOpenUploader },
-    { text: "New Template" },
-    { text: "Upload Template" }
+    { text: "NEW DOCUMENT" },
+    { text: "UPLOAD DOCUMENT", action: handleOpenUploader },
+    { text: "NEW TEMPLATE" },
+    { text: "UPLOAD TEMPLATE" }
   ];
 
 
