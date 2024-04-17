@@ -17,10 +17,6 @@ public class OrganizationDid {
     @Column(name = "id", nullable = false)
     private UUID id;
 
-    @Basic
-    @Column(name = "organization_id", nullable = false)
-    private UUID organizationId;
-
 
     @JsonManagedReference(value = "organization")
     @ManyToOne
@@ -35,6 +31,14 @@ public class OrganizationDid {
     private String did;
 
     @Basic
+    @Column(name = "web_domain")
+    private String webDomain;
+
+    @Basic
+    @Column(name = "web_path")
+    private String webPath;
+
+    @Basic
     @Column(name = "created_at")
     private Instant createdAt;
 
@@ -46,9 +50,6 @@ public class OrganizationDid {
 
     public void setId(UUID id) {this.id = id;}
 
-    public UUID getOrganizationId() {return organizationId;}
-
-    public void setOrganizationId(UUID organizationId) {this.organizationId = organizationId;}
 
     public Organization getOrganization() {return organization;}
 
@@ -61,6 +62,14 @@ public class OrganizationDid {
     public String getDid() {return did;}
 
     public void setDid(String did) {this.did = did;}
+
+    public String getWebDomain() {return webDomain;}
+
+    public void setWebDomain(String webDomain) {this.webDomain = webDomain;}
+
+    public String getWebPath() {return webPath;}
+
+    public void setWebPath(String webPath) {this.webPath = webPath;}
 
     public Instant getCreatedAt() {return createdAt;}
 
@@ -76,11 +85,11 @@ public class OrganizationDid {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         OrganizationDid that = (OrganizationDid) o;
-        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(organization, that.organization) && Objects.equals(keyId, that.keyId) && Objects.equals(did, that.did) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt);
+        return Objects.equals(id, that.id) && Objects.equals(organization, that.organization) && Objects.equals(keyId, that.keyId) && Objects.equals(did, that.did) && Objects.equals(webDomain, that.webDomain) && Objects.equals(webPath, that.webPath) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organizationId, organization, keyId, did, createdAt, updatedAt);
+        return Objects.hash(id, organization, keyId, did, webDomain, webPath, createdAt, updatedAt);
     }
 }
