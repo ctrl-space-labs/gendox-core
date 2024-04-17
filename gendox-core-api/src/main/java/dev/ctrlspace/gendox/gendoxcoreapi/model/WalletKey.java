@@ -1,10 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import id.walt.crypto.keys.LocalKey;
 import jakarta.persistence.*;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
@@ -24,10 +23,15 @@ public class WalletKey {
     private UUID organizationId;
 
     @Basic
-    @Column(name = "private_key", nullable = false, length = -1)
-    private String privateKey;
+    @Column(name = "local_key", nullable = false)
+    private LocalKey localKey;
 
-
+    @Basic
+    @Column(name = "jwk_key_format", nullable = false)
+    private String jwkKeyFormat;
+    @Basic
+    @Column(name = "character_length", nullable = false)
+    private Integer characterLength;
     @ManyToOne
     @JoinColumn(name = "key_type_id", referencedColumnName = "id", nullable = false)
     private Type keyTypeId;
@@ -57,13 +61,20 @@ public class WalletKey {
 
     public void setOrganizationId(UUID organizationId) {this.organizationId = organizationId;}
 
-    public String getPrivateKey() {return privateKey;}
+    public LocalKey getLocalKey() {return localKey;}
 
-    public void setPrivateKey(String privateKey) {this.privateKey = privateKey;}
+    public void setLocalKey(LocalKey localKey) {this.localKey = localKey;}
 
+    public String getJwkKeyFormat() {return jwkKeyFormat;}
+
+    public void setJwkKeyFormat(String jwkKeyFormat) {this.jwkKeyFormat = jwkKeyFormat;}
     public Type getKeyTypeId() {return keyTypeId;}
 
     public void setKeyTypeId(Type keyTypeId) {this.keyTypeId = keyTypeId;}
+
+    public Integer getCharacterLength() {return characterLength;}
+
+    public void setCharacterLength(Integer characterLength) {this.characterLength = characterLength;}
 
     public Instant getCreatedAt() {return createdAt;}
 
@@ -87,11 +98,11 @@ public class WalletKey {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         WalletKey walletKey = (WalletKey) o;
-        return Objects.equals(id, walletKey.id) && Objects.equals(organizationId, walletKey.organizationId) && Objects.equals(privateKey, walletKey.privateKey) && Objects.equals(keyTypeId, walletKey.keyTypeId) && Objects.equals(createdAt, walletKey.createdAt) && Objects.equals(updatedAt, walletKey.updatedAt) && Objects.equals(createdBy, walletKey.createdBy) && Objects.equals(updatedBy, walletKey.updatedBy);
+        return Objects.equals(id, walletKey.id) && Objects.equals(organizationId, walletKey.organizationId) && Objects.equals(localKey, walletKey.localKey) && Objects.equals(jwkKeyFormat, walletKey.jwkKeyFormat) && Objects.equals(characterLength, walletKey.characterLength) && Objects.equals(keyTypeId, walletKey.keyTypeId) && Objects.equals(createdAt, walletKey.createdAt) && Objects.equals(updatedAt, walletKey.updatedAt) && Objects.equals(createdBy, walletKey.createdBy) && Objects.equals(updatedBy, walletKey.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organizationId, privateKey, keyTypeId, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, organizationId, localKey, jwkKeyFormat, characterLength, keyTypeId, createdAt, updatedAt, createdBy, updatedBy);
     }
 }
