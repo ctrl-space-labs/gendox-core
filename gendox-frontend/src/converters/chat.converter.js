@@ -75,6 +75,7 @@ const gendoxMessageToChatMessage = (message) => {
     return {
         senderId: message.createdBy,
         message: message.value,
+        sections: message.messageSections,
         time: message.createdAt,
         feedback: {
             isSent: true,

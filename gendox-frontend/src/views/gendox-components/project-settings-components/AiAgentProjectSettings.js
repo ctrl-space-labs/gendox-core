@@ -22,6 +22,8 @@ import Checkbox from '@mui/material/Checkbox'
 // ** Demo Components Imports
 import CustomRadioIcons from 'src/@core/components/custom-radio/icons'
 
+import projectService from 'src/gendox-sdk/projectService'
+
 const AgentPrivate = [
   {
     value: 'public',
@@ -75,14 +77,17 @@ const AiAgentProjectSettings = ({ project }) => {
       projectAgent: project.projectAgent,
     }
 
-    console.log("json------->", updatedProjectPayload)
+    const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName);
+    if (!storedToken) {
+      console.error('No token found');      
+      return;
+    }
+    
 
     try {
-      const response = await axios.put(apiRequests.updateProject(organizationId, projectId),updatedProjectPayload, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      setOpenSnackbar(true)
-      console.log('Update successful', response)
+      const response = await projectService.getProjectById(organizationId, projectId, updatedProjectPayload, storedToken);
+      console.log('Update successful', response);      
+      setOpenSnackbar(true)      
     } catch (error) {
       console.error('Failed to update project', error)
     }

@@ -32,6 +32,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -239,6 +240,24 @@ public class ProjectController {
         return projectMember;
 
 
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_ADD_PROJECT_MEMBERS', 'getRequestedProjectIdFromPathVariable')")
+    @PostMapping(value = "organizations/{organizationId}/projects/{projectId}/members")
+    @Operation(summary = "Add members to a project",
+            description = "Add new members to a project by specifying both the project ID and users ID. " +
+                    "The user must have the necessary permissions to add members to this project. " +
+                    "This method handles the addition of a user as a member to a project and returns the created ProjectMember entity.")
+    public List<ProjectMember> addMembersToProject(@PathVariable UUID projectId, @RequestBody List<UUID> userIds) throws Exception {
+
+        List<ProjectMember> projectMembers = new ArrayList<>();
+        GendoxAuthenticationToken authentication = (GendoxAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+
+        for(UUID userId: userIds) {
+            ProjectMember projectMember = projectMemberService.createProjectMember(userId, projectId);
+            projectMembers.add(projectMember);
+        }
+        return projectMembers;
     }
 
 

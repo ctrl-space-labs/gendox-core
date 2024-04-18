@@ -1,105 +1,63 @@
-// ** MUI Imports
-import Grid from '@mui/material/Grid'
-
-// ** Icon Imports
-import Icon from 'src/@core/components/icon'
-
-// ** project settings components import
-import ProjectSettingsCard from 'src/views/gendox-components/project-settings-components/ProjectSettingsCard'
-
-// ** Axios
-import axios from 'axios'
-
-// ** Custom Component Import
-import CardStatisticsVertical from 'src/@core/components/card-statistics/card-stats-vertical'
-
-// ** Styled Component Import
-import ApexChartWrapper from 'src/@core/styles/libs/react-apexcharts'
-
-// ** Redux
-import { useSelector, useDispatch } from 'react-redux'
-
-// ** Config
-import authConfig from 'src/configs/auth'
-import apiRequests from 'src/configs/apiRequest'
-
-// ** Demo Components Imports
-import { useAuth } from 'src/hooks/useAuth'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/router'
-
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { useSelector, useDispatch } from 'react-redux';
+import ProjectSettingsCard from 'src/views/gendox-components/project-settings-components/ProjectSettingsCard';
+import { useAuth } from 'src/hooks/useAuth';
+import authConfig from 'src/configs/auth';
+import { fetchOrganizationById } from "src/store/apps/activeOrganization/activeOrganization";
+import { fetchProjectById } from "src/store/apps/activeProject/activeProject";
 
 
 const ProjectSettings = () => {
   const auth = useAuth()
-  const routerFromUrl = useRouter()
-  const { query } = routerFromUrl
-  const { organizationId, projectId } = query
   const dispatch = useDispatch();
+  const router = useRouter();
+  const { organizationId, projectId } = router.query; 
 
-  // const project = useSelector((state) => state.activeProject.activeProject); // Adjust selector according to your state structure
-
-  // useEffect(() => {
-  //   if (projectId && organizationId) {
-  //     dispatch(fetchActiveProject({ organizationId, projectId }));
-  //   }
-  // }, [dispatch, organizationId, projectId]);
-
-
-  const [project, setProject] = useState()
-  const [activeProject, setActiveProject] = useState([])
+  const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName);
+    if (!storedToken) {
+      console.error('No token found');      
+      return;
+    }
 
   useEffect(() => {
-    const initProject = async () => {
+    if (organizationId && projectId && storedToken) {
+      dispatch(fetchOrganizationById({ organizationId, storedToken}))
+      dispatch(fetchProjectById({ organizationId, projectId, storedToken }));
+    }
+  }, [organizationId, projectId, storedToken]);
+  
+  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchProject = async () => {
       if (projectId && organizationId) {
+        setLoading(true);
         const activeOrganization = auth.user.organizations.find(org => org.id === organizationId)
         const selectedProject = activeOrganization.projects.find(proj => proj.id === projectId)
-
-        const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
-
-        if (storedToken) {
-
-          await axios
-            .get(apiRequests.getProjectById(activeOrganization.id, selectedProject.id), {
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: 'Bearer ' + storedToken
-              },
-                 params: {
-                projectId: selectedProject.id
-              }
-            })
-            .then(async response => {
-              // auth.setLoading(false)
-              setProject(response.data)
-              console.log("!!!!!!!!!!!!!", response.data)
-              setActiveProject(selectedProject)
-            })
-            .catch(() => {
-              auth.setLoading(false)
-              if (authConfig.onTokenExpiration === 'logout' && !router.pathname.includes('login')) {
-                router.replace('/login')
-              }
-            })
-        } else {
-          // auth.setLoading(false)
+        
+        if (!selectedProject) {
+          setError('Project not found in the selected organization.');
+          setLoading(false);
+          return;
+        } 
+        else {
+          setLoading(false);
         }
+        
       }
-    }
-    initProject()
-  }, [auth, organizationId, projectId, routerFromUrl, activeProject])
+    };
+    fetchProject();
+  }, [auth, organizationId, projectId, router]);
 
 
-
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
-    <>
-      {project ? (
-        <ProjectSettingsCard project={project} />
-      ) : (
-        <div>Loading...</div>  // Or any other loading state representation
-      )}
-    </>
+    <ProjectSettingsCard />
   );
 
 }

@@ -2,14 +2,10 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ChatThreadCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.MessageCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ChatThreadPredicates;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.MessagePredicates;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,15 +21,13 @@ public class ChatThreadService {
     private ChatThreadRepository chatThreadRepository;
     private ChatThreadMemberRepository chatThreadMemberRepository;
 
-    private MessageRepository messageRepository;
+
 
     @Autowired
     public ChatThreadService(ChatThreadRepository chatThreadRepository,
-                             ChatThreadMemberRepository chatThreadMemberRepository,
-                             MessageRepository messageRepository) {
+                             ChatThreadMemberRepository chatThreadMemberRepository) {
         this.chatThreadRepository = chatThreadRepository;
         this.chatThreadMemberRepository = chatThreadMemberRepository;
-        this.messageRepository = messageRepository;
     }
 
     // getOptionalChatThreadById
@@ -65,10 +59,4 @@ public class ChatThreadService {
         return chatThread;
     }
 
-
-    public Page<Message> getAllMessagesByCriteria(MessageCriteria criteria, Pageable pageable) {
-
-        return messageRepository.findAll(MessagePredicates.build(criteria), pageable);
-
-    }
 }

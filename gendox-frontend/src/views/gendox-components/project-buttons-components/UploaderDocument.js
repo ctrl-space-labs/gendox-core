@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-import apiRequest from 'src/configs/apiRequest';
 import authConfig from 'src/configs/auth'
 import { useDropzone } from 'react-dropzone';
 import { useRouter } from 'next/router';
 import { Box, Button, List, ListItem, Typography } from '@mui/material';
-import Icon from 'src/@core/components/icon';
+import documentService from "src/gendox-sdk/documentService";
+
 
 const UploaderDocument = ({ closeUploader }) => {
   const [files, setFiles] = useState([]);
@@ -25,16 +24,7 @@ const UploaderDocument = ({ closeUploader }) => {
   
 
   try {
-    const response = await axios.post(
-      apiRequest.uploadDocument(organizationId, projectId),
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${storedToken}`,
-        },
-      },
-    );
+    const response = await documentService.uploadDocument(organizationId, projectId, formData ,storedToken)
     console.log('Upload successful', response.data);
     setFiles([]);
     closeUploader(); 

@@ -1,5 +1,6 @@
 // ** React Imports
 import { useState } from 'react'
+import { useSelector, useDispatch } from 'react-redux';
 
 // ** MUI Imports
 import Tab from '@mui/material/Tab'
@@ -21,7 +22,9 @@ import AiAgentProjectSettings from 'src/views/gendox-components/project-settings
 
 
 
-const ProjectSettingsCard = ({ project }) => {
+const ProjectSettingsCard = () => {
+  const project = useSelector((state) => state.activeProject.activeProject); 
+  
   // ** State for tabs
   const [value, setValue] = useState('general')
 
