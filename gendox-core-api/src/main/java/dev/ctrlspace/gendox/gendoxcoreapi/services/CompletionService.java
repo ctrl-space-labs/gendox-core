@@ -38,6 +38,7 @@ public class CompletionService {
     private List<AiModelService> aiModelServices;
     private TrainingService trainingService;
     private ProjectAgentService projectAgentService;
+    private MessageService messageService;
 
     private AiModelUtils aiModelUtils;
     @Autowired
@@ -51,7 +52,8 @@ public class CompletionService {
                              DocumentInstanceSectionRepository documentInstanceSectionRepository,
                              AiModelUtils aiModelUtils,
                              ProjectAgentService projectAgentService,
-                             TrainingService trainingService) {
+                             TrainingService trainingService,
+                             MessageService messageService) {
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
         this.embeddingService = embeddingService;
@@ -61,7 +63,7 @@ public class CompletionService {
         this.typeService = typeService;
         this.aiModelUtils = aiModelUtils;
         this.projectAgentService = projectAgentService;
-
+        this.messageService = messageService;
     }
 
     private CompletionResponse getCompletionForMessages(List<Message> messages, String agentRole, String aiModel,
@@ -120,7 +122,7 @@ public class CompletionService {
         completionResponseMessage.setThreadId(message.getThreadId());
         completionResponseMessage.setCreatedBy(agent.getUserId());
         completionResponseMessage.setUpdatedBy(agent.getUserId());
-        completionResponseMessage = embeddingService.createMessage(completionResponseMessage);
+        completionResponseMessage = messageService.createMessage(completionResponseMessage);
 
         return completionResponseMessage;
 
