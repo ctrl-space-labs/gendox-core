@@ -37,7 +37,7 @@ public class OrganizationDidController {
     @GetMapping("organizations/{organizationId}/dids/{didId}")
     @Operation(summary = "Get organization did by ID",
             description = "Retrieve organization dids details by its unique ID.")
-    public OrganizationDid getOrganizationDidById( @PathVariable UUID didId) throws GendoxException {
+    public OrganizationDid getOrganizationDidById(@PathVariable UUID didId) throws GendoxException {
         return organizationDidService.getOrganizationDidById(didId);
     }
 
@@ -57,36 +57,22 @@ public class OrganizationDidController {
     }
 
 
-    @PostMapping(value = "organizations/{organizationId}/dids", consumes = "application/json")
-    @Operation(summary = "Create organization did",
-            description = "Create a new organization did based on the provided details")
-    public OrganizationDid createOrganizationDid(@Valid OrganizationDidDTO organizationDidDTO) throws GendoxException {
+//    @PostMapping(value = "organizations/{organizationId}/dids", consumes = "application/json")
+//    @Operation(summary = "Create organization did",
+//            description = "Create a new organization did based on the provided details")
+//    public OrganizationDid createOrganizationDid(@Valid OrganizationDidDTO organizationDidDTO) throws GendoxException {
+//
+//        if (organizationDidDTO.getId() != null) {
+//            throw new GendoxException("ORG_DID_ID_MUST_BE_NULL", "DID id is not null", HttpStatus.BAD_REQUEST);
+//        }
+//
+//        OrganizationDid organizationDid = organizationDidConverter.toEntity(organizationDidDTO);
+//        organizationDid = organizationDidService.createOrganizationDid(organizationDid);
+//
+//
+//        return organizationDid;
+//    }
 
-        if (organizationDidDTO.getId() != null) {
-            throw new GendoxException("ORG_DID_ID_MUST_BE_NULL", "DID id is not null", HttpStatus.BAD_REQUEST);
-        }
-
-        OrganizationDid organizationDid = organizationDidConverter.toEntity(organizationDidDTO);
-        organizationDid = organizationDidService.createOrganizationDid(organizationDid);
-
-
-        return organizationDid;
-    }
-
-    @PutMapping("organizations/{organizationId}/dids/{didId}")
-    @Operation(summary = "Update organization did",
-            description = "Update an existing organization did based on the provided details")
-    public OrganizationDid updateOrganizationDid(@PathVariable UUID didId, @RequestBody  OrganizationDidDTO organizationDidDTO) throws GendoxException {
-
-        OrganizationDid organizationDid = organizationDidConverter.toEntity(organizationDidDTO);
-        organizationDid.setId(didId);
-        if (!organizationDid.equals(organizationDid.getId())) {
-            throw new GendoxException("DID's_ID_MISMATCH", "DID's ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
-        }
-        organizationDid = organizationDidService.updateOrganizationDid(organizationDid);
-
-        return organizationDid;
-    }
 
     @DeleteMapping("organizations/{organizationId}/dids/{didId}")
     @Operation(summary = "Delete organization did",
@@ -104,8 +90,21 @@ public class OrganizationDidController {
     }
 
 
+    @PostMapping(value = "organizations/{organizationId}/dids-web", consumes = "application/json")
+    @Operation(summary = "Create organization web did",
+            description = "Create a new organization web did based on the provided details")
+    public OrganizationDid createOrganizationWebDid(@RequestBody OrganizationDidDTO organizationDidDTO) throws GendoxException {
+
+        if (organizationDidDTO.getId() != null) {
+            throw new GendoxException("ORG_DID_ID_MUST_BE_NULL", "DID id is not null", HttpStatus.BAD_REQUEST);
+        }
+
+        OrganizationDid organizationDid = organizationDidConverter.toEntity(organizationDidDTO);
+        organizationDid = organizationDidService.createOrganizationWebDid(organizationDid);
+
+        return organizationDid;
 
 
-
+    }
 
 }

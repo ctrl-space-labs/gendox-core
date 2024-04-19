@@ -9,6 +9,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationDidRepository
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationDidPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.WalletKeyPredicates;
 import dev.ctrlspace.provenai.ssi.issuer.DidIssuer;
+import dev.ctrlspace.provenai.ssi.issuer.KeyCreation;
+import id.walt.crypto.keys.KeyType;
+import id.walt.crypto.keys.LocalKey;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,14 +27,14 @@ public class OrganizationDidService {
     private OrganizationDidRepository organizationDidRepository;
 
     private DidIssuer didIssuer;
+    private KeyCreation keyCreation;
 
     private WalletKeyService walletKeyService;
 
+    @Autowired
     public OrganizationDidService(OrganizationDidRepository organizationDidRepository,
-                                  DidIssuer didIssuer,
                                   WalletKeyService walletKeyService) {
         this.organizationDidRepository = organizationDidRepository;
-        this.didIssuer = didIssuer;
         this.walletKeyService = walletKeyService;
     }
 
@@ -53,12 +57,6 @@ public class OrganizationDidService {
     }
 
 
-    public OrganizationDid updateOrganizationDid(OrganizationDid organizationDid) throws GendoxException {
-
-        organizationDid = organizationDidRepository.save(organizationDid);
-
-        return organizationDid;
-    }
 
     public void deleteOrganizationDid(UUID id) throws GendoxException {
         organizationDidRepository.deleteById(id);
@@ -66,23 +64,44 @@ public class OrganizationDidService {
 
     }
 
-    public OrganizationDid createOrganizationDid(OrganizationDid organizationDid) throws GendoxException {
+    public OrganizationDid createOrganizationWebDid(OrganizationDid organizationDid) throws GendoxException {
 
-        if (organizationDid.getWebDomain() != null && organizationDid.getWebPath() != null) {
-            organizationDid.setDid(String.valueOf(didIssuer.createDidFromWeb(organizationDid.getWebDomain(), organizationDid.getWebPath()
-                    , walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()))));
-        } else if (organizationDid.getWebDomain() == null && organizationDid.getWebPath() == null) {
-
-            organizationDid.setDid(String.valueOf(didIssuer.createDidFromKey(walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()),
-                    walletKeyService.getWalletKeybyId(organizationDid.getKeyId()).getLocalKey())));
-
-        } else {
-            // Error if only one of domain or path is null
+        // Check if both web domain and path are provided
+        if (organizationDid.getWebDomain() == null || organizationDid.getWebPath() == null) {
             throw new GendoxException("INVALID_WEB_DID", "Both domain and path must be provided for web DIDs", HttpStatus.BAD_REQUEST);
         }
-        organizationDid = organizationDidRepository.save(organizationDid);
-        return organizationDid;
+
+        DidIssuer didIssuer = new DidIssuer();
+
+        // Create the web DID
+        organizationDid.setDid(String.valueOf(didIssuer.createDidFromWeb(
+                organizationDid.getWebDomain(),
+                organizationDid.getWebPath(),
+                walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId())
+        )));
+        return organizationDidRepository.save(organizationDid);
     }
+
+//
+//        public OrganizationDid createOrganizationDid(OrganizationDid organizationDid) throws GendoxException {
+//        WalletKey walletKey = walletKeyService.getWalletKeybyId(organizationDid.getKeyId());
+//          KeyType keyType = walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId());
+//        LocalKey localKey = keyCreation.generateKey(keyType,walletKey.getCharacterLength());
+//        if (organizationDid.getWebDomain() != null && organizationDid.getWebPath() != null) {
+//            organizationDid.setDid(String.valueOf(didIssuer.createDidFromWeb(organizationDid.getWebDomain(), organizationDid.getWebPath()
+//                    , walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()))));
+//        } else if (organizationDid.getWebDomain() == null && organizationDid.getWebPath() == null) {
+//
+//            organizationDid.setDid(String.valueOf(didIssuer.createDidFromKey(walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()),
+//                    walletKeyService.getWalletKeybyId(organizationDid.getKeyId()).getPublicKey()));
+//
+//        } else {
+//            // Error if only one of domain or path is null
+//            throw new GendoxException("INVALID_WEB_DID", "Both domain and path must be provided for web DIDs", HttpStatus.BAD_REQUEST);
+//        }
+//        organizationDid = organizationDidRepository.save(organizationDid);
+//        return organizationDid;
+//    }
 
 
     public String exportOrganizationDid(UUID id) throws GendoxException {

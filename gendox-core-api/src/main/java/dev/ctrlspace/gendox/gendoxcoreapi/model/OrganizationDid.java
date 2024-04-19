@@ -18,12 +18,12 @@ public class OrganizationDid {
     private UUID id;
 
 
-    @JsonManagedReference(value = "organization")
-    @ManyToOne
-    @JoinColumn(name = "organization_id", referencedColumnName = "id", nullable = false)
-    private Organization organization;
     @Basic
-    @Column(name = "key_id", nullable = false)
+    @Column(name = "organization_id", nullable = false)
+    private UUID organizationId;
+
+    @Basic
+    @Column(name = "key_id")
     private UUID keyId;
 
     @Basic
@@ -50,10 +50,9 @@ public class OrganizationDid {
 
     public void setId(UUID id) {this.id = id;}
 
+    public UUID getOrganizationId() {return organizationId;}
 
-    public Organization getOrganization() {return organization;}
-
-    public void setOrganization(Organization organization) {this.organization = organization;}
+    public void setOrganizationId(UUID organizationId) {this.organizationId = organizationId;}
 
     public UUID getKeyId() {return keyId;}
 
@@ -85,11 +84,11 @@ public class OrganizationDid {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         OrganizationDid that = (OrganizationDid) o;
-        return Objects.equals(id, that.id) && Objects.equals(organization, that.organization) && Objects.equals(keyId, that.keyId) && Objects.equals(did, that.did) && Objects.equals(webDomain, that.webDomain) && Objects.equals(webPath, that.webPath) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt);
+        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(keyId, that.keyId) && Objects.equals(did, that.did) && Objects.equals(webDomain, that.webDomain) && Objects.equals(webPath, that.webPath) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organization, keyId, did, webDomain, webPath, createdAt, updatedAt);
+        return Objects.hash(id, organizationId, keyId, did, webDomain, webPath, createdAt, updatedAt);
     }
 }

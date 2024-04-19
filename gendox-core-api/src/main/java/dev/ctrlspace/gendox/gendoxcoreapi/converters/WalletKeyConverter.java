@@ -1,24 +1,29 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.WalletKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WalletKeyDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class WalletKeyConverter implements GendoxConverter<WalletKey, WalletKeyDTO> {
 
+    @Autowired
+    private TypeService typeService;
 
     @Override
-    public WalletKeyDTO toDTO(WalletKey walletKey) {
+    public WalletKeyDTO toDTO(WalletKey walletKey) throws JsonProcessingException {
         WalletKeyDTO walletKeyDTO = new WalletKeyDTO();
 
 
         walletKeyDTO.setId(walletKey.getId());
-        walletKeyDTO.setLocalKey(walletKey.getLocalKey());
+        walletKeyDTO.setPublicKey(walletKey.getPublicKey());
         walletKeyDTO.setOrganizationId(walletKey.getOrganizationId());
-        walletKeyDTO.setKeyTypeId(walletKey.getKeyTypeId());
+        walletKeyDTO.setKeyType(walletKey.getKeyType());
         walletKeyDTO.setCharacterLength(walletKey.getCharacterLength());
-        walletKeyDTO.setJwkKeyFormat(walletKey.getJwkKeyFormat());
         walletKeyDTO.setCreatedAt(walletKey.getCreatedAt());
         walletKeyDTO.setUpdatedAt(walletKey.getUpdatedAt());
         walletKeyDTO.setCreatedBy(walletKey.getCreatedBy());
@@ -29,15 +34,14 @@ public class WalletKeyConverter implements GendoxConverter<WalletKey, WalletKeyD
     }
 
     @Override
-    public WalletKey toEntity(WalletKeyDTO walletKeyDTO) {
+    public WalletKey toEntity(WalletKeyDTO walletKeyDTO) throws GendoxException {
         WalletKey walletKey = new WalletKey();
 
         walletKey.setId(walletKeyDTO.getId());
-        walletKey.setLocalKey(walletKeyDTO.getLocalKey());
+        walletKey.setPublicKey(walletKeyDTO.getPublicKey());
         walletKey.setOrganizationId(walletKeyDTO.getOrganizationId());
-        walletKey.setKeyTypeId(walletKeyDTO.getKeyTypeId());
+        walletKey.setKeyType(typeService.getKeyTypeByName(walletKeyDTO.getKeyType().getName()));
         walletKey.setCharacterLength(walletKeyDTO.getCharacterLength());
-        walletKey.setJwkKeyFormat(walletKeyDTO.getJwkKeyFormat());
         walletKey.setCreatedAt(walletKeyDTO.getCreatedAt());
         walletKey.setUpdatedAt(walletKeyDTO.getUpdatedAt());
         walletKey.setCreatedBy(walletKeyDTO.getCreatedBy());
