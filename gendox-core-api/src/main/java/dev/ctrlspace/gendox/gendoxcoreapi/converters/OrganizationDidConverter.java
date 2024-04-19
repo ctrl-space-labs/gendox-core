@@ -2,7 +2,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationDid;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDidDTO;
+import org.springframework.stereotype.Component;
 
+@Component
 public class OrganizationDidConverter implements GendoxConverter<OrganizationDid, OrganizationDidDTO> {
 
     @Override
@@ -10,7 +12,7 @@ public class OrganizationDidConverter implements GendoxConverter<OrganizationDid
         OrganizationDidDTO organizationDidDTO = new OrganizationDidDTO();
 
         organizationDidDTO.setId(organizationDid.getId());
-        organizationDidDTO.setOrganizationId(organizationDid.getOrganization().getId());
+        organizationDidDTO.setOrganizationId(organizationDid.getOrganizationId());
         organizationDidDTO.setKeyId(organizationDid.getKeyId());
         organizationDidDTO.setDid(organizationDid.getDid());
         organizationDidDTO.setWebDomain(organizationDid.getWebDomain());
@@ -28,6 +30,7 @@ public class OrganizationDidConverter implements GendoxConverter<OrganizationDid
         OrganizationDid organizationDid = new OrganizationDid();
 
         organizationDid.setId(organizationDidDTO.getId());
+        organizationDid.setOrganizationId(organizationDidDTO.getOrganizationId());
         organizationDid.setKeyId(organizationDidDTO.getKeyId());
         organizationDid.setDid(organizationDidDTO.getDid());
         organizationDid.setWebDomain(organizationDidDTO.getWebDomain());

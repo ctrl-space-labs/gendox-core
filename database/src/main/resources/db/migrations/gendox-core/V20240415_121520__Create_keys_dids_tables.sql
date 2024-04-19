@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS gendox_core.organization_dids
 (
     id         UUID                 DEFAULT uuid_generate_v4(),
     organization_id UUID        NOT NULL,
-    key_id     UUID        NULL,     --this is the id of the key in the wallet_keys table, if null, then ProvenAI will not be able to sign credentials on behalf of the user
+    key_id     UUID       ,     --this is the id of the key in the wallet_keys table, if null, then ProvenAI will not be able to sign credentials on behalf of the user
     did        TEXT        NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
