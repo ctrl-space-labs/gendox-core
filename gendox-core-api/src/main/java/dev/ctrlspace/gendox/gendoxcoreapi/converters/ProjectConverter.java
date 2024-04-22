@@ -33,6 +33,7 @@ public class ProjectConverter implements GendoxConverter<Project, ProjectDTO> {
         projectDTO.setCreatedAt(project.getCreatedAt());
         projectDTO.setUpdatedAt(project.getUpdatedAt());
         projectDTO.setAutoTraining(project.getAutoTraining());
+        projectDTO.setProjectAgent(projectAgentConverter.toDTO(project.getProjectAgent()));
 
 
         return projectDTO;
@@ -48,6 +49,7 @@ public class ProjectConverter implements GendoxConverter<Project, ProjectDTO> {
         project.setDescription(projectDTO.getDescription());
         project.setCreatedAt(projectDTO.getCreatedAt());
         project.setUpdatedAt(projectDTO.getUpdatedAt());
+        project.setProjectAgent(projectAgentConverter.toEntity(projectDTO.getProjectAgent()));
         project.setAutoTraining(projectDTO.getAutoTraining());
         if (projectDTO.getAutoTraining() == null) {
             project.setAutoTraining(false);}

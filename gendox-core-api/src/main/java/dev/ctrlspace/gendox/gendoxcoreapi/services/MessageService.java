@@ -107,13 +107,16 @@ public class MessageService {
             messageSection.setSectionId(documentInstanceSection.getId());
             messageSection.setMessage(message);
             messageSection.setDocumentId(documentInstanceSection.getDocumentInstance().getId());
-            messageSection = createMessageSection(messageSection);
             messageSections.add(messageSection);
         }
+
+        messageSections = messageSectionRepository.saveAll(messageSections);
 
 
         return messageSections;
     }
+
+
 
     public MessageSection createMessageSection(MessageSection messageSection) throws GendoxException {
         messageSection = messageSectionRepository.save(messageSection);

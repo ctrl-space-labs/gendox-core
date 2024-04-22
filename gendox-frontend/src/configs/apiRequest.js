@@ -56,4 +56,12 @@ export default {
 
   addProjectMember: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/members`,
+
+  getAiModelByCategory: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/ai-models/categories`,
+
+  getAiModels: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/ai-models`,    
+
+
 };

@@ -20,6 +20,8 @@ const ProjectSettings = () => {
       return;
     }
 
+    
+
   useEffect(() => {
     if (organizationId && projectId && storedToken) {
       dispatch(fetchOrganizationById({ organizationId, storedToken}))

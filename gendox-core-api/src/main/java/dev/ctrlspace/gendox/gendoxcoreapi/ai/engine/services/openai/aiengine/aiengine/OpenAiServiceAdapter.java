@@ -2,11 +2,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.ai
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35Moderation;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPTConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.EmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
@@ -27,7 +25,7 @@ import java.util.Set;
 
 @Service
 
-public class OpenAiServiceAdapter implements AiModelService {
+public class OpenAiServiceAdapter implements AiModelTypeService {
 
 
     private Set<String> supportedModels = Set.of("gpt-4", "gpt-3.5-turbo", "text-embedding-ada-002","openai-moderation");

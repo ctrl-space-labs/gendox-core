@@ -89,8 +89,49 @@ const addProjectMember = async (organizationId, projectId, userIds, storedToken)
     });
   };
 
+   /**
+ * get Ai models by categories 
+ * @param organizationId
+ * @param projectId
+ * @param aiModelCategories
+ * @param storedToken
+ * @returns {Promise<axios.AxiosResponse<Map<String, List<AiModel>}
+ */
+const getAiModelByCategory = async (organizationId, projectId, categories, storedToken) => {  
+  return axios.get(apiRequests.getAiModelByCategory(organizationId, projectId), 
+   {categories},
+  {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${storedToken}`
+    }
+  });
+};
 
-  addProjectMember
+   /**
+ * get Ai models 
+ * @param organizationId
+ * @param projectId 
+ * @param storedToken
+ * @returns {Promise<axios.AxiosResponse<Map<String, List<AiModel>}
+ */
+   const getAiModels = async (organizationId, projectId, storedToken) => {    
+    return axios.get(apiRequests.getAiModels(organizationId, projectId),     
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${storedToken}`
+      }
+    });
+  };
+
+
+
+
+
+
+
+  
 
 
 export default {
@@ -98,5 +139,7 @@ export default {
     getProjectById,
     getProjectMembers,
     updateProject,
-    addProjectMember
+    addProjectMember,
+    getAiModels,
+    getAiModelByCategory
 }
