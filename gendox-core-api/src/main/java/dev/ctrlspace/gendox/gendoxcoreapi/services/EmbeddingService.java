@@ -2,13 +2,12 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.BotRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.AiModelEmbeddingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,60 +29,39 @@ public class EmbeddingService {
     private EmbeddingRepository embeddingRepository;
     private AuditLogsRepository auditLogsRepository;
     private EmbeddingGroupRepository embeddingGroupRepository;
-    private MessageRepository messageRepository;
     private TypeService typeService;
-    private AiModelRepository aiModelRepository;
     private AiModelEmbeddingConverter aiModelEmbeddingConverter;
     private SecurityUtils securityUtils;
-    private ProjectAgentService projectAgentService;
     private DocumentSectionService documentSectionService;
-
-    private List<AiModelService> aiModelServices;
-
     private AiModelUtils aiModelUtils;
-
     private ProjectService projectService;
 
-    private ProjectAgentRepository projectAgentRepository;
 
-    private ChatThreadService chatThreadService;
 
-    @Autowired
-    private JWTUtils jwtUtils;
+
 
 
     @Autowired
     public EmbeddingService(
                             EmbeddingRepository embeddingRepository,
                             AuditLogsRepository auditLogsRepository,
-                            ChatThreadService chatThreadService,
                             EmbeddingGroupRepository embeddingGroupRepository,
-                            MessageRepository messageRepository,
                             TypeService typeService,
-                            AiModelRepository aiModelRepository,
                             SecurityUtils securityUtils,
-                            ProjectAgentService projectAgentService,
                             DocumentSectionService documentSectionService,
                             AiModelEmbeddingConverter aiModelEmbeddingConverter,
                             AiModelUtils aiModelUtils,
-                            List<AiModelService> aiModelServices,
-                            ProjectService projectService,
-                            ProjectAgentRepository projectAgentRepository) {
-        this.aiModelServices = aiModelServices;
+                            ProjectService projectService
+                           ) {
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
-        this.chatThreadService = chatThreadService;
         this.embeddingGroupRepository = embeddingGroupRepository;
-        this.messageRepository = messageRepository;
         this.typeService = typeService;
-        this.aiModelRepository = aiModelRepository;
         this.securityUtils = securityUtils;
-        this.projectAgentService = projectAgentService;
         this.documentSectionService = documentSectionService;
         this.aiModelUtils = aiModelUtils;
         this.projectService = projectService;
         this.aiModelEmbeddingConverter = aiModelEmbeddingConverter;
-        this.projectAgentRepository = projectAgentRepository;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -166,9 +144,9 @@ public class EmbeddingService {
     }
 
     public EmbeddingResponse getEmbeddingForMessage(BotRequest botRequest, String aiModel) throws GendoxException {
-        AiModelService aiModelService = aiModelUtils.getAiModelServiceImplementation(aiModel);
-         aiModelService = aiModelUtils.getAiModelServiceImplementation(aiModel);
-        EmbeddingResponse embeddingResponse = aiModelService.askEmbedding(botRequest, aiModel);
+        AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
+         aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
+        EmbeddingResponse embeddingResponse = aiModelTypeService.askEmbedding(botRequest, aiModel);
 
         return embeddingResponse;
     }
@@ -208,28 +186,7 @@ public class EmbeddingService {
         return embeddingGroup;
     }
 
-    public Message createMessage(Message message) {
 
-        message.setId(UUID.randomUUID());
-        ProjectAgent agent = null;
-        if (message.getThreadId() == null) {
-            agent = projectAgentService.getAgentByProjectId(message.getProjectId());
-            ChatThread chatThread = createThreadForMessage(securityUtils.getUserId(), agent.getUserId(), message.getProjectId());
-            message.setThreadId(chatThread.getId());
-        }
-
-
-        // @CreatedBy and @LastModifiedBy are not set in the Message entity
-        // because some messages will have custom values, so we need to control this manually
-        if (message.getCreatedBy() == null) {
-            message.setCreatedBy(securityUtils.getUserId());
-            message.setUpdatedBy(securityUtils.getUserId());
-        }
-
-        message = messageRepository.save(message);
-
-        return message;
-    }
 
     public void deleteEmbeddings(List<Embedding> embeddings) throws GendoxException {
         embeddingRepository.deleteAll(embeddings);
@@ -294,26 +251,5 @@ public class EmbeddingService {
     }
 
 
-    private ChatThread createThreadForMessage(UUID userId, UUID agentId, UUID projectId) {
 
-        // create the members
-        ChatThreadMember userMember = new ChatThreadMember();
-        userMember.setUserId(userId);
-        ChatThreadMember agentMember = new ChatThreadMember();
-        agentMember.setUserId(agentId);
-
-        // create the chat thread
-        ChatThread chatThread = new ChatThread();
-        chatThread.setName("Chat Thread");
-        chatThread.setProjectId(projectId);
-
-        // connect the objects
-        chatThread.getChatThreadMembers().add(userMember);
-        chatThread.getChatThreadMembers().add(agentMember);
-        userMember.setChatThread(chatThread);
-        agentMember.setChatThread(chatThread);
-
-        return chatThreadService.create(chatThread);
-
-    }
 }

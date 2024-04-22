@@ -11,7 +11,8 @@ import { styled, useTheme } from '@mui/material/styles'
 import { useRouter } from 'next/router'
 
 import { useDispatch } from 'react-redux'
-import { activeDocumentActions } from 'src/store/apps/activeDocument/activeDocument'
+import { fetchDocumentById } from "src/store/apps/activeDocument/activeDocument";
+import authConfig from 'src/configs/auth'
 
 // Styled Grid component
 const StyledGrid = styled(Grid)(({ theme }) => ({
@@ -63,8 +64,16 @@ const DocumentComponent = props => {
   const { organizationId, projectId } = router.query
 
   const handleNavigation = () => {
-    dispatch(activeDocumentActions.getActiveDocument(props.document))
-    const path = `/gendox/document-sections?organizationId=${organizationId}&projectId=${projectId}`
+    const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
+    dispatch(
+      fetchDocumentById({
+        organizationId: organizationId,
+        projectId: projectId,
+        documentId: props.document.id,
+        storedToken     
+      })
+    );
+    const path = `/gendox/document-instance?organizationId=${organizationId}&documentId=${props.document.id}`
     router.push(path)
   }
 
@@ -89,7 +98,7 @@ const DocumentComponent = props => {
 
             </Grid>
             <Grid>
-            <Button variant='contained' onClick={handleNavigation} loadingPosition='center'>View Sections</Button>
+            <Button variant='contained' onClick={handleNavigation} >View Sections</Button>
             </Grid>
         </Grid>
       </CardContent>

@@ -81,9 +81,9 @@ export const sendMsg = createAsyncThunk('appChat/sendMsg', async (obj, {dispatch
             'Content-Type': 'application/json',
             Authorization: 'Bearer ' + storedToken
         }
-    });
+    });   
 
-    dispatch(addMessage({senderId: obj.contact.userId, text: response.data.message.value, time: new Date()}))
+    dispatch(addMessage({senderId: obj.contact.userId, text: response.data.message.value, sections: response.data.message.messageSections ,time: new Date()}))
 
     // if threadId is null, then it is a new thread
     let newThread = !obj.contact.threadId;
@@ -100,9 +100,11 @@ export const sendMsg = createAsyncThunk('appChat/sendMsg', async (obj, {dispatch
 
 export const addMessage = createAsyncThunk('appChat/pushMessage', async (message, {dispatch, getState}) => {
 
+    
     return {
         "senderId": message.senderId,
         "message": message.text,
+        "sections": message.sections,
         "time": "2024-04-06T10:35:38.052581Z",
         "feedback": {
             "isSent": true,
@@ -180,9 +182,13 @@ async function _fetchExistingChatWithMessages(id, dispatch, thread) {
             'Content-Type': 'application/json',
             Authorization: 'Bearer ' + storedToken
         }
-    })
+        
+    })  
+    
 
     const chatMessages = messagesResponse.data.content.map(message => chatConverters.gendoxMessageToChatMessage(message))
+
+    
 
     // sort messages by time ascending
     chatMessages.sort((a, b) => new Date(a.time) - new Date(b.time))

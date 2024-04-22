@@ -114,6 +114,12 @@ public class ProjectAgentService {
         existingProjectAgent.setAgentBehavior(projectAgent.getAgentBehavior());
         existingProjectAgent.setPrivateAgent(projectAgent.getPrivateAgent());
         existingProjectAgent.setCreatedAt(projectAgent.getCreatedAt());
+        existingProjectAgent.setCreatedBy(projectAgent.getCreatedBy());
+        existingProjectAgent.setMaxToken(projectAgent.getMaxToken());
+        existingProjectAgent.setTemperature(projectAgent.getTemperature());
+        existingProjectAgent.setTopP(projectAgent.getTopP());
+        existingProjectAgent.setModerationCheck(projectAgent.getModerationCheck());
+        existingProjectAgent.setModerationModel(aiModelRepository.findByName(projectAgent.getModerationModel().getName()));
 
         existingProjectAgent = projectAgentRepository.save(existingProjectAgent);
         return existingProjectAgent;

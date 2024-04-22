@@ -11,13 +11,22 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         ProjectAgentDTO projectAgentDTO = new ProjectAgentDTO();
 
         projectAgentDTO.setId(projectAgent.getId()) ;
+        projectAgentDTO.setUserId(projectAgent.getUserId());
         projectAgentDTO.setSemanticSearchModel(projectAgent.getSemanticSearchModel());
         projectAgentDTO.setCompletionModel(projectAgent.getCompletionModel());
-        projectAgentDTO.setAgentName(projectAgentDTO.getAgentName());
-        projectAgentDTO.setAgentBehavior(projectAgentDTO.getAgentBehavior());
+        projectAgentDTO.setAgentName(projectAgent.getAgentName());
+        projectAgentDTO.setAgentBehavior(projectAgent.getAgentBehavior());
         projectAgentDTO.setPrivateAgent(projectAgent.getPrivateAgent());
         projectAgentDTO.setCreateAt(projectAgent.getCreatedAt());
         projectAgentDTO.setUpdateAt(projectAgent.getUpdatedAt());
+        projectAgentDTO.setCreatedBy(projectAgent.getCreatedBy());
+        projectAgentDTO.setUpdatedBy(projectAgent.getUpdatedBy());
+        projectAgentDTO.setDocumentSplitterType(projectAgent.getDocumentSplitterType());
+        projectAgentDTO.setMaxToken(projectAgent.getMaxToken());
+        projectAgentDTO.setTemperature(projectAgent.getTemperature());
+        projectAgentDTO.setTopP(projectAgent.getTopP());
+        projectAgentDTO.setModerationCheck(projectAgent.getModerationCheck());
+        projectAgentDTO.setModerationModel(projectAgent.getModerationModel());
 
 
         return projectAgentDTO;
@@ -28,6 +37,7 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         ProjectAgent projectAgent = new ProjectAgent();
 
         projectAgent.setId(projectAgentDTO.getId());
+        projectAgent.setUserId(projectAgentDTO.getUserId());
         projectAgent.setSemanticSearchModel(projectAgentDTO.getSemanticSearchModel());
         projectAgent.setCompletionModel(projectAgentDTO.getCompletionModel());
         projectAgent.setAgentName(projectAgentDTO.getAgentName());
@@ -35,6 +45,14 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         projectAgent.setPrivateAgent(projectAgentDTO.getPrivateAgent());
         projectAgent.setCreatedAt(projectAgentDTO.getCreateAt());
         projectAgent.setUpdatedAt(projectAgentDTO.getUpdateAt());
+        projectAgent.setCreatedBy(projectAgentDTO.getCreatedBy());
+        projectAgent.setUpdatedBy(projectAgentDTO.getUpdatedBy());
+        projectAgent.setDocumentSplitterType(projectAgentDTO.getDocumentSplitterType());
+        projectAgent.setMaxToken(projectAgentDTO.getMaxToken());
+        projectAgent.setTemperature(projectAgentDTO.getTemperature());
+        projectAgent.setTopP(projectAgentDTO.getTopP());
+        projectAgent.setModerationCheck(projectAgentDTO.getModerationCheck());
+        projectAgent.setModerationModel(projectAgentDTO.getModerationModel());
 
         return projectAgent;
     }

@@ -7,10 +7,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TrainingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -32,17 +34,20 @@ public class EmbeddingsController {
     private EmbeddingService embeddingService;
     private TrainingService trainingService;
     private CompletionService completionService;
+    private MessageService messageService;
 
     @Autowired
     public EmbeddingsController(EmbeddingRepository embeddingRepository,
                                 EmbeddingService embeddingService,
                                 TrainingService trainingService,
-                                CompletionService completionService
+                                CompletionService completionService,
+                                MessageService messageService
     ) {
         this.embeddingRepository = embeddingRepository;
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
         this.completionService = completionService;
+        this.messageService = messageService;
     }
 
     @PostMapping("/embeddings")
@@ -63,6 +68,8 @@ public class EmbeddingsController {
 
         return embeddingResponse;
     }
+
+
 
 
     @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
@@ -104,7 +111,7 @@ public class EmbeddingsController {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
         }
 
-        message = embeddingService.createMessage(message);
+        message = messageService.createMessage(message);
 
         List<DocumentInstanceSection> instanceSections = new ArrayList<>();
         instanceSections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
@@ -124,11 +131,15 @@ public class EmbeddingsController {
 
 
         message.setProjectId(UUID.fromString(projectId));
-        message = embeddingService.createMessage(message);
+        message = messageService.createMessage(message);
 
         List<DocumentInstanceSection> instanceSections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
 
         Message completion = completionService.getCompletion(message, instanceSections, UUID.fromString(projectId));
+
+        List<MessageSection> messageSections = messageService.createMessageSections(instanceSections, completion);
+
+        completion = messageService.updateMessageWithSections(completion, messageSections);
 
         CompletionMessageDTO completionMessageDTO = CompletionMessageDTO.builder()
                 .message(completion)
@@ -139,6 +150,8 @@ public class EmbeddingsController {
 
         return completionMessageDTO;
     }
+
+
 
 
     @PostMapping("/messages/moderation")
