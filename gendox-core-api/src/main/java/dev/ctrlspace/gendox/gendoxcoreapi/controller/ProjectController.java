@@ -4,15 +4,13 @@ import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectMemberConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectMember;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectMemberDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectMemberCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectMemberService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
@@ -28,12 +26,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 public class ProjectController {
@@ -46,6 +41,7 @@ public class ProjectController {
     private ProjectAgentService projectAgentService;
     private ProjectAgent projectAgent;
     private AiModelRepository aiModelRepository;
+    private AiModelService aiModelService;
 
 
     @Autowired
@@ -55,7 +51,8 @@ public class ProjectController {
                              JWTUtils jwtUtils,
                              ProjectMemberConverter projectMemberConverter,
                              ProjectAgentService projectAgentService,
-                             AiModelRepository aiModelRepository) {
+                             AiModelRepository aiModelRepository,
+                             AiModelService aiModelService) {
         this.projectService = projectService;
         this.projectConverter = projectConverter;
         this.projectMemberService = projectMemberService;
@@ -63,6 +60,7 @@ public class ProjectController {
         this.projectMemberConverter = projectMemberConverter;
         this.projectAgentService = projectAgentService;
         this.aiModelRepository = aiModelRepository;
+        this.aiModelService = aiModelService;
     }
 
 
@@ -241,6 +239,22 @@ public class ProjectController {
 
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_ADD_PROJECT_MEMBERS', 'getRequestedProjectIdFromPathVariable')")
+    @PostMapping(value = "organizations/{organizationId}/projects/{projectId}/members")
+    @Operation(summary = "Add members to a project",
+            description = "Add new members to a project by specifying both the project ID and users ID. " +
+                    "The user must have the necessary permissions to add members to this project. " +
+                    "This method handles the addition of a user as a member to a project and returns the created ProjectMember entity.")
+    public List<ProjectMember> addMembersToProject(@PathVariable UUID projectId, @RequestBody List<UUID> userIds) throws Exception {
+
+        List<ProjectMember> projectMembers = new ArrayList<>();
+        GendoxAuthenticationToken authentication = (GendoxAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+
+        projectMembers = projectMemberService.createProjectMembers(projectId, userIds);
+
+        return projectMembers;
+    }
+
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_REMOVE_PROJECT_MEMBERS', 'getRequestedProjectIdFromPathVariable')")
     @DeleteMapping("organizations/{organizationId}/projects/{projectId}/users/{userId}")
@@ -252,7 +266,13 @@ public class ProjectController {
         projectMemberService.removeMemberFromProject(projectId, userId);
     }
 
+
+
+
+
 }
+
+
 
 
 

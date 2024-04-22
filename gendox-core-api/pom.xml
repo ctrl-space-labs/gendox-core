@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.0-M2</version>
+        <version>3.2.4</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>dev.ctrlspace.gendox</groupId>
@@ -93,6 +93,18 @@
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-jwt</artifactId>
             <version>1.1.1.RELEASE</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcprov-jdk15on</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- Explicitly add the newer Bouncy Castle version -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -260,32 +272,32 @@
         <!--        </dependency>-->
 
 
-        <!--        &lt;!&ndash; https://mvnrepository.com/artifact/io.awspring.cloud/spring-cloud-aws-core &ndash;&gt;-->
+        <!-- https://mvnrepository.com/artifact/io.awspring.cloud/spring-cloud-aws-core -->
         <dependency>
             <groupId>io.awspring.cloud</groupId>
             <artifactId>spring-cloud-aws-core</artifactId>
-            <version>2.4.4</version>
+            <version>3.1.1</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-s3 -->
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-s3</artifactId>
-            <version>1.12.568</version>
+            <version>1.12.701</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-admin-client -->
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-admin-client</artifactId>
-            <version>22.0.4</version>
+            <version>24.0.3</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-core -->
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-core</artifactId>
-            <version>22.0.4</version>
+            <version>24.0.3</version>
         </dependency>
 
 

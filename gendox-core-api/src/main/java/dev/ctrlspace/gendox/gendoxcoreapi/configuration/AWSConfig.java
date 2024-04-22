@@ -2,8 +2,8 @@ package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import io.awspring.cloud.core.io.s3.SimpleStorageProtocolResolver;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.aws.core.io.s3.SimpleStorageProtocolResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.DefaultResourceLoader;
