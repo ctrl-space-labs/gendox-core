@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectMemberCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectMemberRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectMemberPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -28,16 +30,19 @@ public class ProjectMemberService {
     private ProjectService projectService;
 
     private UserOrganizationService userOrganizationService;
+    private final ProjectRepository projectRepository;
 
     @Autowired
     public ProjectMemberService(ProjectMemberRepository projectMemberRepository,
                                 @Lazy UserService userService,
                                 @Lazy ProjectService projectService,
-                                UserOrganizationService userOrganizationService) {
+                                UserOrganizationService userOrganizationService,
+                                ProjectRepository projectRepository) {
         this.projectMemberRepository = projectMemberRepository;
         this.userService = userService;
         this.projectService = projectService;
         this.userOrganizationService = userOrganizationService;
+        this.projectRepository = projectRepository;
     }
 
     public List<ProjectMember> getAll(ProjectMemberCriteria criteria) throws GendoxException {
@@ -83,6 +88,29 @@ public class ProjectMemberService {
         projectMember.setProject(project);
 
         return this.createProjectMember(projectMember);
+
+    }
+
+    public List<ProjectMember> createProjectMembers(UUID projectId, List<UUID> userIds) throws GendoxException {
+
+        List<ProjectMember> projectMembers = new ArrayList<>();
+        Project project = projectService.getProjectById(projectId);
+
+
+        for (UUID userId : userIds) {
+            ProjectMember projectMember = new ProjectMember();
+            User user = userService.getById(userId);
+            projectMember.setUser(user);
+            projectMember.setProject(project);
+            projectMembers.add(projectMember);
+        }
+
+
+        if (!projectMembers.isEmpty()) {
+            projectMembers = projectMemberRepository.saveAll(projectMembers);
+        }
+
+        return projectMembers;
 
     }
 

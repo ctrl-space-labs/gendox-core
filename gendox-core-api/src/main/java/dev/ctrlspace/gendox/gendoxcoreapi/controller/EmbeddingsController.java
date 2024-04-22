@@ -70,6 +70,8 @@ public class EmbeddingsController {
     }
 
 
+
+
     @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
     @PostMapping("/embeddings/sections/{sectionId}")
     @Operation(summary = "Get section embedding",
@@ -148,6 +150,8 @@ public class EmbeddingsController {
 
         return completionMessageDTO;
     }
+
+
 
 
     @PostMapping("/messages/moderation")

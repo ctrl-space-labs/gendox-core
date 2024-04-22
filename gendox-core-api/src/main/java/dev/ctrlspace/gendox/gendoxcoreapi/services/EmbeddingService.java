@@ -2,13 +2,12 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.BotRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.AiModelEmbeddingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,9 +144,9 @@ public class EmbeddingService {
     }
 
     public EmbeddingResponse getEmbeddingForMessage(BotRequest botRequest, String aiModel) throws GendoxException {
-        AiModelService aiModelService = aiModelUtils.getAiModelServiceImplementation(aiModel);
-         aiModelService = aiModelUtils.getAiModelServiceImplementation(aiModel);
-        EmbeddingResponse embeddingResponse = aiModelService.askEmbedding(botRequest, aiModel);
+        AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
+         aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
+        EmbeddingResponse embeddingResponse = aiModelTypeService.askEmbedding(botRequest, aiModel);
 
         return embeddingResponse;
     }
