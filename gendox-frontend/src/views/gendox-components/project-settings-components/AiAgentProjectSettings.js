@@ -46,12 +46,11 @@ const AiAgentProjectSettings = () => {
 
   
 
-  // State for AI models
-  const [aiModels, setAiModels] = useState({
-    SEMANTIC_SEARCH_MODEL: [],
-    COMPLETION_MODEL: [],
-    MODERATION_MODEL: [],
-  });
+  
+  // State for AI models categorized
+  const [semanticModels, setSemanticModels] = useState([]);
+  const [completionModels, setCompletionModels] = useState([]);
+  const [moderationModels, setModerationModels] = useState([]);
 
   const [semanticSearchModel, setSemanticSearchModel] = useState(
     project.projectAgent.semanticSearchModel.name
@@ -121,7 +120,15 @@ const AiAgentProjectSettings = () => {
           projectId,
           storedToken
         );
-        setAiModels(aiModelsResponse.data);
+        
+        // Categorize AI models
+        const semantic = aiModelsResponse.data.filter(model => model.aiModelType.name === "SEMANTIC_SEARCH_MODEL");
+        const completion = aiModelsResponse.data.filter(model => model.aiModelType.name === "COMPLETION_MODEL");
+        const moderation = aiModelsResponse.data.filter(model => model.aiModelType.name === "MODERATION_MODEL");
+
+        setSemanticModels(semantic);
+        setCompletionModels(completion);
+        setModerationModels(moderation);
       } catch (error) {
         console.error("Failed to fetch AI models", error);
         setOpenSnackbar(true);
@@ -252,7 +259,7 @@ const AiAgentProjectSettings = () => {
                   labelId="semantic-search-model"
                   onChange={handleSemanticSearchModelChange}
                 >
-                  {aiModels.SEMANTIC_SEARCH_MODEL.map((model) => (
+                  {semanticModels.map((model) => (
                     <MenuItem key={model.id} value={model.name}>
                       {model.name}
                     </MenuItem>
@@ -271,7 +278,7 @@ const AiAgentProjectSettings = () => {
                   labelId="completion-model"
                   onChange={handleCompletionModelChange}
                 >
-                  {aiModels.COMPLETION_MODEL.map((model) => (
+                  {completionModels.map((model) => (
                     <MenuItem key={model.id} value={model.name}>
                       {model.name}
                     </MenuItem>
@@ -387,7 +394,7 @@ const AiAgentProjectSettings = () => {
                     labelId="moderation"
                     onChange={handleModerationModelChange}
                   >
-                    {aiModels.MODERATION_MODEL.map((model) => (
+                    {moderationModels.map((model) => (
                       <MenuItem key={model.id} value={model.name}>
                         {model.name}
                       </MenuItem>
