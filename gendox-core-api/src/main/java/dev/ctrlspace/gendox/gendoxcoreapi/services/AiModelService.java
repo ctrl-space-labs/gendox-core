@@ -15,59 +15,20 @@ import java.util.Map;
 public class AiModelService {
 
     private AiModelRepository aiModelRepository;
-    private TypeService typeService;
+
 
 
     @Autowired
-    public AiModelService(AiModelRepository aiModelRepository,
-                          TypeService typeService) {
+    public AiModelService(AiModelRepository aiModelRepository) {
         this.aiModelRepository = aiModelRepository;
-        this.typeService = typeService;
+
     }
 
     public List<AiModel> getAllAiModels() {
         return aiModelRepository.findAll();
     }
 
-    public Map<String, List<AiModel>> getAiModels() {
 
-            Map<String, List<AiModel>> aiModelByCategory = new HashMap<>();
-            List<String> categories = new ArrayList<>();
-            List<Type> types = typeService.getTypeCategories("AI_MODEL_TYPE");
-
-            for(Type type : types) {
-                categories.add(type.getName());
-            }
-
-            aiModelByCategory = getAiModelByCategory(categories);
-
-            return aiModelByCategory;
-
-    }
-
-
-    public Map<String, List<AiModel>> getAiModelByCategory(List<String> categories) {
-
-        Map<String, List<AiModel>> aiModelByCategory = new HashMap<>();
-
-        for(String category : categories) {
-            Type type = typeService.getAiModelTypeByName(category);
-            List<AiModel> aiModels = aiModelRepository.findByAiModelType(type);
-            aiModelByCategory.put(category, aiModels);
-        }
-
-        return aiModelByCategory;
-    }
-
-    public List<AiModel> getAiModelByType(List<String> categories) {
-         List<AiModel> aiModels = new ArrayList<>();
-
-            Type type = typeService.getAiModelTypeByName(categories.get(0));
-            aiModels = aiModelRepository.findByAiModelType(type);
-
-            return aiModels;
-
-    }
 
 
 }
