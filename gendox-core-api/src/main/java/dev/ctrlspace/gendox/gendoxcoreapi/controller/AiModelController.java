@@ -30,6 +30,15 @@ public class AiModelController {
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
     @GetMapping("organizations/{organizationId}/projects/{projectId}/ai-models")
+    @Operation(summary = "Get all ai-models by project ID",
+            description = "Retrieve all ai-models by project ID. The user must have the appropriate permissions to access this.")
+    public List<AiModel> getAllAiModels(@PathVariable UUID projectId) throws GendoxException {
+
+        return aiModelService.getAllAiModels();
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
+    @GetMapping("organizations/{organizationId}/projects/{projectId}/ai-models/categories")
     @Operation(summary = "Get ai-model by category type",
             description = "Retrieve the ai-model details by its unique ID. The user must have the appropriate permissions to access this.")
     public ResponseEntity<?> getAiModels(@PathVariable UUID projectId) throws GendoxException {
@@ -45,24 +54,13 @@ public class AiModelController {
 //    @GetMapping("organizations/{organizationId}/projects/{projectId}/ai-models/categories")
 //    @Operation(summary = "Get ai-model by category type",
 //            description = "Retrieve the ai-model details by its unique ID. The user must have the appropriate permissions to access this.")
-//    public Map<String, List<AiModel>> getAiModelByNames(@PathVariable UUID projectId, @RequestBody List<String> categories) throws GendoxException {
+//    public ResponseEntity<?> getAiModelByNames(@PathVariable UUID projectId, @RequestBody List<String> categories) throws GendoxException {
 //
 //        Map<String, List<AiModel>> aiModelByCategory = new HashMap<>();
 //        aiModelByCategory = aiModelService.getAiModelByCategory(categories);
 //
-//        return aiModelByCategory;
+//        return ResponseEntity.ok().body(aiModelByCategory);
 //    }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
-    @GetMapping("organizations/{organizationId}/projects/{projectId}/ai-models/categories")
-    @Operation(summary = "Get ai-model by category type",
-            description = "Retrieve the ai-model details by its unique ID. The user must have the appropriate permissions to access this.")
-    public ResponseEntity<?> getAiModelByNames(@PathVariable UUID projectId, @RequestBody List<String> categories) throws GendoxException {
 
-        Map<String, List<AiModel>> aiModelByCategory = new HashMap<>();
-        aiModelByCategory = aiModelService.getAiModelByCategory(categories);
-
-//        return aiModelByCategory;
-        return ResponseEntity.ok().body(aiModelByCategory);
-    }
 }

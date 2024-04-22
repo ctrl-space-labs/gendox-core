@@ -25,6 +25,10 @@ public class AiModelService {
         this.typeService = typeService;
     }
 
+    public List<AiModel> getAllAiModels() {
+        return aiModelRepository.findAll();
+    }
+
     public Map<String, List<AiModel>> getAiModels() {
 
             Map<String, List<AiModel>> aiModelByCategory = new HashMap<>();
