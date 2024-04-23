@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS gendox_core.users
     FOREIGN KEY (global_role_id) REFERENCES gendox_core.types (id)
 );
 
-comment on column gendox_core.users.global_role_id is 'This is the global role, indicating Simple User, Super Admin etc.';
+--comment on column gendox_core.users.global_role_id is 'This is the global role, indicating Simple User, Super Admin etc.';
 
 
 -- Bigserial creates a sequence and a default value for the column
