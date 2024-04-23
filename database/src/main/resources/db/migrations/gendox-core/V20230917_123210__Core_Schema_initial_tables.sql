@@ -53,11 +53,35 @@ CREATE TABLE IF NOT EXISTS gendox_core.embedding_group
 
 
 ALTER TABLE IF EXISTS gendox_core.ai_models
-DROP COLUMN IF EXISTS api_key,
-    ADD COLUMN IF NOT EXISTS created_by uuid,
-    ADD COLUMN IF NOT EXISTS updated_by uuid,
-    ADD FOREIGN KEY (created_by) REFERENCES gendox_core.users (id),
-    ADD FOREIGN KEY (updated_by) REFERENCES gendox_core.users (id);
+DROP COLUMN IF EXISTS api_key;
+
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'gendox_core'
+        AND table_name = 'ai_models'
+        AND column_name = 'created_by'
+    ) THEN
+        ALTER TABLE gendox_core.ai_models
+        ADD COLUMN created_by UUID,
+        ADD FOREIGN KEY (created_by) REFERENCES gendox_core.users (id);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'gendox_core'
+        AND table_name = 'ai_models'
+        AND column_name = 'updated_by'
+    ) THEN
+        ALTER TABLE gendox_core.ai_models
+        ADD COLUMN updated_by UUID,
+        ADD FOREIGN KEY (updated_by) REFERENCES gendox_core.users (id);
+    END IF;
+END $$;
 
 -- Rename the column name to modelName
 DO $$
@@ -87,9 +111,29 @@ END IF;
 END $$;
 
 
+DO $$
+BEGIN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'gendox_core'
+            AND table_name = 'audit_logs'
+            AND column_name = 'created_by'
+        ) THEN
+            ALTER TABLE gendox_core.audit_logs
+            ADD COLUMN created_by UUID,
+            ADD FOREIGN KEY (created_by) REFERENCES gendox_core.users (id);
+        END IF;
 
-ALTER TABLE IF EXISTS gendox_core.audit_logs
-    ADD COLUMN IF NOT EXISTS created_by uuid,
-    ADD COLUMN IF NOT EXISTS updated_by uuid,
-    ADD FOREIGN KEY (created_by) REFERENCES gendox_core.users (id),
-    ADD FOREIGN KEY (updated_by) REFERENCES gendox_core.users (id);
+        IF NOT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'gendox_core'
+            AND table_name = 'audit_logs'
+            AND column_name = 'updated_by'
+        ) THEN
+            ALTER TABLE gendox_core.audit_logs
+            ADD COLUMN updated_by UUID,
+            ADD FOREIGN KEY (updated_by) REFERENCES gendox_core.users (id);
+        END IF;
+END $$;

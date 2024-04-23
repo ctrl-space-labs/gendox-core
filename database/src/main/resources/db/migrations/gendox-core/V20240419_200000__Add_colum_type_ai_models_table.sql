@@ -16,9 +16,22 @@ BEGIN
 END $$;
 
 -- Add column type to ai_models table
-ALTER TABLE gendox_core.ai_models
-    ADD COLUMN IF NOT EXISTS ai_model_type_id bigint,
-    ADD FOREIGN KEY (ai_model_type_id) REFERENCES gendox_core.types (id);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'gendox_core'
+        AND table_name = 'ai_models'
+        AND column_name = 'ai_model_type_id'
+    ) THEN
+        ALTER TABLE gendox_core.ai_models
+        ADD COLUMN ai_model_type_id bigint,
+        ADD FOREIGN KEY (ai_model_type_id) REFERENCES gendox_core.types (id);
+    END IF;
+END $$;
+
+
 
 
 
