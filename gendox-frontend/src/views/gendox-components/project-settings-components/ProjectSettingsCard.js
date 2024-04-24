@@ -23,7 +23,7 @@ import AiAgentProjectSettings from 'src/views/gendox-components/project-settings
 
 
 const ProjectSettingsCard = () => {
-  const project = useSelector((state) => state.activeProject.activeProject); 
+  const project = useSelector((state) => state.activeProject.projectDetails); 
   
   // ** State for tabs
   const [value, setValue] = useState('general')

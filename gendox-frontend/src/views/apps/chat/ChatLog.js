@@ -10,7 +10,7 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 
 import { useRouter } from "next/router";
-import { fetchProjectById } from "src/store/apps/activeProject/activeProject";
+import { fetchProject } from "src/store/apps/activeProject/activeProject";
 import { fetchDocumentById } from "src/store/apps/activeDocument/activeDocument";
 
 // ** Icon Imports
@@ -139,7 +139,7 @@ const ChatLog = (props) => {
     const path = `/gendox/document-instance?organizationId=${organizationId}&documentId=${documentId}`;
     const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
     dispatch(
-      fetchProjectById({
+      fetchProject({
         organizationId: organizationId,
         projectId: projectId,
         storedToken

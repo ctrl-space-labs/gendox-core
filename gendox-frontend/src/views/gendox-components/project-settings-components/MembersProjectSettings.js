@@ -191,7 +191,7 @@ const MembersProjectSettings = () => {
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
-  const project = useSelector((state) => state.activeProject.activeProject);
+  const project = useSelector((state) => state.activeProject.projectDetails);
   const { id: projectId, organizationId } = project;
 
   const [order, setOrder] = useState("asc");

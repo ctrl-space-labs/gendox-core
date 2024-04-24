@@ -78,6 +78,10 @@ const UserLayout = ({ children, contentHeightFixed }) => {
           )
         }
       }}
+      
+
+
+      
       {...(settings.layout === 'horizontal' && {
         horizontalLayoutProps: {
           navMenu: {
