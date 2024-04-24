@@ -14,7 +14,7 @@ import { Box, Menu, Badge, MenuItem, AvatarGroup, styled } from "@mui/material";
 import { useAuth } from "src/hooks/useAuth";
 import CustomAvatar from "src/@core/components/mui/avatar";
 import authConfig from "src/configs/auth";
-import { fetchProjectById } from "src/store/apps/activeProject/activeProject";
+import { fetchProject } from "src/store/apps/activeProject/activeProject";
 import { fetchOrganizationById } from "src/store/apps/activeOrganization/activeOrganization";
 
 const menuItemStyles = {
@@ -83,7 +83,7 @@ const OrganizationsDropdown = ({ settings }) => {
       localStorage.setItem(authConfig.selectedOrganizationId, organization.id);
       const newProjectId = organization.projects?.[0]?.id ?? null;
       dispatch(
-        fetchProjectById({
+        fetchProject({
           organizationId: organization.id,
           projectId: newProjectId,
           storedToken,

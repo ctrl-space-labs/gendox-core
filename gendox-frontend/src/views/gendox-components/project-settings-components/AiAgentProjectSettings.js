@@ -41,7 +41,7 @@ const AiAgentProjectSettings = () => {
     console.error("No token found");
     return;
   }
-  const project = useSelector((state) => state.activeProject.activeProject);
+  const project = useSelector((state) => state.activeProject.projectDetails);
   const { id: projectId, organizationId } = project;
 
   

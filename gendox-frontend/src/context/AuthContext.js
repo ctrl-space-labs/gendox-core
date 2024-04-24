@@ -6,7 +6,7 @@ import axios from "axios";
 import authConfig from "src/configs/auth";
 import { userDataActions } from "src/store/apps/userData/userData";
 import { fetchOrganizationById } from "src/store/apps/activeOrganization/activeOrganization";
-import { fetchProjectById } from "src/store/apps/activeProject/activeProject";
+import { fetchProject } from "src/store/apps/activeProject/activeProject";
 
 // ** Defaults
 const defaultProvider = {
@@ -95,7 +95,7 @@ const AuthProvider = ({ children }) => {
         );
         if (updatedActiveProject) {
           dispatch(
-            fetchProjectById({
+            fetchProject({
               organizationId: updatedActiveOrganization.id,
               projectId: updatedActiveProject.id,
               storedToken            
@@ -172,7 +172,7 @@ const AuthProvider = ({ children }) => {
               })
             );
             dispatch(
-              fetchProjectById({
+              fetchProject({
                 organizationId: userDataResponse.data.organizations[0],
                 projectId: userDataResponse.data.organizations[0].projects[0],
                 storedToken :response.data.access_token             
