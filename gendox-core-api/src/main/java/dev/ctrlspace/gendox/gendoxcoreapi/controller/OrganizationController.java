@@ -12,6 +12,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCr
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import id.walt.crypto.keys.LocalKey;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.slf4j.LoggerFactory;
@@ -71,6 +72,7 @@ public class OrganizationController {
     @Operation(summary = "Get organization by ID",
             description = "Retrieve an organization by its unique ID.")
     public Organization getOrganizationById(@PathVariable UUID organizationId, Authentication authentication) throws Exception {
+
 
         //run code to get the organization from the database
         Organization organization = organizationService.getById(organizationId);

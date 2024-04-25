@@ -10,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.Organizati
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.WalletKeyPredicates;
 import dev.ctrlspace.provenai.ssi.issuer.DidIssuer;
 import dev.ctrlspace.provenai.ssi.issuer.KeyCreation;
+import dev.ctrlspace.provenai.ssi.issuer.LocalKeyWrapper;
 import id.walt.crypto.keys.KeyType;
 import id.walt.crypto.keys.LocalKey;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +58,6 @@ public class OrganizationDidService {
     }
 
 
-
     public void deleteOrganizationDid(UUID id) throws GendoxException {
         organizationDidRepository.deleteById(id);
 
@@ -66,42 +66,64 @@ public class OrganizationDidService {
 
     public OrganizationDid createOrganizationWebDid(OrganizationDid organizationDid) throws GendoxException {
 
+
         // Check if both web domain and path are provided
         if (organizationDid.getWebDomain() == null || organizationDid.getWebPath() == null) {
             throw new GendoxException("INVALID_WEB_DID", "Both domain and path must be provided for web DIDs", HttpStatus.BAD_REQUEST);
         }
+        String jwk = walletKeyService.getPrivateJWKbyKeyId(organizationDid.getKeyId());
+        LocalKey localKey = new LocalKey(jwk);
 
         DidIssuer didIssuer = new DidIssuer();
 
         // Create the web DID
-        organizationDid.setDid(String.valueOf(didIssuer.createDidFromWeb(
+        organizationDid.setDid(String.valueOf(didIssuer.resolveWebDidToKey(walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()),
                 organizationDid.getWebDomain(),
                 organizationDid.getWebPath(),
-                walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId())
+                localKey
         )));
         return organizationDidRepository.save(organizationDid);
     }
 
-//
-//        public OrganizationDid createOrganizationDid(OrganizationDid organizationDid) throws GendoxException {
-//        WalletKey walletKey = walletKeyService.getWalletKeybyId(organizationDid.getKeyId());
-//          KeyType keyType = walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId());
-//        LocalKey localKey = keyCreation.generateKey(keyType,walletKey.getCharacterLength());
-//        if (organizationDid.getWebDomain() != null && organizationDid.getWebPath() != null) {
-//            organizationDid.setDid(String.valueOf(didIssuer.createDidFromWeb(organizationDid.getWebDomain(), organizationDid.getWebPath()
-//                    , walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()))));
-//        } else if (organizationDid.getWebDomain() == null && organizationDid.getWebPath() == null) {
-//
-//            organizationDid.setDid(String.valueOf(didIssuer.createDidFromKey(walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()),
-//                    walletKeyService.getWalletKeybyId(organizationDid.getKeyId()).getPublicKey()));
-//
-//        } else {
-//            // Error if only one of domain or path is null
-//            throw new GendoxException("INVALID_WEB_DID", "Both domain and path must be provided for web DIDs", HttpStatus.BAD_REQUEST);
-//        }
-//        organizationDid = organizationDidRepository.save(organizationDid);
-//        return organizationDid;
-//    }
+
+
+    public OrganizationDid createOrganizationKeyDid(OrganizationDid organizationDid) throws GendoxException {
+
+        // Create a new DID issuer
+        DidIssuer didIssuer = new DidIssuer();
+        String jwk = walletKeyService.getPrivateJWKbyKeyId(organizationDid.getKeyId());
+        LocalKey localKey = new LocalKey(jwk);
+
+        // Create a LocalKey object using the LocalKeyWrapper
+        LocalKeyWrapper localKeyWrapper = new LocalKeyWrapper();
+
+        organizationDid.setDid(String.valueOf(didIssuer.resolveKeyDidToKey(walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()),
+                false, (LocalKey) localKeyWrapper.exportJWK(localKey))));
+
+        return organizationDidRepository.save(organizationDid);
+    }
+
+
+    public OrganizationDid createOrganizationDid(OrganizationDid organizationDid) throws GendoxException {
+        // Get the key ID from the organizationDid
+
+        String jwk = walletKeyService.getPrivateJWKbyKeyId(organizationDid.getKeyId());
+        LocalKey localKey = new LocalKey(jwk);
+        // Get the key type for the specified key ID
+        KeyType keyType = walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId());
+
+        // Create a new DID issuer
+        DidIssuer didIssuer = new DidIssuer();
+
+        // Check if both web domain and path are provided
+        if (organizationDid.getWebDomain() != null && organizationDid.getWebPath() != null) {
+           return createOrganizationWebDid(organizationDid);
+        } else {
+            // Create a key DID
+           return createOrganizationKeyDid(organizationDid);
+        }
+
+    }
 
 
     public String exportOrganizationDid(UUID id) throws GendoxException {
@@ -110,7 +132,8 @@ public class OrganizationDidService {
 
     }
 
-}
+    }
+
 
 
 

@@ -29,7 +29,7 @@ public class WalletKey {
     private String publicKey;
 
     @JsonIgnore
-    @Basic
+//    @org.hibernate.annotations.Type(LocalKeyUserType.class)
     @Column(name = "jwk_private_key")
     private String jwkPrivateKey;
     @Basic

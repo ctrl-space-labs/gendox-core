@@ -8,7 +8,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.WalletKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WalletKeyDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.WalletKeyCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.request.CreateWalletKeysRequestBody;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.WalletKeyService;
+import id.walt.crypto.keys.KeyType;
+import id.walt.crypto.keys.LocalKey;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,15 +80,17 @@ public class WalletKeyController {
     @ResponseStatus(value = HttpStatus.CREATED)
     @Operation(summary = "Create wallet key",
             description = "Create a new wallet key with the provided details.")
-    public WalletKey createWalletKey(@RequestBody WalletKeyDTO walletKeyDTO) throws GendoxException {
+    public WalletKey createWalletKey(@RequestBody CreateWalletKeysRequestBody walletKeysRequestBody) throws GendoxException {
+
+        WalletKeyDTO walletKeyDTO = walletKeysRequestBody.getWalletKeyDTO();
+        LocalKey localKey = walletKeysRequestBody.getLocalKey();
 
         if (walletKeyDTO.getId() != null) {
             throw new GendoxException("WALLET_KEY_ID_MUST_BE_NULL", "Key id is not null", HttpStatus.BAD_REQUEST);
         }
 
         WalletKey walletKey = walletKeyConverter.toEntity(walletKeyDTO);
-        walletKey = walletKeyService.createWalletKey(walletKey);
-
+        walletKey = walletKeyService.createWalletKey(walletKey, localKey);
 
         return walletKey;
     }
@@ -104,20 +109,26 @@ public class WalletKeyController {
         return walletKeyService.exportWalletKeyJwk(walletKeyId);
     }
 
+    @GetMapping("/organizations/wallet-keys/generate-local-key")
+    public LocalKey generateLocalKey( @RequestParam String keyTypeName,
+                                      @RequestParam(required = false) Integer characterLength) throws GendoxException {
+        return walletKeyService.generateLocalKey(keyTypeName, characterLength);
+    }
+
+
+
 
     @PostMapping("/organizations/{organizationId}/wallet-keys/import-jwk")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Import wallet key",
             description = "Import a new wallet key with the provided details.")
-    public WalletKeyDTO importWalletKeyJwk(@PathVariable UUID organizationId, @RequestBody String jwk) throws JsonProcessingException, GendoxException {
-        // Call the service method to import the wallet key
-        WalletKey walletKey = walletKeyService.importWalletKeyJwk(organizationId, jwk);
+        public WalletKeyDTO importWalletKey(@PathVariable UUID organizationId, @RequestBody LocalKey localKey) throws GendoxException, JsonProcessingException {
+            // Call the service method to import the wallet key
+            WalletKey walletKey = walletKeyService.importWalletKey(localKey, organizationId);
 
-        // Convert the wallet key entity to DTO
-        WalletKeyDTO walletKeyDTO = walletKeyConverter.toDTO(walletKey);
+            // Convert the wallet key entity to DTO
+            WalletKeyDTO walletKeyDTO = walletKeyConverter.toDTO(walletKey);
 
-        return walletKeyDTO;
-    }
-
-
+            return walletKeyDTO;
+        }
 }

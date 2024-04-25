@@ -7,7 +7,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.WalletKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDidDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationDidCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.WalletKeyCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.request.CreateOrganizationDidRequestBody;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationDidService;
+import id.walt.crypto.keys.LocalKey;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,21 +59,7 @@ public class OrganizationDidController {
     }
 
 
-//    @PostMapping(value = "organizations/{organizationId}/dids", consumes = "application/json")
-//    @Operation(summary = "Create organization did",
-//            description = "Create a new organization did based on the provided details")
-//    public OrganizationDid createOrganizationDid(@Valid OrganizationDidDTO organizationDidDTO) throws GendoxException {
-//
-//        if (organizationDidDTO.getId() != null) {
-//            throw new GendoxException("ORG_DID_ID_MUST_BE_NULL", "DID id is not null", HttpStatus.BAD_REQUEST);
-//        }
-//
-//        OrganizationDid organizationDid = organizationDidConverter.toEntity(organizationDidDTO);
-//        organizationDid = organizationDidService.createOrganizationDid(organizationDid);
-//
-//
-//        return organizationDid;
-//    }
+
 
 
     @DeleteMapping("organizations/{organizationId}/dids/{didId}")
@@ -90,10 +78,12 @@ public class OrganizationDidController {
     }
 
 
+
     @PostMapping(value = "organizations/{organizationId}/dids-web", consumes = "application/json")
     @Operation(summary = "Create organization web did",
             description = "Create a new organization web did based on the provided details")
     public OrganizationDid createOrganizationWebDid(@RequestBody OrganizationDidDTO organizationDidDTO) throws GendoxException {
+
 
         if (organizationDidDTO.getId() != null) {
             throw new GendoxException("ORG_DID_ID_MUST_BE_NULL", "DID id is not null", HttpStatus.BAD_REQUEST);
@@ -107,4 +97,41 @@ public class OrganizationDidController {
 
     }
 
+
+
+    @PostMapping(value = "organizations/{organizationId}/dids-key", consumes = "application/json")
+    @Operation(summary = "Create organization key did",
+            description = "Create a new organization key did based on the provided details")
+    public OrganizationDid createOrganizationKeyDid(@RequestBody CreateOrganizationDidRequestBody organizationDidCreationRequestBody) throws GendoxException {
+
+        OrganizationDidDTO organizationDidDTO = organizationDidCreationRequestBody.getOrganizationDidDTO();
+
+        if (organizationDidDTO.getId() != null) {
+            throw new GendoxException("ORG_DID_ID_MUST_BE_NULL", "DID id is not null", HttpStatus.BAD_REQUEST);
+        }
+
+        OrganizationDid organizationDid = organizationDidConverter.toEntity(organizationDidDTO);
+        organizationDid = organizationDidService.createOrganizationKeyDid(organizationDid);
+
+        return organizationDid;
+
+    }
+
+
+
+    @PostMapping(value = "/organizations/{organizationId}/dids", consumes = "application/json")
+    @Operation(summary = "Create organization DID",
+            description = "Create a new organization DID based on the provided details")
+    public OrganizationDid createOrganizationDid(@RequestBody OrganizationDidDTO organizationDidDTO) throws GendoxException {
+
+
+        if (organizationDidDTO.getId() != null) {
+            throw new GendoxException("ORG_DID_ID_MUST_BE_NULL", "DID id must be null", HttpStatus.BAD_REQUEST);
+        }
+
+        OrganizationDid organizationDid = organizationDidConverter.toEntity(organizationDidDTO);
+        organizationDid = organizationDidService.createOrganizationDid(organizationDid);
+
+        return organizationDid;
+    }
 }
