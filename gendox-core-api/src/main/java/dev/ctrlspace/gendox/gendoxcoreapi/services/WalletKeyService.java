@@ -102,19 +102,27 @@ public class WalletKeyService {
         return walletKeyRepository.findAll(WalletKeyPredicates.build(criteria), pageable);
     }
 
-    public WalletKey createWalletKey(WalletKey walletKey,  LocalKey localKey) throws GendoxException {
-
-//        set default value if not defined
+    public WalletKey createWalletKey(WalletKey walletKey) throws GendoxException {
+        // Set default value if not defined
         if (walletKey.getCreatedAt() == null) {
             walletKey.setCreatedAt(Instant.now());
         }
         if (walletKey.getUpdatedAt() == null) {
             walletKey.setUpdatedAt(Instant.now());
         }
+
+        // Generate the local key
+        KeyType keyType = getKeyTypeFromMap(walletKey.getKeyType().getName());
+        Integer characterLength = walletKey.getCharacterLength();
+        if (characterLength == null) {
+            characterLength = WalletKeyConstants.DEFAULT_KEY_LENGTH;
+        }
+        LocalKey localKey = keyCreation.generateKey(keyType, characterLength);
+
+        // Get JWK and key type from the generated local key
         LocalKeyWrapper localKeyWrapper = new LocalKeyWrapper();
         String jwk = localKeyWrapper.getJwk(localKey);
-        KeyType keyType = localKeyWrapper.getKeyType(localKey);
-        // Assuming walletKey has the necessary properties set, such as organizationId, etc.
+        KeyType localKeyType = localKeyWrapper.getKeyType(localKey);
 
         // Set the public key from the local key
         LocalKey publicKey = localKeyWrapper.getPublicKey(localKey);
@@ -124,7 +132,7 @@ public class WalletKeyService {
         walletKey.setJwkPrivateKey(jwk);
 
         // Set the key type
-        String keyTypeName = getKeyTypeName(keyType);
+        String keyTypeName = getKeyTypeName(localKeyType);
         Type walletKeyType = typeService.getKeyTypeByName(keyTypeName);
         walletKey.setKeyType(walletKeyType);
 
@@ -184,13 +192,13 @@ public class WalletKeyService {
 
 
 
-    public LocalKey generateLocalKey(String keyTypeName, Integer characterLength) throws GendoxException {
-        KeyType keyType = getKeyTypeFromMap(keyTypeName);
-        if (characterLength == null) {
-            characterLength = WalletKeyConstants.DEFAULT_KEY_LENGTH;
-        }
-        return keyCreation.generateKey(keyType, characterLength);
-    }
+//    public LocalKey generateLocalKey(String keyTypeName, Integer characterLength) throws GendoxException {
+//        KeyType keyType = getKeyTypeFromMap(keyTypeName);
+//        if (characterLength == null) {
+//            characterLength = WalletKeyConstants.DEFAULT_KEY_LENGTH;
+//        }
+//        return keyCreation.generateKey(keyType, characterLength);
+//    }
 
 
 }

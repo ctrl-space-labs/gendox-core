@@ -90,7 +90,7 @@ public class WalletKeyController {
         }
 
         WalletKey walletKey = walletKeyConverter.toEntity(walletKeyDTO);
-        walletKey = walletKeyService.createWalletKey(walletKey, localKey);
+        walletKey = walletKeyService.createWalletKey(walletKey);
 
         return walletKey;
     }
@@ -108,12 +108,12 @@ public class WalletKeyController {
     public String exportWalletKeyJwk(@PathVariable UUID walletKeyId) throws GendoxException {
         return walletKeyService.exportWalletKeyJwk(walletKeyId);
     }
-
-    @GetMapping("/organizations/wallet-keys/generate-local-key")
-    public LocalKey generateLocalKey( @RequestParam String keyTypeName,
-                                      @RequestParam(required = false) Integer characterLength) throws GendoxException {
-        return walletKeyService.generateLocalKey(keyTypeName, characterLength);
-    }
+//
+//    @GetMapping("/organizations/wallet-keys/generate-local-key")
+//    public LocalKey generateLocalKey( @RequestParam String keyTypeName,
+//                                      @RequestParam(required = false) Integer characterLength) throws GendoxException {
+//        return walletKeyService.generateLocalKey(keyTypeName, characterLength);
+//    }
 
 
 
