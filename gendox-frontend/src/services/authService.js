@@ -1,23 +1,13 @@
 import { UserManager, WebStorageStateStore } from 'oidc-client-ts';
+import authConfig from "src/configs/auth";
 
-const config = {
-    authority: "https://dev.gendox.ctrlspace.dev/idp/realms/gendox-idp-dev",
-    // authority: "http://localhost:8090/realms/gendox-idp-dev",
-    client_id: "gendox-pkce-public-client",
-    redirect_uri: "http://localhost:3000/oidc-callback",
-    response_type: "code",
-    scope: "openid profile email",
-    post_logout_redirect_uri: "http://localhost:3000/login",
-    silent_redirect_uri: "http://localhost:3000/silent-renew",
-    automaticSilentRenew: true,
-    pkceMethod: 'S256'
-};
 
-let userManager = new UserManager(config);
+
+let userManager = new UserManager(authConfig.oidcConfig);
 
 if (typeof window !== 'undefined') {
-    config.userStore = new WebStorageStateStore({ store: window.localStorage });
-    userManager = new UserManager(config);
+    authConfig.oidcConfig.userStore = new WebStorageStateStore({ store: window.localStorage });
+    userManager = new UserManager(authConfig.oidcConfig);
 }
 
 userManager.events.addAccessTokenExpiring(() => {

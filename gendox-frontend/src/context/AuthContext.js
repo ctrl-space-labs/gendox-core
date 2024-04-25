@@ -36,39 +36,14 @@ const AuthProvider = ({ children }) => {
     isLoading: true
   });
 
-
-  const initAuth_old = async () => {
-    setLoading(true);
-    const storedToken = localStorage.getItem(authConfig.storageTokenKeyName);
-    if (!storedToken) {
-      setLoading(false);
-      return handleLogout();
-    }
-
-    try {
-      const response = await axios.get(apiRequests.getProfile, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${storedToken}`,
-        },
-      });
-
-      // Add 'role': 'admin' to the userDataResponse.data object
-      const userData = { ...response.data, role: "admin" };
-      setUser(userData);
-      dispatch(userDataActions.getUserData(userData));
-      setLoading(false);
-    } catch (error) {
-      console.error("Error during auth initialization:", error);
-      handleLogout();
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // New - to test tomorrow
   const handleLogin = () => {
     userManager.signinRedirect();
+  };
+
+  const handleLogout = () => {
+    clearAuthState();
+    userManager.signoutRedirect();
   };
 
   const clearAuthState = () => {
@@ -76,51 +51,38 @@ const AuthProvider = ({ children }) => {
     window.localStorage.removeItem(authConfig.user);
     window.localStorage.removeItem(authConfig.storageTokenKeyName);
     window.localStorage.removeItem(authConfig.onTokenExpiration);
-    //this is to make sure that the page is always redirected to the login page
-    // but actually this is handled by userManager.signoutRedirect();
-    // router.push("/login");
   }
-  const handleLogout = () => {
-    clearAuthState();
-    userManager.signoutRedirect();
-  };
+
+  const loadUser = (user) => {
+    setAuthState({user, isLoading: false});
+  }
+
+  const unloadUser = () => {
+    setAuthState({ user: null, isLoading: false });
+  }
 
   const initAuthOIDC = () => {
 
-    // Adding an event listener for when new user data is loaded
-    userManager.events.addUserLoaded(async (user) => {
-      console.log('addUserLoaded User: ', user);
-      setAuthState({ user, isLoading: false });
+    userManager.getUser().then(user => {
+      if (user && !user.expired) {
+        setAuthState({user, isLoading: false});
+      }
     });
 
+    // Adding an event listener for when new user data is loaded
+    userManager.events.addUserLoaded(loadUser);
+
     userManager.events.addUserSignedOut(() => {
-      console.log("User signed out of IDP");
       // Here you can clear your application's session and redirect the user to the login page
       userManager.removeUser();
     });
 
-    userManager.events.addUserUnloaded(() => {
-      console.log('addUserUnloaded');
-      setAuthState({ user: null, isLoading: false });
-    });
-
-
-    // Check for user session on component mount
-    userManager.signinSilent()
-        .then(user => {
-          console.log('signinSilent User: ', user);
-          setAuthState({user, isLoading: false})
-        })
-        .catch(() => {
-          userManager.signinRedirectCallback().catch(() => {
-            console.log('No user logged in');
-          });
-        });
+    userManager.events.addUserUnloaded(unloadUser);
 
 
     return () => {
-      userManager.events.removeUserLoaded(user => setUser(null));
-      userManager.events.removeUserUnloaded(() => setUser(null));
+      userManager.events.removeUserLoaded(loadUser);
+      userManager.events.removeUserUnloaded(unloadUser);
     };
 
   }
@@ -135,7 +97,6 @@ const AuthProvider = ({ children }) => {
       return;
     }
     let user = authState.user;
-    console.log("AuthState: ", authState);
     window.localStorage.setItem(
         authConfig.storageTokenKeyName,
         user.access_token
@@ -208,19 +169,15 @@ const AuthProvider = ({ children }) => {
   }
 
   useEffect(() => {
-    console.log('useEffect for loadUserProfileFromAuthState');
     loadUserProfileFromAuthState(authState)
   }, [authState]);
 
   useEffect(() => {
-
-    console.log('useEffect for initAuthOIDC');
     // initAuth_old();
     return initAuthOIDC();
   }, []);
 
   useEffect(() => {
-    console.log('useEffect for user');
     const { organizationId, projectId } = router.query;
     const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
 
@@ -260,22 +217,6 @@ const AuthProvider = ({ children }) => {
       }
     }
   }, [user, router.query.organizationId, router.query.projectId]);
-
-  // const handleLogin = (params, errorCallback) => {
-  //
-  //
-  //     .then(async (response) => {
-  //       // Set access token in local storage
-  //       ......
-  //       const returnUrl = router.query.returnUrl;
-  //
-  //
-  //     })
-  //     .catch((err) => {
-  //       console.error("Error occurred:", err);
-  //       if (errorCallback) errorCallback(err);
-  //     });
-  // };
 
   const values = {
     user,

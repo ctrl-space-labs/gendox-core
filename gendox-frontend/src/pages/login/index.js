@@ -253,87 +253,87 @@ const LoginPage = () => {
               <TypographyStyled variant='h5'>{`Welcome to ${themeConfig.templateName}! 👋🏻`}</TypographyStyled>
               <Typography variant='body2'>Please sign-in to your account and start the adventure</Typography>
             </Box>
-            <Alert icon={false} sx={{ py: 3, mb: 6, ...bgColors.primaryLight, '& .MuiAlert-message': { p: 0 } }}>
-              <Typography variant='caption' sx={{ mb: 2, display: 'block', color: 'primary.main' }}>
-                Admin: <strong>admin@materialize.com</strong> / Pass: <strong>admin</strong>
-              </Typography>
-              <Typography variant='caption' sx={{ display: 'block', color: 'primary.main' }}>
-                Client: <strong>client@materialize.com</strong> / Pass: <strong>client</strong>
-              </Typography>
-            </Alert>
+            {/*<Alert icon={false} sx={{ py: 3, mb: 6, ...bgColors.primaryLight, '& .MuiAlert-message': { p: 0 } }}>*/}
+            {/*  <Typography variant='caption' sx={{ mb: 2, display: 'block', color: 'primary.main' }}>*/}
+            {/*    Admin: <strong>admin@materialize.com</strong> / Pass: <strong>admin</strong>*/}
+            {/*  </Typography>*/}
+            {/*  <Typography variant='caption' sx={{ display: 'block', color: 'primary.main' }}>*/}
+            {/*    Client: <strong>client@materialize.com</strong> / Pass: <strong>client</strong>*/}
+            {/*  </Typography>*/}
+            {/*</Alert>*/}
             <form noValidate autoComplete='off' onSubmit={handleSubmit(onSubmit)}>
-              <FormControl fullWidth sx={{ mb: 4 }}>
-                <Controller
-                  name='email'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field: { value, onChange, onBlur } }) => (
-                    <TextField
-                      autoFocus
-                      label='Email'
-                      value={value}
-                      onBlur={onBlur}
-                      onChange={onChange}
-                      error={Boolean(errors.email)}
-                      placeholder='admin@materialize.com'
-                    />
-                  )}
-                />
-                {errors.email && <FormHelperText sx={{ color: 'error.main' }}>{errors.email.message}</FormHelperText>}
-              </FormControl>
-              <FormControl fullWidth>
-                <InputLabel htmlFor='auth-login-v2-password' error={Boolean(errors.password)}>
-                  Password
-                </InputLabel>
-                <Controller
-                  name='password'
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field: { value, onChange, onBlur } }) => (
-                    <OutlinedInput
-                      value={value}
-                      onBlur={onBlur}
-                      label='Password'
-                      onChange={onChange}
-                      id='auth-login-v2-password'
-                      error={Boolean(errors.password)}
-                      type={showPassword ? 'text' : 'password'}
-                      endAdornment={
-                        <InputAdornment position='end'>
-                          <IconButton
-                            edge='end'
-                            onMouseDown={e => e.preventDefault()}
-                            onClick={() => setShowPassword(!showPassword)}
-                          >
-                            <Icon icon={showPassword ? 'mdi:eye-outline' : 'mdi:eye-off-outline'} fontSize={20} />
-                          </IconButton>
-                        </InputAdornment>
-                      }
-                    />
-                  )}
-                />
-                {errors.password && (
-                  <FormHelperText sx={{ color: 'error.main' }} id=''>
-                    {errors.password.message}
-                  </FormHelperText>
-                )}
-              </FormControl>
-              <Box
-                sx={{ mb: 4, display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}
-              >
-                <FormControlLabel
-                  label='Remember Me'
-                  control={<Checkbox checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} />}
-                />
-                <Typography
-                  variant='body2'
-                  component={Link}
-                  href='/forgot-password'
-                  sx={{ color: 'primary.main', textDecoration: 'none' }}
-                >
-                  Forgot Password?
-                </Typography>
-              </Box>
+              {/*<FormControl fullWidth sx={{ mb: 4 }}>*/}
+              {/*  <Controller*/}
+              {/*    name='email'*/}
+              {/*    control={control}*/}
+              {/*    rules={{ required: true }}*/}
+              {/*    render={({ field: { value, onChange, onBlur } }) => (*/}
+              {/*      <TextField*/}
+              {/*        autoFocus*/}
+              {/*        label='Email'*/}
+              {/*        value={value}*/}
+              {/*        onBlur={onBlur}*/}
+              {/*        onChange={onChange}*/}
+              {/*        error={Boolean(errors.email)}*/}
+              {/*        placeholder='admin@materialize.com'*/}
+              {/*      />*/}
+              {/*    )}*/}
+              {/*  />*/}
+              {/*  {errors.email && <FormHelperText sx={{ color: 'error.main' }}>{errors.email.message}</FormHelperText>}*/}
+              {/*</FormControl>*/}
+              {/*<FormControl fullWidth>*/}
+              {/*  <InputLabel htmlFor='auth-login-v2-password' error={Boolean(errors.password)}>*/}
+              {/*    Password*/}
+              {/*  </InputLabel>*/}
+              {/*  <Controller*/}
+              {/*    name='password'*/}
+              {/*    control={control}*/}
+              {/*    rules={{ required: true }}*/}
+              {/*    render={({ field: { value, onChange, onBlur } }) => (*/}
+              {/*      <OutlinedInput*/}
+              {/*        value={value}*/}
+              {/*        onBlur={onBlur}*/}
+              {/*        label='Password'*/}
+              {/*        onChange={onChange}*/}
+              {/*        id='auth-login-v2-password'*/}
+              {/*        error={Boolean(errors.password)}*/}
+              {/*        type={showPassword ? 'text' : 'password'}*/}
+              {/*        endAdornment={*/}
+              {/*          <InputAdornment position='end'>*/}
+              {/*            <IconButton*/}
+              {/*              edge='end'*/}
+              {/*              onMouseDown={e => e.preventDefault()}*/}
+              {/*              onClick={() => setShowPassword(!showPassword)}*/}
+              {/*            >*/}
+              {/*              <Icon icon={showPassword ? 'mdi:eye-outline' : 'mdi:eye-off-outline'} fontSize={20} />*/}
+              {/*            </IconButton>*/}
+              {/*          </InputAdornment>*/}
+              {/*        }*/}
+              {/*      />*/}
+              {/*    )}*/}
+              {/*  />*/}
+              {/*  {errors.password && (*/}
+              {/*    <FormHelperText sx={{ color: 'error.main' }} id=''>*/}
+              {/*      {errors.password.message}*/}
+              {/*    </FormHelperText>*/}
+              {/*  )}*/}
+              {/*</FormControl>*/}
+              {/*<Box*/}
+              {/*  sx={{ mb: 4, display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}*/}
+              {/*>*/}
+              {/*  <FormControlLabel*/}
+              {/*    label='Remember Me'*/}
+              {/*    control={<Checkbox checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} />}*/}
+              {/*  />*/}
+              {/*  <Typography*/}
+              {/*    variant='body2'*/}
+              {/*    component={Link}*/}
+              {/*    href='/forgot-password'*/}
+              {/*    sx={{ color: 'primary.main', textDecoration: 'none' }}*/}
+              {/*  >*/}
+              {/*    Forgot Password?*/}
+              {/*  </Typography>*/}
+              {/*</Box>*/}
               <Button fullWidth size='large' type='submit' variant='contained' sx={{ mb: 7 }}>
                 Login
               </Button>
