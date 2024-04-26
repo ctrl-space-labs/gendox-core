@@ -87,4 +87,26 @@ public class TypeService {
 
     }
 
+    //AI_MODEL_TYPES
+    public Type getAiModelTypeByName(String aiModelTypeName){
+        return typeRepository.findByTypeCategoryAndName("AI_MODEL_TYPE", aiModelTypeName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "AI_MODEL_TYPE_NOT_FOUND", "AI model field type not found with name: " + aiModelTypeName));
+
+    }
+
+    // get all types by type category
+    public List<Type> getTypeCategories(String typeCategory){
+        return typeRepository.findByTypeCategory(typeCategory);
+               }
+
+
+
+
+    /**
+     * Multiple handy service methods can go here like
+     * getOrganizationRoles()
+     * getOrganizationPermissions()
+     * getDocumentFieldTypes()
+     * ...
+     */
 }

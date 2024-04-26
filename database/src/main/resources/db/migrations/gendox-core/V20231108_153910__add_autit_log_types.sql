@@ -1,6 +1,18 @@
-ALTER TABLE gendox_core.audit_logs
-    ADD COLUMN IF NOT EXISTS type_id bigint,
-    ADD FOREIGN KEY (type_id) REFERENCES gendox_core.types (id);
+-- Description: This migration script adds audit log types to the database.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'gendox_core'
+        AND table_name = 'audit_logs'
+        AND column_name = 'type_id'
+    ) THEN
+        ALTER TABLE gendox_core.audit_logs
+        ADD COLUMN type_id bigint,
+        ADD FOREIGN KEY (type_id) REFERENCES gendox_core.types (id);
+    END IF;
+END $$;
 
 DO $$
     BEGIN

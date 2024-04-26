@@ -2,9 +2,23 @@
 ALTER TABLE gendox_core.users
     ADD COLUMN IF NOT EXISTS first_name VARCHAR(255),
     ADD COLUMN IF NOT EXISTS last_name VARCHAR(255),
-    ADD COLUMN IF NOT EXISTS user_name VARCHAR(255),
-    ADD COLUMN IF NOT EXISTS users_type_id bigint,
-    ADD FOREIGN KEY (users_type_id) REFERENCES gendox_core.types (id);
+    ADD COLUMN IF NOT EXISTS user_name VARCHAR(255);
+
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'gendox_core'
+        AND table_name = 'users'
+        AND column_name = 'users_type_id'
+    ) THEN
+        ALTER TABLE gendox_core.users
+        ADD COLUMN users_type_id bigint,
+        ADD FOREIGN KEY (users_type_id) REFERENCES gendox_core.types (id);
+    END IF;
+END $$;
 
 
 
