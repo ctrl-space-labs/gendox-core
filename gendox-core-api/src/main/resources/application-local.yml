@@ -8,7 +8,7 @@ logging:
   level:
     dev.ctrlspace: DEBUG
     org.springframework.security: INFO
-    org.springframework: INFO
+    org.springframework: DEBUG
 #    This is how to change the micrometer tracing pattern, we'll use the default now
 #  pattern:
 #    correlation : "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
@@ -24,22 +24,22 @@ spring:
       ddl-auto: none
 
 
-#  datasource:
-#    url: jdbc:postgresql://localhost:5432/postgres
-#    username: postgres
-#    password: 1234
-#
-#    hikari:
-#      maximum-pool-size: 100
-#      minimum-idle: 10
-
   datasource:
-     url: ${DATABASE_URL}
-     username: ${DATABASE_USERNAME}
-     password: ${DATABASE_PASSWORD}
-     hikari:
-       maximum-pool-size: 100
-       minimum-idle: 10
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: 1234
+
+    hikari:
+      maximum-pool-size: 100
+      minimum-idle: 10
+
+#  datasource:
+#     url: ${DATABASE_URL}
+#     username: ${DATABASE_USERNAME}
+#     password: ${DATABASE_PASSWORD}
+#     hikari:
+#       maximum-pool-size: 100
+#       minimum-idle: 10
 
   jackson:
     serialization:
@@ -101,8 +101,8 @@ rsa:
 
 gendox:
   documents:
-    upload-dir: s3://gendox.organization.documents.local
-#    upload-dir: file:c:\\Users\\myrto\\gendox-documents
+#    upload-dir: s3://gendox.organization.documents.local
+    upload-dir: file:c:\\Users\\myrto\\gendox-documents
 #    upload-dir: file:C:\ProgramData\\gendox\\documents
 
 

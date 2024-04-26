@@ -5,14 +5,18 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationDid;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.WalletKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationDidCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.WalletKeyCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.request.VerifiableCredentialRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationDidRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationDidPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.WalletKeyPredicates;
 import dev.ctrlspace.provenai.ssi.issuer.DidIssuer;
 import dev.ctrlspace.provenai.ssi.issuer.KeyCreation;
 import dev.ctrlspace.provenai.ssi.issuer.LocalKeyWrapper;
+import dev.ctrlspace.provenai.ssi.issuer.VerifiableCredentialBuilder;
+import id.walt.credentials.vc.vcs.W3CVC;
 import id.walt.crypto.keys.KeyType;
 import id.walt.crypto.keys.LocalKey;
+import id.walt.did.dids.registrar.DidResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.UUID;
 
 @Service
@@ -31,6 +36,8 @@ public class OrganizationDidService {
     private KeyCreation keyCreation;
 
     private WalletKeyService walletKeyService;
+
+    private VerifiableCredentialBuilder verifiableCredentialBuilder;
 
     @Autowired
     public OrganizationDidService(OrganizationDidRepository organizationDidRepository,
@@ -76,12 +83,14 @@ public class OrganizationDidService {
 
         DidIssuer didIssuer = new DidIssuer();
 
-        // Create the web DID
-        organizationDid.setDid(String.valueOf(didIssuer.resolveWebDidToKey(walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()),
+        DidResult didResult = didIssuer.resolveWebDidToKey(walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()),
                 organizationDid.getWebDomain(),
                 organizationDid.getWebPath(),
                 localKey
-        )));
+        );
+
+        // Create the web DID
+        organizationDid.setDid(String.valueOf(didResult.getDidDocument()));
         return organizationDidRepository.save(organizationDid);
     }
 
@@ -97,33 +106,15 @@ public class OrganizationDidService {
         // Create a LocalKey object using the LocalKeyWrapper
         LocalKeyWrapper localKeyWrapper = new LocalKeyWrapper();
 
-        organizationDid.setDid(String.valueOf(didIssuer.resolveKeyDidToKey(walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()),
-                false, (LocalKey) localKeyWrapper.exportJWK(localKey))));
+        DidResult didResult = didIssuer.resolveKeyDidToKey(walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()),
+                false, (LocalKey) localKeyWrapper.exportJWK(localKey));
+
+        organizationDid.setDid(String.valueOf(didResult.getDidDocument()));
+
 
         return organizationDidRepository.save(organizationDid);
     }
 
-
-    public OrganizationDid createOrganizationDid(OrganizationDid organizationDid) throws GendoxException {
-        // Get the key ID from the organizationDid
-
-        String jwk = walletKeyService.getPrivateJWKbyKeyId(organizationDid.getKeyId());
-        LocalKey localKey = new LocalKey(jwk);
-        // Get the key type for the specified key ID
-        KeyType keyType = walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId());
-
-        // Create a new DID issuer
-        DidIssuer didIssuer = new DidIssuer();
-
-        // Check if both web domain and path are provided
-        if (organizationDid.getWebDomain() != null && organizationDid.getWebPath() != null) {
-           return createOrganizationWebDid(organizationDid);
-        } else {
-            // Create a key DID
-           return createOrganizationKeyDid(organizationDid);
-        }
-
-    }
 
 
     public String exportOrganizationDid(UUID id) throws GendoxException {
@@ -131,6 +122,51 @@ public class OrganizationDidService {
         return organizationDid.getDid();
 
     }
+
+//method to get keyId from didId
+    public UUID getKeyIdByDidId(UUID didId) throws GendoxException {
+        OrganizationDid organizationDid = getOrganizationDidById(didId);
+        return organizationDid.getKeyId();
+    }
+
+//    public Object createAndSignVerifiableCredential(UUID issuerDidId, UUID subjectDidId,
+//                                                    VerifiableCredentialRequest vcRequest) throws GendoxException {
+//        // Retrieve keys and DIDs from their IDs
+//
+//        OrganizationDid issuerDid = getOrganizationDidById(issuerDidId);
+//        OrganizationDid subjectDid = getOrganizationDidById(subjectDidId);
+//
+//        LocalKey issuerKey = new LocalKey(walletKeyService.getWalletKeybyId(getKeyIdByDidId(issuerDidId)).getJwkPrivateKey());
+//
+//
+//        // Set issuer DID and subject DID
+//        verifiableCredentialBuilder.setIssuerDid(issuerDid.getDid());
+//        verifiableCredentialBuilder.setSubjectDid(subjectDid.getDid());
+//
+//        verifiableCredentialBuilder.addType(vcRequest.getType());
+//        verifiableCredentialBuilder.addContext(vcRequest.getContext());
+//
+//
+//        // Set validity period
+//        if (vcRequest.getValidityPeriod() != null) {
+//            verifiableCredentialBuilder.validFor(vcRequest.getValidityPeriod());
+//        } else {
+//            // Default validity from now
+//            verifiableCredentialBuilder.validFromNow();
+//            verifiableCredentialBuilder.validUntil(vcRequest.getValidUntil());
+//        }
+//
+//        verifiableCredentialBuilder.credentialSubject(vcRequest.getCredentialSubject());
+//
+//        W3CVC verifiableCredential = verifiableCredentialBuilder.buildCredential();
+//
+//
+//        return verifiableCredentialBuilder.signCredential(verifiableCredential, issuerKey, issuerDid.getDid(),
+//                                            subjectDid.getDid(), vcRequest.getAdditionalJwtHeaders(),
+//                                            vcRequest.getAdditionalJwtOptions());
+//
+//    }
+
 
     }
 
