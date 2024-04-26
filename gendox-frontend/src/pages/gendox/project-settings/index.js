@@ -5,7 +5,7 @@ import ProjectSettingsCard from 'src/views/gendox-components/project-settings-co
 import { useAuth } from 'src/hooks/useAuth';
 import authConfig from 'src/configs/auth';
 import { fetchOrganizationById } from "src/store/apps/activeOrganization/activeOrganization";
-import { fetchProjectById } from "src/store/apps/activeProject/activeProject";
+import { fetchProject } from "src/store/apps/activeProject/activeProject";
 
 
 const ProjectSettings = () => {
@@ -25,7 +25,7 @@ const ProjectSettings = () => {
   useEffect(() => {
     if (organizationId && projectId && storedToken) {
       dispatch(fetchOrganizationById({ organizationId, storedToken}))
-      dispatch(fetchProjectById({ organizationId, projectId, storedToken }));
+      dispatch(fetchProject({ organizationId, projectId, storedToken }));
     }
   }, [organizationId, projectId, storedToken]);
   

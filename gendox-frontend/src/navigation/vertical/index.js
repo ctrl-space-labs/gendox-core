@@ -4,6 +4,11 @@ import { useRouter } from "next/router";
 import { useDispatch } from "react-redux";
 import { activeProjectActions } from "src/store/apps/activeProject/activeProject";
 
+// ** MUI Imports
+import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
+
+
 // ** Icon Imports
 import Icon from "src/@core/components/icon";
 
@@ -27,6 +32,7 @@ const Navigation = () => {
         const projects = activeOrganization.projects.map((project) => {
           return {
             title: project.name,
+            icon: "mdi:view-grid-outline",
             path: `/gendox/home?organizationId=${activeOrganization.id}&projectId=${project.id}`,
 
             // children: [
@@ -40,17 +46,23 @@ const Navigation = () => {
 
         setNavigationItems([
           {
-            sectionTitle: "Projects",
-          },
-          ...projects,
-          {
-            icon: "mdi:cog-outline",
-            path: `/gendox/project-settings?organizationId=${activeOrganization.id}&projectId=${projectId}`,
-          },
-          {
             icon: "mdi:chat",
+            title: "Chat",
             path: `/gendox/chat?organizationId=${activeOrganization.id}&projectId=${projectId}`,
           },
+          {
+            sectionTitle: "PROJECTS",
+          },
+          ...projects,
+          // {
+          //   icon: "mdi:cog-outline",
+          //   path: `/gendox/project-settings?organizationId=${activeOrganization.id}&projectId=${projectId}`,
+          // },
+          {
+            title: "NEW PROJECT",
+            path: `/gendox/project-settings?organizationId=${activeOrganization.id}&projectId=${projectId}`,
+          },
+          
         ]);
       }
     }

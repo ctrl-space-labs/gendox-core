@@ -33,7 +33,7 @@ const GeneralProjectSettings = () => {
       console.error('No token found');      
       return;
     }
-  const project = useSelector((state) => state.activeProject.activeProject);
+  const project = useSelector((state) => state.activeProject.projectDetails);
 
   // Explicitly handle all falsey values (including undefined and null) as false
   const [autoTraining, setAutoTraining] = useState(!!project.autoTraining);

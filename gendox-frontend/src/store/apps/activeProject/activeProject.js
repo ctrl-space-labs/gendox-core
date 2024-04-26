@@ -1,44 +1,64 @@
-// import { createSlice } from '@reduxjs/toolkit'
 
-// const initialActiveProjectState = { activeProject: null }
-
-// const ActiveProjectSlice = createSlice({
-//   name: 'activeProject',
-//   initialState: initialActiveProjectState,
-//   reducers: {
-//     getActiveProject(state, action) {
-//       state.activeProject = action.payload
-//     }
-//   }
-// })
-
-// export const activeProjectActions = ActiveProjectSlice.actions
-
-// export default ActiveProjectSlice.reducer
 
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import projectService from "src/gendox-sdk/projectService";
 
-// Define an async thunk for fetching an organization by ID
-export const fetchProjectById = createAsyncThunk(
-  "activeProject/fetchByIdStatus",
+export const fetchProject = createAsyncThunk(
+  "activeProject/fetchProject",
   async ({ organizationId, projectId, storedToken }, thunkAPI) => {
     try {
-      const response = await projectService.getProjectById(
-        organizationId,
-        projectId,
-        storedToken
-      );
-      return response.data;
+      const projectPromise = projectService.getProjectById(organizationId, projectId, storedToken);
+      const membersPromise = projectService.getProjectMembers(organizationId, projectId, storedToken);
+
+      // Use Promise.all to wait for both promises to resolve
+      const [projectData, membersData] = await Promise.all([projectPromise, membersPromise]);
+
+      // Return combined data
+      return { project: projectData.data, members: membersData.data };
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response.data);
     }
   }
 );
 
+
+// Define an async thunk for fetching an organization by ID
+// export const fetchProjectById = createAsyncThunk(
+//   "activeProject/fetchByIdStatus",
+//   async ({ organizationId, projectId, storedToken }, thunkAPI) => {
+//     try {
+//       const response = await projectService.getProjectById(
+//         organizationId,
+//         projectId,
+//         storedToken
+//       );
+//       return response.data;
+//     } catch (error) {
+//       return thunkAPI.rejectWithValue(error.response.data);
+//     }
+//   }
+// );
+
+// export const fetchProjectMembers = createAsyncThunk(
+//   "activeProject/fetchProjectMembers",
+//   async ({ organizationId, projectId, storedToken }, thunkAPI) => {
+//     try {
+//       const response = await projectService.getProjectMembers(
+//         organizationId,
+//         projectId,
+//         storedToken
+//       );
+//       return response.data;
+//     } catch (error) {
+//       return thunkAPI.rejectWithValue(error.response.data);
+//     }
+//   }
+// );  
+
 // Define the initial state
 const initialActiveProjectState = {
-  activeProject: {},
+  projectDetails: {},
+  projectMembers: [], 
   error: null,
 };
 
@@ -51,13 +71,14 @@ const activeProjectSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchProjectById.pending, (state) => {
+      .addCase(fetchProject.pending, (state) => {
         state.error = null;
       })
-      .addCase(fetchProjectById.fulfilled, (state, action) => {
-        state.activeProject = action.payload;
+      .addCase(fetchProject.fulfilled, (state, action) => {
+        state.projectDetails = action.payload.project;
+        state.projectMembers = action.payload.members;
       })
-      .addCase(fetchProjectById.rejected, (state, action) => {
+      .addCase(fetchProject.rejected, (state, action) => {
         state.error = action.payload;
       });
   },

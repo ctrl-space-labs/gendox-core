@@ -37,7 +37,7 @@ const formatDocumentTitle = (remoteUrl) => {
 const DocumentCard = () => {
   const router = useRouter();
   const { organizationId, documentId } = router.query;
-  const projectId = useSelector((state) => state.activeProject.activeProject.id);  
+  const projectId = useSelector((state) => state.activeProject.projectDetails.id);  
   const document = useSelector((state) => state.activeDocument.activeDocument);  
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName

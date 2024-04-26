@@ -8,7 +8,7 @@ import authConfig from "src/configs/auth";
 import apiRequests from "src/configs/apiRequest.js";
 import { userDataActions } from "src/store/apps/userData/userData";
 import { fetchOrganizationById } from "src/store/apps/activeOrganization/activeOrganization";
-import { fetchProjectById } from "src/store/apps/activeProject/activeProject";
+import { fetchProject } from "src/store/apps/activeProject/activeProject";
 import userManager from "src/services/authService";
 
 // ** Defaults
@@ -138,7 +138,7 @@ const AuthProvider = ({ children }) => {
               })
           );
           dispatch(
-              fetchProjectById({
+              fetchProject({
                 organizationId: userDataResponse.data.organizations[0].id,
                 projectId: userDataResponse.data.organizations[0].projects[0].id,
                 storedToken: user.access_token
@@ -190,11 +190,11 @@ const AuthProvider = ({ children }) => {
         (org) => org.id === organizationId
       );
       if (updatedActiveOrganization) {
-        
+
         dispatch(
           fetchOrganizationById({
             organizationId: updatedActiveOrganization.id,
-            storedToken          
+            storedToken
           })
         );
         window.localStorage.setItem(
@@ -206,10 +206,10 @@ const AuthProvider = ({ children }) => {
         );
         if (updatedActiveProject) {
           dispatch(
-            fetchProjectById({
+            fetchProject({
               organizationId: updatedActiveOrganization.id,
               projectId: updatedActiveProject.id,
-              storedToken            
+              storedToken
             })
           );
           window.localStorage.setItem(
