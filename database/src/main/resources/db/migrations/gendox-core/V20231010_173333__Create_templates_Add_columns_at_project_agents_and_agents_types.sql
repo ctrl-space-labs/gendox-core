@@ -18,14 +18,45 @@ CREATE TABLE if not exists gendox_core.templates(
     );
 
 
+-- Add columns to project_agent
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'gendox_core'
+        AND table_name = 'project_agent'
+        AND column_name = 'document_splitter_type'
+    ) THEN
+        ALTER TABLE gendox_core.project_agent
+        ADD COLUMN document_splitter_type bigint,
+        ADD FOREIGN KEY (document_splitter_type) REFERENCES gendox_core.types (id);
+    END IF;
 
-ALTER TABLE IF EXISTS gendox_core.project_agent
-    ADD COLUMN IF NOT EXISTS document_splitter_type bigint,
-    ADD COLUMN IF NOT EXISTS chat_template_id UUID,
-    ADD COLUMN IF NOT EXISTS section_template_id UUID,
-    ADD FOREIGN KEY (document_splitter_type) REFERENCES gendox_core.types (id),
-    ADD FOREIGN KEY (chat_template_id) REFERENCES gendox_core.templates (id),
-    ADD FOREIGN KEY (section_template_id) REFERENCES gendox_core.templates (id);
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'gendox_core'
+        AND table_name = 'project_agent'
+        AND column_name = 'chat_template_id'
+    ) THEN
+        ALTER TABLE gendox_core.project_agent
+        ADD COLUMN chat_template_id UUID,
+        ADD FOREIGN KEY (chat_template_id) REFERENCES gendox_core.templates (id);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'gendox_core'
+        AND table_name = 'project_agent'
+        AND column_name = 'section_template_id'
+    ) THEN
+        ALTER TABLE gendox_core.project_agent
+        ADD COLUMN section_template_id UUID,
+        ADD FOREIGN KEY (section_template_id) REFERENCES gendox_core.templates (id);
+    END IF;
+END $$;
 
 -- update project agent add default values to document_splitter_type, chat_template_id, section_template_id
 UPDATE gendox_core.project_agent

@@ -1,42 +1,41 @@
 import React, { useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box'
-import Card from '@mui/material/Card'
 import Typography from '@mui/material/Typography'
 import CardContent from '@mui/material/CardContent'
 import Grid from '@mui/material/Grid'
+import Button from '@mui/material/Button'
+import Icon from 'src/@core/components/icon'
 
-import ButtonComponent from 'src/views/gendox-components/project-buttons-components/ButtonComponent'
-import UploaderDocument from 'src/views/gendox-components/project-buttons-components/UploaderDocument'
+import UploaderDocument from 'src/views/gendox-components/home-page-components/project-buttons-components/UploaderDocument'
 
 
-const ProjectButtons = props => {
+const ProjectButtons = () => {
+  const project = useSelector((state) => state.activeProject.projectDetails);
   const [showUploader, setShowUploader] = useState(false);
   const handleOpenUploader = () => setShowUploader(true);
   const handleCloseUploader = () => setShowUploader(false);
 
   const buttons = [
-    { text: "New Document" },
-    { text: "Upload Document", action: handleOpenUploader },
-    { text: "New Template" },
-    { text: "Upload Template" }
+    { text: "NEW DOCUMENT" },
+    { text: "UPLOAD DOCUMENT", action: handleOpenUploader },
+    { text: "NEW TEMPLATE" },
+    { text: "UPLOAD TEMPLATE" }
   ];
 
 
   return (
-    <Card sx={{ position: 'relative' }}>
-      <CardContent>
-        <Typography variant='h6' sx={{ marginBottom: 2 }}>
-          Project:{' '}
-          <Box component='span' sx={{ fontWeight: 'bold' }}>
-            {props.project.name}
-          </Box>
-        </Typography>
-
+    
+    <Grid container spacing={6}>     
+      <CardContent>     
         <Grid container spacing={2}>
         {buttons.map((button, index) => (
-            <Grid item key={index}>
-              <ButtonComponent text={button.text} onClick={button.action} />
+            <Grid item key={index}>              
+              <Button variant='outlined' color='primary' onClick={button.action}>
+              <Icon icon='mdi:plus' />
+              {button.text}
+              </Button>
             </Grid>
           ))}
         </Grid>
@@ -52,7 +51,8 @@ const ProjectButtons = props => {
           <UploaderDocument closeUploader={handleCloseUploader} />
         </Box>
       </Modal>
-    </Card>
+      </Grid>
+    
   )
 }
 

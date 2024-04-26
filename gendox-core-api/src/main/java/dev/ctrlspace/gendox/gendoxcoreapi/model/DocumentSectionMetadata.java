@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -8,6 +9,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -52,6 +54,11 @@ public class DocumentSectionMetadata {
     @Column(name = "updated_at", nullable = true)
     @LastModifiedDate
     private Instant updatedAt;
+
+    @JsonBackReference(value = "DocumentSectionMetadata")
+    @OneToMany(mappedBy = "documentSectionMetadata")
+    private List<DocumentInstanceSection> documentInstanceSections;
+
 
     public UUID getId() {
         return id;

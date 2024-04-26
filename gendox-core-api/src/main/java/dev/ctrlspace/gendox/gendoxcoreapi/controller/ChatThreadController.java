@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ChatThreadCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.MessageCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ChatThreadService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -26,12 +27,15 @@ public class ChatThreadController {
 
     private ChatThreadService chatThreadService;
     private SecurityUtils securityUtils;
+    private MessageService messageService;
 
     @Autowired
     public ChatThreadController(ChatThreadService chatThreadService,
-                                SecurityUtils securityUtils) {
+                                SecurityUtils securityUtils,
+                                MessageService messageService) {
         this.chatThreadService = chatThreadService;
         this.securityUtils = securityUtils;
+        this.messageService = messageService;
     }
 
 //    TODO add authorization checks
@@ -79,7 +83,7 @@ public class ChatThreadController {
         if (pageable.getPageSize() > 100) {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 100", HttpStatus.BAD_REQUEST);
         }
-        return chatThreadService.getAllMessagesByCriteria(criteria, pageable);
+        return messageService.getAllMessagesByCriteria(criteria, pageable);
     }
 
 

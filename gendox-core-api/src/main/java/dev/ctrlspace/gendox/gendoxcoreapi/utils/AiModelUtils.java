@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,12 +12,12 @@ import java.util.List;
 public class AiModelUtils {
 
     @Autowired
-    private List<AiModelService> aiModelServices;
+    private List<AiModelTypeService> aiModelTypeServices;
 
-    public AiModelService getAiModelServiceImplementation(String model) throws GendoxException {
-        for (AiModelService aiModelService : aiModelServices) {
-            if (aiModelService.supports(model)){
-                return aiModelService;
+    public AiModelTypeService getAiModelServiceImplementation(String model) throws GendoxException {
+        for (AiModelTypeService aiModelTypeService : aiModelTypeServices) {
+            if (aiModelTypeService.supports(model)){
+                return aiModelTypeService;
             }
         }
         throw new GendoxException("MODEL_NOT_SUPPORTED", "Model not supported", HttpStatus.BAD_REQUEST);

@@ -31,6 +31,7 @@ public class DocumentInstanceSection {
     @ManyToOne
     @JoinColumn(name = "document_section_metadata_id", referencedColumnName = "id", nullable = false)
     private DocumentSectionMetadata documentSectionMetadata;
+
     @Basic
     @Column(name = "section_value", nullable = true, length = -1)
     private String sectionValue;

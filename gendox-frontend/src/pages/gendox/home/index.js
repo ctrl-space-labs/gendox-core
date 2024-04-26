@@ -1,99 +1,126 @@
-// ** MUI Imports
-import Grid from '@mui/material/Grid'
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 
-// ** Icon Imports
-import Icon from 'src/@core/components/icon'
+import { styled } from "@mui/material/styles";
+import Typography from "@mui/material/Typography";
+import CardContent from "@mui/material/CardContent";
+import Card from "@mui/material/Card";
+import Box from "@mui/material/Box";
+import IconButton from '@mui/material/IconButton';
+import Icon from "src/@core/components/icon"; 
 
-// ** Axios
-import axios from 'axios'
 
-// ** Custom Component Import
-import CardStatisticsVertical from 'src/@core/components/card-statistics/card-stats-vertical'
+import ProjectButtons from "src/views/gendox-components/home-page-components/project-buttons-components/ProjectButtons";
+import Documents from "src/views/gendox-components/home-page-components/document-components/Documents";
+import { useAuth } from "src/hooks/useAuth";
+import documentService from "src/gendox-sdk/documentService";
+import authConfig from "src/configs/auth";
+import useRedirectOr404ForHome from "src/utils/redirectOr404";
+import { useDispatch, useSelector } from "react-redux";
 
-// ** Styled Component Import
-import ApexChartWrapper from 'src/@core/styles/libs/react-apexcharts'
+const StyledCardContent = styled(CardContent)(({ theme }) => ({
+  paddingTop: `${theme.spacing(20)} !important`,
+  paddingBottom: `${theme.spacing(20)} !important`,
+  [theme.breakpoints.up("sm")]: {
+    paddingLeft: `${theme.spacing(20)} !important`,
+    paddingRight: `${theme.spacing(20)} !important`,
+  },
+}));
 
-// ** Redux
-import { useSelector, useDispatch } from 'react-redux'
 
-// ** Config
-import authConfig from 'src/configs/auth'
-import apiRequests from 'src/configs/apiRequest'
 
-// ** Demo Components Imports
-import ProjectButtons from 'src/views/gendox-components/project-buttons-components/ProjectButtons'
-import DocumentComponent from 'src/views/gendox-components/DocumentComponent'
-import { useAuth } from 'src/hooks/useAuth'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/router'
 
-const GendoxDashboard = () => {  
-  const router = useRouter()
-  const { organizationId, projectId } = router.query
 
-  const auth = useAuth()
+const GendoxHome = () => {
+  const router = useRouter();
+  const { organizationId, projectId } = router.query;
+  const auth = useAuth();
+  const [documents, setDocuments] = useState([]);
+  const project = useSelector((state) => state.activeProject.projectDetails);
+
+  if (!organizationId || !projectId) {
+    useRedirectOr404ForHome();
+  }
+
+  const handleSettingsClick = () => {
+    const path = `/gendox/project-settings?organizationId=${organizationId}&projectId=${projectId}`;
+    router.push(path);
+  };
   
-  // let activeProject = useSelector(state => state.activeProject.activeProject)
-  const [documents, setDocuments] = useState([])
-  const [activeProject, setActiveProject] = useState([])
-
 
   useEffect(() => {
     const initDocuments = async () => {
       if (projectId && organizationId) {
-        const activeOrganization = auth.user.organizations.find(org => org.id === organizationId)
-        const selectedProject = activeOrganization.projects.find(proj => proj.id === projectId)
-
-        const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
+        const activeOrganization = auth.user.organizations.find(
+          (org) => org.id === organizationId
+        );
+        const selectedProject = activeOrganization.projects.find(
+          (proj) => proj.id === projectId
+        );
+        const storedToken = window.localStorage.getItem(
+          authConfig.storageTokenKeyName
+        );
 
         if (storedToken) {
           // auth.setLoading(true)
-          await axios
-            .get(apiRequests.getDocumentsByProject(activeOrganization.id, selectedProject.id), {
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: 'Bearer ' + storedToken
-              },
-                 params: {
-                projectId: selectedProject.id
+          documentService
+            .getDocumentByProject(
+              activeOrganization.id,
+              selectedProject.id,
+              storedToken
+            )
+            .then((response) => {
+              setDocuments(response.data.content);
+            })
+            .catch((error) => {
+              if (
+                authConfig.onTokenExpiration === "logout" &&
+                !router.pathname.includes("login")
+              ) {
+                router.replace("/login");
               }
-            })
-            .then(async response => {
-              // auth.setLoading(false)
-              setDocuments(response.data.content)
-              setActiveProject(selectedProject)
-            })
-            .catch(() => {
-              auth.setLoading(false)
-              if (authConfig.onTokenExpiration === 'logout' && !router.pathname.includes('login')) {
-                router.replace('/login')
-              }
-            })
+            });
         } else {
           // auth.setLoading(false)
         }
       }
-    }
-    initDocuments()
-  }, [auth, organizationId, projectId, router, activeProject])
-
-
-
+    };
+    initDocuments();
+  }, [auth, organizationId, projectId, router]);
 
   return (
-    <ApexChartWrapper>
-      <Grid container spacing={6} className='match-height'>
-        <Grid item xs={12} md={12}>
-          <ProjectButtons  project={activeProject}/>
-        </Grid>
-        {documents.map(document => (
-          <Grid key={document.id} item xs={6} md={4}>
-            <DocumentComponent document={document} />
-          </Grid>
-        ))}
-      </Grid>
-    </ApexChartWrapper>
-  )
-}
+    <Card>
+      <>
+        <StyledCardContent>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 
-export default GendoxDashboard
+          <Typography
+            variant="h3"
+            sx={{ mb: 6, fontWeight: 600, textAlign: "left" }}
+          >
+            {project?.name || "No Selected "} Project
+          </Typography>
+          <IconButton
+            onClick={handleSettingsClick}
+            sx={{ mb: 6 }}
+          >
+            <Icon icon="mdi:cog-outline" />
+          </IconButton>
+        </Box>
+          <ProjectButtons />
+        </StyledCardContent>
+        <StyledCardContent sx={{ backgroundColor: "action.hover" }}>
+          <Typography
+            variant="h5"
+            sx={{ mb: 6, fontWeight: 600, textAlign: "left" }}
+          >
+            Recent Documents
+          </Typography>
+          <Documents documents={documents} />
+        </StyledCardContent>
+      </>
+    </Card>
+  );
+};
+
+export default GendoxHome;

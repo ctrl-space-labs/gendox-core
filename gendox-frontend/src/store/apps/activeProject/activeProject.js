@@ -1,88 +1,89 @@
-import { createSlice } from '@reduxjs/toolkit'
 
-const initialActiveProjectState = { activeProject: null }
 
-const ActiveProjectSlice = createSlice({
-  name: 'activeProject',
-  initialState: initialActiveProjectState,
-  reducers: {
-    getActiveProject(state, action) {
-      state.activeProject = action.payload
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import projectService from "src/gendox-sdk/projectService";
+
+export const fetchProject = createAsyncThunk(
+  "activeProject/fetchProject",
+  async ({ organizationId, projectId, storedToken }, thunkAPI) => {
+    try {
+      const projectPromise = projectService.getProjectById(organizationId, projectId, storedToken);
+      const membersPromise = projectService.getProjectMembers(organizationId, projectId, storedToken);
+
+      // Use Promise.all to wait for both promises to resolve
+      const [projectData, membersData] = await Promise.all([projectPromise, membersPromise]);
+
+      // Return combined data
+      return { project: projectData.data, members: membersData.data };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response.data);
     }
   }
-})
-
-export const activeProjectActions = ActiveProjectSlice.actions
-
-export default ActiveProjectSlice.reducer
+);
 
 
-
-
-
-
-
-
-// import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
-
-// // ** Axios Imports
-// import axios from 'axios'
-
-// import authConfig from 'src/configs/auth';
-// import apiRequests from 'src/configs/apiRequest';
-
-// // ** Fetch Active Project
-// export const fetchActiveProject = createAsyncThunk('activeProject/fetchActiveProject',
-//   async ({ organizationId, projectId }, { rejectWithValue }) => {
+// Define an async thunk for fetching an organization by ID
+// export const fetchProjectById = createAsyncThunk(
+//   "activeProject/fetchByIdStatus",
+//   async ({ organizationId, projectId, storedToken }, thunkAPI) => {
 //     try {
-//       const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName);
-//       if (!storedToken) {
-//         throw new Error('No authentication token available.');
-//       }
-
-//       const response = await axios.get(apiRequests.getProjectById(organizationId.id, projectId.id),      {
-//         headers: {
-//           'Content-Type': 'application/json',
-//           Authorization: `Bearer ${storedToken}`,
-//         },
-//       });
-//       console.log("*****************", response.data)
-
+//       const response = await projectService.getProjectById(
+//         organizationId,
+//         projectId,
+//         storedToken
+//       );
 //       return response.data;
 //     } catch (error) {
-//       return rejectWithValue(error.response ? error.response.data : 'An error occurred');
+//       return thunkAPI.rejectWithValue(error.response.data);
 //     }
 //   }
 // );
 
-// const ActiveProjectSlice = createSlice({
-//   name: 'activeProject',
-//   initialState: {
-//     activeProject: null,
-//     status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
-//     error: null
-//   },
-//   reducers: {
-//     getActiveProject(state, action) {
-//       state.activeOrganization = fetchActiveProject(action.organizationId, action.projectId)
+// export const fetchProjectMembers = createAsyncThunk(
+//   "activeProject/fetchProjectMembers",
+//   async ({ organizationId, projectId, storedToken }, thunkAPI) => {
+//     try {
+//       const response = await projectService.getProjectMembers(
+//         organizationId,
+//         projectId,
+//         storedToken
+//       );
+//       return response.data;
+//     } catch (error) {
+//       return thunkAPI.rejectWithValue(error.response.data);
 //     }
-//   },
-//   extraReducers: (builder) => {
-//     builder
-//       .addCase(fetchActiveProject.pending, (state) => {
-//         state.status = 'loading';
-//       })
-//       .addCase(fetchActiveProject.fulfilled, (state, action) => {
-//         state.status = 'succeeded';
-//         state.activeProject = action.payload;
-//       })
-//       .addCase(fetchActiveProject.rejected, (state, action) => {
-//         state.status = 'failed';
-//         state.error = action.payload;
-//       });
-//   },
-// });
+//   }
+// );  
 
-// export const activeProjectActions = ActiveProjectSlice.actions
+// Define the initial state
+const initialActiveProjectState = {
+  projectDetails: {},
+  projectMembers: [], 
+  error: null,
+};
 
-// export default ActiveProjectSlice.reducer
+// Create the slice
+const activeProjectSlice = createSlice({
+  name: "activeProject",
+  initialState: initialActiveProjectState,
+  reducers: {
+    // Standard reducer logic can be added here if needed
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchProject.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(fetchProject.fulfilled, (state, action) => {
+        state.projectDetails = action.payload.project;
+        state.projectMembers = action.payload.members;
+      })
+      .addCase(fetchProject.rejected, (state, action) => {
+        state.error = action.payload;
+      });
+  },
+});
+
+// Export actions and reducer
+export const activeProjectActions = activeProjectSlice.actions;
+export default activeProjectSlice.reducer;

@@ -13,6 +13,8 @@ select 'John Doe',
 where not exists(SELECT * FROM gendox_core.users where email = 'jdoe@test.com');
 
 
+
+
 INSERT into gendox_core.users
     (name, email, global_role_id)
 select 'Chris Sekas',
