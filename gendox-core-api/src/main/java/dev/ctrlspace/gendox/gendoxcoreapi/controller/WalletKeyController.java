@@ -3,14 +3,10 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.WalletKeyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.WalletKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WalletKeyDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.WalletKeyCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.request.CreateWalletKeysRequestBody;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.WalletKeyService;
-import id.walt.crypto.keys.KeyType;
 import id.walt.crypto.keys.LocalKey;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -76,24 +72,24 @@ public class WalletKeyController {
         });
     }
 
-    @PostMapping(value = "/organizations/{organizationId}/wallet-keys", consumes = {"application/json"})
-    @ResponseStatus(value = HttpStatus.CREATED)
-    @Operation(summary = "Create wallet key",
-            description = "Create a new wallet key with the provided details.")
-    public WalletKey createWalletKey(@RequestBody CreateWalletKeysRequestBody walletKeysRequestBody) throws GendoxException {
-
-        WalletKeyDTO walletKeyDTO = walletKeysRequestBody.getWalletKeyDTO();
-        LocalKey localKey = walletKeysRequestBody.getLocalKey();
-
-        if (walletKeyDTO.getId() != null) {
-            throw new GendoxException("WALLET_KEY_ID_MUST_BE_NULL", "Key id is not null", HttpStatus.BAD_REQUEST);
-        }
-
-        WalletKey walletKey = walletKeyConverter.toEntity(walletKeyDTO);
-        walletKey = walletKeyService.createWalletKey(walletKey);
-
-        return walletKey;
-    }
+//    @PostMapping(value = "/organizations/{organizationId}/wallet-keys", consumes = {"application/json"})
+//    @ResponseStatus(value = HttpStatus.CREATED)
+//    @Operation(summary = "Create wallet key",
+//            description = "Create a new wallet key with the provided details.")
+//    public WalletKey createWalletKey(@RequestBody CreateWalletKeysRequestBody walletKeysRequestBody) throws GendoxException {
+//
+//        WalletKeyDTO walletKeyDTO = walletKeysRequestBody.getWalletKeyDTO();
+//        LocalKey localKey = walletKeysRequestBody.getLocalKey();
+//
+//        if (walletKeyDTO.getId() != null) {
+//            throw new GendoxException("WALLET_KEY_ID_MUST_BE_NULL", "Key id is not null", HttpStatus.BAD_REQUEST);
+//        }
+//
+//        WalletKey walletKey = walletKeyConverter.toEntity(walletKeyDTO);
+//        walletKey = walletKeyService.createWalletKey(walletKey);
+//
+//        return walletKey;
+//    }
 
 
     @DeleteMapping("/organizations/{organizationId}/wallet-keys/{walletKeyId}")
