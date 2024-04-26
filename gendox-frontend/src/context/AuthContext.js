@@ -61,6 +61,11 @@ const AuthProvider = ({ children }) => {
     setAuthState({ user: null, isLoading: false });
   }
 
+  const removeUser = () => {
+    // Here you can clear your application's session and redirect the user to the login page
+    userManager.removeUser();
+  }
+
   const initAuthOIDC = () => {
 
     userManager.getUser().then(user => {
@@ -72,10 +77,7 @@ const AuthProvider = ({ children }) => {
     // Adding an event listener for when new user data is loaded
     userManager.events.addUserLoaded(loadUser);
 
-    userManager.events.addUserSignedOut(() => {
-      // Here you can clear your application's session and redirect the user to the login page
-      userManager.removeUser();
-    });
+    userManager.events.addUserSignedOut(removeUser);
 
     userManager.events.addUserUnloaded(unloadUser);
 
@@ -83,6 +85,7 @@ const AuthProvider = ({ children }) => {
     return () => {
       userManager.events.removeUserLoaded(loadUser);
       userManager.events.removeUserUnloaded(unloadUser);
+      userManager.events.removeUserSignedOut(removeUser);
     };
 
   }
