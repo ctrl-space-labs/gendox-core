@@ -13,6 +13,24 @@ const localOidcConfig = {
   pkceMethod: 'S256'
 };
 
+const devOidcConfig = {
+  authority: "https://dev.gendox.ctrlspace.dev/idp/realms/gendox-idp-dev",
+  client_id: "gendox-pkce-public-client-dev",
+  redirect_uri: "https://dev.gendox.ctrlspace.dev/oidc-callback",
+  response_type: "code",
+  scope: "openid profile email",
+  post_logout_redirect_uri: "https://dev.gendox.ctrlspace.dev/login",
+  silent_redirect_uri: "https://dev.gendox.ctrlspace.dev/silent-renew",
+  automaticSilentRenew: true,
+  pkceMethod: 'S256'
+};
+
+let oidcConfig = localOidcConfig;
+
+// if (process.env.NODE_ENV === 'development') {
+//   oidcConfig = devOidcConfig;
+// }
+
 
 
 export default {
@@ -22,5 +40,5 @@ export default {
   selectedOrganizationId: 'activeOrganizationId',
   selectedProjectId: 'activeProjectId',
   user: 'userData',
-  oidcConfig: localOidcConfig
+  oidcConfig: oidcConfig
 }
