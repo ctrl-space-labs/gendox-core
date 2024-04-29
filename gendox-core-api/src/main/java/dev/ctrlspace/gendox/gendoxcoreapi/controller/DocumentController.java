@@ -1,13 +1,18 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
+import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentOnlyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,6 +48,8 @@ public class DocumentController {
     private SplitFileService splitFileService;
     private DocumentSectionService documentSectionService;
 
+    private SecurityUtils securityUtils;
+
 
 
     @Autowired
@@ -50,6 +58,7 @@ public class DocumentController {
                               DocumentConverter documentConverter,
                               UploadService uploadService,
                               SplitFileService splitFileService,
+                              SecurityUtils securityUtils,
                               DocumentSectionService documentSectionService) {
         this.documentService = documentService;
         this.documentOnlyConverter = documentOnlyConverter;
@@ -57,6 +66,7 @@ public class DocumentController {
         this.uploadService = uploadService;
         this.splitFileService = splitFileService;
         this.documentSectionService = documentSectionService;
+        this.securityUtils = securityUtils;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
@@ -168,6 +178,43 @@ public class DocumentController {
 
         documentInstance = documentService.updateDocument(documentInstance);
         return documentInstance;
+    }
+
+
+    // CRUD Sections
+
+    //update section with DocumentInstanceSectionDTO request body
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @PutMapping("/documents/{documentId}/sections/{sectionId}")
+    @Operation(summary = "Update document section by ID",
+            description = "Update an existing document section by specifying its unique ID and providing updated section details. " +
+                    "This operation allows you to modify the section's properties and metadata. " +
+                    "Ensure that the ID in the path matches the ID in the provided section details.")
+    public DocumentInstanceSection updateSection(Authentication authentication,  @PathVariable UUID sectionId, @PathVariable UUID documentId, @RequestBody DocumentInstanceSectionDTO sectionDTO) throws GendoxException {
+
+        if(!securityUtils.can("OP_WRITE_DOCUMENT",
+                (GendoxAuthenticationToken) authentication,
+                AccessCriteria.builder()
+                        .orgIds(
+                                Set.of(sectionDTO
+                                        .getDocumentDTO()
+                                        .getOrganizationId()
+                                        .toString()))
+                        .build())) {
+            throw  new GendoxException("UNAUTHORIZED", "You are not authorized to perform this operation", HttpStatus.UNAUTHORIZED);
+        }
+        //request validation check
+
+
+        // in service
+        // 1. get section by id
+        // 2. validate that is linked with the document id
+        // 3. Update the section with the new values + Metadata
+        // 4. Save the section
+
+
+        return null;
     }
 
 

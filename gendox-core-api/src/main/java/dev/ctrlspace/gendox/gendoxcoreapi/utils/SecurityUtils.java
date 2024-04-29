@@ -61,7 +61,7 @@ public class SecurityUtils {
 
 
 
-    private static boolean can(String authority, GendoxAuthenticationToken authentication, AccessCriteria accessCriteria) {
+    public boolean can(String authority, GendoxAuthenticationToken authentication, AccessCriteria accessCriteria) {
 
         if (  ! accessCriteria.getProjectIds().isEmpty()) {
             return canAccessProjects(authority, authentication, accessCriteria.getProjectIds());
