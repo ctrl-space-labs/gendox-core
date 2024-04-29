@@ -166,6 +166,9 @@ public class DocumentController {
     public DocumentInstance update(@PathVariable UUID documentId, @PathVariable UUID organizationId, @RequestBody DocumentDTO documentDTO) throws GendoxException {
         // TODO: Store the sections. The metadata should be updated only if documentTemplate is empty/null
 
+//        1. Authorization check
+//        2. Request validation check
+
         DocumentInstance documentInstance = documentConverter.toEntity(documentDTO);
 
         if (!documentId.equals(documentInstance.getId())) {
