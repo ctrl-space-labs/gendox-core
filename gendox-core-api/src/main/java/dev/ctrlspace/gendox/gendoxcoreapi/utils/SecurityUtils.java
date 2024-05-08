@@ -60,17 +60,18 @@ public class SecurityUtils {
     }
 
 
-
     public boolean can(String authority, GendoxAuthenticationToken authentication, AccessCriteria accessCriteria) {
 
-        if (  ! accessCriteria.getProjectIds().isEmpty()) {
+        // Check if projectIds is not null and not empty, then check project access
+        if (accessCriteria.getProjectIds() != null && !accessCriteria.getProjectIds().isEmpty()) {
             return canAccessProjects(authority, authentication, accessCriteria.getProjectIds());
-
         }
 
-        if ( ! accessCriteria.getOrgIds().isEmpty()) {
+        // Check if orgIds is not null and not empty, then check organization access
+        if (accessCriteria.getOrgIds() != null && !accessCriteria.getOrgIds().isEmpty()) {
             return canAccessOrganizations(authority, authentication, accessCriteria.getOrgIds());
         }
+
 
         return false;
     }
@@ -92,6 +93,7 @@ public class SecurityUtils {
 
         return true;
     }
+
     private static boolean canAccessOrganizations(String authority, GendoxAuthenticationToken authentication, Set<String> requestedOrgIds) {
         Set<String> authorizedOrgIds = authentication
                 .getPrincipal()
@@ -110,12 +112,11 @@ public class SecurityUtils {
     }
 
 
-
     private AccessCriteria getRequestedOrgsFromRequestParams() {
         HttpServletRequest request = getCurrentHttpRequest();
         //get request param with name "organizationId"
         String organizationId = request.getParameter(QueryParamNames.ORGANIZATION_ID);
-        String[] orgStrings= request.getParameterValues(QueryParamNames.ORGANIZATION_ID_IN);
+        String[] orgStrings = request.getParameterValues(QueryParamNames.ORGANIZATION_ID_IN);
 
 
         if (organizationId == null && orgStrings == null) {
@@ -160,7 +161,6 @@ public class SecurityUtils {
                 .projectIds(new HashSet<>())
                 .build();
     }
-
 
 
     private AccessCriteria getRequestedProjectsFromRequestParams() {
@@ -220,7 +220,6 @@ public class SecurityUtils {
     }
 
 
-
     public class AccessCriteriaGetterFunction {
 
         public static final String ORG_IDS_FROM_REQUEST_PARAMS = "getRequestedOrgsFromRequestParams";
@@ -235,13 +234,13 @@ public class SecurityUtils {
     /**
      * This is a general method to check for Authorization
      *
-     * @param authority the authority that the user should have
+     * @param authority      the authority that the user should have
      * @param getterFunction this is used to find the appropriate function, that will extract the {@link AccessCriteria}
      *                       from path variables or requstparams or JSON body
      * @return
      */
     public boolean hasAuthority(String authority, String getterFunction) throws IOException {
-        GendoxAuthenticationToken authentication = (GendoxAuthenticationToken)SecurityContextHolder.getContext().getAuthentication();
+        GendoxAuthenticationToken authentication = (GendoxAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
 
         if (isSuperAdmin(authentication)) {
             return true; // Skip validation if user is an admin
@@ -250,7 +249,7 @@ public class SecurityUtils {
         AccessCriteria accessCriteria = new AccessCriteria();
 
 
-        if (AccessCriteriaGetterFunction.ORG_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)){
+        if (AccessCriteriaGetterFunction.ORG_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)) {
             accessCriteria = getRequestedOrgsFromRequestParams();
         }
         if (AccessCriteriaGetterFunction.ORG_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
@@ -258,7 +257,7 @@ public class SecurityUtils {
         }
 
 
-        if (AccessCriteriaGetterFunction.PROJECT_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)){
+        if (AccessCriteriaGetterFunction.PROJECT_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)) {
             accessCriteria = getRequestedProjectsFromRequestParams();
         }
         if (AccessCriteriaGetterFunction.PROJECT_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
@@ -272,13 +271,12 @@ public class SecurityUtils {
     }
 
 
-
     public UUID getUserId() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userId = ((UserProfile) authentication.getPrincipal()).getId();
             return UUID.fromString(userId);
-        } catch (Exception e){
+        } catch (Exception e) {
             logger.warn("An exception occurred while trying to get the user ID: " + e.getMessage());
             return null;
         }
