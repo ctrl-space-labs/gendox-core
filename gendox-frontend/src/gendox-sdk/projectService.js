@@ -74,6 +74,22 @@ const updateProject = async (organizationId, projectId, updatedProjectPayload, s
 
   /**
  * update project
+ * @param organizationId 
+ * @param newProjectPayload
+ * @param storedToken
+ * @returns {Promise<axios.AxiosResponse<Project>>}
+ */
+const createProject = async (organizationId, newProjectPayload, storedToken) => {
+  return axios.post(apiRequests.createProject(organizationId ), newProjectPayload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${storedToken}`
+    }
+  });
+};
+
+  /**
+ * update project
  * @param organizationId
  * @param projectId
  * @param userIds
@@ -126,7 +142,7 @@ const getAiModelByCategory = async (organizationId, projectId, categories, store
   };
 
 
-
+  
 
 
 
@@ -139,6 +155,7 @@ export default {
     getProjectById,
     getProjectMembers,
     updateProject,
+    createProject,
     addProjectMember,
     getAiModels,
     getAiModelByCategory

@@ -11,7 +11,7 @@ const OidcCallbackPage = () => {
         userManager.signinRedirectCallback()
             .then(() => {
                 // Redirect to the home page after successful login
-                window.location.href = "/";
+                window.location.href = "/gendox/home";
             })
             .catch(error => {
                 // Log the error and redirect to an error page

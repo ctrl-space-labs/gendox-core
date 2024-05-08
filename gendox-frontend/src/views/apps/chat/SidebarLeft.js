@@ -1,10 +1,11 @@
 // ** React Imports
 import {useState, useEffect} from 'react'
 
+import { formatDistanceToNow, parseISO } from "date-fns";
+
+
 // ** Next Import
 import {useRouter} from 'next/router'
-
-import UserDropdown from 'src/@core/layouts/components/shared-components/UserDropdown'
 
 // ** Hook Import
 import {useAuth} from 'src/hooks/useAuth'
@@ -132,6 +133,8 @@ const SidebarLeft = props => {
                 return arrToMap.map((chat, index) => {
                     const {lastMessage} = chat.chat
                     const activeCondition = active !== null && active.id === chat.id && active.type === 'chat'
+                    const formattedTime = lastMessage ? formatDistanceToNow(parseISO(lastMessage.time), { addSuffix: true }) : 'Time unknown';
+
 
                     return (
                         <ListItem key={index} disablePadding sx={{'&:not(:last-child)': {mb: 1.5}}}>

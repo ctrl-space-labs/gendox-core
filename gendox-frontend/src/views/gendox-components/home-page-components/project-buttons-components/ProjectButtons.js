@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useRouter } from "next/router";
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -13,12 +14,17 @@ import UploaderDocument from 'src/views/gendox-components/home-page-components/p
 
 const ProjectButtons = () => {
   const project = useSelector((state) => state.activeProject.projectDetails);
+  const router = useRouter();
   const [showUploader, setShowUploader] = useState(false);
   const handleOpenUploader = () => setShowUploader(true);
   const handleCloseUploader = () => setShowUploader(false);
 
+  const handleCreateDocument = () => {
+    router.push(`/gendox/create-document?organizationId=${project.organizationId}&projectId=${project.id}`);
+  }
+
   const buttons = [
-    { text: "NEW DOCUMENT" },
+    { text: "NEW DOCUMENT" , action: handleCreateDocument},
     { text: "UPLOAD DOCUMENT", action: handleOpenUploader },
     { text: "NEW TEMPLATE" },
     { text: "UPLOAD TEMPLATE" }

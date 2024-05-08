@@ -1,10 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.NewProjectConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectMemberConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.NewProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectMemberDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
@@ -42,7 +44,7 @@ public class ProjectController {
     private ProjectAgent projectAgent;
     private AiModelRepository aiModelRepository;
     private AiModelService aiModelService;
-
+    private NewProjectConverter newProjectConverter;
 
     @Autowired
     public ProjectController(ProjectService projectService,
@@ -52,7 +54,8 @@ public class ProjectController {
                              ProjectMemberConverter projectMemberConverter,
                              ProjectAgentService projectAgentService,
                              AiModelRepository aiModelRepository,
-                             AiModelService aiModelService) {
+                             AiModelService aiModelService,
+                             NewProjectConverter newProjectConverter) {
         this.projectService = projectService;
         this.projectConverter = projectConverter;
         this.projectMemberService = projectMemberService;
@@ -61,6 +64,7 @@ public class ProjectController {
         this.projectAgentService = projectAgentService;
         this.aiModelRepository = aiModelRepository;
         this.aiModelService = aiModelService;
+        this.newProjectConverter = newProjectConverter;
     }
 
 
@@ -100,17 +104,18 @@ public class ProjectController {
             description = "Create a new project for the organization. " +
                     "The user must have the necessary permissions to create projects for the organization. " +
                     "This endpoint accepts a JSON payload describing the project details.")
-    public Project createProject(@PathVariable UUID organizationId, @RequestBody ProjectDTO projectDTO) throws Exception {
+    public Project createProject(@PathVariable UUID organizationId, @RequestBody ProjectDTO newprojectDTO) throws Exception {
 
-        if (projectDTO.getId() != null) {
+        if (newprojectDTO.getId() != null) {
             throw new GendoxException("PROJECT_ID_MUST_BE_NULL", "Project id is not null", HttpStatus.BAD_REQUEST);
         }
 
-        if (!organizationId.equals(projectDTO.getOrganizationId())) {
+        if (!organizationId.equals(newprojectDTO.getOrganizationId())) {
             throw new GendoxException("ORGANIZATION_ID_MISMATCH", "Organization ID in path and Organization ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
 
-        Project project = projectConverter.toEntity(projectDTO);
+//        Project project = newProjectConverter.toEntity(newprojectDTO);
+        Project project = projectConverter.toEntity(newprojectDTO);
 
         // create Project Agent
         ProjectAgent projectAgent = new ProjectAgent();
@@ -118,6 +123,8 @@ public class ProjectController {
         projectAgent.setAgentName(project.getName() + " Agent");
         projectAgent.setSemanticSearchModel(aiModelRepository.findByName(AiModelConstants.ADA2_MODEL));
         projectAgent.setCompletionModel(aiModelRepository.findByName(AiModelConstants.GPT_3_5_TURBO_MODEL));
+        projectAgent.setModerationModel(aiModelRepository.findByName(AiModelConstants.OPEN_AI_MODERATION));
+        projectAgent.setModerationCheck(true);
 
         projectAgent = projectAgentService.createProjectAgent(projectAgent);
 

@@ -24,60 +24,76 @@ const getDocumentByProject = async (organizationId, projectId, storedToken) => {
 };
 
 /**
- * Get Document by id
- * @param organizationId
- * @param projectId
+ * Get Document by id 
  * @param documentId
  * @param storedToken
  * @returns {Promise<axios.AxiosResponse<Document>>}
  */
-const getDocumentById = async (
-  organizationId,
-  projectId,
+const getDocumentById = async (  
   documentId,
   storedToken
 ) => {
   return axios.get(
-    apiRequests.getDocumentById(organizationId, projectId, documentId),
+    apiRequests.getDocumentById(documentId),
     {
       headers: {
         "Content-Type": "application/json",
         Authorization: "Bearer " + storedToken,
-      },
-      params: {
-        projectId: projectId,
-      },
+      },      
     }
   );
 };
 
 /**
- * Get project sections
- * @param organizationId
- * @param projectId
+ * Get project sections 
  * @param documentId
  * @param storedToken
  * @returns {Promise<axios.AxiosResponse<DocumentInstanceSections[]>>}
  */
-const getSectionsByDocumentId = async (
-  organizationId,
-  projectId,
+const getSectionsByDocumentId = async (  
   documentId,
   storedToken
 ) => {
   return axios.get(
-    apiRequests.documentSections(organizationId, projectId, documentId),
+    apiRequests.documentSections(documentId),
     {
       headers: {
         "Content-Type": "application/json",
         Authorization: "Bearer " + storedToken,
-      },
-      params: {
-        projectId: projectId,
-      },
+      },      
     }
   );
 };
+
+/**
+ * update document section 
+ * @param documentId
+ * @param sectionId
+ * @param updatedSectionPayload
+ * @param storedToken 
+ * @returns {Promise<axios.AxiosResponse<DocumentInstanceSection>}
+ */
+const updateDocumentSection = async (  
+  documentId,
+  sectionId,
+  updatedSectionPayload,
+  storedToken
+) => {
+  return axios.put(
+    apiRequests.documentSection(documentId, sectionId),
+    updatedSectionPayload,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + storedToken,
+      },      
+    }
+  );
+}
+
+
+
+
 
 /**
  * Upload document
@@ -128,6 +144,7 @@ export default {
   getDocumentByProject,
   getDocumentById,
   getSectionsByDocumentId,
+  updateDocumentSection,
   uploadDocument,
   triggerJobs,
 };

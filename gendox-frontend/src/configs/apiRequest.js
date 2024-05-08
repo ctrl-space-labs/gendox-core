@@ -1,7 +1,7 @@
-// const url = "http://localhost:5000/gendox/api/v1/"; // Local Environment
+const url = "http://localhost:5000/gendox/api/v1/"; // Local Environment
 //const url= 'https://gendox.ctrlspace.dev/gendox/api/v1/' // Production Environment (AWS)
 // const url= 'http://localhost:8080/gendox/api/v1/' // Local Environment
-const url = 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/' // Development Environment (Hetzner)
+// const url = 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/' // Development Environment (Hetzner)
 
 export default {
   getProfile: url + "profile",
@@ -23,6 +23,9 @@ export default {
   updateProject: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}`,
 
+  createProject: (organizationId ) =>
+    `${url}organizations/${organizationId}/projects`,
+
   postCompletionModel: (projectId) =>
     `${url}messages/semantic-completion?projectId=${projectId}`,
 
@@ -39,11 +42,12 @@ export default {
   ) =>
     `${url}threads/${threadId}/messages?page=${page}&size=${size}&sort=${sort}`,
 
-  documentSections: (organizationId, projectId, documentId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}/sections`,
+  documentSections: (documentId) => `${url}documents/${documentId}/sections`,
 
-  getDocumentById: (organizationId, projectId, documentId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}`,
+  documentSection: (documentId, sectionId) =>
+    `${url}documents/${documentId}/sections/${sectionId}`,
+
+  getDocumentById: (documentId) => `${url}documents/${documentId}`,
 
   uploadDocument: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,
@@ -61,7 +65,5 @@ export default {
     `${url}organizations/${organizationId}/projects/${projectId}/ai-models/categories`,
 
   getAiModels: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/ai-models`,    
-
-
+    `${url}organizations/${organizationId}/projects/${projectId}/ai-models`,
 };

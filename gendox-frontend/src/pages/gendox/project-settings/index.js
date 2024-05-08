@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import ProjectSettingsCard from 'src/views/gendox-components/project-settings-components/ProjectSettingsCard';
 import { useAuth } from 'src/hooks/useAuth';
 import authConfig from 'src/configs/auth';
-import { fetchOrganizationById } from "src/store/apps/activeOrganization/activeOrganization";
+import { fetchOrganization } from "src/store/apps/activeOrganization/activeOrganization";
 import { fetchProject } from "src/store/apps/activeProject/activeProject";
 
 
@@ -24,7 +24,7 @@ const ProjectSettings = () => {
 
   useEffect(() => {
     if (organizationId && projectId && storedToken) {
-      dispatch(fetchOrganizationById({ organizationId, storedToken}))
+      dispatch(fetchOrganization({ organizationId, storedToken}))
       dispatch(fetchProject({ organizationId, projectId, storedToken }));
     }
   }, [organizationId, projectId, storedToken]);
@@ -34,7 +34,7 @@ const ProjectSettings = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchProject = async () => {
+    const loadProjectDetails = async () => {
       if (projectId && organizationId) {
         setLoading(true);
         const activeOrganization = auth.user.organizations.find(org => org.id === organizationId)
@@ -51,7 +51,7 @@ const ProjectSettings = () => {
         
       }
     };
-    fetchProject();
+    loadProjectDetails();
   }, [auth, organizationId, projectId, router]);
 
 

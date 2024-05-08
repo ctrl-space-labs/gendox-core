@@ -119,8 +119,9 @@ public class ProjectAgentService {
         existingProjectAgent.setTemperature(projectAgent.getTemperature());
         existingProjectAgent.setTopP(projectAgent.getTopP());
         existingProjectAgent.setModerationCheck(projectAgent.getModerationCheck());
-        existingProjectAgent.setModerationModel(aiModelRepository.findByName(projectAgent.getModerationModel().getName()));
-
+        if ( projectAgent.getModerationModel() != null && projectAgent.getModerationCheck() ) {
+            existingProjectAgent.setModerationModel(aiModelRepository.findByName(projectAgent.getModerationModel().getName()));
+        }
         existingProjectAgent = projectAgentRepository.save(existingProjectAgent);
         return existingProjectAgent;
     }

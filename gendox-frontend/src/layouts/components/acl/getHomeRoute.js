@@ -7,15 +7,12 @@ import { useState, useEffect } from 'react'
 // ** Config
 import authConfig from 'src/configs/auth'
 
-// Check if window object is defined (client-side)
-if (typeof window !== 'undefined') {
-  const selectedOrganizationId = window.localStorage.getItem(authConfig.selectedOrganizationId)
-  const selectedProjectId = window.localStorage.getItem(authConfig.selectedProjectId)
-}
+
 
 const getHomeRoute = role => {
   let selectedOrganizationId = null
   let selectedProjectId = null
+  
 
   // Check if window object is defined (client-side)
   if (typeof window !== 'undefined') {

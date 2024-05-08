@@ -1,6 +1,9 @@
 // ** React Imports
 import { useRef, useEffect } from "react";
 
+import { formatDistanceToNow, parseISO } from "date-fns";
+
+
 import { useDispatch } from "react-redux";
 
 // ** MUI Imports
@@ -11,7 +14,7 @@ import Button from "@mui/material/Button";
 
 import { useRouter } from "next/router";
 import { fetchProject } from "src/store/apps/activeProject/activeProject";
-import { fetchDocumentById } from "src/store/apps/activeDocument/activeDocument";
+import { fetchDocument } from "src/store/apps/activeDocument/activeDocument";
 
 // ** Icon Imports
 import Icon from "src/@core/components/icon";
@@ -136,7 +139,7 @@ const ChatLog = (props) => {
   };
 
   const handleMessageSectionClick = (documentId) => {
-    const path = `/gendox/document-instance?organizationId=${organizationId}&documentId=${documentId}`;
+    const path = `/gendox/document-instance?documentId=${documentId}`;
     const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
     dispatch(
       fetchProject({
@@ -146,9 +149,7 @@ const ChatLog = (props) => {
       })
     );
     dispatch(
-      fetchDocumentById({
-        organizationId: organizationId,
-        projectId: projectId,
+      fetchDocument({        
         documentId: documentId,
         storedToken
       })
@@ -214,7 +215,9 @@ const ChatLog = (props) => {
             sx={{ maxWidth: ["calc(100% - 5.75rem)", "75%", "65%"] }}
           >
             {item.messages.map((chat, index, { length }) => {
-              const time = new Date(chat.time);
+              // const time = new Date(chat.time);
+              const formattedTime =  formatDistanceToNow(parseISO(chat.time), { addSuffix: true });
+
 
               return (
                 <Box key={index} sx={{ "&:not(:last-of-type)": { mb: 3.5 } }}>
@@ -271,14 +274,8 @@ const ChatLog = (props) => {
                       <Typography
                         variant="caption"
                         sx={{ color: "text.disabled" }}
-                      >
-                        {time
-                          ? new Date(time).toLocaleString("en-US", {
-                              hour: "numeric",
-                              minute: "numeric",
-                              hour12: true,
-                            })
-                          : null}
+                      > {formattedTime ? formattedTime : null}
+                        
                       </Typography>
                     </Box>
                   ) : null}
