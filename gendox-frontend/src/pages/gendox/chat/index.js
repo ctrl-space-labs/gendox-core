@@ -64,9 +64,11 @@ const AppChat = () => {
                 width: '100%',
                 display: 'flex',
                 borderRadius: 1,
+                '@media (max-width:600px)': {
+                    borderRadius: 0
+                },
                 overflow: 'hidden',
                 position: 'relative',
-                backgroundColor: 'background.paper',
                 boxShadow: skin === 'bordered' ? 0 : 6,
                 ...(skin === 'bordered' && {border: `1px solid ${theme.palette.divider}`})
             }}
