@@ -82,6 +82,9 @@ const AppChat = () => {
         width: "100%",
         display: "flex",
         borderRadius: 1,
+        '@media (max-width:600px)': {
+                            borderRadius: 0
+                        },
         overflow: "hidden",
         position: "relative",
         backgroundColor: "background.paper",
@@ -129,4 +132,4 @@ const AppChat = () => {
 };
 AppChat.contentHeightFixed = true;
 
-export default AppChat;
+export default AppChat
