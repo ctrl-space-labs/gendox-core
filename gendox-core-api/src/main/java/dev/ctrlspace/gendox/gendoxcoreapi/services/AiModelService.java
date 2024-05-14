@@ -29,6 +29,7 @@ public class AiModelService {
     }
 
 
-
-
+    public AiModel getByName(String ada2Model) {
+        return aiModelRepository.findByName(ada2Model);
+    }
 }

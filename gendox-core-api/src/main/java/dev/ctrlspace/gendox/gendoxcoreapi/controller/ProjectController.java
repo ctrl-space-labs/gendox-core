@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectMemberConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectMemberDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
@@ -36,31 +37,21 @@ public class ProjectController {
     private ProjectService projectService;
     private ProjectConverter projectConverter;
     private ProjectMemberService projectMemberService;
-    private JWTUtils jwtUtils;
     private ProjectMemberConverter projectMemberConverter;
     private ProjectAgentService projectAgentService;
-    private ProjectAgent projectAgent;
-    private AiModelRepository aiModelRepository;
-    private AiModelService aiModelService;
 
 
     @Autowired
     public ProjectController(ProjectService projectService,
                              ProjectConverter projectConverter,
                              ProjectMemberService projectMemberService,
-                             JWTUtils jwtUtils,
                              ProjectMemberConverter projectMemberConverter,
-                             ProjectAgentService projectAgentService,
-                             AiModelRepository aiModelRepository,
-                             AiModelService aiModelService) {
+                             ProjectAgentService projectAgentService) {
         this.projectService = projectService;
         this.projectConverter = projectConverter;
         this.projectMemberService = projectMemberService;
-        this.jwtUtils = jwtUtils;
         this.projectMemberConverter = projectMemberConverter;
         this.projectAgentService = projectAgentService;
-        this.aiModelRepository = aiModelRepository;
-        this.aiModelService = aiModelService;
     }
 
 
@@ -110,21 +101,10 @@ public class ProjectController {
             throw new GendoxException("ORGANIZATION_ID_MISMATCH", "Organization ID in path and Organization ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
 
-        Project project = projectConverter.toEntity(projectDTO);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String creatorUserId = ((UserProfile) authentication.getPrincipal()).getId();
 
-        // create Project Agent
-        ProjectAgent projectAgent = new ProjectAgent();
-        projectAgent.setProject(project);
-        projectAgent.setAgentName(project.getName() + " Agent");
-        projectAgent.setSemanticSearchModel(aiModelRepository.findByName(AiModelConstants.ADA2_MODEL));
-        projectAgent.setCompletionModel(aiModelRepository.findByName(AiModelConstants.GPT_3_5_TURBO_MODEL));
-
-        projectAgent = projectAgentService.createProjectAgent(projectAgent);
-
-
-        project.setProjectAgent(projectAgent);
-
-        project = projectService.createProject(project);
+        Project project = projectService.createProject(projectDTO, creatorUserId);
 
         return project;
     }

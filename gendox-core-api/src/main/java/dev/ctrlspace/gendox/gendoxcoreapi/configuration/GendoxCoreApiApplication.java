@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
-import dev.ctrlspace.gendox.authentication.GendoxJwtAuthenticationConverter;
+import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeService;
 import dev.ctrlspace.gendox.spring.batch.jobs.SpringBatchConfiguration;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
@@ -16,6 +16,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import org.slf4j.Logger;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -41,7 +42,7 @@ import java.util.StringJoiner;
         SpringBatchConfiguration.class,
         LoggingObservationHandler.class,
         SpringBatchConfiguration.class,
-        GendoxJwtAuthenticationConverter.class,
+        GendoxAuthenticationToken.class,
         UniqueIdentifierCodeService.class
         })
 @EnableCaching
@@ -52,12 +53,6 @@ public class GendoxCoreApiApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(GendoxCoreApiApplication.class, args);
-    }
-
-
-    @Bean
-    public CacheManager cacheManager() {
-        return new ConcurrentMapCacheManager();
     }
 
     @Bean("gendoxKeyGenerator")

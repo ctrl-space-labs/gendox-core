@@ -7,7 +7,7 @@ server:
 logging:
   level:
     dev.ctrlspace: DEBUG
-    org.springframework.security: INFO
+    org.springframework.security: TRACE
     org.springframework: INFO
 #    This is how to change the micrometer tracing pattern, we'll use the default now
 #  pattern:
@@ -15,6 +15,10 @@ logging:
 
 
 spring:
+  cache:
+    type: caffeine
+    caffeine:
+      spec: expireAfterWrite=1m,maximumSize=1000
   mvc:
     format:
       date-time: yyyy-MM-dd'T'HH:mm:ss.SSSZ
