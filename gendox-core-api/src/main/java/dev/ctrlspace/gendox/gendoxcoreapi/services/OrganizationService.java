@@ -3,15 +3,19 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationPredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -64,14 +68,16 @@ public class OrganizationService {
         return userOrganizationRepository.findByUserId(UUID.fromString(userId));
     }
 
-    public Organization createOrganization(Organization organization) throws GendoxException {
+    public Organization createOrganization(Organization organization, UUID ownerUserId) throws GendoxException {
 
         if (organization.getId() != null) {
             throw new GendoxException("NEW_ORGANIZATION_ID_IS_NOT_NULL", "Organization id must be null", HttpStatus.BAD_REQUEST);
         }
 
         organization = organizationRepository.save(organization);
-        userOrganizationService.setAdminRoleForOrganizationsOwner(organization);
+
+        userOrganizationService.createUserOrganization(ownerUserId, organization.getId(), OrganizationRolesConstants.ADMIN);
+
         return organization;
     }
 

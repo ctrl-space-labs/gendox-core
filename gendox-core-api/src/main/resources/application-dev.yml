@@ -9,6 +9,10 @@ logging:
     dev.ctrlspace: DEBUG
     org.springframework: INFO
 spring:
+  cache:
+    type: caffeine
+    caffeine:
+      spec: expireAfterWrite=1m,maximumSize=1000
   mvc:
     format:
       date-time: yyyy-MM-dd'T'HH:mm:ss.SSSZ

@@ -21,6 +21,9 @@ import io.swagger.models.auth.In;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -51,6 +54,12 @@ public class UserService implements UserDetailsService {
     private TypeService typeService;
     private AuthenticationService authenticationService;
 
+    private OrganizationService organizationService;
+
+    private ProjectService projectService;
+
+    private CacheManager cacheManager;
+
 
     @Autowired
     public UserService(UserRepository userRepository,
@@ -58,12 +67,18 @@ public class UserService implements UserDetailsService {
                        JwtDTOUserProfileConverter jwtDTOUserProfileConverter,
                        UserProfileConverter userProfileConverter,
                        TypeService typeService,
+                       OrganizationService organizationService,
+                       ProjectService projectService,
+                       CacheManager cacheManager,
                        AuthenticationService authenticationService) {
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
         this.jwtDTOUserProfileConverter = jwtDTOUserProfileConverter;
         this.typeService = typeService;
+        this.organizationService = organizationService;
+        this.projectService = projectService;
+        this.cacheManager = cacheManager;
         this.authenticationService = authenticationService;
     }
 
@@ -121,10 +136,20 @@ public class UserService implements UserDetailsService {
      * @return
      * @throws GendoxException
      */
+    @Cacheable(value = "UserProfileByIdentifier", keyGenerator = "gendoxKeyGenerator")
     public UserProfile getUserProfileByUniqueIdentifier(String userIdentifier) throws GendoxException {
 
         User user = this.getUserByUniqueIdentifier(userIdentifier);
         return userProfileConverter.toDTO(user);
+    }
+
+    public void evictUserProfileByUniqueIdentifier(String userIdentifier) {
+        // Evict the cache entry for the user
+        Cache cache = cacheManager.getCache("UserProfileByIdentifier");
+        if (cache != null) {
+            cache.evict("UserService:getUserProfileByUniqueIdentifier:"+userIdentifier);
+        }
+        logger.info("Evicting UserProfile cache for userIdentifier: {}", userIdentifier);
     }
 
     public Boolean isUserExistByUserName(String userName) throws GendoxException {
@@ -173,6 +198,21 @@ public class UserService implements UserDetailsService {
 
         return user;
 
+    }
+
+    /**
+     * Register a new user.
+     * It created a new user, a new Organization and a new Project in this organization
+     *
+     * @param email
+     * @return
+     * @throws GendoxException
+     */
+    public User userRegistration(String email) throws GendoxException {
+        User user = new User();
+        user.setEmail(email);
+        user = createUser(user);
+        return user;
     }
 
 
