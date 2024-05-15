@@ -14,7 +14,6 @@ import Divider from "@mui/material/Divider";
 import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
 import Paper from "@mui/material/Paper";
-import Snackbar from "@mui/material/Snackbar";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -29,8 +28,9 @@ import Typography from "@mui/material/Typography";
 
 import Icon from "src/@core/components/icon";
 import authConfig from "src/configs/auth";
-import projectService from "src/gendox-sdk/projectService";
 import organizationService from "src/gendox-sdk/organizationService";
+import userService from "src/gendox-sdk/userService";
+import SendInvitation from "src/views/gendox-components/organization-settings/SendInvitation";
 
 function descendingComparator(a, b, orderBy) {
   if (b[orderBy] < a[orderBy]) {
@@ -69,7 +69,7 @@ const headCells = [
   { id: "email", numeric: true, disablePadding: false, label: "Email" },
   { id: "user-type", numeric: true, disablePadding: false, label: "User Type" },
   {
-    id: "is-project-member",
+    id: "is-organization-member",
     numeric: true,
     disablePadding: false,
     label: "Plan",
@@ -171,7 +171,7 @@ const EnhancedTableToolbar = (props) => {
           id="tableTitle"
           component="div"
         >
-          Project Members
+          Organization Members
         </Typography>
       )}
       {numSelected > 0 ? (
@@ -185,13 +185,13 @@ const EnhancedTableToolbar = (props) => {
   );
 };
 
-const MembersProjectSettings = () => {
+const MembersOrganizationSettings = () => {
   const router = useRouter();
+  const { organizationId } = router.query;
+  const organization = useSelector((state) => state.activeOrganization.activeOrganization);
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
-  const project = useSelector((state) => state.activeProject.projectDetails);
-  const { id: projectId, organizationId } = project;
 
   const [order, setOrder] = useState("asc");
   const [orderBy, setOrderBy] = useState("name");
@@ -199,53 +199,56 @@ const MembersProjectSettings = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [organizationMembers, setOrganizationMembers] = useState([]);
-  const [projectMembers, setProjectMembers] = useState([]);  
-  const [showInviteButton, setShowInviteButton] = useState(true); 
+  const [allUsers, setAllUsers] = useState([]);
+  const [showInviteButton, setShowInviteButton] = useState(true);
+  const [sendInvitationOpen, setSendInvitationOpen] = useState(false)
+  const toggleSendInvitation = () => setSendInvitationOpen(!sendInvitationOpen)
 
-  
   useEffect(() => {
-    if (projectId) {
-      fetchProjectMembers();
+    if (organizationId) {
+      fetchOrganizationMembers();
     }
-  }, [projectId, organizationId, router]);
-
-  const fetchProjectMembers = async () => {
-    try {
-      const response = await projectService.getProjectMembers(
-        organizationId,
-        projectId,
-        storedToken
-      );
-      const fetchedProjectMembers = response.data.map((user) => ({
-        ...user.user,
-        userType: user.user.userType.name,
-        activeProjectMember: true,
-      }));
-      setProjectMembers(fetchedProjectMembers);
-    } catch (error) {
-      console.error("Failed to fetch project members:", error);
-    }
-  };
+  }, [organizationId, router]);
 
   const fetchOrganizationMembers = async () => {
     try {
       const response = await organizationService.getUsersInOrganizationByOrgId(
-        organizationId,        
+        organizationId,
         storedToken
       );
-      const fetchedOrgMembers = response.data.map((user) => ({
+      const fetchedOrganizationMembers = response.data.map((user) => ({
         ...user.user,
         userType: user.user.userType.name,
-        activeProjectMember: false,
+        activeOrganizationMember: true,
       }));
-      // Filter out organization members who are already project members
-      const projectMemberIds = new Set(projectMembers.map(pm => pm.id));
-      const filteredOrgMembers = fetchedOrgMembers.filter(om => !projectMemberIds.has(om.id));
-
-      setOrganizationMembers(filteredOrgMembers);
-      setShowInviteButton(false);
+      setOrganizationMembers(fetchedOrganizationMembers);      
     } catch (error) {
       console.error("Failed to fetch organization members:", error);
+    }
+  };
+
+  const fetchAllUsers = async () => {
+    try {
+      const response = await userService.getAllUsers( 
+        organizationId,      
+        storedToken
+      );
+      console.log("response", response);
+      const fetchedAllUsers = response.data.map((user) => ({
+        ...user.user,
+        userType: user.user.userType.name,
+        activeOrganizationMember: false,
+      }));
+      // Filter out organization members who are already project members
+      const organizationMemberIds = new Set(organizationMembers.map((om) => om.id));
+      const filteredAllUsers = fetchedAllUsers.filter(
+        (us) => !organizationMemberIds.has(us.id)
+      );
+
+      setAllUsers(filteredAllUsers);
+      setShowInviteButton(false);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
     }
   };
 
@@ -257,32 +260,32 @@ const MembersProjectSettings = () => {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-        const newSelected = membersToShow.map((n) => n.id);
-        setSelected(newSelected);
-        return;
+      const newSelected = membersToShow.map((n) => n.id);
+      setSelected(newSelected);
+      return;
     }
     setSelected([]);
-};
+  };
 
   const handleClick = (event, id) => {
     const selectedIndex = selected.indexOf(id);
     let newSelected = [];
 
     if (selectedIndex === -1) {
-        newSelected = newSelected.concat(selected, id);
+      newSelected = newSelected.concat(selected, id);
     } else if (selectedIndex === 0) {
-        newSelected = newSelected.concat(selected.slice(1));
+      newSelected = newSelected.concat(selected.slice(1));
     } else if (selectedIndex === selected.length - 1) {
-        newSelected = newSelected.concat(selected.slice(0, -1));
+      newSelected = newSelected.concat(selected.slice(0, -1));
     } else if (selectedIndex > 0) {
-        newSelected = newSelected.concat(
-            selected.slice(0, selectedIndex),
-            selected.slice(selectedIndex + 1)
-        );
+      newSelected = newSelected.concat(
+        selected.slice(0, selectedIndex),
+        selected.slice(selectedIndex + 1)
+      );
     }
 
     setSelected(newSelected);
-};
+  };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -298,55 +301,68 @@ const MembersProjectSettings = () => {
   // Avoid a layout jump when reaching the last page with empty rows.
   const emptyRows =
     page > 0
-      ? Math.max(0, (1 + page) * rowsPerPage - projectMembers.length)
+      ? Math.max(0, (1 + page) * rowsPerPage - organizationMembers.length)
       : 0;
 
   const handleSubmit = async (e) => {
-    e.preventDefault();  // Prevent the default form submission
+    e.preventDefault(); // Prevent the default form submission
     if (!selected.length) {
-        console.log("No users selected.");
-        return;
+      console.log("No users selected.");
+      return;
     }
 
+    const userTypePayload = {
+      id: 4
+    }
 
+    const newUserOrganizationPayload = {      
+      organization: organization,
+      user: selected,
+      type: userTypePayload
+    };
 
     try {
-      const response = await projectService.addProjectMember(
+      const response = await organizationService.addOrganizationMember(
         organizationId,
-        projectId,
-        selected,
+        newUserOrganizationPayload,
         storedToken
       );
       console.log("Update successful", response);
       setShowInviteButton(true);
       setOrganizationMembers([]);
-      setProjectMembers([]);
+      setAllUsers([]);
       setSelected([]);
-      const path = `/gendox/project-settings?organizationId=${organizationId}&projectId=${projectId}`
+      const path = `/gendox/organization-settings?organizationId=${organizationId}`;
       router.push(path);
     } catch (error) {
-      console.error("Failed to update project", error);
+      console.error("Failed to update organization", error);
     }
   };
 
+  // not used
   const handleInviteNewMembers = (event) => {
     event.preventDefault(); // This prevents the form from submitting.
-    fetchOrganizationMembers();
+    fetchAllUsers();
     setShowInviteButton(false);
   };
+
+  const handleInviteNewMember = (event) => {
+    event.preventDefault(); // This prevents the form from submitting.
+    setSendInvitationOpen(true);
+    };
 
   const handleBack = (event) => {
     event.preventDefault(); // This prevents the form from submitting.
     setShowInviteButton(true); // Reset to show the invite button again
-    setOrganizationMembers([]); // Optionally clear the organization members list
+    setAllUsers([]); // Optionally clear the users 
   };
 
-  const membersToShow = showInviteButton ? projectMembers : organizationMembers;
+  const membersToShow = showInviteButton ? organizationMembers: allUsers;
   const showProjectMemberColumn = !showInviteButton;
 
   return (
     <Card>
-      <CardHeader title="Project Settings" />
+      <CardHeader title="Organization Settings" />
       {/* <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
         <Alert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
           Project updated successfully!
@@ -394,9 +410,7 @@ const MembersProjectSettings = () => {
                             role="checkbox"
                             selected={isItemSelected}
                             aria-checked={isItemSelected}
-                            onClick={(event) =>
-                              handleClick(event, row.id)
-                            }
+                            onClick={(event) => handleClick(event, row.id)}
                           >
                             <TableCell
                               component="th"
@@ -411,7 +425,7 @@ const MembersProjectSettings = () => {
                             <TableCell align="right">{row.userType}</TableCell>
                             {showProjectMemberColumn && (
                               <TableCell align="right">
-                                {row.activeProjectMember ? "Yes" : "No"}
+                                {row.activeOrganizationMember ? "Yes" : "No"}
                               </TableCell>
                             )}
                             {showProjectMemberColumn && (
@@ -455,10 +469,10 @@ const MembersProjectSettings = () => {
             <Button
               type="button"
               size="large"
-              onClick={handleInviteNewMembers}
+              onClick={handleInviteNewMember}
               variant="contained"
             >
-              Invite new members
+              Invite new member
             </Button>
           </CardActions>
         ) : (
@@ -484,8 +498,10 @@ const MembersProjectSettings = () => {
           </CardActions>
         )}
       </form>
+      <SendInvitation open={sendInvitationOpen} toggle={toggleSendInvitation} />
+
     </Card>
   );
 };
 
-export default MembersProjectSettings;
+export default MembersOrganizationSettings;

@@ -73,7 +73,7 @@ const updateProject = async (organizationId, projectId, updatedProjectPayload, s
   };
 
   /**
- * update project
+ * create project
  * @param organizationId 
  * @param newProjectPayload
  * @param storedToken

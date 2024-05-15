@@ -103,7 +103,7 @@ const OrganizationsDropdown = ({ settings }) => {
       >
         {visibleOrganizations.map((organization, index) => (
           <Tooltip title={organization.name} key={organization.id}>
-            <CustomAvatar              
+            <CustomAvatar
               sx={{
                 width: 40,
                 height: 40,
@@ -117,6 +117,10 @@ const OrganizationsDropdown = ({ settings }) => {
                   organization.id === activeOrganizationId
                     ? "0 0 8px gold"
                     : "none",
+                transition: "transform 0.3s ease",
+                "&:hover": {
+                  transform: "scale(1.2)",
+                },
               }}
               onClick={() => handleOrganizations(organization)}
             >
@@ -167,7 +171,6 @@ const OrganizationsDropdown = ({ settings }) => {
             sx={{ p: 0 }}
             onClick={() => handleOrganizations(organization)}
             selected={organization.id === activeOrganizationId}
-
           >
             <Box
               sx={{
@@ -177,7 +180,10 @@ const OrganizationsDropdown = ({ settings }) => {
                 display: "flex",
                 alignItems: "center",
                 textDecoration: "none",
-                backgroundColor: organization.id === activeOrganizationId ? "primary.light" : "inherit",
+                backgroundColor:
+                  organization.id === activeOrganizationId
+                    ? "primary.light"
+                    : "inherit",
                 "& svg": {
                   mr: 2,
                   fontSize: "1.375rem",

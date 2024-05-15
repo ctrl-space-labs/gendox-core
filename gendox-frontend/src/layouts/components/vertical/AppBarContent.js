@@ -46,16 +46,13 @@ const AppBarContent = (props) => {
             <Icon icon="mdi:menu" />
           </IconButton>
         ) : null}
-        {auth.user && <Autocomplete hidden={hidden} settings={settings} /> }
-        
-        
+        {auth.user && <Autocomplete hidden={hidden} settings={settings} />}
       </Box>
       <Box
         className="actions-right"
         sx={{ display: "flex", alignItems: "center" }}
       >
-        
-      {/* </Box>
+        {/* </Box>
       <Box className='actions-right' sx={{ display: 'flex', alignItems: 'center' }}>
         <LanguageDropdown settings={settings} saveSettings={saveSettings} />
         <ShortcutsDropdown settings={settings} shortcuts={shortcuts} />
@@ -70,7 +67,7 @@ const AppBarContent = (props) => {
             />
           </>
         )}
-<ModeToggler settings={settings} saveSettings={saveSettings} />
+        <ModeToggler settings={settings} saveSettings={saveSettings} />
         <UserDropdown settings={settings} />
       </Box>
     </Box>

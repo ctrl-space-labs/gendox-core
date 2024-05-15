@@ -6,6 +6,8 @@ const url = "http://localhost:5000/gendox/api/v1/"; // Local Environment
 export default {
   getProfile: url + "profile",
 
+  getAllUsers:() => `${url}users`,
+
   getProjectById: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}`,
   getProjectsByOrganization: (organizationId) =>
@@ -14,7 +16,7 @@ export default {
   getDocumentsByProject: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents`,
 
-  getUsersInOrganizationByOrgId: (organizationId, projectId) =>
+  getUsersInOrganizationByOrgId: (organizationId) =>
     `${url}organizations/${organizationId}/users`,
 
   getAllProjectMembers: (organizationId, projectId) =>
@@ -23,8 +25,14 @@ export default {
   updateProject: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}`,
 
+  updateOrganization: (organizationId) =>
+    `${url}organizations/${organizationId}`,
+
   createProject: (organizationId ) =>
     `${url}organizations/${organizationId}/projects`,
+
+  createOrganization: () =>
+    `${url}organizations`,
 
   postCompletionModel: (projectId) =>
     `${url}messages/semantic-completion?projectId=${projectId}`,
@@ -60,6 +68,9 @@ export default {
 
   addProjectMember: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/members`,
+
+  addOrganizationMember: (organizationId) =>
+    `${url}organizations/${organizationId}/users`,
 
   getAiModelByCategory: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/ai-models/categories`,

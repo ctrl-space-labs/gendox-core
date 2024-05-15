@@ -1,5 +1,6 @@
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { styled, useTheme } from "@mui/material/styles";
+import { useRouter } from "next/router";
 
 // ** Layout Imports
 // !Do not remove this Layout import
@@ -27,6 +28,8 @@ import { useSettings } from "src/@core/hooks/useSettings";
 import VerticalNavButtons from "src/navigation/vertical/VerticalNavButton";
 
 const UserLayout = ({ children, contentHeightFixed }) => {
+  const router = useRouter();
+
   // ** Hooks
   const { settings, saveSettings } = useSettings();
 
@@ -48,16 +51,40 @@ const UserLayout = ({ children, contentHeightFixed }) => {
 
   const { ChatButton, NewProjectButton } = VerticalNavButtons;
 
+  const handleNavigate = () => {
+    const path = `/gendox/home`;
+    router.push(path);
+  };
+
   const AppBrand = () => {
     return (
-      <Box sx={{ display: "flex", alignItems: "center" }}>
-        <img src="..." alt="logo" width="30" height="30" />
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          cursor: "pointer",
+          padding: "20px 20px",
+          
+        }}
+        onClick={handleNavigate}
+      >
+        <div
+          style={{
+            width: "30px",
+            height: "30px",
+            backgroundImage: "url('/images/gendoxLogo.svg')",
+            backgroundSize: "20px 20px",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+          }}
+        />
         <Typography variant="h6" sx={{ ml: 2 }}>
           Gendox
         </Typography>
       </Box>
     );
   };
+  
 
   return (
     <Layout

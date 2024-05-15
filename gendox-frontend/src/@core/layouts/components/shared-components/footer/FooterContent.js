@@ -20,9 +20,9 @@ const FooterContent = () => {
     <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
       <Typography sx={{ mr: 2 }}>
         {`© ${new Date().getFullYear()}, Created`}
-        <Box component='span' sx={{ color: 'error.main' }}>
+        {/* <Box component='span' sx={{ color: 'error.main' }}>
           ❤️
-        </Box>
+        </Box> */}
         {` by `}
         <LinkStyled target='_blank' href='https://www.ctrlspace.dev/'>
         Ctrl+Space Labs
@@ -33,16 +33,14 @@ const FooterContent = () => {
           <LinkStyled target='_blank' href='https://themeforest.net/licenses/standard'>
             License
           </LinkStyled>
-          <LinkStyled target='_blank' href='https://1.envato.market/pixinvent_portfolio'>
-            More Themes
-          </LinkStyled>
+          
           <LinkStyled
             target='_blank'
-            href='https://demos.pixinvent.com/materialize-nextjs-admin-template/documentation'
+            href='https://github.com/ctrl-space-labs/gendox-core/wiki/01.-Introduction'
           >
             Documentation
           </LinkStyled>
-          <LinkStyled target='_blank' href='https://pixinvent.ticksy.com/'>
+          <LinkStyled target='_blank' href='https://www.ctrlspace.dev/'>
             Support
           </LinkStyled>
         </Box>

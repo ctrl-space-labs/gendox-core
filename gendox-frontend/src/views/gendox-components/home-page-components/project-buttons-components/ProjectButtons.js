@@ -26,8 +26,8 @@ const ProjectButtons = () => {
   const buttons = [
     { text: "NEW DOCUMENT" , action: handleCreateDocument},
     { text: "UPLOAD DOCUMENT", action: handleOpenUploader },
-    { text: "NEW TEMPLATE" },
-    { text: "UPLOAD TEMPLATE" }
+    // { text: "NEW TEMPLATE" },
+    // { text: "UPLOAD TEMPLATE" }
   ];
 
 

@@ -61,7 +61,7 @@ const GendoxHome = () => {
       authConfig.storageTokenKeyName
     );
 
-    if (storedToken) {
+    if (storedToken && selectedProject) {
       // auth.setLoading(true)
       documentService
         .getDocumentByProject(

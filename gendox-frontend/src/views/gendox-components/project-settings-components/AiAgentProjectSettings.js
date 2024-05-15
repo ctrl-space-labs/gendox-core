@@ -42,9 +42,7 @@ const AiAgentProjectSettings = () => {
     return;
   }
   const project = useSelector((state) => state.activeProject.projectDetails);
-  const { id: projectId, organizationId } = project;
-
-  
+  const { id: projectId, organizationId } = project;  
 
   
   // State for AI models categorized

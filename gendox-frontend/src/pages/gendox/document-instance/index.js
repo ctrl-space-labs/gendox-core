@@ -14,8 +14,7 @@ import { fetchDocument } from "src/store/apps/activeDocument/activeDocument";
 import authConfig from "src/configs/auth";
 import SectionCard from "src/views/gendox-components/documents-components/SectionCard";
 import SectionEdit from "src/views/gendox-components/documents-components/SectionEdit";
-import { is } from "date-fns/locale";
-import { set } from "nprogress";
+
 
 const StyledCardContent = styled(CardContent)(({ theme }) => ({
   paddingTop: `${theme.spacing(10)} !important`,
