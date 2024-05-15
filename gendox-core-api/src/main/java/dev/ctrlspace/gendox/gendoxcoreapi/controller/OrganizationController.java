@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OrganizationConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
@@ -12,7 +13,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.slf4j.LoggerFactory;
@@ -43,17 +46,23 @@ public class OrganizationController {
     private UserOrganizationService userOrganizationService;
     private OrganizationConverter organizationConverter;
     private JWTUtils jwtUtils;
+    private UserService userService;
+    private SecurityUtils securityUtils;
 
 
     @Autowired
     public OrganizationController(OrganizationService organizationService,
                                   JWTUtils jwtUtils,
                                   UserOrganizationService userOrganizationService,
-                                  OrganizationConverter organizationConverter) {
+                                  OrganizationConverter organizationConverter,
+                                  UserService userService,
+                                  SecurityUtils securityUtils) {
         this.organizationService = organizationService;
         this.organizationConverter = organizationConverter;
         this.userOrganizationService = userOrganizationService;
         this.jwtUtils = jwtUtils;
+        this.userService = userService;
+        this.securityUtils = securityUtils;
 
     }
 
@@ -93,6 +102,7 @@ public class OrganizationController {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String ownerUserId = ((UserProfile) authentication.getPrincipal()).getId();
+        userService.evictUserProfileByUniqueIdentifier(securityUtils.getUserIdentifier());
 
         organization = organizationService.createOrganization(organization, UUID.fromString(ownerUserId));
 
@@ -172,6 +182,8 @@ public class OrganizationController {
         if (!organizationId.equals(userOrganizationDTO.getOrganization().getId())) {
             throw new GendoxException("ORGANIZATION_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
+        User invitedUser = userService.getById(userOrganizationDTO.getUser().getId());
+        userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser));
 
         return userOrganizationService.createUserOrganization(
                 userOrganizationDTO.getUser().getId(),
@@ -179,6 +191,9 @@ public class OrganizationController {
                 userOrganizationDTO.getRole().getName());
 
     }
+
+
+    // TODO Remove user from organization
 
 
 }
