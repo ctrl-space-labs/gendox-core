@@ -5,6 +5,7 @@ import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QUser;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 
+import java.util.List;
 import java.util.UUID;
 
 public class UserPredicate {
@@ -17,8 +18,16 @@ public class UserPredicate {
                 organizationId(criteria.getOrganizationId()),
                 projectId(criteria.getProjectId()),
                 userIdentifier(criteria.getUserIdentifier()),
-                roleName(criteria.getOrgRoleName())
+                roleName(criteria.getOrgRoleName()),
+                userIds(criteria.getUsersIds())
         );
+    }
+
+    private static Predicate userIds(List<UUID> usersIds) {
+        if (usersIds == null || usersIds.isEmpty()) {
+            return null;
+        }
+        return user.id.in(usersIds);
     }
 
     private static Predicate email(String email) {

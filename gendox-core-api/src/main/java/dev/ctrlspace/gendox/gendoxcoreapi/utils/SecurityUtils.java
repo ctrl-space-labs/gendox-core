@@ -284,6 +284,20 @@ public class SecurityUtils {
         }
     }
 
+    public String getUserIdentifier() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = ((UserProfile) authentication.getPrincipal()).getEmail();
+            if (email != null) {
+                return email;
+            }
+            return ((UserProfile) authentication.getPrincipal()).getUserName();
+        } catch (Exception e){
+            logger.warn("An exception occurred while trying to get the user ID: " + e.getMessage());
+            return null;
+        }
+    }
+
     private HttpServletRequest getCurrentHttpRequest() {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
         if (requestAttributes instanceof ServletRequestAttributes) {

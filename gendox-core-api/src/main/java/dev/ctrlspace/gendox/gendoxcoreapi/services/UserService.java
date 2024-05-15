@@ -15,6 +15,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.models.auth.In;
@@ -149,7 +150,7 @@ public class UserService implements UserDetailsService {
         if (cache != null) {
             cache.evict("UserService:getUserProfileByUniqueIdentifier:"+userIdentifier);
         }
-        logger.info("Evicting UserProfile cache for userIdentifier: {}", userIdentifier);
+        logger.debug("Evicting UserProfile cache for userIdentifier: {}", userIdentifier);
     }
 
     public Boolean isUserExistByUserName(String userName) throws GendoxException {
@@ -241,5 +242,19 @@ public class UserService implements UserDetailsService {
             throw new UsernameNotFoundException(e.getErrorCode(), e);
         }
 
+    }
+
+    /**
+     * Get the user identifier from the user Entity.
+     * The logic should be the same as {@link SecurityUtils#getUserIdentifier()}
+     * @param user
+     * @return
+     */
+    public String getUserIdentifier(User user) {
+        String email = user.getEmail();
+        if (email != null) {
+            return email;
+        }
+        return user.getUserName();
     }
 }
