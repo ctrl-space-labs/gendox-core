@@ -96,10 +96,10 @@ const App = props => {
     <Provider store={store}>
       <CacheProvider value={emotionCache}>
         <Head>
-          <title>{`${themeConfig.templateName} - Gendox App`}</title>
+          <title>{`${themeConfig.templateName} App`}</title>
           <meta
             name='description'
-            content={`${themeConfig.templateName} – Gendox – by CTR+ Space`}
+            content={`${themeConfig.templateName} – - – by CTR+ Space`}
           />
           <meta name='keywords' content='Gendox, MUI, Admin Template, React Admin Template' />
           <meta name='viewport' content='initial-scale=1, width=device-width' />

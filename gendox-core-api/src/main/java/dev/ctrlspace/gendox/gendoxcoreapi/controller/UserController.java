@@ -53,8 +53,8 @@ public class UserController {
     }
 
 
-    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_READ_DOCUMENT') " +
-            "|| @securityUtils.hasAuthorityToRequestedProjectId()")
+//    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_READ_DOCUMENT') " +
+//            "|| @securityUtils.hasAuthorityToRequestedProjectId()")
     @GetMapping("/users")
     @Operation(summary = "Get all users",
             description = "Retrieve a list of all users based on the provided criteria.")

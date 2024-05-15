@@ -15,12 +15,16 @@ import org.springframework.stereotype.Service;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class DocumentService {
 
     private DocumentInstanceRepository documentInstanceRepository;
+    private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private DocumentSectionService documentSectionService;
 
     private ProjectDocumentService projectDocumentService;
@@ -28,10 +32,12 @@ public class DocumentService {
     @Autowired
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
                            DocumentSectionService documentSectionService,
+                           DocumentInstanceSectionRepository documentInstanceSectionRepository,
                            ProjectDocumentService projectDocumentService) {
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentSectionService = documentSectionService;
         this.projectDocumentService = projectDocumentService;
+        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
     }
 
 
@@ -70,32 +76,67 @@ public class DocumentService {
             documentInstance.setId(UUID.randomUUID());
         }
 
-
-
         // Save the DocumentInstance first to save its ID
         documentInstance = documentInstanceRepository.save(documentInstance);
 
         return documentInstance;
     }
 
-    public DocumentInstance updateDocument(DocumentInstance documentInstance) throws GendoxException {
-        UUID documentId = documentInstance.getId();
+    public DocumentInstance updateDocument(DocumentInstance updatedDocument) throws GendoxException {
+        UUID documentId = updatedDocument.getId();
         DocumentInstance existingDocument = this.getDocumentInstanceById(documentId);
 
         // Update the properties of the existingDocument with the values from the updated document
-        existingDocument.setDocumentTemplateId(documentInstance.getDocumentTemplateId());
-        existingDocument.setRemoteUrl(documentInstance.getRemoteUrl());
-        existingDocument.setUpdatedBy(documentInstance.getUpdatedBy());
-
+        existingDocument.setDocumentTemplateId(updatedDocument.getDocumentTemplateId());
+        existingDocument.setRemoteUrl(updatedDocument.getRemoteUrl());
+        existingDocument.setUpdatedBy(updatedDocument.getUpdatedBy());
         existingDocument.setUpdatedAt(Instant.now());
 
-
         existingDocument = documentInstanceRepository.save(existingDocument);
+        updateExistingSectionsList(updatedDocument, existingDocument);
 
         return existingDocument;
     }
 
 
+    /**
+     * Gets the list of sections to be updated, added or deleted from the existing document
+     * Adds new section to the list of existing sections
+     * Updates existing sections
+     * Deletes sections not available in the updated document
+     *
+     * @param updatedDocument
+     * @param existingDocument
+     */
+    private void updateExistingSectionsList(DocumentInstance updatedDocument, DocumentInstance existingDocument) throws GendoxException {
+        Set<String> existingSectionIds = existingDocument.getDocumentInstanceSections().stream()
+                .map(DocumentInstanceSection::getId)
+                .map(UUID::toString)
+                .collect(Collectors.toSet());
+        Set<String> updatedSectionIds = updatedDocument.getDocumentInstanceSections().stream()
+                .map(DocumentInstanceSection::getId)
+                .filter(Objects::nonNull)
+                .map(UUID::toString)
+                .collect(Collectors.toSet());
+
+        for (DocumentInstanceSection updatedSection : updatedDocument.getDocumentInstanceSections()) {
+            if (updatedSection.getId() != null && existingSectionIds.contains(updatedSection.getId().toString())) {
+                documentSectionService.updateSection(updatedSection);
+            } else {
+                // Add new sections
+                updatedSection.setDocumentInstance(existingDocument);
+                documentSectionService.createNewSection(existingDocument, updatedSection.getSectionValue(), updatedSection.getDocumentSectionMetadata().getTitle());
+            }
+        }
+
+        for (DocumentInstanceSection existingSection : existingDocument.getDocumentInstanceSections()) {
+            if (!updatedSectionIds.contains(existingSection.getId().toString())) {
+                //delete section
+                documentSectionService.deleteSection(existingSection);
+            }
+        }
+
+    }
 
 
     public void deleteDocument(UUID documentIid, UUID projectId) throws GendoxException {

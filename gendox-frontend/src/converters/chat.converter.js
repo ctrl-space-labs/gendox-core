@@ -1,3 +1,4 @@
+
 /**
  * Converts a Gendox user profile to a chat user profile.
  *
@@ -51,17 +52,17 @@ const projectToContact = (project) => {
 const gendoxThreadToChatEntry = (thread, contacts) => {
 // find the contact where the id is in any member of the thread
     let contact = contacts.find(contact => thread.chatThreadMembers.some(member => member.userId === contact.userId));
-
+    
         return {
             ...contact,
             id: thread.id,
             threadId: thread.id,
             chat: {
                 lastMessage: {
-                    message: 'A message',
+                    message: thread.name,
                     time: thread.updatedAt,
                 },
-                "unseenMsgs": 2
+                "unseenMsgs": 0,
             }
         }
 }

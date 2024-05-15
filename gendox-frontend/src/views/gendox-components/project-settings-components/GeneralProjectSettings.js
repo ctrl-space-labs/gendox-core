@@ -82,7 +82,7 @@ const GeneralProjectSettings = () => {
 
   return (
     <Card>
-      <CardHeader title="Project s Agent settings" />
+      <CardHeader title="Project s settings" />
       <Snackbar
         open={openSnackbar}
         autoHideDuration={6000}
@@ -105,7 +105,8 @@ const GeneralProjectSettings = () => {
                 required
                 id="project-name"
                 label="Name"
-                value={project.name}
+                // value={project.name}
+                defaultValue={project.name}
                 onChange={handleNameChange}
               />
             </Grid>

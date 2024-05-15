@@ -1,6 +1,8 @@
 // ** React Imports
 import {Fragment} from 'react'
 
+
+
 // ** MUI Imports
 import Badge from '@mui/material/Badge'
 import MuiAvatar from '@mui/material/Avatar'
@@ -173,12 +175,7 @@ const ChatContent = props => {
                             <Box sx={{display: 'flex', alignItems: 'center'}}>
                                 {mdAbove ? (
                                     <Fragment>
-                                        <IconButton size='small' sx={{color: 'text.secondary'}}>
-                                            <Icon icon='mdi:phone-outline'/>
-                                        </IconButton>
-                                        <IconButton size='small' sx={{color: 'text.secondary'}}>
-                                            <Icon icon='mdi:video-outline' fontSize='1.5rem'/>
-                                        </IconButton>
+                                        
                                         <IconButton size='small' sx={{color: 'text.secondary'}}>
                                             <Icon icon='mdi:magnify'/>
                                         </IconButton>
@@ -189,7 +186,7 @@ const ChatContent = props => {
                                     menuProps={{sx: {mt: 2}}}
                                     icon={<Icon icon='mdi:dots-vertical' fontSize='1.25rem'/>}
                                     iconButtonProps={{size: 'small', sx: {color: 'text.secondary'}}}
-                                    options={['View Contact', 'Mute Notifications', 'Block Contact', 'Clear Chat', 'Report']}
+                                    options={['Rename', 'Clear Chat' , 'Delete']}
                                 />
                             </Box>
                         </Box>

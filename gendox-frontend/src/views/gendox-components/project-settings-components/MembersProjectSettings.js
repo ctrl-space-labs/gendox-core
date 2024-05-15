@@ -2,32 +2,31 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { useSelector } from "react-redux";
 import { visuallyHidden } from "@mui/utils";
-import {
-  alpha,
-  Box,
-  Button,
-  Card,
-  CardActions,
-  CardContent,
-  CardHeader,
-  Checkbox,
-  Divider,
-  Grid,
-  IconButton,
-  Paper,
-  Snackbar,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TableRow,
-  TableSortLabel,
-  Toolbar,
-  Tooltip,
-  Typography,
-} from "@mui/material";
+import { alpha } from "@mui/material/styles";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardActions from "@mui/material/CardActions";
+import CardContent from "@mui/material/CardContent";
+import CardHeader from "@mui/material/CardHeader";
+import Checkbox from "@mui/material/Checkbox";
+import Divider from "@mui/material/Divider";
+import Grid from "@mui/material/Grid";
+import IconButton from "@mui/material/IconButton";
+import Paper from "@mui/material/Paper";
+import Snackbar from "@mui/material/Snackbar";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TablePagination from "@mui/material/TablePagination";
+import TableRow from "@mui/material/TableRow";
+import TableSortLabel from "@mui/material/TableSortLabel";
+import Toolbar from "@mui/material/Toolbar";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
+
 import Icon from "src/@core/components/icon";
 import authConfig from "src/configs/auth";
 import projectService from "src/gendox-sdk/projectService";
@@ -231,8 +230,7 @@ const MembersProjectSettings = () => {
   const fetchOrganizationMembers = async () => {
     try {
       const response = await organizationService.getUsersInOrganizationByOrgId(
-        organizationId,
-        projectId,
+        organizationId,        
         storedToken
       );
       const fetchedOrgMembers = response.data.map((user) => ({

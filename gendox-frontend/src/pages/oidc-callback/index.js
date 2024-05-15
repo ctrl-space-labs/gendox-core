@@ -12,6 +12,9 @@ const OidcCallbackPage = () => {
         // Handle the OIDC callback when the component mounts
         userManager.signinRedirectCallback()
             .then(() => {
+                // console.log('OIDC signinRedirectCallback completed');
+                // // Redirect to the home page after successful login
+                // window.location.href = "/gendox/home";
                 console.log('User signed in successfully! Waiting for user data to load...');
 
                 // window.location.href = "/";

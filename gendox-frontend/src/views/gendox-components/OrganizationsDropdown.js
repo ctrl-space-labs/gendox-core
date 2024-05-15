@@ -1,87 +1,66 @@
-// ** React Imports
-import { useState, Fragment, useEffect, useCallback } from "react";
-
-// Redux Imports
-import { useDispatch, useSelector } from "react-redux";
-
-// ** Next Import
+// General and MUI Imports
+import React, { useState, useEffect, useCallback, Fragment } from "react";
+import { useDispatch } from "react-redux";
 import { useRouter } from "next/router";
+import Box from "@mui/material/Box";
+import AvatarGroup from "@mui/material/AvatarGroup";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
+import Tooltip from "@mui/material/Tooltip";
 
-// MUI Imports
-import { Box, Menu, Badge, MenuItem, AvatarGroup, styled } from "@mui/material";
+// ** Icon Imports
+import Icon from "src/@core/components/icon";
 
-// Custom Component & Hook Imports
+// Utility and Hooks Imports
 import { useAuth } from "src/hooks/useAuth";
-import CustomAvatar from "src/@core/components/mui/avatar";
-import authConfig from "src/configs/auth";
 import { fetchProject } from "src/store/apps/activeProject/activeProject";
-import { fetchOrganizationById } from "src/store/apps/activeOrganization/activeOrganization";
+import { fetchOrganization } from "src/store/apps/activeOrganization/activeOrganization";
 
-const menuItemStyles = {
-  py: 2,
-  px: 4,
-  width: "100%",
-  display: "flex",
-  alignItems: "center",
-  color: "text.primary",
-  textDecoration: "none",
-  "& svg": {
-    mr: 2,
-    fontSize: "1.375rem",
-    color: "text.primary",
-  },
-};
+// Custom Components Imports
+import CustomAvatar from "src/@core/components/mui/avatar";
+
+// Style and Config Imports
+import authConfig from "src/configs/auth";
 
 const OrganizationsDropdown = ({ settings }) => {
-  const { direction } = settings;
-  const dispatch = useDispatch();
   const router = useRouter();
-  const { organizationId } = router.query;
+  const dispatch = useDispatch();
+  const auth = useAuth();
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [activeOrganizationId, setActiveOrganizationId] = useState(null);
+  const [visibleCount, setVisibleCount] = useState(4);
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
 
-  const activeOrganization = useSelector(
-    (state) => state.activeOrganization.activeOrganization
-  );
-
-  const { logout } = useAuth();
-  const userData = useAuth();
-  const { organizations } = userData.user;
-
   useEffect(() => {
-    if (organizationId && storedToken) {
-      dispatch(fetchOrganizationById({ organizationId, storedToken }));
+    const { organizationId } = router.query;
+    if (organizationId) {
+      setActiveOrganizationId(organizationId);
     }
-  }, [dispatch, organizationId, storedToken]);
-
-  // ** States
-  const [anchorEl, setAnchorEl] = useState(null);
+  }, [router.query]);
 
   const handleDropdownOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleDropdownClose = useCallback(
-    (url) => {
-      if (url) router.push(url);
-      setAnchorEl(null);
-    },
-    [router]
-  );
+  const handleDropdownClose = useCallback(() => setAnchorEl(null), []);
 
   const handleOrganizations = useCallback(
     (organization) => {
+      const { projects } = organization;
+      const newProjectId = projects?.[0]?.id ?? null;
+      handleDropdownClose();
+
       dispatch(
-        fetchOrganizationById({
+        fetchOrganization({
           organizationId: organization.id,
           storedToken,
         })
       );
 
-      handleDropdownClose();
-      localStorage.setItem(authConfig.selectedOrganizationId, organization.id);
-      const newProjectId = organization.projects?.[0]?.id ?? null;
       dispatch(
         fetchProject({
           organizationId: organization.id,
@@ -89,7 +68,10 @@ const OrganizationsDropdown = ({ settings }) => {
           storedToken,
         })
       );
+
+      localStorage.setItem(authConfig.selectedOrganizationId, organization.id);
       localStorage.setItem(authConfig.selectedProjectId, newProjectId);
+      setActiveOrganizationId(organization.id);
       router.push(
         `/gendox/home?organizationId=${organization.id}&projectId=${newProjectId}`
       );
@@ -97,38 +79,77 @@ const OrganizationsDropdown = ({ settings }) => {
     [dispatch, handleDropdownClose, router]
   );
 
+  const sortedOrganizations = [...auth.user.organizations].sort((a, b) => {
+    return a.id === activeOrganizationId
+      ? -1
+      : b.id === activeOrganizationId
+      ? 1
+      : 0;
+  });
+
+  const visibleOrganizations = sortedOrganizations.slice(0, visibleCount);
+  const overflowCount = sortedOrganizations.length - visibleCount;
+
   return (
     <Fragment>
-      <Badge
-        overlap="circular"
+      <AvatarGroup
+        max={visibleCount + 1}
         sx={{ ml: 2, cursor: "pointer" }}
-        onClick={handleDropdownOpen}
+        slotProps={{
+          additionalAvatar: {
+            onClick: handleDropdownOpen,
+          },
+        }}
       >
-        <AvatarGroup max={2}>
-          {organizations.map((organization) => (
+        {visibleOrganizations.map((organization, index) => (
+          <Tooltip title={organization.name} key={organization.id}>
             <CustomAvatar
-              key={organization.id}
-              onClick={() => {
-                handleOrganizations(organization);
-              }}
               sx={{
                 width: 40,
                 height: 40,
-
-                // backgroundColor: 'blue',
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
                 color: "white",
                 borderRadius: "50%",
                 fontSize: "16px",
+                boxShadow:
+                  organization.id === activeOrganizationId
+                    ? "0 0 8px gold"
+                    : "none",
+                transition: "transform 0.3s ease",
+                "&:hover": {
+                  transform: "scale(1.2)",
+                },
               }}
+              onClick={() => handleOrganizations(organization)}
             >
               {organization.name.substring(0, 4)}
             </CustomAvatar>
-          ))}
-        </AvatarGroup>
-      </Badge>
+          </Tooltip>
+        ))}
+        {overflowCount > 0 && (
+          <Tooltip title="More" key="overflow-avatar">
+            <CustomAvatar
+              sx={{
+                width: 40,
+                height: 40,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: "gray",
+                color: "white",
+                borderRadius: "50%",
+                fontSize: "16px",
+                border: "2px solid primary.dark",
+              }}
+              onClick={handleDropdownOpen}
+            >
+              +{overflowCount}
+            </CustomAvatar>
+          </Tooltip>
+        )}
+      </AvatarGroup>
 
       <Menu
         anchorEl={anchorEl}
@@ -137,22 +158,42 @@ const OrganizationsDropdown = ({ settings }) => {
         sx={{ "& .MuiMenu-paper": { width: 230, mt: 4 } }}
         anchorOrigin={{
           vertical: "bottom",
-          horizontal: direction === "ltr" ? "right" : "left",
+          horizontal: settings.direction === "ltr" ? "right" : "left",
         }}
         transformOrigin={{
           vertical: "top",
-          horizontal: direction === "ltr" ? "right" : "left",
+          horizontal: settings.direction === "ltr" ? "right" : "left",
         }}
       >
-        {organizations.map((organization) => (
+        {auth.user.organizations.map((organization) => (
           <MenuItem
             key={organization.id}
             sx={{ p: 0 }}
             onClick={() => handleOrganizations(organization)}
+            selected={organization.id === activeOrganizationId}
           >
-            <Box sx={menuItemStyles}>
-              {/* <AddHomeIcon /> */}
-              {organization.name}
+            <Box
+              sx={{
+                py: 2,
+                px: 4,
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                textDecoration: "none",
+                backgroundColor:
+                  organization.id === activeOrganizationId
+                    ? "primary.light"
+                    : "inherit",
+                "& svg": {
+                  mr: 2,
+                  fontSize: "1.375rem",
+                },
+              }}
+            >
+              <ListItemIcon sx={{ color: "primary.main" }}>
+                <Icon icon="mdi:domain" fontSize={20} />
+              </ListItemIcon>
+              <ListItemText primary={organization.name} />
             </Box>
           </MenuItem>
         ))}
