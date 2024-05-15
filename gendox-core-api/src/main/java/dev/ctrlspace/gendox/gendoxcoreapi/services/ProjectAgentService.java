@@ -9,7 +9,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +17,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -91,7 +89,7 @@ public class ProjectAgentService {
         //  So the Agent's surname is set to 'GENDOX_AGENT' for now
         user.setLastName(UserNamesConstants.GENDOX_AGENT);
 
-        String agentIdpId = authenticationService.createUser(user, null,true, false);
+        String agentIdpId = authenticationService.createUser(user, null, true, false);
 
         user.setId(UUID.fromString(agentIdpId));
         user = userService.createUser(user);
@@ -170,7 +168,7 @@ public class ProjectAgentService {
         existingProjectAgent.setTemperature(projectAgent.getTemperature());
         existingProjectAgent.setTopP(projectAgent.getTopP());
         existingProjectAgent.setModerationCheck(projectAgent.getModerationCheck());
-        if ( projectAgent.getModerationModel() != null && projectAgent.getModerationCheck() ) {
+        if (projectAgent.getModerationModel() != null && projectAgent.getModerationCheck()) {
             existingProjectAgent.setModerationModel(aiModelRepository.findByName(projectAgent.getModerationModel().getName()));
         }
         existingProjectAgent = projectAgentRepository.save(existingProjectAgent);
