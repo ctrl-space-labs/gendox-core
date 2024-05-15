@@ -124,6 +124,12 @@ public class ProjectAgentService {
         if (projectAgent.getCompletionModel() == null) {
             projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_3_5_TURBO_MODEL));
         }
+        if (projectAgent.getModerationModel() == null) {
+            projectAgent.setModerationModel(aiModelRepository.findByName(AiModelConstants.OPEN_AI_MODERATION));
+        }
+        if (projectAgent.getModerationCheck() == null) {
+            projectAgent.setModerationCheck(true);
+        }
         if (projectAgent.getChatTemplateId() == null) {
             projectAgent.setChatTemplateId(templateRepository.findIdByIsDefaultTrueAndTemplateTypeName("CHAT_TEMPLATE"));
         }
