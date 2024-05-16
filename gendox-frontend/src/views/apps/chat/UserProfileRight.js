@@ -73,7 +73,7 @@ const UserProfileRight = (props) => {
 
   const handleEditAgent = () => {
     router.push(
-      `/gendox/project-settings?organizationId=${organizationId}&projectId=${projectId}`
+      `/gendox/project-settings/?organizationId=${organizationId}&projectId=${projectId}`
     );
   };
 

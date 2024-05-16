@@ -224,7 +224,7 @@ const ChatLog = (props) => {
                         {chat.sections.map((messageSection, idx) => (
                           <Link
                             key={idx}
-                            href={`/gendox/document-instance?documentId=${messageSection.documentId}`}
+                            href={`/gendox/document-instance/?documentId=${messageSection.documentId}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             sx={{
