@@ -97,7 +97,7 @@ public class UserController {
         return userProfile;
     }
 
-    @DeleteMapping("/profile/cache")
+    @DeleteMapping("/profile/caches")
     public String logout(Authentication authentication) {
         String userIdentifier = ((UserProfile) authentication.getPrincipal()).getEmail();
         userService.evictUserProfileByUniqueIdentifier(userIdentifier);
