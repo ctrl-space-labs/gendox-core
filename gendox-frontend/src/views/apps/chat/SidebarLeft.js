@@ -1,7 +1,14 @@
 // ** React Imports
 import { useState, useEffect } from "react";
 
-import { formatDistanceToNow, parseISO } from "date-fns";
+import {
+  formatDistanceToNow,
+  parseISO,
+  isToday,
+  isYesterday,
+  isWithinInterval,
+  subDays,
+} from "date-fns";
 
 // ** Next Import
 import { useRouter } from "next/router";
@@ -38,6 +45,7 @@ import CustomAvatar from "src/@core/components/mui/avatar";
 
 // ** Chat App Components Imports
 import UserProfileLeft from "src/views/apps/chat/UserProfileLeft";
+import authConfig from "src/configs/auth";
 
 const ScrollWrapper = ({ children, hidden }) => {
   if (hidden) {
@@ -75,6 +83,14 @@ const SidebarLeft = (props) => {
     handleUserProfileLeftSidebarToggle,
   } = props;
 
+  const router = useRouter();
+  const { organizationId } = router.query;
+
+  const storedToken = window.localStorage.getItem(
+    authConfig.storageTokenKeyName
+  );
+  
+
   // ** States
   const [query, setQuery] = useState("");
   const [filteredChat, setFilteredChat] = useState([]);
@@ -83,11 +99,46 @@ const SidebarLeft = (props) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [hoveredChat, setHoveredChat] = useState(null);
 
-  // ** Hooks
-  const router = useRouter();
+ 
+
+  const groupChatsByDate = (chats) => {
+    const today = [];
+    const yesterday = [];
+    const last7Days = [];
+    const last30Days = [];
+    const older = [];
+
+    chats.forEach((chat) => {
+      const chatDate = parseISO(chat.chat.lastMessage.time);
+
+      if (isToday(chatDate)) {
+        today.push(chat);
+      } else if (isYesterday(chatDate)) {
+        yesterday.push(chat);
+      } else if (
+        isWithinInterval(chatDate, {
+          start: subDays(new Date(), 7),
+          end: new Date(),
+        })
+      ) {
+        last7Days.push(chat);
+      } else if (
+        isWithinInterval(chatDate, {
+          start: subDays(new Date(), 30),
+          end: new Date(),
+        })
+      ) {
+        last30Days.push(chat);
+      } else {
+        older.push(chat);
+      }
+    });
+
+    return { today, yesterday, last7Days, last30Days, older };
+  };
 
   const handleChatClick = (type, id) => {
-    dispatch(selectChat({ id: id }));
+    dispatch(selectChat({ id: id, organizationId, storedToken}));
     setActive({ type, id });
     if (!mdAbove) {
       handleLeftSidebarToggle();
@@ -127,6 +178,7 @@ const SidebarLeft = (props) => {
   };
 
   const handleMenuClick = (event, chatId) => {
+    event.stopPropagation();
     setAnchorEl(event.currentTarget);
     // setActive({ type: "chat", id: chatId });
   };
@@ -167,15 +219,37 @@ const SidebarLeft = (props) => {
         const arrToMap =
           query.length && filteredChat.length ? filteredChat : store.chats;
 
-        return arrToMap.map((chat, index) => {
-          const { lastMessage } = chat.chat;
-          const activeCondition =
-            active !== null && active.id === chat.id && active.type === "chat";
-          const formattedTime = lastMessage
-            ? formatDistanceToNow(parseISO(lastMessage.time), {
-                addSuffix: true,
-              })
-            : "Time unknown";
+        const groupedChats = groupChatsByDate(arrToMap);
+
+        // return arrToMap.map((chat, index) => {
+        //   const { lastMessage } = chat.chat;
+        //   const activeCondition =
+        //     active !== null && active.id === chat.id && active.type === "chat";
+        //   const formattedTime = lastMessage
+        //     ? formatDistanceToNow(parseISO(lastMessage.time), {
+        //         addSuffix: true,
+        //       })
+        //     : "Time unknown";
+
+        const renderGroupedChats = (chats, label) => (
+          <>
+            {chats.length > 0 && (
+              <Typography
+                variant="subtitle2"
+                sx={{ px: 3, pt: 3, pb: 1, color: "primary.main" }}
+              >
+                {label}
+              </Typography>
+            )}
+            {chats.map((chat, index) => {
+              const { lastMessage } = chat.chat;
+              const activeCondition =
+                active !== null && active.id === chat.id && active.type === "chat";
+              const formattedTime = lastMessage
+                ? formatDistanceToNow(parseISO(lastMessage.time), {
+                    addSuffix: true,
+                  })
+                : "Time unknown";
 
           return (
             <ListItem
@@ -220,7 +294,6 @@ const SidebarLeft = (props) => {
                       }}
                     >
                       {chat.fullName}
-                      
                     </Typography>
                   }
                   secondary={
@@ -232,9 +305,7 @@ const SidebarLeft = (props) => {
                       }}
                     >
                       {lastMessage ? lastMessage.message : null}
-                      
                     </Typography>
-                    
                   }
                 />
                 {/* <Box
@@ -265,7 +336,7 @@ const SidebarLeft = (props) => {
                     flexDirection: "column",
                     justifyContent: "flex-start",
                   }}
-                >                  
+                >
                   <IconButton
                     className="chat-actions"
                     onClick={(e) => handleMenuClick(e, chat.id)}
@@ -276,16 +347,25 @@ const SidebarLeft = (props) => {
                   >
                     <Icon icon="mdi:dots-horizontal" />
                   </IconButton>
-
-                  
                 </Box>
               </ListItemButton>
             </ListItem>
-          );
-        });
-      }
-    }
-  };
+         );
+        })}
+      </>
+    );
+    return (
+      <>
+        {renderGroupedChats(groupedChats.today, "Today")}
+        {renderGroupedChats(groupedChats.yesterday, "Yesterday")}
+        {renderGroupedChats(groupedChats.last7Days, "Last 7 Days")}
+        {renderGroupedChats(groupedChats.last30Days, "Last 30 Days")}
+        {renderGroupedChats(groupedChats.older, "Older")}
+      </>
+    );
+  }
+}
+};
 
   const renderContacts = () => {
     if (store && store.contacts && store.contacts.length) {

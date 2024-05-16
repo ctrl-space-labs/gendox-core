@@ -1,12 +1,12 @@
-const url = "http://localhost:5000/gendox/api/v1/"; // Local Environment
+// const url = "http://localhost:5000/gendox/api/v1/"; // Local Environment
 //const url= 'https://gendox.ctrlspace.dev/gendox/api/v1/' // Production Environment (AWS)
 // const url= 'http://localhost:8080/gendox/api/v1/' // Local Environment
-// const url = 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/' // Development Environment (Hetzner)
+const url = 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/'; // Development Environment (Hetzner)
 
 export default {
   getProfile: url + "profile",
 
-  getAllUsers:() => `${url}users`,
+  getAllUsers: () => `${url}users`,
 
   getProjectById: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}`,
@@ -28,18 +28,22 @@ export default {
   updateOrganization: (organizationId) =>
     `${url}organizations/${organizationId}`,
 
-  createProject: (organizationId ) =>
+  createProject: (organizationId) =>
     `${url}organizations/${organizationId}/projects`,
 
-  createOrganization: () =>
-    `${url}organizations`,
+  createOrganization: () => `${url}organizations`,
 
   postCompletionModel: (projectId) =>
     `${url}messages/semantic-completion?projectId=${projectId}`,
 
+  // getThreadsByCriteria: (projectIdIn) => {
+  //   const projectIds = projectIdIn.join(",");
+  //   return `${url}threads?projectIdIn=${projectIds}`;
+  // },
+
   getThreadsByCriteria: (projectIdIn) => {
     const projectIds = projectIdIn.join(",");
-    return `${url}threads?projectIdIn=${projectIds}`;
+    return `${url}threads?projectIdIn=${projectIds}&size=100&sort=createdAt,desc`;
   },
 
   getThreadMessagesByCriteria: (

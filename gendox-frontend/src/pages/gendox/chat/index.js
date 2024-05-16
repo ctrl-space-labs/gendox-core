@@ -38,7 +38,6 @@ const AppChat = () => {
     authConfig.storageTokenKeyName
   );
 
-
   // ** States
   const [userStatus, setUserStatus] = useState("online");
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
@@ -65,10 +64,12 @@ const AppChat = () => {
     online: "success",
     offline: "secondary",
   };
+
   useEffect(() => {
     dispatch(setUserProfile(auth.user));
-    dispatch(fetchChatsContacts({organizationId, storedToken}));
-  }, [dispatch]);
+    dispatch(fetchChatsContacts({ organizationId, storedToken }));
+  }, [dispatch, organizationId, storedToken]);
+
   const handleLeftSidebarToggle = () => setLeftSidebarOpen(!leftSidebarOpen);
   const handleUserProfileLeftSidebarToggle = () =>
     setUserProfileLeftOpen(!userProfileLeftOpen);
@@ -82,9 +83,9 @@ const AppChat = () => {
         width: "100%",
         display: "flex",
         borderRadius: 1,
-        '@media (max-width:600px)': {
-                            borderRadius: 0
-                        },
+        "@media (max-width:600px)": {
+          borderRadius: 0,
+        },
         overflow: "hidden",
         position: "relative",
         backgroundColor: "background.paper",
@@ -126,10 +127,11 @@ const AppChat = () => {
         handleUserProfileRightSidebarToggle={
           handleUserProfileRightSidebarToggle
         }
+        organizationId={organizationId}
       />
     </Box>
   );
 };
 AppChat.contentHeightFixed = true;
 
-export default AppChat
+export default AppChat;
