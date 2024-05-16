@@ -1,11 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectAgentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -13,13 +10,10 @@ import org.springframework.stereotype.Component;
 public class ProjectConverter implements GendoxConverter<Project, ProjectDTO> {
 
     private ProjectAgentConverter projectAgentConverter;
-    private ProjectAgentService projectAgentService;
 
     @Autowired
-    public ProjectConverter(ProjectAgentConverter projectAgentConverter,
-                            ProjectAgentService projectAgentService) {
+    public ProjectConverter(ProjectAgentConverter projectAgentConverter) {
         this.projectAgentConverter = projectAgentConverter;
-        this.projectAgentService = projectAgentService;
     }
 
     @Override
@@ -49,16 +43,16 @@ public class ProjectConverter implements GendoxConverter<Project, ProjectDTO> {
         project.setDescription(projectDTO.getDescription());
         project.setCreatedAt(projectDTO.getCreatedAt());
         project.setUpdatedAt(projectDTO.getUpdatedAt());
+        project.setAutoTraining(projectDTO.getAutoTraining());
         if (projectDTO.getProjectAgent() != null) {
             project.setProjectAgent(projectAgentConverter.toEntity(projectDTO.getProjectAgent()));
+            // link the agent to the project and vice versa
+            project.getProjectAgent().setProject(project);
+        } else {
+            ProjectAgent projectAgent = new ProjectAgent();
+            projectAgent.setProject(project);
+            project.setProjectAgent(projectAgent);
         }
-        project.setAutoTraining(projectDTO.getAutoTraining());
-        if (projectDTO.getAutoTraining() == null) {
-            project.setAutoTraining(false);}
-            if (projectDTO.getProjectAgent() != null) {
-                project.setProjectAgent(projectAgentConverter.toEntity(projectDTO.getProjectAgent()));
-            }
-
 
 
         return project;

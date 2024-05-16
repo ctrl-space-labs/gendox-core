@@ -41,6 +41,7 @@ const AuthProvider = ({ children }) => {
   };
 
   const handleLogout = () => {
+    // TODO call DELETE /profile/caches
     clearAuthState();
     userManager.signoutRedirect();
   };
@@ -80,6 +81,7 @@ const AuthProvider = ({ children }) => {
     userManager.events.addUserUnloaded(unloadUser);
 
     return () => {
+      console.log("AuthContext Unmounted");
       userManager.events.removeUserLoaded(loadUser);
       userManager.events.removeUserUnloaded(unloadUser);
       userManager.events.removeUserSignedOut(removeUser);
@@ -119,6 +121,7 @@ const AuthProvider = ({ children }) => {
         // Add 'role': 'admin' to the userDataResponse.data object
         userDataResponse.data.role = "admin";
         setUser(userDataResponse.data);
+        console.log("userDataResponse.data: ", userDataResponse.data);
         window.localStorage.setItem(
           authConfig.user,
           JSON.stringify(userDataResponse.data)
@@ -162,14 +165,25 @@ const AuthProvider = ({ children }) => {
     setLoading(false);
   };
 
+
+  useEffect(() => {
+    // initAuth_old();
+    console.log("AuthContext Mounted");
+    return initAuthOIDC();
+  }, []);
+
   useEffect(() => {
     loadUserProfileFromAuthState(authState);
   }, [authState]);
 
   useEffect(() => {
-    // initAuth_old();
-    return initAuthOIDC();
-  }, []);
+
+    if (user && router.pathname.includes("oidc-callback")) {
+      console.log('User data loaded successfully. Redirecting to the home page...');
+      window.location.href = "/gendox/home";
+    }
+  }, [user]);
+
 
   useEffect(() => {
     const { organizationId, projectId } = router.query;

@@ -90,10 +90,18 @@ public class UserController {
         }
 
         // run code to get the user from the database
+        // TODO change this to return user's public profile
         User user = userService.getById(id);
         UserProfile userProfile = userProfileConverter.toDTO(user);
 
         return userProfile;
+    }
+
+    @DeleteMapping("/profile/caches")
+    public String logout(Authentication authentication) {
+        String userIdentifier = ((UserProfile) authentication.getPrincipal()).getEmail();
+        userService.evictUserProfileByUniqueIdentifier(userIdentifier);
+        return "User logged out successfully.";
     }
 
     // TODO this is just for demo purposes, need to be rewrite
@@ -165,8 +173,6 @@ public class UserController {
 
         user = userService.updateUser(user);
         return user;
-
-
     }
 
 }

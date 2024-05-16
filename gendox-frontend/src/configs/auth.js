@@ -4,7 +4,7 @@
 const localOidcConfig = {
   authority: "https://dev.gendox.ctrlspace.dev/idp/realms/gendox-idp-dev",
   client_id: "gendox-pkce-public-client-local",
-  redirect_uri: "http://localhost:3000/oidc-callback",
+  redirect_uri: "http://localhost:3000/oidc-callback/",
   response_type: "code",
   scope: "openid profile email",
   post_logout_redirect_uri: "http://localhost:3000/login",
@@ -16,7 +16,7 @@ const localOidcConfig = {
 const devOidcConfig = {
   authority: "https://dev.gendox.ctrlspace.dev/idp/realms/gendox-idp-dev",
   client_id: "gendox-pkce-public-client-dev",
-  redirect_uri: "https://dev.gendox.ctrlspace.dev/oidc-callback",
+  redirect_uri: "https://dev.gendox.ctrlspace.dev/oidc-callback/",
   response_type: "code",
   scope: "openid profile email",
   post_logout_redirect_uri: "https://dev.gendox.ctrlspace.dev/login",
@@ -25,7 +25,7 @@ const devOidcConfig = {
   pkceMethod: 'S256'
 };
 
-let oidcConfig = localOidcConfig;
+let oidcConfig = devOidcConfig;
 
 // if (process.env.NODE_ENV === 'development') {
 //   oidcConfig = devOidcConfig;

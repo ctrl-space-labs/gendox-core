@@ -5,16 +5,16 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectMemberConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectMemberDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectMemberCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.AiModelService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectMemberService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -36,33 +36,29 @@ public class ProjectController {
     private ProjectService projectService;
     private ProjectConverter projectConverter;
     private ProjectMemberService projectMemberService;
-    private JWTUtils jwtUtils;
     private ProjectMemberConverter projectMemberConverter;
     private ProjectAgentService projectAgentService;
-    private ProjectAgent projectAgent;
-    private AiModelRepository aiModelRepository;
-    private AiModelService aiModelService;
+
+    private SecurityUtils securityUtils;
+
+    private UserService userService;
 
 
     @Autowired
     public ProjectController(ProjectService projectService,
                              ProjectConverter projectConverter,
                              ProjectMemberService projectMemberService,
-                             JWTUtils jwtUtils,
                              ProjectMemberConverter projectMemberConverter,
                              ProjectAgentService projectAgentService,
-                             AiModelRepository aiModelRepository,
-                             AiModelService aiModelService
-                             ) {
+                             SecurityUtils securityUtils,
+                             UserService userService) {
         this.projectService = projectService;
         this.projectConverter = projectConverter;
         this.projectMemberService = projectMemberService;
-        this.jwtUtils = jwtUtils;
         this.projectMemberConverter = projectMemberConverter;
         this.projectAgentService = projectAgentService;
-        this.aiModelRepository = aiModelRepository;
-        this.aiModelService = aiModelService;
-
+        this.securityUtils = securityUtils;
+        this.userService = userService;
     }
 
 
@@ -112,24 +108,11 @@ public class ProjectController {
             throw new GendoxException("ORGANIZATION_ID_MISMATCH", "Organization ID in path and Organization ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
 
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String creatorUserId = ((UserProfile) authentication.getPrincipal()).getId();
+        userService.evictUserProfileByUniqueIdentifier(securityUtils.getUserIdentifier());
 
-        Project project = projectConverter.toEntity(projectDTO);
-
-        // create Project Agent
-        ProjectAgent projectAgent = new ProjectAgent();
-        projectAgent.setProject(project);
-        projectAgent.setAgentName(project.getName() + " Agent");
-        projectAgent.setSemanticSearchModel(aiModelRepository.findByName(AiModelConstants.ADA2_MODEL));
-        projectAgent.setCompletionModel(aiModelRepository.findByName(AiModelConstants.GPT_3_5_TURBO_MODEL));
-        projectAgent.setModerationModel(aiModelRepository.findByName(AiModelConstants.OPEN_AI_MODERATION));
-        projectAgent.setModerationCheck(true);
-
-        projectAgent = projectAgentService.createProjectAgent(projectAgent);
-
-
-        project.setProjectAgent(projectAgent);
-
-        project = projectService.createProject(project);
+        Project project = projectService.createProject(projectDTO, creatorUserId);
 
         return project;
     }
@@ -219,6 +202,10 @@ public class ProjectController {
     public ProjectMember addMemberToProject(@PathVariable UUID projectId, @RequestBody ProjectMemberDTO projectMemberDTO) throws Exception {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        User invitedUser = userService.getById(projectMemberDTO.getUser().getId());
+        userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser));
+
         ProjectMember projectMember = projectMemberConverter.toEntity(projectMemberDTO);
         projectMember = projectMemberService.createProjectMember(projectMember.getUser().getId(), projectId);
 
@@ -236,6 +223,8 @@ public class ProjectController {
 
         GendoxAuthenticationToken authentication = (GendoxAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
 
+        User invitedUser = userService.getById(userId);
+        userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser));
 
         ProjectMember projectMember = projectMemberService.createProjectMember(userId, projectId);
 
@@ -252,14 +241,26 @@ public class ProjectController {
                     "This method handles the addition of a user as a member to a project and returns the created ProjectMember entity.")
     public List<ProjectMember> addMembersToProject(@PathVariable UUID projectId, @RequestBody List<UUID> userIds) throws Exception {
 
+        if (userIds.size() > 1000) {
+            throw new GendoxException("MAX_USERS_EXCEED", "Number of users can't be more than 1000", HttpStatus.BAD_REQUEST);
+        }
+
         List<ProjectMember> projectMembers = new ArrayList<>();
         GendoxAuthenticationToken authentication = (GendoxAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
 
+        Pageable pageable = PageRequest.of(0, userIds.size());
+        Page<User> invitedUsers = userService.getAllUsers(UserCriteria
+                        .builder()
+                        .usersIds(userIds)
+                        .build(),
+                pageable);
+        invitedUsers.forEach(invitedUser -> {
+            userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser));
+        });
         projectMembers = projectMemberService.createProjectMembers(projectId, userIds);
 
         return projectMembers;
     }
-
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_REMOVE_PROJECT_MEMBERS', 'getRequestedProjectIdFromPathVariable')")
     @DeleteMapping("organizations/{organizationId}/projects/{projectId}/users/{userId}")
@@ -268,8 +269,13 @@ public class ProjectController {
             description = "Remove a member from a project by specifying both the project ID and the user ID. " +
                     "The user must have the necessary permissions to remove members from this project.")
     public void removeMemberFromProject(@PathVariable UUID projectId, @PathVariable UUID userId) throws Exception {
+        User invitedUser = userService.getById(userId);
+        userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser));
+
         projectMemberService.removeMemberFromProject(projectId, userId);
     }
+
+
 
 
 

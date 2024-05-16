@@ -19,6 +19,15 @@ const getAllUsers = async (organizationId, storedToken) => {
     });
 }
 
+const deleteProfileCaches = async (storedToken) => {
+    return axios.delete(apiRequests.deleteProfileCaches(), {
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + storedToken
+        }
+    });
+}
+
 
 
   

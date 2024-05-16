@@ -9,6 +9,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+import java.util.UUID;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -19,8 +22,8 @@ public class UserCriteria {
     private String organizationId;
     private String projectId;
     private String orgRoleName;
-
     private String userIdentifier; // email or username or phone
+    private List<UUID> usersIds;
 
 
 }
