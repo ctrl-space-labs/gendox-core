@@ -16,6 +16,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.slf4j.LoggerFactory;
@@ -71,6 +73,14 @@ public class OrganizationController {
     @GetMapping("/organizations")
     @Operation(summary = "Get all organizations",
             description = "Retrieve a list of all organizations based on the provided criteria.")
+    @Observed(name = "OrganizationController.getAllOrganizations",
+            contextualName = "OrganizationController#getAllOrganizations",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public Page<Organization> getAllOrganizations(@Valid OrganizationCriteria criteria, Pageable pageable) throws Exception {
 
         //run code to get the organization from database
@@ -81,6 +91,14 @@ public class OrganizationController {
     @GetMapping("/organizations/{organizationId}")
     @Operation(summary = "Get organization by ID",
             description = "Retrieve an organization by its unique ID.")
+    @Observed(name = "OrganizationController.getOrganizationById",
+            contextualName = "OrganizationController#getOrganizationById",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public Organization getOrganizationById(@PathVariable UUID organizationId, Authentication authentication) throws Exception {
 
         //run code to get the organization from the database
@@ -92,6 +110,14 @@ public class OrganizationController {
     @ResponseStatus(value = HttpStatus.CREATED)
     @Operation(summary = "Create organization",
             description = "Create a new organization based on the provided organization details.")
+    @Observed(name = "OrganizationController.createOrganization",
+            contextualName = "OrganizationController#createOrganization",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public Organization createOrganization(@RequestBody OrganizationDTO organizationDTO) throws Exception {
 
         if (organizationDTO.getId() != null) {
@@ -115,6 +141,14 @@ public class OrganizationController {
     @PutMapping("/organizations/{organizationId}")
     @Operation(summary = "Update organization by ID",
             description = "Update an existing organization by specifying its unique ID and providing updated organization details.")
+    @Observed(name = "OrganizationController.updateOrganization",
+            contextualName = "OrganizationController#updateOrganization",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public Organization updateOrganization(@PathVariable UUID organizationId, @RequestBody OrganizationDTO organizationDTO) throws Exception {
         UUID updatedOrganizationId = organizationDTO.getId();
         Organization organization = new Organization();
@@ -137,6 +171,14 @@ public class OrganizationController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete organization by ID",
             description = "Delete an existing organization by specifying its unique ID.")
+    @Observed(name = "OrganizationController.deleteOrganization",
+            contextualName = "OrganizationController#deleteOrganization",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public void deleteOrganization(@PathVariable UUID organizationId) throws Exception {
         organizationService.deleteOrganization(organizationId);
     }
@@ -177,6 +219,14 @@ public class OrganizationController {
                     All the other fields will be ignored.
                     """)
     @PostMapping(value = "/organizations/{organizationId}/users", consumes = {"application/json"})
+    @Observed(name = "OrganizationController.addUserToOrganization",
+            contextualName = "OrganizationController#addUserToOrganization",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public UserOrganization addUserToOrganization(@PathVariable UUID organizationId, @RequestBody UserOrganizationDTO userOrganizationDTO) throws Exception {
 
         if (!organizationId.equals(userOrganizationDTO.getOrganization().getId())) {
