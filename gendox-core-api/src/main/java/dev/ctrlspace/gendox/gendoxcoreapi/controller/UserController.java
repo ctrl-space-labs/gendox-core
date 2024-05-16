@@ -82,6 +82,14 @@ public class UserController {
     @GetMapping("/profile")
     @Operation(summary = "Get user profile by ID",
             description = "Retrieve a user's profile by their unique ID.")
+    @Observed(name = "UserController.getUserUserProfile",
+            contextualName = "UserController#getUserUserProfile",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public UserProfile getUserUserProfile(@PathVariable(required = false) UUID id, Authentication authentication) throws Exception {
 
         UserProfile loginUserProfile = (UserProfile) authentication.getPrincipal();

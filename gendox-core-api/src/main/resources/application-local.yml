@@ -7,7 +7,7 @@ server:
 logging:
   level:
     dev.ctrlspace: DEBUG
-    org.springframework.security: TRACE
+    org.springframework.security: INFO
     org.springframework: INFO
 #    This is how to change the micrometer tracing pattern, we'll use the default now
 #  pattern:
@@ -23,7 +23,7 @@ spring:
     format:
       date-time: yyyy-MM-dd'T'HH:mm:ss.SSSZ
   jpa:
-    show-sql: true
+    show-sql: false
     hibernate:
       ddl-auto: none
 
