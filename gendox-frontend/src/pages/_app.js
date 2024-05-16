@@ -52,6 +52,7 @@ import 'src/iconify-bundle/icons-bundle-react'
 
 // ** Global css styles
 import '../../styles/globals.css'
+import '../../styles/markdown-renderer.css'
 import GendoxFallbackSpinner from "../views/gendox-components/spinner";
 
 const clientSideEmotionCache = createEmotionCache()

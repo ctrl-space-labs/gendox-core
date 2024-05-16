@@ -24,6 +24,7 @@ import CustomAvatar from "src/@core/components/mui/avatar";
 
 // ** Utils Imports
 import { getInitials } from "src/@core/utils/get-initials";
+import GendoxMarkdownRenderer from "../../gendox-components/markdown-renderer/GendoxMarkdownRenderer";
 
 const PerfectScrollbar = styled(PerfectScrollbarComponent)(({ theme }) => ({
   padding: theme.spacing(5),
@@ -217,7 +218,8 @@ const ChatLog = (props) => {
                           : "background.paper",
                       }}
                     >
-                      {chat.msg}
+                      {/*{chat.msg}*/}
+                      <GendoxMarkdownRenderer markdownText={chat.msg} />
                     </Typography>
                     {chat.sections && chat.sections.length > 0 ? (
                       <Box sx={{ display: "flex", mt: 1 }}>

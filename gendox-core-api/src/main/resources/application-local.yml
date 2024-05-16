@@ -23,7 +23,7 @@ spring:
     format:
       date-time: yyyy-MM-dd'T'HH:mm:ss.SSSZ
   jpa:
-    show-sql: false
+    show-sql: true
     hibernate:
       ddl-auto: none
 
