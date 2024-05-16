@@ -5,6 +5,7 @@ const url = "http://localhost:5000/gendox/api/v1/"; // Local Environment
 
 export default {
   getProfile: url + "profile",
+  deleteProfileCaches: () => `${url}profile/caches`,
 
   getAllUsers:() => `${url}users`,
 
@@ -77,4 +78,5 @@ export default {
 
   getAiModels: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/ai-models`,
+
 };

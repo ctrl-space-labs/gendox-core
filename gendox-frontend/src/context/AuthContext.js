@@ -41,6 +41,7 @@ const AuthProvider = ({ children }) => {
   };
 
   const handleLogout = () => {
+    // TODO call DELETE /profile/caches
     clearAuthState();
     userManager.signoutRedirect();
   };
