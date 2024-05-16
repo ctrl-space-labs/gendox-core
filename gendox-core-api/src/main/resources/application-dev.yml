@@ -12,12 +12,12 @@ spring:
   cache:
     type: caffeine
     caffeine:
-      spec: expireAfterWrite=1m,maximumSize=1000
+      spec: expireAfterWrite=5m,maximumSize=1000
   mvc:
     format:
       date-time: yyyy-MM-dd'T'HH:mm:ss.SSSZ
   jpa:
-    show-sql: true
+    show-sql: false
     hibernate:
       ddl-auto: none
   datasource:
