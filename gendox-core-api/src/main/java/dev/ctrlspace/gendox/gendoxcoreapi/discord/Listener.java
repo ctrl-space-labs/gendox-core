@@ -56,7 +56,7 @@ public class Listener extends ListenerAdapter {
         String categoryName = (category != null) ? category.getName() : "No Category"; // You can change "No Category" to a default value if needed
 
 
-        // check if the event is on the gendox group
+        // check if the event is on the correct group in Discord's server
         if (!gendox_group.equals(categoryName)) {
             return;
         }

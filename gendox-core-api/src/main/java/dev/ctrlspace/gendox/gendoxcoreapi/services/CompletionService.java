@@ -4,7 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.CompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -35,8 +35,10 @@ public class CompletionService {
     private ProjectAgentRepository projectAgentRepository;
     private TemplateRepository templateRepository;
     private TypeService typeService;
-    private List<AiModelService> aiModelServices;
+    private List<AiModelTypeService> aiModelTypeServices;
     private TrainingService trainingService;
+    private ProjectAgentService projectAgentService;
+    private MessageService messageService;
 
     private AiModelUtils aiModelUtils;
     @Autowired
@@ -46,10 +48,12 @@ public class CompletionService {
                              ProjectAgentRepository projectAgentRepository,
                              TemplateRepository templateRepository,
                              TypeService typeService,
-                             List<AiModelService> aiModelServices,
+                             List<AiModelTypeService> aiModelTypeServices,
                              DocumentInstanceSectionRepository documentInstanceSectionRepository,
                              AiModelUtils aiModelUtils,
-                             TrainingService trainingService) {
+                             ProjectAgentService projectAgentService,
+                             TrainingService trainingService,
+                             MessageService messageService) {
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
         this.embeddingService = embeddingService;
@@ -58,7 +62,8 @@ public class CompletionService {
         this.trainingService = trainingService;
         this.typeService = typeService;
         this.aiModelUtils = aiModelUtils;
-
+        this.projectAgentService = projectAgentService;
+        this.messageService = messageService;
     }
 
     private CompletionResponse getCompletionForMessages(List<Message> messages, String agentRole, String aiModel,
@@ -75,8 +80,8 @@ public class CompletionService {
             aiModelMessages.add(aiModelMessage);
         }
         //choose the correct aiModel adapter
-        AiModelService aiModelService = aiModelUtils.getAiModelServiceImplementation(aiModel);
-        CompletionResponse completionResponse = aiModelService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams);
+        AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
+        CompletionResponse completionResponse = aiModelTypeService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams);
         return completionResponse;
     }
 
@@ -110,7 +115,14 @@ public class CompletionService {
         // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)
         AuditLogs auditLogs = embeddingService.createAuditLogs(projectId, (long) completionResponse.getUsage().getTotalTokens(), completionType);
         Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
+
         // TODO save the above response message
+        ProjectAgent agent = projectAgentService.getAgentByProjectId(projectId);
+        completionResponseMessage.setProjectId(projectId);
+        completionResponseMessage.setThreadId(message.getThreadId());
+        completionResponseMessage.setCreatedBy(agent.getUserId());
+        completionResponseMessage.setUpdatedBy(agent.getUserId());
+        completionResponseMessage = messageService.createMessage(completionResponseMessage);
 
         return completionResponseMessage;
 

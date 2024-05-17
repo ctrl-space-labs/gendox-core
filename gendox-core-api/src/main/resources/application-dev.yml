@@ -9,11 +9,15 @@ logging:
     dev.ctrlspace: DEBUG
     org.springframework: DEBUG
 spring:
+  cache:
+    type: caffeine
+    caffeine:
+      spec: expireAfterWrite=5m,maximumSize=1000
   mvc:
     format:
       date-time: yyyy-MM-dd'T'HH:mm:ss.SSSZ
   jpa:
-    show-sql: true
+    show-sql: false
     hibernate:
       ddl-auto: none
   datasource:
@@ -93,9 +97,14 @@ gendox:
     allowed:
       extensions: .txt,.md,.rst,.pdf
   integrations:
+#    poller: 30000 # 30 seconds
     poller: 1800000 # 30 minutes in milliseconds
     storage:
       temporary: /var/tmp
+    s3:
+      sqs:
+        wait-time-seconds: 1 #not in use
+        visibility-timeout-seconds: 300
 
   models:
     openai:
@@ -152,7 +161,12 @@ gendox:
 
 cloud:
   aws:
-    region: eu-central-1
+    s3:
+      region: eu-central-1
+    SQS:
+      region: eu-central-1
+
+
 
 # Discord
 

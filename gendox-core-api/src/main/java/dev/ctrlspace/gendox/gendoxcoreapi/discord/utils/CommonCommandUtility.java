@@ -8,27 +8,28 @@ import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.messages.ChatGendoxMessa
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.messages.SearchGendoxMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectMemberService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import io.micrometer.observation.annotation.Observed;
-import net.dv8tion.jda.api.MessageBuilder;
-import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.interactions.components.ActionRow;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
 import java.util.List;
+
+import static dev.ctrlspace.gendox.gendoxcoreapi.model.QUser.user;
 
 @Component
 public class CommonCommandUtility {
@@ -40,6 +41,8 @@ public class CommonCommandUtility {
     private ChatGendoxMessage chatGendoxMessage;
     private SearchGendoxMessage searchGendoxMessage;
     private AuthenticationService authenticationService;
+    private ProjectMemberService projectMemberService;
+    private UserOrganizationService userOrganizationService;
 
     @Autowired
     public CommonCommandUtility(UserService userService,
@@ -47,13 +50,17 @@ public class CommonCommandUtility {
                                 ListenerService listenerService,
                                 ChatGendoxMessage chatGendoxMessage,
                                 SearchGendoxMessage searchGendoxMessage,
-                                AuthenticationService authenticationService) {
+                                AuthenticationService authenticationService,
+                                ProjectMemberService projectMemberService,
+                                UserOrganizationService userOrganizationService) {
         this.userService = userService;
         this.projectRepository = projectRepository;
         this.listenerService = listenerService;
         this.chatGendoxMessage = chatGendoxMessage;
         this.searchGendoxMessage = searchGendoxMessage;
         this.authenticationService = authenticationService;
+        this.projectMemberService = projectMemberService;
+        this.userOrganizationService = userOrganizationService;
     }
 
 
@@ -67,53 +74,60 @@ public class CommonCommandUtility {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public void executeCommandCode(SlashCommandInteractionEvent event, String command, String threadId) {
+        // Ignore if the event user is a bot
         if (event.getUser().isBot()) return;
 
-        logger.info("Start execute command: " + command);
+        // Log the start of command execution
+        logger.debug("Start execute command: " + command);
         try {
-            // Take channel and channel's name
+            // Extract channel information and user details from the event
             String channelName = event.getChannel().getName();
             String channelId = event.getChannel().getId();
             TextChannel channel = event.getJDA().getTextChannelById(channelId);
             String authorName = event.getUser().getName();
+            Project project = projectRepository.findByName(channelName);
+
             User user = userService
                     .getOptionalUserByUniqueIdentifier(authorName)
                     .orElse(null);
 
-            // check if author is gendox user and if not, create new user
-            if (event.getUser().isBot()) return;
-            try {
-                if (user == null) {
-                    user = userService.createDiscordUser(authorName);
-                }
-            } catch (GendoxException e) {
-                logger.error("An error occurred while checking/creating the user: " + e.getMessage());
-                throw new RuntimeException(e);
+            // Check if the event user is a bot or if the project ID is null
+            if (event.getUser().isBot() || project.getId() == null) return;
+
+            // If the user does not exist, create a new user
+            if (user == null) {
+                user = userService.createDiscordUser(authorName);
+                logger.debug("created new user from discord: {}", user);
             }
 
-            // check if identifier user exist and if no create identifier user
-            try {
-                if (authenticationService.getUsersByUsername(authorName).isEmpty()) {
-                    authenticationService.createUser(user, null, true, false);
-                }
-            } catch (GendoxException e) {
-                logger.error("An error occurred while checking/creating user's identifier: " + e.getMessage());
-                throw new RuntimeException(e);
+            // If the identifier user does not exist, create one (for Keycloak)
+            if (authenticationService.getUsersByUsername(authorName).isEmpty()) {
+                authenticationService.createUser(user, null, true, false);
+                logger.debug("created new keycloak user: {}", user);
             }
 
-            // check if channel's name is equals project's name
-            UUID projectId = projectRepository.findIdByName(channelName);
-            if (projectId == null) {
-                return;
+            // If the user is not a project member, add them to the project
+            if (!projectMemberService.isUserProjectMember(project.getId(), user.getId())) {
+                projectMemberService.createProjectMember(user.getId(), project.getId());
+                logger.debug("user {} becomes project {} member ", user.getName(), project.getName());
             }
 
+            // If the user is not a member of the organization, add them with reader role
+            if (!userOrganizationService.isUserOrganizationMember(user.getId(), project.getOrganizationId())) {
+                userOrganizationService.createUserOrganization(user.getId(), project.getOrganizationId(), OrganizationRolesConstants.READER);
+                logger.debug("user {} becomes organizations {} member ", user.getName(), project.getOrganizationId());
+            }
+
+            // Retrieve JWT token for the user
+            logger.debug("Retrieve JWT token for the user {}", authorName);
             String jwtToken = listenerService.getJwtToken(authorName);
-
 
             // Get the message content from the event
             String question = getTheQuestion(event);
+            logger.debug("Get the message content from the event {}", question);
             channel.sendMessage(authorName + ", thank you for the question: \n- " + question + "\n\uD83E\uDD16 Thinking... \uD83E\uDD16").queue();
 
+            // Perform actions based on the command type
             if (command.equals(DiscordGendoxConstants.CHAT_GENDOX)) {
                 CompletionMessageDTO completionMessageDTO = listenerService.completionForQuestion(question, channelName, jwtToken, threadId);
                 logger.debug("Received completionForQuestion for chat command");
@@ -121,7 +135,9 @@ public class CommonCommandUtility {
                 logger.debug("Received chatMessage");
             } else if (command.equals(DiscordGendoxConstants.SEARCH_GENDOX)) {
                 List<DocumentInstanceSection> documentInstanceSections = listenerService.semanticSearchForQuestion(question, channelName, jwtToken, threadId);
-                searchGendoxMessage.searchMessage(channel, documentInstanceSections, projectId);
+                logger.debug("Received for search command");
+                searchGendoxMessage.searchMessage(channel, documentInstanceSections, project.getId());
+                logger.debug("Received searchMessage");
             } else if (command.equals(DiscordGendoxConstants.REPLY_GENDOX)) {
                 CompletionMessageDTO completionMessageDTO = listenerService.completionForQuestion(question, channelName, jwtToken, threadId);
                 chatGendoxMessage.chatMessage(channel, completionMessageDTO);
@@ -130,9 +146,10 @@ public class CommonCommandUtility {
             }
 
         } catch (GendoxException e) {
-            logger.error("An arithmetic exception occurred: " + e.getMessage());
+            logger.error("An error occurred: " + e.getMessage());
             throw new RuntimeException(e);
         }
+        logger.debug("Complete executed command: " + command);
     }
 
 

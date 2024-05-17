@@ -105,7 +105,9 @@ public class ListenerService {
         completionMessageDTO.getMessage().setThreadId(completionMessageDTO.getThreadID());
         completionMessageDTO.getMessage().setProjectId(projectId);
         //save the answer as message
-        embeddingService.createMessage(completionMessageDTO.getMessage());
+
+        // https://github.com/ctrl-space-labs/gendox-core/issues/213
+//        embeddingService.createMessage(completionMessageDTO.getMessage());
 
 
         return completionMessageDTO;

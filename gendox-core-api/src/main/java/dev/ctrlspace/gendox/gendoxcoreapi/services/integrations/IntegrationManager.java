@@ -29,14 +29,17 @@ public class IntegrationManager {
     private GitIntegrationUpdateService gitIntegrationUpdateService;
     private IntegrationRepository integrationRepository;
     private TypeService typeService;
+    private S3BucketIntegrationUpdateService s3BucketIntegrationUpdateService;
 
     @Autowired
     public IntegrationManager(GitIntegrationUpdateService gitIntegrationUpdateService,
                               IntegrationRepository integrationRepository,
-                              TypeService typeService) {
+                              TypeService typeService,
+                              S3BucketIntegrationUpdateService s3BucketIntegrationUpdateService) {
         this.gitIntegrationUpdateService = gitIntegrationUpdateService;
         this.integrationRepository = integrationRepository;
         this.typeService = typeService;
+        this.s3BucketIntegrationUpdateService = s3BucketIntegrationUpdateService;
     }
 
     @Observed(name = "integrationManager.dispatchToIntegrationServices",
@@ -47,29 +50,61 @@ public class IntegrationManager {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public Map<Integration, List<MultipartFile>> dispatchToIntegrationServices() throws GendoxException{
+    public Map<Integration, List<MultipartFile>> dispatchToIntegrationServices() throws GendoxException {
         Map<Integration, List<MultipartFile>> map = new HashMap<>();
-        List<Integration> integrations = new ArrayList<>();
+        List<Integration> activeIntegrations = findActiveIntegrations();
 
-        // git integrations
-
-        logger.info("find Active Integrations ");
-        integrations = integrationRepository.findActiveIntegrationsByType(typeService.getIntegrationTypeByName(IntegrationTypesConstants.GIT_INTEGRATION).getId());
-        logger.info("After findActiveIntegrations ");
-        for (Integration integration : integrations) {
-            List<MultipartFile> fileList = gitIntegrationUpdateService.checkForUpdates(integration);
-            if (!fileList.isEmpty()) {
-                logger.info("find Integration by ID ");
-                integration = integrationRepository.findById(integration.getId())
-                        .orElseThrow(() -> new GendoxException("INTEGRATION_NOT_FOUND", "Integration not found. " , HttpStatus.NOT_FOUND));
-                map.put(integration, fileList);
-            }
+        for (Integration integration : activeIntegrations) {
+            processIntegration(integration, map);
         }
-
-        // other integrations into the future
 
         return map;
     }
 
 
+    private List<Integration> findActiveIntegrations() throws GendoxException{
+        logger.debug("Searching for active integrations...");
+        return integrationRepository.findActiveIntegrations()
+                .orElseThrow(() -> new GendoxException("ACTIVE_INTEGRATIONS_NOT_FOUND", "Active Integrations not founds", HttpStatus.NOT_FOUND));
+
+    }
+
+    private void processIntegration(Integration integration, Map<Integration, List<MultipartFile>> map) throws GendoxException {
+
+        logger.debug("Processing integration");
+
+        if (integration.getIntegrationType().equals(typeService.getIntegrationTypeByName(IntegrationTypesConstants.GIT_INTEGRATION))) {
+            processGitIntegration(integration, map);
+        } else if (integration.getIntegrationType().equals(typeService.getIntegrationTypeByName(IntegrationTypesConstants.AWS_S3_INTEGRATION))) {
+            processS3Integration(integration, map);
+        } else {
+            logger.error("Unsupported integration type");
+
+        }
+
+    }
+
+    private void processGitIntegration(Integration integration, Map<Integration, List<MultipartFile>> map) throws GendoxException {
+        logger.debug("Processing Git integration...");
+        List<MultipartFile> fileList = gitIntegrationUpdateService.checkForUpdates(integration);
+        updateMap(integration, fileList, map);
+    }
+
+    private void processS3Integration(Integration integration, Map<Integration, List<MultipartFile>> map) throws GendoxException {
+        logger.debug("Processing AWS S3 integration...");
+        List<MultipartFile> fileList = s3BucketIntegrationUpdateService.checkForUpdates(integration);
+        updateMap(integration, fileList, map);
+    }
+
+    private void updateMap(Integration integration, List<MultipartFile> fileList, Map<Integration, List<MultipartFile>> map) throws GendoxException {
+        if (!fileList.isEmpty()) {
+            logger.debug("Integration update found");
+            Integration updatedIntegration = integrationRepository.findById(integration.getId())
+                    .orElseThrow(() -> new GendoxException("INTEGRATION_NOT_FOUND", "Integration not found.", HttpStatus.NOT_FOUND));
+            map.put(updatedIntegration, fileList);
+        }
+    }
+
+
 }
+

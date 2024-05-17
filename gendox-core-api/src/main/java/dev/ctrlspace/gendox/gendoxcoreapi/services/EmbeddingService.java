@@ -2,13 +2,12 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.BotRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.AiModelEmbeddingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nullable;
-import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -31,24 +29,16 @@ public class EmbeddingService {
     private EmbeddingRepository embeddingRepository;
     private AuditLogsRepository auditLogsRepository;
     private EmbeddingGroupRepository embeddingGroupRepository;
-    private MessageRepository messageRepository;
     private TypeService typeService;
-    private AiModelRepository aiModelRepository;
     private AiModelEmbeddingConverter aiModelEmbeddingConverter;
     private SecurityUtils securityUtils;
-    private ProjectAgentService projectAgentService;
     private DocumentSectionService documentSectionService;
-
-    private List<AiModelService> aiModelServices;
-
     private AiModelUtils aiModelUtils;
-
     private ProjectService projectService;
 
-    private ProjectAgentRepository projectAgentRepository;
 
-    @Autowired
-    private JWTUtils jwtUtils;
+
+
 
 
     @Autowired
@@ -56,31 +46,22 @@ public class EmbeddingService {
                             EmbeddingRepository embeddingRepository,
                             AuditLogsRepository auditLogsRepository,
                             EmbeddingGroupRepository embeddingGroupRepository,
-                            MessageRepository messageRepository,
                             TypeService typeService,
-                            AiModelRepository aiModelRepository,
                             SecurityUtils securityUtils,
-                            ProjectAgentService projectAgentService,
                             DocumentSectionService documentSectionService,
                             AiModelEmbeddingConverter aiModelEmbeddingConverter,
                             AiModelUtils aiModelUtils,
-                            List<AiModelService> aiModelServices,
-                            ProjectService projectService,
-                            ProjectAgentRepository projectAgentRepository) {
-        this.aiModelServices = aiModelServices;
+                            ProjectService projectService
+                           ) {
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
-        this.messageRepository = messageRepository;
         this.typeService = typeService;
-        this.aiModelRepository = aiModelRepository;
         this.securityUtils = securityUtils;
-        this.projectAgentService = projectAgentService;
         this.documentSectionService = documentSectionService;
         this.aiModelUtils = aiModelUtils;
         this.projectService = projectService;
         this.aiModelEmbeddingConverter = aiModelEmbeddingConverter;
-        this.projectAgentRepository = projectAgentRepository;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -163,9 +144,9 @@ public class EmbeddingService {
     }
 
     public EmbeddingResponse getEmbeddingForMessage(BotRequest botRequest, String aiModel) throws GendoxException {
-        AiModelService aiModelService = aiModelUtils.getAiModelServiceImplementation(aiModel);
-         aiModelService = aiModelUtils.getAiModelServiceImplementation(aiModel);
-        EmbeddingResponse embeddingResponse = aiModelService.askEmbedding(botRequest, aiModel);
+        AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
+         aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
+        EmbeddingResponse embeddingResponse = aiModelTypeService.askEmbedding(botRequest, aiModel);
 
         return embeddingResponse;
     }
@@ -205,24 +186,7 @@ public class EmbeddingService {
         return embeddingGroup;
     }
 
-    public Message createMessage(Message message) {
 
-        message.setId(UUID.randomUUID());
-        if (message.getThreadId() == null) {
-            message.setThreadId(UUID.randomUUID());
-        }
-
-
-        if (securityUtils.getUserId() == null) {
-            ProjectAgent agent = projectAgentService.getAgentByProjectId(message.getProjectId());
-            message.setCreatedBy(agent.getUserId());
-            message.setUpdatedBy(agent.getUserId());
-        }
-
-        message = messageRepository.save(message);
-
-        return message;
-    }
 
     public void deleteEmbeddings(List<Embedding> embeddings) throws GendoxException {
         embeddingRepository.deleteAll(embeddings);
@@ -285,6 +249,7 @@ public class EmbeddingService {
 
         return sections;
     }
+
 
 
 }

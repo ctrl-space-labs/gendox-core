@@ -13,7 +13,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepositor
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserOrganizationPredicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -74,7 +76,11 @@ public class UserOrganizationService {
 
     }
 
-    public UserOrganization createUserOrganization(UUID userId, UUID organizationId, String roleName) throws Exception {
+    public boolean isUserOrganizationMember(UUID userId, UUID organizationID){
+        return userOrganizationRepository.existsByUserIdAndOrganizationId(userId, organizationID);
+    }
+
+    public UserOrganization createUserOrganization(UUID userId, UUID organizationId, String roleName) throws GendoxException {
 
         User user = userService.getById(userId);
         Organization organization = organizationService.getById(organizationId);
@@ -90,9 +96,9 @@ public class UserOrganizationService {
 
     }
 
-    public UserOrganization createUserOrganization(UserOrganization userOrganization) throws Exception{
+    public UserOrganization createUserOrganization(UserOrganization userOrganization) throws GendoxException {
 
-        if (userOrganizationRepository.existsByUserAndOrganization(userOrganization.getUser(), userOrganization.getOrganization())) {
+        if (userOrganizationRepository.existsByUserIdAndOrganizationId(userOrganization.getUser().getId(), userOrganization.getOrganization().getId())) {
             throw new GendoxException("USER_ORGANIZATION_ALREADY_EXISTS", "User-organization combination already exists", HttpStatus.BAD_REQUEST);
         }
 
@@ -107,16 +113,6 @@ public class UserOrganizationService {
 
     public void deleteUserOrganization(UserOrganization userOrganization) throws GendoxException {
         userOrganizationRepository.delete(userOrganization);
-    }
-
-    public void setAdminRoleForOrganizationsOwner(Organization organization) throws Exception {
-        // user
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        String userId = ((UserProfile) authentication.getPrincipal()).getId();
-
-        createUserOrganization(UUID.fromString(userId), organization.getId(), "ROLE_ADMIN");
-
     }
 }
 

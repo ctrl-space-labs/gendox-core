@@ -7,16 +7,18 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TrainingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 
@@ -32,22 +34,20 @@ public class EmbeddingsController {
     private EmbeddingService embeddingService;
     private TrainingService trainingService;
     private CompletionService completionService;
-
-    private AiModelRepository aiModelRepository;
+    private MessageService messageService;
 
     @Autowired
     public EmbeddingsController(EmbeddingRepository embeddingRepository,
                                 EmbeddingService embeddingService,
                                 TrainingService trainingService,
                                 CompletionService completionService,
-                                AiModelRepository aiModelRepository
-                                ) {
+                                MessageService messageService
+    ) {
         this.embeddingRepository = embeddingRepository;
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
         this.completionService = completionService;
-        this.aiModelRepository = aiModelRepository;
-
+        this.messageService = messageService;
     }
 
     @PostMapping("/embeddings")
@@ -70,6 +70,9 @@ public class EmbeddingsController {
     }
 
 
+
+
+    @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
     @PostMapping("/embeddings/sections/{sectionId}")
     @Operation(summary = "Get section embedding",
             description = "Retrieve the embedding for a specific section in a project based on the provided section ID and project ID. " +
@@ -79,6 +82,8 @@ public class EmbeddingsController {
         return trainingService.runTrainingForSection(sectionId, UUID.fromString(projectId));
     }
 
+
+    @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
     @PostMapping("/embeddings/projects/{projectId}")
     @Operation(summary = "Get project embeddings",
             description = "Retrieve embeddings for all sections in a project based on the provided project ID. " +
@@ -89,6 +94,8 @@ public class EmbeddingsController {
         return trainingService.runTrainingForProject(projectId);
     }
 
+
+    @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
     @PostMapping("/messages/semantic-search")
     @Operation(summary = "Semantic search for closer sections",
             description = "Search for sections within a project that are semantically closer to a given message. " +
@@ -104,7 +111,7 @@ public class EmbeddingsController {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
         }
 
-        message = embeddingService.createMessage(message);
+        message = messageService.createMessage(message);
 
         List<DocumentInstanceSection> instanceSections = new ArrayList<>();
         instanceSections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
@@ -113,27 +120,26 @@ public class EmbeddingsController {
     }
 
 
+    @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
     @PostMapping("/messages/semantic-completion")
     @Operation(summary = "Semantic completion of message",
             description = "Find a message within a project that semantically completes the given input message. " +
                     "This endpoint calculates the embedding for the input message and searches for a complementary message " +
                     "in the context of the provided project.")
     public CompletionMessageDTO getCompletionSearch(@RequestBody Message message,
-                                                    @RequestParam String projectId,
-                                                    Pageable pageable) throws GendoxException {
-        if (pageable == null) {
-            pageable = PageRequest.of(0, 5);
-        }
-        if (pageable.getPageSize() > 5) {
-            throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
-        }
+                                                    @RequestParam String projectId) throws GendoxException {
 
 
-        message = embeddingService.createMessage(message);
+        message.setProjectId(UUID.fromString(projectId));
+        message = messageService.createMessage(message);
 
         List<DocumentInstanceSection> instanceSections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
 
         Message completion = completionService.getCompletion(message, instanceSections, UUID.fromString(projectId));
+
+        List<MessageSection> messageSections = messageService.createMessageSections(instanceSections, completion);
+
+        completion = messageService.updateMessageWithSections(completion, messageSections);
 
         CompletionMessageDTO completionMessageDTO = CompletionMessageDTO.builder()
                 .message(completion)
@@ -145,12 +151,15 @@ public class EmbeddingsController {
         return completionMessageDTO;
     }
 
+
+
+
     @PostMapping("/messages/moderation")
     public OpenAiGpt35ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
         OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(message);
         return openAiGpt35ModerationResponse;
     }
-//
+
     @PostMapping("/messages/moderation/document")
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
         return trainingService.getModerationForDocumentSections(documentId);

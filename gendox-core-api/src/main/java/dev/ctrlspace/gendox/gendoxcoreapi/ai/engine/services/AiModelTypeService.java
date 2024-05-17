@@ -5,7 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*
 
 import java.util.List;
 
-public interface AiModelService {
+public interface AiModelTypeService {
 
 
     EmbeddingResponse askEmbedding(BotRequest botRequest, String aiModelName);
