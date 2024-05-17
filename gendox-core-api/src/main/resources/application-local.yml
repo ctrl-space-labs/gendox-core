@@ -8,7 +8,7 @@ logging:
   level:
     dev.ctrlspace: DEBUG
     org.springframework.security: INFO
-    org.springframework: DEBUG
+    org.springframework: INFO
 #    This is how to change the micrometer tracing pattern, we'll use the default now
 #  pattern:
 #    correlation : "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
@@ -28,6 +28,11 @@ spring:
     url: jdbc:postgresql://localhost:5432/postgres
     username: postgres
     password: 1234
+#  datasource:
+#    url: ${DEV_DATABASE_URL}
+#    username: ${DEV_DATABASE_USERNAME}
+#    password: ${DEV_DATABASE_PASSWORD}
+
 
     hikari:
       maximum-pool-size: 100

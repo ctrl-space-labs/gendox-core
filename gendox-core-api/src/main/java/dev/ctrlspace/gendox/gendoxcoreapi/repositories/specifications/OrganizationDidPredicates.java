@@ -24,7 +24,7 @@ public class OrganizationDidPredicates {
         if (organizationId == null) {
             return null;
         }
-        return qOrganizationDid.organization.id.eq(UUID.fromString(organizationId));
+        return QOrganizationDid.organizationDid.id.eq(UUID.fromString(organizationId));
     }
 
     private static Predicate organizationDidIdIn(List<String> organizationDidIdIn) {

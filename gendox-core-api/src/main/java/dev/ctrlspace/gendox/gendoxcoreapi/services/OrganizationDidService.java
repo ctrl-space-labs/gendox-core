@@ -104,10 +104,9 @@ public class OrganizationDidService {
         LocalKey localKey = new LocalKey(jwk);
 
         // Create a LocalKey object using the LocalKeyWrapper
-        LocalKeyWrapper localKeyWrapper = new LocalKeyWrapper();
 
         DidResult didResult = didIssuer.resolveKeyDidToKey(walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()),
-                false, (LocalKey) localKeyWrapper.exportJWK(localKey));
+                false, localKey);
 
         organizationDid.setDid(String.valueOf(didResult.getDidDocument()));
 

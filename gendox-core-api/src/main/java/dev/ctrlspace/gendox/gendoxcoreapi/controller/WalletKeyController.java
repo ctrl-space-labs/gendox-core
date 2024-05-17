@@ -72,24 +72,26 @@ public class WalletKeyController {
         });
     }
 
-//    @PostMapping(value = "/organizations/{organizationId}/wallet-keys", consumes = {"application/json"})
-//    @ResponseStatus(value = HttpStatus.CREATED)
-//    @Operation(summary = "Create wallet key",
-//            description = "Create a new wallet key with the provided details.")
-//    public WalletKey createWalletKey(@RequestBody CreateWalletKeysRequestBody walletKeysRequestBody) throws GendoxException {
-//
-//        WalletKeyDTO walletKeyDTO = walletKeysRequestBody.getWalletKeyDTO();
-//        LocalKey localKey = walletKeysRequestBody.getLocalKey();
-//
-//        if (walletKeyDTO.getId() != null) {
-//            throw new GendoxException("WALLET_KEY_ID_MUST_BE_NULL", "Key id is not null", HttpStatus.BAD_REQUEST);
-//        }
-//
-//        WalletKey walletKey = walletKeyConverter.toEntity(walletKeyDTO);
-//        walletKey = walletKeyService.createWalletKey(walletKey);
-//
-//        return walletKey;
-//    }
+    @PostMapping(value = "/organizations/{organizationId}/wallet-keys", consumes = {"application/json"})
+    @ResponseStatus(value = HttpStatus.CREATED)
+    @Operation(summary = "Create wallet key",
+            description = "Create a new wallet key with the provided details.")
+    public WalletKey createWalletKey(@PathVariable("organizationId") UUID organizationId,@RequestBody  WalletKeyDTO walletKeyDTO) throws GendoxException {
+
+        if (walletKeyDTO.getId() != null) {
+            throw new GendoxException("WALLET_KEY_ID_MUST_BE_NULL", "Key id is not null", HttpStatus.BAD_REQUEST);
+        }
+
+
+        if (!organizationId.equals(walletKeyDTO.getOrganizationId())) {
+            throw new GendoxException("ORGANIZATION_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
+        }
+
+        WalletKey walletKey = walletKeyConverter.toEntity(walletKeyDTO);
+        walletKey = walletKeyService.createWalletKey(walletKey);
+
+        return walletKey;
+    }
 
 
     @DeleteMapping("/organizations/{organizationId}/wallet-keys/{walletKeyId}")
