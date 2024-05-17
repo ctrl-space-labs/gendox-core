@@ -109,11 +109,11 @@ public class ChatThreadMember {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ChatThreadMember that = (ChatThreadMember) o;
-        return Objects.equals(id, that.id) && Objects.equals(userId, that.userId) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(chatThread, that.chatThread);
+        return Objects.equals(id, that.id) && Objects.equals(userId, that.userId) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals((chatThread != null ? chatThread.getId() : 0), (that.chatThread != null ? that.chatThread.getId() : 0));
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, userId, createdAt, updatedAt, createdBy, updatedBy, chatThread);
+        return Objects.hash(id, userId, createdAt, updatedAt, createdBy, updatedBy, (chatThread != null ? chatThread.getId() : 0));
     }
 }
