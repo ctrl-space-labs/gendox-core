@@ -36,6 +36,7 @@ public class ProjectAgentDTO {
     private Double topP;
     private Boolean moderationCheck;
     private AiModel moderationModel;
+    private String agentVcJwt;
 
 
 

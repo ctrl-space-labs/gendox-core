@@ -1,20 +1,25 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 
+
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
+import dev.ctrlspace.provenai.ssi.issuer.VerifiablePresentationBuilder;
+import id.walt.crypto.keys.LocalKey;
+import kotlinx.serialization.json.Json;
+import kotlinx.serialization.json.JsonPrimitive;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
+import java.io.IOException;
 import java.util.UUID;
 
 @Service
@@ -36,18 +41,23 @@ public class ProjectAgentService {
     private UserService userService;
     private AiModelRepository aiModelRepository;
 
+    private CryptographyUtils cryptographyUtils;
+
+
 
     @Autowired
     public ProjectAgentService(ProjectAgentRepository projectAgentRepository,
                                TypeService typeService,
                                TemplateRepository templateRepository,
                                UserService userService,
-                               AiModelRepository aiModelRepository) {
+                               AiModelRepository aiModelRepository,
+                               CryptographyUtils cryptographyUtils) {
         this.projectAgentRepository = projectAgentRepository;
         this.typeService = typeService;
         this.templateRepository = templateRepository;
         this.userService = userService;
         this.aiModelRepository = aiModelRepository;
+        this.cryptographyUtils = cryptographyUtils;
     }
 
     public ProjectAgent getAgentByProjectId(UUID projectId) {
@@ -124,6 +134,30 @@ public class ProjectAgentService {
         existingProjectAgent = projectAgentRepository.save(existingProjectAgent);
         return existingProjectAgent;
     }
+
+
+
+
+    public Object createVerifiablePresentation(ProjectAgent projectAgent, String subjectKeyJwk, String subjectDid, String agentVcJwt) throws GendoxException, IOException {
+
+        JsonPrimitive agentVcJwtPrimitive = Json.Default.decodeFromString(JsonPrimitive.Companion.serializer(), agentVcJwt);
+        VerifiablePresentationBuilder verifiablePresentationBuilder = new VerifiablePresentationBuilder();
+        verifiablePresentationBuilder.addCredential( agentVcJwtPrimitive);
+        verifiablePresentationBuilder.setPresentationId();
+        verifiablePresentationBuilder.setDid(subjectDid);
+        verifiablePresentationBuilder.setNonce(cryptographyUtils.generateNonce());
+        projectAgent.setAgentVcJwt(agentVcJwt.toString());
+        projectAgentRepository.save(projectAgent);
+
+        LocalKey localKey = new LocalKey(subjectKeyJwk);
+
+
+        return verifiablePresentationBuilder.buildAndSign(localKey);
+
+
+    }
+
+
 
 
 }

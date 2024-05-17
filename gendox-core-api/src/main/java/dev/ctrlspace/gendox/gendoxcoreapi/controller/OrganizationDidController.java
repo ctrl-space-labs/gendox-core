@@ -118,12 +118,16 @@ public class OrganizationDidController {
     @PostMapping(value = "/organizations/{organizationId}/dids", consumes = "application/json")
     @Operation(summary = "Create organization DID",
             description = "Create a new organization DID based on the provided details")
-    public OrganizationDid createOrganizationDid(@RequestBody OrganizationDidDTO organizationDidDTO,
+    public OrganizationDid createOrganizationDid(@PathVariable("organizationId") UUID organizationId, @RequestBody OrganizationDidDTO organizationDidDTO,
                                                  @RequestParam(value = "didType", required = true) String didType) throws GendoxException {
 
 
         if (organizationDidDTO.getId() != null) {
             throw new GendoxException("ORG_DID_ID_MUST_BE_NULL", "DID id must be null", HttpStatus.BAD_REQUEST);
+        }
+
+        if (!organizationId.equals(organizationDidDTO.getOrganizationId())) {
+            throw new GendoxException("ORGANIZATION_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
 
         OrganizationDid organizationDid = organizationDidConverter.toEntity(organizationDidDTO);

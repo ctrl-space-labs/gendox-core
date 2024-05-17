@@ -230,8 +230,18 @@ public class EmbeddingService {
         sb.append("]");
 
         nearestEmbeddings = embeddingRepository.findClosestSections(projectId, sb.toString(), pageRequest.getPageSize());
+//        provennNearestEmbeddings = provenAIService.search(projectId, sb.toString(), pageRequest.getPageSize());
+//        nearestEmbeddings.addAll(provennNearestEmbeddings);
         return nearestEmbeddings;
     }
+
+//    private List<Embedding> search(UUID projectId, StringBuilder sb, PageRequest pageRequest) {
+//        ProjectAgent projectAgent = projectAgentService.getByProjectId(projectId).getProjectAgent();
+//        // POST /token
+//        String provenAIAccessToken = provenAiService.getAccessToken(projectAgent);
+//        // POST /search
+//        return provenAIService.findClosestSections(provenAIAccessToken, "what is ProvenAI?", pageRequest.getPageSize());
+//    }
 
 
     public List<DocumentInstanceSection> findClosestSections(Message message, UUID projectId) throws GendoxException {

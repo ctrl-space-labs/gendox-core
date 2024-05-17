@@ -5,10 +5,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectMemberConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectAgentVPCredential;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectMemberDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectMemberCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.request.ProjectAgentVPOfferRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
@@ -18,6 +20,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
+import kotlinx.serialization.json.JsonElement;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -39,7 +42,6 @@ public class ProjectController {
     private JWTUtils jwtUtils;
     private ProjectMemberConverter projectMemberConverter;
     private ProjectAgentService projectAgentService;
-    private ProjectAgent projectAgent;
     private AiModelRepository aiModelRepository;
     private AiModelService aiModelService;
 
@@ -264,6 +266,24 @@ public class ProjectController {
                     "The user must have the necessary permissions to remove members from this project.")
     public void removeMemberFromProject(@PathVariable UUID projectId, @PathVariable UUID userId) throws Exception {
         projectMemberService.removeMemberFromProject(projectId, userId);
+    }
+
+    @PostMapping("organizations/{organizationId}/projects/{projectId}/agents-vp-offer")
+    @Operation(summary = "Create project agent verifiable presentation offer",
+            description = "Create a verifiable presentation offer for the project agent. " +
+                    "The user must have the necessary permissions to create a verifiable presentation offer for the project agent.")
+    public ProjectAgentVPCredential createProjectAgentVerifiablePresentationOffer(@PathVariable UUID projectId,
+                                                                                  @RequestBody ProjectAgentVPOfferRequest projectAgentVPOfferRequest) throws Exception {
+        ProjectAgent projectAgent = projectAgentService.getAgentByProjectId(projectId);
+        ProjectAgentVPCredential projectAgentVPCredential = new ProjectAgentVPCredential();
+
+        Object agentVpJwt = projectAgentService.createVerifiablePresentation( projectAgent,projectAgentVPOfferRequest.getSubjectKey(),
+                projectAgentVPOfferRequest.getSubjectDid(),projectAgentVPOfferRequest.getAgentVcJwt());
+
+        projectAgentVPCredential.setAgentId(projectAgent.getId().toString());
+        projectAgentVPCredential.setAgentVpJwt(agentVpJwt.toString());
+
+        return projectAgentVPCredential;
     }
 
 
