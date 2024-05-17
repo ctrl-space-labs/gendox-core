@@ -56,8 +56,7 @@ const ChatContent = (props) => {
   };
 
 
-  console.log("ChatContent.js: ChatContent: store", store);
-  console.log("ChatContent.js: ChatContent: hidden", store.selectedChat);
+  co
   
 
   const renderContent = () => {

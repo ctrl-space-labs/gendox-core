@@ -65,8 +65,6 @@ const AppChat = () => {
     offline: "secondary",
   };
 
-  console.log("SETTINGSSSSSSSSSSSSS", settings);
-
   useEffect(() => {
     // Hide navigation on mount
     settings.navHidden = true

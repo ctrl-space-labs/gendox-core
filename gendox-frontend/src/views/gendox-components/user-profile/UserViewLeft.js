@@ -89,7 +89,6 @@ const UserViewLeft = ({ userData }) => {
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
 
-  console.log("User Data: ", userData);
 
   // Handle Edit dialog
   const handleEditClickOpen = () => setOpenEdit(true);

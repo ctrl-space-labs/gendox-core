@@ -22,7 +22,6 @@ const OrganizationSettingsCard = () => {
   
   const organization = useSelector((state) => state.activeOrganization.activeOrganization);
   
-  console.log("ORGANIZATION",organization);
 
   // ** State for tabs
   const [value, setValue] = useState('general')
