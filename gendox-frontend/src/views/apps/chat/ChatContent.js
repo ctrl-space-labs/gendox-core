@@ -55,8 +55,6 @@ const ChatContent = (props) => {
     }
   };
 
-
-  co
   
 
   const renderContent = () => {
