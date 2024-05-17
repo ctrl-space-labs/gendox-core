@@ -42,8 +42,8 @@ const UserProfileRight = (props) => {
   } = props;
 
   const router = useRouter();
-  const { organizationId } = router.query;
-  const projectId = store.selectedChat.contact.projectId;
+  const { organizationId, projectId } = router.query;
+  // const projectId = store.selectedChat.contact.projectId;
   const [projectAgent, setProjectAgent] = useState(null);
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
@@ -60,8 +60,7 @@ const UserProfileRight = (props) => {
           organizationId,
           projectId,
           storedToken
-        );
-        console.log("aaa", projectResponse.data.projectAgent);
+        );        
         setProjectAgent(projectResponse.data.projectAgent);
       } catch (error) {
         console.error("Failed to fetch project", error);
@@ -178,7 +177,9 @@ const UserProfileRight = (props) => {
                         fontSize: "2rem",
                       }}
                     >
-                      {getInitials(store.selectedChat.contact.fullName)}
+                      {store.selectedChat.contact.fullName
+                        ? getInitials(store.selectedChat.contact.fullName)
+                        : ""}
                     </CustomAvatar>
                   )}
                 </Badge>

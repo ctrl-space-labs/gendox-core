@@ -28,7 +28,7 @@ const Form = styled('form')(({ theme }) => ({
 
 const SendMsgForm = props => {
   // ** Props
-  const { store, dispatch, sendMsg } = props
+  const { store, dispatch, sendMsg, organizationId } = props
 
   // ** State
   const [msg, setMsg] = useState('')
@@ -36,7 +36,7 @@ const SendMsgForm = props => {
   const handleSendMsg = e => {
     e.preventDefault()
     if (store && store.selectedChat && msg.trim().length) {
-      dispatch(sendMsg({ ...store.selectedChat, message: msg }))
+      dispatch(sendMsg({ ...store.selectedChat, message: msg, organizationId }))
     }
     setMsg('')
   }

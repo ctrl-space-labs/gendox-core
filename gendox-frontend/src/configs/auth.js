@@ -25,7 +25,7 @@ const devOidcConfig = {
   pkceMethod: 'S256'
 };
 
-let oidcConfig = devOidcConfig;
+let oidcConfig = localOidcConfig;
 
 // if (process.env.NODE_ENV === 'development') {
 //   oidcConfig = devOidcConfig;

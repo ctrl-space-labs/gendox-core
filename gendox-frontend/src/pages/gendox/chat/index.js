@@ -38,7 +38,6 @@ const AppChat = () => {
     authConfig.storageTokenKeyName
   );
 
-
   // ** States
   const [userStatus, setUserStatus] = useState("online");
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
@@ -65,10 +64,26 @@ const AppChat = () => {
     online: "success",
     offline: "secondary",
   };
+
+  console.log("SETTINGSSSSSSSSSSSSS", settings);
+
+  useEffect(() => {
+    // Hide navigation on mount
+    settings.navHidden = true
+    settings.footer = 'hidden'
+    
+    // Show navigation on unmount
+    return () => {
+      settings.navHidden = false
+      settings.footer = 'static'
+    };
+  }, [dispatch]);
+
   useEffect(() => {
     dispatch(setUserProfile(auth.user));
-    dispatch(fetchChatsContacts({organizationId, storedToken}));
-  }, [dispatch]);
+    dispatch(fetchChatsContacts({ organizationId, storedToken }));
+  }, [dispatch, organizationId, storedToken]);
+
   const handleLeftSidebarToggle = () => setLeftSidebarOpen(!leftSidebarOpen);
   const handleUserProfileLeftSidebarToggle = () =>
     setUserProfileLeftOpen(!userProfileLeftOpen);
@@ -82,9 +97,9 @@ const AppChat = () => {
         width: "100%",
         display: "flex",
         borderRadius: 1,
-        '@media (max-width:600px)': {
-                            borderRadius: 0
-                        },
+        "@media (max-width:600px)": {
+          borderRadius: 0,
+        },
         overflow: "hidden",
         position: "relative",
         boxShadow: skin === "bordered" ? 0 : 6,
@@ -110,6 +125,8 @@ const AppChat = () => {
         formatDateToMonthShort={formatDateToMonthShort}
         handleLeftSidebarToggle={handleLeftSidebarToggle}
         handleUserProfileLeftSidebarToggle={handleUserProfileLeftSidebarToggle}
+        organizationId={organizationId}
+        storedToken={storedToken}
       />
       <ChatContent
         store={store}
@@ -125,10 +142,12 @@ const AppChat = () => {
         handleUserProfileRightSidebarToggle={
           handleUserProfileRightSidebarToggle
         }
+        organizationId={organizationId}
+        storedToken={storedToken}
       />
     </Box>
   );
 };
 AppChat.contentHeightFixed = true;
 
-export default AppChat
+export default AppChat;

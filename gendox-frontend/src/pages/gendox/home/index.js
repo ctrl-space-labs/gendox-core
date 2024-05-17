@@ -13,6 +13,10 @@ import Card from "@mui/material/Card";
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Icon from "src/@core/components/icon";
+import Tooltip from "@mui/material/Tooltip";
+import Alert from "@mui/material/Alert";
+import Snackbar from "@mui/material/Snackbar";
+
 
 // Custom components
 import ProjectButtons from "src/views/gendox-components/home-page-components/project-buttons-components/ProjectButtons";
@@ -30,20 +34,49 @@ const StyledCardContent = styled(CardContent)(({ theme }) => ({
 
 const GendoxHome = () => {
   const router = useRouter();
-  const { organizationId, projectId } = router.query;  
+  const { organizationId, projectId } = router.query;
   const auth = useAuth();
   const [documents, setDocuments] = useState([]);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
   const project = useSelector((state) => state.activeProject.projectDetails);
   useRedirectOr404ForHome(organizationId, projectId);
 
-  useEffect(() => {    
+  const storedToken = window.localStorage.getItem(
+    authConfig.storageTokenKeyName
+  );
+
+  useEffect(() => {
     initDocuments();
   }, [organizationId, projectId]);
-  
 
   const handleSettingsClick = () => {
     const path = `/gendox/project-settings?organizationId=${organizationId}&projectId=${projectId}`;
     router.push(path);
+  };
+
+  const handleTrainingClick = () => {
+    documentService
+        .triggerJobs(
+          organizationId,
+          projectId,
+          storedToken
+        )
+        .then((response) => {
+          console.log(response);
+          setAlertMessage("Training triggered successfully!");
+          setAlertOpen(true);
+        })
+        .catch((error) => {
+          console.log(error);
+          setAlertMessage("Error triggering training: " + error.message);
+          setAlertOpen(true);
+        });
+     
+  };  
+
+  const handleAlertClose = () => {
+    setAlertOpen(false);
   };
 
   const initDocuments = async () => {
@@ -57,9 +90,7 @@ const GendoxHome = () => {
     const selectedProject = activeOrganization.projects.find(
       (proj) => proj.id === projectId
     );
-    const storedToken = window.localStorage.getItem(
-      authConfig.storageTokenKeyName
-    );
+    
 
     if (storedToken && selectedProject) {
       // auth.setLoading(true)
@@ -93,19 +124,33 @@ const GendoxHome = () => {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            mb: 6,
           }}
         >
-          <Typography
-            variant="h3"
-            sx={{ mb: 6, fontWeight: 600, textAlign: "left" }}
-          >
-            {project?.name || "No Selected "} Project
-          </Typography>
-          <IconButton onClick={handleSettingsClick} sx={{ mb: 6 }}>
-            <Icon icon="mdi:cog-outline" />
-          </IconButton>
+          <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
+            <Typography
+              variant="h3"
+              sx={{ mb: 3, fontWeight: 600, textAlign: "left" }}
+            >
+              {project?.name || "No Selected "} Project
+            </Typography>
+            <Box sx={{ mt: 3 }}>
+            <ProjectButtons />
+            </Box>
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+          <Tooltip title="Project Settings">
+            <IconButton onClick={handleSettingsClick} sx={{ ml: 2, fontSize: "3rem" }}>
+              <Icon icon="mdi:cog-outline" fontSize="inherit"/>
+            </IconButton>
+            </Tooltip>
+            <Tooltip title="Training Projects">
+            <IconButton onClick={handleTrainingClick} sx={{ ml: 2, fontSize: "3rem" }}>
+              <Icon icon="mdi:search-web" fontSize="inherit"/>
+            </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
-        <ProjectButtons />
       </StyledCardContent>
       <Box sx={{ height: 20 }} />
       {documents.length > 0 ? (
@@ -148,7 +193,17 @@ const GendoxHome = () => {
           </Box>
         </CardContent>
       )}
+      <Snackbar
+        open={alertOpen}
+        autoHideDuration={6000}
+        onClose={handleAlertClose}
+      >
+        <Alert onClose={handleAlertClose} severity="success" sx={{ width: "100%" }}>
+          {alertMessage}
+        </Alert>
+      </Snackbar>
     </Card>
+    
   );
 };
 

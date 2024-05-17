@@ -1,7 +1,14 @@
 // ** React Imports
 import { useState, useEffect } from "react";
 
-import { formatDistanceToNow, parseISO } from "date-fns";
+import {
+  formatDistanceToNow,
+  parseISO,
+  isToday,
+  isYesterday,
+  isWithinInterval,
+  subDays,
+} from "date-fns";
 
 // ** Next Import
 import { useRouter } from "next/router";
@@ -37,7 +44,7 @@ import Icon from "src/@core/components/icon";
 import CustomAvatar from "src/@core/components/mui/avatar";
 
 // ** Chat App Components Imports
-import UserProfileLeft from "src/views/apps/chat/UserProfileLeft";
+import authConfig from "src/configs/auth";
 
 const ScrollWrapper = ({ children, hidden }) => {
   if (hidden) {
@@ -73,26 +80,62 @@ const SidebarLeft = (props) => {
     formatDateToMonthShort,
     handleLeftSidebarToggle,
     handleUserProfileLeftSidebarToggle,
+    organizationId,
+    storedToken,
   } = props;
 
+  const router = useRouter();
+
   // ** States
-  const [query, setQuery] = useState("");
-  const [filteredChat, setFilteredChat] = useState([]);
-  const [filteredContacts, setFilteredContacts] = useState([]);
+
   const [active, setActive] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [hoveredChat, setHoveredChat] = useState(null);
 
-  // ** Hooks
-  const router = useRouter();
+  const groupChatsByDate = (chats) => {
+    const today = [];
+    const yesterday = [];
+    const last7Days = [];
+    const last30Days = [];
+    const older = [];
+
+    chats.forEach((chat) => {
+      const chatDate = parseISO(chat.chat.lastMessage.time);
+
+      if (isToday(chatDate)) {
+        today.push(chat);
+      } else if (isYesterday(chatDate)) {
+        yesterday.push(chat);
+      } else if (
+        isWithinInterval(chatDate, {
+          start: subDays(new Date(), 7),
+          end: new Date(),
+        })
+      ) {
+        last7Days.push(chat);
+      } else if (
+        isWithinInterval(chatDate, {
+          start: subDays(new Date(), 30),
+          end: new Date(),
+        })
+      ) {
+        last30Days.push(chat);
+      } else {
+        older.push(chat);
+      }
+    });
+
+    return { today, yesterday, last7Days, last30Days, older };
+  };
 
   const handleChatClick = (type, id) => {
-    dispatch(selectChat({ id: id }));
+    dispatch(selectChat({ id: id, organizationId, storedToken }));
     setActive({ type, id });
     if (!mdAbove) {
       handleLeftSidebarToggle();
     }
   };
+
   useEffect(() => {
     if (store && store.chats) {
       if (active !== null) {
@@ -127,6 +170,7 @@ const SidebarLeft = (props) => {
   };
 
   const handleMenuClick = (event, chatId) => {
+    event.stopPropagation();
     setAnchorEl(event.currentTarget);
     // setActive({ type: "chat", id: chatId });
   };
@@ -155,289 +199,265 @@ const SidebarLeft = (props) => {
 
   const renderChats = () => {
     if (store && store.chats && store.chats.length) {
-      if (query.length && !filteredChat.length) {
-        return (
-          <ListItem>
-            <Typography sx={{ color: "text.secondary" }}>
-              No Chats Found
-            </Typography>
-          </ListItem>
-        );
-      } else {
-        const arrToMap =
-          query.length && filteredChat.length ? filteredChat : store.chats;
+      const arrToMap = store.chats;
 
-        return arrToMap.map((chat, index) => {
-          const { lastMessage } = chat.chat;
-          const activeCondition =
-            active !== null && active.id === chat.id && active.type === "chat";
-          const formattedTime = lastMessage
-            ? formatDistanceToNow(parseISO(lastMessage.time), {
-                addSuffix: true,
-              })
-            : "Time unknown";
+      const groupedChats = groupChatsByDate(arrToMap);
 
-          return (
-            <ListItem
-              key={index}
-              disablePadding
-              onMouseEnter={() => handleChatMouseEnter(chat.id)}
-              onMouseLeave={handleChatMouseLeave}
-              sx={{ "&:not(:last-child)": { mb: 1.5 }, position: "relative" }}
+      const renderGroupedChats = (chats, label) => (
+        <>
+          {chats.length > 0 && (
+            <Typography
+              variant="subtitle2"
+              sx={{ px: 3, pt: 3, pb: 1, color: "primary.main" }}
             >
-              <ListItemButton
-                disableRipple
-                onClick={() => handleChatClick("chat", chat.id)}
-                sx={{
-                  px: 2.5,
-                  py: 2.5,
-                  width: "100%",
-                  borderRadius: 1,
-                  alignItems: "flex-start",
-                  height: 72,
-                  ...(activeCondition && {
-                    backgroundColor: (theme) =>
-                      `${theme.palette.primary.main} !important`,
-                  }),
-                }}
+              {label}
+            </Typography>
+          )}
+          {chats.map((chat, index) => {
+            const { lastMessage } = chat.chat;
+            const activeCondition =
+              active !== null &&
+              active.id === chat.id &&
+              active.type === "chat";
+            const formattedTime = lastMessage
+              ? formatDistanceToNow(parseISO(lastMessage.time), {
+                  addSuffix: true,
+                })
+              : "Time unknown";
+
+            return (
+              <ListItem
+                key={index}
+                disablePadding
+                onMouseEnter={() => handleChatMouseEnter(chat.id)}
+                onMouseLeave={handleChatMouseLeave}
+                sx={{ "&:not(:last-child)": { mb: 1.5 }, position: "relative" }}
               >
-                <ListItemText
+                <ListItemButton
+                  disableRipple
+                  onClick={() => handleChatClick("chat", chat.id)}
                   sx={{
-                    my: 0,
-                    ml: 4,
-                    mr: 1.5,
-                    "& .MuiTypography-root": {
-                      ...(activeCondition && { color: "common.white" }),
-                    },
-                  }}
-                  primary={
-                    <Typography
-                      noWrap
-                      sx={{
-                        ...(!activeCondition
-                          ? { color: "text.secondary" }
-                          : {}),
-                      }}
-                    >
-                      {chat.fullName}
-                      
-                    </Typography>
-                  }
-                  secondary={
-                    <Typography
-                      noWrap
-                      variant="body2"
-                      sx={{
-                        ...(!activeCondition && { color: "text.disabled" }),
-                      }}
-                    >
-                      {lastMessage ? lastMessage.message : null}
-                      
-                    </Typography>
-                    
-                  }
-                />
-                {/* <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "flex-end",
-                    flexDirection: "column",
-                    justifyContent: "flex-start",
+                    px: 2.5,
+                    py: 2.5,
+                    width: "100%",
+                    borderRadius: 1,
+                    alignItems: "flex-start",
+                    height: 72,
+                    ...(activeCondition && {
+                      backgroundColor: (theme) =>
+                        `${theme.palette.primary.main} !important`,
+                    }),
                   }}
                 >
-                  <Typography
+                  <ListItemText
                     sx={{
-                      whiteSpace: "nowrap",
-                      color: activeCondition ? "common.white" : "text.disabled",
+                      my: 0,
+                      ml: 4,
+                      mr: 1.5,
+                      "& .MuiTypography-root": {
+                        ...(activeCondition && { color: "common.white" }),
+                      },
                     }}
-                  >
-                    <>
-                      {lastMessage
-                        ? formatDateToMonthShort(lastMessage.time, true)
-                        : new Date()}
-                    </>
-                  </Typography>                  
-                </Box> */}
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "flex-end",
-                    flexDirection: "column",
-                    justifyContent: "flex-start",
-                  }}
-                >                  
-                  <IconButton
-                    className="chat-actions"
-                    onClick={(e) => handleMenuClick(e, chat.id)}
-                    sx={{
-                      visibility:
-                        hoveredChat === chat.id ? "visible" : "hidden",
-                    }}
-                  >
-                    <Icon icon="mdi:dots-horizontal" />
-                  </IconButton>
-
+                    primary={
+                      <Typography
+                        noWrap
+                        sx={{
+                          ...(!activeCondition
+                            ? { color: "text.secondary" }
+                            : {}),
+                        }}
+                      >
+                        {chat.fullName}
+                      </Typography>
+                    }
+                    secondary={
+                      <Typography
+                        noWrap
+                        variant="body2"
+                        sx={{
+                          ...(!activeCondition && { color: "text.disabled" }),
+                        }}
+                      >
+                        {lastMessage ? lastMessage.message : null}
+                      </Typography>
+                    }
+                  />
                   
-                </Box>
-              </ListItemButton>
-            </ListItem>
-          );
-        });
-      }
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "flex-end",
+                      flexDirection: "column",
+                      justifyContent: "flex-start",
+                    }}
+                  >
+                    <IconButton
+                      className="chat-actions"
+                      onClick={(e) => handleMenuClick(e, chat.id)}
+                      sx={{
+                        visibility:
+                          hoveredChat === chat.id ? "visible" : "hidden",
+                      }}
+                    >
+                      <Icon icon="mdi:dots-horizontal" />
+                    </IconButton>
+                  </Box>
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
+        </>
+      );
+      return (
+        <>
+          {renderGroupedChats(groupedChats.today, "Today")}
+          {renderGroupedChats(groupedChats.yesterday, "Yesterday")}
+          {renderGroupedChats(groupedChats.last7Days, "Last 7 Days")}
+          {renderGroupedChats(groupedChats.last30Days, "Last 30 Days")}
+          {renderGroupedChats(groupedChats.older, "Older")}
+        </>
+      );
     }
   };
 
   const renderContacts = () => {
     if (store && store.contacts && store.contacts.length) {
-      if (query.length && !filteredContacts.length) {
-        return (
-          <ListItem>
-            <Typography sx={{ color: "text.secondary" }}>
-              No Contacts Found
-            </Typography>
-          </ListItem>
-        );
-      } else {
-        const arrToMap =
-          query.length && filteredContacts.length
-            ? filteredContacts
-            : store.contacts;
+      const arrToMap = store.contacts;
 
-        return arrToMap !== null
-          ? arrToMap.map((contact, index) => {
-              const activeCondition =
-                active !== null &&
-                active.id === contact.id &&
-                active.type === "contact" &&
-                !hasActiveId(contact.id);
+      return arrToMap !== null
+        ? arrToMap.map((contact, index) => {
+            const activeCondition =
+              active !== null &&
+              active.id === contact.id &&
+              active.type === "contact" &&
+              !hasActiveId(contact.id);
 
-              return (
-                <ListItem
-                  key={index}
-                  disablePadding
-                  sx={{ "&:not(:last-child)": { mb: 1.5 } }}
+            return (
+              <ListItem
+                key={index}
+                disablePadding
+                sx={{ "&:not(:last-child)": { mb: 1.5 } }}
+              >
+                <ListItemButton
+                  disableRipple
+                  onClick={() =>
+                    handleChatClick(
+                      hasActiveId(contact.id) ? "chat" : "contact",
+                      contact.id
+                    )
+                  }
+                  sx={{
+                    px: 2.5,
+                    py: 2.5,
+                    width: "100%",
+                    borderRadius: 1,
+                    height: 72,
+                    ...(activeCondition && {
+                      backgroundColor: (theme) =>
+                        `${theme.palette.primary.main} !important`,
+                    }),
+                  }}
                 >
-                  <ListItemButton
-                    disableRipple
-                    onClick={() =>
-                      handleChatClick(
-                        hasActiveId(contact.id) ? "chat" : "contact",
-                        contact.id
-                      )
-                    }
+                  <ListItemAvatar sx={{ m: 0 }}>
+                    <Badge
+                      overlap="circular"
+                      anchorOrigin={{
+                        vertical: "bottom",
+                        horizontal: "right",
+                      }}
+                      badgeContent={
+                        <Box
+                          component="span"
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            color: `${statusObj[contact.status]}.main`,
+                            backgroundColor: `${
+                              statusObj[contact.status]
+                            }.main`,
+                            boxShadow: (theme) =>
+                              `0 0 0 2px ${
+                                !activeCondition
+                                  ? theme.palette.background.paper
+                                  : theme.palette.common.white
+                              }`,
+                          }}
+                        />
+                      }
+                    >
+                      {contact.avatar ? (
+                        <MuiAvatar
+                          alt={contact.fullName}
+                          src={contact.avatar}
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            outline: (theme) =>
+                              `2px solid ${
+                                activeCondition
+                                  ? theme.palette.common.white
+                                  : "transparent"
+                              }`,
+                          }}
+                        />
+                      ) : (
+                        <CustomAvatar
+                          color={contact.avatarColor}
+                          skin={activeCondition ? "light-static" : "light"}
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            fontSize: "1rem",
+                            outline: (theme) =>
+                              `2px solid ${
+                                activeCondition
+                                  ? theme.palette.common.white
+                                  : "transparent"
+                              }`,
+                          }}
+                        >
+                          {getInitials(contact.fullName)}
+                        </CustomAvatar>
+                      )}
+                    </Badge>
+                  </ListItemAvatar>
+                  <ListItemText
                     sx={{
-                      px: 2.5,
-                      py: 2.5,
-                      width: "100%",
-                      borderRadius: 1,
-                      height: 72,
+                      my: 0,
+                      ml: 4,
                       ...(activeCondition && {
-                        backgroundColor: (theme) =>
-                          `${theme.palette.primary.main} !important`,
+                        "& .MuiTypography-root": { color: "common.white" },
                       }),
                     }}
-                  >
-                    <ListItemAvatar sx={{ m: 0 }}>
-                      <Badge
-                        overlap="circular"
-                        anchorOrigin={{
-                          vertical: "bottom",
-                          horizontal: "right",
+                    primary={
+                      <Typography
+                        sx={{
+                          ...(!activeCondition
+                            ? { color: "text.secondary" }
+                            : {}),
                         }}
-                        badgeContent={
-                          <Box
-                            component="span"
-                            sx={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: "50%",
-                              color: `${statusObj[contact.status]}.main`,
-                              backgroundColor: `${
-                                statusObj[contact.status]
-                              }.main`,
-                              boxShadow: (theme) =>
-                                `0 0 0 2px ${
-                                  !activeCondition
-                                    ? theme.palette.background.paper
-                                    : theme.palette.common.white
-                                }`,
-                            }}
-                          />
-                        }
                       >
-                        {contact.avatar ? (
-                          <MuiAvatar
-                            alt={contact.fullName}
-                            src={contact.avatar}
-                            sx={{
-                              width: 40,
-                              height: 40,
-                              outline: (theme) =>
-                                `2px solid ${
-                                  activeCondition
-                                    ? theme.palette.common.white
-                                    : "transparent"
-                                }`,
-                            }}
-                          />
-                        ) : (
-                          <CustomAvatar
-                            color={contact.avatarColor}
-                            skin={activeCondition ? "light-static" : "light"}
-                            sx={{
-                              width: 40,
-                              height: 40,
-                              fontSize: "1rem",
-                              outline: (theme) =>
-                                `2px solid ${
-                                  activeCondition
-                                    ? theme.palette.common.white
-                                    : "transparent"
-                                }`,
-                            }}
-                          >
-                            {getInitials(contact.fullName)}
-                          </CustomAvatar>
-                        )}
-                      </Badge>
-                    </ListItemAvatar>
-                    <ListItemText
-                      sx={{
-                        my: 0,
-                        ml: 4,
-                        ...(activeCondition && {
-                          "& .MuiTypography-root": { color: "common.white" },
-                        }),
-                      }}
-                      primary={
-                        <Typography
-                          sx={{
-                            ...(!activeCondition
-                              ? { color: "text.secondary" }
-                              : {}),
-                          }}
-                        >
-                          {contact.fullName}
-                        </Typography>
-                      }
-                      secondary={
-                        <Typography
-                          noWrap
-                          variant="body2"
-                          sx={{
-                            ...(!activeCondition && { color: "text.disabled" }),
-                          }}
-                        >
-                          {contact.about}
-                        </Typography>
-                      }
-                    />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })
-          : null;
-      }
+                        {contact.fullName}
+                      </Typography>
+                    }
+                    secondary={
+                      <Typography
+                        noWrap
+                        variant="body2"
+                        sx={{
+                          ...(!activeCondition && { color: "text.disabled" }),
+                        }}
+                      >
+                        {contact.about}
+                      </Typography>
+                    }
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })
+        : null;
     }
   };
 
@@ -511,16 +531,7 @@ const SidebarLeft = (props) => {
         </Box>
       </Drawer>
 
-      <UserProfileLeft
-        store={store}
-        hidden={hidden}
-        statusObj={statusObj}
-        userStatus={userStatus}
-        sidebarWidth={sidebarWidth}
-        setUserStatus={setUserStatus}
-        userProfileLeftOpen={userProfileLeftOpen}
-        handleUserProfileLeftSidebarToggle={handleUserProfileLeftSidebarToggle}
-      />
+     
 
       <Menu
         anchorEl={anchorEl}
