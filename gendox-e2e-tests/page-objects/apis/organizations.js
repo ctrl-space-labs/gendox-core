@@ -27,7 +27,48 @@ const getOrganizationByCriteria = async (request, token, criteria) => {
 }
 
 
+const createOrganization = async (request, token, organizationData ) => {
+
+    const response = await request.post(`${config.gendox.contextPath}/organizations`, {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        },
+        data: organizationData
+    });
+    return response;
+}
+
+
+const updateOrganization = async (request, token, organizationData, organizationId ) => {
+
+    const response = await request.put(`${config.gendox.contextPath}/organizations/${organizationId}`, {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        },
+        data: organizationData
+    });
+    return response;
+}
+
+
+const deleteOrganization = async (request, token, organizationId ) => {
+
+    const response = await request.delete(`${config.gendox.contextPath}/organizations/${organizationId}`, {
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        }
+
+    });
+    return response;
+}
+
 module.exports = {
     getOrganizationById,
-    getOrganizationByCriteria
+    getOrganizationByCriteria,
+    createOrganization,
+    updateOrganization,
+    deleteOrganization
 }

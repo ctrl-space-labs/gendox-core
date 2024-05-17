@@ -1,7 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 import com.nimbusds.jose.JOSEException;
-import dev.ctrlspace.gendox.authentication.GendoxJwtAuthenticationConverter;
+import dev.ctrlspace.gendox.authentication.JwtUserProfileConversionFilter;
+import dev.ctrlspace.gendox.authentication.JwtUserRegistrationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +15,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
@@ -41,9 +43,10 @@ public class SecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowCredentials(true);
-        configuration.addAllowedOrigin("http://localhost:3000"); // Allow the React app origin
-        configuration.addAllowedOrigin("http://localhost:3001"); // Allow the React app origin
+//        configuration.setAllowCredentials(true);
+//        configuration.addAllowedOrigin("http://localhost:3000"); // Allow the React app origin
+//        configuration.addAllowedOrigin("http://localhost:3001"); // Allow the React app origin
+        configuration.addAllowedOrigin("*"); // Allow the React app origin
         configuration.addAllowedHeader("*");
         configuration.addAllowedMethod("*");
 
@@ -55,7 +58,8 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            JwtDecoder jwtDecoder,
-                                           GendoxJwtAuthenticationConverter gendoxJwtAuthenticationConverter,
+                                           JwtUserRegistrationFilter jwtUserRegistrationFilter,
+                                           JwtUserProfileConversionFilter jwtUserProfileConversionFilter,
                                            CorsConfigurationSource corsConfigurationSource) throws Exception {
 
         http
@@ -91,9 +95,10 @@ public class SecurityConfiguration {
         http.oauth2ResourceServer(oauth2 ->
                 oauth2.jwt(jwt -> {
                     jwt.decoder(jwtDecoder);
-                    jwt.jwtAuthenticationConverter(gendoxJwtAuthenticationConverter);
 
-                }));
+                }))
+                .addFilterAfter(jwtUserRegistrationFilter, BearerTokenAuthenticationFilter.class)
+                .addFilterAfter(jwtUserProfileConversionFilter, JwtUserRegistrationFilter.class);
 
         return http.build();
     }

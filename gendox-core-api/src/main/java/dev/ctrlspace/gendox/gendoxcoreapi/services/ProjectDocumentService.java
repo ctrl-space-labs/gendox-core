@@ -30,6 +30,13 @@ public class ProjectDocumentService {
         this.documentInstanceRepository = documentInstanceRepository;
     }
 
+    public ProjectDocument getProjectDocument(UUID documentId, UUID projectId) throws GendoxException {
+        return projectDocumentRepository.findByDocumentIdAndProjectId(documentId, projectId)
+                .orElseThrow(() -> new GendoxException("PROJECT_DOCUMENT_NOT_FOUND", "Project document not found with documentId: " + documentId + " and projectId: " + projectId, HttpStatus.NOT_FOUND));
+    }
+
+
+
     public ProjectDocument createProjectDocument(Project project, DocumentInstance documentInstance) {
 
         ProjectDocument projectDocument = new ProjectDocument();
@@ -58,6 +65,11 @@ public class ProjectDocumentService {
         }
         return projectDocument;
 
+    }
+
+    public void deleteProjectDocument(UUID documentIid, UUID projectId) throws GendoxException {
+        ProjectDocument projectDocument = getProjectDocument(documentIid, projectId);
+        projectDocumentRepository.delete(projectDocument);
     }
 
 

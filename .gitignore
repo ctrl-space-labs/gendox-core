@@ -99,3 +99,9 @@ buildNumber.properties
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
 /**/.env/
+**/.env*
+.env
+.env*
+**/.env*
+.env
+.env*

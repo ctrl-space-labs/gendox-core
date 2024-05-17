@@ -1,23 +1,27 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.CommonCommandUtility;
-import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.servlet.HandlerMapping;
 
-import java.util.UUID;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component("securityUtils")
 public class SecurityUtils {
@@ -26,6 +30,9 @@ public class SecurityUtils {
 
     @Autowired
     private JWTUtils jwtUtils;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     public boolean isSuperAdmin() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -53,105 +60,236 @@ public class SecurityUtils {
     }
 
 
-    public boolean hasAuthorityToRequestedOrgId(String authority) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        //JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt)authentication.getPrincipal());
-        if (isSuperAdmin(authentication)) {
-            return true; // Skip validation if user is an admin
+    public boolean can(String authority, GendoxAuthenticationToken authentication, AccessCriteria accessCriteria) {
+
+        // Check if projectIds is not null and not empty, then check project access
+        if (accessCriteria.getProjectIds() != null && !accessCriteria.getProjectIds().isEmpty()) {
+            return canAccessProjects(authority, authentication, accessCriteria.getProjectIds());
         }
 
-//        authentication.ge
+        // Check if orgIds is not null and not empty, then check organization access
+        if (accessCriteria.getOrgIds() != null && !accessCriteria.getOrgIds().isEmpty()) {
+            return canAccessOrganizations(authority, authentication, accessCriteria.getOrgIds());
+        }
+
+
+        return false;
+    }
+
+    private static boolean canAccessProjects(String authority, GendoxAuthenticationToken authentication, Set<String> requestedProjectIds) {
+        Set<String> authorizedProjectIds = authentication
+                .getPrincipal()
+                .getOrganizations()
+                .stream()
+                .filter(org -> org.getAuthorities().contains(authority))
+                .flatMap(org -> org.getProjects().stream())
+                .filter(project -> requestedProjectIds.contains(project.getId()))
+                .map(proj -> proj.getId())
+                .collect(Collectors.toSet());
+
+        if (!authorizedProjectIds.containsAll(requestedProjectIds)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static boolean canAccessOrganizations(String authority, GendoxAuthenticationToken authentication, Set<String> requestedOrgIds) {
+        Set<String> authorizedOrgIds = authentication
+                .getPrincipal()
+                .getOrganizations()
+                .stream()
+                .filter(org -> requestedOrgIds.contains(org.getId()))
+                .filter(org -> org.getAuthorities().contains(authority))
+                .map(OrganizationUserDTO::getId)
+                .collect(Collectors.toSet());
+
+        if (!authorizedOrgIds.containsAll(requestedOrgIds)) {
+            return false;
+        }
+
+        return true;
+    }
+
+
+    private AccessCriteria getRequestedOrgsFromRequestParams() {
         HttpServletRequest request = getCurrentHttpRequest();
         //get request param with name "organizationId"
         String organizationId = request.getParameter(QueryParamNames.ORGANIZATION_ID);
+        String[] orgStrings = request.getParameterValues(QueryParamNames.ORGANIZATION_ID_IN);
 
-        if (organizationId == null) {
-            return false;
+
+        if (organizationId == null && orgStrings == null) {
+            return new AccessCriteria();
         }
 
-//        if (!jwtDTO.getOrgAuthoritiesMap().containsKey(organizationId)) {
-//            return false;
-//        }
+        Set<String> requestedOrgIds = new HashSet<>();
 
-//
-//        if (!jwtDTO.getOrgAuthoritiesMap().get(organizationId).orgAuthorities().contains(authority)){
-//            return false;
-//        }
-
-        return true;
-    }
-
-    public boolean hasAuthorityToRequestedProjectId() {
-        return hasAuthorityToRequestedProjectId(QueryParamNames.PROJECT_ID);
-    }
-    public boolean hasAuthorityToRequestedProjectId(String queryParamName) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt)authentication.getPrincipal());
-        if (isSuperAdmin(authentication)) {
-            return true; // Skip validation if user is an admin
+        if (orgStrings != null) {
+            requestedOrgIds.addAll(Set.of(orgStrings));
         }
+        if (organizationId != null) {
+            requestedOrgIds.add(organizationId);
+        }
+        return AccessCriteria.builder()
+                .orgIds(requestedOrgIds)
+                .projectIds(new HashSet<>())
+                .build();
+    }
+
+
+    @Nullable
+    private AccessCriteria getRequestedOrgIdFromPathVariable() {
+        // Extract organizationId from the request path
         HttpServletRequest request = getCurrentHttpRequest();
-        //get request param with name "projectID"
-        String projectId = request.getParameter(queryParamName);
+        Map<String, String> uriTemplateVariables = (Map<String, String>) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
 
-        if (projectId == null) {
-            return false;
+        String organizationId = new String();
+
+        if (uriTemplateVariables != null) {
+            organizationId = uriTemplateVariables.get(QueryParamNames.ORGANIZATION_ID);
+        }
+        Set<String> requestedOrgIds = new HashSet<>();
+
+        if (organizationId != null) {
+            requestedOrgIds.add(organizationId);
         }
 
-        if (jwtDTO.getOrgProjectsMap()
-                .entrySet()
-                .stream()
-                .noneMatch(entry -> entry.getValue().projectIds().contains(projectId))) {
-            return false;
+        return AccessCriteria
+                .builder()
+                .orgIds(requestedOrgIds)
+                .projectIds(new HashSet<>())
+                .build();
+    }
+
+
+    private AccessCriteria getRequestedProjectsFromRequestParams() {
+        HttpServletRequest request = getCurrentHttpRequest();
+        //get request param with name "projectId"
+        String projectId = request.getParameter(QueryParamNames.PROJECT_ID);
+        String[] projectStrings = request.getParameterValues(QueryParamNames.PROJECT_ID_IN);
+        // 'splitProjectStrings' now contains individual elements, split by commas
+        // You can now use 'splitProjectStrings' as required
+        if (projectStrings != null) {
+            projectStrings = Arrays.stream(projectStrings)
+                    .flatMap(s -> Arrays.stream(s.split(",")))
+                    .toArray(String[]::new);
+
+
         }
 
-        return true;
+        if (projectId == null && projectStrings == null) {
+            return new AccessCriteria();
+        }
+
+        Set<String> requestedProjectIds = new HashSet<>();
+        if (projectStrings != null) {
+            requestedProjectIds.addAll(Set.of(projectStrings));
+        }
+        if (projectId != null) {
+            requestedProjectIds.add(projectId);
+        }
+        return AccessCriteria
+                .builder()
+                .orgIds(new HashSet<>())
+                .projectIds(requestedProjectIds)
+                .build();
+    }
+
+    @Nullable
+    private AccessCriteria getRequestedProjectIdFromPathVariable() {
+        // Extract organizationId from the request path
+        HttpServletRequest request = getCurrentHttpRequest();
+        Map<String, String> uriTemplateVariables = (Map<String, String>) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+
+        String projectId = new String();
+        if (uriTemplateVariables != null) {
+            projectId = uriTemplateVariables.get(QueryParamNames.PROJECT_ID);
+        }
+        Set<String> requestedProjectIds = new HashSet<>();
+
+        if (projectId != null) {
+            requestedProjectIds.add(projectId);
+        }
+
+        return AccessCriteria
+                .builder()
+                .orgIds(new HashSet<>())
+                .projectIds(requestedProjectIds)
+                .build();
+    }
+
+
+    public class AccessCriteriaGetterFunction {
+
+        public static final String ORG_IDS_FROM_REQUEST_PARAMS = "getRequestedOrgsFromRequestParams";
+        public static final String ORG_ID_FROM_PATH_VARIABLE = "getRequestedOrgIdFromPathVariable";
+
+        public static final String PROJECT_IDS_FROM_REQUEST_PARAMS = "getRequestedProjectsFromRequestParams";
+        public static final String PROJECT_ID_FROM_PATH_VARIABLE = "getRequestedProjectIdFromPathVariable";
+
     }
 
 
     /**
-     * Property projectIdIn is a list of projectIds provided in a request param like:
-     * projectIdIn=1,2,3,4,5
+     * This is a general method to check for Authorization
+     *
+     * @param authority      the authority that the user should have
+     * @param getterFunction this is used to find the appropriate function, that will extract the {@link AccessCriteria}
+     *                       from path variables or requstparams or JSON body
      * @return
      */
-    public boolean hasAuthorityToAllRequestedProjectId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        JwtDTO jwtDTO = jwtUtils.toJwtDTO((Jwt)authentication.getPrincipal());
+    public boolean hasAuthority(String authority, String getterFunction) throws IOException {
+        GendoxAuthenticationToken authentication = (GendoxAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+
         if (isSuperAdmin(authentication)) {
             return true; // Skip validation if user is an admin
         }
-        HttpServletRequest request = getCurrentHttpRequest();
-        //get request param with name "projectID"
-        String projectIdIn = request.getParameter(QueryParamNames.PROJECT_ID_IN);
 
-        if (projectIdIn == null) {
+        AccessCriteria accessCriteria = new AccessCriteria();
+
+
+        if (AccessCriteriaGetterFunction.ORG_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)) {
+            accessCriteria = getRequestedOrgsFromRequestParams();
+        }
+        if (AccessCriteriaGetterFunction.ORG_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
+            accessCriteria = getRequestedOrgIdFromPathVariable();
+        }
+
+
+        if (AccessCriteriaGetterFunction.PROJECT_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)) {
+            accessCriteria = getRequestedProjectsFromRequestParams();
+        }
+        if (AccessCriteriaGetterFunction.PROJECT_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
+            accessCriteria = getRequestedProjectIdFromPathVariable();
+        }
+
+        if (accessCriteria == null) {
             return false;
         }
-
-        String[] projectIds = projectIdIn.split(",");
-
-        if (projectIds.length == 0) {
-            return false;
-        }
-
-        for (String projectId : projectIds) {
-            if (jwtDTO.getOrgProjectsMap()
-                    .entrySet()
-                    .stream()
-                    .noneMatch(entry -> entry.getValue().projectIds().contains(projectId))) {
-                return false;
-            }
-        }
-
-        return true;
-
+        return can(authority, authentication, accessCriteria);
     }
+
 
     public UUID getUserId() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userId = ((UserProfile) authentication.getPrincipal()).getId();
             return UUID.fromString(userId);
+        } catch (Exception e) {
+            logger.warn("An exception occurred while trying to get the user ID: " + e.getMessage());
+            return null;
+        }
+    }
+
+    public String getUserIdentifier() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = ((UserProfile) authentication.getPrincipal()).getEmail();
+            if (email != null) {
+                return email;
+            }
+            return ((UserProfile) authentication.getPrincipal()).getUserName();
         } catch (Exception e){
             logger.warn("An exception occurred while trying to get the user ID: " + e.getMessage());
             return null;

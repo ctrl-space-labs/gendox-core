@@ -15,6 +15,10 @@ logging:
 
 
 spring:
+  cache:
+    type: caffeine
+    caffeine:
+      spec: expireAfterWrite=5m,maximumSize=1000
   mvc:
     format:
       date-time: yyyy-MM-dd'T'HH:mm:ss.SSSZ
@@ -24,21 +28,22 @@ spring:
       ddl-auto: none
 
 
-  datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: 1234
-    hikari:
-      maximum-pool-size: 100
-      minimum-idle: 10
-
 #  datasource:
-#     url: ${DATABASE_URL}
-#     username: ${DATABASE_USERNAME}
-#     password: ${DATABASE_PASSWORD}
-#     hikari:
-#       maximum-pool-size: 100
-#       minimum-idle: 10
+#    url: jdbc:postgresql://localhost:5432/postgres
+#    username: postgres
+#    password: 1234
+#
+#    hikari:
+#      maximum-pool-size: 100
+#      minimum-idle: 10
+
+  datasource:
+     url: ${DATABASE_URL}
+     username: ${DATABASE_USERNAME}
+     password: ${DATABASE_PASSWORD}
+     hikari:
+       maximum-pool-size: 100
+       minimum-idle: 10
 
   jackson:
     serialization:
@@ -94,15 +99,15 @@ springdoc:
     path: /api-documentation
 
 rsa:
-  private-key: classpath:.env/local/local-non-production-use-private_key.pem
+#  private-key: classpath:.env/local/local-non-production-use-private_key.pem
 #  private-key: classpath:/var/app/current/.env/local/local-non-production-use-private_key.pem
-
+  private-key: ${RSA_KEY_PATH}
 
 gendox:
   documents:
-#    upload-dir: s3://gendox.organization.documents.local
-#    upload-dir: file:c:\\Users\\sekas\\gendox-documents
-    upload-dir: file:C:\ProgramData\\gendox\\documents
+    upload-dir: s3://gendox.organization.documents.local
+#    upload-dir: file:c:\\Users\\myrto\\gendox-documents
+#    upload-dir: file:C:\ProgramData\\gendox\\documents
 
 
     wordCount: 300
@@ -111,11 +116,15 @@ gendox:
 
   integrations:
 #    poller: 30000 # 30 seconds
+#    poller: 300000
     poller: 86400000 # 24 hours in milliseconds
     storage:
       temporary: C:\ProgramData\\gendox\\temporary_integration_files
 #      temporary: s3://gendox.organization.documents.local/gendox_wiki
-
+    s3:
+      sqs:
+        wait-time-seconds: 1 #not in use
+        visibility-timeout-seconds: 300
   models:
     openai:
       ada2:
@@ -171,7 +180,10 @@ gendox:
 
 cloud:
   aws:
-    region: eu-central-1
+    s3:
+      region: eu-central-1
+    SQS:
+      region: eu-central-1
 
 
 

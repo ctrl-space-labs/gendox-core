@@ -1,13 +1,18 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,15 +26,25 @@ import java.util.UUID;
 public class ProjectService {
 
     private ProjectRepository projectRepository;
+
+    private ProjectAgentService projectAgentService;
     private ProjectMemberService projectMemberService;
+    private UserOrganizationService userOrganizationService;
+
+    private ProjectConverter projectConverter;
 
 
     @Autowired
     public ProjectService(ProjectRepository projectRepository,
-                          ProjectMemberService projectMemberService) {
+                          ProjectAgentService projectAgentService,
+                          ProjectConverter projectConverter,
+                          ProjectMemberService projectMemberService,
+                          UserOrganizationService userOrganizationService) {
         this.projectRepository = projectRepository;
+        this.projectAgentService = projectAgentService;
+        this.projectConverter = projectConverter;
         this.projectMemberService = projectMemberService;
-
+        this.userOrganizationService = userOrganizationService;
     }
 
     public Project getProjectById(UUID id) throws GendoxException {
@@ -48,13 +63,27 @@ public class ProjectService {
         return projectRepository.findAll(ProjectPredicates.build(criteria), pageable);
     }
 
-    public Project createProject(Project project) throws Exception {
+    public Project createProject(ProjectDTO projectDTO, String creatorUserId) throws Exception {
+
+        Project project = projectConverter.toEntity(projectDTO);
+
+
+        ProjectAgent projectAgent = projectAgentService.createProjectAgent(project.getProjectAgent());
+
+        project.setAutoTraining(true);
+
+        project.setProjectAgent(projectAgent);
 
         project = projectRepository.save(project);
 
+        // Project agent become user of organization
+        userOrganizationService.createUserOrganization(project.getProjectAgent().getUserId(), project.getOrganizationId(), OrganizationRolesConstants.READER);
+
+        // Project Agent become members of the project
+        projectMemberService.createProjectMember(project.getProjectAgent().getUserId(), project.getId());
 
         // Project's Admins & Creator become members of the project
-        projectMemberService.addDefaultMembersToTheProject(project, project.getOrganizationId());
+        projectMemberService.addDefaultMembersToTheProject(project, project.getOrganizationId(), creatorUserId);
 
         return project;
 

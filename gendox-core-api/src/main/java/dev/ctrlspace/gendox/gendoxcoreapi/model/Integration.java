@@ -34,6 +34,9 @@ public class Integration {
     @Column(name = "url")
     private String url;
     @Basic
+    @Column(name = "queue_name")
+    private String queueName;
+    @Basic
     @Column(name="directory_path")
     private String directoryPath;
     @Basic
@@ -166,15 +169,53 @@ public class Integration {
         this.repoHead = repoHead;
     }
 
+    public String getQueueName() {
+        return queueName;
+    }
+
+    public void setQueueName(String queueName) {
+        this.queueName = queueName;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Integration that)) return false;
-        return Objects.equals(getId(), that.getId()) && Objects.equals(getProjectId(), that.getProjectId()) && Objects.equals(getIntegrationType(), that.getIntegrationType()) && Objects.equals(isActive, that.isActive) && Objects.equals(getUrl(), that.getUrl()) && Objects.equals(getDirectoryPath(), that.getDirectoryPath()) && Objects.equals(getRepoHead(), that.getRepoHead()) && Objects.equals(getUserName(), that.getUserName()) && Objects.equals(getPassword(), that.getPassword()) && Objects.equals(getCreatedAt(), that.getCreatedAt()) && Objects.equals(getUpdatedAt(), that.getUpdatedAt()) && Objects.equals(getCreatedBy(), that.getCreatedBy()) && Objects.equals(getUpdatedBy(), that.getUpdatedBy());
+
+        if (!Objects.equals(id, that.id)) return false;
+        if (!Objects.equals(projectId, that.projectId)) return false;
+        if (!Objects.equals(integrationType, that.integrationType))
+            return false;
+        if (!Objects.equals(isActive, that.isActive)) return false;
+        if (!Objects.equals(url, that.url)) return false;
+        if (!Objects.equals(queueName, that.queueName)) return false;
+        if (!Objects.equals(directoryPath, that.directoryPath))
+            return false;
+        if (!Objects.equals(repoHead, that.repoHead)) return false;
+        if (!Objects.equals(userName, that.userName)) return false;
+        if (!Objects.equals(password, that.password)) return false;
+        if (!Objects.equals(createdAt, that.createdAt)) return false;
+        if (!Objects.equals(updatedAt, that.updatedAt)) return false;
+        if (!Objects.equals(createdBy, that.createdBy)) return false;
+        return Objects.equals(updatedBy, that.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getProjectId(), getIntegrationType(), isActive, getUrl(), getDirectoryPath(), getRepoHead(), getUserName(), getPassword(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy());
+        int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (projectId != null ? projectId.hashCode() : 0);
+        result = 31 * result + (integrationType != null ? integrationType.hashCode() : 0);
+        result = 31 * result + (isActive != null ? isActive.hashCode() : 0);
+        result = 31 * result + (url != null ? url.hashCode() : 0);
+        result = 31 * result + (queueName != null ? queueName.hashCode() : 0);
+        result = 31 * result + (directoryPath != null ? directoryPath.hashCode() : 0);
+        result = 31 * result + (repoHead != null ? repoHead.hashCode() : 0);
+        result = 31 * result + (userName != null ? userName.hashCode() : 0);
+        result = 31 * result + (password != null ? password.hashCode() : 0);
+        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
+        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
+        result = 31 * result + (createdBy != null ? createdBy.hashCode() : 0);
+        result = 31 * result + (updatedBy != null ? updatedBy.hashCode() : 0);
+        return result;
     }
 }

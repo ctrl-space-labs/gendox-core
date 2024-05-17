@@ -1,5 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,6 +15,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -22,7 +26,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder(toBuilder = true)
 public class Message {
-//    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    //    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
     @Column(name = "id")
     private UUID id;
@@ -45,12 +49,17 @@ public class Message {
     private Instant updatedAt;
     @Basic
     @Column(name = "created_by")
-    @CreatedBy
     private UUID createdBy;
     @Basic
     @Column(name = "updated_by")
-    @LastModifiedBy
     private UUID updatedBy;
+
+
+    //    @JsonBackReference(value = "message")
+    @JsonManagedReference(value = "message")
+    @OneToMany(mappedBy = "message")
+    private List<MessageSection> messageSections;
+
 
     public UUID getId() {
         return id;
@@ -114,6 +123,14 @@ public class Message {
 
     public void setProjectId(UUID projectId) {
         this.projectId = projectId;
+    }
+
+    public List<MessageSection> getMessageSections() {
+        return messageSections;
+    }
+
+    public void setMessageSections(List<MessageSection> messageSections) {
+        this.messageSections = messageSections;
     }
 
     @Override
