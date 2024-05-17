@@ -17,26 +17,23 @@ import projectService from "src/gendox-sdk/projectService";
 // ** Fetch Chats & Contacts
 export const fetchChatsContacts = createAsyncThunk(
   "appChat/fetchChatsContacts",
-  
-  async ( {organizationId, storedToken}, { rejectWithValue }) => {    
-    // get all projects for the organization
-    
+  async ({ organizationId, storedToken }, { rejectWithValue }) => {
     try {
-      
-      const projectsByOrgResponse =
-        await projectService.getProjectsByOrganization(
-          organizationId,
-          storedToken,
-          
-        );
+      const projectsByOrgResponse = await projectService.getProjectsByOrganization(
+        organizationId,
+        storedToken
+      );
 
-        console.log("1) projectsByOrgResponse", projectsByOrgResponse);
+      const projectIds = projectsByOrgResponse.data.content.map((project) => project.id);
+      if (projectIds.length === 0) {
+        return {
+          chatsContacts: [],
+          contacts: [],
+        };
+      }
 
-      // Get all threads for the projects
       const threadsResponse = await axios.get(
-        apiRequests.getThreadsByCriteria(
-          projectsByOrgResponse.data.content.map((project) => project.id)
-        ),
+        apiRequests.getThreadsByCriteria(projectIds),
         {
           headers: {
             "Content-Type": "application/json",
@@ -45,19 +42,39 @@ export const fetchChatsContacts = createAsyncThunk(
         }
       );
 
-      console.log("2) threadsResponse", threadsResponse);
-
-      // Use threads data if the request is successful
       const threads = threadsResponse.data.content;
-      console.log("3) threads", threads);
-      const contacts = projectsByOrgResponse.data.content.map((project) =>
-        chatConverters.projectToContact(project)
-      );
-      console.log("4) contacts", contacts);
+
+      if (threads.length === 0) {
+        return {
+          chatsContacts: [],
+          contacts: projectsByOrgResponse.data.content.map((project) =>
+            chatConverters.projectToContact(project)
+          ),
+        };
+      }
+
+      const contacts = projectsByOrgResponse.data.content.map((project) => {
+        // Ensure projectAgent and its properties are handled properly
+        if (!project.projectAgent) {
+          console.warn("Project has no projectAgent:", project);
+          return {
+            id: '',
+            userId: '',
+            agentId: '',
+            projectId: project.id || '',
+            fullName: 'Unknown Agent',
+            role: "Agent",
+            about: project.description || 'No description available',
+            avatar: null,
+            status: 'offline'
+          };
+        }
+        return chatConverters.projectToContact(project);
+      });
+
       const chatEntries = threads.map((thread) =>
         chatConverters.gendoxThreadToChatEntry(thread, contacts)
       );
-      console.log("5) chatEntries", chatEntries);
 
       chatEntries.sort(
         (a, b) =>
@@ -75,6 +92,7 @@ export const fetchChatsContacts = createAsyncThunk(
   }
 );
 
+
 // ** Select Chat
 export const selectChat = createAsyncThunk(
   "appChat/selectChat",
@@ -86,6 +104,7 @@ export const selectChat = createAsyncThunk(
       const state = getState();
       let thread = state.chat.chats.find((thread) => thread.id === id);
       let newThread = !thread;
+      
 
       if (newThread) {
         return _createNewThreadChat(state, id);
@@ -97,7 +116,7 @@ export const selectChat = createAsyncThunk(
         thread
       );
 
-      dispatch(fetchChatsContacts(organizationId, storedToken));
+      await dispatch(fetchChatsContacts({ organizationId, storedToken }));
 
       return selectedChat;
     } catch (error) {
@@ -107,72 +126,70 @@ export const selectChat = createAsyncThunk(
   }
 );
 
+
 // ** Send Msg
 export const sendMsg = createAsyncThunk(
   "appChat/sendMsg",
-  async (obj, { dispatch, getState, organizationId, rejectWithValue }) => {
-  //   const router = useRouter();
-  // const { organizationId } = router.query;
+  async (obj, { dispatch, getState, rejectWithValue }) => {
+    try {
+      
+      const state = getState();
+      
+      let storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName);
 
-  // const storedToken = window.localStorage.getItem(
-  //   authConfig.storageTokenKeyName
-  // );
-    try{
-    
-    const state = getState();
-    let storedToken = window.localStorage.getItem(
-      authConfig.storageTokenKeyName
-    );
-
-    //chat append string
-    dispatch(
-      addMessage({
-        senderId: state.chat.userProfile.id,
-        text: obj.message,
-        time: new Date(),
-      })
-    );
-
-    console.log("sendMsg chat2: ", obj.chat);
-    const response = await axios.post(
-      apiRequests.postCompletionModel(obj.contact.projectId),
-      {
-        value: obj.message,
-        threadId: obj.contact.threadId,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + storedToken,
-        },
+      if (!state.chat.userProfile || !state.chat.userProfile.id) {
+        throw new Error("User profile is missing or invalid");
       }
-    );
 
-    dispatch(
-      addMessage({
-        senderId: obj.contact.userId,
-        text: response.data.message.value,
-        sections: response.data.message.messageSections,
-        time: new Date(),
-      })
-    );
+      // Chat append string
+      dispatch(
+        addMessage({
+          senderId: state.chat.userProfile.id,
+          text: obj.message,
+          time: new Date(),
+        })
+      );
 
-    // if threadId is null, then it is a new thread
-    let newThread = !obj.contact.threadId;
-    if (newThread) {
-      let newThreadId = response.data.message.threadId;
-      await dispatch(fetchChatsContacts(organizationId, storedToken)); // await to load the new thread before selecting it
-      //select the newly created thread, keep the chat content instead of showing the message loader
-      dispatch(selectChat({ id: newThreadId, keepChatContent: true, organizationId, storedToken}));
+      const response = await axios.post(
+        apiRequests.postCompletionModel(obj.contact.projectId),
+        {
+          value: obj.message,
+          threadId: obj.contact.threadId,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + storedToken,
+          },
+        }
+      );
+
+      dispatch(
+        addMessage({
+          senderId: obj.contact.userId,
+          text: response.data.message.value,
+          sections: response.data.message.messageSections,
+          time: new Date(),
+        })
+      );
+
+      // If threadId is null, then it is a new thread
+      let newThread = !obj.contact.threadId;
+      if (newThread) {
+        let newThreadId = response.data.message.threadId;
+        await dispatch(fetchChatsContacts({ organizationId: obj.organizationId, storedToken })); // Await to load the new thread before selecting it
+        // Select the newly created thread, keep the chat content instead of showing the message loader
+        dispatch(selectChat({ id: newThreadId, keepChatContent: true, organizationId: obj.organizationId, storedToken }));
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      return rejectWithValue(error.message);
     }
-
-    return response.data;
-  } catch (error) {
-    console.error("Failed to send message:", error);
-    return rejectWithValue(error.message);
-  }
   }
 );
+
 
 export const addMessage = createAsyncThunk(
   "appChat/pushMessage",
@@ -244,7 +261,9 @@ export const { removeSelectedChat, setUserProfile } = appChatSlice.actions;
 export default appChatSlice.reducer;
 
 function _createNewThreadChat(state, id) {
-  const contact = state.chat.contacts.find((contact) => contact.id === id);
+  // const contact = state.chat.contacts.find((contact) => contact.id === id);
+  const contact = state.chat.contacts.find((contact) => contact.threadId === id || contact.id === id || contact.userId === id);
+
   let newThreadChat = {
     contact: { ...contact, id: null, threadId: null },
     chat: {
@@ -253,6 +272,7 @@ function _createNewThreadChat(state, id) {
   };
   return newThreadChat;
 }
+
 
 async function _fetchExistingChatWithMessages(id, dispatch, thread) {
   const storedToken = window.localStorage.getItem(

@@ -28,20 +28,20 @@ const toChatUserProfile = (gendoxUserProfile) => {
  * @returns {ChatContact} The converted chat contact.
  */
 const projectToContact = (project) => {
-
+    const projectAgent = project.projectAgent || {};
+    
     return {
-        id: project.projectAgent.userId,
-        userId: project.projectAgent.userId,
-        agentId: project.projectAgent.id,
-        projectId: project.id,
-        fullName: project.projectAgent.agentName,
+        id: projectAgent.userId || '',
+        userId: projectAgent.userId || '',
+        agentId: projectAgent.id || '',
+        projectId: project.id || '',
+        fullName: projectAgent.agentName || 'Unknown Agent',
         role: "Agent",
-        about: project.description,
+        about: project.description || 'No description available',
         avatar: null,
         status: 'online'
-    }
-
-}
+      };
+    };
 
 /**
  * Converts a Gendox thread to a chat entry. get the array of Chat Contacts

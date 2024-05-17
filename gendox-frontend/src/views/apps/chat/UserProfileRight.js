@@ -42,8 +42,8 @@ const UserProfileRight = (props) => {
   } = props;
 
   const router = useRouter();
-  const { organizationId } = router.query;
-  const projectId = store.selectedChat.contact.projectId;
+  const { organizationId, projectId } = router.query;
+  // const projectId = store.selectedChat.contact.projectId;
   const [projectAgent, setProjectAgent] = useState(null);
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName

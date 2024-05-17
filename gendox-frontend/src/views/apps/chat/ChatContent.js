@@ -45,7 +45,8 @@ const ChatContent = (props) => {
     userProfileRightOpen,
     handleLeftSidebarToggle,
     handleUserProfileRightSidebarToggle,
-    organizationId
+    organizationId,
+    storedToken,
   } = props;
 
   const handleStartConversation = () => {
@@ -54,6 +55,9 @@ const ChatContent = (props) => {
     }
   };
 
+
+  console.log("ChatContent.js: ChatContent: store", store);
+  console.log("ChatContent.js: ChatContent: hidden", store.selectedChat);
   
 
   const renderContent = () => {

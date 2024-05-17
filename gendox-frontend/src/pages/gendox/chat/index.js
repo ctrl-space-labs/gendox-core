@@ -65,6 +65,20 @@ const AppChat = () => {
     offline: "secondary",
   };
 
+  console.log("SETTINGSSSSSSSSSSSSS", settings);
+
+  useEffect(() => {
+    // Hide navigation on mount
+    settings.navHidden = true
+    settings.footer = 'hidden'
+    
+    // Show navigation on unmount
+    return () => {
+      settings.navHidden = false
+      settings.footer = 'static'
+    };
+  }, [dispatch]);
+
   useEffect(() => {
     dispatch(setUserProfile(auth.user));
     dispatch(fetchChatsContacts({ organizationId, storedToken }));
@@ -112,6 +126,8 @@ const AppChat = () => {
         formatDateToMonthShort={formatDateToMonthShort}
         handleLeftSidebarToggle={handleLeftSidebarToggle}
         handleUserProfileLeftSidebarToggle={handleUserProfileLeftSidebarToggle}
+        organizationId={organizationId}
+        storedToken={storedToken}
       />
       <ChatContent
         store={store}
@@ -128,6 +144,7 @@ const AppChat = () => {
           handleUserProfileRightSidebarToggle
         }
         organizationId={organizationId}
+        storedToken={storedToken}
       />
     </Box>
   );

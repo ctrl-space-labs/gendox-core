@@ -1,9 +1,13 @@
 // ** MUI Imports
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
+import Typography from "@mui/material/Typography";
+
 
 // ** Icon Imports
 import Icon from "src/@core/components/icon";
+
+import { useRouter } from "next/router";
 
 // ** Components
 import Autocomplete from "src/layouts/components/Autocomplete";
@@ -17,12 +21,52 @@ import OrganizationsDropdown from "src/views/gendox-components/OrganizationsDrop
 // ** Hook Import
 import { useAuth } from "src/hooks/useAuth";
 
+
+
+
+
 const AppBarContent = (props) => {
   // ** Props
   const { hidden, settings, saveSettings, toggleNavVisibility } = props;
 
   // ** Hook
   const auth = useAuth();
+  const router = useRouter();
+
+  const handleNavigate = () => {
+    const path = `/gendox/home`;
+    router.push(path);
+  
+  }
+
+  const AppBrand = () => {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          cursor: "pointer",
+          padding: "20px 20px",
+          
+        }}
+        onClick={handleNavigate}
+      >
+        <div
+          style={{
+            width: "30px",
+            height: "30px",
+            backgroundImage: "url('/images/gendoxLogo.svg')",
+            backgroundSize: "20px 20px",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+          }}
+        />
+        <Typography variant="h6" sx={{ ml: 2 }}>
+          Gendox
+        </Typography>
+      </Box>
+    );
+  };
 
   return (
     <Box
@@ -37,7 +81,9 @@ const AppBarContent = (props) => {
         className="actions-left"
         sx={{ mr: 2, display: "flex", alignItems: "center" }}
       >
+        {settings.navHidden && <AppBrand />}
         {hidden && !settings.navHidden ? (
+           
           <IconButton
             color="inherit"
             sx={{ ml: -2.75 }}
@@ -46,7 +92,9 @@ const AppBarContent = (props) => {
             <Icon icon="mdi:menu" />
           </IconButton>
         ) : null}
-        {auth.user && <Autocomplete hidden={hidden} settings={settings} />}
+        {auth.user && !settings.navHidden && (
+          <Autocomplete hidden={hidden} settings={settings} />
+        )}
       </Box>
       <Box
         className="actions-right"
