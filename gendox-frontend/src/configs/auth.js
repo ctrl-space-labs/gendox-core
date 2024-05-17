@@ -25,7 +25,19 @@ const devOidcConfig = {
   pkceMethod: 'S256'
 };
 
-let oidcConfig = devOidcConfig;
+const prodOidcConfig = {
+  authority: "https://dev.gendox.ctrlspace.dev/idp/realms/gendox-idp-dev",
+  client_id: "gendox-pkce-public-client-prod",
+  redirect_uri: "https://gendox.ctrlspace.dev/oidc-callback/",
+  response_type: "code",
+  scope: "openid profile email",
+  post_logout_redirect_uri: "https://gendox.ctrlspace.dev/login",
+  silent_redirect_uri: "https://gendox.ctrlspace.dev/silent-renew",
+  automaticSilentRenew: true,
+  pkceMethod: 'S256'
+};
+
+let oidcConfig = prodOidcConfig;
 
 // if (process.env.NODE_ENV === 'development') {
 //   oidcConfig = devOidcConfig;
