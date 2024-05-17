@@ -14,6 +14,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TrainingService;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import io.micrometer.observation.annotation.Observed;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -56,6 +58,14 @@ public class EmbeddingsController {
                     "This endpoint accepts a BotRequest containing the text input and returns an Ada2Response " +
                     "containing the embeddings for the input text. Additionally, it stores the embeddings in the database " +
                     "as an Embedding entity with a unique ID.")
+    @Observed(name = "EmbeddingsController.getEmbeddings",
+            contextualName = "EmbeddingsController#getEmbeddings",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public EmbeddingResponse getEmbeddings(@RequestBody BotRequest botRequest, @RequestParam String aiModel) throws GendoxException {
 
         EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(botRequest, aiModel);
@@ -89,7 +99,14 @@ public class EmbeddingsController {
             description = "Retrieve embeddings for all sections in a project based on the provided project ID. " +
                     "This endpoint calculates and returns embeddings for all sections within the specified project. " +
                     "It performs the embedding calculation for each section and associates the results with the respective sections.")
-
+    @Observed(name = "EmbeddingsController.getProjectEmbeddings",
+            contextualName = "EmbeddingsController#getProjectEmbeddings",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public List<Embedding> getProjectEmbeddings(@PathVariable UUID projectId) throws GendoxException {
         return trainingService.runTrainingForProject(projectId);
     }
@@ -101,6 +118,14 @@ public class EmbeddingsController {
             description = "Search for sections within a project that are semantically closer to a given message. " +
                     "This endpoint calculates the embedding for the input message and retrieves sections from the specified project " +
                     "that have similar semantic representations.")
+    @Observed(name = "EmbeddingsController.findCloserSections",
+            contextualName = "EmbeddingsController#findCloserSections",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public List<DocumentInstanceSection> findCloserSections(@RequestBody Message message,
                                                             @RequestParam String projectId,
                                                             Pageable pageable) throws GendoxException {
@@ -126,6 +151,14 @@ public class EmbeddingsController {
             description = "Find a message within a project that semantically completes the given input message. " +
                     "This endpoint calculates the embedding for the input message and searches for a complementary message " +
                     "in the context of the provided project.")
+    @Observed(name = "EmbeddingsController.getCompletionSearch",
+            contextualName = "EmbeddingsController#getCompletionSearch",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public CompletionMessageDTO getCompletionSearch(@RequestBody Message message,
                                                     @RequestParam String projectId) throws GendoxException {
 
