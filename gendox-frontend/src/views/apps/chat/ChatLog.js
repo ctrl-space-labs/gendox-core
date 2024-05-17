@@ -35,7 +35,7 @@ const ChatLog = (props) => {
   const projectId = data.contact.projectId;
   
 
-  console.log("PROPS", props);
+  
   // ** Ref
   const chatArea = useRef(null);
 

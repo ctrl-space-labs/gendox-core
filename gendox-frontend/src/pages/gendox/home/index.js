@@ -37,8 +37,7 @@ const GendoxHome = () => {
   const { organizationId, projectId } = router.query;
   const auth = useAuth();
   const [documents, setDocuments] = useState([]);
-  const [alertOpen, setAlertOpen] = useState(false);
-  const [alertMessage, setAlertMessage] = useState("");
+  
   const project = useSelector((state) => state.activeProject.projectDetails);
   useRedirectOr404ForHome(organizationId, projectId);
 
@@ -55,29 +54,9 @@ const GendoxHome = () => {
     router.push(path);
   };
 
-  const handleTrainingClick = () => {
-    documentService
-        .triggerJobs(
-          organizationId,
-          projectId,
-          storedToken
-        )
-        .then((response) => {
-          console.log(response);
-          setAlertMessage("Training triggered successfully!");
-          setAlertOpen(true);
-        })
-        .catch((error) => {
-          console.log(error);
-          setAlertMessage("Error triggering training: " + error.message);
-          setAlertOpen(true);
-        });
-     
-  };  
+  
 
-  const handleAlertClose = () => {
-    setAlertOpen(false);
-  };
+ 
 
   const initDocuments = async () => {
     const activeOrganization = auth.user.organizations.find(
@@ -140,15 +119,11 @@ const GendoxHome = () => {
           </Box>
           <Box sx={{ display: "flex", alignItems: "center" }}>
           <Tooltip title="Project Settings">
-            <IconButton onClick={handleSettingsClick} sx={{ ml: 2, fontSize: "3rem" }}>
+            <IconButton onClick={handleSettingsClick} sx={{ ml: 2, fontSize: "2rem" }}>
               <Icon icon="mdi:cog-outline" fontSize="inherit"/>
             </IconButton>
             </Tooltip>
-            <Tooltip title="Training Projects">
-            <IconButton onClick={handleTrainingClick} sx={{ ml: 2, fontSize: "3rem" }}>
-              <Icon icon="mdi:search-web" fontSize="inherit"/>
-            </IconButton>
-            </Tooltip>
+            
           </Box>
         </Box>
       </StyledCardContent>
@@ -193,15 +168,7 @@ const GendoxHome = () => {
           </Box>
         </CardContent>
       )}
-      <Snackbar
-        open={alertOpen}
-        autoHideDuration={6000}
-        onClose={handleAlertClose}
-      >
-        <Alert onClose={handleAlertClose} severity="success" sx={{ width: "100%" }}>
-          {alertMessage}
-        </Alert>
-      </Snackbar>
+      
     </Card>
     
   );
