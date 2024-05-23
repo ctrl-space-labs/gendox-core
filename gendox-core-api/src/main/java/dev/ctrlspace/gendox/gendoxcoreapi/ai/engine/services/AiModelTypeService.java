@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 
 import java.util.List;
 
@@ -12,9 +13,16 @@ public interface AiModelTypeService {
     CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, String aiModelName,
                                      AiModelRequestParams aiModelRequestParams);
 
+    /**
+     * The name of the service provide the completions.
+     * e.g. 'OpenAI', 'Cohere', 'Ollama' etc
+     *
+     * @return
+     */
+    String getServiceName();
 
     OpenAiGpt35ModerationResponse moderationCheck(String message);
 
-    boolean supports(String model);
+    boolean supports(AiModel model);
 }
 

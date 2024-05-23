@@ -10,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.CohereConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.CohereCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.CohereEmbeddingResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +31,9 @@ public class CohereAiServiceAdapter implements AiModelTypeService {
 
     Logger logger = LoggerFactory.getLogger(CohereAiServiceAdapter.class);
 
-    private Set<String> supportedModels = Set.of("command", "embed-multilingual-v3.0");
+    private Set<String> supportedModels = Set.of("COHERE_COMMAND", "COHERE_EMBED_MULTILINGUAL_V3.0");
+
+    private String serviceName = "Cohere";
 
     private AiModelRepository aiModelRepository;
 
@@ -67,12 +70,12 @@ public class CohereAiServiceAdapter implements AiModelTypeService {
 
     public CohereEmbedMultilingualResponse getEmbeddingResponse(CohereEmbedMultilingualRequest embeddingRequestHttpEntity, String aiModelName) {
         String embeddingsApiUrl = getApiEndpointByAiModel(aiModelName);
-        logger.debug("Sending Embedding Request to Cohere: {}", embeddingRequestHttpEntity);
+        logger.debug("Sending Embedding Request to {}: {}", this.getServiceName(), embeddingRequestHttpEntity);
         ResponseEntity<CohereEmbedMultilingualResponse> responseEntity = restTemplate.postForEntity(
                 embeddingsApiUrl,
                 new HttpEntity<>(embeddingRequestHttpEntity, buildHeader()),
                 CohereEmbedMultilingualResponse.class);
-        logger.info("Received Embedding Response from OpenAI. Tokens billed: {}",
+        logger.info("Received Embedding Response from {}. Tokens billed: {}", this.getServiceName(),
                 responseEntity.getBody().getMeta().getBilledUnits().getInputTokens() + responseEntity.getBody().getMeta().getBilledUnits().getOutputTokens());
 
         return responseEntity.getBody();
@@ -81,12 +84,12 @@ public class CohereAiServiceAdapter implements AiModelTypeService {
 
     public CohereCommandResponse getCompletionResponse(CohereCommandRequest chatRequestHttpEntity, String aiModelName) {
         String completionApiUrl = getApiEndpointByAiModel(aiModelName);
-        logger.debug("Sending completion Request to OpenAI: {}", chatRequestHttpEntity);
+        logger.debug("Sending completion Request to {}: {}", this.getServiceName(), chatRequestHttpEntity);
         ResponseEntity<CohereCommandResponse> responseEntity = restTemplate.postForEntity(
                 completionApiUrl,
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader()),
                 CohereCommandResponse.class);
-        logger.info("Received completion Response from Cohere. Tokens billed: {}",
+        logger.info("Received completion Response from {}. Tokens billed: {}", this.getServiceName(),
                 responseEntity.getBody().getMeta().getBilledUnits().getInputTokens() + responseEntity.getBody().getMeta().getBilledUnits().getOutputTokens());
 
         return responseEntity.getBody();
@@ -142,7 +145,12 @@ public class CohereAiServiceAdapter implements AiModelTypeService {
 
 
     @Override
-    public boolean supports(String model) {
-        return supportedModels.contains(model);
+    public boolean supports(AiModel model) {
+        return supportedModels.contains(model.getName());
+    }
+
+    @Override
+    public String getServiceName() {
+        return serviceName;
     }
 }

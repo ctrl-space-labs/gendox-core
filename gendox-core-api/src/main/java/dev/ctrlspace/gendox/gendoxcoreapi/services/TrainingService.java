@@ -4,10 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingGroupRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectDocumentRepository;
@@ -79,7 +76,7 @@ public class TrainingService {
     public Embedding runTrainingForSection(@NonNull DocumentInstanceSection section, UUID projectId) throws GendoxException {
         Project project = projectService.getProjectById(projectId);
         EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(section.getSectionValue(),
-                project.getProjectAgent().getSemanticSearchModel().getModel());
+                project.getProjectAgent().getSemanticSearchModel());
         Embedding embedding = embeddingService.upsertEmbeddingForText(embeddingResponse, projectId, null, section.getId());
 
         return embedding;
@@ -106,7 +103,9 @@ public class TrainingService {
     }
 
     public OpenAiGpt35ModerationResponse getModeration(String message) throws GendoxException {
-        AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelServiceImplementation("openai-moderation");
+        AiModel aiModel = new AiModel();
+        aiModel.setModel("OPENAI_MODERATION");
+        AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
         OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = aiModelTypeService.moderationCheck(message);
         return openAiGpt35ModerationResponse;
     }
