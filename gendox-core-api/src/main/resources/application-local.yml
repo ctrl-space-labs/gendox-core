@@ -131,6 +131,8 @@ gendox:
         key: ${OPENAI_KEY}
     cohere:
         key: ${COHERE_KEY}
+    groq:
+      key: ${GROQ_KEY}
   domain:
     base-url: http://localhost:8080
     document-sections:
