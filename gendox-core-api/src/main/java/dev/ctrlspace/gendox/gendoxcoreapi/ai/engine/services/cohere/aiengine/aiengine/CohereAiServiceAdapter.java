@@ -153,4 +153,9 @@ public class CohereAiServiceAdapter implements AiModelTypeService {
     public String getServiceName() {
         return serviceName;
     }
+
+    @Override
+    public Set<String> getSupportedModels() {
+        return supportedModels;
+    }
 }

@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.groq.aiengine.aiengine;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine.OpenAiServiceAdapter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiEmbeddingResponseConverter;
@@ -18,7 +19,7 @@ import java.util.Set;
  *
  */
 @Service
-public class GroqServiceAdapter extends OpenAiServiceAdapter {
+public class GroqServiceAdapter extends OpenAiServiceAdapter implements AiModelTypeService {
 
     protected Set<String> supportedModels = Set.of(AiModelConstants.GROQ_LLAMA_3_70B_8192, AiModelConstants.GROQ_LLAMA_3_8B_8192);
 
@@ -40,5 +41,14 @@ public class GroqServiceAdapter extends OpenAiServiceAdapter {
     @Override
     public String getServiceName() {
         return serviceName;
+    }
+
+    @Override
+    public Set<String> getSupportedModels() {
+        return supportedModels;
+    }
+
+    public String getApiKey() {
+        return apiKey;
     }
 }

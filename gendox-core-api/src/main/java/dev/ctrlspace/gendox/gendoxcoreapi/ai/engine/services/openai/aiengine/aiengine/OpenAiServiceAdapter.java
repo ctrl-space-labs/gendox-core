@@ -61,7 +61,7 @@ public class OpenAiServiceAdapter implements AiModelTypeService {
     public HttpHeaders buildHeader() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType(OpenAIADA2.MEDIA_TYPE));
-        headers.add(OpenAIADA2.AUTHORIZATION, OpenAIADA2.BEARER + apiKey);
+        headers.add(OpenAIADA2.AUTHORIZATION, OpenAIADA2.BEARER + getApiKey());
         return headers;
     }
 
@@ -147,11 +147,21 @@ public class OpenAiServiceAdapter implements AiModelTypeService {
 
     @Override
     public boolean supports(AiModel model) {
-        return supportedModels.contains(model.getName());
+        return getSupportedModels().contains(model.getName());
     }
 
     @Override
     public String getServiceName() {
         return serviceName;
+    }
+
+    @Override
+    public Set<String> getSupportedModels() {
+        return supportedModels;
+    }
+
+
+    public String getApiKey() {
+        return apiKey;
     }
 }
