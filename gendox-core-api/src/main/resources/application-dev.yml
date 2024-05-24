@@ -1,7 +1,7 @@
 
 
 server:
-  port: 5000
+  port: 8080
   servlet:
     context-path: /gendox/api/v1
 logging:
@@ -113,7 +113,7 @@ gendox:
     cohere:
       key: ${COHERE_KEY}
     groq:
-      key: ${GROQ_KEY}
+      key: ${GROQ_KEY:default-token}
   domain:
     base-url: http://localhost:${server.port}
     document-sections:

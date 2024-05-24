@@ -104,7 +104,7 @@ public class TrainingService {
 
     public OpenAiGpt35ModerationResponse getModeration(String message) throws GendoxException {
         AiModel aiModel = new AiModel();
-        aiModel.setModel("OPENAI_MODERATION");
+        aiModel.setName("OPENAI_MODERATION");
         AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
         OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = aiModelTypeService.moderationCheck(message);
         return openAiGpt35ModerationResponse;
