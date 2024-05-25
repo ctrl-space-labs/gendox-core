@@ -63,7 +63,7 @@ public class OpenAiServiceAdapter implements AiModelTypeService {
 
     public OpenAiAda2Response getEmbeddingResponse(OpenAiAda2Request embeddingRequestHttpEntity, String aiModelName) {
         String embeddingsApiUrl = getApiEndpointByAiModel(aiModelName);
-        logger.debug("Sending Embedding Request to OpenAI: {}", embeddingRequestHttpEntity);
+        logger.trace("Sending Embedding Request to OpenAI: {}", embeddingRequestHttpEntity);
         ResponseEntity<OpenAiAda2Response> responseEntity = restTemplate.postForEntity(
                 embeddingsApiUrl,
                 new HttpEntity<>(embeddingRequestHttpEntity, buildHeader()),
@@ -76,7 +76,7 @@ public class OpenAiServiceAdapter implements AiModelTypeService {
 
     public OpenAiGptResponse getCompletionResponse(OpenAiGptRequest chatRequestHttpEntity, String aiModelName) {
         String completionApiUrl = getApiEndpointByAiModel(aiModelName);
-        logger.debug("Sending completion Request to OpenAI: {}", chatRequestHttpEntity);
+        logger.trace("Sending completion Request to OpenAI: {}", chatRequestHttpEntity);
         ResponseEntity<OpenAiGptResponse> responseEntity = restTemplate.postForEntity(
                 completionApiUrl,
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader()),
@@ -87,12 +87,12 @@ public class OpenAiServiceAdapter implements AiModelTypeService {
     }
 
     public OpenAiGpt35ModerationResponse getModerationResponse(Gpt35ModerationRequest moderationRequest) {
-        logger.debug("Sending moderation Request to OpenAI: {}", moderationRequest);
+        logger.trace("Sending moderation Request to OpenAI: {}", moderationRequest);
         ResponseEntity<OpenAiGpt35ModerationResponse> responseEntity = restTemplate.postForEntity(
                 GPT35Moderation.URL,
                 new HttpEntity<>(moderationRequest, buildHeader()),
                 OpenAiGpt35ModerationResponse.class);
-        logger.info("Received moderation Response from OpenAI.");
+        logger.debug("Received moderation Response from OpenAI.");
 
         return responseEntity.getBody();
     }
