@@ -34,6 +34,7 @@ public class OpenAiServiceAdapter implements AiModelTypeService {
             AiModelConstants.GPT_4,
             AiModelConstants.GPT_3_5_TURBO_MODEL,
             AiModelConstants.ADA2_MODEL,
+            AiModelConstants.ADA_3_SMALL,
             AiModelConstants.OPEN_AI_MODERATION);
     protected String serviceName = "OpenAI";
 
