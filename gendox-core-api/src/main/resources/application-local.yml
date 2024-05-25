@@ -130,7 +130,9 @@ gendox:
       ada2:
         key: ${OPENAI_KEY}
     cohere:
-        key: ${COHERE_KEY}
+      key: ${COHERE_KEY}
+    groq:
+      key: ${GROQ_KEY:default-token}
   domain:
     base-url: http://localhost:8080
     document-sections:
