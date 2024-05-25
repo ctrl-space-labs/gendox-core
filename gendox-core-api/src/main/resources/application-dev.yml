@@ -1,7 +1,7 @@
 
 
 server:
-  port: 8080
+  port: 5000
   servlet:
     context-path: /gendox/api/v1
 logging:
