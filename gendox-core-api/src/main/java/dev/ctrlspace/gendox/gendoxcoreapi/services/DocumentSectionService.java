@@ -151,8 +151,8 @@ public class DocumentSectionService {
         section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
 
         // take moderation check
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
-        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
+//        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
+//        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
 
         //create metadata
         section.setDocumentSectionMetadata(createMetadata(section));
@@ -184,8 +184,8 @@ public class DocumentSectionService {
         section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
 
         // take moderation check
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
-        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
+//        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
+//        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
 
         //create metadata
         section.setDocumentSectionMetadata(createMetadata(section));
