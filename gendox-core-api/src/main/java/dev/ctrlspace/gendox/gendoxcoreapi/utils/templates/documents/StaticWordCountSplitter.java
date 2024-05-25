@@ -35,7 +35,8 @@ public class StaticWordCountSplitter implements DocumentSplitter {
 
             // split the section in this word
             if (counter == wordCount) {
-                sections.add(section.toString().trim());
+                // TODO investigate a better way to handle "UTF8": 0x00 which is not acceptable in postgres
+                sections.add(section.toString().replaceAll("\u0000", "").trim());
                 section = new StringBuilder();
                 counter = 0;
             }
