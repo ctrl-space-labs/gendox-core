@@ -4,10 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.BotRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageSection;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
@@ -68,7 +65,9 @@ public class EmbeddingsController {
             })
     public EmbeddingResponse getEmbeddings(@RequestBody BotRequest botRequest, @RequestParam String aiModel) throws GendoxException {
 
-        EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(botRequest, aiModel);
+        AiModel aiModelObj = new AiModel();
+        aiModelObj.setModel(aiModel);
+        EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(botRequest, aiModelObj);
         Embedding embedding = new Embedding();
 
         embedding.setEmbeddingVector(embeddingResponse.getData().get(0).getEmbedding());

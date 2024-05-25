@@ -112,6 +112,8 @@ gendox:
         key: ${OPENAI_KEY}
     cohere:
       key: ${COHERE_KEY}
+    groq:
+      key: ${GROQ_KEY:default-token}
   domain:
     base-url: http://localhost:${server.port}
     document-sections:
