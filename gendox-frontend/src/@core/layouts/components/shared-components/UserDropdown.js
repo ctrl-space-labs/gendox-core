@@ -13,6 +13,7 @@ import Divider from "@mui/material/Divider";
 import MenuItem from "@mui/material/MenuItem";
 import { styled } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
+import Link from "next/link";
 
 // ** Icon Imports
 import Icon from "src/@core/components/icon";
@@ -35,18 +36,19 @@ const UserDropdown = (props) => {
   const { settings } = props;
   const auth = useAuth();
 
-
   // ** States
   const [anchorEl, setAnchorEl] = useState(null);
 
   // ** Hooks
   const router = useRouter();
-  let {organizationId} = router.query;
+  let { organizationId } = router.query;
 
   if (!organizationId) {
-    organizationId = window.localStorage.getItem(authConfig.selectedOrganizationId);
+    organizationId = window.localStorage.getItem(
+      authConfig.selectedOrganizationId
+    );
   }
-  
+
   const { logout } = useAuth();
 
   // ** Vars
@@ -62,8 +64,6 @@ const UserDropdown = (props) => {
     }
     setAnchorEl(null);
   };
-
-  
 
   const styles = {
     py: 2,
@@ -153,24 +153,59 @@ const UserDropdown = (props) => {
           </Box>
         </Box>
         <Divider sx={{ mt: "0 !important" }} />
-        <MenuItem sx={{ p: 0 }} onClick={() => handleDropdownClose(`/gendox/user-profile?organizationId=${organizationId}&userId=${auth.user.id}`)}>
-          <Box sx={styles}>
-            <Icon icon="mdi:account-outline" />
-            Profile
-          </Box>
+        <MenuItem
+          sx={{ p: 0 }}
+          onClick={() =>
+            handleDropdownClose(
+              `/gendox/user-profile?organizationId=${organizationId}&userId=${auth.user.id}`
+            )
+          }
+        >
+          <Link
+            href={`/gendox/user-profile?organizationId=${organizationId}&userId=${auth.user.id}`}
+            passHref
+            style={{ textDecoration: "none" }}
+          >
+            <Box sx={styles} component="a">
+              <Icon icon="mdi:account-outline" />
+              Profile
+            </Box>
+          </Link>
         </MenuItem>
         <Divider />
-        <MenuItem sx={{ p: 0 }} onClick={() => handleDropdownClose("/gendox/create-organization")}>
-          <Box sx={styles}>
-            <Icon icon="mdi:plus" />
-            Add Organization
-          </Box>
+        <MenuItem
+          sx={{ p: 0 }}
+          onClick={() => handleDropdownClose("/gendox/create-organization")}
+        >
+          <Link
+            href="/gendox/create-organization"
+            passHref
+            style={{ textDecoration: "none" }}
+          >
+            <Box sx={{ ...styles, textDecoration: "none" }} component="a">
+              <Icon icon="mdi:plus" />
+              Add Organization
+            </Box>
+          </Link>
         </MenuItem>
-        <MenuItem sx={{ p: 0 }} onClick={() => handleDropdownClose(`/gendox/organization-settings?organizationId=${organizationId}`)}>
-          <Box sx={styles}>
-            <Icon icon="mdi:cog-outline" />
-            Organization Settings
-          </Box>
+        <MenuItem
+          sx={{ p: 0 }}
+          onClick={() =>
+            handleDropdownClose(
+              `/gendox/organization-settings?organizationId=${organizationId}`
+            )
+          }
+        >
+          <Link
+            href={`/gendox/organization-settings?organizationId=${organizationId}`}
+            passHref
+            style={{ textDecoration: "none" }}
+          >
+            <Box sx={{ ...styles, textDecoration: "none" }} component="a">
+              <Icon icon="mdi:cog-outline" />
+              Organization Settings
+            </Box>
+          </Link>
         </MenuItem>
         <Divider />
         <MenuItem

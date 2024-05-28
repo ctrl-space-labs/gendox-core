@@ -9,6 +9,7 @@ import MenuItem from "@mui/material/MenuItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Tooltip from "@mui/material/Tooltip";
+import Link from "next/link";
 
 // ** Icon Imports
 import Icon from "src/@core/components/icon";
@@ -72,9 +73,10 @@ const OrganizationsDropdown = ({ settings }) => {
       localStorage.setItem(authConfig.selectedOrganizationId, organization.id);
       localStorage.setItem(authConfig.selectedProjectId, newProjectId);
       setActiveOrganizationId(organization.id);
-      router.push(
-        `/gendox/home?organizationId=${organization.id}&projectId=${newProjectId}`
-      );
+      const newPath = router.pathname === '/gendox/chat'
+        ? `/gendox/chat?organizationId=${organization.id}`
+        : `/gendox/home?organizationId=${organization.id}&projectId=${newProjectId}`;
+      router.push(newPath);
     },
     [dispatch, handleDropdownClose, router]
   );
@@ -165,38 +167,53 @@ const OrganizationsDropdown = ({ settings }) => {
           horizontal: settings.direction === "ltr" ? "right" : "left",
         }}
       >
-        {auth.user.organizations.map((organization) => (
-          <MenuItem
+        {auth.user.organizations.map((organization) => {
+          const href = router.pathname === '/gendox/chat'
+          ? `/gendox/chat?organizationId=${organization.id}`
+          : `/gendox/home?organizationId=${organization.id}&projectId=${organization.projects?.[0]?.id ?? ""}`;
+        return (
+          <Link
+            href={href}
+            passHref
             key={organization.id}
-            sx={{ p: 0 }}
-            onClick={() => handleOrganizations(organization)}
-            selected={organization.id === activeOrganizationId}
+            style={{ textDecoration: "none" }}
           >
-            <Box
-              sx={{
-                py: 2,
-                px: 4,
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                textDecoration: "none",
-                backgroundColor:
-                  organization.id === activeOrganizationId
-                    ? "primary.light"
-                    : "inherit",
-                "& svg": {
-                  mr: 2,
-                  fontSize: "1.375rem",
-                },
+            <MenuItem              
+              sx={{ p: 0 }}              
+              onClick={(e) => {
+                e.preventDefault();
+                handleOrganizations(organization);
               }}
+              selected={organization.id === activeOrganizationId}
+              component="a" // Make it behave like an anchor
             >
-              <ListItemIcon sx={{ color: "primary.main" }}>
-                <Icon icon="mdi:domain" fontSize={20} />
-              </ListItemIcon>
-              <ListItemText primary={organization.name} />
-            </Box>
-          </MenuItem>
-        ))}
+              <Box
+                sx={{
+                  py: 2,
+                  px: 4,
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  textDecoration: "none",
+                  backgroundColor:
+                    organization.id === activeOrganizationId
+                      ? "primary.light"
+                      : "inherit",
+                  "& svg": {
+                    mr: 2,
+                    fontSize: "1.375rem",
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: "primary.main" }}>
+                  <Icon icon="mdi:domain" fontSize={20} />
+                </ListItemIcon>
+                <ListItemText primary={organization.name} />
+              </Box>
+            </MenuItem>
+          </Link>
+        );
+      })}
       </Menu>
     </Fragment>
   );

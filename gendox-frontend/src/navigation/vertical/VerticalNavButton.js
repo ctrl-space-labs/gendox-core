@@ -5,6 +5,8 @@ import { styled } from "@mui/material/styles";
 import Icon from 'src/@core/components/icon'
 import Tooltip from "@mui/material/Tooltip";
 import Box from "@mui/material/Box";
+import Link from "next/link";
+
 
 const StyledButton = styled(Button)(({ theme, variant }) => ({
   margin: theme.spacing(2), // Adds space around the button
@@ -21,51 +23,49 @@ const StyledButton = styled(Button)(({ theme, variant }) => ({
 // Button component for Chat
 const ChatButton = () => {
   const router = useRouter();
-  const { organizationId, projectId } = router.query;
-
-  const handleClick = () => {
-    router.push(`/gendox/chat?organizationId=${organizationId}&projectId=${projectId}`);
-    console.log("Chat button clicked");
-  };
+  const { organizationId } = router.query;
+ 
 
   return (
     <Box mt={3} mb={3}> {/* Add margin top and bottom */}
-   
-      <StyledButton
-        variant="contained"
-        onClick={handleClick}
-        startIcon={<Icon icon="mdi:creation" />}
-      >
-        Chat
-      </StyledButton>
-   
+      <Link href={`/gendox/chat?organizationId=${organizationId}`} passHref>
+        <StyledButton
+          component="a" // Ensure it behaves as a link
+          variant="contained"
+          startIcon={<Icon icon="mdi:creation" />}
+        >
+          Chat
+        </StyledButton>
+      </Link>
     </Box>
   );
 };
+
+
 
 // Button component for New Project
 const NewProjectButton = () => {
   const router = useRouter();
   const { organizationId }  = router.query;
-
-  const handleClick = () => {
-    router.push(`/gendox/create-project?organizationId=${organizationId}`);
-    console.log("New Project button clicked");
-  };
+  
 
   return (
     <Box mt={3} mb={3}> {/* Add margin top and bottom */}
-    <Tooltip title="New Project">
-      <StyledButton
-        variant="outlined"
-        onClick={handleClick}
-        startIcon={<Icon icon="mdi:plus" />}
-      >        
-      </StyledButton>
-    </Tooltip>
+      <Tooltip title="New Project">
+        <Link href={`/gendox/create-project?organizationId=${organizationId}`} passHref>
+          <StyledButton
+            component="a" // Ensure it behaves as a link
+            variant="outlined"
+            startIcon={<Icon icon="mdi:plus" />}
+          >
+            {/* New Project */}
+          </StyledButton>
+        </Link>
+      </Tooltip>
     </Box>
   );
 };
+
 
 export default {
   ChatButton,

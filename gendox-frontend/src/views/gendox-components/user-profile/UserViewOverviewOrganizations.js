@@ -53,6 +53,23 @@ const columns = [
   },
   {
     flex: 0.15,
+    minWidth: 200,
+    headerName: "Projects",
+    field: "Projects",
+    renderCell: ({ row }) => (
+      <Box sx={{ width: "100%" }}>
+        <Typography variant="body2">{row.projects.length}</Typography>
+        <LinearProgress
+          variant="determinate"
+          value={row.projects.length}
+          color={row.progressColor}
+          sx={{ height: 6, mt: 1, borderRadius: "5px" }}
+        />
+      </Box>
+    ),
+  },
+  {
+    flex: 0.15,
     minWidth: 100,
     field: "address",
     headerName: "address",
@@ -69,23 +86,7 @@ const columns = [
       <Typography variant="body2">{row.phone}</Typography>
     ),
   },
-  {
-    flex: 0.15,
-    minWidth: 200,
-    headerName: "Projects",
-    field: "Projects",
-    renderCell: ({ row }) => (
-      <Box sx={{ width: "100%" }}>
-        <Typography variant="body2">{row.projects.length}</Typography>
-        <LinearProgress
-          variant="determinate"
-          value={row.projects.length}
-          color={row.progressColor}
-          sx={{ height: 6, mt: 1, borderRadius: "5px" }}
-        />
-      </Box>
-    ),
-  },
+  
 ];
 
 const UserViewOverviewOrganizations = ({ userData }) => {

@@ -37,7 +37,9 @@ const prodOidcConfig = {
   pkceMethod: 'S256'
 };
 
-let oidcConfig = prodOidcConfig;
+// let oidcConfig = prodOidcConfig;
+// let oidcConfig = localOidcConfig;
+let oidcConfig = devOidcConfig;
 
 // if (process.env.NODE_ENV === 'development') {
 //   oidcConfig = devOidcConfig;
