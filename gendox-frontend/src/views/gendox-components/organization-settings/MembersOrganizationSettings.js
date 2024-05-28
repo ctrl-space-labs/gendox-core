@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { useSelector } from "react-redux";
 import { visuallyHidden } from "@mui/utils";
 import { alpha } from "@mui/material/styles";
+import { useSettings } from "src/@core/hooks/useSettings";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -188,6 +189,8 @@ const EnhancedTableToolbar = (props) => {
 const MembersOrganizationSettings = () => {
   const router = useRouter();
   const { organizationId } = router.query;
+  const { settings } = useSettings();
+  const isDemo = settings.isDemo;
   const organization = useSelector((state) => state.activeOrganization.activeOrganization);
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
@@ -466,14 +469,22 @@ const MembersOrganizationSettings = () => {
         <Divider />
         {showInviteButton ? (
           <CardActions sx={{ justifyContent: "flex-end" }}>
-            <Button
-              type="button"
-              size="large"
-              onClick={handleInviteNewMember}
-              variant="contained"
-            >
-              Invite new member
-            </Button>
+            <Tooltip title={isDemo ? "Feature not available in demo mode" : ""}>
+              <span>                
+                <Button
+                  size="large"
+                  variant="contained"
+                  component="a"
+                  onClick={handleInviteNewMember}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  disabled={isDemo} 
+                >
+                  Invite new members
+                </Button>
+              </span>
+            </Tooltip>   
+            
           </CardActions>
         ) : (
           <CardActions>

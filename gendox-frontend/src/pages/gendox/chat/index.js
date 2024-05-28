@@ -32,7 +32,7 @@ import ChatContent from "src/views/apps/chat/ChatContent";
 
 const AppChat = () => {
   const router = useRouter();
-  const { organizationId } = router.query;
+  const { organizationId, threadId } = router.query;
 
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
@@ -78,9 +78,18 @@ const AppChat = () => {
   }, [dispatch]);
 
   useEffect(() => {
+   
     dispatch(setUserProfile(auth.user));
-    dispatch(fetchChatsContacts({ organizationId, storedToken }));
-  }, [dispatch, organizationId, storedToken]);
+    
+    dispatch(fetchChatsContacts({ organizationId, storedToken })).then(() => {
+      if (threadId) {
+        dispatch(selectChat({ id: threadId, organizationId, storedToken }));        
+      }
+    });
+   
+  }, [dispatch, organizationId, storedToken, threadId]);
+
+  
 
   const handleLeftSidebarToggle = () => setLeftSidebarOpen(!leftSidebarOpen);
   const handleUserProfileLeftSidebarToggle = () =>

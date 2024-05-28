@@ -14,6 +14,7 @@ import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Icon from "src/@core/components/icon";
 import Tooltip from "@mui/material/Tooltip";
+import Link from "next/link";
 import Alert from "@mui/material/Alert";
 import Snackbar from "@mui/material/Snackbar";
 
@@ -119,9 +120,12 @@ const GendoxHome = () => {
           </Box>
           <Box sx={{ display: "flex", alignItems: "center" }}>
           <Tooltip title="Project Settings">
+          <Link href={`/gendox/project-settings?organizationId=${organizationId}&projectId=${projectId}`} passHref>
+
             <IconButton onClick={handleSettingsClick} sx={{ ml: 2, fontSize: "2rem" }}>
               <Icon icon="mdi:cog-outline" fontSize="inherit"/>
             </IconButton>
+            </Link>
             </Tooltip>
             
           </Box>

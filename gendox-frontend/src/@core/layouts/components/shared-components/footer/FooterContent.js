@@ -30,9 +30,9 @@ const FooterContent = () => {
       </Typography>
       {hidden ? null : (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', '& :not(:last-child)': { mr: 4 } }}>
-          <LinkStyled target='_blank' href='https://themeforest.net/licenses/standard'>
+          {/* <LinkStyled target='_blank' href='https://themeforest.net/licenses/standard'>
             License
-          </LinkStyled>
+          </LinkStyled> */}
           
           <LinkStyled
             target='_blank'

@@ -2,6 +2,7 @@
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
+import Link from "next/link";
 
 
 // ** Icon Imports
@@ -32,39 +33,40 @@ const AppBarContent = (props) => {
   // ** Hook
   const auth = useAuth();
   const router = useRouter();
-
-  const handleNavigate = () => {
-    const path = `/gendox/home`;
-    router.push(path);
-  
-  }
+ 
 
   const AppBrand = () => {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          cursor: "pointer",
-          padding: "20px 20px",
-          
-        }}
-        onClick={handleNavigate}
-      >
-        <div
-          style={{
-            width: "30px",
-            height: "30px",
-            backgroundImage: "url('/images/gendoxLogo.svg')",
-            backgroundSize: "20px 20px",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "center",
-          }}
-        />
-        <Typography variant="h6" sx={{ ml: 2 }}>
-          Gendox
-        </Typography>
-      </Box>
+      <Link href="/gendox/home" passHref style={{ textDecoration: 'none' }}>
+        <Box
+          component="a"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            cursor: "pointer",
+            padding: "20px 20px",    
+          }}          
+        >
+          <div
+            style={{
+              width: "30px",
+              height: "30px",
+              backgroundImage: "url('/images/gendoxLogo.svg')",
+              backgroundSize: "20px 20px",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+            }}
+          />
+          <Typography
+            variant="h6"
+            sx={{
+              ml: 2,              
+            }}
+          >
+            Gendox
+          </Typography>
+        </Box>
+      </Link>
     );
   };
 
@@ -92,9 +94,9 @@ const AppBarContent = (props) => {
             <Icon icon="mdi:menu" />
           </IconButton>
         ) : null}
-        {auth.user && !settings.navHidden && (
+        {/* {auth.user && !settings.navHidden && (
           <Autocomplete hidden={hidden} settings={settings} />
-        )}
+        )} */}
       </Box>
       <Box
         className="actions-right"

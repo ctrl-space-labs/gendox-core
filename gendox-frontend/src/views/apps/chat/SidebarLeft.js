@@ -131,6 +131,8 @@ const SidebarLeft = (props) => {
   const handleChatClick = (type, id) => {
     dispatch(selectChat({ id: id, organizationId, storedToken }));
     setActive({ type, id });
+    const newPath = `/gendox/chat?organizationId=${organizationId}&threadId=${id}`;
+    router.push(newPath); 
     if (!mdAbove) {
       handleLeftSidebarToggle();
     }
