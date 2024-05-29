@@ -38,8 +38,8 @@ const prodOidcConfig = {
 };
 
 // let oidcConfig = prodOidcConfig;
-let oidcConfig = localOidcConfig;
-// let oidcConfig = devOidcConfig;
+// let oidcConfig = localOidcConfig;
+let oidcConfig = devOidcConfig;
 
 // if (process.env.NODE_ENV === 'development') {
 //   oidcConfig = devOidcConfig;
