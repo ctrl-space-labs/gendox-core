@@ -9,6 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.commons.codec.binary.Base32;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -316,8 +317,9 @@ public class SecurityUtils {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             // Calculate the hash
             byte[] hashBytes = digest.digest(text.getBytes());
-            // Encode the hash in Base64
-            return Base64.getEncoder().encodeToString(hashBytes);
+            // Encode the hash in Base32
+            Base32 base32 = new Base32();
+            return base32.encodeToString(hashBytes);
         } catch (NoSuchAlgorithmException e) {
             throw new GendoxException("HASHING_ERROR", "An error occurred while hashing the text", HttpStatus.INTERNAL_SERVER_ERROR);
         }
