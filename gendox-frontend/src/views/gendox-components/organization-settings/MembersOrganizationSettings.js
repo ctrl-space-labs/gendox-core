@@ -473,8 +473,7 @@ const MembersOrganizationSettings = () => {
               <span>                
                 <Button
                   size="large"
-                  variant="contained"
-                  component="a"
+                  variant="contained"                  
                   onClick={handleInviteNewMember}
                   target="_blank"
                   rel="noopener noreferrer"

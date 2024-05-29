@@ -14,7 +14,7 @@ const AuthGuard = props => {
   useEffect(
     () => {
       if (!router.isReady) {
-        return
+        router.replace('/')
       }
       if (auth.user === null && !window.localStorage.getItem('userData')) {
         if (router.asPath !== '/') {

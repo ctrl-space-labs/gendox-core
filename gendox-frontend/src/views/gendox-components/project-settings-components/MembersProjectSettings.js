@@ -459,8 +459,7 @@ const MembersProjectSettings = () => {
               <span>                
                 <Button
                   size="large"
-                  variant="contained"
-                  component="a"
+                  variant="contained"                  
                   onClick={handleInviteNewMembers}
                   target="_blank"
                   rel="noopener noreferrer"

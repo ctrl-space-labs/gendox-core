@@ -77,17 +77,7 @@ const ProjectButtons = () => {
             
           ))}
         
-        {/* {buttons.map((button, index) => (
-            <Grid item key={index}>  
-             
-            <Link href={button.href} passHref>           
-              <Button variant='outlined' color='primary' onClick={button.action}>
-              <Icon icon='mdi:plus' />
-              {button.text}
-              </Button>
-              </Link> 
-            </Grid>
-          ))} */}
+        
         </Grid>
       </CardContent>
       <Modal

@@ -50,7 +50,7 @@ const data = {
   currentPlan: "enterprise",
   fullName: "Daisy Patterson",
   email: "gslixby0@abc.net.au",
-  avatar: "/images/avatars/4.png",
+  avatar: "/images/avatars/1.png",
 };
 
 const roleColors = {

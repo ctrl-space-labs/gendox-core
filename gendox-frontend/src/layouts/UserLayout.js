@@ -58,7 +58,7 @@ const UserLayout = ({ children, contentHeightFixed }) => {
     return (
       <Link href="/gendox/home" passHref style={{ textDecoration: 'none' }}>
         <Box
-          component="a"
+          
           sx={{
             display: "flex",
             alignItems: "center",

@@ -36,11 +36,10 @@ const AuthProvider = ({ children }) => {
 
   // New - to test tomorrow
   const handleLogin = () => {
-    userManager.signinRedirect();
-    
+    userManager.signinRedirect();    
   };
 
-  const handleLogout = () => {
+  const handleLogout = () => {    
     // TODO call DELETE /profile/caches
     clearAuthState();
     userManager.signoutRedirect();
@@ -51,17 +50,20 @@ const AuthProvider = ({ children }) => {
     window.localStorage.removeItem(authConfig.user);
     window.localStorage.removeItem(authConfig.storageTokenKeyName);
     window.localStorage.removeItem(authConfig.onTokenExpiration);
+    window.localStorage.removeItem(authConfig.selectedOrganizationId);
+    window.localStorage.removeItem(authConfig.selectedProjectId);
+    window.localStorage.removeItem(authConfig.oidcConfig);
   };
 
-  const loadUser = (user) => {
+  const loadUser = (user) => {    
     setAuthState({ user, isLoading: false });
   };
 
-  const unloadUser = () => {
+  const unloadUser = () => {    
     setAuthState({ user: null, isLoading: false });
   };
 
-  const removeUser = () => {
+  const removeUser = () => {    
     // Here you can clear your application's session and redirect the user to the login page
     userManager.removeUser();
   };
@@ -71,17 +73,14 @@ const AuthProvider = ({ children }) => {
       if (user && !user.expired) {
         setAuthState({ user, isLoading: false });
       }
-    });
+    });    
 
     // Adding an event listener for when new user data is loaded
     userManager.events.addUserLoaded(loadUser);
-
     userManager.events.addUserSignedOut(removeUser);
-
     userManager.events.addUserUnloaded(unloadUser);
 
     return () => {
-      console.log("AuthContext Unmounted");
       userManager.events.removeUserLoaded(loadUser);
       userManager.events.removeUserUnloaded(unloadUser);
       userManager.events.removeUserSignedOut(removeUser);
@@ -90,10 +89,9 @@ const AuthProvider = ({ children }) => {
 
   const loadUserProfileFromAuthState = async (authState) => {
     setLoading(true);
-    if (!authState.user) {
+    if (!authState.user || authState.user === null) {
       setLoading(false);
-      clearAuthState();
-      // router.push("/login");
+      clearAuthState();      
       return;
     }
     let user = authState.user;
@@ -121,7 +119,6 @@ const AuthProvider = ({ children }) => {
         // Add 'role': 'admin' to the userDataResponse.data object
         userDataResponse.data.role = "admin";
         setUser(userDataResponse.data);
-        console.log("userDataResponse.data: ", userDataResponse.data);
         window.localStorage.setItem(
           authConfig.user,
           JSON.stringify(userDataResponse.data)
@@ -156,19 +153,18 @@ const AuthProvider = ({ children }) => {
       })
 
       .catch((userDataError) => {
+        setLoading(false);
         console.error(
           "Error occurred while fetching user data:",
           userDataError
-        );
+        );        
       });
 
     setLoading(false);
   };
 
-
   useEffect(() => {
     // initAuth_old();
-    console.log("AuthContext Mounted");
     return initAuthOIDC();
   }, []);
 
@@ -177,21 +173,21 @@ const AuthProvider = ({ children }) => {
   }, [authState]);
 
   useEffect(() => {
-
     if (user && router.pathname.includes("oidc-callback")) {
-      console.log('User data loaded successfully. Redirecting to the home page...');
+      console.log(
+        "User data loaded successfully. Redirecting to the home page..."
+      );
       window.location.href = "/gendox/home";
     }
   }, [user]);
-
 
   useEffect(() => {
     const { organizationId, projectId } = router.query;
     const storedToken = window.localStorage.getItem(
       authConfig.storageTokenKeyName
     );
+    
 
-    const returnUrl = router.query.returnUrl;
     if (user && user.organizations) {
       const updatedActiveOrganization = user.organizations.find(
         (org) => org.id === organizationId
@@ -225,6 +221,7 @@ const AuthProvider = ({ children }) => {
         }
       }
     }
+    
   }, [user, router]);
 
   const values = {

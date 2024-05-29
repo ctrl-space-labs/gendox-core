@@ -185,7 +185,7 @@ const OrganizationsDropdown = ({ settings }) => {
                 handleOrganizations(organization);
               }}
               selected={organization.id === activeOrganizationId}
-              component="a" // Make it behave like an anchor
+              
             >
               <Box
                 sx={{
