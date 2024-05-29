@@ -67,6 +67,7 @@ public class SecurityConfiguration {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((authz) ->
                         authz
+                                .requestMatchers("/invitations/acceptance").permitAll()
                                 .requestMatchers("/actuator/health").permitAll()
                                 .requestMatchers("/auth/signup").permitAll()
                                 .requestMatchers("/users/login").permitAll()

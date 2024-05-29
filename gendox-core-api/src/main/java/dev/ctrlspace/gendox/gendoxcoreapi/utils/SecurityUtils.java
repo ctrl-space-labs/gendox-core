@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
@@ -11,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -20,6 +22,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.HandlerMapping;
 
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -303,5 +307,19 @@ public class SecurityUtils {
         }
 
         return null;
+    }
+
+
+    public static String calculateSHA256(String text) throws GendoxException {
+        try {
+            // Get an instance of SHA-256 MessageDigest
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            // Calculate the hash
+            byte[] hashBytes = digest.digest(text.getBytes());
+            // Encode the hash in Base64
+            return Base64.getEncoder().encodeToString(hashBytes);
+        } catch (NoSuchAlgorithmException e) {
+            throw new GendoxException("HASHING_ERROR", "An error occurred while hashing the text", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

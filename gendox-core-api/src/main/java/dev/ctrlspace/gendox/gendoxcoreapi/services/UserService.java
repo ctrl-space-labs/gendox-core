@@ -101,8 +101,11 @@ public class UserService implements UserDetailsService {
     }
 
     public User getByEmail(String email) throws GendoxException {
-        return userRepository.findByEmail(email)
+        return getOptionalByEmail(email)
                 .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with email: " + email, HttpStatus.NOT_FOUND));
+    }
+    public Optional<User> getOptionalByEmail(String email) throws GendoxException {
+        return userRepository.findByEmail(email);
     }
 
     /**
@@ -155,6 +158,10 @@ public class UserService implements UserDetailsService {
 
     public Boolean isUserExistByUserName(String userName) throws GendoxException {
         return userRepository.existsByUserName(userName);
+    }
+
+    public Boolean isUserExistByEmail(String email) throws GendoxException {
+        return userRepository.existsByEmail(email);
     }
 
     public User createUser(User user) throws GendoxException {
