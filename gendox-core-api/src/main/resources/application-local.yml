@@ -175,7 +175,8 @@ gendox:
             throttle-limit: 10    # this should be around 10 to not hit the throttle limit of the OpenAI API
             chunk-size: 10
             pageable-size: 1000
-
+  user-invitation:
+    ttl: 86400  # in seconds
 
 
 # AWS
