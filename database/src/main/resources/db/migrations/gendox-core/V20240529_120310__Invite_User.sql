@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS gendox_core.invitations
     id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     invitee_email     TEXT      NOT NULL,
     organization_id   UUID,
+    project_id        UUID,
     user_role_type_id BIGINT,
     token             TEXT      NOT NULL,
     expires_at        TIMESTAMP NOT NULL,

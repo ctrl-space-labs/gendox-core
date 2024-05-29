@@ -41,6 +41,10 @@ public class Invitation {
     private UUID organizationId;
 
     @Basic
+    @Column(name = "project_id", nullable = false)
+    private UUID projectId;
+
+    @Basic
     @Column(name = "expires_at")
     private Instant expiresAt;
     @Basic
@@ -105,6 +109,14 @@ public class Invitation {
         this.organizationId = organization;
     }
 
+    public UUID getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(UUID project) {
+        this.projectId = project;
+    }
+
     public Instant getExpiresAt() {
         return expiresAt;
     }
@@ -166,11 +178,11 @@ public class Invitation {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Invitation that = (Invitation) o;
-        return Objects.equals(id, that.id) && Objects.equals(inviteeEmail, that.inviteeEmail) && Objects.equals(userRoleType, that.userRoleType) && Objects.equals(token, that.token) && Objects.equals(organizationId, that.organizationId) && Objects.equals(expiresAt, that.expiresAt) && Objects.equals(inviterUserId, that.inviterUserId) && Objects.equals(statusType, that.statusType) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy);
+        return Objects.equals(id, that.id) && Objects.equals(inviteeEmail, that.inviteeEmail) && Objects.equals(userRoleType, that.userRoleType) && Objects.equals(token, that.token) && Objects.equals(organizationId, that.organizationId) && Objects.equals(projectId, that.projectId) && Objects.equals(expiresAt, that.expiresAt) && Objects.equals(inviterUserId, that.inviterUserId) && Objects.equals(statusType, that.statusType) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, inviteeEmail, userRoleType, token, organizationId, expiresAt, inviterUserId, statusType, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, inviteeEmail, userRoleType, token, organizationId, projectId, expiresAt, inviterUserId, statusType, createdAt, updatedAt, createdBy, updatedBy);
     }
 }

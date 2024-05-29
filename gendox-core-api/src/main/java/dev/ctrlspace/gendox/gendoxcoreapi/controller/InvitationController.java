@@ -67,6 +67,7 @@ public class InvitationController {
                 invitation.getInviteeEmail(),
                 userId,
                 invitation.getOrganizationId().toString(),
+                invitation.getProjectId().toString(),
                 invitation.getUserRoleType().getName());
     }
 

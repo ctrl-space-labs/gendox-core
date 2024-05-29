@@ -29,6 +29,7 @@ public class UserInvitationService {
     private UserOrganizationService userOrganizationService;
 
     private UserService userService;
+    private ProjectMemberService projectMemberService;
 
     @Value("${gendox.user-invitation.ttl}")
     private long invitationTtl;
@@ -38,11 +39,13 @@ public class UserInvitationService {
     public UserInvitationService(InvitationRepository invitationRepository,
                                  TypeService typeService,
                                  UserOrganizationService userOrganizationService,
-                                 UserService userService) {
+                                 UserService userService,
+                                 ProjectMemberService projectMemberService) {
         this.invitationRepository = invitationRepository;
         this.typeService = typeService;
         this.userOrganizationService = userOrganizationService;
         this.userService = userService;
+        this.projectMemberService = projectMemberService;
     }
 
     public Optional<Invitation> getOptionalInvitationById(UUID id) {
@@ -64,18 +67,19 @@ public class UserInvitationService {
     }
 
 
-    public Invitation inviteUser(String inviteeEmail, UUID inviterUserId, String organizationId, String userRoleName) throws GendoxException {
+    public Invitation inviteUser(String inviteeEmail, UUID inviterUserId, String organizationId, String projectId,  String userRoleName) throws GendoxException {
 
         Optional<User> inviteeUser = userService.getOptionalByEmail(inviteeEmail);
         if (inviteeUser.isPresent() &&
-                userOrganizationService.isUserOrganizationMember(inviteeUser.get().getId(), UUID.fromString(organizationId))) {
-            throw new GendoxException("INVITATION_ALREADY_ACCEPTED", "User with email: " + inviteeEmail + " is already a member of organization with id: " + organizationId, HttpStatus.BAD_REQUEST);
+                projectMemberService.isUserProjectMember(inviteeUser.get().getId(), UUID.fromString(projectId))) {
+            throw new GendoxException("INVITATION_ALREADY_ACCEPTED", "User with email: " + inviteeEmail + " is already a member of project with id: " + projectId, HttpStatus.BAD_REQUEST);
         }
 
         Invitation invitation = new Invitation();
         invitation.setInviteeEmail(inviteeEmail);
 
         invitation.setOrganizationId(UUID.fromString(organizationId));
+        invitation.setProjectId(UUID.fromString(projectId));
 
         invitation.setUserRoleType(typeService.getOrganizationRolesByName(userRoleName));
 
@@ -112,11 +116,20 @@ public class UserInvitationService {
         invitation.setStatusType(typeService.getEmailInvitationStatusByName("ACCEPTED"));
 
         // if user exists, create user-organization. In case of user not existing, user will be created during signup
-        Optional<User> inviteeUser = userService.getOptionalByEmail(inviteeEmail);
-        if (inviteeUser.isPresent() &&
-                !userOrganizationService.isUserOrganizationMember(inviteeUser.get().getId(), invitation.getOrganizationId())) {
-            userOrganizationService.createUserOrganization(inviteeUser.get().getId(), invitation.getOrganizationId(), invitation.getUserRoleType().getName());
+        Optional<User> invitedUser = userService.getOptionalByEmail(inviteeEmail);
+        if (invitedUser.isPresent() &&
+                !userOrganizationService.isUserOrganizationMember(invitedUser.get().getId(), invitation.getOrganizationId())) {
 
+            userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser.get()));
+            userOrganizationService.createUserOrganization(invitedUser.get().getId(), invitation.getOrganizationId(), invitation.getUserRoleType().getName());
+
+        }
+
+        if (invitedUser.isPresent() &&
+                !projectMemberService.isUserProjectMember(invitedUser.get().getId(), invitation.getProjectId())) {
+
+            userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser.get()));
+            projectMemberService.createProjectMember(invitedUser.get().getId(), invitation.getProjectId());
         }
 
         return invitationRepository.save(invitation);
