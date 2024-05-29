@@ -92,6 +92,8 @@ const SidebarLeft = (props) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [hoveredChat, setHoveredChat] = useState(null);
 
+  console.log("store", store)
+
   const groupChatsByDate = (chats) => {
     const today = [];
     const yesterday = [];
@@ -128,9 +130,7 @@ const SidebarLeft = (props) => {
     return { today, yesterday, last7Days, last30Days, older };
   };
 
-  const handleChatClick = (type, id) => {
-    dispatch(selectChat({ id: id, organizationId, storedToken }));
-    setActive({ type, id });
+  const handleChatClick = (type, id) => {    
     const newPath = `/gendox/chat?organizationId=${organizationId}&threadId=${id}`;
     router.push(newPath); 
     if (!mdAbove) {
@@ -138,18 +138,14 @@ const SidebarLeft = (props) => {
     }
   };
 
+ 
+
   useEffect(() => {
-    if (store && store.chats) {
-      if (active !== null) {
-        if (
-          active.type === "contact" &&
-          store?.selectedChat?.contact?.id != null
-        ) {
-          setActive({ type: "chat", id: store.selectedChat.contact.id });
-        }
-      }
+    if (store && store.selectedChat) {
+      setActive({ type: "chat", id: store.selectedChat.contact.threadId });
     }
-  }, [store, active]);
+  }, [store]);
+  
 
   useEffect(() => {
     router.events.on("routeChangeComplete", () => {

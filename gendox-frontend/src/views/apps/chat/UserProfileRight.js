@@ -302,8 +302,7 @@ const UserProfileRight = (props) => {
                   target="_blank"
                 >
                   <Button
-                    variant="contained"
-                    component="a"
+                    variant="contained"                    
                     color="primary"    
                     fullWidth
                   >

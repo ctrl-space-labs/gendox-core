@@ -29,8 +29,7 @@ const ChatButton = () => {
   return (
     <Box mt={3} mb={3}> {/* Add margin top and bottom */}
       <Link href={`/gendox/chat?organizationId=${organizationId}`} passHref>
-        <StyledButton
-          component="a" // Ensure it behaves as a link
+        <StyledButton           
           variant="contained"
           startIcon={<Icon icon="mdi:creation" />}
         >
@@ -53,8 +52,7 @@ const NewProjectButton = () => {
     <Box mt={3} mb={3}> {/* Add margin top and bottom */}
       <Tooltip title="New Project">
         <Link href={`/gendox/create-project?organizationId=${organizationId}`} passHref>
-          <StyledButton
-            component="a" // Ensure it behaves as a link
+          <StyledButton            
             variant="outlined"
             startIcon={<Icon icon="mdi:plus" />}
           >

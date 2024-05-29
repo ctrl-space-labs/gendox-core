@@ -38,8 +38,7 @@ const AppBarContent = (props) => {
   const AppBrand = () => {
     return (
       <Link href="/gendox/home" passHref style={{ textDecoration: 'none' }}>
-        <Box
-          component="a"
+        <Box          
           sx={{
             display: "flex",
             alignItems: "center",

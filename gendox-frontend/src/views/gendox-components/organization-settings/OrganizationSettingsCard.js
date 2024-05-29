@@ -72,8 +72,7 @@ const OrganizationSettingsCard = () => {
                 {/* Use a span to ensure Tooltip works correctly when the button is disabled */}
                 <Button
                   size="large"
-                  variant="contained"
-                  component="a"
+                  variant="contained"                 
                   href="https://www.ctrlspace.dev/"
                   target="_blank"
                   rel="noopener noreferrer"

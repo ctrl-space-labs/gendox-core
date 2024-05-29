@@ -198,7 +198,7 @@ export const addMessage = createAsyncThunk(
       senderId: message.senderId,
       message: message.text,
       sections: message.sections,
-      time: "2024-04-06T10:35:38.052581Z",
+      time: new Date().toISOString(),
       feedback: {
         isSent: true,
         isDelivered: true,
