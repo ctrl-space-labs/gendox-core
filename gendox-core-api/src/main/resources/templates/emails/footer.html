@@ -1,0 +1,4 @@
+<!-- footer.html -->
+<div th:fragment="footer" class="footer">
+    This email was sent to <span th:text="${recipientEmail}">[recipientEmail]</span>, If this was sent by mistake to you, you can contact us at <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}"></a>
+</div>

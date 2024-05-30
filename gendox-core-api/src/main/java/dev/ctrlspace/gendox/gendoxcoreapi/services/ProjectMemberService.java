@@ -57,7 +57,7 @@ public class ProjectMemberService {
         return projectMemberRepository.findAll(ProjectMemberPredicates.build(criteria), pageable).toList();
     }
 
-    public boolean isUserProjectMember(UUID projectId, UUID userId) {
+    public boolean isUserProjectMember(UUID userId, UUID projectId) {
         return projectMemberRepository.existsByProjectIdAndUserId(projectId, userId);
     }
 

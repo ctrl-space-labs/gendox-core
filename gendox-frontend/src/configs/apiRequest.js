@@ -83,4 +83,7 @@ export default {
   getAiModels: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/ai-models`,
 
+  acceptInvitation: (email, token) =>
+    `${url}invitations/acceptance?email=${email}&token=${token}`,
+
 };

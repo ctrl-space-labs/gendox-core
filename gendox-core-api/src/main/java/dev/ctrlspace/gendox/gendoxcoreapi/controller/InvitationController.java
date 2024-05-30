@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.InvitationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserInvitationService;
+import jakarta.mail.MessagingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,7 +54,7 @@ public class InvitationController {
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_ADD_USERS', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("/organizations/{organizationId}/invitations")
-    public Invitation inviteUser(@PathVariable("organizationId") String organizationId, @RequestBody Invitation invitation, Authentication authentication) throws GendoxException {
+    public Invitation inviteUser(@PathVariable("organizationId") String organizationId, @RequestBody Invitation invitation, Authentication authentication) throws GendoxException, MessagingException {
 
         if (invitation.getOrganizationId() == null) {
             invitation.setOrganizationId(UUID.fromString(organizationId));
@@ -62,10 +63,12 @@ public class InvitationController {
             throw new GendoxException("ORGANIZATION_ID_MISMATCH", "Organization id in path variable and in criteria do not match", HttpStatus.BAD_REQUEST);
         }
 
-        UUID userId = UUID.fromString(((UserProfile) authentication.getPrincipal()).getId());
+        UUID inviterUserId = UUID.fromString(((UserProfile) authentication.getPrincipal()).getId());
+        String inviterEmail = ((UserProfile) authentication.getPrincipal()).getEmail();
         return userInvitationService.inviteUser(
                 invitation.getInviteeEmail(),
-                userId,
+                inviterUserId,
+                inviterEmail,
                 invitation.getOrganizationId().toString(),
                 invitation.getProjectId().toString(),
                 invitation.getUserRoleType().getName());
