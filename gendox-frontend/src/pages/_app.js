@@ -101,7 +101,7 @@ const App = props => {
           <title>{`${themeConfig.templateName} App`}</title>
           <meta
             name='description'
-            content={`${themeConfig.templateName} – - – by CTRL+ Space`}
+            content={`${themeConfig.templateName} – by Ctrl+Space Labs`}
           />
           <meta name='keywords' content='Gendox, MUI, Admin Template, React Admin Template' />
           <meta name='viewport' content='initial-scale=1, width=device-width' />

@@ -1,20 +1,22 @@
+<!-- invitationToOrganization.html -->
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <th:block th:replace="emails/head :: head"/>
 <body>
+<div class="bodyClass">
 <div class="container">
     <th:block th:replace="emails/header :: header"/>
     <div class="subtitle">
         <span th:text="${subtitle}">[Subtitle]</span>
     </div>
-    <div class="body">
+    <div class="bodyContent">
         You have been invited to the Organization '<strong><span th:text="${organizationName}">[OrganizationName]</span></strong>'
         by <span th:text="${InviterEmail}">[InviterEmail]</span>.
 
         <br><br>
 
         Click the link below to accept the invitation:<br>
-        <a th:href="${invitationLink}" th:text="${invitationLink}">[InvitationLink]</a>
+        <a th:href="${invitationLink}" class="button-link">Accept Invitation</a>
 
         <br><br>
 
@@ -22,6 +24,7 @@
 
     </div>
     <th:block th:replace="emails/footer :: footer"/>
+</div>
 </div>
 </body>
 </html>
