@@ -114,6 +114,7 @@ gendox:
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
+
   integrations:
 #    poller: 30000 # 30 seconds
     poller: 1800000 # 30 minutes in milliseconds
@@ -123,7 +124,6 @@ gendox:
       sqs:
         wait-time-seconds: 1 #not in use
         visibility-timeout-seconds: 300
-
   models:
     openai:
       ada2:
@@ -153,7 +153,6 @@ gendox:
   moderation:
     message: "Sorry, I can't reply in this message, it contains inappropriate content. If this this not the case, please contact the support team."
 
-
   batch-jobs:
     document-training:
       job:
@@ -176,6 +175,7 @@ gendox:
             chunk-size: 10
             pageable-size: 1000
   user-invitation:
+    accept-url-template: /accept-invitation/?email=%s&token=%s
     ttl: 86400  # in seconds
 
 
