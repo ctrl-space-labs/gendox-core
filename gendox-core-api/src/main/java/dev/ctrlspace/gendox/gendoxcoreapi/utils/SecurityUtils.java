@@ -55,7 +55,7 @@ public class SecurityUtils {
         return authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(grantedAuthority -> {
                     String authority = grantedAuthority.getAuthority();
-                    return authority.endsWith("_USER");
+                    return authority.contains(UserNamesConstants.GENDOX_USER);
                 });
     }
 

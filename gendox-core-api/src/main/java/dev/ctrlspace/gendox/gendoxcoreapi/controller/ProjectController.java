@@ -5,7 +5,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectMemberConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.ProjectOrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectMemberDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
@@ -78,7 +81,7 @@ public class ProjectController {
     @Operation(summary = "Get all projects",
             description = "Retrieve a list of all projects based on the provided criteria. The user must have the necessary permissions to access these projects.")
 
-    public Page<Project> getAllProjects(@Valid ProjectCriteria criteria, @PathVariable("organizationId") String organizationId, Pageable pageable) throws GendoxException {
+    public Page<Project> getAllProjects(@Valid ProjectCriteria criteria, @PathVariable("organizationId") String organizationId, Pageable pageable, Authentication authentication) throws GendoxException {
         // override requested org id with the path variable
         criteria.setOrganizationId(organizationId);
         if (pageable == null) {
@@ -87,6 +90,16 @@ public class ProjectController {
         if (pageable.getPageSize() > 100) {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 100", HttpStatus.BAD_REQUEST);
         }
+
+        if (securityUtils.isUser()) {
+            UserProfile userProfile = (UserProfile) authentication.getPrincipal();
+//            find user profile organization by organization id
+            OrganizationUserDTO organizationUserDTO = userProfile.getOrganizations().stream().filter(org -> org.getId().equals(organizationId)).findFirst().orElseThrow(() -> new GendoxException("ORGANIZATION_NOT_FOUND", "Organization not found", HttpStatus.NOT_FOUND));
+//            add project ids to criteria
+            organizationUserDTO.getProjects().stream().map(ProjectOrganizationDTO::getId).forEach(projectId -> criteria.getProjectIdIn().add(projectId));
+
+        }
+
         return projectService.getAllProjects(criteria, pageable);
     }
 
