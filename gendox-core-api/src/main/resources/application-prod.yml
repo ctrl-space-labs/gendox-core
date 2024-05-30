@@ -101,7 +101,6 @@ rsa:
   #private-key: classpath:.env/local/local-non-production-use-private_key.pem
   private-key: ${RSA_KEY_PATH}
 
-
 gendox:
   domains:
     frontend: https://gendox.ctrlspace.dev
@@ -114,6 +113,7 @@ gendox:
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
+
   integrations:
 #    poller: 30000 # 30 seconds
     poller: 1800000 # 30 minutes in milliseconds
@@ -123,7 +123,6 @@ gendox:
       sqs:
         wait-time-seconds: 1 #not in use
         visibility-timeout-seconds: 300
-
   models:
     openai:
       ada2:
@@ -176,6 +175,7 @@ gendox:
             chunk-size: 10
             pageable-size: 1000
   user-invitation:
+    accept-url-template: /accept-invitation/?email=%s&token=%s
     ttl: 86400  # in seconds
 
 
