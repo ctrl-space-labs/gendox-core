@@ -107,7 +107,7 @@ public class CommonCommandUtility {
             }
 
             // If the user is not a project member, add them to the project
-            if (!projectMemberService.isUserProjectMember(project.getId(), user.getId())) {
+            if (!projectMemberService.isUserProjectMember(user.getId(), project.getId())) {
                 projectMemberService.createProjectMember(user.getId(), project.getId());
                 logger.debug("user {} becomes project {} member ", user.getName(), project.getName());
             }

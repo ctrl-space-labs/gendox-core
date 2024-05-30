@@ -117,7 +117,7 @@ public class ProjectAgentService {
             projectAgent.setPrivateAgent(true);
         }
         if (projectAgent.getSemanticSearchModel() == null) {
-            projectAgent.setSemanticSearchModel(aiModelService.getByName(AiModelConstants.ADA2_MODEL));
+            projectAgent.setSemanticSearchModel(aiModelService.getByName(AiModelConstants.ADA_3_SMALL));
         }
         if (projectAgent.getCompletionModel() == null) {
             projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_3_5_TURBO_MODEL));

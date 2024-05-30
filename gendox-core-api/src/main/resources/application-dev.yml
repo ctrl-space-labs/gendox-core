@@ -9,6 +9,19 @@ logging:
     dev.ctrlspace: DEBUG
     org.springframework: INFO
 spring:
+  mail:
+    host: ${GENDOX_SPRING_EMAIL_HOST:no-env-variable}
+    port: ${GENDOX_SPRING_EMAIL_PORT:no-env-variable}
+    username: ${GENDOX_SPRING_EMAIL_USERNAME:no-env-variable}
+    password: ${GENDOX_SPRING_EMAIL_PASSWORD:no-env-variable}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
   cache:
     type: caffeine
     caffeine:
@@ -25,7 +38,7 @@ spring:
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
     hikari:
-      maximum-pool-size: 100
+      maximum-pool-size: 50
       minimum-idle: 10
 #  datasource:
 #    url: jdbc:postgresql://localhost:5432/postgres
@@ -90,6 +103,11 @@ rsa:
 
 
 gendox:
+  domains:
+    frontend: https://dev.gendox.ctrlspace.dev
+
+  emails:
+    contact-email: contact@ctrlspace.dev
   documents:
     upload-dir: s3://gendox.organization.documents.dev
 #    upload-dir: file:c:\\Users\\sekas\\gendox-documents
