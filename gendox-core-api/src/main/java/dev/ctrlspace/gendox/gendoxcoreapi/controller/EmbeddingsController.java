@@ -135,6 +135,7 @@ public class EmbeddingsController {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
         }
 
+        message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
 
         List<DocumentInstanceSection> instanceSections = new ArrayList<>();
