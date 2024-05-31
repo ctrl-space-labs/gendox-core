@@ -131,7 +131,7 @@ public class EmbeddingsController {
         if (pageable == null) {
             pageable = PageRequest.of(0, 5);
         }
-        if (pageable.getPageSize() > 5) {
+        if (pageable.getPageSize() > 20) {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
         }
 
