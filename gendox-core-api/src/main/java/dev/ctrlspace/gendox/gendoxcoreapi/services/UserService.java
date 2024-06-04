@@ -170,8 +170,8 @@ public class UserService implements UserDetailsService {
             user.setUserType(typeService.getUserTypeByName("GENDOX_USER"));
         }
 
-        user.setEmail(user.getEmail().toLowerCase());
-        user.setUserName(user.getUserName().toLowerCase());
+        user.setEmail(user.getEmail() != null ? user.getEmail().toLowerCase() : null);
+        user.setUserName(user.getUserName() != null ? user.getUserName().toLowerCase() : null);
 
         user = userRepository.save(user);
         return user;
