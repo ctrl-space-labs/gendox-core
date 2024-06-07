@@ -2,17 +2,18 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import documentService from "src/gendox-sdk/documentService";
 
 // Define an async thunk for fetching an organization by ID
-export const fetchDocumentById = createAsyncThunk(
-  "activeDocument/fetchByIdStatus",
-  async ({ organizationId, projectId, documentId, storedToken }, thunkAPI) => {
+export const fetchDocument = createAsyncThunk(
+  "activeDocument/fetchDocument",
+  async ({ documentId, storedToken }, thunkAPI) => {    
     try {
-      const response = await documentService.getDocumentById(
-        organizationId,
-        projectId,
+      const documentPromise = await documentService.getDocumentById(        
         documentId,
         storedToken
       );
-      return response.data;
+
+      const documentData = await documentPromise;
+      return { document: documentData.data, sections: documentData.data.documentInstanceSections};
+      
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response.data);
     }
@@ -21,7 +22,8 @@ export const fetchDocumentById = createAsyncThunk(
 
 // Define the initial state
 const initialActiveDocumentState = {
-  activeDocument: {},
+  document: {},
+  sections: [],
   error: null,
 };
 
@@ -34,13 +36,14 @@ const activeDocumentSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchDocumentById.pending, (state) => {
+      .addCase(fetchDocument.pending, (state) => {
         state.error = null;
       })
-      .addCase(fetchDocumentById.fulfilled, (state, action) => {
-        state.activeDocument = action.payload;
+      .addCase(fetchDocument.fulfilled, (state, action) => {
+        state.document = action.payload.document;
+        state.sections = action.payload.sections;
       })
-      .addCase(fetchDocumentById.rejected, (state, action) => {
+      .addCase(fetchDocument.rejected, (state, action) => {
         state.error = action.payload;
       });
   },

@@ -1,10 +1,13 @@
 // const url = "http://localhost:5000/gendox/api/v1/"; // Local Environment
-//const url= 'https://gendox.ctrlspace.dev/gendox/api/v1/' // Production Environment (AWS)
+//const url= 'https://gendox-api.ctrlspace.dev/gendox/api/v1/' // Production Environment (AWS)
 // const url= 'http://localhost:8080/gendox/api/v1/' // Local Environment
 const url = 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/' // Development Environment (Hetzner)
 
 export default {
   getProfile: url + "profile",
+  deleteProfileCaches: () => `${url}profile/caches`,
+
+  getAllUsers:() => `${url}users`,
 
   getProjectById: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}`,
@@ -14,7 +17,7 @@ export default {
   getDocumentsByProject: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents`,
 
-  getUsersInOrganizationByOrgId: (organizationId, projectId) =>
+  getUsersInOrganizationByOrgId: (organizationId) =>
     `${url}organizations/${organizationId}/users`,
 
   getAllProjectMembers: (organizationId, projectId) =>
@@ -23,12 +26,25 @@ export default {
   updateProject: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}`,
 
+  updateOrganization: (organizationId) =>
+    `${url}organizations/${organizationId}`,
+
+  createProject: (organizationId) =>
+    `${url}organizations/${organizationId}/projects`,
+
+  createOrganization: () => `${url}organizations`,
+
   postCompletionModel: (projectId) =>
     `${url}messages/semantic-completion?projectId=${projectId}`,
 
+  // getThreadsByCriteria: (projectIdIn) => {
+  //   const projectIds = projectIdIn.join(",");
+  //   return `${url}threads?projectIdIn=${projectIds}`;
+  // },
+
   getThreadsByCriteria: (projectIdIn) => {
     const projectIds = projectIdIn.join(",");
-    return `${url}threads?projectIdIn=${projectIds}`;
+    return `${url}threads?projectIdIn=${projectIds}&size=100&sort=createdAt,desc`;
   },
 
   getThreadMessagesByCriteria: (
@@ -39,11 +55,12 @@ export default {
   ) =>
     `${url}threads/${threadId}/messages?page=${page}&size=${size}&sort=${sort}`,
 
-  documentSections: (organizationId, projectId, documentId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}/sections`,
+  documentSections: (documentId) => `${url}documents/${documentId}/sections`,
 
-  getDocumentById: (organizationId, projectId, documentId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}`,
+  documentSection: (documentId, sectionId) =>
+    `${url}documents/${documentId}/sections/${sectionId}`,
+
+  getDocumentById: (documentId) => `${url}documents/${documentId}`,
 
   uploadDocument: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,
@@ -57,11 +74,16 @@ export default {
   addProjectMember: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/members`,
 
+  addOrganizationMember: (organizationId) =>
+    `${url}organizations/${organizationId}/users`,
+
   getAiModelByCategory: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/ai-models/categories`,
 
   getAiModels: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/ai-models`,    
+    `${url}organizations/${organizationId}/projects/${projectId}/ai-models`,
 
+  acceptInvitation: (email, token) =>
+    `${url}invitations/acceptance?email=${email}&token=${token}`,
 
 };

@@ -1,22 +1,20 @@
 // ** React Imports
 import { useRef, useEffect } from "react";
 
+import { formatDistanceToNow, parseISO } from "date-fns";
+
 import { useDispatch } from "react-redux";
 
 // ** MUI Imports
 import Box from "@mui/material/Box";
 import { styled } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
-
+import Link from "@mui/material/Link";
 import { useRouter } from "next/router";
-import { fetchProject } from "src/store/apps/activeProject/activeProject";
-import { fetchDocumentById } from "src/store/apps/activeDocument/activeDocument";
+
 
 // ** Icon Imports
 import Icon from "src/@core/components/icon";
-import authConfig from "src/configs/auth";
-
 
 // ** Third Party Components
 import PerfectScrollbarComponent from "react-perfect-scrollbar";
@@ -26,8 +24,7 @@ import CustomAvatar from "src/@core/components/mui/avatar";
 
 // ** Utils Imports
 import { getInitials } from "src/@core/utils/get-initials";
-
-
+import GendoxMarkdownRenderer from "../../gendox-components/markdown-renderer/GendoxMarkdownRenderer";
 
 const PerfectScrollbar = styled(PerfectScrollbarComponent)(({ theme }) => ({
   padding: theme.spacing(5),
@@ -36,11 +33,10 @@ const PerfectScrollbar = styled(PerfectScrollbarComponent)(({ theme }) => ({
 const ChatLog = (props) => {
   // ** Props
   const { data, hidden } = props;
-  const dispatch = useDispatch();
   const projectId = data.contact.projectId;
-  const router = useRouter();
-  const { organizationId, projectIdFromRouter } = router.query;
+  
 
+  
   // ** Ref
   const chatArea = useRef(null);
 
@@ -135,27 +131,7 @@ const ChatLog = (props) => {
     }
   };
 
-  const handleMessageSectionClick = (documentId) => {
-    const path = `/gendox/document-instance?organizationId=${organizationId}&documentId=${documentId}`;
-    const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
-    dispatch(
-      fetchProject({
-        organizationId: organizationId,
-        projectId: projectId,
-        storedToken
-      })
-    );
-    dispatch(
-      fetchDocumentById({
-        organizationId: organizationId,
-        projectId: projectId,
-        documentId: documentId,
-        storedToken
-      })
-    );
-
-    router.push(path);
-  };
+  
 
   useEffect(() => {
     if (data && data.chat && data.chat.chat.length) {
@@ -190,6 +166,8 @@ const ChatLog = (props) => {
                 ml: isSender ? 4 : undefined,
                 mr: !isSender ? 4 : undefined,
               }}
+              // src="/images/gendoxLogo.svg"
+              // alt="Gendox Logo"
               {...(data.contact.avatar && !isSender
                 ? {
                     src: data.contact.avatar,
@@ -214,7 +192,10 @@ const ChatLog = (props) => {
             sx={{ maxWidth: ["calc(100% - 5.75rem)", "75%", "65%"] }}
           >
             {item.messages.map((chat, index, { length }) => {
-              const time = new Date(chat.time);
+              // const time = new Date(chat.time);
+              const formattedTime = formatDistanceToNow(parseISO(chat.time), {
+                addSuffix: true,
+              });
 
               return (
                 <Box key={index} sx={{ "&:not(:last-of-type)": { mb: 3.5 } }}>
@@ -237,23 +218,36 @@ const ChatLog = (props) => {
                           : "background.paper",
                       }}
                     >
-                      {chat.msg}
+                      {/*{chat.msg}*/}
+                      <GendoxMarkdownRenderer markdownText={chat.msg} />
                     </Typography>
                     {chat.sections && chat.sections.length > 0 ? (
                       <Box sx={{ display: "flex", mt: 1 }}>
                         {chat.sections.map((messageSection, idx) => (
-                          <Button
+                          <Link
                             key={idx}
-                            sx={{ ml: idx !== 0 ? 1 : 0, fontSize: "0.75rem" }}
-                            onClick={() =>
-                              handleMessageSectionClick(
-                                messageSection.documentId
-                              )
-                            }
+                            href={`/gendox/document-instance/?documentId=${messageSection.documentId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{
+                              ml: { xs: 1, sm: 2, md: idx !== 0 ? 5 : 0 },                              
+                              color: isSender ? "common.white" : "primary.main",
+                              textDecoration: "none",
+                              "&:hover": {
+                                textDecoration: "underline",
+                                backgroundColor: isSender
+                                  ? "primary.dark"
+                                  : "secondary.light",
+                                color: "common.white",
+                              },
+                              p: 1,
+                              borderRadius: 1,
+                              flexGrow: 1, 
+                              textAlign: "center",
+                            }}
                           >
-                            {" "}
                             Link-{idx + 1}
-                          </Button>
+                          </Link>
                         ))}
                       </Box>
                     ) : null}
@@ -272,13 +266,8 @@ const ChatLog = (props) => {
                         variant="caption"
                         sx={{ color: "text.disabled" }}
                       >
-                        {time
-                          ? new Date(time).toLocaleString("en-US", {
-                              hour: "numeric",
-                              minute: "numeric",
-                              hour12: true,
-                            })
-                          : null}
+                        {" "}
+                        {formattedTime ? formattedTime : null}
                       </Typography>
                     </Box>
                   ) : null}

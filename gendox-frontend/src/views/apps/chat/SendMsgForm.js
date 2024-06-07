@@ -28,7 +28,7 @@ const Form = styled('form')(({ theme }) => ({
 
 const SendMsgForm = props => {
   // ** Props
-  const { store, dispatch, sendMsg } = props
+  const { store, dispatch, sendMsg, organizationId } = props
 
   // ** State
   const [msg, setMsg] = useState('')
@@ -36,7 +36,7 @@ const SendMsgForm = props => {
   const handleSendMsg = e => {
     e.preventDefault()
     if (store && store.selectedChat && msg.trim().length) {
-      dispatch(sendMsg({ ...store.selectedChat, message: msg }))
+      dispatch(sendMsg({ ...store.selectedChat, message: msg, organizationId }))
     }
     setMsg('')
   }
@@ -54,14 +54,7 @@ const SendMsgForm = props => {
             sx={{ '& .MuiOutlinedInput-input': { pl: 0 }, '& fieldset': { border: '0 !important' } }}
           />
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <IconButton size='small' sx={{ mr: 1.5, color: 'text.primary' }}>
-            <Icon icon='mdi:microphone' fontSize='1.375rem' />
-          </IconButton>
-          <IconButton size='small' component='label' htmlFor='upload-img' sx={{ mr: 2.75, color: 'text.primary' }}>
-            <Icon icon='mdi:attachment' fontSize='1.375rem' />
-            <input hidden type='file' id='upload-img' />
-          </IconButton>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>          
           <Button type='submit' variant='contained'>
             Send
           </Button>

@@ -44,9 +44,6 @@ const AiAgentProjectSettings = () => {
   const project = useSelector((state) => state.activeProject.projectDetails);
   const { id: projectId, organizationId } = project;
 
-  
-
-  
   // State for AI models categorized
   const [semanticModels, setSemanticModels] = useState([]);
   const [completionModels, setCompletionModels] = useState([]);
@@ -120,11 +117,17 @@ const AiAgentProjectSettings = () => {
           projectId,
           storedToken
         );
-        
+
         // Categorize AI models
-        const semantic = aiModelsResponse.data.filter(model => model.aiModelType.name === "SEMANTIC_SEARCH_MODEL");
-        const completion = aiModelsResponse.data.filter(model => model.aiModelType.name === "COMPLETION_MODEL");
-        const moderation = aiModelsResponse.data.filter(model => model.aiModelType.name === "MODERATION_MODEL");
+        const semantic = aiModelsResponse.data.filter(
+          (model) => model.aiModelType.name === "SEMANTIC_SEARCH_MODEL"
+        );
+        const completion = aiModelsResponse.data.filter(
+          (model) => model.aiModelType.name === "COMPLETION_MODEL"
+        );
+        const moderation = aiModelsResponse.data.filter(
+          (model) => model.aiModelType.name === "MODERATION_MODEL"
+        );
 
         setSemanticModels(semantic);
         setCompletionModels(completion);
@@ -200,15 +203,13 @@ const AiAgentProjectSettings = () => {
         },
       };
 
-      
-
       const response = await projectService.updateProject(
         organizationId,
         projectId,
         updatedProjectPayload,
         storedToken
       );
-      
+
       setOpenSnackbar(true);
       setSnackbarMessage("Project updated successfully!");
       setSnackbarSeverity("success");
@@ -316,54 +317,97 @@ const AiAgentProjectSettings = () => {
               </Typography>
             </Grid>
 
+
+            
             <Grid item xs={12} sm={6}>
-              <TextField
-                id="max-tokens"
-                label="Max Tokens"
-                type="number"
-                defaultValue={maxToken}
-                onChange={handleMaxTokenChange}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">Tokens</InputAdornment>
-                  ),
-                }}
-              />
+              <Grid container spacing={4}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  id="max-tokens"
+                  label="Max Tokens"
+                  type="number"
+                  defaultValue={maxToken}
+                  onChange={handleMaxTokenChange}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">Tokens</InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  id="temperature"
+                  label="Temperature"
+                  type="number"
+                  defaultValue={temperature}
+                  onChange={handleTemperatureChange}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">temps °C</InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  id="top-p"
+                  label="Top p"
+                  type="number"
+                  defaultValue={topP}
+                  onChange={handleTopPChange}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">top P's</InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}></Grid>
+
+              <Grid item xs={12} sm={6} sx={{ mb: 15 }}>
+                <FormControlLabel
+                  label="moderation-check"
+                  control={
+                    <Checkbox
+                      checked={moderationCheck}
+                      onChange={handleModerationCheckChange}
+                      defaultChecked
+                      name="basic-checked"
+                    />
+                  }
+                />
+              </Grid>
+
+              {moderationCheck && (
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel id="moderation">Moderation</InputLabel>
+                    <Select
+                      label="moderation"
+                      value={moderationModel}
+                      id="moderation"
+                      labelId="moderation"
+                      onChange={handleModerationModelChange}
+                    >
+                      {moderationModels.map((model) => (
+                        <MenuItem key={model.id} value={model.name}>
+                          {model.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
+            </Grid>
             </Grid>
 
             <Grid item xs={12} sm={6}>
               <TextField
-                id="temperature"
-                label="Temperature"
-                type="number"
-                defaultValue={temperature}
-                onChange={handleTemperatureChange}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">temps °C</InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                id="top-p"
-                label="Top p"
-                type="number"
-                defaultValue={topP}
-                onChange={handleTopPChange}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">top P's</InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                rows={4}
+              fullWidth
+                rows={10}
                 multiline
                 label="Agent Behavior"
                 id="agent-behavior"
@@ -372,37 +416,6 @@ const AiAgentProjectSettings = () => {
               />
             </Grid>
 
-            <Grid item xs={12} sm={6} sx={{ mb: 15 }}>
-              <FormControlLabel
-                label="moderation-check"
-                control={
-                <Checkbox 
-                checked={moderationCheck}
-                onChange={handleModerationCheckChange}
-                defaultChecked name="basic-checked" />}
-              />
-            </Grid>
-
-            {moderationCheck && (
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel id="moderation">Moderation</InputLabel>
-                  <Select
-                    label="moderation"
-                    value={moderationModel}
-                    id="moderation"
-                    labelId="moderation"
-                    onChange={handleModerationModelChange}
-                  >
-                    {moderationModels.map((model) => (
-                      <MenuItem key={model.id} value={model.name}>
-                        {model.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            )}
             {/*******************   3 Access ******************/}
             <Grid item xs={12}>
               <Divider sx={{ mb: "0 !important" }} />

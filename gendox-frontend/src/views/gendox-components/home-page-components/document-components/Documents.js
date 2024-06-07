@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { formatDistanceToNow, parseISO } from 'date-fns';
-
+import React, { useState, useEffect } from "react";
+import { formatDistanceToNow, parseISO } from "date-fns";
 
 // ** MUI Imports
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Grid from "@mui/material/Grid";
 import { styled } from "@mui/material/styles";
-import { Button } from '@mui/material';
-import Divider from '@mui/material/Divider'
-
+import { Button } from "@mui/material";
+import Divider from "@mui/material/Divider";
 
 // ** Next Import
 import Link from "next/link";
@@ -18,46 +16,50 @@ import Link from "next/link";
 import Icon from "src/@core/components/icon";
 import CustomAvatar from "src/@core/components/mui/avatar";
 
-import { useSelector } from "react-redux";
-import { formatDocumentTitle } from 'src/utils/documentUtils';
+import { useSelector, useDispatch } from "react-redux";
+import { useRouter } from "next/router";
+import { formatDocumentTitle } from "src/utils/documentUtils";
+import authConfig from "src/configs/auth";
 
-
-
-const Documents = ({ documents }) => {  
-  const { projectDetails, projectMembers } = useSelector((state) => state.activeProject);
+const Documents = ({ documents }) => {
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const { projectDetails, projectMembers } = useSelector(
+    (state) => state.activeProject
+  );
   const { id: projectId, organizationId } = projectDetails;
   const [showAll, setShowAll] = useState(false);
-
-  
+  const storedToken = localStorage.getItem(authConfig.storageTokenKeyName);
 
   useEffect(() => {
-    setShowAll(false);  
+    setShowAll(false);
   }, [projectDetails]);
 
   const toggleShowAll = () => {
-    setShowAll(prev => !prev);  
+    setShowAll((prev) => !prev);
   };
 
   if (documents.length === 0) {
     return (
-      <Box sx={{ m: 2, textAlign: 'center' }}>
+      <Box sx={{ m: 2, textAlign: "center" }}>
         <Typography variant="subtitle1">No documents found.</Typography>
       </Box>
     );
   }
 
-  const renderDocuments = () => {   
-    
+  const renderDocuments = () => {
     const visibleDocuments = showAll ? documents : documents.slice(0, 3);
-    
-      return visibleDocuments.map(document => {        
-        const documentAuthor = projectMembers.find(
-          (projMem) => projMem.user.id === document.createdBy
-        );
-        const relativeDate = formatDistanceToNow(parseISO(document.createAt), { addSuffix: true });       
 
-        return (
-          <Grid item xs={12} sm={6} md={4} key={document.id}>
+    return visibleDocuments.map((document) => {
+      const documentAuthor = projectMembers.find(
+        (projMem) => projMem.user.id === document.createdBy
+      );
+      const relativeDate = formatDistanceToNow(parseISO(document.createAt), {
+        addSuffix: true,
+      });
+
+      return (
+        <Grid item xs={12} sm={6} md={4} key={document.id}>
           <Box
             sx={{
               p: 5,
@@ -68,7 +70,6 @@ const Documents = ({ documents }) => {
               flexDirection: "column",
               alignItems: "flex-start",
               backgroundColor: "background.paper",
-              
             }}
           >
             <Box sx={{ mb: 5, display: "flex", alignItems: "center" }}>
@@ -82,13 +83,14 @@ const Documents = ({ documents }) => {
               <Typography
                 variant="h6"
                 component={Link}
-                href={`/gendox/document-instance?organizationId=${organizationId}&documentId=${document.id}`}
+                href={`/gendox/document-instance?documentId=${document.id}`}
                 sx={{
                   fontWeight: 600,
-                  textDecoration: "none",                  
+                  textDecoration: "none",
                   "&:hover": { color: "primary.main" },
+                  cursor: "pointer",
                 }}
-              >                
+              >
                 {formatDocumentTitle(document.remoteUrl)}
               </Typography>
             </Box>
@@ -101,31 +103,31 @@ const Documents = ({ documents }) => {
                 "& li": { mb: 2, color: "primary.main" },
               }}
             >
-              
               <li>
                 <Typography
                   // component={Link}
                   sx={{ color: "inherit", textDecoration: "none" }}
-                  // href={`/gendox/document-instance?organizationId=${organizationId}&documentId=${document.id}`}
-                >                  
-                  {documentAuthor ? documentAuthor.user.name : 'Unknown Author'}
+                  // href={`/gendox/document-instance?documentId=${document.id}`}
+                >
+                  {documentAuthor ? documentAuthor.user.name : "Unknown Author"}
                 </Typography>
               </li>
               <li>
                 <Typography
-                  // component={Link}
                   sx={{ color: "inherit", textDecoration: "none" }}
-                  // href={`/gendox/document-instance?organizationId=${organizationId}&documentId=${document.id}`}
-                >                  
-                  {documentAuthor ? documentAuthor.user.email : 'Unknown E-mail'}
+                  // component={Link}
+                  // href={`/gendox/document-instance?documentId=${document.id}`}
+                >
+                  {documentAuthor
+                    ? documentAuthor.user.email
+                    : "Unknown E-mail"}
                 </Typography>
               </li>
-              
             </Box>
 
             <Typography
               // component={Link}
-              // href={`/gendox/document-instance?organizationId=${organizationId}&documentId=${document.id}`}
+              // href={`/gendox/document-instance?documentId=${document.id}`}
               sx={{
                 mt: "auto",
                 textDecoration: "none",
@@ -136,21 +138,31 @@ const Documents = ({ documents }) => {
             </Typography>
           </Box>
         </Grid>
-        )
-      })
-  }
-
+      );
+    });
+  };
 
   return (
-    <Grid container spacing={6}>              
-     {renderDocuments()}
-     {documents.length > 3 &&  (  
-        <Grid item xs={12} style={{ textAlign: 'center' }}>
-          <Divider sx={{ my: theme => {theme.spacing(3)}  }} />
-        <Button onClick={toggleShowAll} endIcon={<Icon icon={showAll ? "mdi:chevron-up" : "mdi:chevron-down"} />}>
-          {showAll ? '' : ''}
-        </Button>
-      </Grid>
+    <Grid container spacing={6}>
+      {renderDocuments()}
+      {documents.length > 3 && (
+        <Grid item xs={12} style={{ textAlign: "center" }}>
+          <Divider
+            sx={{
+              my: (theme) => {
+                theme.spacing(3);
+              },
+            }}
+          />
+          <Button
+            onClick={toggleShowAll}
+            endIcon={
+              <Icon icon={showAll ? "mdi:chevron-up" : "mdi:chevron-down"} />
+            }
+          >
+            {showAll ? "" : ""}
+          </Button>
+        </Grid>
       )}
     </Grid>
   );

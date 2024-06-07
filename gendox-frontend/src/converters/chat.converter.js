@@ -1,3 +1,4 @@
+
 /**
  * Converts a Gendox user profile to a chat user profile.
  *
@@ -27,20 +28,20 @@ const toChatUserProfile = (gendoxUserProfile) => {
  * @returns {ChatContact} The converted chat contact.
  */
 const projectToContact = (project) => {
-
+    const projectAgent = project.projectAgent || {};
+    
     return {
-        id: project.projectAgent.userId,
-        userId: project.projectAgent.userId,
-        agentId: project.projectAgent.id,
-        projectId: project.id,
-        fullName: project.projectAgent.agentName,
+        id: projectAgent.userId || '',
+        userId: projectAgent.userId || '',
+        agentId: projectAgent.id || '',
+        projectId: project.id || '',
+        fullName: projectAgent.agentName || 'Unknown Agent',
         role: "Agent",
-        about: project.description,
+        about: project.description || 'No description available',
         avatar: null,
         status: 'online'
-    }
-
-}
+      };
+    };
 
 /**
  * Converts a Gendox thread to a chat entry. get the array of Chat Contacts
@@ -51,17 +52,17 @@ const projectToContact = (project) => {
 const gendoxThreadToChatEntry = (thread, contacts) => {
 // find the contact where the id is in any member of the thread
     let contact = contacts.find(contact => thread.chatThreadMembers.some(member => member.userId === contact.userId));
-
+    
         return {
             ...contact,
             id: thread.id,
             threadId: thread.id,
             chat: {
                 lastMessage: {
-                    message: 'A message',
+                    message: thread.name,
                     time: thread.updatedAt,
                 },
-                "unseenMsgs": 2
+                "unseenMsgs": 0,
             }
         }
 }

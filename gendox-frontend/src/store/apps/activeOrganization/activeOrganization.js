@@ -2,7 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import organizationService from "src/gendox-sdk/organizationService";
 
 // Define an async thunk for fetching an organization by ID
-export const fetchOrganizationById = createAsyncThunk(
+export const fetchOrganization = createAsyncThunk(
   "activeOrganization/fetchByIdStatus",
   async ({ organizationId, storedToken }, thunkAPI) => {
     try {
@@ -33,13 +33,13 @@ const activeOrganizationSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchOrganizationById.pending, (state) => {
+      .addCase(fetchOrganization.pending, (state) => {
         state.error = null;
       })
-      .addCase(fetchOrganizationById.fulfilled, (state, action) => {
+      .addCase(fetchOrganization.fulfilled, (state, action) => {
         state.activeOrganization = action.payload;
       })
-      .addCase(fetchOrganizationById.rejected, (state, action) => {
+      .addCase(fetchOrganization.rejected, (state, action) => {
         state.error = action.payload;
       });
   },

@@ -41,6 +41,7 @@ public class DocumentSectionService {
     private MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter;
 
 
+
     @Lazy
     @Autowired
     public void setEmbeddingService(EmbeddingService embeddingService) {
@@ -122,6 +123,8 @@ public class DocumentSectionService {
             sections.add(section);
         }
 
+        sections = documentInstanceSectionRepository.saveAll(sections);
+
         return sections;
     }
 
@@ -148,8 +151,41 @@ public class DocumentSectionService {
         section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
 
         // take moderation check
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
-        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
+//        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
+//        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
+
+        //create metadata
+        section.setDocumentSectionMetadata(createMetadata(section));
+//        // sava section
+//        section = documentInstanceSectionRepository.save(section);
+
+
+        return section;
+    }
+
+    public DocumentInstanceSection createNewSection(DocumentInstance documentInstance, String fileContent, String sectionTitle) throws GendoxException {
+        Integer sectionOrder =2;
+        DocumentInstanceSection section = new DocumentInstanceSection();
+        // create section's metadata
+        DocumentSectionMetadata metadata = new DocumentSectionMetadata();
+        metadata.setDocumentSectionTypeId(typeService.getDocumentTypeByName("FIELD_TEXT").getId());
+        metadata.setTitle(sectionTitle);
+        metadata.setSectionOrder(sectionOrder);
+
+        section.setDocumentSectionMetadata(metadata);
+        section.setSectionValue(fileContent);
+        section.setDocumentInstance(documentInstance);
+
+        String fileName = getFileNameFromUrl(section.getDocumentInstance().getRemoteUrl());
+
+        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
+                fileContent.getBytes(), fileName);
+
+        section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
+
+        // take moderation check
+//        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
+//        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
 
         //create metadata
         section.setDocumentSectionMetadata(createMetadata(section));
@@ -179,15 +215,31 @@ public class DocumentSectionService {
 
         for (DocumentInstanceSection section : instance.getDocumentInstanceSections()) {
             section.setDocumentInstance(instance);
-            DocumentInstanceSection savedSection = updateSection(section);
+            DocumentInstanceSection savedSection = updateExistingSection(section);
             documentInstanceSections.add(savedSection);
         }
+
+        documentInstanceSections = documentInstanceSectionRepository.saveAll(documentInstanceSections);
 
         return documentInstanceSections;
     }
 
+    public DocumentInstanceSection updateExistingSection(DocumentInstanceSection section) throws GendoxException {
+        UUID sectionId = section.getId();
+        DocumentInstanceSection existingSection = this.getSectionById(sectionId);
+        existingSection.setSectionValue(section.getSectionValue());
+        String fileName = getFileNameFromUrl(existingSection.getDocumentInstance().getRemoteUrl());
+        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
+                existingSection.getSectionValue().getBytes(), fileName);
+        existingSection.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
+        existingSection.setDocumentSectionMetadata(updateMetadata(section));
+
+        return existingSection;
+    }
+
 
     public DocumentInstanceSection updateSection(DocumentInstanceSection section) throws GendoxException {
+
         UUID sectionId = section.getId();
         DocumentInstanceSection existingSection = this.getSectionById(sectionId);
 
@@ -204,9 +256,9 @@ public class DocumentSectionService {
         existingSection.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
 
         // Check if documentInstance.documentTemplateId is empty/null before updating metadata
-        if (section.getDocumentInstance().getDocumentTemplateId() == null) {
+//        if (section.getDocumentInstance().getDocumentTemplateId() == null) {
             existingSection.setDocumentSectionMetadata(updateMetadata(section));
-        }
+//        }
 
         existingSection = documentInstanceSectionRepository.save(existingSection);
 
@@ -234,11 +286,15 @@ public class DocumentSectionService {
 
     public void deleteSections(List<DocumentInstanceSection> sections) throws GendoxException {
         for (DocumentInstanceSection section : sections) {
-            DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
-            embeddingService.deleteEmbeddingGroupsBySection(section.getId());
-            documentInstanceSectionRepository.delete(section);
-            deleteMetadata(metadata);
+            deleteSection(section);
         }
+    }
+
+    public void deleteSection(DocumentInstanceSection section) throws GendoxException{
+        DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
+        embeddingService.deleteEmbeddingGroupsBySection(section.getId());
+        documentInstanceSectionRepository.delete(section);
+        deleteMetadata(metadata);
     }
 
     public void deleteDocumentSections(UUID documentInstanceId) throws GendoxException {

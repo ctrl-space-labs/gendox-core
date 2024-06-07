@@ -13,13 +13,14 @@ const AuthGuard = props => {
   const router = useRouter()
   useEffect(
     () => {
+      console.log('AuthGuard router.route effect')
       if (!router.isReady) {
         return
       }
       if (auth.user === null && !window.localStorage.getItem('userData')) {
         if (router.asPath !== '/') {
           router.replace({
-            pathname: '/login',
+            pathname: '/',
             query: { returnUrl: router.asPath }
           })
         } else {

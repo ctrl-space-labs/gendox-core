@@ -9,11 +9,28 @@ logging:
     dev.ctrlspace: DEBUG
     org.springframework: INFO
 spring:
+  mail:
+    host: ${GENDOX_SPRING_EMAIL_HOST:no-env-variable}
+    port: ${GENDOX_SPRING_EMAIL_PORT:no-env-variable}
+    username: ${GENDOX_SPRING_EMAIL_USERNAME:no-env-variable}
+    password: ${GENDOX_SPRING_EMAIL_PASSWORD:no-env-variable}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: expireAfterWrite=5m,maximumSize=1000
   mvc:
     format:
       date-time: yyyy-MM-dd'T'HH:mm:ss.SSSZ
   jpa:
-    show-sql: true
+    show-sql: false
     hibernate:
       ddl-auto: none
   datasource:
@@ -84,14 +101,19 @@ rsa:
   #private-key: classpath:.env/local/local-non-production-use-private_key.pem
   private-key: ${RSA_KEY_PATH}
 
-
 gendox:
+  domains:
+    frontend: https://gendox.ctrlspace.dev
+
+  emails:
+    contact-email: contact@ctrlspace.dev
   documents:
     upload-dir: s3://gendox.organization.documents.dev
     #    upload-dir: file:c:\\Users\\sekas\\gendox-documents
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
+
   integrations:
 #    poller: 30000 # 30 seconds
     poller: 1800000 # 30 minutes in milliseconds
@@ -101,13 +123,14 @@ gendox:
       sqs:
         wait-time-seconds: 1 #not in use
         visibility-timeout-seconds: 300
-
   models:
     openai:
       ada2:
         key: ${OPENAI_KEY}
     cohere:
       key: ${COHERE_KEY}
+    groq:
+      key: ${GROQ_KEY:default-token}
   domain:
     base-url: http://localhost:${server.port}
     document-sections:
@@ -151,6 +174,9 @@ gendox:
             throttle-limit: 10    # this should be around 10 to not hit the throttle limit of the OpenAI API
             chunk-size: 10
             pageable-size: 1000
+  user-invitation:
+    accept-url-template: /accept-invitation/?email=%s&token=%s
+    ttl: 86400  # in seconds
 
 
 # AWS

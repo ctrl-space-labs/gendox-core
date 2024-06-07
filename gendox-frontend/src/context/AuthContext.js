@@ -7,7 +7,7 @@ import authConfig from "src/configs/auth";
 
 import apiRequests from "src/configs/apiRequest.js";
 import { userDataActions } from "src/store/apps/userData/userData";
-import { fetchOrganizationById } from "src/store/apps/activeOrganization/activeOrganization";
+import { fetchOrganization } from "src/store/apps/activeOrganization/activeOrganization";
 import { fetchProject } from "src/store/apps/activeProject/activeProject";
 import userManager from "src/services/authService";
 
@@ -24,8 +24,6 @@ const defaultProvider = {
 // Create context
 const AuthContext = createContext(defaultProvider);
 
-
-
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(defaultProvider.user);
   const [loading, setLoading] = useState(defaultProvider.loading);
@@ -33,15 +31,16 @@ const AuthProvider = ({ children }) => {
   const dispatch = useDispatch();
   const [authState, setAuthState] = React.useState({
     user: null,
-    isLoading: true
+    isLoading: true,
   });
 
   // New - to test tomorrow
   const handleLogin = () => {
-    userManager.signinRedirect();
+    userManager.signinRedirect();    
   };
 
-  const handleLogout = () => {
+  const handleLogout = () => {    
+    // TODO call DELETE /profile/caches
     clearAuthState();
     userManager.signoutRedirect();
   };
@@ -51,129 +50,118 @@ const AuthProvider = ({ children }) => {
     window.localStorage.removeItem(authConfig.user);
     window.localStorage.removeItem(authConfig.storageTokenKeyName);
     window.localStorage.removeItem(authConfig.onTokenExpiration);
-  }
+    window.localStorage.removeItem(authConfig.selectedOrganizationId);
+    window.localStorage.removeItem(authConfig.selectedProjectId);
+    window.localStorage.removeItem(authConfig.oidcConfig);
+  };
 
-  const loadUser = (user) => {
-    setAuthState({user, isLoading: false});
-  }
+  const loadUser = (user) => {    
+    setAuthState({ user, isLoading: false });
+  };
 
-  const unloadUser = () => {
+  const unloadUser = () => {    
     setAuthState({ user: null, isLoading: false });
-  }
+  };
 
-  const removeUser = () => {
+  const removeUser = () => {    
     // Here you can clear your application's session and redirect the user to the login page
     userManager.removeUser();
-  }
+  };
 
   const initAuthOIDC = () => {
-
-    userManager.getUser().then(user => {
+    userManager.getUser().then((user) => {
       if (user && !user.expired) {
-        setAuthState({user, isLoading: false});
+        setAuthState({ user, isLoading: false });
       }
-    });
+    });    
 
     // Adding an event listener for when new user data is loaded
     userManager.events.addUserLoaded(loadUser);
-
     userManager.events.addUserSignedOut(removeUser);
-
     userManager.events.addUserUnloaded(unloadUser);
-
 
     return () => {
       userManager.events.removeUserLoaded(loadUser);
       userManager.events.removeUserUnloaded(unloadUser);
       userManager.events.removeUserSignedOut(removeUser);
     };
-
-  }
+  };
 
   const loadUserProfileFromAuthState = async (authState) => {
-
     setLoading(true);
-    if (!authState.user) {
+    if (!authState.user || authState.user === null) {
       setLoading(false);
-      clearAuthState();
-      // router.push("/login");
+      clearAuthState();      
       return;
     }
     let user = authState.user;
     window.localStorage.setItem(
-        authConfig.storageTokenKeyName,
-        user.access_token
-    )
+      authConfig.storageTokenKeyName,
+      user.access_token
+    );
 
     // Set refresh token in local storage
     window.localStorage.setItem(
-        authConfig.onTokenExpiration,
-        user.refresh_token
-    )
+      authConfig.onTokenExpiration,
+      user.refresh_token
+    );
 
     // Fetch user data from getProfile
     setLoading(true);
     await axios
-        .get(apiRequests.getProfile, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + user.access_token,
-          },
-        })
-        .then(async (userDataResponse) => {
-          // Add 'role': 'admin' to the userDataResponse.data object
-          userDataResponse.data.role = "admin";
-          setUser(userDataResponse.data);
-          window.localStorage.setItem(
-              authConfig.user,
-              JSON.stringify(userDataResponse.data)
-          )
+      .get(apiRequests.getProfile, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + user.access_token,
+        },
+      })
+      .then(async (userDataResponse) => {
+        // Add 'role': 'admin' to the userDataResponse.data object
+        userDataResponse.data.role = "admin";
+        setUser(userDataResponse.data);
+        window.localStorage.setItem(
+          authConfig.user,
+          JSON.stringify(userDataResponse.data)
+        );
 
-          // Store userData, actives project and organization
-          dispatch(userDataActions.getUserData(userDataResponse.data));
-          dispatch(
-              fetchOrganizationById({
-                organizationId: userDataResponse.data.organizations[0].id,
-                storedToken: user.access_token
-              })
-          );
-          dispatch(
-              fetchProject({
-                organizationId: userDataResponse.data.organizations[0].id,
-                projectId: userDataResponse.data.organizations[0].projects[0].id,
-                storedToken: user.access_token
-              })
-          );
+        // Store userData, actives project and organization
+        dispatch(userDataActions.getUserData(userDataResponse.data));
+        dispatch(
+          fetchOrganization({
+            organizationId: userDataResponse.data.organizations[0].id,
+            storedToken: user.access_token,
+          })
+        );
+        dispatch(
+          fetchProject({
+            organizationId: userDataResponse.data.organizations[0].id,
+            projectId: userDataResponse.data.organizations[0].projects[0].id,
+            storedToken: user.access_token,
+          })
+        );
 
-          window.localStorage.setItem(
-              authConfig.selectedOrganizationId,
-              userDataResponse.data.organizations[0].id
-          );
-          window.localStorage.setItem(
-              authConfig.selectedProjectId,
-              userDataResponse.data.organizations[0].projects[0].id
-          );
+        window.localStorage.setItem(
+          authConfig.selectedOrganizationId,
+          userDataResponse.data.organizations[0].id
+        );
+        window.localStorage.setItem(
+          authConfig.selectedProjectId,
+          userDataResponse.data.organizations[0].projects[0].id
+        );
 
-          const returnUrl = router.query.returnUrl;
-          const redirectURL =
-              returnUrl && returnUrl !== "/" ? returnUrl : "/";
-          router.replace(redirectURL);
-          setLoading(false);
-        })
-        .catch((userDataError) => {
-          console.error(
-              "Error occurred while fetching user data:",
-              userDataError
-          );
-        });
+        setLoading(false);
+      })
 
-    // const redirectURL = returnUrl && returnUrl !== "/" ? returnUrl : "/";
-    // router.replace(redirectURL);
-  }
+      .catch((userDataError) => {
+        setLoading(false);
+        console.error(
+          "Error occurred while fetching user data:",
+          userDataError
+        );        
+      });
 
-  useEffect(() => {
-    loadUserProfileFromAuthState(authState)
-  }, [authState]);
+    setLoading(false);
+  };
 
   useEffect(() => {
     // initAuth_old();
@@ -181,20 +169,34 @@ const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    const { organizationId, projectId } = router.query;
-    const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName)
+    loadUserProfileFromAuthState(authState);
+  }, [authState]);
 
-    const returnUrl = router.query.returnUrl;
+  useEffect(() => {
+    if (user && router.pathname.includes("oidc-callback")) {
+      console.log(
+        "User data loaded successfully. Redirecting to the home page..."
+      );
+      window.location.href = "/gendox/home";
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const { organizationId, projectId } = router.query;
+    const storedToken = window.localStorage.getItem(
+      authConfig.storageTokenKeyName
+    );
+    
+
     if (user && user.organizations) {
       const updatedActiveOrganization = user.organizations.find(
         (org) => org.id === organizationId
       );
       if (updatedActiveOrganization) {
-
         dispatch(
-          fetchOrganizationById({
+          fetchOrganization({
             organizationId: updatedActiveOrganization.id,
-            storedToken
+            storedToken,
           })
         );
         window.localStorage.setItem(
@@ -209,7 +211,7 @@ const AuthProvider = ({ children }) => {
             fetchProject({
               organizationId: updatedActiveOrganization.id,
               projectId: updatedActiveProject.id,
-              storedToken
+              storedToken,
             })
           );
           window.localStorage.setItem(
@@ -219,7 +221,8 @@ const AuthProvider = ({ children }) => {
         }
       }
     }
-  }, [user, router.query.organizationId, router.query.projectId]);
+    
+  }, [user, router]);
 
   const values = {
     user,
@@ -228,7 +231,7 @@ const AuthProvider = ({ children }) => {
     setLoading,
     login: handleLogin,
     logout: handleLogout,
-    oidcAuthState: authState
+    oidcAuthState: authState,
   };
 
   return <AuthContext.Provider value={values}>{children}</AuthContext.Provider>;

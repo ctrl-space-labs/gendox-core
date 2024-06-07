@@ -67,6 +67,7 @@
     "react-hook-form": "7.43.5",
     "react-hot-toast": "2.4.0",
     "react-i18next": "12.2.0",
+    "react-markdown": "^9.0.1",
     "react-perfect-scrollbar": "1.5.8",
     "react-popper": "2.3.0",
     "react-redux": "^9.1.0",

@@ -4,7 +4,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aie
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.post.MessageRestClient;
 import io.micrometer.tracing.Tracer;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -47,7 +46,7 @@ public class RestClientConfiguration {
 //return null;
         String base = baseUrl + contextPath;
 
-        RestTemplate restTemplate = createRestTempleteWithObservabilityParams(tracer, base);
+        RestTemplate restTemplate = createRestTemplateWithObservabilityParams(tracer, base);
 
 
         RestClient restClient = RestClient.create(restTemplate);
@@ -56,7 +55,7 @@ public class RestClientConfiguration {
     }
 
     @NotNull
-    private static RestTemplate createRestTempleteWithObservabilityParams(Tracer tracer, String base) {
+    private static RestTemplate createRestTemplateWithObservabilityParams(Tracer tracer, String base) {
         RestTemplate restTemplate = new RestTemplate();
         DefaultUriBuilderFactory uriBuilderFactory = new DefaultUriBuilderFactory(base);
         restTemplate.setUriTemplateHandler(uriBuilderFactory);

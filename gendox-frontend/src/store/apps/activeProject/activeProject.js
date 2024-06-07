@@ -1,5 +1,3 @@
-
-
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import projectService from "src/gendox-sdk/projectService";
 
@@ -21,39 +19,6 @@ export const fetchProject = createAsyncThunk(
   }
 );
 
-
-// Define an async thunk for fetching an organization by ID
-// export const fetchProjectById = createAsyncThunk(
-//   "activeProject/fetchByIdStatus",
-//   async ({ organizationId, projectId, storedToken }, thunkAPI) => {
-//     try {
-//       const response = await projectService.getProjectById(
-//         organizationId,
-//         projectId,
-//         storedToken
-//       );
-//       return response.data;
-//     } catch (error) {
-//       return thunkAPI.rejectWithValue(error.response.data);
-//     }
-//   }
-// );
-
-// export const fetchProjectMembers = createAsyncThunk(
-//   "activeProject/fetchProjectMembers",
-//   async ({ organizationId, projectId, storedToken }, thunkAPI) => {
-//     try {
-//       const response = await projectService.getProjectMembers(
-//         organizationId,
-//         projectId,
-//         storedToken
-//       );
-//       return response.data;
-//     } catch (error) {
-//       return thunkAPI.rejectWithValue(error.response.data);
-//     }
-//   }
-// );  
 
 // Define the initial state
 const initialActiveProjectState = {

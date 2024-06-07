@@ -57,7 +57,7 @@ public class ProjectMemberService {
         return projectMemberRepository.findAll(ProjectMemberPredicates.build(criteria), pageable).toList();
     }
 
-    public boolean isUserProjectMember(UUID projectId, UUID userId) {
+    public boolean isUserProjectMember(UUID userId, UUID projectId) {
         return projectMemberRepository.existsByProjectIdAndUserId(projectId, userId);
     }
 
@@ -80,12 +80,11 @@ public class ProjectMemberService {
 
     public ProjectMember createProjectMember(UUID userId, UUID projectId) throws GendoxException {
 
-        User user = userService.getById(userId);
-        Project project = projectService.getProjectById(projectId);
-
         ProjectMember projectMember = new ProjectMember();
-        projectMember.setUser(user);
-        projectMember.setProject(project);
+        projectMember.setUser(new User());
+        projectMember.getUser().setId(userId);
+        projectMember.setProject(new Project());
+        projectMember.getProject().setId(projectId);
 
         return this.createProjectMember(projectMember);
 
@@ -148,17 +147,12 @@ public class ProjectMemberService {
      * Add the default members to the project
      * The default members are the project's creator and the organization's admins
      *
-     * @param project
-     * @param organizationId
+     * @param project the project to add the default members to
+     * @param organizationId the organization id where the project belongs and all the admins will be members
+     * @param creatorUserId the creator of the project to be added as a member
      * @throws Exception
      */
-    public void addDefaultMembersToTheProject(Project project, UUID organizationId) throws GendoxException {
-        // user
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userId = ((UserProfile) authentication.getPrincipal()).getId();
-
-        // The project's creator become member of the project
-        createProjectMember(UUID.fromString(userId), project.getId());
+    public void addDefaultMembersToTheProject(Project project, UUID organizationId, String creatorUserId) throws GendoxException {
 
         // project's users all the organization admins
         Set<UUID> userIds = userOrganizationService.getAll(UserOrganizationCriteria
@@ -170,10 +164,9 @@ public class ProjectMemberService {
                 .map(userOrganization -> userOrganization.getUser().getId())
                 .collect(Collectors.toSet());
 
-        userIds.add(UUID.fromString(userId));
+        userIds.add(UUID.fromString(creatorUserId));
 
         createAllProjectMembers(userIds, project.getId());
-
 
     }
 

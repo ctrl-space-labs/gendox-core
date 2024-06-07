@@ -52,6 +52,8 @@ import 'src/iconify-bundle/icons-bundle-react'
 
 // ** Global css styles
 import '../../styles/globals.css'
+import '../../styles/markdown-renderer.css'
+import GendoxFallbackSpinner from "../views/gendox-components/spinner";
 
 const clientSideEmotionCache = createEmotionCache()
 
@@ -70,11 +72,11 @@ if (themeConfig.routingLoader) {
 
 const Guard = ({ children, authGuard, guestGuard }) => {
   if (guestGuard) {
-    return <GuestGuard fallback={<Spinner />}>{children}</GuestGuard>
+    return <GuestGuard fallback={<GendoxFallbackSpinner />}>{children}</GuestGuard>
   } else if (!guestGuard && !authGuard) {
     return <>{children}</>
   } else {
-    return <AuthGuard fallback={<Spinner />}>{children}</AuthGuard>
+    return <AuthGuard fallback={<GendoxFallbackSpinner />}>{children}</AuthGuard>
   }
 }
 
@@ -96,10 +98,10 @@ const App = props => {
     <Provider store={store}>
       <CacheProvider value={emotionCache}>
         <Head>
-          <title>{`${themeConfig.templateName} - Gendox App`}</title>
+          <title>{`${themeConfig.templateName} App`}</title>
           <meta
             name='description'
-            content={`${themeConfig.templateName} – Gendox – by CTR+ Space`}
+            content={`${themeConfig.templateName} – by Ctrl+Space Labs`}
           />
           <meta name='keywords' content='Gendox, MUI, Admin Template, React Admin Template' />
           <meta name='viewport' content='initial-scale=1, width=device-width' />

@@ -23,16 +23,22 @@ import CardContent from "@mui/material/CardContent";
 import CardActions from "@mui/material/CardActions";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Icon from "src/@core/components/icon";
+import Tooltip from "@mui/material/Tooltip";
 
 import projectService from "src/gendox-sdk/projectService";
+import documentService from "src/gendox-sdk/documentService";
 
 const GeneralProjectSettings = () => {
   const router = useRouter();
-  const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName);
-    if (!storedToken) {
-      console.error('No token found');      
-      return;
-    }
+  const storedToken = window.localStorage.getItem(
+    authConfig.storageTokenKeyName
+  );
+  if (!storedToken) {
+    console.error("No token found");
+    return;
+  }
   const project = useSelector((state) => state.activeProject.projectDetails);
 
   // Explicitly handle all falsey values (including undefined and null) as false
@@ -40,6 +46,8 @@ const GeneralProjectSettings = () => {
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description);
   const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
 
   // Handlers for form inputs
   const handleNameChange = (event) => setName(event.target.value);
@@ -62,8 +70,6 @@ const GeneralProjectSettings = () => {
       projectAgent: project.projectAgent,
     };
 
-    
-
     try {
       const response = await projectService.updateProject(
         project.organizationId,
@@ -73,16 +79,35 @@ const GeneralProjectSettings = () => {
       );
       console.log("Update successful", response);
       setOpenSnackbar(true);
-      const path = `/gendox/project-settings?organizationId=${project.organizationId}&projectId=${project.id}`
+      const path = `/gendox/project-settings?organizationId=${project.organizationId}&projectId=${project.id}`;
       router.push(path);
     } catch (error) {
       console.error("Failed to update project", error);
     }
   };
 
+  const handleTrainingClick = () => {
+    documentService
+      .triggerJobs(project.organizationId, project.id, storedToken)
+      .then((response) => {
+        console.log(response);
+        setAlertMessage("Training triggered successfully!");
+        setAlertOpen(true);
+      })
+      .catch((error) => {
+        console.log(error);
+        setAlertMessage("Error triggering training: " + error.message);
+        setAlertOpen(true);
+      });
+  };
+
+  const handleAlertClose = () => {
+    setAlertOpen(false);
+  };
+
   return (
     <Card>
-      <CardHeader title="Project s Agent settings" />
+      <CardHeader title="Project s settings" />
       <Snackbar
         open={openSnackbar}
         autoHideDuration={6000}
@@ -99,18 +124,19 @@ const GeneralProjectSettings = () => {
       <Divider sx={{ m: "0 !important" }} />
       <form onSubmit={handleSubmit}>
         <CardContent>
-          <Grid>
-            <Grid item xs={12} sm={6} sx={{ mb: 15 }}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 required
                 id="project-name"
                 label="Name"
-                value={project.name}
+                // value={project.name}
+                defaultValue={project.name}
                 onChange={handleNameChange}
               />
             </Grid>
 
-            <Grid item xs={12} sm={6} sx={{ mb: 15 }}>
+            <Grid item xs={12} sm={6}>
               <FormControlLabel
                 label="auto-training"
                 control={
@@ -137,25 +163,56 @@ const GeneralProjectSettings = () => {
         </CardContent>
         <Divider sx={{ m: "0 !important" }} />
         <CardActions>
-          <Button
-            size="large"
-            type="submit"
-            sx={{ mr: 2 }}
-            onClick={handleSubmit}
-            variant="contained"
-          >
-            Submit
-          </Button>
-          <Button
-            type="reset"
-            size="large"
-            color="secondary"
-            variant="outlined"
-          >
-            Reset
-          </Button>
+          <Box sx={{ flexGrow: 1 }}>
+            <Button
+              size="large"
+              type="submit"
+              sx={{ mr: 2 }}
+              onClick={handleSubmit}
+              variant="contained"
+            >
+              Submit
+            </Button>
+            <Button
+              type="reset"
+              size="large"
+              color="secondary"
+              variant="outlined"
+            >
+              Reset
+            </Button>
+          </Box>
+
+          <Tooltip title="Training Projects">
+            <Button
+              size="large"
+              variant="contained"
+              onClick={handleTrainingClick}
+              sx={{ ml: 2 }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Icon icon="mdi:brain" />{" "}
+                <Box component="span" sx={{ ml: 5 }}>
+                  Training
+                </Box>
+              </Box>
+            </Button>
+          </Tooltip>
         </CardActions>
       </form>
+      <Snackbar
+        open={alertOpen}
+        autoHideDuration={6000}
+        onClose={handleAlertClose}
+      >
+        <Alert
+          onClose={handleAlertClose}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
+          {alertMessage}
+        </Alert>
+      </Snackbar>
     </Card>
   );
 };

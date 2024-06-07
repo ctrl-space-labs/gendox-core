@@ -59,6 +59,12 @@ public class TypeService {
 
     }
 
+    public Type getEmailInvitationStatusByName(String emailStatusName){
+        return typeRepository.findByTypeCategoryAndName("USER_INVITATION_STATUS", emailStatusName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "EMAIL_INVITATION_STATUS_TYPE_NOT_FOUND", "Email invitation status field type not found with name: " + emailStatusName));
+
+    }
+
     public Type getGlobalApplicationRoleTypeByName(String globalApplicationRoleTypeName){
         return typeRepository.findByTypeCategoryAndName("GLOBAL_APPLICATION_ROLE_TYPE", globalApplicationRoleTypeName)
                 .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "GLOBAL_APPLICATION_ROLE_TYPE_NOT_FOUND", "Global application role field type not found with name: " + globalApplicationRoleTypeName));

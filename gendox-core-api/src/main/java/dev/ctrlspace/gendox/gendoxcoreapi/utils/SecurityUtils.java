@@ -2,15 +2,18 @@ package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.commons.codec.binary.Base32;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -20,6 +23,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.HandlerMapping;
 
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -50,7 +55,7 @@ public class SecurityUtils {
         return authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(grantedAuthority -> {
                     String authority = grantedAuthority.getAuthority();
-                    return authority.endsWith("_USER");
+                    return authority.contains(UserNamesConstants.GENDOX_USER);
                 });
     }
 
@@ -60,17 +65,18 @@ public class SecurityUtils {
     }
 
 
+    public boolean can(String authority, GendoxAuthenticationToken authentication, AccessCriteria accessCriteria) {
 
-    private static boolean can(String authority, GendoxAuthenticationToken authentication, AccessCriteria accessCriteria) {
-
-        if (  ! accessCriteria.getProjectIds().isEmpty()) {
+        // Check if projectIds is not null and not empty, then check project access
+        if (accessCriteria.getProjectIds() != null && !accessCriteria.getProjectIds().isEmpty()) {
             return canAccessProjects(authority, authentication, accessCriteria.getProjectIds());
-
         }
 
-        if ( ! accessCriteria.getOrgIds().isEmpty()) {
+        // Check if orgIds is not null and not empty, then check organization access
+        if (accessCriteria.getOrgIds() != null && !accessCriteria.getOrgIds().isEmpty()) {
             return canAccessOrganizations(authority, authentication, accessCriteria.getOrgIds());
         }
+
 
         return false;
     }
@@ -92,6 +98,7 @@ public class SecurityUtils {
 
         return true;
     }
+
     private static boolean canAccessOrganizations(String authority, GendoxAuthenticationToken authentication, Set<String> requestedOrgIds) {
         Set<String> authorizedOrgIds = authentication
                 .getPrincipal()
@@ -110,12 +117,11 @@ public class SecurityUtils {
     }
 
 
-
     private AccessCriteria getRequestedOrgsFromRequestParams() {
         HttpServletRequest request = getCurrentHttpRequest();
         //get request param with name "organizationId"
         String organizationId = request.getParameter(QueryParamNames.ORGANIZATION_ID);
-        String[] orgStrings= request.getParameterValues(QueryParamNames.ORGANIZATION_ID_IN);
+        String[] orgStrings = request.getParameterValues(QueryParamNames.ORGANIZATION_ID_IN);
 
 
         if (organizationId == null && orgStrings == null) {
@@ -160,7 +166,6 @@ public class SecurityUtils {
                 .projectIds(new HashSet<>())
                 .build();
     }
-
 
 
     private AccessCriteria getRequestedProjectsFromRequestParams() {
@@ -220,7 +225,6 @@ public class SecurityUtils {
     }
 
 
-
     public class AccessCriteriaGetterFunction {
 
         public static final String ORG_IDS_FROM_REQUEST_PARAMS = "getRequestedOrgsFromRequestParams";
@@ -235,13 +239,13 @@ public class SecurityUtils {
     /**
      * This is a general method to check for Authorization
      *
-     * @param authority the authority that the user should have
+     * @param authority      the authority that the user should have
      * @param getterFunction this is used to find the appropriate function, that will extract the {@link AccessCriteria}
      *                       from path variables or requstparams or JSON body
      * @return
      */
     public boolean hasAuthority(String authority, String getterFunction) throws IOException {
-        GendoxAuthenticationToken authentication = (GendoxAuthenticationToken)SecurityContextHolder.getContext().getAuthentication();
+        GendoxAuthenticationToken authentication = (GendoxAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
 
         if (isSuperAdmin(authentication)) {
             return true; // Skip validation if user is an admin
@@ -250,7 +254,7 @@ public class SecurityUtils {
         AccessCriteria accessCriteria = new AccessCriteria();
 
 
-        if (AccessCriteriaGetterFunction.ORG_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)){
+        if (AccessCriteriaGetterFunction.ORG_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)) {
             accessCriteria = getRequestedOrgsFromRequestParams();
         }
         if (AccessCriteriaGetterFunction.ORG_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
@@ -258,7 +262,7 @@ public class SecurityUtils {
         }
 
 
-        if (AccessCriteriaGetterFunction.PROJECT_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)){
+        if (AccessCriteriaGetterFunction.PROJECT_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)) {
             accessCriteria = getRequestedProjectsFromRequestParams();
         }
         if (AccessCriteriaGetterFunction.PROJECT_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
@@ -272,12 +276,25 @@ public class SecurityUtils {
     }
 
 
-
     public UUID getUserId() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userId = ((UserProfile) authentication.getPrincipal()).getId();
             return UUID.fromString(userId);
+        } catch (Exception e) {
+            logger.warn("An exception occurred while trying to get the user ID: " + e.getMessage());
+            return null;
+        }
+    }
+
+    public String getUserIdentifier() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = ((UserProfile) authentication.getPrincipal()).getEmail();
+            if (email != null) {
+                return email;
+            }
+            return ((UserProfile) authentication.getPrincipal()).getUserName();
         } catch (Exception e){
             logger.warn("An exception occurred while trying to get the user ID: " + e.getMessage());
             return null;
@@ -291,5 +308,20 @@ public class SecurityUtils {
         }
 
         return null;
+    }
+
+
+    public static String calculateSHA256(String text) throws GendoxException {
+        try {
+            // Get an instance of SHA-256 MessageDigest
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            // Calculate the hash
+            byte[] hashBytes = digest.digest(text.getBytes());
+            // Encode the hash in Base32
+            Base32 base32 = new Base32();
+            return base32.encodeToString(hashBytes);
+        } catch (NoSuchAlgorithmException e) {
+            throw new GendoxException("HASHING_ERROR", "An error occurred while hashing the text", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
