@@ -53,8 +53,8 @@ public class UserController {
     }
 
 
-    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_READ_DOCUMENT') " +
-            "|| @securityUtils.hasAuthorityToRequestedProjectId()")
+//    @PreAuthorize("@securityUtils.hasAuthorityToRequestedOrgId('OP_READ_DOCUMENT') " +
+//            "|| @securityUtils.hasAuthorityToRequestedProjectId()")
     @GetMapping("/users")
     @Operation(summary = "Get all users",
             description = "Retrieve a list of all users based on the provided criteria.")
@@ -82,6 +82,14 @@ public class UserController {
     @GetMapping("/profile")
     @Operation(summary = "Get user profile by ID",
             description = "Retrieve a user's profile by their unique ID.")
+    @Observed(name = "UserController.getUserUserProfile",
+            contextualName = "UserController#getUserUserProfile",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public UserProfile getUserUserProfile(@PathVariable(required = false) UUID id, Authentication authentication) throws Exception {
 
         UserProfile loginUserProfile = (UserProfile) authentication.getPrincipal();
@@ -90,10 +98,18 @@ public class UserController {
         }
 
         // run code to get the user from the database
+        // TODO change this to return user's public profile
         User user = userService.getById(id);
         UserProfile userProfile = userProfileConverter.toDTO(user);
 
         return userProfile;
+    }
+
+    @DeleteMapping("/profile/caches")
+    public String logout(Authentication authentication) {
+        String userIdentifier = ((UserProfile) authentication.getPrincipal()).getEmail();
+        userService.evictUserProfileByUniqueIdentifier(userIdentifier);
+        return "User logged out successfully.";
     }
 
     // TODO this is just for demo purposes, need to be rewrite
@@ -165,8 +181,6 @@ public class UserController {
 
         user = userService.updateUser(user);
         return user;
-
-
     }
 
 }

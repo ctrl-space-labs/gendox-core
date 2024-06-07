@@ -15,7 +15,7 @@ import java.util.UUID;
 public class DocumentInstanceSectionDTO {
 
     private UUID id;
-    //private DocumentInstance documentInstance;
+    private DocumentDTO documentDTO;
     private DocumentSectionMetadataDTO documentSectionMetadata;
     private String sectionValue;
     private UUID createdBy;

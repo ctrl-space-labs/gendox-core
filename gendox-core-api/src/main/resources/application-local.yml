@@ -15,6 +15,23 @@ logging:
 
 
 spring:
+  mail:
+    host: ${GENDOX_SPRING_EMAIL_HOST:no-env-variable}
+    port: ${GENDOX_SPRING_EMAIL_PORT:no-env-variable}
+    username: ${GENDOX_SPRING_EMAIL_USERNAME:no-env-variable}
+    password: ${GENDOX_SPRING_EMAIL_PASSWORD:no-env-variable}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: expireAfterWrite=5m,maximumSize=1000
   mvc:
     format:
       date-time: yyyy-MM-dd'T'HH:mm:ss.SSSZ
@@ -105,12 +122,15 @@ rsa:
   private-key: ${RSA_KEY_PATH}
 
 gendox:
+  domains:
+    frontend: http://localhost:3000
+
+  emails:
+    contact-email: contact@ctrlspace.dev
   documents:
 #    upload-dir: s3://gendox.organization.documents.local
     upload-dir: file:c:\\Users\\myrto\\gendox-documents
 #    upload-dir: file:C:\ProgramData\\gendox\\documents
-
-
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
@@ -131,7 +151,9 @@ gendox:
       ada2:
         key: ${OPENAI_KEY}
     cohere:
-        key: ${COHERE_KEY}
+      key: ${COHERE_KEY}
+    groq:
+      key: ${GROQ_KEY:default-token}
   domain:
     base-url: http://localhost:8080
     document-sections:
@@ -174,7 +196,9 @@ gendox:
             throttle-limit: 10    # this should be around 10 to not hit the throttle limit of the OpenAI API
             chunk-size: 10
             pageable-size: 1000
-
+  user-invitation:
+    accept-url-template: /accept-invitation/?email=%s&token=%s
+    ttl: 86400  # in seconds
 
 
 # AWS
@@ -186,20 +210,11 @@ cloud:
     SQS:
       region: eu-central-1
 
-
-
 # Discord
 
 discord:
   bots:
     gendox-bot:
       token: ${DISCORD_TOKEN:default-token}
-
   server:
     group-name: gendox-agents
-
-
-
-
-
-

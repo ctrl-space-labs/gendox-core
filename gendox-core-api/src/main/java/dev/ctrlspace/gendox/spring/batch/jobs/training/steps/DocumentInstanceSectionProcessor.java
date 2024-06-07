@@ -44,7 +44,7 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
                 .orElse(null);
         EmbeddingResponse embeddingResponse;
         try {
-            embeddingResponse = embeddingService.getEmbeddingForMessage(item.getSectionValue(), projectAgent.getSemanticSearchModel().getModel());
+            embeddingResponse = embeddingService.getEmbeddingForMessage(item.getSectionValue(), projectAgent.getSemanticSearchModel());
         } catch (Exception e) {
             logger.warn("Error {} getting Embedding for section {}. Skipping...", e.getMessage(), item.getId());
             return null;

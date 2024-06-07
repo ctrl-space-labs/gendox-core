@@ -13,7 +13,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepositor
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserOrganizationPredicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -111,16 +113,6 @@ public class UserOrganizationService {
 
     public void deleteUserOrganization(UserOrganization userOrganization) throws GendoxException {
         userOrganizationRepository.delete(userOrganization);
-    }
-
-    public void setAdminRoleForOrganizationsOwner(Organization organization) throws GendoxException {
-        // user
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        String userId = ((UserProfile) authentication.getPrincipal()).getId();
-
-        createUserOrganization(UUID.fromString(userId), organization.getId(), "ROLE_ADMIN");
-
     }
 }
 

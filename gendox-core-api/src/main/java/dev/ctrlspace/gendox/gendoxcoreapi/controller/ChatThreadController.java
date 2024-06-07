@@ -48,7 +48,7 @@ public class ChatThreadController {
         return chatThreadService.getById(id);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
+//    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
     @GetMapping("threads")
     @Operation(summary = "Get Chat Threads by criteria",
             description = "Retrieve the Chat Threads details by criteria. The supported criteria are:" +

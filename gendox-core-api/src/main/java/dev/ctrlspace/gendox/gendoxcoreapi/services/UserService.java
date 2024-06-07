@@ -15,12 +15,16 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.models.auth.In;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -51,6 +55,12 @@ public class UserService implements UserDetailsService {
     private TypeService typeService;
     private AuthenticationService authenticationService;
 
+    private OrganizationService organizationService;
+
+    private ProjectService projectService;
+
+    private CacheManager cacheManager;
+
 
     @Autowired
     public UserService(UserRepository userRepository,
@@ -58,12 +68,18 @@ public class UserService implements UserDetailsService {
                        JwtDTOUserProfileConverter jwtDTOUserProfileConverter,
                        UserProfileConverter userProfileConverter,
                        TypeService typeService,
+                       OrganizationService organizationService,
+                       ProjectService projectService,
+                       CacheManager cacheManager,
                        AuthenticationService authenticationService) {
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
         this.jwtDTOUserProfileConverter = jwtDTOUserProfileConverter;
         this.typeService = typeService;
+        this.organizationService = organizationService;
+        this.projectService = projectService;
+        this.cacheManager = cacheManager;
         this.authenticationService = authenticationService;
     }
 
@@ -85,8 +101,11 @@ public class UserService implements UserDetailsService {
     }
 
     public User getByEmail(String email) throws GendoxException {
-        return userRepository.findByEmail(email)
+        return getOptionalByEmail(email)
                 .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with email: " + email, HttpStatus.NOT_FOUND));
+    }
+    public Optional<User> getOptionalByEmail(String email) throws GendoxException {
+        return userRepository.findByEmail(email);
     }
 
     /**
@@ -121,14 +140,28 @@ public class UserService implements UserDetailsService {
      * @return
      * @throws GendoxException
      */
+    @Cacheable(value = "UserProfileByIdentifier", keyGenerator = "gendoxKeyGenerator")
     public UserProfile getUserProfileByUniqueIdentifier(String userIdentifier) throws GendoxException {
 
         User user = this.getUserByUniqueIdentifier(userIdentifier);
         return userProfileConverter.toDTO(user);
     }
 
+    public void evictUserProfileByUniqueIdentifier(String userIdentifier) {
+        // Evict the cache entry for the user
+        Cache cache = cacheManager.getCache("UserProfileByIdentifier");
+        if (cache != null) {
+            cache.evict("UserService:getUserProfileByUniqueIdentifier:"+userIdentifier);
+        }
+        logger.debug("Evicting UserProfile cache for userIdentifier: {}", userIdentifier);
+    }
+
     public Boolean isUserExistByUserName(String userName) throws GendoxException {
         return userRepository.existsByUserName(userName);
+    }
+
+    public Boolean isUserExistByEmail(String email) throws GendoxException {
+        return userRepository.existsByEmail(email);
     }
 
     public User createUser(User user) throws GendoxException {
@@ -136,6 +169,9 @@ public class UserService implements UserDetailsService {
         if (user.getUserType() == null) {
             user.setUserType(typeService.getUserTypeByName("GENDOX_USER"));
         }
+
+        user.setEmail(user.getEmail() != null ? user.getEmail().toLowerCase() : null);
+        user.setUserName(user.getUserName() != null ? user.getUserName().toLowerCase() : null);
 
         user = userRepository.save(user);
         return user;
@@ -175,6 +211,21 @@ public class UserService implements UserDetailsService {
 
     }
 
+    /**
+     * Register a new user.
+     * It created a new user, a new Organization and a new Project in this organization
+     *
+     * @param email
+     * @return
+     * @throws GendoxException
+     */
+    public User userRegistration(String email) throws GendoxException {
+        User user = new User();
+        user.setEmail(email);
+        user = createUser(user);
+        return user;
+    }
+
 
     @Observed(name = "get.jwt.claims",
             contextualName = "get-jwt-claims",
@@ -201,5 +252,19 @@ public class UserService implements UserDetailsService {
             throw new UsernameNotFoundException(e.getErrorCode(), e);
         }
 
+    }
+
+    /**
+     * Get the user identifier from the user Entity.
+     * The logic should be the same as {@link SecurityUtils#getUserIdentifier()}
+     * @param user
+     * @return
+     */
+    public String getUserIdentifier(User user) {
+        String email = user.getEmail();
+        if (email != null) {
+            return email;
+        }
+        return user.getUserName();
     }
 }

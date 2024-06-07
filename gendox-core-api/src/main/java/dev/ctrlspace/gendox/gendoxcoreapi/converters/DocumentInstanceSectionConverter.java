@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionMetadata;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentSectionMetadataDTO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,9 +14,13 @@ public class DocumentInstanceSectionConverter implements GendoxConverter<Documen
 
     private DocumentSectionMetadataConverter documentSectionMetadataConverter;
 
+
     @Autowired
-    public DocumentInstanceSectionConverter(DocumentSectionMetadataConverter documentSectionMetadataConverter){
+    public DocumentInstanceSectionConverter(DocumentSectionMetadataConverter documentSectionMetadataConverter
+
+    ){
         this.documentSectionMetadataConverter = documentSectionMetadataConverter;
+
     }
 
     @Override
@@ -30,6 +36,9 @@ public class DocumentInstanceSectionConverter implements GendoxConverter<Documen
 
         DocumentSectionMetadataDTO metadataDTO = documentSectionMetadataConverter.toDTO(documentInstanceSection.getDocumentSectionMetadata());
         documentInstanceSectionDTO.setDocumentSectionMetadata(metadataDTO);
+
+//        DocumentDTO documentDTO = documentConverter.toDTO(documentInstanceSection.getDocumentInstance());
+//        documentInstanceSectionDTO.setDocumentDTO(documentDTO);
 
         return documentInstanceSectionDTO;
     }
@@ -47,6 +56,11 @@ public class DocumentInstanceSectionConverter implements GendoxConverter<Documen
 
         DocumentSectionMetadata metadata = documentSectionMetadataConverter.toEntity(documentInstanceSectionDTO.getDocumentSectionMetadata());
         documentInstanceSection.setDocumentSectionMetadata(metadata);
+
+//        DocumentInstance documentInstance = documentConverter.toEntity(documentInstanceSectionDTO.getDocumentDTO());
+//        documentInstanceSection.setDocumentInstance(documentInstance);
+
+
 
         return documentInstanceSection;
     }

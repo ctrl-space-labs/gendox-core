@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.authentication;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
+import org.keycloak.representations.AccessTokenResponse;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.security.oauth2.jwt.Jwt;
 
@@ -24,9 +25,10 @@ public interface AuthenticationService {
      *
      * @return
      */
-    public Jwt getClientToken(String clientId, String clientSecret);
+    public String getClientTokenString();
+    public Jwt getClientToken();
 
-    public Jwt impersonateUser(String username);
+    public AccessTokenResponse impersonateUser(String username, @Nullable String scope);
 
     String createUser(User user, @Nullable String password, Boolean emailVerified, Boolean tempPassword) throws GendoxException;
 
