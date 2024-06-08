@@ -7,6 +7,7 @@
 const themeConfig = {
   // ** Layout Configs
   isDemo: true /* Change it to false to disable the demo */,
+  showOrganizationDropdown: true,
   templateName: 'Gendox' /* App Name */,
   layout: 'vertical' /* vertical | horizontal */,
   mode: 'dark' /* light | dark | semi-dark /*! Note: semi-dark value will only work for Vertical Layout */,
@@ -14,6 +15,7 @@ const themeConfig = {
   skin: 'default' /* default | bordered */,
   contentWidth: 'boxed' /* full | boxed */,
   footer: 'static' /* fixed | static | hidden */,
+  footerContent: undefined /* poweredBy | undefined */,
   // ** Routing Configs
   routingLoader: true /* true | false */,
   // ** Navigation (Menu) Configs

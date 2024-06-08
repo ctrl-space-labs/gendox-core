@@ -19,7 +19,8 @@ const initialSettings = {
   toastPosition: themeConfig.toastPosition,
   verticalNavToggleType: themeConfig.verticalNavToggleType,
   appBar: themeConfig.layout === 'horizontal' && themeConfig.appBar === 'hidden' ? 'fixed' : themeConfig.appBar,
-  isDemo: themeConfig.isDemo
+  isDemo: themeConfig.isDemo,
+  showOrganizationDropdown: themeConfig.showOrganizationDropdown
 }
 
 const staticSettings = {
@@ -29,7 +30,8 @@ const staticSettings = {
   navHidden: initialSettings.navHidden,
   lastLayout: initialSettings.lastLayout,
   toastPosition: initialSettings.toastPosition,
-  isDemo: initialSettings.isDemo
+  isDemo: initialSettings.isDemo,
+  showOrganizationDropdown: initialSettings.showOrganizationDropdown
 }
 
 const restoreSettings = () => {
