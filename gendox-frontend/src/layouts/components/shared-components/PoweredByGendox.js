@@ -2,11 +2,11 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import GendoxAppBrand from "./GendoxAppBrand";
 import Link from "next/link";
-import properties  from "src/configs/frontend-properties.js";
+import commonConfig  from "src/configs/common.config.js";
 
 const PoweredByGendox = () => {
     return (
-        <Link href={properties.gendoxHomePage} passHref target="_blank" style={{ textDecoration: 'none',
+        <Link href={commonConfig.gendoxHomePage} passHref target="_blank" style={{ textDecoration: 'none',
             display: 'flex',
             justifyContent: 'center'}}>
             <Box
