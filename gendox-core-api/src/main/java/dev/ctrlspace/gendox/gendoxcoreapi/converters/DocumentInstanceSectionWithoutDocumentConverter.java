@@ -1,22 +1,20 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionMetadata;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentSectionMetadataDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-public class DocumentInstanceSectionConverter implements GendoxConverter<DocumentInstanceSection, DocumentInstanceSectionDTO> {
+public class DocumentInstanceSectionWithoutDocumentConverter implements GendoxConverter<DocumentInstanceSection, DocumentInstanceSectionDTO> {
 
     private DocumentSectionMetadataConverter documentSectionMetadataConverter;
 
 
     @Autowired
-    public DocumentInstanceSectionConverter(DocumentSectionMetadataConverter documentSectionMetadataConverter
+    public DocumentInstanceSectionWithoutDocumentConverter(DocumentSectionMetadataConverter documentSectionMetadataConverter
 
     ){
         this.documentSectionMetadataConverter = documentSectionMetadataConverter;
@@ -37,8 +35,11 @@ public class DocumentInstanceSectionConverter implements GendoxConverter<Documen
         DocumentSectionMetadataDTO metadataDTO = documentSectionMetadataConverter.toDTO(documentInstanceSection.getDocumentSectionMetadata());
         documentInstanceSectionDTO.setDocumentSectionMetadata(metadataDTO);
 
+        if (documentInstanceSection.getDocumentInstance() != null) {
+
 //        DocumentDTO documentDTO = documentConverter.toDTO(documentInstanceSection.getDocumentInstance());
 //        documentInstanceSectionDTO.setDocumentDTO(documentDTO);
+        }
 
         return documentInstanceSectionDTO;
     }

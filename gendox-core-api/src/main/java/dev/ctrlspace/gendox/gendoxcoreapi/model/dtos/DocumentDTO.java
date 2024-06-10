@@ -19,6 +19,7 @@ public class DocumentDTO {
     private UUID id;
     private UUID organizationId;
     private UUID documentTemplateId;
+    private String documentIsccCode;
     private String remoteUrl;
     private UUID createdBy;
     private UUID updatedBy;
