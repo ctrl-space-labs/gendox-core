@@ -2,13 +2,11 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentConverter;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithoutDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentOnlyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
@@ -49,7 +47,7 @@ public class DocumentController {
     private UploadService uploadService;
     private SplitFileService splitFileService;
     private DocumentSectionService documentSectionService;
-    private DocumentInstanceSectionConverter documentInstanceSectionConverter;
+    private DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter;
 
     private SecurityUtils securityUtils;
 
@@ -62,7 +60,7 @@ public class DocumentController {
                               SplitFileService splitFileService,
                               SecurityUtils securityUtils,
                               DocumentSectionService documentSectionService,
-                              DocumentInstanceSectionConverter documentInstanceSectionConverter) {
+                              DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter) {
         this.documentService = documentService;
         this.documentOnlyConverter = documentOnlyConverter;
         this.documentConverter = documentConverter;
@@ -70,7 +68,7 @@ public class DocumentController {
         this.splitFileService = splitFileService;
         this.documentSectionService = documentSectionService;
         this.securityUtils = securityUtils;
-        this.documentInstanceSectionConverter = documentInstanceSectionConverter;
+        this.documentInstanceSectionWithoutDocumentConverter = documentInstanceSectionWithoutDocumentConverter;
     }
 
 
@@ -249,7 +247,7 @@ public class DocumentController {
             throw new GendoxException("UNAUTHORIZED", "You are not authorized to perform this operation", HttpStatus.UNAUTHORIZED);
         }
 
-        DocumentInstanceSection documentSection = documentInstanceSectionConverter.toEntity(sectionDTO);
+        DocumentInstanceSection documentSection = documentInstanceSectionWithoutDocumentConverter.toEntity(sectionDTO);
         DocumentInstance documentInstance = documentConverter.toEntity(sectionDTO.getDocumentDTO());
         documentSection.setDocumentInstance(documentInstance);
 

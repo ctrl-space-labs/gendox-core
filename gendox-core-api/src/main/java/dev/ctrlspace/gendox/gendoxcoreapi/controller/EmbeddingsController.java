@@ -3,9 +3,11 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.BotRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
@@ -35,11 +37,14 @@ public class EmbeddingsController {
     private CompletionService completionService;
     private MessageService messageService;
 
+    private DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter;
+
     @Autowired
     public EmbeddingsController(EmbeddingRepository embeddingRepository,
                                 EmbeddingService embeddingService,
                                 TrainingService trainingService,
                                 CompletionService completionService,
+                                DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter,
                                 MessageService messageService
     ) {
         this.embeddingRepository = embeddingRepository;
@@ -47,6 +52,7 @@ public class EmbeddingsController {
         this.trainingService = trainingService;
         this.completionService = completionService;
         this.messageService = messageService;
+        this.documentInstanceSectionWithDocumentConverter = documentInstanceSectionWithDocumentConverter;
     }
 
     @PostMapping("/embeddings")
@@ -125,7 +131,7 @@ public class EmbeddingsController {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public List<DocumentInstanceSection> findCloserSections(@RequestBody Message message,
+    public List<DocumentInstanceSectionDTO> findCloserSections(@RequestBody Message message,
                                                             @RequestParam String projectId,
                                                             Pageable pageable) throws GendoxException {
         if (pageable == null) {
@@ -138,11 +144,19 @@ public class EmbeddingsController {
         message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
 
-        List<DocumentInstanceSection> instanceSections = new ArrayList<>();
-        instanceSections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
+        List<DocumentInstanceSection> instanceSections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
 
-        return instanceSections;
+        List<DocumentInstanceSectionDTO> sections = instanceSections
+                .stream()
+                .map(section -> documentInstanceSectionWithDocumentConverter.toDTO(section))
+                .toList();
+        return sections;
     }
+
+
+
+
+
 
 
     @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
@@ -167,6 +181,7 @@ public class EmbeddingsController {
         message = messageService.createMessage(message);
 
         List<DocumentInstanceSection> instanceSections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
+
 
         Message completion = completionService.getCompletion(message, instanceSections, UUID.fromString(projectId));
 
