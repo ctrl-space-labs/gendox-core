@@ -52,6 +52,12 @@ public class OrganizationDidService {
                 .orElseThrow(() -> new GendoxException("ORGANIZATION_DID_NOT_FOUND", "Organization did not found with id: " + id, HttpStatus.NOT_FOUND));
     }
 
+//    get OrganizationDid by organization Id
+    public OrganizationDid getOrganizationDidByOrganizationId(UUID organizationId) throws GendoxException {
+        return organizationDidRepository.findByOrganizationId(organizationId)
+                .orElseThrow(() -> new GendoxException("ORGANIZATION_DID_NOT_FOUND", "Organization did not found with organization id: " + organizationId, HttpStatus.NOT_FOUND));
+    }
+
 
     public Page<OrganizationDid> getAllOrganizationDids(OrganizationDidCriteria criteria) throws GendoxException {
         return this.getAllOrganizationDids(criteria, PageRequest.of(0, 100));
@@ -108,7 +114,7 @@ public class OrganizationDidService {
         DidResult didResult = didIssuer.resolveKeyDidToKey(walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()),
                 false, localKey);
 
-        organizationDid.setDid(String.valueOf(didResult.getDidDocument()));
+        organizationDid.setDid(String.valueOf(didResult.getDid()));
 
 
         return organizationDidRepository.save(organizationDid);

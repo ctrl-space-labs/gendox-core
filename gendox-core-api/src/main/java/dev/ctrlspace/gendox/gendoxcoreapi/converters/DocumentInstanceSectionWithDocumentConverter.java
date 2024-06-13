@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionMetadata;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.EmbeddingGroup;
@@ -63,8 +64,34 @@ public class DocumentInstanceSectionWithDocumentConverter implements GendoxConve
         return documentInstanceSectionDTO;
     }
 
+//    @Override
+//    public DocumentInstanceSection toEntity(DocumentInstanceSectionDTO documentInstanceSectionDTO) {
+//        throw new UnsupportedOperationException("Not implemented yet!");
+//    }
+
     @Override
     public DocumentInstanceSection toEntity(DocumentInstanceSectionDTO documentInstanceSectionDTO) {
-        throw new UnsupportedOperationException("Not implemented yet!");
+        DocumentInstanceSection documentInstanceSection = new DocumentInstanceSection();
+
+        // Map fields from DTO to entity
+        documentInstanceSection.setId(documentInstanceSectionDTO.getId());
+        documentInstanceSection.setSectionValue(documentInstanceSectionDTO.getSectionValue());
+        documentInstanceSection.setDocumentSectionIsccCode(documentInstanceSectionDTO.getDocumentSectionIsccCode());
+        documentInstanceSection.setCreatedBy(documentInstanceSectionDTO.getCreatedBy());
+        documentInstanceSection.setUpdatedBy(documentInstanceSectionDTO.getUpdatedBy());
+        documentInstanceSection.setCreatedAt(documentInstanceSectionDTO.getCreatedAt());
+        documentInstanceSection.setUpdatedAt(documentInstanceSectionDTO.getUpdatedAt());
+
+        // Map DocumentSectionMetadataDTO to DocumentSectionMetadata
+        DocumentSectionMetadata metadata = documentSectionMetadataConverter.toEntity(documentInstanceSectionDTO.getDocumentSectionMetadata());
+        documentInstanceSection.setDocumentSectionMetadata(metadata);
+
+        // Convert DocumentDTO to DocumentInstance using DocumentOnlyConverter
+            DocumentInstance documentInstance = documentOnlyConverter.toEntity(documentInstanceSectionDTO.getDocumentDTO());
+            documentInstanceSection.setDocumentInstance(documentInstance);
+
+
+        return documentInstanceSection;
     }
+
 }

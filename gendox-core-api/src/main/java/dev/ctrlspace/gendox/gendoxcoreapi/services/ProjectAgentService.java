@@ -12,7 +12,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
+import dev.ctrlspace.provenai.ssi.issuer.LocalKeyWrapper;
 import dev.ctrlspace.provenai.ssi.issuer.VerifiablePresentationBuilder;
+import dev.ctrlspace.provenai.utils.ContinuationObjectUtils;
+import id.walt.crypto.keys.Key;
 import id.walt.crypto.keys.LocalKey;
 import kotlinx.serialization.json.Json;
 import kotlinx.serialization.json.JsonPrimitive;
@@ -57,7 +60,7 @@ public class ProjectAgentService {
                                ProjectAgentRepository projectAgentRepository,
                                TypeService typeService,
                                TemplateRepository templateRepository,
-                               UserService userService,
+                               @Lazy UserService userService,
                                AiModelRepository aiModelRepository,
                                AiModelService aiModelService,
                                CryptographyUtils cryptographyUtils) {
@@ -78,6 +81,10 @@ public class ProjectAgentService {
     public ProjectAgent getAgentByDocumentId(UUID documentId) {
         return projectAgentRepository.findAgentByDocumentInstanceId(documentId)
                 .orElse(null);
+    }
+
+    public ProjectAgent getAgentById(UUID agentId) {
+        return projectAgentRepository.findById(agentId).orElse(null);
     }
 
     public ProjectAgent createProjectAgent(ProjectAgent projectAgent) throws Exception {
@@ -189,18 +196,22 @@ public class ProjectAgentService {
 
 
 
-    public Object createVerifiablePresentation(ProjectAgent projectAgent, String subjectKeyJwk, String subjectDid, String agentVcJwt) throws GendoxException, IOException {
+    public Object createVerifiablePresentation(ProjectAgent projectAgent, String subjectKeyJwk, String subjectDid) throws GendoxException, IOException {
 
-        JsonPrimitive agentVcJwtPrimitive = Json.Default.decodeFromString(JsonPrimitive.Companion.serializer(), agentVcJwt);
+        JsonPrimitive agentVcJwtPrimitive = Json.Default.decodeFromString(JsonPrimitive.Companion.serializer(), projectAgent.getAgentVcJwt());
         VerifiablePresentationBuilder verifiablePresentationBuilder = new VerifiablePresentationBuilder();
         verifiablePresentationBuilder.addCredential( agentVcJwtPrimitive);
         verifiablePresentationBuilder.setPresentationId();
         verifiablePresentationBuilder.setDid(subjectDid);
         verifiablePresentationBuilder.setNonce(cryptographyUtils.generateNonce());
-        projectAgent.setAgentVcJwt(agentVcJwt.toString());
+        projectAgent.setAgentVcJwt(projectAgent.getAgentVcJwt().toString());
         projectAgentRepository.save(projectAgent);
 
+        LocalKeyWrapper localKeyWrapper = new LocalKeyWrapper();
+
+
         LocalKey localKey = new LocalKey(subjectKeyJwk);
+
 
 
         return verifiablePresentationBuilder.buildAndSign(localKey);
