@@ -290,17 +290,17 @@ public class ProjectController {
         projectMemberService.removeMemberFromProject(projectId, userId);
     }
 
-    @PostMapping("organizations/{organizationId}/projects/{projectId}/agents-vp-offer")
+    @PostMapping("agents-vp-offer/{agentId}")
     @Operation(summary = "Create project agent verifiable presentation offer",
             description = "Create a verifiable presentation offer for the project agent. " +
                     "The user must have the necessary permissions to create a verifiable presentation offer for the project agent.")
-    public ProjectAgentVPCredential createProjectAgentVerifiablePresentationOffer(@PathVariable UUID projectId,
+    public ProjectAgentVPCredential createProjectAgentVerifiablePresentationOffer(@PathVariable UUID agentId,
                                                                                   @RequestBody ProjectAgentVPOfferRequest projectAgentVPOfferRequest) throws Exception {
-        ProjectAgent projectAgent = projectAgentService.getAgentByProjectId(projectId);
+        ProjectAgent projectAgent = projectAgentService.getAgentById(agentId);
         ProjectAgentVPCredential projectAgentVPCredential = new ProjectAgentVPCredential();
 
         Object agentVpJwt = projectAgentService.createVerifiablePresentation( projectAgent,projectAgentVPOfferRequest.getSubjectKey(),
-                projectAgentVPOfferRequest.getSubjectDid(),projectAgentVPOfferRequest.getAgentVcJwt());
+                projectAgentVPOfferRequest.getSubjectDid());
 
         projectAgentVPCredential.setAgentId(projectAgent.getId().toString());
         projectAgentVPCredential.setAgentVpJwt(agentVpJwt.toString());

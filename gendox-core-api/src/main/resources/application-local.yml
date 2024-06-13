@@ -17,7 +17,7 @@ logging:
 spring:
   mail:
     host: ${GENDOX_SPRING_EMAIL_HOST:no-env-variable}
-    port: ${GENDOX_SPRING_EMAIL_PORT:no-env-variable}
+    port: ${GENDOX_SPRING_EMAIL_PORT:0}
     username: ${GENDOX_SPRING_EMAIL_USERNAME:no-env-variable}
     password: ${GENDOX_SPRING_EMAIL_PASSWORD:no-env-variable}
     properties:
@@ -41,16 +41,18 @@ spring:
       ddl-auto: none
 
 
-  datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: 1234
+#  datasource:
+#    url: jdbc:postgresql://localhost:5432/postgres
+#    username: postgres
+#    password: 1234
 #  datasource:
 #    url: ${DEV_DATABASE_URL}
 #    username: ${DEV_DATABASE_USERNAME}
 #    password: ${DEV_DATABASE_PASSWORD}
-
-
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: 1234
     hikari:
       maximum-pool-size: 100
       minimum-idle: 10
@@ -218,3 +220,17 @@ discord:
       token: ${DISCORD_TOKEN:default-token}
   server:
     group-name: gendox-agents
+
+search-domains:
+  proven-ai:
+    base-url: http://localhost:8082
+    context-path: /proven-ai/api/v1
+    apis:
+      agent-authentication:
+        endpoint: /agents/token
+        scope: vp_token
+        grant_type: openid email
+      search:
+        endpoint: /search
+        proven-ai-enabled: true
+

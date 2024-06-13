@@ -63,6 +63,13 @@ public class WalletKeyService {
                 .orElseThrow(() -> new GendoxException("WALLET_KEY_NOT_FOUND", "Wallet key not found with id: " + id, HttpStatus.NOT_FOUND));
     }
 
+    public WalletKey getWalletKeybyOrganizationId(UUID organizationId) throws GendoxException {
+        return walletKeyRepository.findByOrganizationId(organizationId)
+                .orElseThrow(() -> new GendoxException("WALLET_KEY_NOT_FOUND", "Wallet key not found with organization id: " + organizationId, HttpStatus.NOT_FOUND));
+    }
+
+
+
     public KeyType getKeyTypebyKeyId(UUID keyId) throws GendoxException {
         WalletKey walletKey = walletKeyRepository.findById(keyId)
                 .orElseThrow(() -> new GendoxException("WALLET_KEY_NOT_FOUND",

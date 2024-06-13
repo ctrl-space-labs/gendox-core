@@ -25,4 +25,6 @@ public class DocumentInstanceSectionDTO {
     private UUID updatedBy;
     private Instant createdAt;
     private Instant updatedAt;
+    private String documentURL;
+    private String ownerName;
 }
