@@ -27,4 +27,5 @@ public class DocumentInstanceSectionDTO {
     private Instant updatedAt;
     private String documentURL;
     private String ownerName;
+    private Object signedPermissionOfUseVc;
 }

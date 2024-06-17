@@ -30,8 +30,8 @@ public class WalletKey {
 
     @JsonIgnore
 //    @org.hibernate.annotations.Type(LocalKeyUserType.class)
-    @Column(name = "jwk_private_key")
-    private String jwkPrivateKey;
+    @Column(name = "jwk_key_format")
+    private String jwkKeyFormat;
     @Basic
     @Column(name = "character_length")
     private Integer characterLength;
@@ -68,9 +68,10 @@ public class WalletKey {
 
     public void setPublicKey(String publicKey) {this.publicKey = publicKey;}
 
-    public String getJwkPrivateKey() {return jwkPrivateKey;}
+    public String getJwkKeyFormat() {return jwkKeyFormat;}
 
-    public void setJwkPrivateKey(String jwkPrivateKey) {this.jwkPrivateKey = jwkPrivateKey;}
+    public void setJwkKeyFormat(String jwkKeyFormat) {this.jwkKeyFormat = jwkKeyFormat;}
+
     public Type getKeyType() {return keyType;}
 
     public void setKeyType(Type keyType) {this.keyType = keyType;}
@@ -100,11 +101,11 @@ public class WalletKey {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         WalletKey walletKey = (WalletKey) o;
-        return Objects.equals(id, walletKey.id) && Objects.equals(organizationId, walletKey.organizationId) && Objects.equals(publicKey, walletKey.publicKey) && Objects.equals(jwkPrivateKey, walletKey.jwkPrivateKey) && Objects.equals(characterLength, walletKey.characterLength) && Objects.equals(keyType, walletKey.keyType) && Objects.equals(createdAt, walletKey.createdAt) && Objects.equals(updatedAt, walletKey.updatedAt) && Objects.equals(createdBy, walletKey.createdBy) && Objects.equals(updatedBy, walletKey.updatedBy);
+        return Objects.equals(id, walletKey.id) && Objects.equals(organizationId, walletKey.organizationId) && Objects.equals(publicKey, walletKey.publicKey) && Objects.equals(jwkKeyFormat, walletKey.jwkKeyFormat) && Objects.equals(characterLength, walletKey.characterLength) && Objects.equals(keyType, walletKey.keyType) && Objects.equals(createdAt, walletKey.createdAt) && Objects.equals(updatedAt, walletKey.updatedAt) && Objects.equals(createdBy, walletKey.createdBy) && Objects.equals(updatedBy, walletKey.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organizationId, publicKey, jwkPrivateKey, characterLength, keyType, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, organizationId, publicKey, jwkKeyFormat, characterLength, keyType, createdAt, updatedAt, createdBy, updatedBy);
     }
 }

@@ -71,6 +71,14 @@ public class DocumentSectionService {
 
     }
 
+    public DocumentSectionMetadata getMetadataBySectionId(UUID sectionId) throws GendoxException {
+        DocumentInstanceSection section = getSectionById(sectionId);
+        return section.getDocumentSectionMetadata();
+    }
+
+
+
+
     public DocumentInstanceSection getSectionById(UUID id) throws GendoxException {
         return documentInstanceSectionRepository.findById(id)
                 .orElseThrow(() -> new GendoxException("SECTION_NOT_FOUND", "Section not found with id: " + id, HttpStatus.NOT_FOUND));
