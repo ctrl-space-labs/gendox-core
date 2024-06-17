@@ -39,19 +39,16 @@ public class ProvenAiAgentAuthenticationAdapter {
 
 
     @Autowired
-    public ProvenAiAgentAuthenticationAdapter(RestTemplate restTemplate) {
+    public ProvenAiAgentAuthenticationAdapter(RestTemplate restTemplate,
+                                              AuthenticationService authenticationService) {
         this.restTemplate = restTemplate;
+        this.authenticationService = authenticationService;
     }
 
-    public AccessTokenResponse getAgentToken(String vpToken) {
-
-        String adminJwt = authenticationService.getClientTokenString();
-
-
+    public AccessTokenResponse ProvenAiAgentAuthentication(String vpToken) {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        headers.add("Authorization", "Bearer " + adminJwt);
 
         // Build the request body with grant_type, scope, and vp_token
         MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();

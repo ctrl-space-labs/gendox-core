@@ -16,6 +16,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.TrainingService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +40,9 @@ public class EmbeddingsController {
     private MessageService messageService;
 
     private DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter;
+
+    @Value("${search-domains.proven-ai.apis.search.proven-ai-enabled}")
+    private Boolean provenAiEnabled;
 
     @Autowired
     public EmbeddingsController(EmbeddingRepository embeddingRepository,
@@ -133,7 +138,7 @@ public class EmbeddingsController {
             })
     public List<DocumentInstanceSectionDTO> findCloserSections(@RequestBody Message message,
                                                             @RequestParam String projectId,
-                                                            Pageable pageable) throws GendoxException {
+                                                            Pageable pageable) throws GendoxException, IOException {
         if (pageable == null) {
             pageable = PageRequest.of(0, 5);
         }
@@ -144,12 +149,12 @@ public class EmbeddingsController {
         message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
 
-        List<DocumentInstanceSection> instanceSections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
+        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
 
-        List<DocumentInstanceSectionDTO> sections = instanceSections
-                .stream()
-                .map(section -> documentInstanceSectionWithDocumentConverter.toDTO(section))
-                .toList();
+//        List<DocumentInstanceSectionDTO> sections = instanceSections
+//                .stream()
+//                .map(section -> documentInstanceSectionWithDocumentConverter.toDTO(section))
+//                .toList();
         return sections;
     }
 
@@ -174,13 +179,30 @@ public class EmbeddingsController {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public CompletionMessageDTO getCompletionSearch(@RequestBody Message message,
-                                                    @RequestParam String projectId) throws GendoxException {
+                                                    @RequestParam String projectId) throws GendoxException, IOException {
 
 
         message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
 
-        List<DocumentInstanceSection> instanceSections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
+//        sections.stream()
+//                .map(DocumentInstanceSectionDTO::getDocumentUrl)
+//                .collect(Collectors.toList());
+//
+//        List<Integer> tokens = sections.stream()
+//                .map(DocumentInstanceSectionDTO::getTokens)
+//                .collect(Collectors.toList())
+
+        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
+
+        if (provenAiEnabled) {
+            List<DocumentInstanceSectionDTO> provenAiSections = embeddingService.findProvenAiClosestSections(message, UUID.fromString(projectId));
+            sections.addAll(provenAiSections);
+        }
+
+        List<DocumentInstanceSection> instanceSections = sections.stream()
+                .map(dto -> documentInstanceSectionWithDocumentConverter.toEntity(dto))
+                .toList();
 
 
         Message completion = completionService.getCompletion(message, instanceSections, UUID.fromString(projectId));
@@ -191,8 +213,17 @@ public class EmbeddingsController {
 
         CompletionMessageDTO completionMessageDTO = CompletionMessageDTO.builder()
                 .message(completion)
-                .sectionId(instanceSections.stream().map(DocumentInstanceSection::getId).toList())
                 .threadID(message.getThreadId())
+                .sectionId(instanceSections.stream().map(DocumentInstanceSection::getId).toList())
+                .tokens(sections.stream().map(DocumentInstanceSectionDTO::getTokenCount).toList())
+                .iscc(sections.stream().map(DocumentInstanceSectionDTO::getDocumentSectionIsccCode).toList())
+                .documentURL(sections.stream().map(DocumentInstanceSectionDTO::getDocumentURL).toList())
+                .ownerName(sections.stream().map(DocumentInstanceSectionDTO::getOwnerName).toList())
+                .title(sections.stream()
+                        .map(section -> section.getDocumentSectionMetadata().getTitle()).toList())
+                .signedPermissionOfUseVc(sections.stream()
+                        .map(DocumentInstanceSectionDTO::getSignedPermissionOfUseVc).toList())
+
                 .build();
 
 

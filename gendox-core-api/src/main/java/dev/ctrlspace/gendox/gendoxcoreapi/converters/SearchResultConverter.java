@@ -47,7 +47,7 @@ public class SearchResultConverter {
 
 
         DocumentDTO documentDTO = documentOnlyConverter.toDTO(documentService.getDocumentInstanceById(UUID.fromString(searchResult.getDocumentId())));
-        DocumentSectionMetadataDTO metadataDTO = documentSectionMetadataConverter.toDTO(documentSectionService.getMetadataById(UUID.fromString(searchResult.getDocumentSectionId())));
+        DocumentSectionMetadataDTO metadataDTO = documentSectionMetadataConverter.toDTO(documentSectionService.getMetadataBySectionId(UUID.fromString(searchResult.getDocumentSectionId())));
 
         DocumentInstanceSectionDTO.DocumentInstanceSectionDTOBuilder builder = DocumentInstanceSectionDTO.builder()
                 .id(UUID.fromString(searchResult.getDocumentSectionId()))
@@ -57,7 +57,9 @@ public class SearchResultConverter {
                 .tokenCount(Double.valueOf(searchResult.getTokens()))
                 .documentSectionIsccCode(searchResult.getIscc())
                 .documentURL(searchResult.getDocumentURL())
+                .signedPermissionOfUseVc(searchResult.getSignedPermissionOfUseVc())
                 .ownerName(searchResult.getOwnerName());
+
 
         return builder.build();
     }

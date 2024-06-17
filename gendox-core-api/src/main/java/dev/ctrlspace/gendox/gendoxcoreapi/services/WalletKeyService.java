@@ -84,7 +84,7 @@ public class WalletKeyService {
                 .orElseThrow(() -> new GendoxException("WALLET_KEY_NOT_FOUND",
                         "Wallet key not found with id: " + keyId, HttpStatus.NOT_FOUND));
 
-        String privateJWK = walletKey.getJwkPrivateKey();
+        String privateJWK = walletKey.getJwkKeyFormat();
 
         return privateJWK;
     }
@@ -136,7 +136,7 @@ public class WalletKeyService {
         walletKey.setPublicKey(publicKey.getJwk());
 
         // Set the private key from the local key
-        walletKey.setJwkPrivateKey(jwk);
+        walletKey.setJwkKeyFormat(jwk);
 
         // Set the key type
         String keyTypeName = getKeyTypeName(localKeyType);
@@ -164,7 +164,7 @@ public class WalletKeyService {
         String jwk = localKeyWrapper.getJwk(localKey);
         KeyType keyType = localKeyWrapper.getKeyType(localKey);
         WalletKey walletKey = new WalletKey();
-        walletKey.setJwkPrivateKey(jwk); // Set the entire JWK
+        walletKey.setJwkKeyFormat(jwk); // Set the entire JWK
 //        get the public key object and its Jwk
         LocalKey publicKey = localKeyWrapper.getPublicKey(localKey);
         walletKey.setPublicKey(publicKey.getJwk()); // Set only the public part
@@ -194,7 +194,7 @@ public class WalletKeyService {
     public String exportWalletKeyJwk(UUID id) throws GendoxException {
         WalletKey walletKey = this.getWalletKeybyId(id);
 
-        return walletKey.getJwkPrivateKey();
+        return walletKey.getJwkKeyFormat();
     }
 
 
