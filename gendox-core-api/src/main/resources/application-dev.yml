@@ -34,9 +34,9 @@ spring:
     hibernate:
       ddl-auto: none
     datasource:
-      url: ${DEV_DATABASE_URL}
-      username: ${DEV_DATABASE_USERNAME}
-      password: ${DEV_DATABASE_PASSWORD}
+      url: ${DATABASE_URL}
+      username: ${DATABASE_USERNAME}
+      password: ${DATABASE_PASSWORD}
 
     hikari:
       maximum-pool-size: 50
@@ -203,8 +203,8 @@ search-domains:
     apis:
       agent-authentication:
         endpoint: /agents/token
-        scope: vp_token
-        grant_type: openid email
+        scope: openid email
+        grant_type: vp_token
       search:
         endpoint: /search
         proven-ai-enabled: true

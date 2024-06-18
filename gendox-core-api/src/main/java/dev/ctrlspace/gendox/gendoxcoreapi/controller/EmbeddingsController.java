@@ -15,6 +15,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TrainingService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -33,6 +35,9 @@ import java.util.UUID;
 @RestController
 public class EmbeddingsController {
 
+    Logger logger = LoggerFactory.getLogger(EmbeddingsController.class);
+
+
     private EmbeddingRepository embeddingRepository;
     private EmbeddingService embeddingService;
     private TrainingService trainingService;
@@ -40,6 +45,8 @@ public class EmbeddingsController {
     private MessageService messageService;
 
     private DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter;
+
+
 
     @Value("${search-domains.proven-ai.apis.search.proven-ai-enabled}")
     private Boolean provenAiEnabled;
@@ -195,9 +202,19 @@ public class EmbeddingsController {
 
         List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
 
+
         if (provenAiEnabled) {
-            List<DocumentInstanceSectionDTO> provenAiSections = embeddingService.findProvenAiClosestSections(message, UUID.fromString(projectId));
-            sections.addAll(provenAiSections);
+            try {
+                List<DocumentInstanceSectionDTO> provenAiSections = embeddingService.findProvenAiClosestSections(message, UUID.fromString(projectId));
+                sections.addAll(provenAiSections);
+            } catch (GendoxException e) {
+                // swallow exception
+                if ("PROVENAI_AGENT_NOT_FOUND".equals(e.getErrorCode())) {
+                    logger.debug("ProvenAI agent not found");
+                } else {
+                    throw e;
+                }
+            }
         }
 
         List<DocumentInstanceSection> instanceSections = sections.stream()
