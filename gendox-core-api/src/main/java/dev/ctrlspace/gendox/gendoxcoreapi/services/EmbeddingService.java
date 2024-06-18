@@ -278,7 +278,7 @@ public class EmbeddingService {
             throw new GendoxException("PROVENAI_AGENT_NOT_FOUND", "Agent not found in ProvenAI", HttpStatus.NOT_FOUND);
         }
 
-        List<SearchResult> provenAiSearchResults = provenAiService.search(message.getValue(), projectId);
+        List<SearchResult> provenAiSearchResults = provenAiService.search(message.getValue(), projectAgent);
 
         List<DocumentInstanceSectionDTO> provenAiSections = new ArrayList<>();
         for (SearchResult searchResult : provenAiSearchResults) {

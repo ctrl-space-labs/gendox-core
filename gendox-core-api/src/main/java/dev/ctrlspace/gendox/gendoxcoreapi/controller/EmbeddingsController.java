@@ -48,7 +48,7 @@ public class EmbeddingsController {
 
 
 
-    @Value("${search-domains.proven-ai.apis.search.proven-ai-enabled}")
+    @Value("${proven-ai.enabled}")
     private Boolean provenAiEnabled;
 
     @Autowired

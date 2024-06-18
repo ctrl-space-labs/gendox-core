@@ -198,3 +198,15 @@ discord:
     group-name: gendox-agents
 
 
+proven-ai:
+  enabled: true
+  base-url: https://provenai.ctrlspace.dev
+  context-path: /proven-ai/api/v1
+  apis:
+    agent-authentication:
+      endpoint: /agents/token
+      scope: openid email
+      grant_type: vp_token
+    search:
+      endpoint: /search
+

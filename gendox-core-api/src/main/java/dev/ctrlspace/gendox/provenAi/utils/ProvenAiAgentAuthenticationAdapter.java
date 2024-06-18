@@ -21,19 +21,19 @@ public class ProvenAiAgentAuthenticationAdapter {
 
     private AuthenticationService authenticationService;
 
-    @Value("${search-domains.proven-ai.base-url}")
+    @Value("${proven-ai.base-url}")
     private String baseUrl;
 
-    @Value("${search-domains.proven-ai.context-path}")
+    @Value("${proven-ai.context-path}")
     private String contextPath;
 
-    @Value("${search-domains.proven-ai.apis.agent-authentication.endpoint}")
+    @Value("${proven-ai.apis.agent-authentication.endpoint}")
     private String tokenApiPath;
 
-    @Value("${search-domains.proven-ai.apis.agent-authentication.grant-type}")
+    @Value("${proven-ai.apis.agent-authentication.grant-type}")
     private String grantType;
 
-    @Value("${search-domains.proven-ai.apis.agent-authentication.scope}")
+    @Value("${proven-ai.apis.agent-authentication.scope}")
     private String scope;
 
 
@@ -45,7 +45,7 @@ public class ProvenAiAgentAuthenticationAdapter {
         this.authenticationService = authenticationService;
     }
 
-    public AccessTokenResponse ProvenAiAgentAuthentication(String vpToken) {
+    public AccessTokenResponse provenAiAgentAuthentication(String vpToken) {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);

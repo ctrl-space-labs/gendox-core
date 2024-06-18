@@ -196,17 +196,16 @@ discord:
   server:
     group-name: gendox-agents
 
-search-domains:
-  proven-ai:
-    base-url: http://localhost:8082
-    context-path: /proven-ai/api/v1
-    apis:
-      agent-authentication:
-        endpoint: /agents/token
-        scope: openid email
-        grant_type: vp_token
-      search:
-        endpoint: /search
-        proven-ai-enabled: true
 
+proven-ai:
+  enabled: true
+  base-url: https://dev.provenai.ctrlspace.dev
+  context-path: /proven-ai/api/v1
+  apis:
+    agent-authentication:
+      endpoint: /agents/token
+      scope: openid email
+      grant_type: vp_token
+    search:
+      endpoint: /search
 
