@@ -393,6 +393,27 @@
         </dependency>
     </dependencies>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>id.walt.did</groupId>
+                <artifactId>waltid-did-jvm</artifactId>
+                <version>0.2.0</version>
+            </dependency>
+            <dependency>
+                <groupId>id.walt.crypto</groupId>
+                <artifactId>waltid-crypto-jvm</artifactId>
+                <version>0.2.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>id.walt</groupId>
+                <artifactId>waltid-sdjwt-jvm</artifactId>
+                <version>0.2.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <pluginRepositories>
         <pluginRepository>
             <id>spring-snapshots</id>

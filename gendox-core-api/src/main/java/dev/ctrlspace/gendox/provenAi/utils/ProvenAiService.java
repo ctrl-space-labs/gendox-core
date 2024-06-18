@@ -1,7 +1,6 @@
 package dev.ctrlspace.gendox.provenAi.utils;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SearchResult;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationDidService;
@@ -9,12 +8,11 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.WalletKeyService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class ProvenAiService {
@@ -47,22 +45,22 @@ public class ProvenAiService {
     }
 
 
-    public String getAgentToken(UUID projectId) throws GendoxException, IOException {
+    @Cacheable(value = "ProvenAiService#getAgentToken", keyGenerator = "gendoxKeyGenerator")
+    public String getAgentToken(ProjectAgent projectAgent) throws GendoxException, IOException {
 
-        ProjectAgent projectAgent = projectAgentService.getAgentByProjectId(projectId);
-        Project project = projectService.getProjectById(projectId);
 
         Object agentVpJwt = projectAgentService.createVerifiablePresentation(projectAgent,
-                walletKeyService.getWalletKeybyOrganizationId(project.getOrganizationId()).getJwkKeyFormat(),
-                organizationDidService.getOrganizationDidByOrganizationId(project.getOrganizationId()).getDid());
+                walletKeyService.getWalletKeybyOrganizationId(projectAgent.getProject().getOrganizationId()).getJwkKeyFormat(),
+                organizationDidService.getOrganizationDidByOrganizationId(projectAgent.getProject().getOrganizationId()).getDid());
 
-        return provenAiAgentAuthenticationAdapter.ProvenAiAgentAuthentication((String) agentVpJwt).getToken();
+        return provenAiAgentAuthenticationAdapter.provenAiAgentAuthentication((String) agentVpJwt).getToken();
 
     }
 
-    public List<SearchResult> search(String question, UUID projectId) throws GendoxException, IOException {
+    public List<SearchResult> search(String question, ProjectAgent projectAgent) throws GendoxException, IOException {
 
-        return provenAiQueryAdapter.provenAiSearch(question, getAgentToken(projectId));
+        String agentJwt = this.getAgentToken(projectAgent);
+        return provenAiQueryAdapter.provenAiSearch(question, agentJwt);
     }
 
 

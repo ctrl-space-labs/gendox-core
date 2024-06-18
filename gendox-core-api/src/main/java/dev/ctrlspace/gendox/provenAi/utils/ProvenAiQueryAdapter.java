@@ -21,13 +21,13 @@ public class ProvenAiQueryAdapter {
 
     private AuthenticationService authenticationService;
 
-    @Value("${search-domains.proven-ai.base-url}")
+    @Value("${proven-ai.base-url}")
     private String baseUrl;
 
-    @Value("${search-domains.proven-ai.context-path}")
+    @Value("${proven-ai.context-path}")
     private String contextPath;
 
-    @Value("${search-domains.proven-ai.apis.search.endpoint}")
+    @Value("${proven-ai.apis.search.endpoint}")
     private String searchApiPath;
 
     @Autowired
