@@ -45,14 +45,14 @@ spring:
 #    url: jdbc:postgresql://localhost:5432/postgres
 #    username: postgres
 #    password: 1234
-#  datasource:
-#    url: ${DEV_DATABASE_URL}
-#    username: ${DEV_DATABASE_USERNAME}
-#    password: ${DEV_DATABASE_PASSWORD}
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: 1234
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+#  datasource:
+#    url: jdbc:postgresql://localhost:5432/postgres
+#    username: postgres
+#    password: 1234
     hikari:
       maximum-pool-size: 100
       minimum-idle: 10
@@ -228,8 +228,8 @@ search-domains:
     apis:
       agent-authentication:
         endpoint: /agents/token
-        scope: vp_token
-        grant_type: openid email
+        scope: openid email
+        grant_type: vp_token
       search:
         endpoint: /search
         proven-ai-enabled: true

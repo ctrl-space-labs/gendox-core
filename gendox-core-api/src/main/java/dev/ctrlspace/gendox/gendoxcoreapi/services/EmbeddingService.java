@@ -52,27 +52,25 @@ public class EmbeddingService {
 
     private DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter;
 
-
-
-
+    private ProjectAgentService projectAgentService;
 
 
     @Autowired
     public EmbeddingService(
-                            EmbeddingRepository embeddingRepository,
-                            AuditLogsRepository auditLogsRepository,
-                            EmbeddingGroupRepository embeddingGroupRepository,
-                            TypeService typeService,
-                            SecurityUtils securityUtils,
-                            DocumentSectionService documentSectionService,
-                            AiModelEmbeddingConverter aiModelEmbeddingConverter,
-                            AiModelUtils aiModelUtils,
-                            ProjectService projectService,
-                            ProjectAgentService projectAgentService,
-                            ProvenAiService provenAiService,
-                            DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter,
-                            SearchResultConverter searchResultConverter
-                           ) {
+            EmbeddingRepository embeddingRepository,
+            AuditLogsRepository auditLogsRepository,
+            EmbeddingGroupRepository embeddingGroupRepository,
+            TypeService typeService,
+            SecurityUtils securityUtils,
+            DocumentSectionService documentSectionService,
+            AiModelEmbeddingConverter aiModelEmbeddingConverter,
+            AiModelUtils aiModelUtils,
+            ProjectService projectService,
+            ProjectAgentService projectAgentService,
+            ProvenAiService provenAiService,
+            DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter,
+            SearchResultConverter searchResultConverter
+    ) {
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
@@ -85,6 +83,7 @@ public class EmbeddingService {
         this.provenAiService = provenAiService;
         this.documentInstanceSectionWithDocumentConverter = documentInstanceSectionWithDocumentConverter;
         this.searchResultConverter = searchResultConverter;
+        this.projectAgentService = projectAgentService;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -127,7 +126,6 @@ public class EmbeddingService {
             embedding.setEmbeddingVector(embeddingResponse.getData().get(0).getEmbedding());
 
 
-
             embeddingGroup.setEmbeddingId(embedding.getId());
             embeddingGroup.setTokenCount((double) embeddingResponse.getUsage().getTotalTokens());
             embeddingGroup.setGroupingStrategyType(typeService.getGroupingTypeByName("SIMPLE_SECTION").getId());
@@ -135,8 +133,6 @@ public class EmbeddingService {
             Project project = projectService.getProjectById(projectId);
             embeddingGroup.setSemanticSearchModelId(project.getProjectAgent().
                     getSemanticSearchModel().getId());
-
-
 
 
             embeddingRepository.save(embedding);
@@ -154,9 +150,8 @@ public class EmbeddingService {
     }
 
 
-
-     public EmbeddingResponse getEmbeddingForMessage(String value, AiModel aiModel) throws GendoxException {
-            return this.getEmbeddingForMessage(Arrays.asList(value), aiModel);
+    public EmbeddingResponse getEmbeddingForMessage(String value, AiModel aiModel) throws GendoxException {
+        return this.getEmbeddingForMessage(Arrays.asList(value), aiModel);
     }
 
 
@@ -202,12 +197,10 @@ public class EmbeddingService {
         embeddingGroup.setMessageId(message_id);
 
 
-
         embeddingGroup = embeddingGroupRepository.save(embeddingGroup);
 
         return embeddingGroup;
     }
-
 
 
     public void deleteEmbeddings(List<Embedding> embeddings) throws GendoxException {
@@ -257,9 +250,6 @@ public class EmbeddingService {
     }
 
 
-
-
-
     public List<DocumentInstanceSectionDTO> findClosestSections(Message message, UUID projectId) throws GendoxException, IOException {
 
         Project project = projectService.getProjectById(projectId);
@@ -268,8 +258,6 @@ public class EmbeddingService {
         Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse, projectId, message.getId(), null);
 
         List<Embedding> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, PageRequest.of(0, 5));
-
-
 
 
         Set<UUID> nearestEmbeddingsIds = nearestEmbeddings.stream().map(emb -> emb.getId()).collect(Collectors.toSet());
@@ -284,16 +272,23 @@ public class EmbeddingService {
     }
 
     public List<DocumentInstanceSectionDTO> findProvenAiClosestSections(Message message, UUID projectId) throws GendoxException, IOException {
-            List<SearchResult> provenAiSearchResults = provenAiService.search(message.getValue(), projectId);
 
-            List<DocumentInstanceSectionDTO> provenAiSections = new ArrayList<>();
-            for (SearchResult searchResult : provenAiSearchResults) {
-                DocumentInstanceSectionDTO sectionDTO = searchResultConverter.toDocumentInstanceDTO(searchResult);
-                provenAiSections.add(sectionDTO);
-            }
-
-            return provenAiSections;
+        ProjectAgent projectAgent = projectAgentService.getAgentByProjectId(projectId);
+        if (projectAgent.getAgentVcJwt() == null) {
+            throw new GendoxException("PROVENAI_AGENT_NOT_FOUND", "Agent not found in ProvenAI", HttpStatus.NOT_FOUND);
         }
+
+        List<SearchResult> provenAiSearchResults = provenAiService.search(message.getValue(), projectId);
+
+        List<DocumentInstanceSectionDTO> provenAiSections = new ArrayList<>();
+        for (SearchResult searchResult : provenAiSearchResults) {
+            DocumentInstanceSectionDTO sectionDTO = searchResultConverter.toDocumentInstanceDTO(searchResult);
+            provenAiSections.add(sectionDTO);
+        }
+
+        return provenAiSections;
+
     }
+}
 
 
