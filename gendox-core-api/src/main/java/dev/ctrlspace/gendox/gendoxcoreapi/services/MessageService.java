@@ -122,4 +122,7 @@ public class MessageService {
         messageSection = messageSectionRepository.save(messageSection);
         return messageSection;
     }
+
+    public void deleteMessageSection(UUID sectionId){
+        messageSectionRepository.deleteAllBySectionId(sectionId);    }
 }
