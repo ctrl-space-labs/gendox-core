@@ -10,5 +10,7 @@ import java.util.UUID;
 @Repository
 public interface MessageSectionRepository extends JpaRepository<MessageSection, UUID>, QuerydslPredicateExecutor<MessageSection> {
 
+    void deleteAllBySectionId(UUID sectionId);
+
 
 }
