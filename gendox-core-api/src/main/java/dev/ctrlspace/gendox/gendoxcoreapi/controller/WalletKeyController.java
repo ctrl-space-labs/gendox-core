@@ -106,27 +106,19 @@ public class WalletKeyController {
     public String exportWalletKeyJwk(@PathVariable UUID walletKeyId) throws GendoxException {
         return walletKeyService.exportWalletKeyJwk(walletKeyId);
     }
-//
-//    @GetMapping("/organizations/wallet-keys/generate-local-key")
-//    public LocalKey generateLocalKey( @RequestParam String keyTypeName,
-//                                      @RequestParam(required = false) Integer characterLength) throws GendoxException {
-//        return walletKeyService.generateLocalKey(keyTypeName, characterLength);
-//    }
-
 
 
 
     @PostMapping("/organizations/{organizationId}/wallet-keys/import-jwk")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Import wallet key",
-            description = "Import a new wallet key with the provided details.")
-        public WalletKeyDTO importWalletKey(@PathVariable UUID organizationId, @RequestBody LocalKey localKey) throws GendoxException, JsonProcessingException {
+            description = "Import a new key from a wallet app by providing the private key in jwk format.")
+        public WalletKeyDTO importWalletKey(@PathVariable UUID organizationId, @RequestBody String privateKeyJwk) throws GendoxException, JsonProcessingException {
             // Call the service method to import the wallet key
-            WalletKey walletKey = walletKeyService.importWalletKey(localKey, organizationId);
+            WalletKey walletKey = walletKeyService.importWalletKey(privateKeyJwk, organizationId);
 
             // Convert the wallet key entity to DTO
-            WalletKeyDTO walletKeyDTO = walletKeyConverter.toDTO(walletKey);
 
-            return walletKeyDTO;
+        return walletKeyConverter.toDTO(walletKey);
         }
 }

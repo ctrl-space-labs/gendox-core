@@ -158,13 +158,12 @@ public class WalletKeyService {
 
 
 
-    public WalletKey importWalletKey(LocalKey localKey, UUID organizationId) throws GendoxException {
+    public WalletKey importWalletKey(String privateKeyJwk, UUID organizationId) throws GendoxException {
         // Extract the necessary information from the LocalKey object
-        LocalKeyWrapper localKeyWrapper = new LocalKeyWrapper();
-        String jwk = localKeyWrapper.getJwk(localKey);
+        LocalKey localKey = new LocalKey(privateKeyJwk);
         KeyType keyType = localKeyWrapper.getKeyType(localKey);
         WalletKey walletKey = new WalletKey();
-        walletKey.setJwkKeyFormat(jwk); // Set the entire JWK
+        walletKey.setJwkKeyFormat(privateKeyJwk); // Set the entire JWK
 //        get the public key object and its Jwk
         LocalKey publicKey = localKeyWrapper.getPublicKey(localKey);
         walletKey.setPublicKey(publicKey.getJwk()); // Set only the public part

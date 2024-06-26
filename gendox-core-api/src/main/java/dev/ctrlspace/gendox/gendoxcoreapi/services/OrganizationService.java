@@ -4,9 +4,11 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDidDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.WalletKeyRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,14 +32,22 @@ public class OrganizationService {
     private OrganizationRepository organizationRepository;
     private UserOrganizationService userOrganizationService;
 
+    private OrganizationDidService organizationDidService;
+
+    private WalletKeyRepository walletKeyRepository;
+
 
     @Autowired
     public OrganizationService(UserOrganizationRepository userOrganizationRepository,
                                OrganizationRepository organizationRepository,
-                               UserOrganizationService userOrganizationService) {
+                               UserOrganizationService userOrganizationService,
+                               OrganizationDidService organizationDidService,
+                               WalletKeyRepository walletKeyRepository) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.organizationRepository = organizationRepository;
         this.userOrganizationService = userOrganizationService;
+        this.organizationDidService = organizationDidService;
+        this.walletKeyRepository = walletKeyRepository;
 
     }
 
@@ -77,6 +88,16 @@ public class OrganizationService {
         organization = organizationRepository.save(organization);
 
         userOrganizationService.createUserOrganization(ownerUserId, organization.getId(), OrganizationRolesConstants.ADMIN);
+
+
+
+        organizationDidService.createOrganizationDid(OrganizationDidDTO.builder()
+                        .createdAt(Instant.now())
+                        .updatedAt(Instant.now())
+                        .organizationId(organization.getId())
+                        .keyId(walletKeyRepository.findWalletKeyIdByOrganizationId(organization.getId()))
+                .build(), "key");
+
 
         return organization;
     }
