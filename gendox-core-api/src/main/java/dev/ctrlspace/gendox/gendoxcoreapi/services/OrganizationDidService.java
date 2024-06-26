@@ -1,8 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.OrganizationDidConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationDid;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.WalletKey;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDidDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationDidCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.WalletKeyCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.request.VerifiableCredentialRequest;
@@ -39,11 +41,15 @@ public class OrganizationDidService {
 
     private VerifiableCredentialBuilder verifiableCredentialBuilder;
 
+    private OrganizationDidConverter organizationDidConverter;
+
     @Autowired
     public OrganizationDidService(OrganizationDidRepository organizationDidRepository,
-                                  WalletKeyService walletKeyService) {
+                                  WalletKeyService walletKeyService,
+                                  OrganizationDidConverter organizationDidConverter) {
         this.organizationDidRepository = organizationDidRepository;
         this.walletKeyService = walletKeyService;
+        this.organizationDidConverter = organizationDidConverter;
     }
 
 
@@ -52,7 +58,7 @@ public class OrganizationDidService {
                 .orElseThrow(() -> new GendoxException("ORGANIZATION_DID_NOT_FOUND", "Organization did not found with id: " + id, HttpStatus.NOT_FOUND));
     }
 
-//    get OrganizationDid by organization Id
+    //    get OrganizationDid by organization Id
     public OrganizationDid getOrganizationDidByOrganizationId(UUID organizationId) throws GendoxException {
         return organizationDidRepository.findByOrganizationId(organizationId)
                 .orElseThrow(() -> new GendoxException("ORGANIZATION_DID_NOT_FOUND", "Organization did not found with organization id: " + organizationId, HttpStatus.NOT_FOUND));
@@ -75,6 +81,21 @@ public class OrganizationDidService {
         organizationDidRepository.deleteById(id);
 
 
+    }
+
+
+    public OrganizationDid createOrganizationDid(OrganizationDidDTO organizationDidDTO, String didType) throws GendoxException {
+
+        OrganizationDid organizationDid = organizationDidConverter.toEntity(organizationDidDTO);
+
+        if (didType.equals("web")) {
+            organizationDid = createOrganizationWebDid(organizationDid);
+        } else if (didType.equals("key")) {
+            organizationDid = createOrganizationKeyDid(organizationDid);
+        } else {
+            throw new GendoxException("INVALID_DID_TYPE", "Invalid DID type specified", HttpStatus.BAD_REQUEST);
+        }
+        return organizationDid;
     }
 
     public OrganizationDid createOrganizationWebDid(OrganizationDid organizationDid) throws GendoxException {
@@ -101,7 +122,6 @@ public class OrganizationDidService {
     }
 
 
-
     public OrganizationDid createOrganizationKeyDid(OrganizationDid organizationDid) throws GendoxException {
 
         // Create a new DID issuer
@@ -121,59 +141,34 @@ public class OrganizationDidService {
     }
 
 
-
     public String exportOrganizationDid(UUID id) throws GendoxException {
         OrganizationDid organizationDid = this.getOrganizationDidById(id);
         return organizationDid.getDid();
 
     }
 
-//method to get keyId from didId
+    //method to get keyId from didId
     public UUID getKeyIdByDidId(UUID didId) throws GendoxException {
         OrganizationDid organizationDid = getOrganizationDidById(didId);
         return organizationDid.getKeyId();
     }
 
-//    public Object createAndSignVerifiableCredential(UUID issuerDidId, UUID subjectDidId,
-//                                                    VerifiableCredentialRequest vcRequest) throws GendoxException {
-//        // Retrieve keys and DIDs from their IDs
-//
-//        OrganizationDid issuerDid = getOrganizationDidById(issuerDidId);
-//        OrganizationDid subjectDid = getOrganizationDidById(subjectDidId);
-//
-//        LocalKey issuerKey = new LocalKey(walletKeyService.getWalletKeybyId(getKeyIdByDidId(issuerDidId)).getJwkPrivateKey());
-//
-//
-//        // Set issuer DID and subject DID
-//        verifiableCredentialBuilder.setIssuerDid(issuerDid.getDid());
-//        verifiableCredentialBuilder.setSubjectDid(subjectDid.getDid());
-//
-//        verifiableCredentialBuilder.addType(vcRequest.getType());
-//        verifiableCredentialBuilder.addContext(vcRequest.getContext());
-//
-//
-//        // Set validity period
-//        if (vcRequest.getValidityPeriod() != null) {
-//            verifiableCredentialBuilder.validFor(vcRequest.getValidityPeriod());
-//        } else {
-//            // Default validity from now
-//            verifiableCredentialBuilder.validFromNow();
-//            verifiableCredentialBuilder.validUntil(vcRequest.getValidUntil());
-//        }
-//
-//        verifiableCredentialBuilder.credentialSubject(vcRequest.getCredentialSubject());
-//
-//        W3CVC verifiableCredential = verifiableCredentialBuilder.buildCredential();
-//
-//
-//        return verifiableCredentialBuilder.signCredential(verifiableCredential, issuerKey, issuerDid.getDid(),
-//                                            subjectDid.getDid(), vcRequest.getAdditionalJwtHeaders(),
-//                                            vcRequest.getAdditionalJwtOptions());
-//
-//    }
+    public OrganizationDid importOrganizationDid(OrganizationDidDTO organizationDidDTO,UUID organizationId) throws GendoxException {
+        OrganizationDid organizationDid = organizationDidConverter.toEntity(organizationDidDTO);
+
+        organizationDid.setDid(organizationDid.getDid());
+        organizationDid.setOrganizationId(organizationId);
+        organizationDid.setCreatedAt(organizationDid.getCreatedAt());
+        organizationDid.setUpdatedAt(organizationDid.getUpdatedAt());
+        organizationDid.setKeyId(organizationDid.getKeyId());
+        organizationDid.setWebDomain(organizationDid.getWebDomain());
+        organizationDid.setWebPath(organizationDid.getWebPath());
+
+        return organizationDidRepository.save(organizationDid);
 
 
     }
+}
 
 
 

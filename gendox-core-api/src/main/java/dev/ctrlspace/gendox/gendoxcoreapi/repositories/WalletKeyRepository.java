@@ -14,4 +14,5 @@ public interface WalletKeyRepository extends JpaRepository<WalletKey, UUID>, Que
 
 Optional<WalletKey> findByOrganizationId(UUID organizationId);
 
+    UUID findWalletKeyIdByOrganizationId(UUID organizationId);
 }

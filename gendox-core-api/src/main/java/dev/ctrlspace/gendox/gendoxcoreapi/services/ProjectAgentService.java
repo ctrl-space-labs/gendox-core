@@ -207,9 +207,6 @@ public class ProjectAgentService {
         projectAgent.setAgentVcJwt(projectAgent.getAgentVcJwt().toString());
         projectAgentRepository.save(projectAgent);
 
-        LocalKeyWrapper localKeyWrapper = new LocalKeyWrapper();
-
-
         LocalKey localKey = new LocalKey(subjectKeyJwk);
 
 
