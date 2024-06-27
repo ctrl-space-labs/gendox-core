@@ -14,10 +14,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectAgentPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
-import dev.ctrlspace.provenai.ssi.issuer.LocalKeyWrapper;
 import dev.ctrlspace.provenai.ssi.issuer.VerifiablePresentationBuilder;
-import dev.ctrlspace.provenai.utils.ContinuationObjectUtils;
-import id.walt.crypto.keys.Key;
 import id.walt.crypto.keys.LocalKey;
 import kotlinx.serialization.json.Json;
 import kotlinx.serialization.json.JsonPrimitive;
@@ -26,10 +23,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.UUID;
 
 @Service
@@ -200,6 +197,7 @@ public class ProjectAgentService {
         if (projectAgent.getModerationModel() != null && projectAgent.getModerationCheck()) {
             existingProjectAgent.setModerationModel(aiModelRepository.findByName(projectAgent.getModerationModel().getName()));
         }
+        existingProjectAgent.setOrganizationDid(projectAgent.getOrganizationDid());
         existingProjectAgent = projectAgentRepository.save(existingProjectAgent);
         return existingProjectAgent;
     }

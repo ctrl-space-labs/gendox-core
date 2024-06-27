@@ -37,6 +37,7 @@ public class ProjectAgentDTO {
     private Boolean moderationCheck;
     private AiModel moderationModel;
     private String agentVcJwt;
+    private String organizationDid;
 
 
 

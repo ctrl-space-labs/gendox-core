@@ -3,9 +3,11 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.WalletKeyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.WalletKey;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WalletKeyDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.WalletKeyCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.WalletKeyRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.WalletKeyPredicates;
@@ -34,14 +36,18 @@ public class WalletKeyService {
 
     private TypeService typeService;
 
+    private WalletKeyConverter walletKeyConverter;
 
 
     @Autowired
     public WalletKeyService(WalletKeyRepository walletKeyRepository,
-                            TypeService typeService
+                            TypeService typeService,
+                            WalletKeyConverter walletKeyConverter
+
                       ) {
         this.walletKeyRepository = walletKeyRepository;
         this.typeService = typeService;
+        this.walletKeyConverter = walletKeyConverter;
 
 
     }
@@ -84,9 +90,7 @@ public class WalletKeyService {
                 .orElseThrow(() -> new GendoxException("WALLET_KEY_NOT_FOUND",
                         "Wallet key not found with id: " + keyId, HttpStatus.NOT_FOUND));
 
-        String privateJWK = walletKey.getJwkKeyFormat();
-
-        return privateJWK;
+        return walletKey.getJwkKeyFormat();
     }
     public KeyType getKeyTypeFromMap(String keyTypeName) throws GendoxException {
         KeyType keyType = KeyTypeMap().get(keyTypeName);
@@ -109,7 +113,9 @@ public class WalletKeyService {
         return walletKeyRepository.findAll(WalletKeyPredicates.build(criteria), pageable);
     }
 
-    public WalletKey createWalletKey(WalletKey walletKey) throws GendoxException {
+    public WalletKey createWalletKey(WalletKeyDTO walletKeyDTO) throws GendoxException {
+
+        WalletKey walletKey = walletKeyConverter.toEntity(walletKeyDTO);
         // Set default value if not defined
         if (walletKey.getCreatedAt() == null) {
             walletKey.setCreatedAt(Instant.now());
@@ -160,8 +166,9 @@ public class WalletKeyService {
 
     public WalletKey importWalletKey(String privateKeyJwk, UUID organizationId) throws GendoxException {
         // Extract the necessary information from the LocalKey object
+        LocalKeyWrapper localKeyWrapper = new LocalKeyWrapper();
         LocalKey localKey = new LocalKey(privateKeyJwk);
-        KeyType keyType = localKeyWrapper.getKeyType(localKey);
+        KeyType keyType = localKey.getKeyType();
         WalletKey walletKey = new WalletKey();
         walletKey.setJwkKeyFormat(privateKeyJwk); // Set the entire JWK
 //        get the public key object and its Jwk
