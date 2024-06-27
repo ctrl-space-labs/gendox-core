@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.WalletKeyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.WalletKey;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.KeyImportDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WalletKeyDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.WalletKeyCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.WalletKeyService;
@@ -87,10 +88,7 @@ public class WalletKeyController {
             throw new GendoxException("ORGANIZATION_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
 
-        WalletKey walletKey = walletKeyConverter.toEntity(walletKeyDTO);
-        walletKey = walletKeyService.createWalletKey(walletKey);
-
-        return walletKey;
+        return walletKeyService.createWalletKey(walletKeyDTO);
     }
 
 
@@ -113,9 +111,9 @@ public class WalletKeyController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Import wallet key",
             description = "Import a new key from a wallet app by providing the private key in jwk format.")
-        public WalletKeyDTO importWalletKey(@PathVariable UUID organizationId, @RequestBody String privateKeyJwk) throws GendoxException, JsonProcessingException {
+        public WalletKeyDTO importWalletKey(@PathVariable UUID organizationId, @RequestBody KeyImportDTO keyImportDTO) throws GendoxException, JsonProcessingException {
             // Call the service method to import the wallet key
-            WalletKey walletKey = walletKeyService.importWalletKey(privateKeyJwk, organizationId);
+            WalletKey walletKey = walletKeyService.importWalletKey(keyImportDTO.getPrivateKeyJwk(), organizationId);
 
             // Convert the wallet key entity to DTO
 
