@@ -203,13 +203,11 @@ public class ProjectAgentService {
     }
 
 
-
-
     public Object createVerifiablePresentation(ProjectAgent projectAgent, String subjectKeyJwk, String subjectDid) throws GendoxException, IOException {
 
         JsonPrimitive agentVcJwtPrimitive = Json.Default.decodeFromString(JsonPrimitive.Companion.serializer(), projectAgent.getAgentVcJwt());
         VerifiablePresentationBuilder verifiablePresentationBuilder = new VerifiablePresentationBuilder();
-        verifiablePresentationBuilder.addCredential( agentVcJwtPrimitive);
+        verifiablePresentationBuilder.addCredential(agentVcJwtPrimitive);
         verifiablePresentationBuilder.setPresentationId();
         verifiablePresentationBuilder.setDid(subjectDid);
         verifiablePresentationBuilder.setNonce(cryptographyUtils.generateNonce());
@@ -218,17 +216,30 @@ public class ProjectAgentService {
 
         LocalKey localKey = new LocalKey(subjectKeyJwk);
 
-
-
         return verifiablePresentationBuilder.buildAndSign(localKey);
+
+    }
+        public Object createVerifiablePresentationOrg (String vcJwt, String subjectKeyJwk, String subjectDid) throws
+        GendoxException, IOException {
+
+            JsonPrimitive agentVcJwtPrimitive = Json.Default.decodeFromString(JsonPrimitive.Companion.serializer(), vcJwt);
+            VerifiablePresentationBuilder verifiablePresentationBuilder = new VerifiablePresentationBuilder();
+            verifiablePresentationBuilder.addCredential(agentVcJwtPrimitive);
+            verifiablePresentationBuilder.setPresentationId();
+            verifiablePresentationBuilder.setDid(subjectDid);
+            verifiablePresentationBuilder.setNonce(cryptographyUtils.generateNonce());
+
+            LocalKey localKey = new LocalKey(subjectKeyJwk);
+
+
+            return verifiablePresentationBuilder.buildAndSign(localKey);
+
+
+        }
 
 
     }
 
-
-
-
-}
 
 
 
