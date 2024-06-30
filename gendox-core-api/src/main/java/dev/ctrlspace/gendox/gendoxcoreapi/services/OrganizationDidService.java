@@ -27,6 +27,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -156,10 +157,10 @@ public class OrganizationDidService {
     public OrganizationDid importOrganizationDid(OrganizationDidDTO organizationDidDTO,UUID organizationId) throws GendoxException {
         OrganizationDid organizationDid = organizationDidConverter.toEntity(organizationDidDTO);
 
-        organizationDid.setDid(organizationDid.getDid());
+        organizationDid.setDid(organizationDidDTO.getDid());
         organizationDid.setOrganizationId(organizationId);
-        organizationDid.setCreatedAt(organizationDid.getCreatedAt());
-        organizationDid.setUpdatedAt(organizationDid.getUpdatedAt());
+        organizationDid.setCreatedAt(Instant.now());
+        organizationDid.setUpdatedAt(Instant.now());
         organizationDid.setKeyId(organizationDid.getKeyId());
         organizationDid.setWebDomain(organizationDid.getWebDomain());
         organizationDid.setWebPath(organizationDid.getWebPath());
