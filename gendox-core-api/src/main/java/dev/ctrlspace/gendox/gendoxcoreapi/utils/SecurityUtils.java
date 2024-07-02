@@ -282,7 +282,7 @@ public class SecurityUtils {
             String userId = ((UserProfile) authentication.getPrincipal()).getId();
             return UUID.fromString(userId);
         } catch (Exception e) {
-            logger.warn("An exception occurred while trying to get the user ID: " + e.getMessage());
+            logger.debug("An exception occurred while trying to get the user ID: " + e.getMessage());
             return null;
         }
     }
