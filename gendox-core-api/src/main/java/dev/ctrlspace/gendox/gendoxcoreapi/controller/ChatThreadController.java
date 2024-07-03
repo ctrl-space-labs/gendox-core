@@ -39,16 +39,17 @@ public class ChatThreadController {
     }
 
 //    TODO add authorization checks
-//    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
-    @GetMapping("threads/{id}")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable')")
+    @GetMapping("threads/{threadId}")
     @Operation(summary = "Get Chat Thread by ID",
             description = "Retrieve the Chat Thread details by its unique ID. The user must have the appropriate permissions to access this.")
 
-    public ChatThread getById(@PathVariable UUID id) throws GendoxException {
-        return chatThreadService.getById(id);
+    public ChatThread getById(@PathVariable UUID threadId) throws GendoxException {
+
+        return chatThreadService.getById(threadId);
     }
 
-//    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
     @GetMapping("threads")
     @Operation(summary = "Get Chat Threads by criteria",
             description = "Retrieve the Chat Threads details by criteria. The supported criteria are:" +
@@ -68,12 +69,13 @@ public class ChatThreadController {
         return chatThreadService.getAllChatThreads(criteria, pageable);
     }
 
-
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable')")
     @GetMapping("threads/{threadId}/messages")
     @Operation(summary = "Get the messages in a Thread",
             description = "Retrieve the messages from a thread. Pagination is supported. The user should have the rights to access this chat.")
 
     public Page<Message> getMessagesById(@PathVariable UUID threadId, MessageCriteria criteria, Pageable pageable) throws GendoxException {
+
 
         criteria.setThreadId(threadId);
         if (pageable == null) {
