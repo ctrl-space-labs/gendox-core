@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,11 +34,22 @@ public class SecurityUtils {
 
     Logger logger = org.slf4j.LoggerFactory.getLogger(SecurityUtils.class);
 
-    @Autowired
+    private ObjectMapper objectMapper;
+
     private JWTUtils jwtUtils;
 
+    private ChatThreadRepository chatThreadRepository;
+
     @Autowired
-    private ObjectMapper objectMapper;
+    public SecurityUtils(ObjectMapper objectMapper,
+                         JWTUtils jwtUtils,
+                         ChatThreadRepository chatThreadRepository) {
+        this.objectMapper = objectMapper;
+        this.jwtUtils = jwtUtils;
+        this.chatThreadRepository = chatThreadRepository;
+    }
+
+
 
     public boolean isSuperAdmin() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -76,6 +88,14 @@ public class SecurityUtils {
         if (accessCriteria.getOrgIds() != null && !accessCriteria.getOrgIds().isEmpty()) {
             return canAccessOrganizations(authority, authentication, accessCriteria.getOrgIds());
         }
+
+        if (accessCriteria.getThreadId() != null) {
+            return canAccessThread(authority, authentication, UUID.fromString(accessCriteria.getThreadId()));
+        }
+
+//        if (accessCriteria.getDocumentId() != null) {
+//            return canAccessDocument(authority, authentication, accessCriteria.getDocumentId());
+//        }
 
 
         return false;
@@ -116,6 +136,34 @@ public class SecurityUtils {
         return true;
     }
 
+    private boolean canAccessThread(String authority, GendoxAuthenticationToken authentication, UUID threadId) {
+
+        List<UUID> userProjectUUIDs = authentication
+                .getPrincipal()
+                .getOrganizations()
+                .stream()
+                .filter(org -> org.getAuthorities().contains(authority))
+                .flatMap(org -> org.getProjects().stream())
+                .map(project -> UUID.fromString(project.getId()))
+                .collect(Collectors.toList());
+
+        return chatThreadRepository.existsByIdAndProjectIdIn(threadId, userProjectUUIDs);
+    }
+
+    private boolean canAccessDocuments(String authority, GendoxAuthenticationToken authentication, UUID threadId) {
+
+        List<UUID> userProjectUUIDs = authentication
+                .getPrincipal()
+                .getOrganizations()
+                .stream()
+                .filter(org -> org.getAuthorities().contains(authority))
+                .flatMap(org -> org.getProjects().stream())
+                .map(project -> UUID.fromString(project.getId()))
+                .collect(Collectors.toList());
+
+        return chatThreadRepository.existsByIdAndProjectIdIn(threadId, userProjectUUIDs);
+    }
+
 
     private AccessCriteria getRequestedOrgsFromRequestParams() {
         HttpServletRequest request = getCurrentHttpRequest();
@@ -139,6 +187,7 @@ public class SecurityUtils {
         return AccessCriteria.builder()
                 .orgIds(requestedOrgIds)
                 .projectIds(new HashSet<>())
+                .threadId(new String())
                 .build();
     }
 
@@ -164,6 +213,7 @@ public class SecurityUtils {
                 .builder()
                 .orgIds(requestedOrgIds)
                 .projectIds(new HashSet<>())
+                .threadId(new String())
                 .build();
     }
 
@@ -198,6 +248,7 @@ public class SecurityUtils {
                 .builder()
                 .orgIds(new HashSet<>())
                 .projectIds(requestedProjectIds)
+                .threadId(new String())
                 .build();
     }
 
@@ -221,8 +272,29 @@ public class SecurityUtils {
                 .builder()
                 .orgIds(new HashSet<>())
                 .projectIds(requestedProjectIds)
+                .threadId(new String())
                 .build();
     }
+
+    private AccessCriteria getRequestedThreadIdFromPathVariable() {
+        // Extract threadId from the request path
+        HttpServletRequest request = getCurrentHttpRequest();
+        Map<String, String> uriTemplateVariables = (Map<String, String>) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+
+        String threadId = new String();
+
+        if (uriTemplateVariables != null) {
+            threadId = uriTemplateVariables.get(QueryParamNames.THREAD_ID);
+        }
+
+        return AccessCriteria
+                .builder()
+                .orgIds(new HashSet<>())
+                .projectIds(new HashSet<>())
+                .threadId(threadId)
+                .build();
+    }
+
 
 
     public class AccessCriteriaGetterFunction {
@@ -233,6 +305,7 @@ public class SecurityUtils {
         public static final String PROJECT_IDS_FROM_REQUEST_PARAMS = "getRequestedProjectsFromRequestParams";
         public static final String PROJECT_ID_FROM_PATH_VARIABLE = "getRequestedProjectIdFromPathVariable";
 
+        public static final String THREAD_ID_FROM_PATH_VARIABLE = "getRequestedThreadIdFromPathVariable";
     }
 
 
@@ -241,7 +314,7 @@ public class SecurityUtils {
      *
      * @param authority      the authority that the user should have
      * @param getterFunction this is used to find the appropriate function, that will extract the {@link AccessCriteria}
-     *                       from path variables or requstparams or JSON body
+     *                       from path variables or requestparams or JSON body
      * @return
      */
     public boolean hasAuthority(String authority, String getterFunction) throws IOException {
@@ -267,6 +340,10 @@ public class SecurityUtils {
         }
         if (AccessCriteriaGetterFunction.PROJECT_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
             accessCriteria = getRequestedProjectIdFromPathVariable();
+        }
+
+        if (AccessCriteriaGetterFunction.THREAD_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
+            accessCriteria = getRequestedThreadIdFromPathVariable();
         }
 
         if (accessCriteria == null) {
