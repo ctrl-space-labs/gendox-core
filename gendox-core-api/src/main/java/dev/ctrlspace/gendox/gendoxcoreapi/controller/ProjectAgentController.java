@@ -8,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.ProjectOrganizati
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectAgentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.request.ProjectAgentVPOfferRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectAgentPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
@@ -18,12 +19,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.function.Predicate;
 
 @RestController
@@ -54,6 +55,12 @@ public class ProjectAgentController {
         }
 
         return projectAgentService.getAllProjectAgents(criteria, pageable);
+    }
+
+    @PostMapping("/create-vp")
+    public ResponseEntity<Object> createVerifiablePresentation(@RequestBody ProjectAgentVPOfferRequest projectAgentVPOfferRequest) throws GendoxException, IOException {
+        Object verifiablePresentation = projectAgentService.createVerifiablePresentationOrg(projectAgentVPOfferRequest.getAgentVcJwt(), projectAgentVPOfferRequest.getSubjectKey(), projectAgentVPOfferRequest.getSubjectDid());
+        return ResponseEntity.ok(verifiablePresentation);
     }
 
 
