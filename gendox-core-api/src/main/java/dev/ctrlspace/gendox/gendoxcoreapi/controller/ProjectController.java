@@ -290,6 +290,7 @@ public class ProjectController {
         projectMemberService.removeMemberFromProject(projectId, userId);
     }
 
+
     @PostMapping("agents-vp-offer/{agentId}")
     @Operation(summary = "Create project agent verifiable presentation offer",
             description = "Create a verifiable presentation offer for the project agent. " +

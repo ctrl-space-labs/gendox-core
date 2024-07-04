@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserD
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,13 +41,17 @@ public class SecurityUtils {
 
     private ChatThreadRepository chatThreadRepository;
 
+    private DocumentInstanceRepository documentInstanceRepository;
+
     @Autowired
     public SecurityUtils(ObjectMapper objectMapper,
                          JWTUtils jwtUtils,
-                         ChatThreadRepository chatThreadRepository) {
+                         ChatThreadRepository chatThreadRepository,
+                         DocumentInstanceRepository documentInstanceRepository) {
         this.objectMapper = objectMapper;
         this.jwtUtils = jwtUtils;
         this.chatThreadRepository = chatThreadRepository;
+        this.documentInstanceRepository = documentInstanceRepository;
     }
 
 
@@ -89,13 +94,14 @@ public class SecurityUtils {
             return canAccessOrganizations(authority, authentication, accessCriteria.getOrgIds());
         }
 
-        if (accessCriteria.getThreadId() != null) {
+
+        if (accessCriteria.getThreadId() != null && !accessCriteria.getThreadId().isEmpty()) {
             return canAccessThread(authority, authentication, UUID.fromString(accessCriteria.getThreadId()));
         }
 
-//        if (accessCriteria.getDocumentId() != null) {
-//            return canAccessDocument(authority, authentication, accessCriteria.getDocumentId());
-//        }
+        if (accessCriteria.getDocumentId() != null && !accessCriteria.getDocumentId().isEmpty()) {
+            return canAccessDocument(authority, authentication, UUID.fromString(accessCriteria.getDocumentId()));
+        }
 
 
         return false;
@@ -150,7 +156,7 @@ public class SecurityUtils {
         return chatThreadRepository.existsByIdAndProjectIdIn(threadId, userProjectUUIDs);
     }
 
-    private boolean canAccessDocuments(String authority, GendoxAuthenticationToken authentication, UUID threadId) {
+    private boolean canAccessDocument(String authority, GendoxAuthenticationToken authentication, UUID documentId) {
 
         List<UUID> userProjectUUIDs = authentication
                 .getPrincipal()
@@ -161,7 +167,7 @@ public class SecurityUtils {
                 .map(project -> UUID.fromString(project.getId()))
                 .collect(Collectors.toList());
 
-        return chatThreadRepository.existsByIdAndProjectIdIn(threadId, userProjectUUIDs);
+        return documentInstanceRepository.existsByDocumentIdAndProjectIds(documentId, userProjectUUIDs);
     }
 
 
@@ -292,6 +298,28 @@ public class SecurityUtils {
                 .orgIds(new HashSet<>())
                 .projectIds(new HashSet<>())
                 .threadId(threadId)
+                .documentId(new String())
+                .build();
+    }
+
+    private AccessCriteria getRequestedDocumentIdFromPathVariable() {
+        // Extract documentId from the request path
+        HttpServletRequest request = getCurrentHttpRequest();
+        Map<String, String> uriTemplateVariables = (Map<String, String>) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+
+        String documentId = new String();
+
+        if (uriTemplateVariables != null) {
+            documentId = uriTemplateVariables.get(QueryParamNames.DOCUMENT_INSTANCE_ID);
+        }
+
+
+        return AccessCriteria
+                .builder()
+                .orgIds(new HashSet<>())
+                .projectIds(new HashSet<>())
+                .threadId(new String())
+                .documentId(documentId)
                 .build();
     }
 
@@ -306,6 +334,7 @@ public class SecurityUtils {
         public static final String PROJECT_ID_FROM_PATH_VARIABLE = "getRequestedProjectIdFromPathVariable";
 
         public static final String THREAD_ID_FROM_PATH_VARIABLE = "getRequestedThreadIdFromPathVariable";
+        public static final String DOCUMENT_ID_FROM_PATH_VARIABLE = "getRequestedDocumentIdFromPathVariable";
     }
 
 
@@ -344,6 +373,10 @@ public class SecurityUtils {
 
         if (AccessCriteriaGetterFunction.THREAD_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
             accessCriteria = getRequestedThreadIdFromPathVariable();
+        }
+
+        if (AccessCriteriaGetterFunction.DOCUMENT_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
+            accessCriteria = getRequestedDocumentIdFromPathVariable();
         }
 
         if (accessCriteria == null) {
