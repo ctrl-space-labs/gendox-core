@@ -198,7 +198,7 @@ discord:
 
 
 proven-ai:
-  enabled: true
+  enabled: false
   base-url: https://dev.provenai.ctrlspace.dev
   context-path: /proven-ai/api/v1
   apis:
@@ -209,3 +209,7 @@ proven-ai:
     search:
       endpoint: /search
 
+walt-id:
+  default-key:
+    type: ECDSA_SECP256K1
+    size: 2048

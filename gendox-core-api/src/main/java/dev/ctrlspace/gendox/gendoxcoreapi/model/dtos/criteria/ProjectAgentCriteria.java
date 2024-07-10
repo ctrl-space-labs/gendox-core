@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @AllArgsConstructor
@@ -20,4 +21,6 @@ public class ProjectAgentCriteria {
     private List<String> projectIdIn = new ArrayList<>();
     private String userId;
     private Boolean privateAgent;
+    private List<UUID> agentIdIn = new ArrayList<>();
+
 }
