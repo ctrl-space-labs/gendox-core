@@ -2,14 +2,18 @@ package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.ProjectAgentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectAgentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.RolePermissionCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.RolePermissionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
@@ -31,11 +35,16 @@ public class UserProfileConverter {
     @Autowired
     private OrganizationUserConverter organizationUserConverter;
 
+
+
     @Autowired
     private ProjectService projectService;
 
     @Autowired
     private RolePermissionService rolePermissionService;
+
+    @Autowired
+    private ProjectAgentService projectAgentService;
 
     public UserProfile toDTO(User user) throws GendoxException {
         // TODO Complete this
@@ -63,6 +72,7 @@ public class UserProfileConverter {
                 .map(organization -> {
                     // TODO optimize this to get all projects per Organization in one query
                     Page<Project> projects = new PageImpl<>(new ArrayList<>());
+                    Page<ProjectAgent> projectAgents = new PageImpl<>(new ArrayList<>());
                     try {
                         projects = projectService.getAllProjects(ProjectCriteria
                                         .builder()
@@ -70,13 +80,30 @@ public class UserProfileConverter {
                                         .organizationId(organization.getId().toString())
                                         .build(),
                                 Pageable.unpaged());
+
+                        List<Project> fetchedProjects = projects.getContent();
+
+                        ProjectAgentCriteria agentCriteria = ProjectAgentCriteria.builder()
+                                .projectIdIn(fetchedProjects.stream()
+                                        .map(project -> project.getId().toString())
+                                        .collect(Collectors.toList()))
+                                .organizationId(organization.getId().toString())
+                                .build();
+
+
+                        if (agentCriteria.getProjectIdIn().size() > 0) {
+                            projectAgents= projectAgentService.getAllProjectAgents(agentCriteria, Pageable.unpaged());
+                        }
+
+                        // Convert agents to ProjectAgentDTO list
+
                     } catch (GendoxException e) {
                         throw new RuntimeException(e);
                     }
 
                     return organizationUserConverter.toDTO(organization,
                             organizationAuthoritiesMap.get(organization.getId().toString()).orgAuthorities(),
-                            projects.getContent());
+                            projects.getContent(),projectAgents.getContent() );
                 })
                 .collect(Collectors.toList());
 

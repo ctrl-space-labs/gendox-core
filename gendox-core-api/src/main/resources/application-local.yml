@@ -13,11 +13,11 @@ logging:
 #  pattern:
 #    correlation : "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
 
-
+#
 spring:
   mail:
     host: ${GENDOX_SPRING_EMAIL_HOST:no-env-variable}
-    port: ${GENDOX_SPRING_EMAIL_PORT:0}
+    port: 0
     username: ${GENDOX_SPRING_EMAIL_USERNAME:no-env-variable}
     password: ${GENDOX_SPRING_EMAIL_PASSWORD:no-env-variable}
     properties:
@@ -45,6 +45,11 @@ spring:
 #    url: jdbc:postgresql://localhost:5432/postgres
 #    username: postgres
 #    password: 1234
+#
+#    hikari:
+#      maximum-pool-size: 100
+#      minimum-idle: 10
+
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
@@ -56,14 +61,6 @@ spring:
     hikari:
       maximum-pool-size: 100
       minimum-idle: 10
-
-#  datasource:
-#     url: ${DATABASE_URL}
-#     username: ${DATABASE_USERNAME}
-#     password: ${DATABASE_PASSWORD}
-#     hikari:
-#       maximum-pool-size: 100
-#       minimum-idle: 10
 
   jackson:
     serialization:
@@ -130,8 +127,8 @@ gendox:
   emails:
     contact-email: contact@ctrlspace.dev
   documents:
-#    upload-dir: s3://gendox.organization.documents.local
-    upload-dir: file:c:\\Users\\myrto\\gendox-documents
+    upload-dir: s3://gendox.organization.documents.local
+#    upload-dir: file:c:\\Users\\myrto\\gendox-documents
 #    upload-dir: file:C:\ProgramData\\gendox\\documents
     wordCount: 300
     allowed:
@@ -223,8 +220,8 @@ discord:
 
 
 proven-ai:
-  enabled: true
-  base-url: http://localhost:8082
+  enabled: false
+  base-url: https://dev.provenai.ctrlspace.dev
   context-path: /proven-ai/api/v1
   apis:
     agent-authentication:
@@ -234,3 +231,7 @@ proven-ai:
     search:
       endpoint: /search
 
+walt-id:
+  default-key:
+    type: ECDSA_SECP256K1
+    size: 2048

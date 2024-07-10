@@ -66,7 +66,18 @@ public class JWTUtils {
                                             return orgProj1;
                                         }))
                 )
-                .build();
+                .projectAgentsMap(
+                        jwt.getClaimAsStringList(JwtClaimName.PROJECT_AGENTS).stream()
+                                .map(s -> s.split(":"))
+                                .collect(Collectors.toMap(
+                                        s -> s[1],
+                                        s -> new JwtDTO.ProjectAgent(new HashSet<>(Arrays.asList(s[0]))),
+                                        (projAgent1, projAgent2) -> {
+                                            projAgent1.agentIds().addAll(projAgent2.agentIds());
+                                            return projAgent1;
+                                        }))
+                )
+                                .build();
     }
 
     private static Predicate<String[]> outGlobalRole() {
@@ -101,7 +112,13 @@ public class JWTUtils {
                 .claim(JwtClaimName.SCOPE, getAuthorities(jwtDTO))
                 .claim(JwtClaimName.PROJECTS_ORGANIZATION, jwtDTO.getOrgProjectsMap().entrySet().stream()
                         .flatMap(entry -> entry.getValue().projectIds().stream().map(s -> s + ":" + entry.getKey().toString()))
+                        .collect(Collectors.toList()))
+                .claim(JwtClaimName.PROJECT_AGENTS, jwtDTO.getProjectAgentsMap().entrySet().stream()
+                        .flatMap(entry -> entry.getValue().agentIds().stream().map(s -> s + ":" + entry.getKey().toString()))
                         .collect(Collectors.toList()));
+
+        ;
+
 
         return builder.build();
     }

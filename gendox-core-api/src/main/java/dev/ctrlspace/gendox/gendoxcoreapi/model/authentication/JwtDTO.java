@@ -60,6 +60,7 @@ public class JwtDTO {
     private Map<String, OrganizationProject> orgProjectsMap;
     private Map<String, Object> originalClaims;
     private Map<String, Object> originalHeaders;
+    private Map<String,ProjectAgent> projectAgentsMap;
 
 
 
@@ -67,6 +68,10 @@ public class JwtDTO {
     public record OrganizationAuthorities(Set<String> orgAuthorities) {
     }
     public record OrganizationProject(Set<String> projectIds) {
+    }
+
+    public record ProjectAgent(Set<String> agentIds){
+
     }
 
 

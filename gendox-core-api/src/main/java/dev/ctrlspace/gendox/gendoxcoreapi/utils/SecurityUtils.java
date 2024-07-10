@@ -144,7 +144,7 @@ public class SecurityUtils {
 
     private boolean canAccessThread(String authority, GendoxAuthenticationToken authentication, UUID threadId) {
 
-        List<UUID> userProjectUUIDs = authentication
+        List<UUID> authorizedProjectIds = authentication
                 .getPrincipal()
                 .getOrganizations()
                 .stream()
@@ -153,12 +153,12 @@ public class SecurityUtils {
                 .map(project -> UUID.fromString(project.getId()))
                 .collect(Collectors.toList());
 
-        return chatThreadRepository.existsByIdAndProjectIdIn(threadId, userProjectUUIDs);
+        return chatThreadRepository.existsByIdAndProjectIdIn(threadId, authorizedProjectIds);
     }
 
     private boolean canAccessDocument(String authority, GendoxAuthenticationToken authentication, UUID documentId) {
 
-        List<UUID> userProjectUUIDs = authentication
+        List<UUID> authorizedProjectIds = authentication
                 .getPrincipal()
                 .getOrganizations()
                 .stream()
@@ -167,7 +167,7 @@ public class SecurityUtils {
                 .map(project -> UUID.fromString(project.getId()))
                 .collect(Collectors.toList());
 
-        return documentInstanceRepository.existsByDocumentIdAndProjectIds(documentId, userProjectUUIDs);
+        return documentInstanceRepository.existsByDocumentIdAndProjectIds(documentId, authorizedProjectIds);
     }
 
 

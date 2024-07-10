@@ -291,7 +291,8 @@ public class ProjectController {
     }
 
 
-    @PostMapping("agents-vp-offer/{agentId}")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PostMapping("projects/{projectId}/agents-vp-offer/{agentId}")
     @Operation(summary = "Create project agent verifiable presentation offer",
             description = "Create a verifiable presentation offer for the project agent. " +
                     "The user must have the necessary permissions to create a verifiable presentation offer for the project agent.")
