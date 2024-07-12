@@ -22,6 +22,8 @@ public class OrganizationUserDTO {
     private String address;
     Set<String> authorities; //include roles and permissions
     List<ProjectOrganizationDTO> projects;
+    List<ProjectAgentDTO> projectAgents;
+
 
     private Instant createdAt;
     private Instant updatedAt;
