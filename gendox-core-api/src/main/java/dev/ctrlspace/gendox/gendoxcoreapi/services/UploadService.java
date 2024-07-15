@@ -4,9 +4,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
-import dev.ctrlspace.gendox.provenAi.utils.IsccCodeServiceAdapter;
 import dev.ctrlspace.gendox.provenAi.utils.MockUniqueIdentifierServiceAdapter;
-import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
+import dev.ctrlspace.provenai.iscc.IsccCodeResponse;
+import dev.ctrlspace.provenai.iscc.IsccCodeService;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,9 +32,9 @@ public class UploadService {
     private DocumentService documentService;
     private ProjectDocumentService projectDocumentService;
 
-    private IsccCodeServiceAdapter isccCodeServiceAdapter;
-
     private MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter;
+
+    private IsccCodeService isccCodeService;
 
 
 
@@ -44,13 +44,13 @@ public class UploadService {
     @Autowired
     public UploadService(DocumentService documentService,
                          ProjectDocumentService projectDocumentService,
-                         IsccCodeServiceAdapter isccCodeServiceAdapter,
-                         MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter
+                         MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter,
+                         IsccCodeService isccCodeService
                          ) {
         this.documentService = documentService;
         this.projectDocumentService = projectDocumentService;
-        this.isccCodeServiceAdapter = isccCodeServiceAdapter;
         this.mockUniqueIdentifierServiceAdapter = mockUniqueIdentifierServiceAdapter;
+        this.isccCodeService = isccCodeService;
     }
 
 
@@ -58,8 +58,8 @@ public class UploadService {
         String fileName = file.getOriginalFilename();
         DocumentInstance instance =
                 documentService.getDocumentByFileName(projectId, organizationId, fileName);
-//        UniqueIdentifierCodeResponse uniqueIdentifierCodeResponse = isccCodeServiceAdapter.getDocumentUniqueIdentifier(file, fileName);
-        UniqueIdentifierCodeResponse uniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(file, fileName);
+        IsccCodeResponse isccCodeResponse = isccCodeService.getDocumentIsccCode(file, fileName);
+//        UniqueIdentifierCodeResponse uniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(file, fileName);
 
 
         if (instance == null) {
@@ -72,9 +72,9 @@ public class UploadService {
             documentInstance.setOrganizationId(organizationId);
             documentInstance.setRemoteUrl(fullFilePath);
 //            ISCC code
-//            documentInstance.setDocumentIsccCode(uniqueIdentifierCodeResponse.getIscc());
+            documentInstance.setDocumentIsccCode(isccCodeResponse.getIscc());
 //              Mock Unique Identifier Code: UUID
-            documentInstance.setDocumentIsccCode(uniqueIdentifierCodeResponse.getUuid());
+//            documentInstance.setDocumentIsccCode(uniqueIdentifierCodeResponse.getUuid());
             documentInstance = documentService.createDocumentInstance(documentInstance);
             // create project document
             ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, documentInstance.getId());
@@ -83,8 +83,8 @@ public class UploadService {
         } else {
             String fullFilePath = saveFile(file, organizationId, projectId);
             instance.setRemoteUrl(fullFilePath);
-//            instance.setDocumentIsccCode(uniqueIdentifierCodeResponse.getIscc());
-            instance.setDocumentIsccCode(uniqueIdentifierCodeResponse.getUuid());
+            instance.setDocumentIsccCode(isccCodeResponse.getIscc());
+//            instance.setDocumentIsccCode(uniqueIdentifierCodeResponse.getUuid());
 
             instance = documentService.updateDocument(instance);
         }
