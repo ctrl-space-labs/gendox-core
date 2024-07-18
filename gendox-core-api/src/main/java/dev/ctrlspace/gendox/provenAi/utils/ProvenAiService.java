@@ -50,8 +50,7 @@ public class ProvenAiService {
 
 
         Object agentVpJwt = projectAgentService.createVerifiablePresentation(projectAgent,
-                walletKeyService.getWalletKeybyOrganizationId(projectAgent.getProject().getOrganizationId()).getJwkKeyFormat(),
-                organizationDidService.getOrganizationDidByOrganizationId(projectAgent.getProject().getOrganizationId()).getDid());
+                walletKeyService.getWalletKeybyOrganizationId(projectAgent.getProject().getOrganizationId()).getJwkKeyFormat(),projectAgent.getOrganizationDid());
 
         return provenAiAgentAuthenticationAdapter.provenAiAgentAuthentication((String) agentVpJwt).getToken();
 
