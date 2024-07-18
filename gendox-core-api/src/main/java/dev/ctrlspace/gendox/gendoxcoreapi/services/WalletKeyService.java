@@ -127,7 +127,7 @@ public class WalletKeyService {
         if (characterLength == null) {
             characterLength = WalletKeyConstants.DEFAULT_KEY_LENGTH;
         }
-        JWKKey jwkKey = keyCreation.generateKey(keyType, characterLength);
+        JWKKey jwkKey = KeyCreation.generateKey(keyType, characterLength);
 
         // Get JWK and key type from the generated local key
         KeyType jwkKeyType = jwkKey.getKeyType();
