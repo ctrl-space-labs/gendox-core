@@ -2,7 +2,6 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.gson.Gson;
-import id.walt.crypto.keys.LocalKey;
 import jakarta.persistence.*;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -29,7 +28,6 @@ public class WalletKey {
     private String publicKey;
 
     @JsonIgnore
-//    @org.hibernate.annotations.Type(LocalKeyUserType.class)
     @Column(name = "jwk_key_format")
     private String jwkKeyFormat;
     @Basic

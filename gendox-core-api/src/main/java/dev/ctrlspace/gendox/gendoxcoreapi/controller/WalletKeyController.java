@@ -8,7 +8,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.KeyImportDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WalletKeyDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.WalletKeyCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.WalletKeyService;
-import id.walt.crypto.keys.LocalKey;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;

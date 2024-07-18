@@ -15,7 +15,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectAge
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import dev.ctrlspace.provenai.ssi.issuer.VerifiablePresentationBuilder;
-import id.walt.crypto.keys.LocalKey;
+import id.walt.crypto.keys.jwk.JWKKey;
 import kotlinx.serialization.json.Json;
 import kotlinx.serialization.json.JsonPrimitive;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -214,9 +214,9 @@ public class ProjectAgentService {
         projectAgent.setAgentVcJwt(projectAgent.getAgentVcJwt().toString());
         projectAgentRepository.save(projectAgent);
 
-        LocalKey localKey = new LocalKey(subjectKeyJwk);
+        JWKKey jwkKey = new JWKKey(subjectKeyJwk);
 
-        return verifiablePresentationBuilder.buildAndSign(localKey);
+        return verifiablePresentationBuilder.buildAndSign(jwkKey);
 
     }
         public Object createVerifiablePresentationOrg (String vcJwt, String subjectKeyJwk, String subjectDid) throws
@@ -229,10 +229,10 @@ public class ProjectAgentService {
             verifiablePresentationBuilder.setDid(subjectDid);
             verifiablePresentationBuilder.setNonce(cryptographyUtils.generateNonce());
 
-            LocalKey localKey = new LocalKey(subjectKeyJwk);
+            JWKKey jwkKey = new JWKKey(subjectKeyJwk);
 
 
-            return verifiablePresentationBuilder.buildAndSign(localKey);
+            return verifiablePresentationBuilder.buildAndSign(jwkKey);
 
 
         }

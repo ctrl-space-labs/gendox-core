@@ -16,7 +16,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
-import id.walt.crypto.keys.LocalKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
