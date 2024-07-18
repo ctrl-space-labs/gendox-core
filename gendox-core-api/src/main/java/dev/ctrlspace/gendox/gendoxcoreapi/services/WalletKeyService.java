@@ -1,8 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.WalletKeyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
@@ -12,8 +10,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.WalletKeyCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.WalletKeyRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.WalletKeyPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WalletKeyConstants;
+import dev.ctrlspace.provenai.ssi.issuer.JWKKeyWrapper;
 import id.walt.crypto.keys.KeyType;
-import id.walt.crypto.keys.LocalKey;
+import id.walt.crypto.keys.jwk.JWKKey;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,7 +20,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import dev.ctrlspace.provenai.ssi.issuer.KeyCreation;
-import dev.ctrlspace.provenai.ssi.issuer.LocalKeyWrapper;
 
 import java.time.Instant;
 import java.util.*;
@@ -32,7 +30,6 @@ public class WalletKeyService {
     private WalletKeyRepository walletKeyRepository;
     private KeyCreation keyCreation;
 
-    private LocalKeyWrapper localKeyWrapper;
 
     private TypeService typeService;
 
@@ -130,22 +127,21 @@ public class WalletKeyService {
         if (characterLength == null) {
             characterLength = WalletKeyConstants.DEFAULT_KEY_LENGTH;
         }
-        LocalKey localKey = keyCreation.generateKey(keyType, characterLength);
+        JWKKey jwkKey = keyCreation.generateKey(keyType, characterLength);
 
         // Get JWK and key type from the generated local key
-        LocalKeyWrapper localKeyWrapper = new LocalKeyWrapper();
-        String jwk = localKeyWrapper.getJwk(localKey);
-        KeyType localKeyType = localKeyWrapper.getKeyType(localKey);
+        KeyType jwkKeyType = jwkKey.getKeyType();
+        JWKKeyWrapper jwkKeyWrapper = new JWKKeyWrapper();
 
         // Set the public key from the local key
-        LocalKey publicKey = localKeyWrapper.getPublicKey(localKey);
+        JWKKey publicKey = jwkKeyWrapper.getPublicKey(jwkKey);
         walletKey.setPublicKey(publicKey.getJwk());
 
         // Set the private key from the local key
-        walletKey.setJwkKeyFormat(jwk);
+        walletKey.setJwkKeyFormat(jwkKey.getJwk());
 
         // Set the key type
-        String keyTypeName = getKeyTypeName(localKeyType);
+        String keyTypeName = getKeyTypeName(jwkKeyType);
         Type walletKeyType = typeService.getKeyTypeByName(keyTypeName);
         walletKey.setKeyType(walletKeyType);
 
@@ -166,13 +162,13 @@ public class WalletKeyService {
 
     public WalletKey importWalletKey(String privateKeyJwk, UUID organizationId) throws GendoxException {
         // Extract the necessary information from the LocalKey object
-        LocalKeyWrapper localKeyWrapper = new LocalKeyWrapper();
-        LocalKey localKey = new LocalKey(privateKeyJwk);
-        KeyType keyType = localKey.getKeyType();
+        JWKKeyWrapper jwkKeyWrapper = new JWKKeyWrapper();
+        JWKKey jwkKey = new JWKKey(privateKeyJwk);
+        KeyType keyType = jwkKey.getKeyType();
         WalletKey walletKey = new WalletKey();
         walletKey.setJwkKeyFormat(privateKeyJwk); // Set the entire JWK
 //        get the public key object and its Jwk
-        LocalKey publicKey = localKeyWrapper.getPublicKey(localKey);
+        JWKKey publicKey = jwkKeyWrapper.getPublicKey(jwkKey);
         walletKey.setPublicKey(publicKey.getJwk()); // Set only the public part
         String keyTypeName = getKeyTypeName(keyType);
         Type walletKeyType = typeService.getKeyTypeByName(keyTypeName);
@@ -188,7 +184,6 @@ public class WalletKeyService {
         return walletKey;
     }
 
-//i want to get the KeyTypeName from the Map given the keyType
     public String getKeyTypeName(KeyType keyType) throws GendoxException {
         for (Map.Entry<String, KeyType> entry : KeyTypeMap().entrySet()) {
             if (entry.getValue().equals(keyType)) {
@@ -203,15 +198,6 @@ public class WalletKeyService {
         return walletKey.getJwkKeyFormat();
     }
 
-
-
-//    public LocalKey generateLocalKey(String keyTypeName, Integer characterLength) throws GendoxException {
-//        KeyType keyType = getKeyTypeFromMap(keyTypeName);
-//        if (characterLength == null) {
-//            characterLength = WalletKeyConstants.DEFAULT_KEY_LENGTH;
-//        }
-//        return keyCreation.generateKey(keyType, characterLength);
-//    }
 
 
 }

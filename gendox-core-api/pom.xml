@@ -398,19 +398,20 @@
             <dependency>
                 <groupId>id.walt.did</groupId>
                 <artifactId>waltid-did-jvm</artifactId>
-                <version>0.2.0</version>
+                <version>0.5.0</version>
             </dependency>
             <dependency>
                 <groupId>id.walt.crypto</groupId>
                 <artifactId>waltid-crypto-jvm</artifactId>
-                <version>0.2.0</version>
+                <version>0.5.0</version>
             </dependency>
 
             <dependency>
                 <groupId>id.walt</groupId>
                 <artifactId>waltid-sdjwt-jvm</artifactId>
-                <version>0.2.0</version>
+                <version>0.4.1</version>
             </dependency>
+
         </dependencies>
     </dependencyManagement>
 

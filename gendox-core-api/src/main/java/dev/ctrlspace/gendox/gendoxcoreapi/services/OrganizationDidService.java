@@ -3,21 +3,14 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OrganizationDidConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationDid;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.WalletKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDidDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationDidCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.WalletKeyCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.request.VerifiableCredentialRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationDidRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationDidPredicates;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.WalletKeyPredicates;
 import dev.ctrlspace.provenai.ssi.issuer.DidIssuer;
 import dev.ctrlspace.provenai.ssi.issuer.KeyCreation;
-import dev.ctrlspace.provenai.ssi.issuer.LocalKeyWrapper;
 import dev.ctrlspace.provenai.ssi.issuer.VerifiableCredentialBuilder;
-import id.walt.credentials.vc.vcs.W3CVC;
-import id.walt.crypto.keys.KeyType;
-import id.walt.crypto.keys.LocalKey;
+import id.walt.crypto.keys.jwk.JWKKey;
 import id.walt.did.dids.registrar.DidResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -107,14 +100,14 @@ public class OrganizationDidService {
             throw new GendoxException("INVALID_WEB_DID", "Both domain and path must be provided for web DIDs", HttpStatus.BAD_REQUEST);
         }
         String jwk = walletKeyService.getPrivateJWKbyKeyId(organizationDid.getKeyId());
-        LocalKey localKey = new LocalKey(jwk);
+        JWKKey jwkKey = new JWKKey(jwk);
 
         DidIssuer didIssuer = new DidIssuer();
 
         DidResult didResult = didIssuer.resolveWebDidToKey(walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()),
                 organizationDid.getWebDomain(),
                 organizationDid.getWebPath(),
-                localKey
+                jwkKey
         );
 
         // Create the web DID
@@ -128,12 +121,12 @@ public class OrganizationDidService {
         // Create a new DID issuer
         DidIssuer didIssuer = new DidIssuer();
         String jwk = walletKeyService.getPrivateJWKbyKeyId(organizationDid.getKeyId());
-        LocalKey localKey = new LocalKey(jwk);
+        JWKKey jwkKey = new JWKKey(jwk);
 
         // Create a LocalKey object using the LocalKeyWrapper
 
         DidResult didResult = didIssuer.resolveKeyDidToKey(walletKeyService.getKeyTypebyKeyId(organizationDid.getKeyId()),
-                false, localKey);
+                false, jwkKey);
 
         organizationDid.setDid(String.valueOf(didResult.getDid()));
 
