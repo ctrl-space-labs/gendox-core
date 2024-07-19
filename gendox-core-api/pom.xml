@@ -175,7 +175,7 @@
         <dependency>
             <groupId>com.nimbusds</groupId>
             <artifactId>nimbus-jose-jwt</artifactId>
-            <version>9.31</version>
+            <version>9.40</version>
         </dependency>
 
 <!--        <dependency>-->
@@ -395,6 +395,13 @@
 
     <dependencyManagement>
         <dependencies>
+
+
+            <dependency>
+                <groupId>id.walt.credentials</groupId>
+                <artifactId>waltid-verifiable-credentials-jvm</artifactId>
+                <version>0.5.0</version>
+            </dependency>
             <dependency>
                 <groupId>id.walt.did</groupId>
                 <artifactId>waltid-did-jvm</artifactId>
