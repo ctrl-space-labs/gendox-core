@@ -37,6 +37,7 @@ public class ProvenAiMessageService {
         if ("PROVEN_AI_AGENT_REGISTRATION".equals(messageType)) {
             ProjectAgent projectAgent = projectAgentService.getAgentById(UUID.fromString(payload.getProjectAgentId()));
             projectAgent.setOrganizationDid(payload.getOrganizationDid());
+            projectAgent.setAgentVcJwt(payload.getAgentVcJwt());
             projectAgentService.updateProjectAgent(projectAgent);
             return ResponseEntity.ok(new WebHookEventResponse("Agent registered successfully"));
         }
