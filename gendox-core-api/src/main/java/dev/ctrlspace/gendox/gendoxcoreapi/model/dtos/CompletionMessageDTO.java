@@ -23,6 +23,7 @@ public class CompletionMessageDTO {
     private List<Double> tokens;
     private List<String> ownerName; // get public info of organization by ID
     private List<Object> signedPermissionOfUseVc;
+    private List<String> aiModelName;
 
     // TODO review this to add more metadata about the sections involved in the response
 
