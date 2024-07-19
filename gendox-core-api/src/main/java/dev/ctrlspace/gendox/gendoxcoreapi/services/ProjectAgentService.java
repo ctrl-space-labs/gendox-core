@@ -211,8 +211,6 @@ public class ProjectAgentService {
         verifiablePresentationBuilder.setPresentationId();
         verifiablePresentationBuilder.setDid(subjectDid);
         verifiablePresentationBuilder.setNonce(cryptographyUtils.generateNonce());
-        projectAgent.setAgentVcJwt(projectAgent.getAgentVcJwt().toString());
-        projectAgentRepository.save(projectAgent);
 
         JWKKey jwkKey = new JWKKey(subjectKeyJwk);
 
