@@ -2,7 +2,6 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -37,7 +36,6 @@ public interface DocumentInstanceSectionRepository extends JpaRepository<Documen
 
     @Query("SELECT dis FROM DocumentInstanceSection dis " +
             "INNER JOIN ProjectDocument pd ON dis.documentInstance.id = pd.documentId " +
-            "INNER JOIN EmbeddingGroup eg ON dis.id = eg.sectionId " +
-            "WHERE pd.project.id = :projectId AND eg.embeddingId IN :embeddingIds")
-    public List<DocumentInstanceSection> findByProjectAndEmbeddingIds(UUID projectId, Set<UUID> embeddingIds);
+            "WHERE pd.project.id = :projectId AND dis.id IN :sectionIds")
+    public List<DocumentInstanceSection> findByProjectAndSectionIds(UUID projectId, Set<UUID> sectionIds);
 }
