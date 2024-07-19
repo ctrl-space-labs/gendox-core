@@ -122,11 +122,11 @@ public class DocumentSectionService {
          * TODO merge this with the above to findSectionsByCriteria
          *
          * @param projectId
-         * @param embeddingIds
+         * @param sectionIds
          * @return
          */
-    public List<DocumentInstanceSection> getSectionsByEmbeddingsIn(UUID projectId, Set<UUID> embeddingIds) {
-        return documentInstanceSectionRepository.findByProjectAndEmbeddingIds(projectId, embeddingIds);
+    public List<DocumentInstanceSection> getSectionsBySectionsIn(UUID projectId, Set<UUID> sectionIds) {
+        return documentInstanceSectionRepository.findByProjectAndSectionIds(projectId, sectionIds);
     }
 
 

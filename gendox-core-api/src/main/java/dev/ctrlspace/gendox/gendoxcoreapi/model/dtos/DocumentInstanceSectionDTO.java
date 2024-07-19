@@ -28,4 +28,6 @@ public class DocumentInstanceSectionDTO {
     private String documentURL;
     private String ownerName;
     private Object signedPermissionOfUseVc;
+    private Double distanceFromQuestion;
+    private String distanceModelName;
 }
