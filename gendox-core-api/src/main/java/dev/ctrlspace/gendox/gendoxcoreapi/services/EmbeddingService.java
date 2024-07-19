@@ -9,20 +9,17 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.SearchResultConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SectionDistanceDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SearchResult;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
-import dev.ctrlspace.gendox.provenAi.utils.ProvenAiAgentAuthenticationAdapter;
-import dev.ctrlspace.gendox.provenAi.utils.ProvenAiQueryAdapter;
 import dev.ctrlspace.gendox.provenAi.utils.ProvenAiService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nullable;
@@ -235,8 +232,8 @@ public class EmbeddingService {
      * @return
      * @throws GendoxException
      */
-    public List<Embedding> findNearestEmbeddings(Embedding embedding, UUID projectId, PageRequest pageRequest) throws GendoxException, IOException {
-        List<Embedding> nearestEmbeddings = new ArrayList<>();
+    public List<SectionDistanceDTO> findNearestEmbeddings(Embedding embedding, UUID projectId, PageRequest pageRequest) throws GendoxException, IOException {
+        List<SectionDistanceDTO> nearestEmbeddings = new ArrayList<>();
 
         StringBuilder sb = new StringBuilder("[");
         sb.append(embedding.getEmbeddingVector().stream()
@@ -244,7 +241,7 @@ public class EmbeddingService {
                 .collect(Collectors.joining(",")));
         sb.append("]");
 
-        nearestEmbeddings = embeddingRepository.findClosestSections(projectId, sb.toString(), pageRequest.getPageSize());
+        nearestEmbeddings = embeddingRepository.findClosestSectionIdsWithDistance(projectId, sb.toString(), pageRequest.getPageSize());
 
         return nearestEmbeddings;
     }
@@ -257,15 +254,18 @@ public class EmbeddingService {
                 project.getProjectAgent().getSemanticSearchModel());
         Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse, projectId, message.getId(), null);
 
-        List<Embedding> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, PageRequest.of(0, 5));
+        List<SectionDistanceDTO> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, PageRequest.of(0, 5));
 
+        Map<UUID, Double> nearestSectionIds = nearestEmbeddings.stream()
+                .collect(Collectors.toMap(SectionDistanceDTO::getSectionsId, SectionDistanceDTO::getDistance));
 
-        Set<UUID> nearestEmbeddingsIds = nearestEmbeddings.stream().map(emb -> emb.getId()).collect(Collectors.toSet());
-        List<DocumentInstanceSection> sections = documentSectionService.getSectionsByEmbeddingsIn(projectId, nearestEmbeddingsIds);
+        List<DocumentInstanceSection> sections = documentSectionService.getSectionsBySectionsIn(projectId, nearestSectionIds.keySet());
 
         List<DocumentInstanceSectionDTO> instanceSections = new ArrayList<>(sections
                 .stream()
                 .map(section -> documentInstanceSectionWithDocumentConverter.toDTO(section))
+                .peek(sectionDTO -> sectionDTO.setDistanceFromQuestion(nearestSectionIds.get(sectionDTO.getId()))) // Set the distance from the question
+                .peek(sectionDTO -> sectionDTO.setDistanceModelName(project.getProjectAgent().getSemanticSearchModel().getName()))
                 .toList());
 
         return instanceSections;
