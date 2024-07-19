@@ -240,6 +240,8 @@ public class EmbeddingsController {
                         .map(section -> section.getDocumentSectionMetadata().getTitle()).toList())
                 .signedPermissionOfUseVc(sections.stream()
                         .map(DocumentInstanceSectionDTO::getSignedPermissionOfUseVc).toList())
+                .aiModelName(sections.stream()
+                        .map(DocumentInstanceSectionDTO::getAiModelName).toList())
 
                 .build();
 
