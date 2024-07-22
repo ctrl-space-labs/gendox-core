@@ -4,10 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.BotRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageSection;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
@@ -68,7 +65,9 @@ public class EmbeddingsController {
             })
     public EmbeddingResponse getEmbeddings(@RequestBody BotRequest botRequest, @RequestParam String aiModel) throws GendoxException {
 
-        EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(botRequest, aiModel);
+        AiModel aiModelObj = new AiModel();
+        aiModelObj.setModel(aiModel);
+        EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(botRequest, aiModelObj);
         Embedding embedding = new Embedding();
 
         embedding.setEmbeddingVector(embeddingResponse.getData().get(0).getEmbedding());
@@ -132,10 +131,11 @@ public class EmbeddingsController {
         if (pageable == null) {
             pageable = PageRequest.of(0, 5);
         }
-        if (pageable.getPageSize() > 5) {
+        if (pageable.getPageSize() > 20) {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
         }
 
+        message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
 
         List<DocumentInstanceSection> instanceSections = new ArrayList<>();

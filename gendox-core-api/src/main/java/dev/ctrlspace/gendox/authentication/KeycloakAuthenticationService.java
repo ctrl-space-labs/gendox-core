@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -52,19 +53,23 @@ public class KeycloakAuthenticationService implements AuthenticationService {
 
     private Keycloak keycloakClient;
 
+    private JwtDecoder jwtDecoder;
+
 
 
     public KeycloakAuthenticationService(@Value("${keycloak.base-url}") String keycloakServerUrl,
                                          @Value("${keycloak.token-uri}") String keycloakTokenUrl,
                                          @Value("${keycloak.realm}") String realm,
                                          @Value("${keycloak.client-id}") String clientId,
-                                         @Value("${keycloak.client-secret}") String clientSecret) {
+                                         @Value("${keycloak.client-secret}") String clientSecret,
+                                         JwtDecoder jwtDecoder) {
 
         this.keycloakServerUrl = keycloakServerUrl;
         this.keycloakTokenUrl = keycloakTokenUrl;
         this.realm = realm;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+        this.jwtDecoder = jwtDecoder;
 
         keycloakClient = KeycloakBuilder.builder()
                 .serverUrl(keycloakServerUrl)
@@ -76,13 +81,20 @@ public class KeycloakAuthenticationService implements AuthenticationService {
 
     }
 
-    @Override
-    public Jwt getClientToken(String clientId, String clientSecret) {
-        return null;
+    public Jwt getClientToken() {
+        String jwtString = getClientTokenString();
+        Jwt jwt = jwtDecoder.decode(jwtString);
+        return jwt;
     }
 
     @Override
-    public Jwt impersonateUser(String username) {
+    public String getClientTokenString() {
+        String jwtString = keycloakClient.tokenManager().getAccessTokenString();
+        return jwtString;
+    }
+
+    @Override
+    public AccessTokenResponse impersonateUser(String username, @Nullable String scope) {
 
         AccessTokenResponse clientToken = keycloakClient.tokenManager().getAccessToken();
         HttpHeaders headers = new HttpHeaders();
@@ -94,6 +106,9 @@ public class KeycloakAuthenticationService implements AuthenticationService {
         map.add("subject_token", clientToken.getToken());
         map.add("requested_subject", username);
         map.add("requested_token_type", OAuth2Constants.ACCESS_TOKEN_TYPE);
+        if (scope != null) {
+            map.add("scope", scope);
+        }
 
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
 
@@ -103,32 +118,8 @@ public class KeycloakAuthenticationService implements AuthenticationService {
                 request,
                 AccessTokenResponse.class);
 
-        String tokenString = impersonationToken.getBody().getToken();
-        // Parse the JWT token
-        SignedJWT signedJWT = null;
-        try {
-            signedJWT = (SignedJWT) JWTParser.parse(tokenString);
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
-        }
 
-        // Extract headers and claims
-        JWSHeader jwtHeaders = signedJWT.getHeader();
-        Payload payload = signedJWT.getPayload();
-
-
-        // Convert Unix timestamps to Instant
-        Map<String, Object> claims = payload.toJSONObject();
-        convertTimestampsToInstant(claims);
-
-        // Rebuild the token using Spring Boot's Jwt class
-        Jwt jwt = Jwt.withTokenValue(tokenString)
-                .headers(h -> h.putAll(jwtHeaders.toJSONObject()))
-                .claims(c -> c.putAll(claims))
-                .build();
-
-
-        return jwt;
+        return impersonationToken.getBody();
 
     }
 

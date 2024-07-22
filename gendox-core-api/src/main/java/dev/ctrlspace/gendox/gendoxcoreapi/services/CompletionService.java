@@ -66,7 +66,7 @@ public class CompletionService {
         this.messageService = messageService;
     }
 
-    private CompletionResponse getCompletionForMessages(List<Message> messages, String agentRole, String aiModel,
+    private CompletionResponse getCompletionForMessages(List<Message> messages, String agentRole, AiModel aiModel,
                                                  AiModelRequestParams aiModelRequestParams) throws GendoxException {
 
         //TODO add in DB table message, a field for the role of the message
@@ -81,7 +81,7 @@ public class CompletionService {
         }
         //choose the correct aiModel adapter
         AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
-        CompletionResponse completionResponse = aiModelTypeService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams);
+        CompletionResponse completionResponse = aiModelTypeService.askCompletion(aiModelMessages, agentRole, aiModel.getModel(), aiModelRequestParams);
         return completionResponse;
     }
 
@@ -108,7 +108,7 @@ public class CompletionService {
 
         CompletionResponse completionResponse = getCompletionForMessages(List.of(promptMessage),
                 project.getProjectAgent().getAgentBehavior(),
-                project.getProjectAgent().getCompletionModel().getModel(),
+                project.getProjectAgent().getCompletionModel(),
                 aiModelRequestParams);
 
         Type completionType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");

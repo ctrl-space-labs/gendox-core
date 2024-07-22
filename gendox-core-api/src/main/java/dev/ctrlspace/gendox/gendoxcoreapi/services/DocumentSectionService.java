@@ -39,6 +39,7 @@ public class DocumentSectionService {
     private EmbeddingService embeddingService;
     private IsccCodeServiceAdapter isccCodeServiceAdapter;
     private MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter;
+    private MessageService messageService;
 
 
 
@@ -54,7 +55,8 @@ public class DocumentSectionService {
                                   DocumentInstanceSectionRepository documentInstanceSectionRepository,
                                   DocumentSectionMetadataRepository documentSectionMetadataRepository,
                                   IsccCodeServiceAdapter isccCodeServiceAdapter,
-                                  MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter
+                                  MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter,
+                                    MessageService messageService
     ) {
         this.typeService = typeService;
         this.trainingService = trainingService;
@@ -62,6 +64,7 @@ public class DocumentSectionService {
         this.documentSectionMetadataRepository = documentSectionMetadataRepository;
         this.isccCodeServiceAdapter = isccCodeServiceAdapter;
         this.mockUniqueIdentifierServiceAdapter = mockUniqueIdentifierServiceAdapter;
+        this.messageService = messageService;
     }
 
 
@@ -151,8 +154,8 @@ public class DocumentSectionService {
         section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
 
         // take moderation check
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
-        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
+//        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
+//        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
 
         //create metadata
         section.setDocumentSectionMetadata(createMetadata(section));
@@ -184,8 +187,8 @@ public class DocumentSectionService {
         section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
 
         // take moderation check
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
-        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
+//        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
+//        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
 
         //create metadata
         section.setDocumentSectionMetadata(createMetadata(section));
@@ -291,6 +294,7 @@ public class DocumentSectionService {
     }
 
     public void deleteSection(DocumentInstanceSection section) throws GendoxException{
+        messageService.deleteMessageSection(section.getId());
         DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
         embeddingService.deleteEmbeddingGroupsBySection(section.getId());
         documentInstanceSectionRepository.delete(section);

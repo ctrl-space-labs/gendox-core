@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -20,5 +21,5 @@ public class ProjectCriteria {
         private String organizationId;
         private String userId;
         //populate in controller as default with user's projects
-        private List<String> projectIdIn;
+        private List<String> projectIdIn = new ArrayList<>();
 }

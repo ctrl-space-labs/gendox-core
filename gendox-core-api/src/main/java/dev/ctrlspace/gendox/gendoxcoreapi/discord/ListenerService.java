@@ -16,6 +16,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.HttpUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import org.keycloak.representations.AccessTokenResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -208,9 +209,9 @@ public class ListenerService {
 
     public String getJwtToken(String userIdentifier) throws GendoxException {
 
-        Jwt jwt = authenticationService.impersonateUser(userIdentifier);
+        AccessTokenResponse jwt = authenticationService.impersonateUser(userIdentifier, null);
 
-        return jwt.getTokenValue();
+        return jwt.getToken();
 
     }
 

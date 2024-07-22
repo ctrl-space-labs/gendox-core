@@ -6,14 +6,18 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectAgentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectAgentPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -69,6 +73,13 @@ public class ProjectAgentService {
                 .orElse(null);
     }
 
+    public Page<ProjectAgent> getAllProjectAgents(ProjectAgentCriteria criteria, Pageable pageable) throws GendoxException {
+        if (pageable == null) {
+            throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
+        }
+        return projectAgentRepository.findAll(ProjectAgentPredicates.build(criteria), pageable);
+    }
+
     public ProjectAgent createProjectAgent(ProjectAgent projectAgent) throws Exception {
         if (projectAgent.getId() != null) {
             throw new GendoxException("NEW_PROJECT_AGENT_ID_IS_NOT_NULL", "Project - Agent id must be null", HttpStatus.BAD_REQUEST);
@@ -117,7 +128,7 @@ public class ProjectAgentService {
             projectAgent.setPrivateAgent(true);
         }
         if (projectAgent.getSemanticSearchModel() == null) {
-            projectAgent.setSemanticSearchModel(aiModelService.getByName(AiModelConstants.ADA2_MODEL));
+            projectAgent.setSemanticSearchModel(aiModelService.getByName(AiModelConstants.ADA_3_SMALL));
         }
         if (projectAgent.getCompletionModel() == null) {
             projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_3_5_TURBO_MODEL));
