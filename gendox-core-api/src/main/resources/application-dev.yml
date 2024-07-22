@@ -11,7 +11,7 @@ logging:
 spring:
   mail:
     host: ${GENDOX_SPRING_EMAIL_HOST:no-env-variable}
-    port: ${GENDOX_SPRING_EMAIL_PORT:no-env-variable}
+    port: 0
     username: ${GENDOX_SPRING_EMAIL_USERNAME:no-env-variable}
     password: ${GENDOX_SPRING_EMAIL_PASSWORD:no-env-variable}
     properties:
@@ -33,14 +33,14 @@ spring:
     show-sql: false
     hibernate:
       ddl-auto: none
-    datasource:
-      url: ${DATABASE_URL}
-      username: ${DATABASE_USERNAME}
-      password: ${DATABASE_PASSWORD}
-
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
     hikari:
-      maximum-pool-size: 50
+      maximum-pool-size: 100
       minimum-idle: 10
+
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -106,8 +106,8 @@ gendox:
   emails:
     contact-email: contact@ctrlspace.dev
   documents:
-#    upload-dir: s3://gendox.organization.documents.dev
-    upload-dir: file:c:\\Users\\myrto\\projects
+    upload-dir: s3://gendox.organization.documents.dev
+#    upload-dir: file:c:\\Users\\myrto\\projects
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf

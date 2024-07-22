@@ -220,8 +220,9 @@ discord:
 
 
 proven-ai:
-  enabled: false
-  base-url: https://dev.provenai.ctrlspace.dev
+  enabled: true
+#  base-url: https://dev.provenai.ctrlspace.dev
+  base-url: http://localhost:8082
   context-path: /proven-ai/api/v1
   apis:
     agent-authentication:
