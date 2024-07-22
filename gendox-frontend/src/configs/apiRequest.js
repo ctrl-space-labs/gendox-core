@@ -1,7 +1,7 @@
 // const url = "http://localhost:5000/gendox/api/v1/"; // Local Environment
-const url= 'https://gendox-api.ctrlspace.dev/gendox/api/v1/' // Production Environment (AWS)
+//const url= 'https://gendox-api.ctrlspace.dev/gendox/api/v1/' // Production Environment (AWS)
 // const url= 'http://localhost:8080/gendox/api/v1/' // Local Environment
-//const url = 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/' // Development Environment (Hetzner)
+const url = 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/' // Development Environment (Hetzner)
 
 export default {
   getProfile: url + "profile",
@@ -82,5 +82,8 @@ export default {
 
   getAiModels: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/ai-models`,
+
+  acceptInvitation: (email, token) =>
+    `${url}invitations/acceptance?email=${email}&token=${token}`,
 
 };

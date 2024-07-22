@@ -31,7 +31,7 @@ public class UserPredicate {
     }
 
     private static Predicate email(String email) {
-        return email != null ? user.email.eq(email) : null;
+        return email != null ? user.email.eq(email.toLowerCase()) : null;
     }
 
     private static Predicate organizationId(String organizationId) {
@@ -50,9 +50,9 @@ public class UserPredicate {
         if (userIdentifier == null) {
             return null;
         }
-        return user.email.eq(userIdentifier)
-                .or(user.userName.eq(userIdentifier))
-                .or(user.phone.eq(userIdentifier));
+        return user.email.eq(userIdentifier.toLowerCase())
+                .or(user.userName.eq(userIdentifier.toLowerCase()))
+                .or(user.phone.eq(userIdentifier.toLowerCase()));
     }
 
 

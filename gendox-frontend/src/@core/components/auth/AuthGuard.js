@@ -13,6 +13,7 @@ const AuthGuard = props => {
   const router = useRouter()
   useEffect(
     () => {
+      console.log('AuthGuard router.route effect')
       if (!router.isReady) {
         return
       }

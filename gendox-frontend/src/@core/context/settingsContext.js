@@ -18,7 +18,8 @@ const initialSettings = {
   contentWidth: themeConfig.contentWidth,
   toastPosition: themeConfig.toastPosition,
   verticalNavToggleType: themeConfig.verticalNavToggleType,
-  appBar: themeConfig.layout === 'horizontal' && themeConfig.appBar === 'hidden' ? 'fixed' : themeConfig.appBar
+  appBar: themeConfig.layout === 'horizontal' && themeConfig.appBar === 'hidden' ? 'fixed' : themeConfig.appBar,
+  isDemo: themeConfig.isDemo
 }
 
 const staticSettings = {
@@ -27,7 +28,8 @@ const staticSettings = {
   layout: initialSettings.layout,
   navHidden: initialSettings.navHidden,
   lastLayout: initialSettings.lastLayout,
-  toastPosition: initialSettings.toastPosition
+  toastPosition: initialSettings.toastPosition,
+  isDemo: initialSettings.isDemo
 }
 
 const restoreSettings = () => {
@@ -55,6 +57,7 @@ const storeSettings = settings => {
   delete initSettings.navHidden
   delete initSettings.lastLayout
   delete initSettings.toastPosition
+  delete initSettings.isDemo
   window.localStorage.setItem('settings', JSON.stringify(initSettings))
 }
 

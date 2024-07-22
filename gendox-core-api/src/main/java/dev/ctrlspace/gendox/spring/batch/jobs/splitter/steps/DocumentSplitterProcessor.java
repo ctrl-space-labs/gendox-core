@@ -41,7 +41,7 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
     public DocumentSectionDTO process(DocumentInstance item) throws Exception {
         List<String> contentSections = new ArrayList<>();
         ProjectAgent agent = new ProjectAgent();
-        logger.debug("Start processing split: {}", item.getId());
+        logger.trace("Start processing split: {}", item.getId());
 
         try {
             String fileContent = downloadService.readDocumentContent(item.getRemoteUrl());

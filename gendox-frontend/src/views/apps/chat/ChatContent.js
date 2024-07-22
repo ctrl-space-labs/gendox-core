@@ -60,6 +60,7 @@ const ChatContent = (props) => {
   const renderContent = () => {
     if (store) {
       const selectedChat = store.selectedChat;
+      console.log("selectedChat: ", selectedChat);
       if (!selectedChat) {
         return (
           <ChatWrapperStartChat
@@ -190,7 +191,7 @@ const ChatContent = (props) => {
                 </Box>
               </Box>
 
-              <Box sx={{ display: "flex", alignItems: "center" }}>
+              {/* <Box sx={{ display: "flex", alignItems: "center" }}>
                 {mdAbove ? (
                   <Fragment>
                     <IconButton size="small" sx={{ color: "text.secondary" }}>
@@ -208,7 +209,7 @@ const ChatContent = (props) => {
                   }}
                   options={["Rename", "Clear Chat", "Delete"]}
                 />
-              </Box>
+              </Box> */}
             </Box>
 
             {selectedChat && store.userProfile ? (

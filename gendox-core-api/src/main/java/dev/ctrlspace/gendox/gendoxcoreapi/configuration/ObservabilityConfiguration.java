@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 public class ObservabilityConfiguration {
 
     @Bean
-    ObservedAspect observedAspect(ObservationRegistry observationRegistry, LoggingObservationHandler loggingObservationHandler) {
+    public ObservedAspect observedAspect(ObservationRegistry observationRegistry) {
 
         return new ObservedAspect(observationRegistry);
     }

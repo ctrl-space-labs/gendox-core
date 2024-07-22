@@ -132,21 +132,20 @@ public class EmbeddingService {
 
 
 
-     public EmbeddingResponse getEmbeddingForMessage(String value, String aiModelName) throws GendoxException {
-            return this.getEmbeddingForMessage(Arrays.asList(value), aiModelName);
+     public EmbeddingResponse getEmbeddingForMessage(String value, AiModel aiModel) throws GendoxException {
+            return this.getEmbeddingForMessage(Arrays.asList(value), aiModel);
     }
 
 
-    public EmbeddingResponse getEmbeddingForMessage(List<String> value, String aiModelName) throws GendoxException {
+    public EmbeddingResponse getEmbeddingForMessage(List<String> value, AiModel aiModel) throws GendoxException {
         BotRequest botRequest = new BotRequest();
         botRequest.setMessages(value);
-        return this.getEmbeddingForMessage(botRequest, aiModelName);
+        return this.getEmbeddingForMessage(botRequest, aiModel);
     }
 
-    public EmbeddingResponse getEmbeddingForMessage(BotRequest botRequest, String aiModel) throws GendoxException {
+    public EmbeddingResponse getEmbeddingForMessage(BotRequest botRequest, AiModel aiModel) throws GendoxException {
         AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
-         aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
-        EmbeddingResponse embeddingResponse = aiModelTypeService.askEmbedding(botRequest, aiModel);
+        EmbeddingResponse embeddingResponse = aiModelTypeService.askEmbedding(botRequest, aiModel.getModel());
 
         return embeddingResponse;
     }
@@ -238,7 +237,7 @@ public class EmbeddingService {
 
         Project project = projectService.getProjectById(projectId);
         EmbeddingResponse embeddingResponse = getEmbeddingForMessage(message.getValue(),
-                project.getProjectAgent().getSemanticSearchModel().getModel());
+                project.getProjectAgent().getSemanticSearchModel());
         Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse, projectId, message.getId(), null);
 
         List<Embedding> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, PageRequest.of(0, 5));

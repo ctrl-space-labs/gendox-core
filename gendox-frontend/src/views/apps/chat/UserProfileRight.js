@@ -17,6 +17,7 @@ import Typography from "@mui/material/Typography";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Button from "@mui/material/Button";
+import Link from "next/link";
 
 // ** Icon Imports
 import Icon from "src/@core/components/icon";
@@ -42,8 +43,8 @@ const UserProfileRight = (props) => {
   } = props;
 
   const router = useRouter();
-  const { organizationId, projectId } = router.query;
-  // const projectId = store.selectedChat.contact.projectId;
+  const { organizationId } = router.query;
+  const projectId = store.selectedChat.contact.projectId;
   const [projectAgent, setProjectAgent] = useState(null);
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
@@ -60,7 +61,7 @@ const UserProfileRight = (props) => {
           organizationId,
           projectId,
           storedToken
-        );        
+        );
         setProjectAgent(projectResponse.data.projectAgent);
       } catch (error) {
         console.error("Failed to fetch project", error);
@@ -70,11 +71,7 @@ const UserProfileRight = (props) => {
     fetchAiModels();
   }, [organizationId, projectId, storedToken]);
 
-  const handleEditAgent = () => {
-    router.push(
-      `/gendox/project-settings/?organizationId=${organizationId}&projectId=${projectId}`
-    );
-  };
+  
 
   const ScrollWrapper = ({ children }) => {
     if (hidden) {
@@ -298,14 +295,20 @@ const UserProfileRight = (props) => {
                     />
                   </ListItem>
                 </List>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleEditAgent}
-                  fullWidth
+
+                <Link
+                  href={`/gendox/project-settings/?organizationId=${organizationId}&projectId=${projectId}`}
+                  passHref
+                  target="_blank"
                 >
-                  Edit Agent
-                </Button>
+                  <Button
+                    variant="contained"                    
+                    color="primary"    
+                    fullWidth
+                  >
+                    Edit Agent
+                  </Button>
+                </Link>
               </Box>
             </ScrollWrapper>
           </Box>

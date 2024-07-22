@@ -1,6 +1,8 @@
 // ** React Imports
 import { useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux';
+import { useSettings } from "src/@core/hooks/useSettings";
+
 
 // ** MUI Imports
 import Tab from '@mui/material/Tab'
@@ -13,6 +15,8 @@ import TabContext from '@mui/lab/TabContext'
 import CardContent from '@mui/material/CardContent'
 import CardHeader from '@mui/material/CardHeader'
 import CardActions from '@mui/material/CardActions'
+import Link from "next/link";
+import Tooltip from "@mui/material/Tooltip";
 
 import GeneralOrganizationSettings from 'src/views/gendox-components/organization-settings/GeneralOrganizationSettings'
 import MembersOrganizationSettings from 'src/views/gendox-components/organization-settings/MembersOrganizationSettings'
@@ -30,10 +34,8 @@ const OrganizationSettingsCard = () => {
     setValue(newValue)
   }
 
-  // Function to navigate to ProvenAi
-  const navigateToProvenAi = () => {
-    window.open('https://www.ctrlspace.dev/', '_blank');
-  };
+  const { settings } = useSettings();
+  const isDemo = settings.isDemo;
 
   return (
     <Card>
@@ -65,9 +67,21 @@ const OrganizationSettingsCard = () => {
           </CardContent>
           <Divider sx={{ m: '0 !important' }} />
           <CardActions sx={{ justifyContent: 'flex-end' }}>
-            <Button size='large' onClick={navigateToProvenAi} variant='contained'>
-              Go to ProvenAi
-            </Button>
+          <Tooltip title={isDemo ? "Feature not available in demo mode" : ""}>
+              <span>
+                {/* Use a span to ensure Tooltip works correctly when the button is disabled */}
+                <Button
+                  size="large"
+                  variant="contained"                 
+                  href="https://www.ctrlspace.dev/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  disabled={isDemo} // Disable the button if isDemo is true
+                >
+                  Go to ProvenAi
+                </Button>
+              </span>
+            </Tooltip>
           </CardActions>
         </form>
       </TabContext>

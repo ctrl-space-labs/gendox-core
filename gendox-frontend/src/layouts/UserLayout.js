@@ -9,6 +9,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Icon from "src/@core/components/icon";
 import Button from "@mui/material/Button";
+import Link from "next/link";
 
 // ** Navigation Imports
 import VerticalNavItems from "src/navigation/vertical";
@@ -51,40 +52,43 @@ const UserLayout = ({ children, contentHeightFixed }) => {
 
   const { ChatButton, NewProjectButton } = VerticalNavButtons;
 
-  const handleNavigate = () => {
-    const path = `/gendox/home`;
-    router.push(path);
-  };
+  
 
   const AppBrand = () => {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          cursor: "pointer",
-          padding: "20px 20px",
+      <Link href="/gendox/home" passHref style={{ textDecoration: 'none' }}>
+        <Box
           
-        }}
-        onClick={handleNavigate}
-      >
-        <div
-          style={{
-            width: "30px",
-            height: "30px",
-            backgroundImage: "url('/images/gendoxLogo.svg')",
-            backgroundSize: "20px 20px",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "center",
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            cursor: "pointer",
+            padding: "20px 20px",    
           }}
-        />
-        <Typography variant="h6" sx={{ ml: 2 }}>
-          Gendox
-        </Typography>
-      </Box>
+          
+        >
+          <div
+            style={{
+              width: "30px",
+              height: "30px",
+              backgroundImage: "url('/images/gendoxLogo.svg')",
+              backgroundSize: "20px 20px",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+            }}
+          />
+          <Typography
+            variant="h6"
+            sx={{
+              ml: 2,              
+            }}
+          >
+            Gendox
+          </Typography>
+        </Box>
+      </Link>
     );
   };
-  
 
   return (
     <Layout
