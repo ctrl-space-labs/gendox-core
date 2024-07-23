@@ -13,6 +13,7 @@ import dev.ctrlspace.provenai.iscc.IsccCodeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,7 +39,8 @@ public class DocumentSectionService {
 
     private IsccCodeService isccCodeService;
 
-
+    @Value("${proven-ai.enabled}")
+    private Boolean provenAiEnabled;
 
 
     @Lazy
@@ -168,13 +170,19 @@ public class DocumentSectionService {
 
         String fileName = getFileNameFromUrl(section.getDocumentInstance().getRemoteUrl());
 
-        IsccCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeService.getDocumentUniqueIdentifier(
-                fileContent.getBytes(), fileName);
-//        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
-//                fileContent.getBytes(), fileName);
-//
-        section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getIscc());
-//        section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
+        String documentSectionIsccCode = new String();
+        if (provenAiEnabled) {
+            IsccCodeResponse sectionIsccCodeResponse = isccCodeService.getDocumentUniqueIdentifier(
+                    fileContent.getBytes(), fileName);
+            documentSectionIsccCode = sectionIsccCodeResponse.getIscc();
+        }
+        else{
+            UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
+                    fileContent.getBytes(), fileName);
+            documentSectionIsccCode = sectionUniqueIdentifierCodeResponse.getUuid();
+        }
+
+        section.setDocumentSectionIsccCode(documentSectionIsccCode);
 
         // take moderation check
 //        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
