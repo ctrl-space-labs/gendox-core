@@ -199,7 +199,7 @@ discord:
 
 
 proven-ai:
-  enabled: true
+  enabled: ${PROVEN_AI_ENABLED:no-env-variable}
   base-url: https://provenai.ctrlspace.dev
   context-path: /proven-ai/api/v1
   apis:

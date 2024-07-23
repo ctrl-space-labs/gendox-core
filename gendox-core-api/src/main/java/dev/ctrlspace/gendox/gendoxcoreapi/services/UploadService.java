@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
 import dev.ctrlspace.gendox.provenAi.utils.MockUniqueIdentifierServiceAdapter;
+import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
 import dev.ctrlspace.provenai.iscc.IsccCodeResponse;
 import dev.ctrlspace.provenai.iscc.IsccCodeService;
 import org.jetbrains.annotations.NotNull;
@@ -28,6 +29,9 @@ public class UploadService {
     // Define the location where you want to save uploaded files
     @Value("${gendox.documents.upload-dir}")
     private String uploadDir;
+
+    @Value("${proven-ai.enabled}")
+    private Boolean provenAiEnabled;
 
     private DocumentService documentService;
     private ProjectDocumentService projectDocumentService;
@@ -58,33 +62,39 @@ public class UploadService {
         String fileName = file.getOriginalFilename();
         DocumentInstance instance =
                 documentService.getDocumentByFileName(projectId, organizationId, fileName);
-        IsccCodeResponse isccCodeResponse = isccCodeService.getDocumentIsccCode(file, fileName);
-//        UniqueIdentifierCodeResponse uniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(file, fileName);
+        String fullFilePath = saveFile(file, organizationId, projectId);
+        String documentIsccCode = new String();
+        if (provenAiEnabled) {
+            IsccCodeResponse isccCodeResponse = isccCodeService.getDocumentIsccCode(file, fileName);
+            documentIsccCode = isccCodeResponse.getIscc();
+        }
+//              Mock Unique Identifier Code: UUID
+        else {
 
+            UniqueIdentifierCodeResponse uniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(file, fileName);
+            documentIsccCode = uniqueIdentifierCodeResponse.getUuid();
+        }
 
         if (instance == null) {
             DocumentInstance documentInstance = new DocumentInstance();
             // Generate a unique UUID
             UUID documentInstanceId = UUID.randomUUID();
-            String fullFilePath = saveFile(file, organizationId, projectId);
 
             documentInstance.setId(documentInstanceId);
             documentInstance.setOrganizationId(organizationId);
             documentInstance.setRemoteUrl(fullFilePath);
 //            ISCC code
-            documentInstance.setDocumentIsccCode(isccCodeResponse.getIscc());
-//              Mock Unique Identifier Code: UUID
-//            documentInstance.setDocumentIsccCode(uniqueIdentifierCodeResponse.getUuid());
+
+            documentInstance.setDocumentIsccCode(documentIsccCode);
             documentInstance = documentService.createDocumentInstance(documentInstance);
             // create project document
             ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, documentInstance.getId());
             return documentInstance;
 
         } else {
-            String fullFilePath = saveFile(file, organizationId, projectId);
+//            String fullFilePath = saveFile(file, organizationId, projectId);
             instance.setRemoteUrl(fullFilePath);
-            instance.setDocumentIsccCode(isccCodeResponse.getIscc());
-//            instance.setDocumentIsccCode(uniqueIdentifierCodeResponse.getUuid());
+            instance.setDocumentIsccCode(documentIsccCode);
 
             instance = documentService.updateDocument(instance);
         }
