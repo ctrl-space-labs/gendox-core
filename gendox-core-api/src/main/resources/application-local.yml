@@ -17,7 +17,7 @@ logging:
 spring:
   mail:
     host: ${GENDOX_SPRING_EMAIL_HOST:no-env-variable}
-    port: 0
+    port: ${GENDOX_SPRING_EMAIL_PORT:no-env-variable}
     username: ${GENDOX_SPRING_EMAIL_USERNAME:no-env-variable}
     password: ${GENDOX_SPRING_EMAIL_PASSWORD:no-env-variable}
     properties:
@@ -232,7 +232,13 @@ proven-ai:
     search:
       endpoint: /search
 
+# Walt.id
 walt-id:
   default-key:
     type: ECDSA_SECP256K1
     size: 2048
+
+#ISCC Code
+iscc:
+  apis:
+    code-generation: http://localhost:8970/api/v1/iscc
