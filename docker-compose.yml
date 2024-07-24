@@ -37,8 +37,8 @@ services:
        context: ./gendox-core-api
        dockerfile: Dockerfile
        args:
-         - GIT_REPOSITORY=${GIT_REPOSITORY}
-         - GIT_BRANCH=${GIT_BRANCH}
+         - PROVEN_AI_GIT_REPOSITORY=${PROVEN_AI_GIT_REPOSITORY}
+         - PROVEN_AI_GIT_BRANCH=${PROVEN_AI_GIT_BRANCH}
     container_name: gendox-core-api
     volumes:
       - ~/.aws/:/root/.aws:ro
