@@ -9,10 +9,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserD
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.ProjectOrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectAgentVPCredential;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectMemberDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectMemberCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.request.ProjectAgentVPOfferRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
@@ -21,6 +23,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
+import kotlinx.serialization.json.JsonElement;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -41,7 +44,6 @@ public class ProjectController {
     private ProjectMemberService projectMemberService;
     private ProjectMemberConverter projectMemberConverter;
     private ProjectAgentService projectAgentService;
-
     private SecurityUtils securityUtils;
 
     private UserService userService;
@@ -286,6 +288,26 @@ public class ProjectController {
         userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser));
 
         projectMemberService.removeMemberFromProject(projectId, userId);
+    }
+
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PostMapping("projects/{projectId}/agents-vp-offer/{agentId}")
+    @Operation(summary = "Create project agent verifiable presentation offer",
+            description = "Create a verifiable presentation offer for the project agent. " +
+                    "The user must have the necessary permissions to create a verifiable presentation offer for the project agent.")
+    public ProjectAgentVPCredential createProjectAgentVerifiablePresentationOffer(@PathVariable UUID agentId,
+                                                                                  @RequestBody ProjectAgentVPOfferRequest projectAgentVPOfferRequest) throws Exception {
+        ProjectAgent projectAgent = projectAgentService.getAgentById(agentId);
+        ProjectAgentVPCredential projectAgentVPCredential = new ProjectAgentVPCredential();
+
+        Object agentVpJwt = projectAgentService.createVerifiablePresentation( projectAgent,projectAgentVPOfferRequest.getSubjectKey(),
+                projectAgentVPOfferRequest.getSubjectDid());
+
+        projectAgentVPCredential.setAgentId(projectAgent.getId().toString());
+        projectAgentVPCredential.setAgentVpJwt(agentVpJwt.toString());
+
+        return projectAgentVPCredential;
     }
 
 

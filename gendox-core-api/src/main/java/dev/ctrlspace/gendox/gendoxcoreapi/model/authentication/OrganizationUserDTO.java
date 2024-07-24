@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -21,7 +22,9 @@ public class OrganizationUserDTO {
     private String phone;
     private String address;
     Set<String> authorities; //include roles and permissions
-    List<ProjectOrganizationDTO> projects;
+    List<ProjectOrganizationDTO> projects = new ArrayList<>();
+    List<ProjectAgentDTO> projectAgents = new ArrayList<>();
+
 
     private Instant createdAt;
     private Instant updatedAt;

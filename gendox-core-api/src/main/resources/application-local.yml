@@ -13,7 +13,7 @@ logging:
 #  pattern:
 #    correlation : "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
 
-
+#
 spring:
   mail:
     host: ${GENDOX_SPRING_EMAIL_HOST:no-env-variable}
@@ -51,12 +51,16 @@ spring:
 #      minimum-idle: 10
 
   datasource:
-     url: ${DATABASE_URL}
-     username: ${DATABASE_USERNAME}
-     password: ${DATABASE_PASSWORD}
-     hikari:
-       maximum-pool-size: 100
-       minimum-idle: 10
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+#  datasource:
+#    url: jdbc:postgresql://localhost:5432/postgres
+#    username: postgres
+#    password: 1234
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
 
   jackson:
     serialization:
@@ -213,3 +217,28 @@ discord:
       token: ${DISCORD_TOKEN:default-token}
   server:
     group-name: gendox-agents
+
+
+proven-ai:
+  enabled: ${PROVEN_AI_ENABLED:no-env-variable}
+#  base-url: https://dev.provenai.ctrlspace.dev
+  base-url: http://localhost:8082
+  context-path: /proven-ai/api/v1
+  apis:
+    agent-authentication:
+      endpoint: /agents/token
+      scope: openid email
+      grant_type: vp_token
+    search:
+      endpoint: /search
+
+# Walt.id
+walt-id:
+  default-key:
+    type: ECDSA_SECP256K1
+    size: 2048
+
+#ISCC Code
+iscc:
+  apis:
+    code-generation: http://localhost:8970/api/v1/iscc

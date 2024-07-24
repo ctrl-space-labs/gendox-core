@@ -30,6 +30,7 @@ public class OpenAiServiceAdapter implements AiModelTypeService {
 
 
     protected Set<String> supportedModels = Set.of(AiModelConstants.GPT_4_OMNI,
+            AiModelConstants.GPT_4_OMNI_MINI,
             AiModelConstants.GPT_4_TURBO,
             AiModelConstants.GPT_4,
             AiModelConstants.GPT_3_5_TURBO_MODEL,

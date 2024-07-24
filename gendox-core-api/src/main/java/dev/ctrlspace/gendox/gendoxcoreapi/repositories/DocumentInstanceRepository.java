@@ -22,7 +22,6 @@ public interface DocumentInstanceRepository extends JpaRepository<DocumentInstan
     String findRemoteUrlBySectionId(@Param("sectionId") UUID sectionId);
 
 
-
     @Query(nativeQuery = true, value = "SELECT di.* " +
             "FROM gendox_core.document_instance di " +
             "INNER JOIN gendox_core.project_documents pd ON di.id = pd.document_id " +
@@ -36,4 +35,11 @@ public interface DocumentInstanceRepository extends JpaRepository<DocumentInstan
             @Param("organizationId") UUID organizationId,
             @Param("fileName") String fileName);
 
+
+    @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(di.id) > 0 THEN TRUE ELSE FALSE END " +
+            "FROM gendox_core.document_instance di " +
+            "INNER JOIN gendox_core.project_documents pd ON di.id = pd.document_id " +
+            "WHERE di.id = :documentId AND pd.project_id IN (:projectIds)")
+    boolean existsByDocumentIdAndProjectIds(@Param("documentId") UUID documentId, @Param("projectIds") List<UUID> projectIds);
 }
+

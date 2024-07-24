@@ -2,13 +2,11 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentConverter;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithoutDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentOnlyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
@@ -49,7 +47,7 @@ public class DocumentController {
     private UploadService uploadService;
     private SplitFileService splitFileService;
     private DocumentSectionService documentSectionService;
-    private DocumentInstanceSectionConverter documentInstanceSectionConverter;
+    private DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter;
 
     private SecurityUtils securityUtils;
 
@@ -62,7 +60,7 @@ public class DocumentController {
                               SplitFileService splitFileService,
                               SecurityUtils securityUtils,
                               DocumentSectionService documentSectionService,
-                              DocumentInstanceSectionConverter documentInstanceSectionConverter) {
+                              DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter) {
         this.documentService = documentService;
         this.documentOnlyConverter = documentOnlyConverter;
         this.documentConverter = documentConverter;
@@ -70,31 +68,18 @@ public class DocumentController {
         this.splitFileService = splitFileService;
         this.documentSectionService = documentSectionService;
         this.securityUtils = securityUtils;
-        this.documentInstanceSectionConverter = documentInstanceSectionConverter;
+        this.documentInstanceSectionWithoutDocumentConverter = documentInstanceSectionWithoutDocumentConverter;
     }
 
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedDocumentIdFromPathVariable')")
     @GetMapping("/documents/{documentId}")
     @Operation(summary = "Get document by ID",
             description = "Retrieve a document by its unique ID.")
     public DocumentInstance getById(Authentication authentication, @PathVariable UUID documentId) throws GendoxException {
 
-        DocumentInstance documentInstance = documentService.getDocumentInstanceById(documentId);
 
-        if (!securityUtils.can("OP_READ_DOCUMENT",
-                (GendoxAuthenticationToken) authentication,
-                AccessCriteria.builder()
-                        .orgIds(
-                                Set.of(documentInstance
-                                        .getOrganizationId()
-                                        .toString()))
-                        .build())) {
-            throw new GendoxException("UNAUTHORIZED", "You are not authorized to perform this operation", HttpStatus.UNAUTHORIZED);
-        }
-
-
-
-        return documentInstance;
+        return documentService.getDocumentInstanceById(documentId);
     }
 
 
@@ -121,7 +106,7 @@ public class DocumentController {
     }
 
 
-
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
     @GetMapping("/projects/{projectId}/documents/sections")
     @Operation(summary = "Get document sections by project ID",
             description = "Fetch a list of document sections associated with a particular project based on the provided project ID. " +
@@ -129,39 +114,17 @@ public class DocumentController {
                     "This operation enables you to access the sections within the specified project.")
     public List<DocumentInstanceSection> getSectionsByProjectId(Authentication authentication, @PathVariable UUID projectId) throws GendoxException {
 
-        if (!securityUtils.can("OP_READ_DOCUMENT",
-                (GendoxAuthenticationToken) authentication,
-                AccessCriteria.builder()
-                        .projectIds(
-                                Set.of(projectId
-                                        .toString()))
-                        .build())) {
-            throw new GendoxException("UNAUTHORIZED", "You are not authorized to perform this operation", HttpStatus.UNAUTHORIZED);
-        }
-
         return documentSectionService.getProjectSections(projectId);
     }
 
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedDocumentIdFromPathVariable')")
     @GetMapping("/documents/{documentId}/sections")
     @Operation(summary = "Get document sections by document ID",
             description = "Fetch a list of document sections associated with a particular document based on the provided document ID. " +
                     "Document sections provide structured content within a project, such as chapters, sections, or segments. " +
                     "This operation enables you to access the sections within the specified document.")
     public List<DocumentInstanceSection> getSectionsByDocumentId(Authentication authentication, @PathVariable UUID documentId) throws GendoxException {
-
-        DocumentInstance documentInstance = documentService.getDocumentInstanceById(documentId);
-
-        if (!securityUtils.can("OP_READ_DOCUMENT",
-                (GendoxAuthenticationToken) authentication,
-                AccessCriteria.builder()
-                        .orgIds(
-                                Set.of(documentInstance
-                                        .getOrganizationId()
-                                        .toString()))
-                        .build())) {
-            throw new GendoxException("UNAUTHORIZED", "You are not authorized to perform this operation", HttpStatus.UNAUTHORIZED);
-        }
 
         return documentSectionService.getSectionsByDocument(documentId);
     }
@@ -193,27 +156,14 @@ public class DocumentController {
     }
 
 
-//    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
-//            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
-    @PutMapping("/documents/{documentId}")
+@PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedDocumentIdFromPathVariable')")
+@PutMapping("/documents/{documentId}")
     @Operation(summary = "Update document by ID",
             description = "Update an existing document by specifying its unique ID and providing updated document details. " +
                     "This operation allows you to modify the document's properties, sections, and metadata. " +
                     "Ensure that the ID in the path matches the ID in the provided document details.")
     public DocumentInstance update(Authentication authentication, @PathVariable UUID documentId,  @RequestBody DocumentDTO documentDTO) throws GendoxException {
         // TODO: Store the sections. The metadata should be updated only if documentTemplate is empty/null
-
-        // Authorize check
-        if (!securityUtils.can("OP_WRITE_DOCUMENT",
-                (GendoxAuthenticationToken) authentication,
-                AccessCriteria.builder()
-                        .orgIds(
-                                Set.of(documentDTO
-                                        .getOrganizationId()
-                                        .toString()))
-                        .build())) {
-            throw new GendoxException("UNAUTHORIZED", "You are not authorized to perform this operation", HttpStatus.UNAUTHORIZED);
-        }
 
         // ID Validation checks
         if (!documentId.equals(documentDTO.getId())) {
@@ -230,6 +180,7 @@ public class DocumentController {
     // CRUD Sections
 
     //update section with DocumentInstanceSectionDTO request body
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedDocumentIdFromPathVariable')")
     @PutMapping("/documents/{documentId}/sections/{sectionId}")
     @Operation(summary = "Update document section by ID",
             description = "Update an existing document section by specifying its unique ID and providing updated section details. " +
@@ -237,19 +188,19 @@ public class DocumentController {
                     "Ensure that the ID in the path matches the ID in the provided section details.")
     public DocumentInstanceSection updateSection(Authentication authentication, @PathVariable UUID sectionId, @PathVariable UUID documentId, @RequestBody DocumentInstanceSectionDTO sectionDTO) throws GendoxException {
 
-        if (!securityUtils.can("OP_WRITE_DOCUMENT",
-                (GendoxAuthenticationToken) authentication,
-                AccessCriteria.builder()
-                        .orgIds(
-                                Set.of(sectionDTO
-                                        .getDocumentDTO()
-                                        .getOrganizationId()
-                                        .toString()))
-                        .build())) {
-            throw new GendoxException("UNAUTHORIZED", "You are not authorized to perform this operation", HttpStatus.UNAUTHORIZED);
-        }
+//        if (!securityUtils.can("OP_WRITE_DOCUMENT",
+//                (GendoxAuthenticationToken) authentication,
+//                AccessCriteria.builder()
+//                        .orgIds(
+//                                Set.of(sectionDTO
+//                                        .getDocumentDTO()
+//                                        .getOrganizationId()
+//                                        .toString()))
+//                        .build())) {
+//            throw new GendoxException("UNAUTHORIZED", "You are not authorized to perform this operation", HttpStatus.UNAUTHORIZED);
+//        }
 
-        DocumentInstanceSection documentSection = documentInstanceSectionConverter.toEntity(sectionDTO);
+        DocumentInstanceSection documentSection = documentInstanceSectionWithoutDocumentConverter.toEntity(sectionDTO);
         DocumentInstance documentInstance = documentConverter.toEntity(sectionDTO.getDocumentDTO());
         documentSection.setDocumentInstance(documentInstance);
 

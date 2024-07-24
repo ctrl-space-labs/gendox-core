@@ -7,8 +7,9 @@ public class QueryParamNames {
     public static final String PROJECT_ID = "projectId";
     public static final String PROJECT_ID_IN = "projectIdIn";
     public static final String USER_ID = "userId";
+    public static final String THREAD_ID = "threadId";
     public static final String EMAIL = "email";
     public static final String ORG_ROLE_NAME = "orgRoleName";
-    public static final String DOCUMENT_INSTANCE_ID = "documentInstanceId";
+    public static final String DOCUMENT_INSTANCE_ID = "documentId";
     public static final String DOCUMENT_INSTANCE_IDS = "documentInstanceIds";
 }

@@ -13,11 +13,11 @@ import java.util.List;
 @Component
 public class DocumentConverter implements GendoxConverter<DocumentInstance, DocumentDTO> {
 
-    private DocumentInstanceSectionConverter documentInstanceSectionConverter;
+    private DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter;
 
     @Autowired
-    public DocumentConverter(DocumentInstanceSectionConverter documentInstanceSectionConverter){
-        this.documentInstanceSectionConverter = documentInstanceSectionConverter;
+    public DocumentConverter(DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter){
+        this.documentInstanceSectionWithoutDocumentConverter = documentInstanceSectionWithoutDocumentConverter;
     }
 
     @Override
@@ -36,7 +36,7 @@ public class DocumentConverter implements GendoxConverter<DocumentInstance, Docu
         // Convert the List<DocumentInstanceSection> to List<DocumentInstanceSectionDTO>
         List<DocumentInstanceSectionDTO> sectionDTOs = new ArrayList<>();
         for (DocumentInstanceSection section : documentInstance.getDocumentInstanceSections()) {
-            DocumentInstanceSectionDTO sectionDTO = documentInstanceSectionConverter.toDTO(section);
+            DocumentInstanceSectionDTO sectionDTO = documentInstanceSectionWithoutDocumentConverter.toDTO(section);
             sectionDTOs.add(sectionDTO);        }
 
         // Set the list of section DTOs in the DTO
@@ -61,7 +61,7 @@ public class DocumentConverter implements GendoxConverter<DocumentInstance, Docu
 
         List <DocumentInstanceSection> sections = new ArrayList<>();
         for (DocumentInstanceSectionDTO sectionDTO : documentDTO.getDocumentInstanceSections()){
-            DocumentInstanceSection section = documentInstanceSectionConverter.toEntity(sectionDTO);
+            DocumentInstanceSection section = documentInstanceSectionWithoutDocumentConverter.toEntity(sectionDTO);
             sections.add(section);
         }
 

@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.EventPayloadDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserOrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
@@ -23,6 +24,7 @@ import jakarta.validation.Valid;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -100,6 +102,7 @@ public class OrganizationController {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public Organization getOrganizationById(@PathVariable UUID organizationId, Authentication authentication) throws Exception {
+
 
         //run code to get the organization from the database
         Organization organization = organizationService.getById(organizationId);
@@ -244,6 +247,7 @@ public class OrganizationController {
 
 
     // TODO Remove user from organization
+
 
 
 }

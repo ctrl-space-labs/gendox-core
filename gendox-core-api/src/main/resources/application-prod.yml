@@ -198,3 +198,25 @@ discord:
     group-name: gendox-agents
 
 
+proven-ai:
+  enabled: ${PROVEN_AI_ENABLED:no-env-variable}
+  base-url: https://provenai.ctrlspace.dev
+  context-path: /proven-ai/api/v1
+  apis:
+    agent-authentication:
+      endpoint: /agents/token
+      scope: openid email
+      grant_type: vp_token
+    search:
+      endpoint: /search
+
+# Walt.id
+walt-id:
+  default-key:
+    type: ECDSA_SECP256K1
+    size: 2048
+
+#ISCC Code
+iscc:
+  apis:
+    code-generation: http://localhost:8970/api/v1/iscc

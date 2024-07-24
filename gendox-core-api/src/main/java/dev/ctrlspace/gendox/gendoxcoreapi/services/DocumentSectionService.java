@@ -1,22 +1,19 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentSectionMetadataRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentInstanceSectionPredicates;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
-import dev.ctrlspace.gendox.provenAi.utils.IsccCodeServiceAdapter;
 import dev.ctrlspace.gendox.provenAi.utils.MockUniqueIdentifierServiceAdapter;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
+import dev.ctrlspace.provenai.iscc.IsccCodeResponse;
+import dev.ctrlspace.provenai.iscc.IsccCodeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,10 +34,13 @@ public class DocumentSectionService {
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private DocumentSectionMetadataRepository documentSectionMetadataRepository;
     private EmbeddingService embeddingService;
-    private IsccCodeServiceAdapter isccCodeServiceAdapter;
     private MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter;
     private MessageService messageService;
 
+    private IsccCodeService isccCodeService;
+
+    @Value("${proven-ai.enabled}")
+    private Boolean provenAiEnabled;
 
 
     @Lazy
@@ -54,17 +54,17 @@ public class DocumentSectionService {
                                   TrainingService trainingService,
                                   DocumentInstanceSectionRepository documentInstanceSectionRepository,
                                   DocumentSectionMetadataRepository documentSectionMetadataRepository,
-                                  IsccCodeServiceAdapter isccCodeServiceAdapter,
                                   MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter,
-                                    MessageService messageService
+                                  MessageService messageService,
+                                  IsccCodeService isccCodeService
     ) {
         this.typeService = typeService;
         this.trainingService = trainingService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.documentSectionMetadataRepository = documentSectionMetadataRepository;
-        this.isccCodeServiceAdapter = isccCodeServiceAdapter;
         this.mockUniqueIdentifierServiceAdapter = mockUniqueIdentifierServiceAdapter;
         this.messageService = messageService;
+        this.isccCodeService = isccCodeService;
     }
 
 
@@ -73,6 +73,14 @@ public class DocumentSectionService {
                 .orElseThrow(() -> new GendoxException("METADATA_NOT_FOUND", "Metadata not found with id: " + id, HttpStatus.NOT_FOUND));
 
     }
+
+    public DocumentSectionMetadata getMetadataBySectionId(UUID sectionId) throws GendoxException {
+        DocumentInstanceSection section = getSectionById(sectionId);
+        return section.getDocumentSectionMetadata();
+    }
+
+
+
 
     public DocumentInstanceSection getSectionById(UUID id) throws GendoxException {
         return documentInstanceSectionRepository.findById(id)
@@ -85,9 +93,26 @@ public class DocumentSectionService {
         return documentInstanceSectionRepository.findAll(DocumentInstanceSectionPredicates.build(criteria), pageable);
     }
 
+//    public String getFileNameFromUrl(String url) {
+//        String normalizedUrl = url.startsWith("file:") ? url.substring(5) : url;
+//        normalizedUrl = url.startsWith("s3:") ? url.substring(3) : url;
+//        // Replace backslashes with forward slashes
+//        normalizedUrl = normalizedUrl.replace('\\', '/');
+//
+//        Path path = Paths.get(normalizedUrl);
+//        return path.getFileName().toString();
+//    }
+
     public String getFileNameFromUrl(String url) {
-        String normalizedUrl = url.startsWith("file:") ? url.substring(5) : url;
-        normalizedUrl = url.startsWith("s3:") ? url.substring(3) : url;
+        String normalizedUrl;
+
+        if (url.startsWith("file:")) {
+            normalizedUrl = url.substring(5); // Remove "file:" prefix
+        } else if (url.startsWith("s3:")) {
+            normalizedUrl = url.substring(3); // Remove "s3:" prefix
+        } else {
+            throw new IllegalArgumentException("Unsupported URL format: " + url);
+        }
         // Replace backslashes with forward slashes
         normalizedUrl = normalizedUrl.replace('\\', '/');
 
@@ -95,15 +120,15 @@ public class DocumentSectionService {
         return path.getFileName().toString();
     }
 
-    /**
-     * TODO merge this with the above to findSectionsByCriteria
-     *
-     * @param projectId
-     * @param embeddingIds
-     * @return
-     */
-    public List<DocumentInstanceSection> getSectionsByEmbeddingsIn(UUID projectId, Set<UUID> embeddingIds) {
-        return documentInstanceSectionRepository.findByProjectAndEmbeddingIds(projectId, embeddingIds);
+        /**
+         * TODO merge this with the above to findSectionsByCriteria
+         *
+         * @param projectId
+         * @param sectionIds
+         * @return
+         */
+    public List<DocumentInstanceSection> getSectionsBySectionsIn(UUID projectId, Set<UUID> sectionIds) {
+        return documentInstanceSectionRepository.findByProjectAndSectionIds(projectId, sectionIds);
     }
 
 
@@ -144,14 +169,20 @@ public class DocumentSectionService {
         section.setDocumentInstance(documentInstance);
 
         String fileName = getFileNameFromUrl(section.getDocumentInstance().getRemoteUrl());
-//        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeServiceAdapter.getDocumentUniqueIdentifier(
-//                fileContent.getBytes(), fileName);
 
-        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
-                fileContent.getBytes(), fileName);
-//
-//        section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getIscc());
-        section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
+        String documentSectionIsccCode = new String();
+        if (provenAiEnabled) {
+            IsccCodeResponse sectionIsccCodeResponse = isccCodeService.getDocumentUniqueIdentifier(
+                    fileContent.getBytes(), fileName);
+            documentSectionIsccCode = sectionIsccCodeResponse.getIscc();
+        }
+        else{
+            UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
+                    fileContent.getBytes(), fileName);
+            documentSectionIsccCode = sectionUniqueIdentifierCodeResponse.getUuid();
+        }
+
+        section.setDocumentSectionIsccCode(documentSectionIsccCode);
 
         // take moderation check
 //        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
@@ -181,10 +212,14 @@ public class DocumentSectionService {
 
         String fileName = getFileNameFromUrl(section.getDocumentInstance().getRemoteUrl());
 
-        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
+//        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
+//                fileContent.getBytes(), fileName);
+
+        IsccCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeService.getDocumentUniqueIdentifier(
                 fileContent.getBytes(), fileName);
 
-        section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
+//        section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
+        section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getIscc());
 
         // take moderation check
 //        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
@@ -232,9 +267,13 @@ public class DocumentSectionService {
         DocumentInstanceSection existingSection = this.getSectionById(sectionId);
         existingSection.setSectionValue(section.getSectionValue());
         String fileName = getFileNameFromUrl(existingSection.getDocumentInstance().getRemoteUrl());
-        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
+//        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
+//                existingSection.getSectionValue().getBytes(), fileName);
+        IsccCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeService.getDocumentUniqueIdentifier(
                 existingSection.getSectionValue().getBytes(), fileName);
-        existingSection.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
+//        existingSection.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
+        existingSection.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getIscc());
+
         existingSection.setDocumentSectionMetadata(updateMetadata(section));
 
         return existingSection;
