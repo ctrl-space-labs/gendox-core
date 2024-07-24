@@ -11,6 +11,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectMemberService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
@@ -134,7 +135,7 @@ public class CommonCommandUtility {
                 chatGendoxMessage.chatMessage(channel, completionMessageDTO);
                 logger.debug("Received chatMessage");
             } else if (command.equals(DiscordGendoxConstants.SEARCH_GENDOX)) {
-                List<DocumentInstanceSection> documentInstanceSections = listenerService.semanticSearchForQuestion(question, channelName, jwtToken, threadId);
+                List<DocumentInstanceSectionDTO> documentInstanceSections = listenerService.semanticSearchForQuestion(question, channelName, jwtToken, threadId);
                 logger.debug("Received for search command");
                 searchGendoxMessage.searchMessage(channel, documentInstanceSections, project.getId());
                 logger.debug("Received searchMessage");

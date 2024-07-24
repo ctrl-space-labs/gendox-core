@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.messages;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.ListenerService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -28,13 +29,13 @@ public class SearchGendoxMessage {
         this.listenerService = listenerService;
     }
 
-    public void searchMessage(TextChannel channel, List<DocumentInstanceSection> sectionList, UUID projectId){
+    public void searchMessage(TextChannel channel, List<DocumentInstanceSectionDTO> sectionList, UUID projectId){
 
 
         // Make the EmbedBuilders
         List<MessageEmbed> messageEmbeds = new ArrayList<>();
         int count = 0;
-        for (DocumentInstanceSection section : sectionList) {
+        for (DocumentInstanceSectionDTO section : sectionList) {
             count++;
             // Make new List with strings under 1900 characters by every sections value
             List<String> answers = listenerService.splitTextToStringsOfMaxLength(section.getSectionValue(), 1900);

@@ -10,9 +10,14 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectAgentCriter
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectAgentPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
+import dev.ctrlspace.provenai.ssi.issuer.VerifiablePresentationBuilder;
+import id.walt.crypto.keys.jwk.JWKKey;
+import kotlinx.serialization.json.Json;
+import kotlinx.serialization.json.JsonPrimitive;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -21,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.UUID;
 
 @Service
@@ -42,6 +48,9 @@ public class ProjectAgentService {
     private UserService userService;
     private AiModelRepository aiModelRepository;
 
+    private CryptographyUtils cryptographyUtils;
+
+
     private AiModelService aiModelService;
 
     private AuthenticationService authenticationService;
@@ -54,7 +63,8 @@ public class ProjectAgentService {
                                TemplateRepository templateRepository,
                                @Lazy UserService userService,
                                AiModelRepository aiModelRepository,
-                               AiModelService aiModelService) {
+                               AiModelService aiModelService,
+                               CryptographyUtils cryptographyUtils) {
         this.authenticationService = authenticationService;
         this.projectAgentRepository = projectAgentRepository;
         this.typeService = typeService;
@@ -62,6 +72,7 @@ public class ProjectAgentService {
         this.userService = userService;
         this.aiModelRepository = aiModelRepository;
         this.aiModelService = aiModelService;
+        this.cryptographyUtils = cryptographyUtils;
     }
 
     public ProjectAgent getAgentByProjectId(UUID projectId) {
@@ -71,6 +82,10 @@ public class ProjectAgentService {
     public ProjectAgent getAgentByDocumentId(UUID documentId) {
         return projectAgentRepository.findAgentByDocumentInstanceId(documentId)
                 .orElse(null);
+    }
+
+    public ProjectAgent getAgentById(UUID agentId) {
+        return projectAgentRepository.findById(agentId).orElse(null);
     }
 
     public Page<ProjectAgent> getAllProjectAgents(ProjectAgentCriteria criteria, Pageable pageable) throws GendoxException {
@@ -94,7 +109,7 @@ public class ProjectAgentService {
         // Enable Agent to become User
         User user = new User();
         user.setName(projectAgent.getAgentName());
-        user.setUserName(projectAgent.getAgentName());
+        user.setUserName(projectAgent.getAgentName().toLowerCase());
         user.setUserType(typeService.getUserTypeByName(UserNamesConstants.GENDOX_AGENT));
         // TODO: this is just a Hack... Use Keycloak Attributes when the Gendox's Keycloak Service starts support attributes .
         //  So the Agent's surname is set to 'GENDOX_AGENT' for now
@@ -182,12 +197,47 @@ public class ProjectAgentService {
         if (projectAgent.getModerationModel() != null && projectAgent.getModerationCheck()) {
             existingProjectAgent.setModerationModel(aiModelRepository.findByName(projectAgent.getModerationModel().getName()));
         }
+        existingProjectAgent.setOrganizationDid(projectAgent.getOrganizationDid());
         existingProjectAgent = projectAgentRepository.save(existingProjectAgent);
         return existingProjectAgent;
     }
 
 
-}
+    public Object createVerifiablePresentation(ProjectAgent projectAgent, String subjectKeyJwk, String subjectDid) throws GendoxException, IOException {
+
+        JsonPrimitive agentVcJwtPrimitive = Json.Default.decodeFromString(JsonPrimitive.Companion.serializer(), projectAgent.getAgentVcJwt());
+        VerifiablePresentationBuilder verifiablePresentationBuilder = new VerifiablePresentationBuilder();
+        verifiablePresentationBuilder.addCredential(agentVcJwtPrimitive);
+        verifiablePresentationBuilder.setPresentationId();
+        verifiablePresentationBuilder.setDid(subjectDid);
+        verifiablePresentationBuilder.setNonce(cryptographyUtils.generateNonce());
+
+        JWKKey jwkKey = new JWKKey(subjectKeyJwk);
+
+        return verifiablePresentationBuilder.buildAndSign(jwkKey);
+
+    }
+        public Object createVerifiablePresentationOrg (String vcJwt, String subjectKeyJwk, String subjectDid) throws
+        GendoxException, IOException {
+
+            JsonPrimitive agentVcJwtPrimitive = Json.Default.decodeFromString(JsonPrimitive.Companion.serializer(), vcJwt);
+            VerifiablePresentationBuilder verifiablePresentationBuilder = new VerifiablePresentationBuilder();
+            verifiablePresentationBuilder.addCredential(agentVcJwtPrimitive);
+            verifiablePresentationBuilder.setPresentationId();
+            verifiablePresentationBuilder.setDid(subjectDid);
+            verifiablePresentationBuilder.setNonce(cryptographyUtils.generateNonce());
+
+            JWKKey jwkKey = new JWKKey(subjectKeyJwk);
+
+
+            return verifiablePresentationBuilder.buildAndSign(jwkKey);
+
+
+        }
+
+
+    }
+
 
 
 
