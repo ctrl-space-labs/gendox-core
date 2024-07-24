@@ -36,5 +36,5 @@ VOLUME /tmp
 COPY --from=builder /app/target/*.jar /app.jar
 
 
-
+# Run the application
 ENTRYPOINT ["java","-jar","/app.jar"]

@@ -392,7 +392,7 @@ public class SecurityUtils {
             String userId = ((UserProfile) authentication.getPrincipal()).getId();
             return UUID.fromString(userId);
         } catch (Exception e) {
-            logger.warn("An exception occurred while trying to get the user ID: " + e.getMessage());
+            logger.trace("An exception occurred while trying to get the user ID: " + e.getMessage());
             return null;
         }
     }
@@ -406,7 +406,7 @@ public class SecurityUtils {
             }
             return ((UserProfile) authentication.getPrincipal()).getUserName();
         } catch (Exception e){
-            logger.warn("An exception occurred while trying to get the user ID: " + e.getMessage());
+            logger.trace("An exception occurred while trying to get the user ID: " + e.getMessage());
             return null;
         }
     }
