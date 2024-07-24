@@ -12,7 +12,10 @@ export const fetchDocument = createAsyncThunk(
       );
 
       const documentData = await documentPromise;
-      return { document: documentData.data, sections: documentData.data.documentInstanceSections};
+      const orderedSections = documentData.data.documentInstanceSections.sort((a, b) => {
+        return a.documentSectionMetadata.sectionOrder - b.documentSectionMetadata.sectionOrder;
+      });
+      return { document: documentData.data, sections: orderedSections};
       
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response.data);

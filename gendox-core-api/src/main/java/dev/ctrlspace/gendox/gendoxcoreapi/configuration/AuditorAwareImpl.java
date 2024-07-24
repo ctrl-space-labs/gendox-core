@@ -20,7 +20,7 @@ public class AuditorAwareImpl implements AuditorAware<UUID> {
             UUID userId = UUID.fromString(((UserProfile) authentication.getPrincipal()).getId());
             return Optional.ofNullable(userId);
         } catch (Exception e){
-            logger.warn("An exception occurred while trying to get the user ID: " + e.getMessage());
+            logger.trace("An exception occurred while trying to get the user ID: " + e.getMessage());
             return null;
         }
     }
