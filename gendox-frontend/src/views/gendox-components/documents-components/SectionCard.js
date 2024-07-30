@@ -8,6 +8,7 @@ import CardContent from "@mui/material/CardContent";
 import CardActions from "@mui/material/CardActions";
 import Divider from "@mui/material/Divider";
 import TextField from "@mui/material/TextField";
+import GendoxMarkdownRenderer from "../markdown-renderer/GendoxMarkdownRenderer";
 
 const SectionCard = () => {
   const sections = useSelector((state) => state.activeDocument.sections);
@@ -29,17 +30,18 @@ const SectionCard = () => {
             >
               {section.documentSectionMetadata.title}
             </Typography>
-            <TextField
-              fullWidth
-              variant="standard"
-              margin="normal"
-              value={section.sectionValue}
-              InputProps={{
-                readOnly: true,  
-                disableUnderline: true  
-              }}
-              multiline  
-            />
+            {/*<TextField*/}
+            {/*  fullWidth*/}
+            {/*  variant="standard"*/}
+            {/*  margin="normal"*/}
+            {/*  value={section.sectionValue}*/}
+            {/*  InputProps={{*/}
+            {/*    readOnly: true,  */}
+            {/*    disableUnderline: true  */}
+            {/*  }}*/}
+            {/*  multiline  */}
+            {/*/>*/}
+            <GendoxMarkdownRenderer markdownText={section.sectionValue} />
             
           </CardContent>
           {index !== sections.length - 1 && (
