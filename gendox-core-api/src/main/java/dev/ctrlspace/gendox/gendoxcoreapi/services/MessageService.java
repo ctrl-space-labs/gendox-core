@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.MessageCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageSectionRepository;
@@ -9,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.MessagePre
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -125,4 +127,11 @@ public class MessageService {
 
     public void deleteMessageSection(UUID sectionId){
         messageSectionRepository.deleteAllBySectionId(sectionId);    }
+
+    public  List<MessageMetadataDTO> getAllMessagesMetadataByMessageId(UUID messageId){
+
+        return messageRepository.getMessageMetadataByMessageId(messageId);
+
+    }
+
 }

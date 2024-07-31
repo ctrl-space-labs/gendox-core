@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ChatThreadCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.MessageCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ChatThreadService;
@@ -20,7 +21,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 public class ChatThreadController {
@@ -28,6 +31,7 @@ public class ChatThreadController {
     private ChatThreadService chatThreadService;
     private SecurityUtils securityUtils;
     private MessageService messageService;
+
 
     @Autowired
     public ChatThreadController(ChatThreadService chatThreadService,
@@ -88,5 +92,13 @@ public class ChatThreadController {
         return messageService.getAllMessagesByCriteria(criteria, pageable);
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable')")
+    @GetMapping("threads/{threadId}/message-metadata/{messageId}")
+    @Operation(summary = "Get the messages metadata in a Thread",
+            description = "Retrieve the messages metadata from a thread. Pagination is supported. The user should have the rights to access this chat.")
+    public List<MessageMetadataDTO> getThreadMessageMetadataByMessageId(@PathVariable UUID messageId) throws GendoxException {
+
+        return messageService.getAllMessagesMetadataByMessageId(messageId);
+    }
 
 }
