@@ -13,6 +13,12 @@ public class UserPredicate {
     private static QUser user = QUser.user;
 
     public static Predicate build(UserCriteria criteria) {
+
+        // If fetchAll is true, return a predicate that always evaluates to true
+        if (criteria.isFetchAll()) {
+            return user.isNotNull();
+        }
+
         return ExpressionUtils.allOf(
                 email(criteria.getEmail()),
                 organizationId(criteria.getOrganizationId()),

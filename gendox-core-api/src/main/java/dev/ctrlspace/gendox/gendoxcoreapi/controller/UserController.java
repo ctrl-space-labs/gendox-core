@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserPublicDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
@@ -62,6 +63,15 @@ public class UserController {
 
         // run code to get the user from the database
         return userService.getAllUsers(criteria, pageable);
+    }
+
+
+    @GetMapping("/users/public")
+    @Operation(summary = "Get all users",
+            description = "Retrieve a list of all users with public data like id and email, based on the provided criteria.")
+    public Page<UserPublicDTO> getAllUsersPublic(@Valid UserCriteria criteria, Pageable pageable) throws GendoxException {
+
+            return userService.getAllPublicUsers(criteria, pageable);
     }
 
 
