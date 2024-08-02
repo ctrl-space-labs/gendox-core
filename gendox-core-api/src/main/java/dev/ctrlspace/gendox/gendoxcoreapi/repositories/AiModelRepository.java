@@ -27,6 +27,12 @@ public interface AiModelRepository extends JpaRepository<AiModel, UUID>, Queryds
     @Query("SELECT a.name FROM AiModel a WHERE a.id = :id")
     String findNameById(@Param("id") UUID id);
 
+    @Query("SELECT a FROM AiModel a WHERE a.organizationId is null")
+    List<AiModel> findAllPublicModels();
+
+    @Query("SELECT a FROM AiModel a WHERE a.organizationId = :organizationId or a.organizationId is null")
+    List<AiModel> findAllModelsByOrganizationId(@Param("organizationId") UUID organizationId);
+
 
 
 }

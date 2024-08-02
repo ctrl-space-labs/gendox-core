@@ -48,6 +48,14 @@ public class AiModel {
     @JoinColumn(name = "ai_model_type_id", referencedColumnName = "id", nullable = false)
     private Type aiModelType;
 
+    @ManyToOne
+    @JoinColumn(name = "model_tier_type_id", referencedColumnName = "id", nullable = false)
+    private Type modelTierType;
+
+    @Basic
+    @Column(name = "organization_id", nullable = true)
+    private UUID organizationId;
+
 
     public UUID getId() {
         return id;
@@ -123,33 +131,33 @@ public class AiModel {
         this.aiModelType = aiModelType;
     }
 
+    public Type getModelTierType() {
+        return modelTierType;
+    }
+
+    public void setModelTierType(Type modelTierType) {
+        this.modelTierType = modelTierType;
+    }
+
+    public UUID getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(UUID organizationId) {
+        this.organizationId = organizationId;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof AiModel aiModel)) return false;
-
-        if (!Objects.equals(id, aiModel.id)) return false;
-        if (!Objects.equals(model, aiModel.model)) return false;
-        if (!Objects.equals(url, aiModel.url)) return false;
-        if (!Objects.equals(name, aiModel.name)) return false;
-        if (!Objects.equals(price, aiModel.price)) return false;
-        if (!Objects.equals(createdAt, aiModel.createdAt)) return false;
-        if (!Objects.equals(updatedAt, aiModel.updatedAt)) return false;
-        if (!Objects.equals(description, aiModel.description)) return false;
-        return Objects.equals(aiModelType, aiModel.aiModelType);
+        if (o == null || getClass() != o.getClass()) return false;
+        AiModel aiModel = (AiModel) o;
+        return Objects.equals(id, aiModel.id) && Objects.equals(model, aiModel.model) && Objects.equals(url, aiModel.url) && Objects.equals(name, aiModel.name) && Objects.equals(price, aiModel.price) && Objects.equals(createdAt, aiModel.createdAt) && Objects.equals(updatedAt, aiModel.updatedAt) && Objects.equals(description, aiModel.description) && Objects.equals(aiModelType, aiModel.aiModelType) && Objects.equals(modelTierType, aiModel.modelTierType) && Objects.equals(organizationId, aiModel.organizationId);
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (model != null ? model.hashCode() : 0);
-        result = 31 * result + (url != null ? url.hashCode() : 0);
-        result = 31 * result + (name != null ? name.hashCode() : 0);
-        result = 31 * result + (price != null ? price.hashCode() : 0);
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        result = 31 * result + (description != null ? description.hashCode() : 0);
-        result = 31 * result + (aiModelType != null ? aiModelType.hashCode() : 0);
-        return result;
+        return Objects.hash(id, model, url, name, price, createdAt, updatedAt, description, aiModelType, modelTierType, organizationId);
     }
 }
