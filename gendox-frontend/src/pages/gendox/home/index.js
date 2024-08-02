@@ -6,7 +6,6 @@ import documentService from "src/gendox-sdk/documentService";
 import authConfig from "src/configs/auth";
 
 // MUI components
-import { styled } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import CardContent from "@mui/material/CardContent";
 import Card from "@mui/material/Card";
@@ -15,23 +14,16 @@ import IconButton from "@mui/material/IconButton";
 import Icon from "src/@core/components/icon";
 import Tooltip from "@mui/material/Tooltip";
 import Link from "next/link";
-import Alert from "@mui/material/Alert";
-import Snackbar from "@mui/material/Snackbar";
+
 
 
 // Custom components
 import ProjectButtons from "src/views/gendox-components/home-page-components/project-buttons-components/ProjectButtons";
 import Documents from "src/views/gendox-components/home-page-components/document-components/Documents";
 import useRedirectOr404ForHome from "src/utils/useRedirectOr404ForHome";
+import { StyledCardContent }  from "src/utils/styledCardsContent";
 
-const StyledCardContent = styled(CardContent)(({ theme }) => ({
-  paddingTop: `${theme.spacing(10)} !important`,
-  paddingBottom: `${theme.spacing(8)} !important`,
-  [theme.breakpoints.up("sm")]: {
-    paddingLeft: `${theme.spacing(20)} !important`,
-    paddingRight: `${theme.spacing(20)} !important`,
-  },
-}));
+
 
 const GendoxHome = () => {
   const router = useRouter();

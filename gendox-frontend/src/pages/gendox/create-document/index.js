@@ -7,6 +7,7 @@ import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import { EditorState, ContentState } from "draft-js";
 import ReactDraftWysiwyg from "src/@core/components/react-draft-wysiwyg";
+import { StyledCardContent } from "src/utils/styledCardsContent";
 import { EditorWrapper } from "src/@core/styles/libs/react-draft-wysiwyg";
 import documentService from "src/gendox-sdk/documentService";
 import authConfig from "src/configs/auth";
@@ -18,14 +19,7 @@ import Input from "@mui/material/Input";
 import InputLabel from "@mui/material/InputLabel";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 
-const StyledCardContent = styled(CardContent)(({ theme }) => ({
-  paddingTop: `${theme.spacing(10)} !important`,
-  paddingBottom: `${theme.spacing(8)} !important`,
-  [theme.breakpoints.up("sm")]: {
-    paddingLeft: `${theme.spacing(20)} !important`,
-    paddingRight: `${theme.spacing(20)} !important`,
-  },
-}));
+
 
 const CreateDocument = () => {
   const router = useRouter();

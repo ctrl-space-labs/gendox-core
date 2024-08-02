@@ -7,6 +7,7 @@ import { useSettings } from "src/@core/hooks/useSettings";
 
 // ** MUI Imports
 import Tab from "@mui/material/Tab";
+import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import TabList from "@mui/lab/TabList";
 import TabPanel from "@mui/lab/TabPanel";
@@ -16,7 +17,7 @@ import TabContext from "@mui/lab/TabContext";
 import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
 import CardActions from "@mui/material/CardActions";
-import Link from "next/link";
+import Icon from "src/@core/components/icon";
 import Tooltip from "@mui/material/Tooltip";
 
 // ** Project Setting Components Imports
@@ -37,55 +38,64 @@ const ProjectSettingsCard = () => {
     setValue(newValue);
   };
 
- 
   return (
-    <Card>
-      <CardHeader title={project.name} subheader="project settings" />
+    <Card sx={{ backgroundColor: "action.hover" }}>
+      <CardHeader />
       <TabContext value={value}>
         <TabList
-          variant="scrollable"
+          variant="fullWidth"
           scrollButtons={false}
           onChange={handleTabsChange}
           sx={{ borderBottom: (theme) => `1px solid ${theme.palette.divider}` }}
         >
-          <Tab value="general" label="GENERAL" />
-          <Tab value="members" label="MEMBERS" />
-          <Tab value="ai-agent" label="AI AGENT" />
+          <Tab
+            value="general"
+            label={
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Icon icon="mdi:cog" fontSize={20} />
+                <Box component="span" sx={{ ml: 3 }}>
+                  GENERAL
+                </Box>
+              </Box>
+            }
+          />
+          <Tab
+            value="members"
+            label={
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Icon icon="mdi:account-group" fontSize={20} />
+                <Box component="span" sx={{ ml: 3 }}>
+                  MEMBERS
+                </Box>
+              </Box>
+            }
+          />          
+          <Tab
+            value="ai-agent"
+            label={
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Icon icon="mdi:robot" fontSize={20} />
+                <Box component="span" sx={{ ml: 3 }}>
+                  AI AGENT
+                </Box>
+              </Box>
+            }
+          />
         </TabList>
 
-        <form onSubmit={(e) => e.preventDefault()}>
-          <CardContent>
-            <TabPanel value="general">
-              <GeneralProjectSettings project={project} />
-            </TabPanel>
+        <CardContent>
+          <TabPanel value="general">
+            <GeneralProjectSettings project={project} />
+          </TabPanel>
 
-            <TabPanel value="members">
-              <MembersProjectSettings project={project} />
-            </TabPanel>
+          <TabPanel value="members">
+            <MembersProjectSettings project={project} />
+          </TabPanel>          
 
-            <TabPanel value="ai-agent">
-              <AiAgentProjectSettings project={project} />
-            </TabPanel>
-          </CardContent>
-          <Divider sx={{ m: "0 !important" }} />
-          <CardActions sx={{ justifyContent: "flex-end" }}>
-            <Tooltip title={isDemo ? "Feature not available in demo mode" : ""}>
-              <span>
-                {/* Use a span to ensure Tooltip works correctly when the button is disabled */}
-                <Button
-                  size="large"
-                  variant="contained"                  
-                  href="https://www.ctrlspace.dev/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  disabled={isDemo} // Disable the button if isDemo is true
-                >
-                  Go to ProvenAi
-                </Button>
-              </span>
-            </Tooltip>
-          </CardActions>
-        </form>
+          <TabPanel value="ai-agent">
+            <AiAgentProjectSettings project={project} />
+          </TabPanel>
+        </CardContent>
       </TabContext>
     </Card>
   );

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 
 // ** MUI Imports
 import Card from "@mui/material/Card";
+import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
 import Divider from "@mui/material/Divider";
@@ -14,6 +15,7 @@ import Typography from "@mui/material/Typography";
 import CardContent from "@mui/material/CardContent";
 import CardActions from "@mui/material/CardActions";
 import FormControl from "@mui/material/FormControl";
+import Icon from "src/@core/components/icon";
 import Select from "@mui/material/Select";
 import InputAdornment from "@mui/material/InputAdornment";
 import FormControlLabel from "@mui/material/FormControlLabel";
@@ -42,7 +44,9 @@ const AiAgentProjectSettings = () => {
     return;
   }
   const project = useSelector((state) => state.activeProject.projectDetails);
-  const { id: projectId, organizationId } = project;
+  const provenAiUrl = process.env.NEXT_PUBLIC_PROVEN_AI_URL;
+
+  const { id: projectId, organizationId } = project; 
 
   // State for AI models categorized
   const [semanticModels, setSemanticModels] = useState([]);
@@ -227,14 +231,13 @@ const AiAgentProjectSettings = () => {
 
   return (
     <Card>
-      <CardHeader title="Project's Agent Settings" />
-      <Divider sx={{ m: "0 !important" }} />
+      <CardHeader  />
       <form onSubmit={handleSubmit}>
         <CardContent>
           <Grid container spacing={5}>
             {/*******************   1 AI Model ******************/}
             <Grid item xs={12}>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: "primary.main"  }}>
                 1. AI Model
               </Typography>
             </Grid>
@@ -309,10 +312,10 @@ const AiAgentProjectSettings = () => {
 
             {/*******************   2 Agent's Personality ******************/}
             <Grid item xs={12}>
-              <Divider sx={{ mb: "0 !important" }} />
+              <Divider sx={{ mt: 5, mb: "0 !important" }} />
             </Grid>
             <Grid item xs={12}>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: "primary.main"  }}>
                 2. Agent's Personality
               </Typography>
             </Grid>
@@ -418,11 +421,11 @@ const AiAgentProjectSettings = () => {
 
             {/*******************   3 Access ******************/}
             <Grid item xs={12}>
-              <Divider sx={{ mb: "0 !important" }} />
+              <Divider sx={{ mt: 5, mb: "0 !important" }} />
             </Grid>
 
             <Grid item xs={12}>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: "primary.main"  }}>
                 3. Access
               </Typography>
             </Grid>
@@ -441,27 +444,35 @@ const AiAgentProjectSettings = () => {
                 />
               ))}
             </Grid>
+            <Grid item xs={12} sm={6} sx={{ display: 'flex', alignItems: 'flex-end'}}>
+            
+              <Button
+                size="large"
+                variant="outlined"
+                href={`${provenAiUrl}/provenAi/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`} 
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Box component="span" sx={{ mr: 5 }}>
+                  Go to Proven-Ai
+                </Box>
+                <Icon icon="mdi:arrow-right-thin" />{" "}
+              </Button>
+              
+            </Grid>
           </Grid>
         </CardContent>
 
-        <Divider sx={{ m: "0 !important" }} />
-        <CardActions>
+        <Divider sx={{ mt: 5, mb: "0 !important" }} />
+        <CardActions sx={{ justifyContent: "flex-end", p: 2 }}>
           <Button
             size="large"
             type="submit"
-            sx={{ mr: 2 }}
             onClick={handleSubmit}
             variant="contained"
+            sx={{ px: 22, py: 3 }}
           >
-            Submit
-          </Button>
-          <Button
-            type="reset"
-            size="large"
-            color="secondary"
-            variant="outlined"
-          >
-            Reset
+            Save Changes
           </Button>
         </CardActions>
       </form>
