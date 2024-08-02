@@ -146,7 +146,7 @@ public class ProjectAgentService {
             projectAgent.setSemanticSearchModel(aiModelService.getByName(AiModelConstants.ADA_3_SMALL));
         }
         if (projectAgent.getCompletionModel() == null) {
-            projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_3_5_TURBO_MODEL));
+            projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_4_OMNI_MINI));
         }
         if (projectAgent.getModerationModel() == null) {
             projectAgent.setModerationModel(aiModelRepository.findByName(AiModelConstants.OPEN_AI_MODERATION));
