@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Post Message Example</title>
+    <style>
+        iframe {
+            /*fill parent div*/
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+<h1>PARENT!!!</h1>
+<!--div with inline style red border-->
+<div style="border: 1px solid red; width: 500px; height: 896px;">
+    <iframe id="myIframe" src="http://localhost:3000/gendox/embed/embedded-chat/?organizationId=0c1eedb0-fa61-4528-b15c-d5ad832155e3&threadId=018f00b0-3805-4c45-b4fb-f7cec8efb589"></iframe>
+</div>
+<!--<iframe id="myIframe" src="http://localhost:3000/gendox/chat/?organizationId=0c1eedb0-fa61-4528-b15c-d5ad832155e3&threadId=018f00b0-3805-4c45-b4fb-f7cec8efb589"></iframe>-->
+<script>
+    var messageListener = function(event) {
+        if (event.data && event.data.type === 'gendox.events.initialization.request') {
+            var iframeWindow = document.getElementById("myIframe").contentWindow;
+            var message = { type: "gendox.events.initialization.response", accessToken: "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJDR0NpMlNTX2lQNkdGYTBKQmVqRjAxYzNpcDBTdm43d2FLMGNYQnJHR19RIn0.eyJleHAiOjE3MTc2MDE5ODcsImlhdCI6MTcxNzU3MzE4NywiYXV0aF90aW1lIjoxNzE3NTczMTg2LCJqdGkiOiIxMTBhZjMwOS1mNjc4LTQyMzAtYTkyNS00Yzg3N2E2YjBkZTIiLCJpc3MiOiJodHRwczovL2Rldi5nZW5kb3guY3RybHNwYWNlLmRldi9pZHAvcmVhbG1zL2dlbmRveC1pZHAtZGV2IiwiYXVkIjoiYWNjb3VudCIsInN1YiI6ImFiZDllN2NiLWRhOGItNGUzZi04YWU5LTc4NDI2ZmJkNzdlZSIsInR5cCI6IkJlYXJlciIsImF6cCI6ImdlbmRveC1wa2NlLXB1YmxpYy1jbGllbnQtZGV2Iiwic2Vzc2lvbl9zdGF0ZSI6IjZhYTAyOWJhLTIzMWYtNDJiOS1iNmFmLWE1YjgxOGRjMmZiMSIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cHM6Ly9kZXYuZ2VuZG94LmN0cmxzcGFjZS5kZXYiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtZ2VuZG94LWlkcC1kZXYiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJvcGVuaWQgZW1haWwgcHJvZmlsZSIsInNpZCI6IjZhYTAyOWJhLTIzMWYtNDJiOS1iNmFmLWE1YjgxOGRjMmZiMSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYW1lIjoiQ2hyaXMgVGVzdCBTZWthcyAiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJjc2VrYXNAdGVzdC5jb20iLCJnaXZlbl9uYW1lIjoiQ2hyaXMgVGVzdCIsImZhbWlseV9uYW1lIjoiU2VrYXMgIiwiZW1haWwiOiJjc2VrYXNAdGVzdC5jb20ifQ.hBMoKcvu0QqXbKI-haGEcOgu7VbqZKc-_UF1v6nxHQpJbIdDthfNpE8-0ToDvfamJZM0uFjcPGZ0GZ1vpRnkX5SozkHWaSNCwCvxYO4cGjCJFLwgI5QnMLoJ1snPuh19qc6MolDT7zMi7Do1foRFD37QRV0lkVrunmqhj2IxSjNO6L-CGEMxl9vJ9hMzuTqs6qxcnfvXiVbtmI5y3KxDXszeoMWGs-GJ_CI566MjZDkW8Lkvoy4nI_JfELQtHQDv09Pw-uzbiRosG3DodL1VBh9lFVDwFfY546ajYDeD-2OxsqH7xZmcvOiO7Bq9eZwXYANUV9k4RFrmkBTHy9bTLA" };
+            iframeWindow.postMessage(message, "*");
+        }
+    }
+
+    window.onload = function() {
+        window.addEventListener('message', messageListener);
+    }
+
+    window.onunload = function() {
+        window.removeEventListener('message', messageListener);
+    }
+</script>
+</body>
+</html>

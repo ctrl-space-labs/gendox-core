@@ -27,6 +27,7 @@ import HorizontalAppBarContent from "./components/horizontal/AppBarContent";
 import { useSettings } from "src/@core/hooks/useSettings";
 
 import VerticalNavButtons from "src/navigation/vertical/VerticalNavButton";
+import PoweredByGendox from "./components/shared-components/PoweredByGendox";
 
 const UserLayout = ({ children, contentHeightFixed }) => {
   const router = useRouter();
@@ -52,7 +53,12 @@ const UserLayout = ({ children, contentHeightFixed }) => {
 
   const { ChatButton, NewProjectButton } = VerticalNavButtons;
 
-  
+  const { footerContent } = settings;
+  let footerContentComponent = null;
+  if (footerContent === 'poweredBy') {
+      footerContentComponent = () => <PoweredByGendox/>
+  }
+
 
   const AppBrand = () => {
     return (
@@ -96,6 +102,9 @@ const UserLayout = ({ children, contentHeightFixed }) => {
       settings={settings}
       saveSettings={saveSettings}
       contentHeightFixed={contentHeightFixed}
+      footerProps= {{
+          content: footerContentComponent
+      }}
       verticalLayoutProps={{
         navMenu: {
           navItems: VerticalNavItems(),
@@ -108,7 +117,6 @@ const UserLayout = ({ children, contentHeightFixed }) => {
           // Uncomment the below line when using server-side menu in vertical layout and comment the above line
           // navItems: verticalMenuItems,
         },
-
         appBar: {
           content: (props) => (
             <VerticalAppBarContent
