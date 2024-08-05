@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.authentication.AuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.JwtDTOUserProfileConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
@@ -41,7 +42,6 @@ import java.util.*;
 @Service
 public class UserService implements UserDetailsService {
 
-    private final UserConverter userConverter;
     Logger logger = LoggerFactory.getLogger(UserService.class);
 
 
@@ -51,6 +51,9 @@ public class UserService implements UserDetailsService {
     private UserProfileConverter userProfileConverter;
     private TypeService typeService;
     private AuthenticationService authenticationService;
+    private final UserConverter userConverter;
+
+
 
     private OrganizationService organizationService;
 
