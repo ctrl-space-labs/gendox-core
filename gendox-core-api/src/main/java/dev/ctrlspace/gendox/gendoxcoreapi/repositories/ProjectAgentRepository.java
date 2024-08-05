@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
@@ -14,6 +15,7 @@ import java.util.UUID;
 @Repository
 public interface ProjectAgentRepository extends JpaRepository<ProjectAgent, UUID>, QuerydslPredicateExecutor<ProjectAgent> {
 
+    @EntityGraph(attributePaths = {"project", "semanticSearchModel", "completionModel"})
     ProjectAgent findByProjectId(UUID projectId);
 
     @Query("SELECT pa FROM ProjectAgent pa JOIN pa.project p JOIN p.projectDocuments pd WHERE pd.documentId = :documentInstanceId")

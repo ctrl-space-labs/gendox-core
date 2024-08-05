@@ -180,7 +180,8 @@ public class EmbeddingsController {
 
 
 
-    @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
+    @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams') || " +
+            "@securityUtils.isPublicProject(#projectId)")
     @PostMapping("/messages/semantic-completion")
     @Operation(summary = "Semantic completion of message",
             description = "Find a message within a project that semantically completes the given input message. " +
