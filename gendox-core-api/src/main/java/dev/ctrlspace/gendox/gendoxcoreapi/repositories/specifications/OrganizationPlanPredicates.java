@@ -33,8 +33,8 @@ public class OrganizationPlanPredicates {
             return null;
         }
         return QOrganizationPlan.organizationPlan.startDate
-                .goe(activeAtDate)
-                .and(QOrganizationPlan.organizationPlan.endDate.loe(activeAtDate));
+                .loe(activeAtDate)
+                .and(QOrganizationPlan.organizationPlan.endDate.goe(activeAtDate));
     }
 
 }
