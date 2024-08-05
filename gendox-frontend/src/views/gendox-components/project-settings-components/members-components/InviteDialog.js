@@ -18,6 +18,9 @@ import Fade from "@mui/material/Fade";
 import DialogContent from "@mui/material/DialogContent";
 import IconButton from "@mui/material/IconButton";
 import Autocomplete from "@mui/material/Autocomplete";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import Tooltip from "@mui/material/Tooltip"; // Import Tooltip
 
 // ** Icon Imports
 import Icon from "src/@core/components/icon";
@@ -32,14 +35,15 @@ import invitationService from "src/gendox-sdk/invitationService";
 import userService from "src/gendox-sdk/userService";
 import { set } from "nprogress";
 import toast from "react-hot-toast";
-
+import { useAuth } from "src/hooks/useAuth";
 
 const Transition = forwardRef(function Transition(props, ref) {
   return <Fade ref={ref} {...props} />;
 });
 
-const InviteDialog = ({ open, handleClose }) => {
+const InviteDialog = ({ open, handleClose, organizationMembers }) => {
   const router = useRouter();
+  const auth = useAuth();
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
@@ -47,30 +51,18 @@ const InviteDialog = ({ open, handleClose }) => {
   const { id: projectId, organizationId } = project;
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
-  const [publicUsers, setPublicUsers] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState(null);
-  
+  const [selectedRole, setSelectedRole] = useState("");
+
+
+  const members = organizationMembers.filter(
+    (member) => member.user.email !== null
+  );
+
 
   const validateEmail = (email) => {
     // Simple email validation regex
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
-  };
-
-  useEffect(() => {
-    fetchAllPublicUsers();
-  }, []);
-
-  const fetchAllPublicUsers = async () => {
-    try {
-      const response = await userService.getPublicUsers(storedToken);
-      const usersWithEmails = response.data.content.filter(
-        (user) => user.email !== null
-      );
-      setPublicUsers(usersWithEmails);
-    } catch (error) {
-      console.error("Failed to fetch public users", error);
-    }
   };
 
   const handleInvitation = async () => {
@@ -86,17 +78,19 @@ const InviteDialog = ({ open, handleClose }) => {
 
     setError(""); // Clear any existing error
 
+    const existingMember = members.find(
+      (member) => member.user.email === email
+    );
+
     const invitationBody = {
       inviteeEmail: email,
       projectId,
       organizationId,
-      userRoleType: {
-        name: "ROLE_EDITOR",
-      },
-      userId: selectedUserId,
+      userRoleType: existingMember
+        ? { name: existingMember.role.name }
+        : { name: selectedRole },
+      userId: auth.user.id,
     };
-
-    console.log("Invitation Body", invitationBody);
 
     try {
       await invitationService.inviteProjectMember(
@@ -104,8 +98,8 @@ const InviteDialog = ({ open, handleClose }) => {
         storedToken,
         invitationBody
       );
-      console.log("Invitation Sent");      
-      toast.success("Invitation sent successfully!");      
+      console.log("Invitation Sent");
+      toast.success("Invitation sent successfully!");
       handleClose(); // Close the dialog on success
     } catch (error) {
       console.error("Failed to send invitation", error);
@@ -261,7 +255,6 @@ const InviteDialog = ({ open, handleClose }) => {
           ],
         }}
       >
-        
         <Box sx={{ mb: 8 }}>
           <Typography variant="h6" sx={{ mb: 4, lineHeight: "2rem" }}>
             Invite new Member
@@ -278,22 +271,15 @@ const InviteDialog = ({ open, handleClose }) => {
             <Autocomplete
               freeSolo
               fullWidth
-              options={publicUsers}
-              getOptionLabel={(option) => option.email}
-              filterOptions={
-                (options, { inputValue }) =>
-                  inputValue
-                    ? options.filter((option) =>
-                        option.email
-                          .toLowerCase()
-                          .includes(inputValue.toLowerCase())
-                      )
-                    : [] // Return an empty array if inputValue is empty
-              }
-              onInputChange={(event, value) => setEmail(value)}
+              options={members.map((member) => member.user.email)}
+              onInputChange={(event, value) => {
+                setEmail(value);
+                if (error) {
+                  setError(""); // Clear the error when the user starts typing
+                }
+              }}
               onChange={(event, value) => {
-                setEmail(value ? value.email : "");
-                setSelectedUserId(value ? value.id : null);
+                setEmail(value || "");
               }}
               renderInput={(params) => (
                 <TextField
@@ -309,9 +295,41 @@ const InviteDialog = ({ open, handleClose }) => {
                 />
               )}
             />
+            <Tooltip
+              title={
+                members.some((member) => member.user.email === email)
+                  ? "Role selection is disabled because the email already exists."
+                  : ""
+              }
+            >
+              <span>
+                <Select
+                  value={
+                    members.some((member) => member.user.email === email)
+                      ? ""
+                      : selectedRole
+                  } // Set value to empty string if disabled
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  sx={{ mt: { xs: 2, sm: 0 }, ml: 2, minWidth: 150 }}
+                  size="small"
+                  disabled={members.some(
+                    (member) => member.user.email === email
+                  )} // Disable if the email exists
+                  displayEmpty
+                >
+                  <MenuItem value="ROLE_EDITOR">EDITOR</MenuItem>
+                  <MenuItem value="ROLE_READER">READER</MenuItem>
+                  <MenuItem value="ROLE_ADMIN">ADMIN</MenuItem>
+                </Select>
+              </span>
+            </Tooltip>
             <Button
               variant="contained"
-              sx={{ mt: { xs: 2, sm: 0 }, ml:5, width: { xs: "100%", sm: "auto" } }}
+              sx={{
+                mt: { xs: 2, sm: 0 },
+                ml: 5,
+                width: { xs: "100%", sm: "auto" },
+              }}
               onClick={handleInvitation}
             >
               Send
@@ -330,8 +348,6 @@ const InviteDialog = ({ open, handleClose }) => {
             {`Enter your friend’s email address and invite them to join ${project.name} project 😍`}
           </InputLabel>
         </Box>
-
-        
       </DialogContent>
     </Dialog>
   );

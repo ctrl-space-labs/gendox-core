@@ -30,6 +30,7 @@ import CustomAvatar from "src/@core/components/mui/avatar";
 import QuickSearchToolbar from "src/views/gendox-components/project-settings-components/members-components/QuickSearchToolbar";
 import InviteDialog from "src/views/gendox-components/project-settings-components/members-components/InviteDialog";
 import projectService from "src/gendox-sdk/projectService";
+import organizationService from "src/gendox-sdk/organizationService";
 
 import authConfig from "src/configs/auth";
 import { styled, useTheme } from "@mui/material/styles";
@@ -75,12 +76,19 @@ const renderClient = (params) => {
   //   }
 };
 
-const statusObj = {
+const userTypeStatus = {
   GENDOX_USER: { title: "GENDOX_USER", color: "primary" },
   GENDOX_AGENT: { title: "GENDOX_AGENT", color: "success" },
   UNKNOWN: { title: "UNKNOWN", color: "error" },
   DISCORD_USER: { title: "DISCORD_USER", color: "warning" },
   GENDOX_SUPER_ADMIN: { title: "GENDOX_SUPER_ADMIN", color: "info" },
+};
+
+const mamberRoleStatus = {
+  ROLE_ADMIN: { title: "ADMIN", color: "#1976d2", icon: "mdi:shield-crown-outline" },
+  ROLE_READER: { title: "READER", color: "#4caf50", icon: "mdi:smart-card-reader-outline" },
+  ROLE_EDITOR: { title: "EDITOR", color: "#ff9800", icon: "mdi:pencil-outline" },
+  UNKNOWN: { title: "UNKNOWN", color: "#f44336", icon: "mdi:account-question" },
 };
 
 const escapeRegExp = (value) => {
@@ -96,9 +104,9 @@ const MembersProjectSettings = () => {
   );
   const project = useSelector((state) => state.activeProject.projectDetails);
   const { id: projectId, organizationId } = project;
-  const [data, setData] = useState("");
-  const [searchText, setSearchText] = useState("");
-  const [filteredData, setFilteredData] = useState([]);
+  const [projectMembers, setProjectMembers] = useState([]);
+  const [searchText, setSearchText] = useState([]);
+  const [filteredProjectMembers, setFilteredProjectMembers] = useState([]);
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
     pageSize: 7,
@@ -112,11 +120,16 @@ const MembersProjectSettings = () => {
   });
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [organizationMembers, setOrganizationMembers] = useState([]);
 
+
+  
 
   useEffect(() => {
     if (projectId) {
       fetchProjectMembers();
+      fetchProjectMembersRole();
     }
   }, [projectId, organizationId, router]);
 
@@ -132,10 +145,45 @@ const MembersProjectSettings = () => {
         userType: user.user.userType.name,
         activeProjectMember: true,
       }));
-      setData(fetchedProjectMembers);
-      setFilteredData(fetchedProjectMembers);
+      setProjectMembers(fetchedProjectMembers);
+      setFilteredProjectMembers(fetchedProjectMembers);
     } catch (error) {
       console.error("Failed to fetch project members:", error);
+    }
+  };
+
+  const fetchProjectMembersRole = async () => {
+    try {
+      setLoading(true); // Start loading
+      const response = await organizationService.getUsersInOrganizationByOrgId(
+        organizationId,
+        storedToken
+      );
+      setOrganizationMembers(response.data);
+      const organizationUsers = response.data;
+      // Update the existing project members with roles from organization users
+      setProjectMembers((prevProjectMembers) => {
+        const updatedProjectMembers = prevProjectMembers.map(
+          (projectMember) => {
+            const orgUser = organizationUsers.find(
+              (orgUser) => orgUser.user.id === projectMember.id
+            );
+            return {
+              ...projectMember,
+              role: orgUser ? orgUser.role : null, // Assign role if found
+            };
+          }
+        );
+
+        // Update filteredProjectMembers as well
+        setFilteredProjectMembers(updatedProjectMembers);
+
+        return updatedProjectMembers;
+      });
+    } catch (error) {
+      console.error("Failed to fetch project members role:", error);
+    } finally {
+      setLoading(false); // Stop loading once fetch is done
     }
   };
 
@@ -143,13 +191,15 @@ const MembersProjectSettings = () => {
     setSearchText(searchValue);
     const searchRegex = new RegExp(escapeRegExp(searchValue), "i");
 
-    const filteredRows = data.filter((row) => {
+    const filteredRows = projectMembers.filter((row) => {
       return Object.keys(row).some((field) => {
         const fieldValue = row[field];
-      return fieldValue && searchRegex.test(fieldValue.toString());
+        return fieldValue && searchRegex.test(fieldValue.toString());
       });
     });
-    setFilteredData(searchValue.length ? filteredRows : data);
+    setFilteredProjectMembers(
+      searchValue.length ? filteredRows : projectMembers
+    );
   };
 
   const handleMenuClick = (event, row) => {
@@ -170,10 +220,10 @@ const MembersProjectSettings = () => {
           selectedUser.id,
           storedToken
         );
-        setData((prevData) =>
+        setProjectMembers((prevData) =>
           prevData.filter((user) => user.id !== selectedUser.id)
         );
-        setFilteredData((prevData) =>
+        setFilteredProjectMembers((prevData) =>
           prevData.filter((user) => user.id !== selectedUser.id)
         );
         setShowSnackbar({
@@ -209,9 +259,9 @@ const MembersProjectSettings = () => {
     setConfirmDelete(false);
   };
 
-    const handleInviteNewMembers = () => {
-        setShowInviteDialog(true);
-      }; 
+  const handleInviteNewMembers = () => {
+    setShowInviteDialog(true);
+  };
 
   const columns = [
     {
@@ -252,6 +302,30 @@ const MembersProjectSettings = () => {
         </Typography>
       ),
     },
+    {
+      flex: 0.2,
+      minWidth: 120,
+      field: "role",
+      headerName: "Organization Role",
+      renderCell: (params) => {
+        if (loading) {
+          // Render a loader or placeholder
+          return <Typography variant="body2">Loading...</Typography>;
+        }
+        const role = params.row.role?.name|| "UNKNOWN";
+        const status = mamberRoleStatus[role] || mamberRoleStatus.UNKNOWN;
+        return (
+      <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
+        
+        {status.icon && (
+          <Icon icon={status.icon} style={{ color: status.color, marginRight: '0.5rem' }} />
+        )}
+        
+        {status.title}
+      </Typography>
+    );
+      },
+    },
 
     {
       flex: 0.2,
@@ -259,7 +333,8 @@ const MembersProjectSettings = () => {
       field: "userType",
       headerName: "User Type",
       renderCell: (params) => {
-        const status = statusObj[params.row.userType];
+        const userType = params.row.userType;
+        const status = userTypeStatus[userType] || userTypeStatus.UNKNOWN;
         return (
           <CustomChip
             size="small"
@@ -306,8 +381,8 @@ const MembersProjectSettings = () => {
               horizontal: "center",
             }}
           >
-            <MenuItem onClick={handleDeleteConfirmOpen}>Delete User</MenuItem>
-            <MenuItem onClick={handleBanUser}>Ban User</MenuItem>
+            <MenuItem onClick={handleDeleteConfirmOpen}>Remove User</MenuItem>
+            {/* <MenuItem onClick={handleBanUser}>Ban User</MenuItem> */}
           </Menu>
         </>
       ),
@@ -324,7 +399,11 @@ const MembersProjectSettings = () => {
         paginationModel={paginationModel}
         slots={{ toolbar: QuickSearchToolbar }}
         onPaginationModelChange={setPaginationModel}
-        rows={filteredData.length ? filteredData : data}
+        rows={
+          filteredProjectMembers.length
+            ? filteredProjectMembers
+            : projectMembers
+        }
         slotProps={{
           baseButton: {
             variant: "outlined",
@@ -354,7 +433,7 @@ const MembersProjectSettings = () => {
           <Button onClick={handleDeleteConfirmClose} color="secondary">
             Cancel
           </Button>
-          <Button onClick={handleDeleteUser} color="primary">
+          <Button onClick={handleDeleteUser} color="error">
             Delete
           </Button>
         </DialogActions>
@@ -390,6 +469,7 @@ const MembersProjectSettings = () => {
       <InviteDialog
         open={showInviteDialog}
         handleClose={() => setShowInviteDialog(false)}
+        organizationMembers={organizationMembers}
       />
     </Card>
   );
