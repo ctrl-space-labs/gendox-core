@@ -15,6 +15,7 @@ import java.util.UUID;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "organizations", schema = "gendox_core")
 public class Organization {
+
     @GeneratedValue(strategy = GenerationType.UUID)
     @Id
     @Column(name = "id", nullable = false)
@@ -39,6 +40,10 @@ public class Organization {
     @Column(name = "updated_at", nullable = true)
     @LastModifiedDate
     private Instant updatedAt;
+
+    @Basic
+    @Column(name = "developer_email", nullable = true)
+    private String developerEmail;
 
 
     @JsonBackReference(value = "organizationUser")
@@ -109,31 +114,25 @@ public class Organization {
         this.userOrganizations = userOrganizations;
     }
 
+    public String getDeveloperEmail() {
+        return developerEmail;
+    }
+
+    public void setDeveloperEmail(String developerEmail) {
+        this.developerEmail = developerEmail;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Organization that)) return false;
-
-        if (!Objects.equals(id, that.id)) return false;
-        if (!Objects.equals(name, that.name)) return false;
-        if (!Objects.equals(displayName, that.displayName)) return false;
-        if (!Objects.equals(address, that.address)) return false;
-        if (!Objects.equals(phone, that.phone)) return false;
-        if (!Objects.equals(createdAt, that.createdAt)) return false;
-        if (!Objects.equals(updatedAt, that.updatedAt)) return false;
-        return Objects.equals(userOrganizations, that.userOrganizations);
+        if (o == null || getClass() != o.getClass()) return false;
+        Organization that = (Organization) o;
+        return Objects.equals(id, that.id) && Objects.equals(name, that.name) && Objects.equals(displayName, that.displayName) && Objects.equals(address, that.address) && Objects.equals(phone, that.phone) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(developerEmail, that.developerEmail) && Objects.equals(userOrganizations, that.userOrganizations);
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (name != null ? name.hashCode() : 0);
-        result = 31 * result + (displayName != null ? displayName.hashCode() : 0);
-        result = 31 * result + (address != null ? address.hashCode() : 0);
-        result = 31 * result + (phone != null ? phone.hashCode() : 0);
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        result = 31 * result + (userOrganizations != null ? userOrganizations.hashCode() : 0);
-        return result;
+        return Objects.hash(id, name, displayName, address, phone, createdAt, updatedAt, developerEmail, userOrganizations);
     }
 }
