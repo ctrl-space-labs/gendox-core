@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS gendox_core.subscription_plans
     user_upload_limit_mb INT NOT NULL,
     user_message_monthly_limit_count INT NOT NULL,
     ai_models_tier_type_id BIGINT NOT NULL,
+    active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
     PRIMARY KEY (id),
@@ -28,6 +29,7 @@ comment on column gendox_core.subscription_plans.user_upload_limit_file_count is
 comment on column gendox_core.subscription_plans.user_upload_limit_mb is 'Maximum Total size of files a user can upload, in MB';
 comment on column gendox_core.subscription_plans.user_message_monthly_limit_count is 'Maximum number of messages a user can send';
 comment on column gendox_core.subscription_plans.ai_models_tier_type_id is 'Tier of AI Models available in this plan. e.g Free Models, Standard Models, Custom Models';
+comment on column gendox_core.subscription_plans.active is 'Flag to indicate if the subscription is active or not, only one per subscription type should be active';
 
 
 CREATE TABLE IF NOT EXISTS gendox_core.api_rate_limits
@@ -35,7 +37,7 @@ CREATE TABLE IF NOT EXISTS gendox_core.api_rate_limits
     id UUID DEFAULT uuid_generate_v4(),
     tier_type_id BIGINT NOT NULL,
     public_completions_per_minute INT NOT NULL, --per IP Address
-    completions_per_minute VARCHAR(255) NOT NULL, --per Auth Users
+    completions_per_minute INT NOT NULL, --per Auth Users
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
     PRIMARY KEY (id),
@@ -50,50 +52,50 @@ CREATE TABLE IF NOT EXISTS gendox_core.api_rate_limits
 
 
 -----------------------------------------------------
--------------- INSERT PRODUCT SKU TYPES --------------
+-------------- INSERT SUBSCRIPTION SKU TYPES --------------
 -- Inserting SKU_TYPE_FREE
 INSERT INTO gendox_core.types (type_category, name, description)
-SELECT 'PRODUCT_SKU_TYPE', 'SKU_TYPE_FREE', 'Free product SKU type'
+SELECT 'SUBSCRIPTION_SKU_TYPE', 'SKU_TYPE_FREE', 'Free subscription SKU type'
 WHERE NOT EXISTS (SELECT 1
                   FROM gendox_core.types
-                  WHERE type_category = 'PRODUCT_SKU_TYPE'
+                  WHERE type_category = 'SUBSCRIPTION_SKU_TYPE'
                     AND name = 'SKU_TYPE_FREE');
 
 -- Inserting SKU_TYPE_BASIC
 INSERT INTO gendox_core.types (type_category, name, description)
-SELECT 'PRODUCT_SKU_TYPE', 'SKU_TYPE_BASIC', 'Basic product SKU type'
+SELECT 'SUBSCRIPTION_SKU_TYPE', 'SKU_TYPE_BASIC', 'Basic subscription SKU type'
 WHERE NOT EXISTS (SELECT 1
                   FROM gendox_core.types
-                  WHERE type_category = 'PRODUCT_SKU_TYPE'
+                  WHERE type_category = 'SUBSCRIPTION_SKU_TYPE'
                     AND name = 'SKU_TYPE_BASIC');
 
 -- Inserting SKU_TYPE_PRO
 INSERT INTO gendox_core.types (type_category, name, description)
-SELECT 'PRODUCT_SKU_TYPE', 'SKU_TYPE_PRO', 'Pro product SKU type'
+SELECT 'SUBSCRIPTION_SKU_TYPE', 'SKU_TYPE_PRO', 'Pro subscription SKU type'
 WHERE NOT EXISTS (SELECT 1
                   FROM gendox_core.types
-                  WHERE type_category = 'PRODUCT_SKU_TYPE'
+                  WHERE type_category = 'SUBSCRIPTION_SKU_TYPE'
                     AND name = 'SKU_TYPE_PRO');
 
 -- Inserting SKU_TYPE_BUSINESS
 INSERT INTO gendox_core.types (type_category, name, description)
-SELECT 'PRODUCT_SKU_TYPE', 'SKU_TYPE_BUSINESS', 'Business product SKU type'
+SELECT 'SUBSCRIPTION_SKU_TYPE', 'SKU_TYPE_BUSINESS', 'Business subscription SKU type'
 WHERE NOT EXISTS (SELECT 1
                   FROM gendox_core.types
-                  WHERE type_category = 'PRODUCT_SKU_TYPE'
+                  WHERE type_category = 'SUBSCRIPTION_SKU_TYPE'
                     AND name = 'SKU_TYPE_BUSINESS');
 
 -- Inserting SKU_TYPE_CUSTOM
 INSERT INTO gendox_core.types (type_category, name, description)
-SELECT 'PRODUCT_SKU_TYPE', 'SKU_TYPE_CUSTOM', 'Custom product SKU type'
+SELECT 'SUBSCRIPTION_SKU_TYPE', 'SKU_TYPE_CUSTOM', 'Custom subscription SKU type'
 WHERE NOT EXISTS (SELECT 1
                   FROM gendox_core.types
-                  WHERE type_category = 'PRODUCT_SKU_TYPE'
+                  WHERE type_category = 'SUBSCRIPTION_SKU_TYPE'
                     AND name = 'SKU_TYPE_CUSTOM');
 
 
 
--------------- INSERT PRODUCT SKU TYPES --------------
+-------------- INSERT SUBSCRIPTION SKU TYPES --------------
 -----------------------------------------------------
 
 
@@ -183,8 +185,8 @@ WHERE NOT EXISTS (SELECT 1
 
 
 -----------------------------------------------------
--------------- INSERT PRODUCT  --------------
--- Inserting Product for Free Tier
+-------------- INSERT SUBSCRIPTION  --------------
+-- Inserting Subscription for Free Tier
 INSERT INTO gendox_core.subscription_plans (sku, sku_type_id, name, description, price, currency, moq, user_upload_limit_file_count, user_upload_limit_mb, user_message_monthly_limit_count, ai_models_tier_type_id, created_at, updated_at)
 SELECT 'gd-free-001',
        (SELECT id FROM gendox_core.types WHERE name = 'SKU_TYPE_FREE'),
@@ -201,7 +203,7 @@ SELECT 'gd-free-001',
        timezone('UTC', NOW())
 WHERE NOT EXISTS (SELECT 1 FROM gendox_core.subscription_plans WHERE sku = 'gd-free-001');
 
--- Inserting Product for Basic Tier
+-- Inserting Subscription for Basic Tier
 INSERT INTO gendox_core.subscription_plans (sku, sku_type_id, name, description, price, currency, moq, user_upload_limit_file_count, user_upload_limit_mb, user_message_monthly_limit_count, ai_models_tier_type_id, created_at, updated_at)
 SELECT
     'gd-basic-001',
@@ -219,7 +221,7 @@ SELECT
     timezone('UTC', NOW())
 WHERE NOT EXISTS (SELECT 1 FROM gendox_core.subscription_plans WHERE sku = 'gd-basic-001');
 
--- Inserting Product for Pro Tier
+-- Inserting Subscription for Pro Tier
 INSERT INTO gendox_core.subscription_plans (sku, sku_type_id, name, description, price, currency, moq, user_upload_limit_file_count, user_upload_limit_mb, user_message_monthly_limit_count, ai_models_tier_type_id, created_at, updated_at)
 SELECT 'gd-pro-001',
        (SELECT id FROM gendox_core.types WHERE name = 'SKU_TYPE_PRO'),
@@ -236,7 +238,7 @@ SELECT 'gd-pro-001',
        timezone('UTC', NOW())
 WHERE NOT EXISTS (SELECT 1 FROM gendox_core.subscription_plans WHERE sku = 'gd-pro-001');
 
--- Inserting Product for Business Tier
+-- Inserting Subscription for Business Tier
 INSERT INTO gendox_core.subscription_plans (sku, sku_type_id, name, description, price, currency, moq, user_upload_limit_file_count, user_upload_limit_mb, user_message_monthly_limit_count, ai_models_tier_type_id, created_at, updated_at)
 SELECT 'gd-business-001',
        (SELECT id FROM gendox_core.types WHERE name = 'SKU_TYPE_BUSINESS'),
@@ -253,7 +255,7 @@ SELECT 'gd-business-001',
        timezone('UTC', NOW())
 WHERE NOT EXISTS (SELECT 1 FROM gendox_core.subscription_plans WHERE sku = 'gd-business-001');
 
--------------- INSERT PRODUCT  --------------
+-------------- INSERT SUBSCRIPTION  --------------
 -----------------------------------------------------
 
 -----------------------------------------------------
@@ -444,4 +446,19 @@ DO $$
     END $$;
 
 
+alter table gendox_core.organizations
+    add column if not exists developer_email varchar(256) default null;
+
+create table if not exists gendox_core.organization_model_keys
+(
+    id uuid default uuid_generate_v4(),
+    organization_id uuid not null,
+    ai_model_id uuid not null,
+    model_key varchar(1024) not null,
+    created_at timestamp not null,
+    updated_at timestamp not null,
+    primary key (id),
+    foreign key (organization_id) references gendox_core.organizations(id),
+    foreign key (ai_model_id) references gendox_core.ai_models(id)
+);
 

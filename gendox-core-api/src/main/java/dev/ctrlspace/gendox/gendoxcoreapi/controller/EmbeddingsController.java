@@ -9,12 +9,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.TrainingService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,11 +21,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -44,6 +42,8 @@ public class EmbeddingsController {
     private CompletionService completionService;
     private MessageService messageService;
 
+    private OrganizationPlanService organizationPlanService;
+
     private DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter;
 
 
@@ -57,7 +57,8 @@ public class EmbeddingsController {
                                 TrainingService trainingService,
                                 CompletionService completionService,
                                 DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter,
-                                MessageService messageService
+                                MessageService messageService,
+                                OrganizationPlanService organizationPlanService
     ) {
         this.embeddingRepository = embeddingRepository;
         this.embeddingService = embeddingService;
@@ -65,6 +66,7 @@ public class EmbeddingsController {
         this.completionService = completionService;
         this.messageService = messageService;
         this.documentInstanceSectionWithDocumentConverter = documentInstanceSectionWithDocumentConverter;
+        this.organizationPlanService = organizationPlanService;
     }
 
     @PostMapping("/embeddings")
@@ -145,7 +147,14 @@ public class EmbeddingsController {
             })
     public List<DocumentInstanceSectionDTO> findCloserSections(@RequestBody Message message,
                                                             @RequestParam String projectId,
+                                                            Authentication authentication,
+                                                            HttpServletRequest request,
                                                             Pageable pageable) throws GendoxException, IOException {
+
+        String requestIP = request.getRemoteAddr();
+        organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
+
+
         if (pageable == null) {
             pageable = PageRequest.of(0, 5);
         }
@@ -186,8 +195,12 @@ public class EmbeddingsController {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public CompletionMessageDTO getCompletionSearch(@RequestBody Message message,
-                                                    @RequestParam String projectId) throws GendoxException, IOException {
+                                                    @RequestParam String projectId,
+                                                    Authentication authentication,
+                                                    HttpServletRequest request) throws GendoxException, IOException {
 
+        String requestIP = request.getRemoteAddr();
+        organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
 
         message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
@@ -262,5 +275,8 @@ public class EmbeddingsController {
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
         return trainingService.getModerationForDocumentSections(documentId);
     }
+
+
+
 
 }
