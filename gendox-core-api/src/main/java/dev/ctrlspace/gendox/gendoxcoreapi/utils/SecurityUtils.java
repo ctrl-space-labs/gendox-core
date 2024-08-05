@@ -3,11 +3,14 @@ package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,16 +44,20 @@ public class SecurityUtils {
 
     private ChatThreadRepository chatThreadRepository;
 
+    private ProjectAgentService projectAgentService;
+
     private DocumentInstanceRepository documentInstanceRepository;
 
     @Autowired
     public SecurityUtils(ObjectMapper objectMapper,
                          JWTUtils jwtUtils,
                          ChatThreadRepository chatThreadRepository,
+                            ProjectAgentService projectAgentService,
                          DocumentInstanceRepository documentInstanceRepository) {
         this.objectMapper = objectMapper;
         this.jwtUtils = jwtUtils;
         this.chatThreadRepository = chatThreadRepository;
+        this.projectAgentService = projectAgentService;
         this.documentInstanceRepository = documentInstanceRepository;
     }
 
@@ -323,6 +330,10 @@ public class SecurityUtils {
                 .build();
     }
 
+    public boolean isPublicProject(String projectId) {
+        ProjectAgent projectAgent = projectAgentService.getAgentByProjectId(UUID.fromString(projectId));
+        return Boolean.FALSE.equals(projectAgent.getPrivateAgent());
+    }
 
 
     public class AccessCriteriaGetterFunction {
@@ -347,6 +358,9 @@ public class SecurityUtils {
      * @return
      */
     public boolean hasAuthority(String authority, String getterFunction) throws IOException {
+        if (!(SecurityContextHolder.getContext().getAuthentication() instanceof GendoxAuthenticationToken)) {
+            return false;
+        }
         GendoxAuthenticationToken authentication = (GendoxAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
 
         if (isSuperAdmin(authentication)) {
