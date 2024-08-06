@@ -2,7 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.BotRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.AiModelEmbeddingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.SearchResultConverter;
@@ -164,8 +164,8 @@ public class EmbeddingService {
 
     public EmbeddingResponse getEmbeddingForMessage(ProjectAgent agent, BotRequest botRequest, AiModel aiModel) throws GendoxException {
         String apiKey = this.getApiKey(agent, "SEMANTIC_SEARCH_MODEL");
-        AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
-        EmbeddingResponse embeddingResponse = aiModelTypeService.askEmbedding(botRequest, aiModel, apiKey );
+        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
+        EmbeddingResponse embeddingResponse = aiModelApiAdapterService.askEmbedding(botRequest, aiModel, apiKey );
 
         return embeddingResponse;
     }

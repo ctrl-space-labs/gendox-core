@@ -7,7 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import java.util.List;
 import java.util.Set;
 
-public interface AiModelTypeService {
+public interface AiModelApiAdapterService {
 
 
     EmbeddingResponse askEmbedding(BotRequest botRequest, AiModel aiModel, String apiKey);

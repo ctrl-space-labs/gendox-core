@@ -4,7 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.CompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -35,7 +35,7 @@ public class CompletionService {
     private ProjectAgentRepository projectAgentRepository;
     private TemplateRepository templateRepository;
     private TypeService typeService;
-    private List<AiModelTypeService> aiModelTypeServices;
+    private List<AiModelApiAdapterService> aiModelApiAdapterServices;
     private TrainingService trainingService;
     private ProjectAgentService projectAgentService;
     private MessageService messageService;
@@ -50,7 +50,7 @@ public class CompletionService {
                              ProjectAgentRepository projectAgentRepository,
                              TemplateRepository templateRepository,
                              TypeService typeService,
-                             List<AiModelTypeService> aiModelTypeServices,
+                             List<AiModelApiAdapterService> aiModelApiAdapterServices,
                              DocumentInstanceSectionRepository documentInstanceSectionRepository,
                              AiModelUtils aiModelUtils,
                              ProjectAgentService projectAgentService,
@@ -74,8 +74,8 @@ public class CompletionService {
                                                  AiModelRequestParams aiModelRequestParams, String apiKey) throws GendoxException {
 
         //choose the correct aiModel adapter
-        AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
-        CompletionResponse completionResponse = aiModelTypeService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey);
+        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
+        CompletionResponse completionResponse = aiModelApiAdapterService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey);
         return completionResponse;
     }
 
