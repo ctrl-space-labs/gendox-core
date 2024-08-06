@@ -80,7 +80,7 @@ public class OrganizationPlanService {
      * Check if the API Key is within the subscription limits.
      * This included the rate limits and the subscription plan limits.
      *
-     * This mehtod implements all the business logic required to check if the API Key is within the subscription limits.
+     * This method implements all the business logic required to check if the API Key is within the subscription limits.
      *
      * @param projectId The project ID that the request is made for.
      * @param authentication The authentication object that contains the user details.
@@ -93,6 +93,12 @@ public class OrganizationPlanService {
 
 
         Project project = projectService.getProjectById(projectId);
+
+        return this.validateRequestIsInSubscriptionLimits(project, authentication, requestIP);
+    }
+
+    public ConsumptionProbe validateRequestIsInSubscriptionLimits(Project project, Authentication authentication, String requestIP) throws GendoxException {
+
 
         OrganizationPlan plan = getActiveOrganizationPlan(project.getOrganizationId());
 
@@ -108,12 +114,23 @@ public class OrganizationPlanService {
      * - Total Number of uploaded documents
      * - Total MegaBytes of uploaded documents
      *
+     * If AI model Provider key is missing for the Organization,
+     * it runs the message limits check for the free plan.
+     *
      * @param project
      * @param plan
      */
-    private void validateSubscriptionLimits(Project project, OrganizationPlan plan) throws GendoxException {
+    public void validateSubscriptionLimits(Project project, OrganizationPlan plan) throws GendoxException {
+        validateMessageSubscriptionLimits(project, plan);
         //TODO implement this
     }
+
+    public void validateMessageSubscriptionLimits(Project project, OrganizationPlan plan) throws GendoxException {
+
+        //TODO implement this
+    }
+
+
 
     private ConsumptionProbe validateRateLimits(Authentication authentication, String requestIP, OrganizationPlan plan) throws GendoxException {
         String bucketKey = requestIP;

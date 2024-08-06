@@ -122,9 +122,9 @@ gendox:
         wait-time-seconds: 1 #not in use
         visibility-timeout-seconds: 300
   models:
-    openai:
-      ada2:
-        key: ${OPENAI_KEY}
+#    It is important these fields to have the same names as the DB ai_model_provider.api_type_id.name
+    open_ai:
+      key: ${OPENAI_KEY}
     cohere:
       key: ${COHERE_KEY}
     groq:

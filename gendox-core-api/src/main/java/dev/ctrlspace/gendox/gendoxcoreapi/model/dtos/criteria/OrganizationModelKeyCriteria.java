@@ -14,6 +14,5 @@ import java.util.UUID;
 public class OrganizationModelKeyCriteria {
 
         private UUID organizationId;
-
-        private String aiModelName;
+        private String aiModelProviderName;
 }
