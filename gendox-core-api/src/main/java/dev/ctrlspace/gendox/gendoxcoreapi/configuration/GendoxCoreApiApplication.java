@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeService;
 import dev.ctrlspace.gendox.spring.batch.jobs.SpringBatchConfiguration;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
@@ -44,7 +45,10 @@ import java.util.StringJoiner;
         })
 @EnableCaching
 @EnableJpaRepositories(basePackageClasses = {UserRepository.class})
-@EntityScan(basePackageClasses = {User.class})
+@EntityScan(basePackageClasses = {
+        User.class,
+        AiModelMessage.class
+})
 public class GendoxCoreApiApplication {
     Logger logger = org.slf4j.LoggerFactory.getLogger(getClass());
 

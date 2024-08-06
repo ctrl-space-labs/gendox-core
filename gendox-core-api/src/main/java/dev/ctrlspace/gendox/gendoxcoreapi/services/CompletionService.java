@@ -66,19 +66,9 @@ public class CompletionService {
         this.messageService = messageService;
     }
 
-    private CompletionResponse getCompletionForMessages(List<Message> messages, String agentRole, AiModel aiModel,
+    private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
                                                  AiModelRequestParams aiModelRequestParams) throws GendoxException {
 
-        //TODO add in DB table message, a field for the role of the message
-        // if the message is from a user it will have role: "user" (or the role: ${userName})
-        // if the message is from the agent it will have the role: ${agentName}
-        // for the time being only 1 message will be in the list, from the user
-
-        List<AiModelMessage> aiModelMessages = new ArrayList<>();
-        for (Message message : messages) {
-            AiModelMessage aiModelMessage = messageAiMessageConverter.toDTO(message);
-            aiModelMessages.add(aiModelMessage);
-        }
         //choose the correct aiModel adapter
         AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
         CompletionResponse completionResponse = aiModelTypeService.askCompletion(aiModelMessages, agentRole, aiModel.getModel(), aiModelRequestParams);
@@ -96,9 +86,16 @@ public class CompletionService {
 
 
         Project project = projectService.getProjectById(projectId);
+        ProjectAgent agent = project.getProjectAgent();
+        List<AiModelMessage> previousMessages = messageService.getPreviousMessages(message, 4);
 
         // clone message to avoid changing the original message text in DB
-        Message promptMessage = message.toBuilder().value(question).build();
+        AiModelMessage promptMessage = AiModelMessage.builder()
+                .content(question)
+                .role("user")
+                .build();
+
+        previousMessages.add(promptMessage);
 
          AiModelRequestParams aiModelRequestParams = AiModelRequestParams.builder()
                 .maxTokens(project.getProjectAgent().getMaxToken())
@@ -106,7 +103,7 @@ public class CompletionService {
                 .topP(project.getProjectAgent().getTopP())
                 .build();
 
-        CompletionResponse completionResponse = getCompletionForMessages(List.of(promptMessage),
+        CompletionResponse completionResponse = getCompletionForMessages(previousMessages,
                 project.getProjectAgent().getAgentBehavior(),
                 project.getProjectAgent().getCompletionModel(),
                 aiModelRequestParams);
@@ -116,8 +113,6 @@ public class CompletionService {
         AuditLogs auditLogs = embeddingService.createAuditLogs(projectId, (long) completionResponse.getUsage().getTotalTokens(), completionType);
         Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
 
-        // TODO save the above response message
-        ProjectAgent agent = projectAgentService.getAgentByProjectId(projectId);
         completionResponseMessage.setProjectId(projectId);
         completionResponseMessage.setThreadId(message.getThreadId());
         completionResponseMessage.setCreatedBy(agent.getUserId());
