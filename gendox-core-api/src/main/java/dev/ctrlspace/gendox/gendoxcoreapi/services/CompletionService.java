@@ -40,6 +40,8 @@ public class CompletionService {
     private ProjectAgentService projectAgentService;
     private MessageService messageService;
 
+    private OrganizationModelKeyService organizationModelKeyService;
+
     private AiModelUtils aiModelUtils;
     @Autowired
     public CompletionService(ProjectService projectService,
@@ -53,6 +55,7 @@ public class CompletionService {
                              AiModelUtils aiModelUtils,
                              ProjectAgentService projectAgentService,
                              TrainingService trainingService,
+                             OrganizationModelKeyService organizationModelKeyService,
                              MessageService messageService) {
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
@@ -63,15 +66,16 @@ public class CompletionService {
         this.typeService = typeService;
         this.aiModelUtils = aiModelUtils;
         this.projectAgentService = projectAgentService;
+        this.organizationModelKeyService = organizationModelKeyService;
         this.messageService = messageService;
     }
 
     private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
-                                                 AiModelRequestParams aiModelRequestParams) throws GendoxException {
+                                                 AiModelRequestParams aiModelRequestParams, String apiKey) throws GendoxException {
 
         //choose the correct aiModel adapter
-        AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
-        CompletionResponse completionResponse = aiModelTypeService.askCompletion(aiModelMessages, agentRole, aiModel.getModel(), aiModelRequestParams);
+        AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
+        CompletionResponse completionResponse = aiModelTypeService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey);
         return completionResponse;
     }
 
@@ -79,7 +83,8 @@ public class CompletionService {
     public Message getCompletion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
         String question = convertToAiModelTextQuestion(message, nearestSections, projectId);
         // check moderation
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(question);
+        String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
+        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(question, moderationApiKey);
         if (openAiGpt35ModerationResponse.getResults().get(0).isFlagged()) {
             throw new GendoxException("MODERATION_CHECK_FAILED", "The question did not pass moderation.", HttpStatus.NOT_ACCEPTABLE);
         }
@@ -97,6 +102,8 @@ public class CompletionService {
 
         previousMessages.add(promptMessage);
 
+         String apiKey = embeddingService.getApiKey(agent, "COMPLETION_MODEL");
+
          AiModelRequestParams aiModelRequestParams = AiModelRequestParams.builder()
                 .maxTokens(project.getProjectAgent().getMaxToken())
                 .temperature(project.getProjectAgent().getTemperature())
@@ -106,7 +113,11 @@ public class CompletionService {
         CompletionResponse completionResponse = getCompletionForMessages(previousMessages,
                 project.getProjectAgent().getAgentBehavior(),
                 project.getProjectAgent().getCompletionModel(),
-                aiModelRequestParams);
+                aiModelRequestParams,
+                apiKey);
+
+
+
 
         Type completionType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
         // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)

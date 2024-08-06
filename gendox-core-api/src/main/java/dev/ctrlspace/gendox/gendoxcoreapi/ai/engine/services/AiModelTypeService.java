@@ -10,22 +10,15 @@ import java.util.Set;
 public interface AiModelTypeService {
 
 
-    EmbeddingResponse askEmbedding(BotRequest botRequest, String aiModelName);
-    CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, String aiModelName,
-                                     AiModelRequestParams aiModelRequestParams);
+    EmbeddingResponse askEmbedding(BotRequest botRequest, AiModel aiModel, String apiKey);
+    CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel,
+                                     AiModelRequestParams aiModelRequestParams, String apiKey);
 
-    /**
-     * The name of the service provide the completions.
-     * e.g. 'OpenAI', 'Cohere', 'Ollama' etc
-     *
-     * @return
-     */
-    String getServiceName();
 
-    Set<String> getSupportedModels();
+    Set<String> getSupportedApiTypeNames();
 
-    OpenAiGpt35ModerationResponse moderationCheck(String message);
+    OpenAiGpt35ModerationResponse moderationCheck(String message, String apiKey);
 
-    boolean supports(AiModel model);
+    boolean supports(String apiTypeName);
 }
 

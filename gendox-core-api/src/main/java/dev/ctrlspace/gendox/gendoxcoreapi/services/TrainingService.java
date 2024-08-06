@@ -37,6 +37,8 @@ public class TrainingService {
 
     private ProjectService projectService;
 
+    private OrganizationModelKeyService organizationModelKeyService;
+
 
     @Lazy
     @Autowired
@@ -57,13 +59,15 @@ public class TrainingService {
                            ProjectDocumentRepository projectDocumentRepository,
                            DocumentInstanceSectionRepository documentInstanceSectionRepository,
                            AiModelUtils aiModelUtils,
-                           ProjectService projectService) {
+                           ProjectService projectService,
+                           OrganizationModelKeyService organizationModelKeyService) {
         this.sectionRepository = sectionRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
         this.projectDocumentRepository = projectDocumentRepository;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.projectService = projectService;
         this.aiModelUtils = aiModelUtils;
+        this.organizationModelKeyService = organizationModelKeyService;
 
     }
 
@@ -75,7 +79,8 @@ public class TrainingService {
 
     public Embedding runTrainingForSection(@NonNull DocumentInstanceSection section, UUID projectId) throws GendoxException {
         Project project = projectService.getProjectById(projectId);
-        EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(section.getSectionValue(),
+        EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(project.getProjectAgent(),
+                section.getSectionValue(),
                 project.getProjectAgent().getSemanticSearchModel());
         Embedding embedding = embeddingService.upsertEmbeddingForText(embeddingResponse, projectId, null, section.getId());
 
@@ -102,20 +107,21 @@ public class TrainingService {
         return projectEmbeddings;
     }
 
-    public OpenAiGpt35ModerationResponse getModeration(String message) throws GendoxException {
+    public OpenAiGpt35ModerationResponse getModeration(String message, String apiKey) throws GendoxException {
         AiModel aiModel = new AiModel();
         aiModel.setName("OPENAI_MODERATION");
-        AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = aiModelTypeService.moderationCheck(message);
+        AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelApiAdapterImpl("OPEN_AI_API");
+        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = aiModelTypeService.moderationCheck(message, apiKey);
         return openAiGpt35ModerationResponse;
     }
 
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(UUID documentInstanceId) throws GendoxException {
         List<DocumentInstanceSection> documentInstanceSections = documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
         Map<Map<String, Boolean>, String> isFlaggedSections = new HashMap<>();
+        String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
 
         for (DocumentInstanceSection section : documentInstanceSections) {
-            OpenAiGpt35ModerationResponse moderationResponse = getModeration(section.getSectionValue());
+            OpenAiGpt35ModerationResponse moderationResponse = getModeration(section.getSectionValue(), moderationApiKey);
             if (moderationResponse.getResults().get(0).isFlagged()) {
                 isFlaggedSections.put(moderationResponse.getResults().get(0).getCategories(), section.getSectionValue());
             }

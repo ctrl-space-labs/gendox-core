@@ -46,6 +46,8 @@ public class EmbeddingsController {
 
     private DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter;
 
+    private OrganizationModelKeyService organizationModelKeyService;
+
 
 
     @Value("${proven-ai.enabled}")
@@ -58,7 +60,8 @@ public class EmbeddingsController {
                                 CompletionService completionService,
                                 DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter,
                                 MessageService messageService,
-                                OrganizationPlanService organizationPlanService
+                                OrganizationPlanService organizationPlanService,
+                                OrganizationModelKeyService organizationModelKeyService
     ) {
         this.embeddingRepository = embeddingRepository;
         this.embeddingService = embeddingService;
@@ -67,35 +70,7 @@ public class EmbeddingsController {
         this.messageService = messageService;
         this.documentInstanceSectionWithDocumentConverter = documentInstanceSectionWithDocumentConverter;
         this.organizationPlanService = organizationPlanService;
-    }
-
-    @PostMapping("/embeddings")
-    @Operation(summary = "Get embeddings",
-            description = "Retrieve embeddings for a given text input using an AI model. " +
-                    "This endpoint accepts a BotRequest containing the text input and returns an Ada2Response " +
-                    "containing the embeddings for the input text. Additionally, it stores the embeddings in the database " +
-                    "as an Embedding entity with a unique ID.")
-    @Observed(name = "EmbeddingsController.getEmbeddings",
-            contextualName = "EmbeddingsController#getEmbeddings",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
-    public EmbeddingResponse getEmbeddings(@RequestBody BotRequest botRequest, @RequestParam String aiModel) throws GendoxException {
-
-        AiModel aiModelObj = new AiModel();
-        aiModelObj.setModel(aiModel);
-        EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(botRequest, aiModelObj);
-        Embedding embedding = new Embedding();
-
-        embedding.setEmbeddingVector(embeddingResponse.getData().get(0).getEmbedding());
-        embedding.setId(UUID.randomUUID());
-
-        embedding = embeddingRepository.save(embedding);
-
-        return embeddingResponse;
+        this.organizationModelKeyService = organizationModelKeyService;
     }
 
 
@@ -268,7 +243,8 @@ public class EmbeddingsController {
 
     @PostMapping("/messages/moderation")
     public OpenAiGpt35ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(message);
+        String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
+        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(message, moderationApiKey);
         return openAiGpt35ModerationResponse;
     }
 

@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -45,8 +46,10 @@ import java.util.UUID;
 @Builder(toBuilder = true)
 public class AiModelMessage {
     @Id
+    @JsonIgnore
     private UUID id;
     private String content;
     private String role;
+    @JsonIgnore
     private Instant createdAt;
 }

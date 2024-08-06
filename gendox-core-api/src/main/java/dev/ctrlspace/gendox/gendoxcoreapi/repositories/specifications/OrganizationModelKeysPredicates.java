@@ -15,7 +15,7 @@ public class OrganizationModelKeysPredicates {
     public static Predicate build(OrganizationModelKeyCriteria criteria) {
         return ExpressionUtils.allOf(
                 organizationId(criteria.getOrganizationId()),
-                aiModelProviderName(criteria.getAiModelName())
+                aiModelProviderName(criteria.getAiModelProviderName())
         );
     }
 
