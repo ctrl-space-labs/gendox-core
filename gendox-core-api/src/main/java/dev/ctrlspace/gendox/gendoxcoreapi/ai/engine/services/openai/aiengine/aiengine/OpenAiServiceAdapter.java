@@ -2,7 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.ai
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35Moderation;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiCompletionResponseConverter;
@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Set;
 
 @Service
-public class OpenAiServiceAdapter implements AiModelTypeService {
+public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
 
     protected Set<String> supportedApiType = Set.of("OPEN_AI_API");

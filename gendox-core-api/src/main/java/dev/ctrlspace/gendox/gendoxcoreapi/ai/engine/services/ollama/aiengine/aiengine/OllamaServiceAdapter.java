@@ -2,7 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.ollama.aiengine.ai
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import org.slf4j.Logger;
@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Set;
 
-public class OllamaServiceAdapter implements AiModelTypeService {
+public class OllamaServiceAdapter implements AiModelApiAdapterService {
 
     protected Set<String> supportedApiTypeNames = Set.of("OLLAMA_API");
 

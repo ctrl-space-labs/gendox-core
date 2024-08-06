@@ -2,7 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
@@ -110,8 +110,8 @@ public class TrainingService {
     public OpenAiGpt35ModerationResponse getModeration(String message, String apiKey) throws GendoxException {
         AiModel aiModel = new AiModel();
         aiModel.setName("OPENAI_MODERATION");
-        AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelApiAdapterImpl("OPEN_AI_API");
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = aiModelTypeService.moderationCheck(message, apiKey);
+        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl("OPEN_AI_API");
+        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = aiModelApiAdapterService.moderationCheck(message, apiKey);
         return openAiGpt35ModerationResponse;
     }
 

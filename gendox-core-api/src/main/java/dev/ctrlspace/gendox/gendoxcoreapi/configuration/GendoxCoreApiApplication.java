@@ -4,7 +4,7 @@ import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeService;
 import dev.ctrlspace.gendox.spring.batch.jobs.SpringBatchConfiguration;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.controller.UserController;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.Listener;
@@ -35,7 +35,7 @@ import java.util.StringJoiner;
         GendoxException.class,
         UserService.class,
         UserRepository.class,
-        AiModelTypeService.class,
+        AiModelApiAdapterService.class,
         Listener.class,
         SpringBatchConfiguration.class,
         LoggingObservationHandler.class,

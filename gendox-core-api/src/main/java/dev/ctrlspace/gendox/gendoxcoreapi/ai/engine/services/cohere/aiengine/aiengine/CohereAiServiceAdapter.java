@@ -6,7 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.request.Co
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereCommandResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereEmbedMultilingualResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.CohereConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.CohereCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.CohereEmbeddingResponseConverter;
@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Set;
 
 @Service
-public class CohereAiServiceAdapter implements AiModelTypeService {
+public class CohereAiServiceAdapter implements AiModelApiAdapterService {
 
     Logger logger = LoggerFactory.getLogger(CohereAiServiceAdapter.class);
 
