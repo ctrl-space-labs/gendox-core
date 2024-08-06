@@ -9,12 +9,13 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface AiModelRepository extends JpaRepository<AiModel, UUID>, QuerydslPredicateExecutor<AiModel> {
 
-    AiModel findByName(@Param("name") String name);
+    Optional<AiModel> findByName(@Param("name") String name);
 
 //    AiModel findAiModelByName
 

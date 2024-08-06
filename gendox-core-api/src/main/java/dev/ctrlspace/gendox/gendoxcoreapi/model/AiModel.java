@@ -56,6 +56,10 @@ public class AiModel {
     @Column(name = "organization_id", nullable = true)
     private UUID organizationId;
 
+    @ManyToOne
+    @JoinColumn(name = "ai_model_provider_id", referencedColumnName = "id", nullable = false)
+    private AiModelProvider aiModelProvider;
+
 
     public UUID getId() {
         return id;
@@ -147,17 +151,25 @@ public class AiModel {
         this.organizationId = organizationId;
     }
 
+    public AiModelProvider getAiModelProvider() {
+        return aiModelProvider;
+    }
+
+    public void setAiModelProvider(AiModelProvider aiModelProvider) {
+        this.aiModelProvider = aiModelProvider;
+    }
+
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         AiModel aiModel = (AiModel) o;
-        return Objects.equals(id, aiModel.id) && Objects.equals(model, aiModel.model) && Objects.equals(url, aiModel.url) && Objects.equals(name, aiModel.name) && Objects.equals(price, aiModel.price) && Objects.equals(createdAt, aiModel.createdAt) && Objects.equals(updatedAt, aiModel.updatedAt) && Objects.equals(description, aiModel.description) && Objects.equals(aiModelType, aiModel.aiModelType) && Objects.equals(modelTierType, aiModel.modelTierType) && Objects.equals(organizationId, aiModel.organizationId);
+        return Objects.equals(id, aiModel.id) && Objects.equals(model, aiModel.model) && Objects.equals(url, aiModel.url) && Objects.equals(name, aiModel.name) && Objects.equals(price, aiModel.price) && Objects.equals(createdAt, aiModel.createdAt) && Objects.equals(updatedAt, aiModel.updatedAt) && Objects.equals(description, aiModel.description) && Objects.equals(aiModelType, aiModel.aiModelType) && Objects.equals(modelTierType, aiModel.modelTierType) && Objects.equals(organizationId, aiModel.organizationId) && Objects.equals(aiModelProvider, aiModel.aiModelProvider);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, model, url, name, price, createdAt, updatedAt, description, aiModelType, modelTierType, organizationId);
+        return Objects.hash(id, model, url, name, price, createdAt, updatedAt, description, aiModelType, modelTierType, organizationId, aiModelProvider);
     }
 }
