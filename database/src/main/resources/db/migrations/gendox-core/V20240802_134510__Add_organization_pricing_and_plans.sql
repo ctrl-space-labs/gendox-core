@@ -446,20 +446,128 @@ DO $$
     END $$;
 
 
-alter table gendox_core.organizations
-    add column if not exists developer_email varchar(256) default null;
+-----------------------------------------------------
+-------------- AI Model Providers  --------------
 
-create table if not exists gendox_core.organization_model_keys
+create table if not exists gendox_core.ai_model_providers
 (
     id uuid default uuid_generate_v4(),
-    organization_id uuid not null,
-    ai_model_id uuid not null,
-    model_key varchar(1024) not null,
+    name varchar(256) not null,
+    api_type_id bigint not null,
+    description text,
     created_at timestamp not null,
     updated_at timestamp not null,
     primary key (id),
+    foreign key (api_type_id) references gendox_core.types(id)
+);
+
+INSERT INTO gendox_core.ai_model_providers
+(name, api_type_id, description, created_at, updated_at)
+SELECT 'OPEN_AI',
+       (SELECT id FROM gendox_core.types WHERE name = 'OPEN_AI_API'),
+       'OpenAI',
+       timezone('UTC', NOW()),
+       timezone('UTC', NOW())
+WHERE NOT EXISTS
+          (SELECT 1
+           FROM gendox_core.ai_model_providers
+           WHERE name = 'OPEN_AI');
+
+INSERT INTO gendox_core.ai_model_providers
+(name, api_type_id, description, created_at, updated_at)
+SELECT 'GROQ',
+       (SELECT id FROM gendox_core.types WHERE name = 'OPEN_AI_API'), --It uses the OPEN_AI_API standard
+       'Groq',
+       timezone('UTC', NOW()),
+       timezone('UTC', NOW())
+WHERE NOT EXISTS
+          (SELECT 1
+           FROM gendox_core.ai_model_providers
+           WHERE name = 'GROQ');
+
+
+INSERT INTO gendox_core.ai_model_providers
+(name, api_type_id, description, created_at, updated_at)
+SELECT 'COHERE',
+       (SELECT id FROM gendox_core.types WHERE name = 'COHERE_API'), --It uses the OPEN_AI_API standard
+       'Cohere',
+       timezone('UTC', NOW()),
+       timezone('UTC', NOW())
+WHERE NOT EXISTS
+          (SELECT 1
+           FROM gendox_core.ai_model_providers
+           WHERE name = 'COHERE');
+
+INSERT INTO gendox_core.ai_model_providers
+(name, api_type_id, description, created_at, updated_at)
+SELECT 'PRIVATE_OLLAMA',
+       (SELECT id FROM gendox_core.types WHERE name = 'OLLAMA_API'), --It uses the OPEN_AI_API standard
+       'Ollama',
+       timezone('UTC', NOW()),
+       timezone('UTC', NOW())
+WHERE NOT EXISTS
+          (SELECT 1
+           FROM gendox_core.ai_model_providers
+           WHERE name = 'PRIVATE_OLLAMA');
+
+-- add association with AI models
+DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'gendox_core'
+              AND table_name = 'ai_models'
+              AND column_name = 'ai_model_provider_id'
+        ) THEN
+            ALTER TABLE gendox_core.ai_models
+                ADD COLUMN ai_model_provider_id UUID NULL,
+                ADD FOREIGN KEY (ai_model_provider_id) REFERENCES gendox_core.ai_model_providers (id);
+        END IF;
+    END $$;
+
+-- Set  OPEN_AI if url contains api.openai.com
+UPDATE gendox_core.ai_models
+SET ai_model_provider_id = (SELECT id
+                            FROM gendox_core.ai_model_providers
+                            WHERE name = 'OPEN_AI')
+WHERE url LIKE '%api.openai.com%';
+
+-- Set  GROQ if url contains api.groq.com
+UPDATE gendox_core.ai_models
+SET ai_model_provider_id = (SELECT id
+                            FROM gendox_core.ai_model_providers
+                            WHERE name = 'GROQ')
+WHERE url LIKE '%api.groq.com%';
+
+-- Set  COHERE if url contains api.cohere.ai
+UPDATE gendox_core.ai_models
+SET ai_model_provider_id = (SELECT id
+                            FROM gendox_core.ai_model_providers
+                            WHERE name = 'COHERE')
+WHERE url LIKE '%api.cohere.ai%';
+
+
+
+alter table gendox_core.organizations
+    add column if not exists developer_email varchar(256) default null;
+
+create table if not exists gendox_core.organization_model_provider_keys
+(
+    id uuid default uuid_generate_v4(),
+    organization_id uuid not null,
+    ai_model_provider_id uuid not null,
+    key varchar(2048) not null,
+    created_at timestamp not null,
+    updated_at timestamp not null,
+    created_by uuid,
+    updated_by uuid,
+    primary key (id),
     foreign key (organization_id) references gendox_core.organizations(id),
-    foreign key (ai_model_id) references gendox_core.ai_models(id)
+    foreign key (ai_model_provider_id) references gendox_core.ai_model_providers(id),
+    foreign key (created_by) references gendox_core.users(id),
+    foreign key (updated_by) references gendox_core.users(id),
+    UNIQUE (organization_id, ai_model_provider_id)
 );
 
 INSERT into gendox_core.types
@@ -506,3 +614,6 @@ from gendox_core.types r, gendox_core.types p
 where r.type_category = 'ORGANIZATION_ROLE_TYPE' and r.name = 'ROLE_ADMIN'
   and p.type_category = 'ORGANIZATION_ROLE_PERMISSION_TYPE' and p.name = 'OP_EDIT_ORGANIZATION_MODEL_KEYS'
   and not exists (select * from gendox_core.role_permission where role_id = r.id and permission_id = p.id);
+
+
+
