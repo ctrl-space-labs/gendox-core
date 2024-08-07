@@ -2,19 +2,17 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.ai
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35Moderation;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -26,21 +24,11 @@ import java.util.List;
 import java.util.Set;
 
 @Service
-public class OpenAiServiceAdapter implements AiModelTypeService {
+public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
 
-    protected Set<String> supportedModels = Set.of(AiModelConstants.GPT_4_OMNI,
-            AiModelConstants.GPT_4_OMNI_MINI,
-            AiModelConstants.GPT_4_TURBO,
-            AiModelConstants.GPT_4,
-            AiModelConstants.GPT_3_5_TURBO_MODEL,
-            AiModelConstants.ADA2_MODEL,
-            AiModelConstants.ADA_3_SMALL,
-            AiModelConstants.OPEN_AI_MODERATION);
-    protected String serviceName = "OpenAI";
+    protected Set<String> supportedApiType = Set.of("OPEN_AI_API");
 
-    @Value("${gendox.models.openai.ada2.key}")
-    protected String apiKey;
 
     protected Logger logger = LoggerFactory.getLogger(OpenAiServiceAdapter.class);
 
@@ -60,10 +48,10 @@ public class OpenAiServiceAdapter implements AiModelTypeService {
     }
     private static final RestTemplate restTemplate = new RestTemplate();
 
-    public HttpHeaders buildHeader() {
+    public HttpHeaders buildHeader(String apiKey) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType(OpenAIADA2.MEDIA_TYPE));
-        headers.add(OpenAIADA2.AUTHORIZATION, OpenAIADA2.BEARER + getApiKey());
+        headers.add(OpenAIADA2.AUTHORIZATION, OpenAIADA2.BEARER + apiKey);
         return headers;
     }
 
@@ -71,49 +59,50 @@ public class OpenAiServiceAdapter implements AiModelTypeService {
         return aiModelRepository.findUrlByModel(model);
     }
 
-    public OpenAiAda2Response getEmbeddingResponse(OpenAiAda2Request embeddingRequestHttpEntity, String aiModelName) {
-        String embeddingsApiUrl = getApiEndpointByAiModel(aiModelName);
-        logger.trace("Sending Embedding Request to {}: {}", this.getServiceName(), embeddingRequestHttpEntity);
+    public OpenAiAda2Response getEmbeddingResponse(OpenAiAda2Request embeddingRequestHttpEntity, AiModel aiModel, String apiKey) {
+        String embeddingsApiUrl = aiModel.getUrl();
+        logger.trace("Sending Embedding Request to {}: {}", embeddingsApiUrl, embeddingRequestHttpEntity);
         ResponseEntity<OpenAiAda2Response> responseEntity = restTemplate.postForEntity(
                 embeddingsApiUrl,
-                new HttpEntity<>(embeddingRequestHttpEntity, buildHeader()),
+                new HttpEntity<>(embeddingRequestHttpEntity, buildHeader(apiKey)),
                 OpenAiAda2Response.class);
-        logger.info("Received Embedding Response from {}. Tokens billed: {}", this.getServiceName(), responseEntity.getBody().getUsage().getTotalTokens());
+        logger.info("Received Embedding Response from {}. Tokens billed: {}", embeddingsApiUrl, responseEntity.getBody().getUsage().getTotalTokens());
 
         return responseEntity.getBody();
     }
 
 
-    public OpenAiGptResponse getCompletionResponse(OpenAiGptRequest chatRequestHttpEntity, String aiModelName) {
-        String completionApiUrl = getApiEndpointByAiModel(aiModelName);
-        logger.trace("Sending completion Request to {}: {}", this.getServiceName(), chatRequestHttpEntity);
+    public OpenAiGptResponse getCompletionResponse(OpenAiGptRequest chatRequestHttpEntity, AiModel aiModel, String apiKey) {
+        String completionApiUrl = aiModel.getUrl();
+        logger.trace("Sending completion Request to {}: {}", completionApiUrl, chatRequestHttpEntity);
         ResponseEntity<OpenAiGptResponse> responseEntity = restTemplate.postForEntity(
                 completionApiUrl,
-                new HttpEntity<>(chatRequestHttpEntity, buildHeader()),
+                new HttpEntity<>(chatRequestHttpEntity, buildHeader(apiKey)),
                 OpenAiGptResponse.class);
-        logger.info("Received completion Response from {}. Tokens billed: {}", this.getServiceName(), responseEntity.getBody().getUsage().getTotalTokens());
+        logger.info("Received completion Response from {}. Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getTotalTokens());
 
         return responseEntity.getBody();
     }
 
-    public OpenAiGpt35ModerationResponse getModerationResponse(Gpt35ModerationRequest moderationRequest) {
-        logger.trace("Sending moderation Request to {}: {}", this.getServiceName(), moderationRequest);
+    public OpenAiGpt35ModerationResponse getModerationResponse(Gpt35ModerationRequest moderationRequest, String apiKey) {
+        logger.trace("Sending moderation Request to {}: {}", GPT35Moderation.URL, moderationRequest);
         ResponseEntity<OpenAiGpt35ModerationResponse> responseEntity = restTemplate.postForEntity(
                 GPT35Moderation.URL,
-                new HttpEntity<>(moderationRequest, buildHeader()),
+                new HttpEntity<>(moderationRequest, buildHeader(apiKey)),
                 OpenAiGpt35ModerationResponse.class);
-        logger.debug("Received moderation Response from {}.", this.getServiceName());
+        logger.debug("Received moderation Response from {}.", GPT35Moderation.URL);
 
         return responseEntity.getBody();
     }
 
 
-    public EmbeddingResponse askEmbedding(BotRequest botRequest, String aiModelName) {
+    public EmbeddingResponse askEmbedding(BotRequest botRequest, AiModel aiModel, String apiKey) {
         String message = botRequest.getMessages().get(0);
         OpenAiAda2Response openAiAda2Response = this.getEmbeddingResponse((OpenAiAda2Request.builder()
-                .model(aiModelName)
+                .model(aiModel.getModel())
                 .input(message).build()),
-                aiModelName);
+                aiModel,
+                apiKey);
 
         EmbeddingResponse embeddingResponse = openAiEmbeddingResponseConverter.openAitoEmbeddingResponse(openAiAda2Response);
 
@@ -122,18 +111,19 @@ public class OpenAiServiceAdapter implements AiModelTypeService {
     }
 
     @Override
-    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, String aiModelName, AiModelRequestParams aiModelRequestParams) {
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey) {
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
 
         }
         OpenAiGptResponse openAiGptResponse = this.getCompletionResponse((OpenAiGptRequest.builder()
-                .model(aiModelName)
-                .temperature(aiModelRequestParams.getTemperature())
-                .topP(aiModelRequestParams.getTopP())
-                .maxTokens(aiModelRequestParams.getMaxTokens())
-                .messages(messages).build()),
-                aiModelName);
+                        .model(aiModel.getModel())
+                        .temperature(aiModelRequestParams.getTemperature())
+                        .topP(aiModelRequestParams.getTopP())
+                        .maxTokens(aiModelRequestParams.getMaxTokens())
+                        .messages(messages).build()),
+                aiModel,
+                apiKey);
 
         CompletionResponse completionResponse = openAiCompletionResponseConverter.toCompletionResponse(openAiGptResponse);
 
@@ -141,29 +131,21 @@ public class OpenAiServiceAdapter implements AiModelTypeService {
     }
 
 
-    public OpenAiGpt35ModerationResponse moderationCheck(String message) {
+    public OpenAiGpt35ModerationResponse moderationCheck(String message, String apiKey) {
         return getModerationResponse(Gpt35ModerationRequest.builder()
                 .input(message)
-                .build());
+                .build(),
+                apiKey);
     }
 
     @Override
-    public boolean supports(AiModel model) {
-        return getSupportedModels().contains(model.getName());
+    public boolean supports(String apiTypeName) {
+        return getSupportedApiTypeNames().contains(apiTypeName);
     }
 
     @Override
-    public String getServiceName() {
-        return serviceName;
+    public Set<String> getSupportedApiTypeNames() {
+        return supportedApiType;
     }
 
-    @Override
-    public Set<String> getSupportedModels() {
-        return supportedModels;
-    }
-
-
-    public String getApiKey() {
-        return apiKey;
-    }
 }
