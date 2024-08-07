@@ -89,7 +89,7 @@ const createProject = async (organizationId, newProjectPayload, storedToken) => 
 };
 
   /**
- * update project
+ * add Project Members
  * @param organizationId
  * @param projectId
  * @param userIds
@@ -104,6 +104,24 @@ const addProjectMember = async (organizationId, projectId, userIds, storedToken)
       }
     });
   };
+
+
+  /**
+   * delete Project Members
+   * @param organizationId
+   * @Param projectId
+   * @param userId
+   * @param storedToken
+   * @returns {Promise<axios.AxiosResponse<String>>}
+   */
+  const deleteProjectMember = async (organizationId, projectId, userId, storedToken) => {
+    return axios.delete(apiRequests.deleteProjectMember(organizationId, projectId, userId), {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${storedToken}`
+      }
+    });
+  }
 
    /**
  * get Ai models by categories 
@@ -157,6 +175,7 @@ export default {
     updateProject,
     createProject,
     addProjectMember,
+    deleteProjectMember,
     getAiModels,
     getAiModelByCategory
 }

@@ -1,13 +1,18 @@
 // const url = "http://localhost:5000/gendox/api/v1/"; // Local Environment
 //const url= 'https://gendox-api.ctrlspace.dev/gendox/api/v1/' // Production Environment (AWS)
- const url= 'http://localhost:8080/gendox/api/v1/' // Local Environment
+//  const url= 'http://localhost:8080/gendox/api/v1/' // Local Environment
 //const url = 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/' // Development Environment (Hetzner)
+const url = process.env.NEXT_PUBLIC_GENDOX_URL;
+
 
 export default {
   getProfile: url + "profile",
-  deleteProfileCaches: () => `${url}profile/caches`,
+  deleteProfileCaches: () =>
+    `${url}profile/caches`,
 
-  getAllUsers:() => `${url}users`,
+  getAllUsers: () => `${url}users`,
+
+  getPublicUsers: (page = 0, size = 10000) => `${url}users/public?page=${page}&size=${size}`,
 
   getProjectById: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}`,
@@ -74,6 +79,12 @@ export default {
   addProjectMember: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/members`,
 
+  deleteProjectMember: (organizationId, projectId, userId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/users/${userId}`,
+
+  inviteProjectMember: (organizationId) =>
+    `${url}organizations/${organizationId}/invitations`,
+
   addOrganizationMember: (organizationId) =>
     `${url}organizations/${organizationId}/users`,
 
@@ -85,5 +96,7 @@ export default {
 
   acceptInvitation: (email, token) =>
     `${url}invitations/acceptance?email=${email}&token=${token}`,
+
+
 
 };

@@ -11,19 +11,13 @@ import Tooltip from "@mui/material/Tooltip";
 import Icon from "src/@core/components/icon";
 import { formatDocumentTitle } from "src/utils/documentUtils";
 import { fetchDocument } from "src/store/apps/activeDocument/activeDocument";
+import { StyledCardContent } from "src/utils/styledCardsContent";
+
 import authConfig from "src/configs/auth";
 import SectionCard from "src/views/gendox-components/documents-components/SectionCard";
 import SectionEdit from "src/views/gendox-components/documents-components/SectionEdit";
 
 
-const StyledCardContent = styled(CardContent)(({ theme }) => ({
-  paddingTop: `${theme.spacing(10)} !important`,
-  paddingBottom: `${theme.spacing(8)} !important`,
-  [theme.breakpoints.up("sm")]: {
-    paddingLeft: `${theme.spacing(20)} !important`,
-    paddingRight: `${theme.spacing(20)} !important`,
-  },
-}));
 
 const DocumentSections = () => {
   const dispatch = useDispatch();
