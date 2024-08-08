@@ -70,22 +70,30 @@ public class SecurityUtils {
     }
 
     public boolean isSuperAdmin(Authentication authentication) {
-        return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith(UserNamesConstants.GENDOX_SUPER_ADMIN));
+        GendoxAuthenticationToken principal = (GendoxAuthenticationToken)SecurityContextHolder.getContext()
+                .getAuthentication();
+        return principal != null &&
+                UserNamesConstants.GENDOX_SUPER_ADMIN.equals(
+                        principal.getPrincipal().getGlobalUserRoleType().getName()
+                );
     }
 
     public boolean isUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(grantedAuthority -> {
-                    String authority = grantedAuthority.getAuthority();
-                    return authority.contains(UserNamesConstants.GENDOX_USER);
-                });
+        GendoxAuthenticationToken principal = (GendoxAuthenticationToken)SecurityContextHolder.getContext()
+                .getAuthentication();
+        return principal != null &&
+                UserNamesConstants.GENDOX_USER.equals(
+                        principal.getPrincipal().getGlobalUserRoleType().getName()
+                );
     }
 
     public boolean isAgent(Authentication authentication) {
-        return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith(UserNamesConstants.GENDOX_AGENT));
+        GendoxAuthenticationToken principal = (GendoxAuthenticationToken)SecurityContextHolder.getContext()
+                .getAuthentication();
+        return principal != null &&
+                UserNamesConstants.GENDOX_AGENT.equals(
+                        principal.getPrincipal().getGlobalUserRoleType().getName()
+                );
     }
 
 
