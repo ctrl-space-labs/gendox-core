@@ -35,7 +35,6 @@ const GendoxHome = () => {
     authConfig.storageTokenKeyName
   );
 
-  console.log("DOCUMENTS", documents);
 
   useEffect(() => {
     initDocuments(currentPage);
