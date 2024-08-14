@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.authentication;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,7 +20,7 @@ public class UserProfile {
     private String lastName;
     private String userName;
     private String phone;
-    private String userTypeId;
+    private Type globalUserRoleType;
     private String name;
     private List<OrganizationUserDTO> organizations;
 
