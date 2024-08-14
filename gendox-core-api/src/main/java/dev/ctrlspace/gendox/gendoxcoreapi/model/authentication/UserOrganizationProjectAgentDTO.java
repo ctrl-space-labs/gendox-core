@@ -21,7 +21,8 @@ import java.time.Instant;
                         @ColumnResult(name = "last_name", type = String.class),
                         @ColumnResult(name = "user_name", type = String.class),
                         @ColumnResult(name = "phone", type = String.class),
-                        @ColumnResult(name = "users_type_id", type = Integer.class),
+                        @ColumnResult(name = "user_type_name", type = String.class),
+                        @ColumnResult(name = "users_type_id", type = Long.class),
                         @ColumnResult(name = "name", type = String.class),
                         @ColumnResult(name = "org_id", type = String.class),
                         @ColumnResult(name = "org_name", type = String.class),
@@ -54,6 +55,7 @@ import java.time.Instant;
                u.last_name,
                u.user_name,
                u.phone,
+               ut.name as user_type_name,
                u.users_type_id,
                u.name,
                o.id as org_id,
@@ -76,6 +78,7 @@ import java.time.Instant;
                o.created_at as org_created_at,
                o.updated_at as org_updated_at
         FROM gendox_core.users u
+            inner join gendox_core.types ut on ut.id = u.users_type_id
             inner join gendox_core.user_organization uo on u.id = uo.user_id
             inner join gendox_core.types rt on rt.id = uo.organization_role_id
             inner join gendox_core.organizations o ON uo.organization_id = o.id
@@ -96,7 +99,8 @@ public class UserOrganizationProjectAgentDTO {
     private String lastName;
     private String userName;
     private String phone;
-    private Integer usersTypeId;
+    private String userTypeName;
+    private Long userTypeId;
     private String name;
     private String orgId;
     private String orgName;

@@ -1,23 +1,14 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectAgentCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.RolePermissionCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.RolePermissionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -59,6 +50,9 @@ public class UserProfileConverter {
 
         // Extract user-related information
         UserOrganizationProjectAgentDTO firstDto = dtos.get(0);
+        Type userType = new Type();
+        userType.setId(firstDto.getUserTypeId());
+        userType.setName(firstDto.getUserTypeName());
         UserProfile.UserProfileBuilder userProfileBuilder = UserProfile.builder()
                 .id(firstDto.getId())
                 .email(firstDto.getEmail())
@@ -66,7 +60,7 @@ public class UserProfileConverter {
                 .lastName(firstDto.getLastName())
                 .userName(firstDto.getUserName())
                 .phone(firstDto.getPhone())
-                .userTypeId(firstDto.getUsersTypeId() != null ? firstDto.getUsersTypeId().toString() : null)
+                .globalUserRoleType(firstDto.getUserTypeId() != null ? userType : null)
                 .name(firstDto.getName());
 
         // Group by organization

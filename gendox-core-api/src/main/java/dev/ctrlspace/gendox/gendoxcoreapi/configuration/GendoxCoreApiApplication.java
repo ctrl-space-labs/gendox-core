@@ -1,5 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeService;
@@ -68,5 +73,24 @@ public class GendoxCoreApiApplication {
             return joiner.toString();
         };
     }
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        // Register the JavaTimeModule
+        objectMapper.registerModule(new JavaTimeModule());
+
+        objectMapper.addMixIn(Object.class, IgnoreHibernatePropertiesInJackson.class);
+
+        // Disable unwanted serialization features
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+
+        return objectMapper;
+    }
+
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private abstract class IgnoreHibernatePropertiesInJackson{ }
 
 }
