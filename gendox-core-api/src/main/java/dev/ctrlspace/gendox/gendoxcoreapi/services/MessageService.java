@@ -33,7 +33,7 @@ public class MessageService {
                           MessageSectionRepository messageSectionRepository,
                           SecurityUtils securityUtils,
                           ChatThreadService chatThreadService,
-                          ProjectAgentService projectAgentService){
+                          ProjectAgentService projectAgentService) {
         this.messageRepository = messageRepository;
         this.messageSectionRepository = messageSectionRepository;
         this.securityUtils = securityUtils;
@@ -44,6 +44,10 @@ public class MessageService {
 
     public Page<Message> getAllMessagesByCriteria(MessageCriteria criteria, Pageable pageable) {
         return messageRepository.findAll(MessagePredicates.build(criteria), pageable);
+    }
+
+    public List<MessageSection> getMessageSectionsBySectionId(UUID sectionId) {
+        return messageSectionRepository.findAllBySectionId(sectionId);
     }
 
     public Message createMessage(Message message) {
@@ -92,7 +96,7 @@ public class MessageService {
 
     }
 
-    public Message updateMessageWithSections(Message message, List<MessageSection> messageSections){
+    public Message updateMessageWithSections(Message message, List<MessageSection> messageSections) {
         message.setMessageSections(messageSections);
         message = messageRepository.save(message);
 
@@ -101,11 +105,10 @@ public class MessageService {
     }
 
 
-
-    public List<MessageSection> createMessageSections(List<DocumentInstanceSection> sections, Message message) throws GendoxException{
+    public List<MessageSection> createMessageSections(List<DocumentInstanceSection> sections, Message message) throws GendoxException {
         List<MessageSection> messageSections = new ArrayList<>();
 
-        for (DocumentInstanceSection documentInstanceSection: sections){
+        for (DocumentInstanceSection documentInstanceSection : sections) {
             MessageSection messageSection = new MessageSection();
             messageSection.setSectionId(documentInstanceSection.getId());
             messageSection.setMessage(message);
@@ -120,14 +123,16 @@ public class MessageService {
     }
 
 
-
     public MessageSection createMessageSection(MessageSection messageSection) throws GendoxException {
         messageSection = messageSectionRepository.save(messageSection);
         return messageSection;
     }
 
-    public void deleteMessageSection(UUID sectionId){
-        messageSectionRepository.deleteAllBySectionId(sectionId);    }
+    public void deleteMessageSection(UUID sectionId) {
+        List<MessageSection> messageSections = messageSectionRepository.findAllBySectionId(sectionId);
+        messageSectionRepository.deleteAll(messageSections);
+//        messageSectionRepository.deleteAllBySectionId(sectionId);
+    }
 
     /**
      * Get the previous messages from the same thread for a given message

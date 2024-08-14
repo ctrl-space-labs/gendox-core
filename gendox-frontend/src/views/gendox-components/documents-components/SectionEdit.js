@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import Tooltip from "@mui/material/Tooltip";
 import { useRouter } from "next/router";
 import { EditorState, ContentState } from "draft-js";
@@ -9,28 +9,40 @@ import documentService from "src/gendox-sdk/documentService";
 import authConfig from "src/configs/auth";
 import Icon from "src/@core/components/icon";
 import Box from "@mui/material/Box";
+import Alert from "@mui/material/Alert";
 import IconButton from "@mui/material/IconButton";
 import Input from "@mui/material/Input";
 import InputLabel from "@mui/material/InputLabel";
+import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
+import toast from "react-hot-toast";
+import {
+  fetchDocument,
+  updateSectionsOrder,
+} from "src/store/apps/activeDocument/activeDocument";
 
-const SectionEdit = ({ section }) => {
-  
+const SectionEdit = ({ section, isMinimized }) => {
   const router = useRouter();
+  const dispatch = useDispatch();
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
   const project = useSelector((state) => state.activeProject.projectDetails);
   const document = useSelector((state) => state.activeDocument.document);
   const [activeSection, setActiveSection] = useState(section);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isSectionMinimized, setIsSectionMinimized] = useState(isMinimized);
+
+  useEffect(() => {
+    setIsSectionMinimized(isMinimized);
+  }, [isMinimized]);
 
   const initialContent = EditorState.createWithContent(
-    ContentState.createFromText(section.sectionValue)
+    ContentState.createFromText(section.sectionValue || "")
   );
   const initialTitle = section.documentSectionMetadata.title;
   const [sectionValue, setSectionValue] = useState(initialContent);
   const [sectionTitle, setSectionTitle] = useState(initialTitle);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const lastSavedValue = useRef(sectionValue);
   const lastSavedTitle = useRef(sectionTitle);
@@ -45,28 +57,50 @@ const SectionEdit = ({ section }) => {
         lastSavedValue.current = sectionValue;
         lastSavedTitle.current = sectionTitle;
       }
-    }, 3000); // check every 3 seconds
+    }, 1000); // check every 3 seconds
 
     return () => clearInterval(intervalId); // Cleanup interval on component unmount
   }, [sectionValue, sectionTitle]);
 
   const handleMinimize = () => {
-    setIsMinimized(!isMinimized);
+    setIsSectionMinimized(!isSectionMinimized);
   };
 
   const handleDelete = async () => {
-    console.log("Delete section");
+    try {
+      const response = await documentService.deleteDocumentSection(
+        document.id,
+        section.id,
+        storedToken
+      );
+      dispatch(fetchDocument({ documentId: document.id, storedToken })).then(
+        () => {
+          dispatch(updateSectionsOrder({ documentId:document.id, storedToken }));
+          toast.success("Document Section deleted successfully");
+        }
+      );
+    } catch (error) {
+      console.error("Error deleting section", error);
+      toast.error("Failed to delete Document Section");
+    }
+    setConfirmDelete(false);
+  };
+
+  const handleDeleteConfirmOpen = () => {
+    setConfirmDelete(true);
+  };
+
+  const handleDeleteConfirmClose = () => {
+    setConfirmDelete(false);
   };
 
   const handleRestore = () => {
-    console.log("Restore section");
     handleSave();
     setSectionValue(initialContent);
     setSectionTitle(initialTitle);
   };
 
   const handleSave = async () => {
-    // e.preventDefault(); // Prevent default form submission
 
     const updatedSectionPayload = {
       ...activeSection,
@@ -85,10 +119,7 @@ const SectionEdit = ({ section }) => {
         updatedSectionPayload,
         storedToken
       );
-      console.log("Section updated", response);
-      setActiveSection(response.data);
-      // const path = `/gendox/document-instance?documentId=${document.id}`;
-      // router.push(path);
+      setActiveSection(response.data);      
     } catch (error) {
       console.error("Error updating section", error);
     }
@@ -96,7 +127,7 @@ const SectionEdit = ({ section }) => {
 
   const EditorToolbar = () => (
     <Box sx={{ display: "flex", alignItems: "center" }}>
-      <Tooltip title="Minimize ">
+      <Tooltip title={isSectionMinimized ? "Maximize" : "Minimize"}>
         <IconButton
           sx={{ p: 1, color: "primary.main" }}
           onClick={handleMinimize}
@@ -113,7 +144,10 @@ const SectionEdit = ({ section }) => {
         </IconButton>
       </Tooltip>
       <Tooltip title="Delete">
-        <IconButton sx={{ p: 1, color: "primary.main" }} onClick={handleDelete}>
+        <IconButton
+          sx={{ p: 1, color: "primary.main" }}
+          onClick={handleDeleteConfirmOpen}
+        >
           <Icon icon="mdi:delete" />
         </IconButton>
       </Tooltip>
@@ -121,22 +155,7 @@ const SectionEdit = ({ section }) => {
   );
 
   return (
-    <Box
-      anchor="bottom"
-      variant="temporary"
-      sx={{
-        top: "auto",
-        left: "auto",
-        bottom: "1.5rem",
-        display: "block",
-        zIndex: (theme) => `${theme.zIndex.drawer} + 1`,
-        "& .MuiDrawer-paper": {
-          borderRadius: 1,
-          position: "static",
-        },
-      }}
-      // onMouseLeave={handleSave}
-    >
+    <Box>
       <Box
         sx={{
           py: 1,
@@ -161,7 +180,7 @@ const SectionEdit = ({ section }) => {
         />
         <EditorToolbar />
       </Box>
-      {!isMinimized && (
+      {!isSectionMinimized && (
         <EditorWrapper>
           <ReactDraftWysiwyg
             editorState={sectionValue}
@@ -174,9 +193,26 @@ const SectionEdit = ({ section }) => {
                 options: ["bold", "italic", "underline", "strikethrough"],
               },
             }}
+            editorStyle={{
+              height: "25rem", // Set fixed height for the editor
+              overflow: "auto", // Enable scrolling
+              padding: "0 1rem", // Add padding for better readability
+            }}
           />
         </EditorWrapper>
       )}
+      <DeleteConfirmDialog
+        open={confirmDelete}
+        onClose={handleDeleteConfirmClose}
+        onConfirm={handleDelete}
+        title="Confirm Deletion Document Section"
+        // contentText={`Are you sure you want to delete this section? This action cannot be undone.`}
+        contentText={`Are you sure you want to delete ${
+          sectionTitle || "this section"
+        } from this document? This action cannot be undone.`}
+        confirmButtonText="Delete Section"
+        cancelButtonText="Cancel"
+      />
     </Box>
   );
 };

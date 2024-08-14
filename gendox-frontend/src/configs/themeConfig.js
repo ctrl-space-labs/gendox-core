@@ -6,7 +6,7 @@
  */
 const themeConfig = {
   // ** Layout Configs
-  isDemo: true /* Change it to false to disable the demo */,
+  isDemo: false /* Change it to false to disable the demo */,
   showOrganizationDropdown: true,
   templateName: 'Gendox' /* App Name */,
   layout: 'vertical' /* vertical | horizontal */,

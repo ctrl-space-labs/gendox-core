@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { forwardRef } from "react";
 import { useSelector } from "react-redux";
 // ** MUI Imports
 import Card from "@mui/material/Card";
@@ -10,7 +10,7 @@ import Divider from "@mui/material/Divider";
 import TextField from "@mui/material/TextField";
 import GendoxMarkdownRenderer from "../markdown-renderer/GendoxMarkdownRenderer";
 
-const SectionCard = () => {
+const SectionCard = forwardRef((props, ref) => {
   const sections = useSelector((state) => state.activeDocument.sections);
 
   if (!sections || sections.length === 0) {
@@ -22,6 +22,7 @@ const SectionCard = () => {
       {sections.map((section, index) => (
         <React.Fragment key={section.id || index}>
           <CardContent
+            ref={index === props.targetIndex ? ref : null}
             sx={{ overflow: "auto", backgroundColor: "transparent" }}
           >
             <Typography
@@ -42,7 +43,6 @@ const SectionCard = () => {
             {/*  multiline  */}
             {/*/>*/}
             <GendoxMarkdownRenderer markdownText={section.sectionValue} />
-            
           </CardContent>
           {index !== sections.length - 1 && (
             <Divider sx={{ my: 2, mx: 3, width: "calc(100% - 24px)" }} />
@@ -51,6 +51,6 @@ const SectionCard = () => {
       ))}
     </Card>
   );
-};
+});
 
 export default SectionCard;

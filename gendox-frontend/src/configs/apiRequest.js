@@ -19,8 +19,8 @@ export default {
   getProjectsByOrganization: (organizationId) =>
     `${url}organizations/${organizationId}/projects`,
 
-  getDocumentsByProject: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/documents`,
+  getDocumentsByProject: (organizationId, projectId, page) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/documents?page=${page}`,
 
   getUsersInOrganizationByOrgId: (organizationId) =>
     `${url}organizations/${organizationId}/users`,
@@ -66,6 +66,9 @@ export default {
     `${url}documents/${documentId}/sections/${sectionId}`,
 
   getDocumentById: (documentId) => `${url}documents/${documentId}`,
+
+  updateSectionsOrder: (documentId) => 
+    `${url}documents/${documentId}/sections-order`,
 
   uploadDocument: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,

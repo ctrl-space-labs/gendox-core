@@ -8,14 +8,7 @@ import { useSettings } from "src/@core/hooks/useSettings";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
-import Chip from "@mui/material/Chip";
-import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -31,6 +24,7 @@ import QuickSearchToolbar from "src/views/gendox-components/project-settings-com
 import InviteDialog from "src/views/gendox-components/project-settings-components/members-components/InviteDialog";
 import projectService from "src/gendox-sdk/projectService";
 import organizationService from "src/gendox-sdk/organizationService";
+import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 
 import authConfig from "src/configs/auth";
 import { styled, useTheme } from "@mui/material/styles";
@@ -38,6 +32,7 @@ import { styled, useTheme } from "@mui/material/styles";
 // ** Utils Import
 import { getInitials } from "src/@core/utils/get-initials";
 import { set } from "nprogress";
+import toast from "react-hot-toast";
 
 // ** renders client column
 const renderClient = (params) => {
@@ -85,9 +80,21 @@ const userTypeStatus = {
 };
 
 const mamberRoleStatus = {
-  ROLE_ADMIN: { title: "ADMIN", color: "#1976d2", icon: "mdi:shield-crown-outline" },
-  ROLE_READER: { title: "READER", color: "#4caf50", icon: "mdi:smart-card-reader-outline" },
-  ROLE_EDITOR: { title: "EDITOR", color: "#ff9800", icon: "mdi:pencil-outline" },
+  ROLE_ADMIN: {
+    title: "ADMIN",
+    color: "#1976d2",
+    icon: "mdi:shield-crown-outline",
+  },
+  ROLE_READER: {
+    title: "READER",
+    color: "#4caf50",
+    icon: "mdi:smart-card-reader-outline",
+  },
+  ROLE_EDITOR: {
+    title: "EDITOR",
+    color: "#ff9800",
+    icon: "mdi:pencil-outline",
+  },
   UNKNOWN: { title: "UNKNOWN", color: "#f44336", icon: "mdi:account-question" },
 };
 
@@ -113,18 +120,12 @@ const MembersProjectSettings = () => {
   });
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [showSnackbar, setShowSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
+ 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [organizationMembers, setOrganizationMembers] = useState([]);
 
-
-  
 
   useEffect(() => {
     if (projectId) {
@@ -226,18 +227,12 @@ const MembersProjectSettings = () => {
         setFilteredProjectMembers((prevData) =>
           prevData.filter((user) => user.id !== selectedUser.id)
         );
-        setShowSnackbar({
-          open: true,
-          message: "User deleted successfully",
-          severity: "success",
-        });
+        toast.success("User deleted successfully");
+        
       } catch (error) {
         console.error("Failed to delete user:", error);
-        setShowSnackbar({
-          open: true,
-          message: "Failed to delete user",
-          severity: "error",
-        });
+        toast.error("Failed to delete user");
+        
       }
       setConfirmDelete(false);
       handleMenuClose();
@@ -312,18 +307,23 @@ const MembersProjectSettings = () => {
           // Render a loader or placeholder
           return <Typography variant="body2">Loading...</Typography>;
         }
-        const role = params.row.role?.name|| "UNKNOWN";
+        const role = params.row.role?.name || "UNKNOWN";
         const status = mamberRoleStatus[role] || mamberRoleStatus.UNKNOWN;
         return (
-      <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
-        
-        {status.icon && (
-          <Icon icon={status.icon} style={{ color: status.color, marginRight: '0.5rem' }} />
-        )}
-        
-        {status.title}
-      </Typography>
-    );
+          <Typography
+            variant="body2"
+            sx={{ display: "flex", alignItems: "center" }}
+          >
+            {status.icon && (
+              <Icon
+                icon={status.icon}
+                style={{ color: status.color, marginRight: "0.5rem" }}
+              />
+            )}
+
+            {status.title}
+          </Typography>
+        );
       },
     },
 
@@ -415,42 +415,18 @@ const MembersProjectSettings = () => {
           },
         }}
       />
-      <Dialog
+      
+      <DeleteConfirmDialog
         open={confirmDelete}
         onClose={handleDeleteConfirmClose}
-        aria-labelledby="confirm-delete-dialog-title"
-      >
-        <DialogTitle id="confirm-delete-dialog-title" color="primary">
-          Confirm Deletion
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this user? This action cannot be
-            undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDeleteConfirmClose} color="secondary">
-            Cancel
-          </Button>
-          <Button onClick={handleDeleteUser} color="error">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={showSnackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setShowSnackbar({ ...showSnackbar, open: false })}
-      >
-        <Alert
-          onClose={() => setShowSnackbar({ ...showSnackbar, open: false })}
-          severity={showSnackbar.severity}
-        >
-          {showSnackbar.message}
-        </Alert>
-      </Snackbar>
+        onConfirm={handleDeleteUser}
+        title="Confirm Deletion User"
+        contentText={`Are you sure you want to delete ${selectedUser?.name || selectedUser?.userName || "this user"}? This action cannot be undone.`}
+        confirmButtonText="Remove Member"
+        cancelButtonText="Cancel"        
+      />
+
+      
 
       {/* Invite New Members Button */}
       <Box sx={{ padding: 4, display: "flex", justifyContent: "flex-end" }}>

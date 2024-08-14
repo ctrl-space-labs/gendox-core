@@ -81,7 +81,7 @@ const Editor = (props) => {
           px: 4,
           display: "flex",
           alignItems: "center",
-          borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+          // borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
         }}
       >
         <InputLabel sx={{ mr: 3, color: "text.disabled" }}>Title: </InputLabel>

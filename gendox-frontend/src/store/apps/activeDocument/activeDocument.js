@@ -4,19 +4,40 @@ import documentService from "src/gendox-sdk/documentService";
 // Define an async thunk for fetching an organization by ID
 export const fetchDocument = createAsyncThunk(
   "activeDocument/fetchDocument",
-  async ({ documentId, storedToken }, thunkAPI) => {    
+  async ({ documentId, storedToken }, thunkAPI) => {
     try {
-      const documentPromise = await documentService.getDocumentById(        
+      const documentPromise = await documentService.getDocumentById(
         documentId,
         storedToken
       );
 
       const documentData = await documentPromise;
-      const orderedSections = documentData.data.documentInstanceSections.sort((a, b) => {
-        return a.documentSectionMetadata.sectionOrder - b.documentSectionMetadata.sectionOrder;
-      });
-      return { document: documentData.data, sections: orderedSections};
-      
+      const orderedSections = documentData.data.documentInstanceSections.sort(
+        (a, b) => {
+          return (
+            a.documentSectionMetadata.sectionOrder -
+            b.documentSectionMetadata.sectionOrder
+          );
+        }
+      );
+      return { document: documentData.data, sections: orderedSections };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response.data);
+    }
+  }
+);
+
+// Thunk action for updating section order
+export const updateSectionsOrder = createAsyncThunk(
+  "activeDocument/updateSectionsOrder",
+  async ({ documentId, updatedSectionPayload, storedToken }, thunkAPI) => {
+    try {
+      await documentService.updateSectionsOrder(
+        documentId,
+        updatedSectionPayload,
+        storedToken
+      );
+      return updatedSectionPayload; // Return the updated sections order
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response.data);
     }
@@ -35,7 +56,9 @@ const activeDocumentSlice = createSlice({
   name: "activeDocument",
   initialState: initialActiveDocumentState,
   reducers: {
-    // Standard reducer logic can be added here if needed
+    updateSectionOrder: (state, action) => {
+      state.sections = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -48,10 +71,20 @@ const activeDocumentSlice = createSlice({
       })
       .addCase(fetchDocument.rejected, (state, action) => {
         state.error = action.payload;
+      })
+      .addCase(updateSectionsOrder.fulfilled, (state, action) => {
+        // Update the state with the new sections order
+        state.sections = state.sections.map(section => {
+          const updatedSection = action.payload.find(s => s.sectionId === section.id);
+          return updatedSection ? { ...section, sectionOrder: updatedSection.sectionOrder } : section;
+        });
+      })
+      .addCase(updateSectionsOrder.rejected, (state, action) => {
+        state.error = action.payload;
       });
   },
 });
 
 // Export actions and reducer
-export const activeDocumentActions = activeDocumentSlice.actions;
+export const { updateSectionOrder } = activeDocumentSlice.actions;
 export default activeDocumentSlice.reducer;

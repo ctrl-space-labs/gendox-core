@@ -6,11 +6,12 @@ import apiRequests from "src/configs/apiRequest.js";
  * @param organizationId
  * @param projectId
  * @param storedToken
+ * @param page
  * @returns {Promise<axios.AxiosResponse<DocumentInstances[]>>}
  */
-const getDocumentByProject = async (organizationId, projectId, storedToken) => {
+const getDocumentByProject = async (organizationId, projectId, storedToken, page) => {
   return axios.get(
-    apiRequests.getDocumentsByProject(organizationId, projectId),
+    apiRequests.getDocumentsByProject(organizationId, projectId, page),
     {
       headers: {
         "Content-Type": "application/json",
@@ -64,6 +65,30 @@ const getSectionsByDocumentId = async (
     }
   );
 };
+
+
+/**
+ * create empty document section
+ * @param documentId
+ * @param storedToken
+ * @returns {Promise<axios.AxiosResponse<DocumentInstanceSection>}
+ */
+const createDocumentSection = async (
+  documentId,
+  storedToken
+) => {
+  return axios.post(
+    apiRequests.documentSections(documentId),
+    {},
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + storedToken,
+      },
+    }
+  );
+}
+
 
 /**
  * update document section 
@@ -122,6 +147,54 @@ const uploadDocument = async (
 };
 
 /**
+ * Update Document Sections Order
+ * @param documentId 
+ * @param storedToken
+ * @param updatedSectionPayload
+ * @returns {Promise<axios.AxiosResponse<String>>}
+ */
+const updateSectionsOrder = async (
+  documentId,  
+  updatedSectionPayload,
+  storedToken
+) => {
+  return axios.put(
+    apiRequests.updateSectionsOrder(documentId),
+    updatedSectionPayload,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + storedToken,
+      },
+    }
+  );
+}
+
+/**
+ * delete Document Section
+ * @param documentId
+ * @param sectionId
+ * @param storedToken
+ * @returns {Promise<axios.AxiosResponse<String>>}
+ */
+const deleteDocumentSection = async (
+  documentId,
+  sectionId,
+  storedToken
+) => {
+  return axios.delete(
+    apiRequests.documentSection(documentId, sectionId),
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + storedToken,
+      },
+    }
+  );
+}
+
+
+/**
  * Trigger Spring Jobs for split and training document
  * @param organizationId
  * @param projectId
@@ -144,7 +217,10 @@ export default {
   getDocumentByProject,
   getDocumentById,
   getSectionsByDocumentId,
+  createDocumentSection,
   updateDocumentSection,
   uploadDocument,
+  updateSectionsOrder,
+  deleteDocumentSection,
   triggerJobs,
 };
