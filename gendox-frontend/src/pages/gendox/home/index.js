@@ -35,7 +35,6 @@ const GendoxHome = () => {
     authConfig.storageTokenKeyName
   );
 
-
   useEffect(() => {
     initDocuments(currentPage);
   }, [organizationId, projectId, currentPage]);
@@ -95,7 +94,14 @@ const GendoxHome = () => {
   };
 
   return (
-    <Card sx={{ backgroundColor: "transparent", boxShadow: "none" }}>
+    <Card
+      sx={{
+        backgroundColor: "transparent",
+        boxShadow: "none",
+        filter: isBlurring ? "blur(6px)" : "none",
+        transition: "filter 0.3s ease",
+      }}
+    >
       <StyledCardContent sx={{ backgroundColor: "background.paper", mb: -7 }}>
         <Box
           sx={{
@@ -109,8 +115,6 @@ const GendoxHome = () => {
               flexGrow: 1,
               display: "flex",
               flexDirection: "column",
-              filter: isBlurring ? "blur(6px)" : "none",
-              transition: "filter 0.3s ease",
             }}
           >
             <Typography

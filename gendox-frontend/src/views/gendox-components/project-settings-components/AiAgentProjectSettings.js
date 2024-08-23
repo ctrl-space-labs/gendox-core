@@ -344,7 +344,7 @@ const AiAgentProjectSettings = () => {
                     id="max-tokens"
                     label="Max Tokens"
                     type="number"
-                    defaultValue={maxToken}
+                    value={maxToken}
                     onChange={handleMaxTokenChange}
                     InputProps={{
                       startAdornment: (
@@ -359,7 +359,7 @@ const AiAgentProjectSettings = () => {
                     id="temperature"
                     label="Temperature"
                     type="number"
-                    defaultValue={temperature}
+                    value={temperature}
                     onChange={handleTemperatureChange}
                     InputProps={{
                       startAdornment: (
@@ -376,7 +376,7 @@ const AiAgentProjectSettings = () => {
                     id="top-p"
                     label="Top p"
                     type="number"
-                    defaultValue={topP}
+                    value={topP}
                     onChange={handleTopPChange}
                     InputProps={{
                       startAdornment: (
@@ -432,7 +432,7 @@ const AiAgentProjectSettings = () => {
                 multiline
                 label="Agent Behavior"
                 id="agent-behavior"
-                defaultValue={agentBehavior}
+                value={agentBehavior}
                 onChange={handleAgentBehaviorChange}
               />
             </Grid>

@@ -16,6 +16,7 @@ const ProjectSettings = () => {
   const dispatch = useDispatch();
   const router = useRouter();
   const { organizationId, projectId } = router.query;
+  const [isBlurring, setIsBlurring] = useState(false);
 
   const project = useSelector((state) => state.activeProject.projectDetails);
 
@@ -34,13 +35,10 @@ const ProjectSettings = () => {
     }
   }, [organizationId, projectId, storedToken]);
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
   useEffect(() => {
     const loadProjectDetails = async () => {
       if (projectId && organizationId) {
-        setLoading(true);
+        setIsBlurring(true);
         const activeOrganization = auth.user.organizations.find(
           (org) => org.id === organizationId
         );
@@ -50,26 +48,38 @@ const ProjectSettings = () => {
 
         if (!selectedProject) {
           setError("Project not found in the selected organization.");
-          setLoading(false);
+          setTimeout(() => {
+            setIsBlurring(false); // Remove blur effect after 300ms
+          }, 300);
           return;
         } else {
-          setLoading(false);
+          setTimeout(() => {
+            setIsBlurring(false); // Remove blur effect after 300ms
+          }, 300);
         }
       }
     };
     loadProjectDetails();
   }, [auth, organizationId, projectId, router]);
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-
   return (
-    <Card sx={{ backgroundColor: "transparent", boxShadow: "none" }}>
+    <Card
+      sx={{
+        backgroundColor: "transparent",
+        boxShadow: "none",
+        filter: isBlurring ? "blur(6px)" : "none",
+        transition: "filter 0.3s ease",
+      }}
+    >
       <StyledCardContent sx={{ backgroundColor: "background.paper" }}>
         <Box sx={{ textAlign: "left" }}>
           <Typography
             variant="h4"
-            sx={{ fontWeight: 600, color: "text.secondary", mb: 2 }}
+            sx={{
+              fontWeight: 600,
+              color: "text.secondary",
+              mb: 2,
+            }}
           >
             Project Settings
           </Typography>

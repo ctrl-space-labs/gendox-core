@@ -34,73 +34,13 @@ import { getInitials } from "src/@core/utils/get-initials";
 import { set } from "nprogress";
 import toast from "react-hot-toast";
 
-// ** renders client column
-const renderClient = (params) => {
-  const { row } = params;
-  const theme = useTheme();
+import {
+  userTypeStatus,
+  memberRoleStatus,
+  escapeRegExp,
+  renderClientAvatar
+} from "src/utils/membersUtils";
 
-  const stateNum = Math.floor(Math.random() * 6);
-  const states = [
-    "success",
-    "error",
-    "warning",
-    "info",
-    "primary",
-    "secondary",
-  ];
-  const color = states[stateNum];
-  //   if (row.avatar.length) {
-  //     return (
-  //       <CustomAvatar
-  //         src={`/images/avatars/${row.avatar}`}
-  //         sx={{ mr: 3, width: "1.875rem", height: "1.875rem" }}
-  //       />
-  //     );
-  //   } else {
-  return (
-    <CustomAvatar
-      skin="light"
-      color={color}
-      sx={{ mr: 3, fontSize: ".8rem", width: "1.875rem", height: "1.875rem" }}
-    >
-      {getInitials(
-        row.name ? row.name : row.userName ? row.userName : "Unknown Name"
-      )}
-    </CustomAvatar>
-  );
-  //   }
-};
-
-const userTypeStatus = {
-  GENDOX_USER: { title: "GENDOX_USER", color: "primary" },
-  GENDOX_AGENT: { title: "GENDOX_AGENT", color: "success" },
-  UNKNOWN: { title: "UNKNOWN", color: "error" },
-  DISCORD_USER: { title: "DISCORD_USER", color: "warning" },
-  GENDOX_SUPER_ADMIN: { title: "GENDOX_SUPER_ADMIN", color: "info" },
-};
-
-const mamberRoleStatus = {
-  ROLE_ADMIN: {
-    title: "ADMIN",
-    color: "#1976d2",
-    icon: "mdi:shield-crown-outline",
-  },
-  ROLE_READER: {
-    title: "READER",
-    color: "#4caf50",
-    icon: "mdi:smart-card-reader-outline",
-  },
-  ROLE_EDITOR: {
-    title: "EDITOR",
-    color: "#ff9800",
-    icon: "mdi:pencil-outline",
-  },
-  UNKNOWN: { title: "UNKNOWN", color: "#f44336", icon: "mdi:account-question" },
-};
-
-const escapeRegExp = (value) => {
-  return value.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
-};
 
 const MembersProjectSettings = () => {
   const router = useRouter();
@@ -215,7 +155,7 @@ const MembersProjectSettings = () => {
   const handleDeleteUser = async () => {
     if (selectedUser) {
       try {
-        await projectService.deleteProjectMember(
+        await projectService.removeProjectMember(
           organizationId,
           projectId,
           selectedUser.id,
@@ -269,7 +209,7 @@ const MembersProjectSettings = () => {
 
         return (
           <Box sx={{ display: "flex", alignItems: "center" }}>
-            {renderClient(params)}
+            {renderClientAvatar(params)}
             <Box sx={{ display: "flex", flexDirection: "column" }}>
               <Typography
                 noWrap
@@ -289,7 +229,7 @@ const MembersProjectSettings = () => {
     {
       flex: 0.2,
       minWidth: 120,
-      headerName: "EMAIL",
+      headerName: "Email",
       field: "email",
       renderCell: (params) => (
         <Typography variant="body2" sx={{ color: "text.primary" }}>
@@ -308,7 +248,7 @@ const MembersProjectSettings = () => {
           return <Typography variant="body2">Loading...</Typography>;
         }
         const role = params.row.role?.name || "UNKNOWN";
-        const status = mamberRoleStatus[role] || mamberRoleStatus.UNKNOWN;
+        const status = memberRoleStatus[role] || memberRoleStatus.UNKNOWN;
         return (
           <Typography
             variant="body2"
@@ -395,6 +335,7 @@ const MembersProjectSettings = () => {
       <DataGrid
         autoHeight
         columns={columns}
+        disableRowSelectionOnClick
         pageSizeOptions={[7, 10, 25, 50]}
         paginationModel={paginationModel}
         slots={{ toolbar: QuickSearchToolbar }}
