@@ -209,4 +209,14 @@ public class ProjectMemberService {
 
     }
 
+    public void removeUserFromOrganizationProjects(UUID organizationId, UUID userId) throws GendoxException {
+        // Fetch all project IDs associated with the organization
+        List<UUID> projectIds = projectService.getProjectIdsByOrganizationId(organizationId);
+
+        // Remove the user from each project
+        for (UUID projectId : projectIds) {
+            removeMemberFromProject(projectId, userId);
+        }
+    }
+
 }

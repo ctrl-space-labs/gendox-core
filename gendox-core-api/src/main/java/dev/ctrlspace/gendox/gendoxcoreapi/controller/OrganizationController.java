@@ -15,6 +15,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriter
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectMemberService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
@@ -54,6 +55,7 @@ public class OrganizationController {
     private JWTUtils jwtUtils;
     private UserService userService;
     private SecurityUtils securityUtils;
+    private ProjectMemberService projectMemberService;
 
 
     @Autowired
@@ -62,13 +64,15 @@ public class OrganizationController {
                                   UserOrganizationService userOrganizationService,
                                   OrganizationConverter organizationConverter,
                                   UserService userService,
-                                  SecurityUtils securityUtils) {
+                                  SecurityUtils securityUtils,
+                                  ProjectMemberService projectMemberService) {
         this.organizationService = organizationService;
         this.organizationConverter = organizationConverter;
         this.userOrganizationService = userOrganizationService;
         this.jwtUtils = jwtUtils;
         this.userService = userService;
         this.securityUtils = securityUtils;
+        this.projectMemberService = projectMemberService;
 
     }
 
@@ -272,6 +276,27 @@ public class OrganizationController {
 
 
     // TODO Remove user from organization
+    @PreAuthorize("@securityUtils.hasAuthority('OP_DELETE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
+    @DeleteMapping("/organizations/{organizationId}/users/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete organization user by user ID",
+            description = "Delete an existing organization member by specifying its unique ID.")
+    @Observed(name = "OrganizationController.removeUserFromOrganization",
+            contextualName = "OrganizationController#removeUserFromOrganization",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
+    public void removeUserFromOrganization(@PathVariable UUID organizationId, @PathVariable UUID userId) throws Exception {
+        // Step 1: Remove the user from all projects associated with the organization
+        projectMemberService.removeUserFromOrganizationProjects(organizationId, userId);
+
+        // Step 2: Remove the user-organization association
+        userOrganizationService.removeUserFromOrganization(organizationId, userId);
+    }
+
 
 
 
