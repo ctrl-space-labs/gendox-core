@@ -7,6 +7,7 @@ import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -18,8 +19,7 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, Queryds
     @Query("SELECT p.id FROM Project p WHERE p.name = :name")
     UUID findIdByName(@Param("name") String name);
 
-
-
-
+    @Query("SELECT p.id FROM Project p WHERE p.organizationId = :organizationId")
+    List<UUID> findProjectIdsByOrganizationId(@Param("organizationId") UUID organizationId);
 
 }
