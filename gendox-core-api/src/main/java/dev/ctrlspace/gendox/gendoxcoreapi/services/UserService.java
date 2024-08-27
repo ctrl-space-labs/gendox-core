@@ -5,20 +5,18 @@ import dev.ctrlspace.gendox.authentication.AuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.JwtDTOUserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserDetailsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import io.micrometer.observation.annotation.Observed;
-import io.swagger.models.auth.In;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +24,6 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -37,10 +34,7 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -266,5 +260,22 @@ public class UserService implements UserDetailsService {
             return email;
         }
         return user.getUserName();
+    }
+
+
+    private static final Map<String, Integer> ROLE_LEVEL_MAP = new HashMap<>();
+
+    static {
+        ROLE_LEVEL_MAP.put(OrganizationRolesConstants.READER, 1);
+        ROLE_LEVEL_MAP.put(OrganizationRolesConstants.EDITOR, 2);
+        ROLE_LEVEL_MAP.put(OrganizationRolesConstants.ADMIN, 3);
+    }
+
+    public int getUserOrganizationRoleLevel(String roleName) throws GendoxException {
+        Integer level = ROLE_LEVEL_MAP.get(roleName);
+        if (level == null) {
+            throw new GendoxException("UNKNOWN_ROLE", "Unknown role: " + roleName, HttpStatus.BAD_REQUEST);
+        }
+        return level;
     }
 }
