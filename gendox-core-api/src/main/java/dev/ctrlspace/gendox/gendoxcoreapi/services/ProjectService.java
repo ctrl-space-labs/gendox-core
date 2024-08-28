@@ -108,9 +108,6 @@ public class ProjectService {
 
     }
 
-    public List<UUID> getProjectIdsByOrganizationId(UUID organizationId) {
-        return projectRepository.findProjectIdsByOrganizationId(organizationId);
-    }
 
 
 }

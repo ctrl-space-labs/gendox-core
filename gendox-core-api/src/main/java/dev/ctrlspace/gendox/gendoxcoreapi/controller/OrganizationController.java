@@ -290,10 +290,7 @@ public class OrganizationController {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public void removeUserFromOrganization(@PathVariable UUID organizationId, @PathVariable UUID userId) throws Exception {
-        // Step 1: Remove the user from all projects associated with the organization
-        projectMemberService.removeUserFromOrganizationProjects(organizationId, userId);
 
-        // Step 2: Remove the user-organization association
         userOrganizationService.removeUserFromOrganization(organizationId, userId);
     }
 
