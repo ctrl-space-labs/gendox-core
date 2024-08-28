@@ -19,13 +19,24 @@ public class ChatTemplateAuthor {
 
     public Map<String, String> toChatValues(Message message, String sectionValues){
         Map<String, String> questionTemplateValues = new HashMap<>();
-        questionTemplateValues.put("context", sectionValues);
-        questionTemplateValues.put("question", message.getValue());
+        questionTemplateValues.put("context", escapePlaceholders(sectionValues));
+        questionTemplateValues.put("question", (message.getValue()));
         return questionTemplateValues;
     }
 
     public String processTemplate(String template, Map<String, String> values) {
         String result = StringSubstitutor.replace(template, values);
         return result;
+    }
+
+    /**
+     * If not replaced, the "processTemplate" will break with "infinity loop" error
+     *
+     * @param input
+     * @return
+     */
+    private String escapePlaceholders(String input) {
+        return input.replaceAll("\\$\\{", "\\$\\$\\{");
+
     }
 }

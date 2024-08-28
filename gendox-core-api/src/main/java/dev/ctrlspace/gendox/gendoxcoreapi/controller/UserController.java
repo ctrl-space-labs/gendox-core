@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserPublicDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
@@ -18,11 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 
@@ -65,6 +62,15 @@ public class UserController {
     }
 
 
+    @GetMapping("/users/public")
+    @Operation(summary = "Get all users",
+            description = "Retrieve a list of all users with public data like id and email, based on the provided criteria.")
+    public Page<UserPublicDTO> getAllUsersPublic(@Valid UserCriteria criteria, Pageable pageable) throws GendoxException {
+
+            return userService.getAllPublicUsers(criteria, pageable);
+    }
+
+
     // TODO add authorization check if the user belongs to the same organization
 
     @GetMapping("/users/{id}")
@@ -99,8 +105,7 @@ public class UserController {
 
         // run code to get the user from the database
         // TODO change this to return user's public profile
-        User user = userService.getById(id);
-        UserProfile userProfile = userProfileConverter.toDTO(user);
+        UserProfile userProfile = userService.getUserProfileByUserId(id);
 
         return userProfile;
     }

@@ -126,7 +126,7 @@ public class ProjectAgentService {
         return projectAgent;
     }
 
-    private void populateAgentDefaultValues(ProjectAgent projectAgent) {
+    private void populateAgentDefaultValues(ProjectAgent projectAgent) throws GendoxException {
         // it is possible to have a project that has only id, without name.
         // unlikely to happen, add this exception to figure out the root cause, instead of silently creating an agent with empty name
         if (projectAgent.getProject().getName() == null) {
@@ -146,10 +146,10 @@ public class ProjectAgentService {
             projectAgent.setSemanticSearchModel(aiModelService.getByName(AiModelConstants.ADA_3_SMALL));
         }
         if (projectAgent.getCompletionModel() == null) {
-            projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_3_5_TURBO_MODEL));
+            projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_4_OMNI_MINI));
         }
         if (projectAgent.getModerationModel() == null) {
-            projectAgent.setModerationModel(aiModelRepository.findByName(AiModelConstants.OPEN_AI_MODERATION));
+            projectAgent.setModerationModel(aiModelService.getByName(AiModelConstants.OPEN_AI_MODERATION));
         }
         if (projectAgent.getModerationCheck() == null) {
             projectAgent.setModerationCheck(true);
@@ -183,8 +183,8 @@ public class ProjectAgentService {
 
         // Update the properties         existingProjectAgent.setCompletionModelId(aiModelRepo.findByName(projectAgent.getCompletionModelId().getName()));
         existingProjectAgent.setAgentName(projectAgent.getAgentName());
-        existingProjectAgent.setCompletionModel(aiModelRepository.findByName(projectAgent.getCompletionModel().getName()));
-        existingProjectAgent.setSemanticSearchModel(aiModelRepository.findByName(projectAgent.getSemanticSearchModel().getName()));
+        existingProjectAgent.setCompletionModel(aiModelService.getByName(projectAgent.getCompletionModel().getName()));
+        existingProjectAgent.setSemanticSearchModel(aiModelService.getByName(projectAgent.getSemanticSearchModel().getName()));
         existingProjectAgent.setAgentName(projectAgent.getAgentName());
         existingProjectAgent.setAgentBehavior(projectAgent.getAgentBehavior());
         existingProjectAgent.setPrivateAgent(projectAgent.getPrivateAgent());
@@ -195,7 +195,7 @@ public class ProjectAgentService {
         existingProjectAgent.setTopP(projectAgent.getTopP());
         existingProjectAgent.setModerationCheck(projectAgent.getModerationCheck());
         if (projectAgent.getModerationModel() != null && projectAgent.getModerationCheck()) {
-            existingProjectAgent.setModerationModel(aiModelRepository.findByName(projectAgent.getModerationModel().getName()));
+            existingProjectAgent.setModerationModel(aiModelService.getByName(projectAgent.getModerationModel().getName()));
         }
         existingProjectAgent.setOrganizationDid(projectAgent.getOrganizationDid());
         existingProjectAgent = projectAgentRepository.save(existingProjectAgent);

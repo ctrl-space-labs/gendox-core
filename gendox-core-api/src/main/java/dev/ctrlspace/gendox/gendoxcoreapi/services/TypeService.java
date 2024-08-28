@@ -108,11 +108,5 @@ public class TypeService {
 
 
 
-    /**
-     * Multiple handy service methods can go here like
-     * getOrganizationRoles()
-     * getOrganizationPermissions()
-     * getDocumentFieldTypes()
-     * ...
-     */
+
 }
