@@ -19,7 +19,5 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, Queryds
     @Query("SELECT p.id FROM Project p WHERE p.name = :name")
     UUID findIdByName(@Param("name") String name);
 
-    @Query("SELECT p.id FROM Project p WHERE p.organizationId = :organizationId")
-    List<UUID> findProjectIdsByOrganizationId(@Param("organizationId") UUID organizationId);
 
 }
