@@ -20,8 +20,31 @@ const acceptInvitation = async (email, invitationToken) => {
 
 }
 
+
+/**
+ * Invite new project member
+ * @param organizationId
+ * @param invitationBody 
+ * @param storedToken
+ * @returns {Promise<axios.AxiosResponse<any>>}
+ */
+const inviteProjectMember = async (organizationId, storedToken, invitationBody) => {
+    return axios.post(
+        apiRequests.inviteProjectMember(organizationId), invitationBody,        
+        {
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + storedToken,
+              }, 
+        }
+    );
+}
+
+
+
 export default {
-    acceptInvitation
+    acceptInvitation,
+    inviteProjectMember
 }
 
 

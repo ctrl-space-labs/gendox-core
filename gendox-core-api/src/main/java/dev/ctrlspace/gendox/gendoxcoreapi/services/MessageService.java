@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageMetadataDTO;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,6 +24,7 @@ import java.util.UUID;
 public class MessageService {
 
     private MessageRepository messageRepository;
+
     private MessageSectionRepository messageSectionRepository;
     private SecurityUtils securityUtils;
     private ChatThreadService chatThreadService;
@@ -134,4 +137,38 @@ public class MessageService {
 
     }
 
+
+    /**
+     * Get the previous messages from the same thread for a given message
+     * The messages are ordered by creation date, the oldest message is the first in the list
+     *
+     * @param message
+     * @param size
+     * @return
+     */
+    public List<AiModelMessage> getPreviousMessages(Message message, int size) {
+        List<AiModelMessage> previousMessages = messageRepository.findPreviousMessages(message.getThreadId(), message.getCreatedAt(), size);
+        previousMessages.forEach(m -> m.setRole(completionRole(m.getRole())));
+        // from the latest 4 messages, the first one is the oldest
+        Collections.reverse(previousMessages);
+        return previousMessages;
+    }
+
+    /**
+     * Transform the role of the message to the one expected by the AI model provider
+     * eg. GENDOX_USER (or null) -> user
+     * eg. GENDOX_AGENT -> assistant
+     *
+     * @param role
+     * @return
+     */
+    public String completionRole(String role) {
+        if (role == null || "GENDOX_USER".equals(role)) {
+            return "user";
+        }
+        if ("GENDOX_AGENT".equals(role)) {
+            return "assistant";
+        }
+        return role;
+    }
 }

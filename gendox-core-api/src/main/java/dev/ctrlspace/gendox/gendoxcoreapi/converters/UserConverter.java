@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserPublicDTO;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -39,5 +40,12 @@ public class UserConverter implements GendoxConverter<User, UserDTO> {
         user.setUserType(userDTO.getUserType());
 
         return user;
+    }
+
+    public UserPublicDTO toPublicDTO(User user) {
+        return UserPublicDTO.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .build();
     }
 }

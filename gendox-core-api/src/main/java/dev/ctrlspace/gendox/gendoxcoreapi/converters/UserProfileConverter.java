@@ -1,26 +1,14 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.ProjectAgentDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectAgentCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.RolePermissionCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.RolePermissionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -46,111 +34,97 @@ public class UserProfileConverter {
     @Autowired
     private ProjectAgentService projectAgentService;
 
-    public UserProfile toDTO(User user) throws GendoxException {
-        // TODO Complete this
-        List<UserOrganization> userOrganizations = userOrganizationService.getAll(UserOrganizationCriteria
-                .builder()
-                .userId(user.getId().toString())
-                .build());
-        List<Long> roleIds = userOrganizations.stream()
-                .map(userOrganization -> userOrganization.getRole().getId())
+    public UserProfile toDTO(List<UserOrganizationProjectAgentDTO> dtos) throws GendoxException {
+        if (dtos == null || dtos.isEmpty()) {
+            return null;
+        }
+
+        List<Long> roleIds = dtos.stream()
+                .map(UserOrganizationProjectAgentDTO::getOrgRoleId)
                 .distinct()
-                .collect(Collectors.toList());
-
-
+                .toList();
         Map<String, List<String>> rolePermissionMap = rolePermissionService.getRoleToPermissionMapping(RolePermissionCriteria
                 .builder()
                 .roleIdIn(roleIds)
                 .build());
 
+        // Extract user-related information
+        UserOrganizationProjectAgentDTO firstDto = dtos.get(0);
+        Type userType = new Type();
+        userType.setId(firstDto.getUserTypeId());
+        userType.setName(firstDto.getUserTypeName());
+        UserProfile.UserProfileBuilder userProfileBuilder = UserProfile.builder()
+                .id(firstDto.getId())
+                .email(firstDto.getEmail())
+                .firstName(firstDto.getFirstName())
+                .lastName(firstDto.getLastName())
+                .userName(firstDto.getUserName())
+                .phone(firstDto.getPhone())
+                .globalUserRoleType(firstDto.getUserTypeId() != null ? userType : null)
+                .name(firstDto.getName());
 
-        Map<String, JwtDTO.OrganizationAuthorities> organizationAuthoritiesMap = getOrganizationAuthoritiesMapping(userOrganizations, rolePermissionMap);
+        // Group by organization
+        Map<String, List<UserOrganizationProjectAgentDTO>> orgGrouped = dtos.stream()
+                .collect(Collectors.groupingBy(UserOrganizationProjectAgentDTO::getOrgId));
 
-
-        List<OrganizationUserDTO> organizationUserDTOS = userOrganizations.stream()
-                .map(userOrganization -> userOrganization.getOrganization())
-                .map(organization -> {
-                    // TODO optimize this to get all projects per Organization in one query
-                    Page<Project> projects = new PageImpl<>(new ArrayList<>());
-                    Page<ProjectAgent> projectAgents = new PageImpl<>(new ArrayList<>());
-                    try {
-                        projects = projectService.getAllProjects(ProjectCriteria
-                                        .builder()
-                                        .userId(user.getId().toString())
-                                        .organizationId(organization.getId().toString())
-                                        .build(),
-                                Pageable.unpaged());
-
-                        List<Project> fetchedProjects = projects.getContent();
-
-                        ProjectAgentCriteria agentCriteria = ProjectAgentCriteria.builder()
-                                .projectIdIn(fetchedProjects.stream()
-                                        .map(project -> project.getId().toString())
-                                        .collect(Collectors.toList()))
-                                .organizationId(organization.getId().toString())
-                                .build();
+        List<OrganizationUserDTO> organizations = orgGrouped.entrySet().stream()
+                .map(entry -> {
+                    List<UserOrganizationProjectAgentDTO> orgDtos = entry.getValue();
+                    UserOrganizationProjectAgentDTO firstOrgDto = orgDtos.get(0);
 
 
-                        if (agentCriteria.getProjectIdIn().size() > 0) {
-                            projectAgents= projectAgentService.getAllProjectAgents(agentCriteria, Pageable.unpaged());
-                        }
+                    // Group by project, excluding null projectIds
+                    Map<String, List<UserOrganizationProjectAgentDTO>> projectGrouped = orgDtos.stream()
+                            .filter(dto -> dto.getProjectId() != null)
+                            .collect(Collectors.groupingBy(UserOrganizationProjectAgentDTO::getProjectId));
 
-                        // Convert agents to ProjectAgentDTO list
+                    List<ProjectOrganizationDTO> projects = projectGrouped.entrySet().stream()
+                            .map(projectEntry -> {
+                                List<UserOrganizationProjectAgentDTO> projectDtos = projectEntry.getValue();
+                                UserOrganizationProjectAgentDTO firstProjectDto = projectDtos.get(0);
 
-                    } catch (GendoxException e) {
-                        throw new RuntimeException(e);
+                                return ProjectOrganizationDTO.builder()
+                                        .id(firstProjectDto.getProjectId())
+                                        .name(firstProjectDto.getProjectName())
+                                        .description(firstProjectDto.getProjectDescription())
+                                        .createdAt(firstProjectDto.getProjectCreatedAt())
+                                        .updatedAt(firstProjectDto.getProjectUpdatedAt())
+                                        .build();
+                            }).collect(Collectors.toList());
+
+                    // Collect agents, excluding null agentIds
+                    List<ProjectAgentDTO> agents = orgDtos.stream()
+                            .filter(dto -> dto.getAgentId() != null)
+                            .map(dto -> ProjectAgentDTO.builder()
+                                    .id(UUID.fromString(dto.getAgentId()))
+                                    .userId(dto.getAgentUserId() != null ? UUID.fromString(dto.getAgentUserId()) : null)
+                                    .agentName(dto.getAgentName())
+                                    .projectId(dto.getProjectId() != null ? UUID.fromString(dto.getProjectId()) : null)
+                                    .createdAt(dto.getAgentCreatedAt())
+                                    .updatedAt(dto.getAgentUpdatedAt())
+                                    .build())
+                            .collect(Collectors.toList());
+
+                    Set<String> authorities = new HashSet<>();
+                    authorities.add(firstOrgDto.getOrgRoleName());
+                    if (rolePermissionMap.containsKey(firstOrgDto.getOrgRoleName())) {
+                        authorities.addAll(rolePermissionMap.get(firstOrgDto.getOrgRoleName()));
                     }
 
-                    return organizationUserConverter.toDTO(organization,
-                            organizationAuthoritiesMap.get(organization.getId().toString()).orgAuthorities(),
-                            projects.getContent(),projectAgents.getContent() );
-                })
-                .collect(Collectors.toList());
+                    return OrganizationUserDTO.builder()
+                            .id(firstOrgDto.getOrgId())
+                            .name(firstOrgDto.getOrgName())
+                            .displayName(firstOrgDto.getDisplayName())
+                            .phone(firstOrgDto.getOrgPhone())
+                            .address(firstOrgDto.getAddress())
+                            .authorities(authorities)
+                            .projects(projects)
+                            .projectAgents(agents)
+                            .createdAt(firstOrgDto.getOrgCreatedAt())
+                            .updatedAt(firstOrgDto.getOrgUpdatedAt())
+                            .build();
+                }).collect(Collectors.toList());
 
-//        QOrganization organization = QOrganization.organization;
-        return UserProfile.builder()
-                .id(user.getId().toString())
-                .email(user.getEmail())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .phone(user.getPhone())
-                .userName(user.getUserName())
-                .userTypeId(user.getUserType().getName())
-                .name(user.getName())
-                .organizations(organizationUserDTOS)
-                .build();
-    }
-
-    /**
-     * Get organization authorities mapping for given user organizations
-     * eg: {
-     * UUID1: {
-     * organizationId: UUID1,
-     * authorities: [ROLE_ADMIN, READ, WRITE, DELETE]
-     * },
-     * UUID2: {
-     * organizationId: UUID2,
-     * authorities: [ROLE_READER, READ]
-     * }
-     * }
-     *
-     * @param userOrganizations
-     * @param rolePermissionMap
-     * @return
-     */
-    private static Map<String, JwtDTO.OrganizationAuthorities> getOrganizationAuthoritiesMapping(List<UserOrganization> userOrganizations, Map<String, List<String>> rolePermissionMap) {
-        Map<String, JwtDTO.OrganizationAuthorities> organizationAuthoritiesMap = new HashMap<>();
-        //User role in each organization
-        for (UserOrganization userOrganization : userOrganizations) {
-            JwtDTO.OrganizationAuthorities organizationAuthorities = organizationAuthoritiesMap.getOrDefault(userOrganization.getOrganization().getId().toString(), new JwtDTO.OrganizationAuthorities(new HashSet<>()));
-            String roleName = userOrganization.getRole().getName();
-            organizationAuthorities.orgAuthorities().add(roleName);
-            organizationAuthoritiesMap.put(userOrganization.getOrganization().getId().toString(), organizationAuthorities);
-            //Add role permissions
-            if (rolePermissionMap.containsKey(roleName)) {
-                organizationAuthorities.orgAuthorities().addAll(rolePermissionMap.get(roleName));
-            }
-        }
-        return organizationAuthoritiesMap;
+        return userProfileBuilder.organizations(organizations.isEmpty() ? null : organizations).build();
     }
 }

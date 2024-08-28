@@ -3,12 +3,16 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.authentication.AuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.JwtDTOUserProfileConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserDetailsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserPublicDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredicate;
@@ -48,6 +52,9 @@ public class UserService implements UserDetailsService {
     private UserProfileConverter userProfileConverter;
     private TypeService typeService;
     private AuthenticationService authenticationService;
+    private final UserConverter userConverter;
+
+
 
     private OrganizationService organizationService;
 
@@ -65,7 +72,7 @@ public class UserService implements UserDetailsService {
                        OrganizationService organizationService,
                        ProjectService projectService,
                        CacheManager cacheManager,
-                       AuthenticationService authenticationService) {
+                       AuthenticationService authenticationService, UserConverter userConverter) {
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
@@ -75,12 +82,22 @@ public class UserService implements UserDetailsService {
         this.projectService = projectService;
         this.cacheManager = cacheManager;
         this.authenticationService = authenticationService;
+        this.userConverter = userConverter;
     }
 
     public Page<User> getAllUsers(UserCriteria criteria) {
 
         Pageable pageable = PageRequest.of(0, 100);
         return this.getAllUsers(criteria, pageable);
+    }
+
+    public Page<UserPublicDTO> getAllPublicUsers(UserCriteria criteria, Pageable pageable) throws GendoxException{
+        if (pageable == null) {
+            throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
+        }
+        Page<User> users = userRepository.findAll(UserPredicate.build(criteria), pageable);
+
+        return users.map(userConverter::toPublicDTO);
     }
 
     public Page<User> getAllUsers(UserCriteria criteria, Pageable pageable) {
@@ -129,6 +146,14 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with identifier: " + userIdentifier, HttpStatus.NOT_FOUND));
     }
 
+    public UserProfile getUserProfileByUserId(UUID userId) throws GendoxException {
+
+        User user = this.getById(userId);
+        List<UserOrganizationProjectAgentDTO> rawUser =  userRepository.findRawUserProfileById(user.getId());
+
+        return userProfileConverter.toDTO(rawUser);
+    }
+
     /**
      * @param userIdentifier can be either the email or username or phone number
      * @return
@@ -138,7 +163,9 @@ public class UserService implements UserDetailsService {
     public UserProfile getUserProfileByUniqueIdentifier(String userIdentifier) throws GendoxException {
 
         User user = this.getUserByUniqueIdentifier(userIdentifier);
-        return userProfileConverter.toDTO(user);
+        List<UserOrganizationProjectAgentDTO> rawUser =  userRepository.findRawUserProfileById(user.getId());
+
+        return userProfileConverter.toDTO(rawUser);
     }
 
     public void evictUserProfileByUniqueIdentifier(String userIdentifier) {

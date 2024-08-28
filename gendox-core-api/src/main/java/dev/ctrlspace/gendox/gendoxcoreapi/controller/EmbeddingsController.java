@@ -9,12 +9,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.TrainingService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,11 +21,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -44,7 +42,11 @@ public class EmbeddingsController {
     private CompletionService completionService;
     private MessageService messageService;
 
+    private OrganizationPlanService organizationPlanService;
+
     private DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter;
+
+    private OrganizationModelKeyService organizationModelKeyService;
 
 
 
@@ -57,7 +59,9 @@ public class EmbeddingsController {
                                 TrainingService trainingService,
                                 CompletionService completionService,
                                 DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter,
-                                MessageService messageService
+                                MessageService messageService,
+                                OrganizationPlanService organizationPlanService,
+                                OrganizationModelKeyService organizationModelKeyService
     ) {
         this.embeddingRepository = embeddingRepository;
         this.embeddingService = embeddingService;
@@ -65,35 +69,8 @@ public class EmbeddingsController {
         this.completionService = completionService;
         this.messageService = messageService;
         this.documentInstanceSectionWithDocumentConverter = documentInstanceSectionWithDocumentConverter;
-    }
-
-    @PostMapping("/embeddings")
-    @Operation(summary = "Get embeddings",
-            description = "Retrieve embeddings for a given text input using an AI model. " +
-                    "This endpoint accepts a BotRequest containing the text input and returns an Ada2Response " +
-                    "containing the embeddings for the input text. Additionally, it stores the embeddings in the database " +
-                    "as an Embedding entity with a unique ID.")
-    @Observed(name = "EmbeddingsController.getEmbeddings",
-            contextualName = "EmbeddingsController#getEmbeddings",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
-    public EmbeddingResponse getEmbeddings(@RequestBody BotRequest botRequest, @RequestParam String aiModel) throws GendoxException {
-
-        AiModel aiModelObj = new AiModel();
-        aiModelObj.setModel(aiModel);
-        EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(botRequest, aiModelObj);
-        Embedding embedding = new Embedding();
-
-        embedding.setEmbeddingVector(embeddingResponse.getData().get(0).getEmbedding());
-        embedding.setId(UUID.randomUUID());
-
-        embedding = embeddingRepository.save(embedding);
-
-        return embeddingResponse;
+        this.organizationPlanService = organizationPlanService;
+        this.organizationModelKeyService = organizationModelKeyService;
     }
 
 
@@ -145,7 +122,14 @@ public class EmbeddingsController {
             })
     public List<DocumentInstanceSectionDTO> findCloserSections(@RequestBody Message message,
                                                             @RequestParam String projectId,
+                                                            Authentication authentication,
+                                                            HttpServletRequest request,
                                                             Pageable pageable) throws GendoxException, IOException {
+
+        String requestIP = request.getRemoteAddr();
+        organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
+
+
         if (pageable == null) {
             pageable = PageRequest.of(0, 5);
         }
@@ -171,7 +155,8 @@ public class EmbeddingsController {
 
 
 
-    @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
+    @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams') || " +
+            "@securityUtils.isPublicProject(#projectId)")
     @PostMapping("/messages/semantic-completion")
     @Operation(summary = "Semantic completion of message",
             description = "Find a message within a project that semantically completes the given input message. " +
@@ -186,8 +171,12 @@ public class EmbeddingsController {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public CompletionMessageDTO getCompletionSearch(@RequestBody Message message,
-                                                    @RequestParam String projectId) throws GendoxException, IOException {
+                                                    @RequestParam String projectId,
+                                                    Authentication authentication,
+                                                    HttpServletRequest request) throws GendoxException, IOException {
 
+        String requestIP = request.getRemoteAddr();
+        organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
 
         message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
@@ -254,7 +243,8 @@ public class EmbeddingsController {
 
     @PostMapping("/messages/moderation")
     public OpenAiGpt35ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(message);
+        String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
+        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(message, moderationApiKey);
         return openAiGpt35ModerationResponse;
     }
 
@@ -262,5 +252,8 @@ public class EmbeddingsController {
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
         return trainingService.getModerationForDocumentSections(documentId);
     }
+
+
+
 
 }

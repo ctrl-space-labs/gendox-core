@@ -94,6 +94,10 @@ const App = props => {
   const guestGuard = Component.guestGuard ?? false
   const aclAbilities = Component.acl ?? defaultACLObj
 
+  // By default it is PKCE, for /embed pages it is IFrameAuthProvider
+  const authProviderOption = Component.authProviderOption ?? 'PKCEAuthProvider';
+
+
   return (
     <Provider store={store}>
       <CacheProvider value={emotionCache}>
@@ -107,7 +111,7 @@ const App = props => {
           <meta name='viewport' content='initial-scale=1, width=device-width' />
         </Head>
 
-        <AuthProvider>
+        <AuthProvider option={authProviderOption}>
           <SettingsProvider {...(setConfig ? { pageSettings: setConfig() } : {})}>
             <SettingsConsumer>
               {({ settings }) => {
