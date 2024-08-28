@@ -276,7 +276,7 @@ public class OrganizationController {
 
 
     // TODO Remove user from organization
-    @PreAuthorize("@securityUtils.hasAuthority('OP_DELETE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_REMOVE_USERS', 'getRequestedOrgIdFromPathVariable')")
     @DeleteMapping("/organizations/{organizationId}/users/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete organization user by user ID",
