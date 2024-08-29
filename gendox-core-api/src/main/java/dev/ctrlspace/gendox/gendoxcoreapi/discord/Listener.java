@@ -5,7 +5,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.messages.ChatGendoxMessa
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.constants.DiscordGendoxConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.messages.ReplyGendoxMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import net.dv8tion.jda.api.entities.Category;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;

@@ -8,7 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SectionAdditionalInfo;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProvenAiMetadata;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
@@ -224,8 +224,8 @@ public class EmbeddingsController {
                 .map(DocumentInstanceSectionDTO::getId)
                 .collect(Collectors.toList());
 
-        List<SectionAdditionalInfo> sectionInfos = sections.stream()
-                .map(section -> SectionAdditionalInfo.builder()
+        List<ProvenAiMetadata> sectionInfos = sections.stream()
+                .map(section -> ProvenAiMetadata.builder()
                         .sectionId(section.getId()) // Section ID
                         .iscc(section.getDocumentSectionIsccCode())
                         .title(section.getDocumentSectionMetadata().getTitle())
@@ -241,7 +241,7 @@ public class EmbeddingsController {
         return CompletionMessageDTO.builder()
                 .message(completion)
                 .threadID(message.getThreadId())
-                .sectionsAdditionalInfo(sectionInfos) // Populate with detailed section info
+                .provenAiMetadata(sectionInfos) // Populate with detailed section info
                 .build();
     }
 

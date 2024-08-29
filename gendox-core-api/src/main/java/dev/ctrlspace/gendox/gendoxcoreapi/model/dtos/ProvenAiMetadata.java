@@ -12,7 +12,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class SectionAdditionalInfo {
+public class ProvenAiMetadata {
     private UUID sectionId;
     private String iscc;
     private String title;
