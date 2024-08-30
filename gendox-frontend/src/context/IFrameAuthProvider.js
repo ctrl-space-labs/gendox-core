@@ -9,6 +9,7 @@ import { userDataActions } from "src/store/apps/userData/userData";
 import { fetchOrganization } from "src/store/apps/activeOrganization/activeOrganization";
 import { fetchProject } from "src/store/apps/activeProject/activeProject";
 import {AuthContext} from "./AuthContext";
+import { generalConstants } from "src/utils/generalConstants";
 
 
 
@@ -51,8 +52,17 @@ const IFrameAuthProvider = ({ children, defaultProvider }) => {
   const loadUserProfileFromAccessToken = async () => {
     setLoading(true);
     if (!accessToken) {
-      setLoading(false);
       // clearLocalStorage();
+      return;
+    }
+
+    if (accessToken === generalConstants.NO_AUTH_TOKEN) {
+      setUser({
+        id: "anonymous",
+        name: "Anonymous",
+        organizations: [],
+      });
+      setLoading(false);
       return;
     }
 
@@ -102,6 +112,9 @@ const IFrameAuthProvider = ({ children, defaultProvider }) => {
       })
 
       .catch((userDataError) => {
+        console.log("set loading to false");
+        // TODO in case of expired token the hole app brakes and the user is not able to login again
+        // check if the token is expired and redirect user to login page
         setLoading(false);
         console.error(
           "Error occurred while fetching user data:",
@@ -109,12 +122,11 @@ const IFrameAuthProvider = ({ children, defaultProvider }) => {
         );        
       });
 
-    setLoading(false);
   };
 
 
   const receiveAccessTokenMessage = (event) => {
-    console.log("event.data", event.data)
+    // console.log("event.data", event.data)
     if (event.data && event.data.type === 'ACCESS_TOKEN') {
 
       console.log("event.data.accessToken", event.data.accessToken)
@@ -136,6 +148,12 @@ const IFrameAuthProvider = ({ children, defaultProvider }) => {
 
     if (!storedToken) {
       window.parent.postMessage({ type: 'gendox.events.initialization.request' }, "*");
+      // TODO actually wait for the token
+    //   wait one sec and then set custom token
+      setTimeout(() => {
+        console.log("setAccessToken to empty")
+        setAccessToken(generalConstants.NO_AUTH_TOKEN);
+      } , 1000)
     }
     return () => {
       window.parent.postMessage({ type: 'GENDOX_EVENTS_LISTENER_REMOVED' }, "*");

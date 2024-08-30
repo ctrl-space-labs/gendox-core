@@ -144,6 +144,7 @@ const AppChat = (props) => {
         handleUserProfileLeftSidebarToggle={handleUserProfileLeftSidebarToggle}
         organizationId={organizationId}
         storedToken={storedToken}
+        chatUrlPath={props.chatUrlPath}
       />
       <ChatContent
         store={store}

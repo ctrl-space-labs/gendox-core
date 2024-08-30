@@ -8,7 +8,6 @@ import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,6 +48,10 @@ public class ChatThread {
     @JsonManagedReference(value = "chatThread")
     @OneToMany(mappedBy = "chatThread")
     private List<ChatThreadMember> chatThreadMembers = new ArrayList<>();
+
+    @Basic
+    @Column(name = "public_thread", columnDefinition = "boolean default false", nullable = false)
+    private Boolean publicThread = false; // default value
 
     public UUID getId() {
         return id;
@@ -115,16 +118,25 @@ public class ChatThread {
         this.chatThreadMembers = chatThreadMembers;
     }
 
+    public Boolean getPublicThread() {
+        return publicThread;
+    }
+
+    public void setPublicThread(Boolean isPublicThread) {
+        this.publicThread = isPublicThread;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ChatThread that = (ChatThread) o;
-        return Objects.equals(id, that.id) && Objects.equals(name, that.name) && Objects.equals(projectId, that.projectId) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(chatThreadMembers, that.chatThreadMembers);
+        return Objects.equals(id, that.id) && Objects.equals(name, that.name) && Objects.equals(projectId, that.projectId) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(chatThreadMembers, that.chatThreadMembers) && Objects.equals(publicThread, that.publicThread);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, projectId, createdAt, updatedAt, createdBy, updatedBy, chatThreadMembers);
+        return Objects.hash(id, name, projectId, createdAt, updatedAt, createdBy, updatedBy, chatThreadMembers, publicThread);
     }
 }

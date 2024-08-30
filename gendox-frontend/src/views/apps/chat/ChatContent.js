@@ -60,7 +60,6 @@ const ChatContent = (props) => {
   const renderContent = () => {
     if (store) {
       const selectedChat = store.selectedChat;
-      console.log("selectedChat: ", selectedChat);
       if (!selectedChat) {
         return (
           <ChatWrapperStartChat

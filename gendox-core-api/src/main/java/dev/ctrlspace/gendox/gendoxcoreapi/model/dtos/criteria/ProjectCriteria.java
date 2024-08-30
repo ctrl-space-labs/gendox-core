@@ -22,4 +22,5 @@ public class ProjectCriteria {
         private String userId;
         //populate in controller as default with user's projects
         private List<String> projectIdIn = new ArrayList<>();
+        private Boolean privateProjectAgent = null;
 }

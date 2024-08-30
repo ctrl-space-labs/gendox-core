@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
+import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
@@ -16,10 +17,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.UUID;
 
 @RestController
@@ -49,7 +52,8 @@ public class ChatThreadController {
         return chatThreadService.getById(threadId);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams') " +
+            "|| isAnonymous()")
     @GetMapping("threads")
     @Operation(summary = "Get Chat Threads by criteria",
             description = "Retrieve the Chat Threads details by criteria. The supported criteria are:" +
@@ -57,9 +61,12 @@ public class ChatThreadController {
                     "- the members participated in the Chat Thread <br>" +
                     "<br>" +
                     "The user must have the appropriate permissions to access this.")
-    public Page<ChatThread> getAllChatThreads(@Valid ChatThreadCriteria criteria, Pageable pageable) throws GendoxException {
-        // Override the memberIds with the current user's ID
-        criteria.getMemberIdIn().add(securityUtils.getUserId());
+    public Page<ChatThread> getAllChatThreads(@Valid ChatThreadCriteria criteria, Pageable pageable, Authentication authentication) throws GendoxException {
+
+        handleCriteriaForAuthenticatedUser(criteria, authentication);
+
+        handleCriteriaForAnonymousUser(criteria, authentication);
+
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
         }
@@ -69,7 +76,8 @@ public class ChatThreadController {
         return chatThreadService.getAllChatThreads(criteria, pageable);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') " +
+            "|| @securityUtils.isPublicThread(#threadId)")
     @GetMapping("threads/{threadId}/messages")
     @Operation(summary = "Get the messages in a Thread",
             description = "Retrieve the messages from a thread. Pagination is supported. The user should have the rights to access this chat.")
@@ -86,6 +94,29 @@ public class ChatThreadController {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 100", HttpStatus.BAD_REQUEST);
         }
         return messageService.getAllMessagesByCriteria(criteria, pageable);
+    }
+
+
+    private void handleCriteriaForAuthenticatedUser(ChatThreadCriteria criteria, Authentication authentication) {
+        // Override the memberIds with the current user's ID
+        if (authentication instanceof GendoxAuthenticationToken) {
+            criteria.setMemberIdIn(new ArrayList<>());
+            criteria.getMemberIdIn().add(securityUtils.getUserId());
+        }
+    }
+
+    private static void handleCriteriaForAnonymousUser(ChatThreadCriteria criteria, Authentication authentication) throws GendoxException {
+        // if it is anonymous, gets only the public threads
+        if (!(authentication instanceof GendoxAuthenticationToken)) {
+            criteria.setIsPublicThread(true);
+        }
+
+        // if it is anonymous, must provide specific thread IDs
+        if ((!(authentication instanceof GendoxAuthenticationToken))
+                && criteria.getThreadIdIn() == null) {
+            // it will return an empty list
+            criteria.setThreadIdIn(new ArrayList<>());
+        }
     }
 
 

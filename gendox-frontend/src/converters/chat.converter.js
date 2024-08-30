@@ -74,7 +74,7 @@ const gendoxThreadToChatEntry = (thread, contacts) => {
  */
 const gendoxMessageToChatMessage = (message) => {
     return {
-        senderId: message.createdBy,
+        senderId: message.createdBy || 'anonymous',
         message: message.value,
         sections: message.messageSections,
         time: message.createdAt,

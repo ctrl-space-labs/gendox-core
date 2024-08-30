@@ -26,6 +26,7 @@ import AclGuard from 'src/@core/components/auth/AclGuard'
 import ThemeComponent from 'src/@core/theme/ThemeComponent'
 import AuthGuard from 'src/@core/components/auth/AuthGuard'
 import GuestGuard from 'src/@core/components/auth/GuestGuard'
+import DefaultGuard from 'src/components/DefaultGuard'
 
 // ** Spinner Import
 import Spinner from 'src/@core/components/spinner'
@@ -74,7 +75,8 @@ const Guard = ({ children, authGuard, guestGuard }) => {
   if (guestGuard) {
     return <GuestGuard fallback={<GendoxFallbackSpinner />}>{children}</GuestGuard>
   } else if (!guestGuard && !authGuard) {
-    return <>{children}</>
+    // return <>{children}</>
+    return <DefaultGuard fallback={<GendoxFallbackSpinner />}>{children}</DefaultGuard>
   } else {
     return <AuthGuard fallback={<GendoxFallbackSpinner />}>{children}</AuthGuard>
   }

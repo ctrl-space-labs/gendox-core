@@ -9,12 +9,13 @@ import apiRequests from "src/configs/apiRequest.js";
  * @returns {Promise<axios.AxiosResponse<ProjectAgent>>}
  */
 const getProjectsByOrganization = async (organizationId, storedToken) => {
-    return axios.get(apiRequests.getProjectsByOrganization(organizationId), {
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer ' + storedToken
-        }
-    });
+    let headers = {
+        'Content-Type': 'application/json',
+    };
+    if (storedToken) {
+        headers.Authorization = 'Bearer ' + storedToken;
+    }
+    return axios.get(apiRequests.getProjectsByOrganization(organizationId), { headers });
 }
 
 /**

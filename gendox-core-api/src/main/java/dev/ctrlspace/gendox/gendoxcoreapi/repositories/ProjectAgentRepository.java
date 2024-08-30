@@ -18,6 +18,9 @@ public interface ProjectAgentRepository extends JpaRepository<ProjectAgent, UUID
     @EntityGraph(attributePaths = {"project", "semanticSearchModel", "completionModel"})
     ProjectAgent findByProjectId(UUID projectId);
 
+    //is public agent
+    Boolean existsByProjectIdAndPrivateAgentIsFalse(UUID projectId);
+
     @Query("SELECT pa FROM ProjectAgent pa JOIN pa.project p JOIN p.projectDocuments pd WHERE pd.documentId = :documentInstanceId")
     Optional<ProjectAgent> findAgentByDocumentInstanceId(@Param("documentInstanceId") UUID documentInstanceId);
 
