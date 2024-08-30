@@ -15,6 +15,8 @@ import Icon from "src/@core/components/icon";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import IconButton from "@mui/material/IconButton";
+import SectionEdit from "src/views/gendox-components/documents-components/SectionEdit";
+import DocumentEdit from "src/views/gendox-components/create-document/DocumentEdit";
 import Input from "@mui/material/Input";
 import InputLabel from "@mui/material/InputLabel";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
@@ -28,56 +30,29 @@ const CreateDocument = () => {
     authConfig.storageTokenKeyName
   );
 
-  const [isMinimized, setIsMinimized] = useState(false);
 
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentValue, setDocumentValue] = useState("");
 
-  const lastSavedValue = useRef(documentValue);
-  const lastSavedTitle = useRef(documentTitle);
+  
 
   const handleGoBack = () => {
     router.push(`/gendox/home?organizationId=${organizationId}&projectId=${projectId}`);
   };
 
-  const handleDelete = async () => {
-    console.log("Delete section");
+  const section = {
+    sectionValue: "",
+    id: 1,
+    documentSectionMetadata: {
+      title: "",
+    },
   };
 
-  const handleRestore = () => {
-    console.log("Restore section");
-    handleSave();
-    setDocumentValue(initialContent);
-    setDocumentTitle(initialTitle);
-  };
 
   const handleSave = async () => {
-    // e.preventDefault(); // Prevent default form submission
+    console.log("Saving document...");
 
-    const updatedSectionPayload = {
-      ...activeSection,
-      sectionValue: documentValue.getCurrentContent().getPlainText(),
-      documentDTO: document,
-      documentSectionMetadata: {
-        ...activeSection.documentSectionMetadata,
-        title: documentTitle,
-      },
-    };
-
-    try {
-      const response = await documentService.updateDocumentSection(
-        document.id,
-        section.id,
-        updatedSectionPayload,
-        storedToken
-      );
-      console.log("Section updated", response);
-      setActiveSection(response.data);
-      // const path = `/gendox/document-instance?documentId=${document.id}`;
-      // router.push(path);
-    } catch (error) {
-      console.error("Error updating section", error);
-    }
+    
   };
 
   
@@ -92,7 +67,7 @@ const CreateDocument = () => {
           }}
         >
           <Typography
-            variant="h3"
+            variant="h4"
             sx={{ mb: 6, fontWeight: 600, textAlign: "left" }}
           >
             Create New Document
@@ -131,70 +106,15 @@ const CreateDocument = () => {
         </Box>
       </StyledCardContent>
       <Box sx={{ height: 20 }} />
-      {/* ************************************** *************************** */}
+      
       <StyledCardContent
         sx={{ backgroundColor: "background.paper", pt: 3, pb: 3, mb: 6 }}
       >
-        <Box
-          anchor="bottom"
-          variant="temporary"
-          sx={{
-            top: "auto",
-            left: "auto",
-            bottom: "1.5rem",
-            display: "block",
-            zIndex: (theme) => `${theme.zIndex.drawer} + 1`,
-            "& .MuiDrawer-paper": {
-              borderRadius: 1,
-              position: "static",
-            },
-          }}          
-        >
-          <Box
-            sx={{
-              py: 1,
-              px: 4,
-              display: "flex",
-              alignItems: "center",
-              borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-            }}
-          >
-            <div>
-              <InputLabel sx={{ mr: 3, color: "primary.main" }}>
-                Document Title:{" "}
-              </InputLabel>
-            </div>
-            <Input
-              fullWidth
-              value={documentTitle}
-              id="title-input"
-              onChange={(e) => setDocumentTitle(e.target.value)}
-              sx={{
-                "&:before, &:after": { display: "none" },
-                "& .MuiInput-input": { py: 1.875 },
-              }}
-            />
-            
-          </Box>
-          {!isMinimized && (
-            <EditorWrapper>
-              <ReactDraftWysiwyg
-                editorState={documentValue}
-                onEditorStateChange={(editorState) =>
-                  setDocumentValue(editorState)
-                }
-                placeholder="Document Value"
-                toolbar={{
-                  options: ["inline", "textAlign"],
-                  inline: {
-                    inDropdown: false,
-                    options: ["bold", "italic", "underline", "strikethrough"],
-                  },
-                }}
+        <DocumentEdit
+          section={section}
+          isMinimized={false}
               />
-            </EditorWrapper>
-          )}
-        </Box>
+       
       </StyledCardContent>
     </Card>
   );

@@ -184,7 +184,7 @@ public class DocumentSectionService {
 
         // take moderation check
 //        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
-//        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
+//        section.setHasContentWarning(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
 
         //create metadata
         section.setDocumentSectionMetadata(createMetadata(section));
@@ -221,7 +221,7 @@ public class DocumentSectionService {
 
         // take moderation check
 //        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
-//        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
+//        section.setHasContentWarning(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
 
         //create metadata
         section.setDocumentSectionMetadata(createMetadata(section));
@@ -242,7 +242,7 @@ public class DocumentSectionService {
         metadata = documentSectionMetadataRepository.save(metadata);
         newSection.setDocumentInstance(documentInstance);
         newSection.setDocumentSectionMetadata(metadata);
-        newSection.setModerationFlagged(false);
+        newSection.setHasContentWarning(false);
         newSection = documentInstanceSectionRepository.save(newSection);
         return newSection;
     }

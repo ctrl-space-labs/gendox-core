@@ -105,6 +105,7 @@ const updateDocumentSection = async (
   storedToken
 ) => {
   return axios.put(
+   
     apiRequests.documentSection(documentId, sectionId),
     updatedSectionPayload,
     {

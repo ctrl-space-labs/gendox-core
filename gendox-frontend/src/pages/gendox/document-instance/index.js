@@ -40,6 +40,7 @@ const DocumentSections = () => {
   const sectionRefs = useRef([]);
   const [targetIndex, setTargetIndex] = useState(null);
   const sectionCardRef = useRef(null);
+
   
 
   const scrollToSectionOrder = (order) => {
