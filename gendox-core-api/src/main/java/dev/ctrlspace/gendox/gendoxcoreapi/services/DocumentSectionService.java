@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionOrderDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentSectionMetadataRepository;
@@ -80,8 +81,6 @@ public class DocumentSectionService {
     }
 
 
-
-
     public DocumentInstanceSection getSectionById(UUID id) throws GendoxException {
         return documentInstanceSectionRepository.findById(id)
                 .orElseThrow(() -> new GendoxException("SECTION_NOT_FOUND", "Section not found with id: " + id, HttpStatus.NOT_FOUND));
@@ -120,13 +119,13 @@ public class DocumentSectionService {
         return path.getFileName().toString();
     }
 
-        /**
-         * TODO merge this with the above to findSectionsByCriteria
-         *
-         * @param projectId
-         * @param sectionIds
-         * @return
-         */
+    /**
+     * TODO merge this with the above to findSectionsByCriteria
+     *
+     * @param projectId
+     * @param sectionIds
+     * @return
+     */
     public List<DocumentInstanceSection> getSectionsBySectionsIn(UUID projectId, Set<UUID> sectionIds) {
         return documentInstanceSectionRepository.findByProjectAndSectionIds(projectId, sectionIds);
     }
@@ -175,8 +174,7 @@ public class DocumentSectionService {
             IsccCodeResponse sectionIsccCodeResponse = isccCodeService.getDocumentUniqueIdentifier(
                     fileContent.getBytes(), fileName);
             documentSectionIsccCode = sectionIsccCodeResponse.getIscc();
-        }
-        else{
+        } else {
             UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
                     fileContent.getBytes(), fileName);
             documentSectionIsccCode = sectionUniqueIdentifierCodeResponse.getUuid();
@@ -186,7 +184,7 @@ public class DocumentSectionService {
 
         // take moderation check
 //        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
-//        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
+//        section.setHasContentWarning(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
 
         //create metadata
         section.setDocumentSectionMetadata(createMetadata(section));
@@ -223,7 +221,7 @@ public class DocumentSectionService {
 
         // take moderation check
 //        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
-//        section.setModerationFlagged(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
+//        section.setHasContentWarning(openAiGpt35ModerationResponse.getResults().get(0).isFlagged());
 
         //create metadata
         section.setDocumentSectionMetadata(createMetadata(section));
@@ -233,6 +231,25 @@ public class DocumentSectionService {
 
         return section;
     }
+
+
+    public DocumentInstanceSection createNewSection(DocumentInstance documentInstance) throws GendoxException {
+        DocumentInstanceSection newSection = new DocumentInstanceSection();
+        DocumentSectionMetadata metadata = new DocumentSectionMetadata();
+        metadata.setDocumentSectionTypeId(typeService.getDocumentTypeByName("FIELD_TEXT").getId());
+        metadata.setTitle("Default Title");
+        metadata.setSectionOrder(documentInstance.getDocumentInstanceSections().size() + 1);
+        metadata = documentSectionMetadataRepository.save(metadata);
+        newSection.setDocumentInstance(documentInstance);
+        newSection.setDocumentSectionMetadata(metadata);
+        newSection.setHasContentWarning(false);
+        newSection = documentInstanceSectionRepository.save(newSection);
+        return newSection;
+    }
+
+
+
+
 
     public DocumentSectionMetadata createMetadata(DocumentInstanceSection section) throws GendoxException {
         DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
@@ -299,7 +316,7 @@ public class DocumentSectionService {
 
         // Check if documentInstance.documentTemplateId is empty/null before updating metadata
 //        if (section.getDocumentInstance().getDocumentTemplateId() == null) {
-            existingSection.setDocumentSectionMetadata(updateMetadata(section));
+        existingSection.setDocumentSectionMetadata(updateMetadata(section));
 //        }
 
         existingSection = documentInstanceSectionRepository.save(existingSection);
@@ -326,13 +343,24 @@ public class DocumentSectionService {
         return existingMetadata;
     }
 
+    public void updateSectionsOrder(List<DocumentInstanceSectionOrderDTO> sectionOrderDTOs) throws GendoxException {
+
+        for (DocumentInstanceSectionOrderDTO sectionOrderDTO : sectionOrderDTOs) {
+            DocumentSectionMetadata metadata = this.getMetadataById(sectionOrderDTO.getDocumentSectionMetadataId());
+            metadata.setSectionOrder(sectionOrderDTO.getSectionOrder());
+            documentSectionMetadataRepository.save(metadata);
+        }
+
+
+    }
+
     public void deleteSections(List<DocumentInstanceSection> sections) throws GendoxException {
         for (DocumentInstanceSection section : sections) {
             deleteSection(section);
         }
     }
 
-    public void deleteSection(DocumentInstanceSection section) throws GendoxException{
+    public void deleteSection(DocumentInstanceSection section) throws GendoxException {
         messageService.deleteMessageSection(section.getId());
         DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
         embeddingService.deleteEmbeddingGroupsBySection(section.getId());

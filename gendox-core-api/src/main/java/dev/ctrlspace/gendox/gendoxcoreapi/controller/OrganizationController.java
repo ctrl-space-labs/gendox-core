@@ -10,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.EventPayloadDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UpdateUserRoleRequestDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserOrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
@@ -41,6 +42,7 @@ import org.springframework.web.bind.annotation.*;
 
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 
@@ -274,27 +276,23 @@ public class OrganizationController {
 
     }
 
+    // TODO add preauthorize to update user role in organization
 
-    // TODO Remove user from organization
-    @PreAuthorize("@securityUtils.hasAuthority('OP_REMOVE_USERS', 'getRequestedOrgIdFromPathVariable')")
-    @DeleteMapping("/organizations/{organizationId}/users/{userId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete organization user by user ID",
-            description = "Delete an existing organization member by specifying its unique ID.")
-    @Observed(name = "OrganizationController.removeUserFromOrganization",
-            contextualName = "OrganizationController#removeUserFromOrganization",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
-    public void removeUserFromOrganization(@PathVariable UUID organizationId, @PathVariable UUID userId) throws Exception {
+    @PutMapping("/organizations/{organizationId}/users/{userId}/roles")
+    @Operation(summary = "Update user role in organization",
+            description = "Update a user's role in an organization by specifying the user's unique ID, the organization's unique ID, and the new role name.")
+    public UserOrganization updateUserRoleInOrganization(@RequestBody UpdateUserRoleRequestDTO request) throws Exception {
+        return userOrganizationService.updateUserRole(request.getUserOrganizationId(), request.getRoleName());
 
-        userOrganizationService.removeUserFromOrganization(organizationId, userId);
     }
 
+    // TODO add preauthorize to remove user from organization
 
-
-
+    @DeleteMapping("/organizations/{organizationId}/users/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Remove user from organization",
+            description = "Remove a user from an organization by specifying the user's unique ID and the organization's unique ID.")
+    public void removeUserFromOrganization(@PathVariable UUID organizationId, @PathVariable UUID userId) throws Exception {
+        userOrganizationService.deleteUserOrganization(userId, organizationId);
+    }
 }
