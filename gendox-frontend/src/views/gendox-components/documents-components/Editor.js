@@ -71,8 +71,8 @@ const Editor = ({
     setSectionValue(editorState);
     
     // Convert to Markdown (without setting it back to the editor state)
-    // const markdown = draftToMarkdown(convertToRaw(editorState.getCurrentContent()));
-    // console.log("Converted Markdown:", markdown);
+    const markdown = draftToMarkdown(convertToRaw(editorState.getCurrentContent()));
+    console.log("Converted Markdown:", markdown);
     // Here you would likely update some state or pass this markdown value up to be saved later
   };
 

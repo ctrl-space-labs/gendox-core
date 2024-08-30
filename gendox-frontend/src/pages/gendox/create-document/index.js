@@ -20,7 +20,7 @@ import DocumentEdit from "src/views/gendox-components/create-document/DocumentEd
 import Input from "@mui/material/Input";
 import InputLabel from "@mui/material/InputLabel";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
-
+import { convertToRaw } from "draft-js";
 
 
 const CreateDocument = () => {
@@ -30,32 +30,50 @@ const CreateDocument = () => {
     authConfig.storageTokenKeyName
   );
 
-
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentValue, setDocumentValue] = useState("");
-
-  
+  const [isCreatingDocument, setIsCreatingDocument] = useState(false);
 
   const handleGoBack = () => {
-    router.push(`/gendox/home?organizationId=${organizationId}&projectId=${projectId}`);
+    router.push(
+      `/gendox/home?organizationId=${organizationId}&projectId=${projectId}`
+    );
   };
 
-  const section = {
-    sectionValue: "",
-    id: 1,
-    documentSectionMetadata: {
-      title: "",
-    },
-  };
-
+  // const handleSave = async () => {
+  //   console.log("Saving document...");
+  // };
 
   const handleSave = async () => {
-    console.log("Saving document...");
+    setIsCreatingDocument(true);
+    try {
+      
+      // Convert documentValue (EditorState) to plain text
+      const plainText = documentValue.getCurrentContent().getPlainText();
 
-    
+      console.log("plainText", plainText);
+
+      // Create a Blob from the plain text
+      const blob = new Blob([plainText], { type: "text/plain" });
+      const file = new File([blob], `${documentTitle}.txt`, { type: "text/plain" });
+
+      // Prepare form data
+      const formData = new FormData();
+      formData.append("file", file);
+
+      console.log("formData", formData.get("file"));
+
+      // Upload the document
+      await documentService.uploadDocument(organizationId, projectId, formData, storedToken);
+
+      console.log("Document uploaded successfully");
+    } catch (error) {
+      console.error("Error saving document:", error);
+    } finally {
+      setIsCreatingDocument(false);
+    }
   };
 
-  
   return (
     <Card sx={{ backgroundColor: "transparent", boxShadow: "none" }}>
       <StyledCardContent sx={{ backgroundColor: "background.paper" }}>
@@ -106,15 +124,23 @@ const CreateDocument = () => {
         </Box>
       </StyledCardContent>
       <Box sx={{ height: 20 }} />
-      
+
       <StyledCardContent
-        sx={{ backgroundColor: "background.paper", pt: 3, pb: 3, mb: 6 }}
+        sx={{
+          backgroundColor: "background.paper",
+          pt: 3,
+          pb: 3,
+          mb: 6,
+          filter: isCreatingDocument ? "blur(6px)" : "none", // Apply blur during loading
+          transition: "filter 0.3s ease",
+        }}
       >
         <DocumentEdit
-          section={section}
-          isMinimized={false}
-              />
-       
+          documentTitle={documentTitle}
+          setDocumentTitle={setDocumentTitle}
+          documentValue={documentValue}
+          setDocumentValue={setDocumentValue}
+        />
       </StyledCardContent>
     </Card>
   );
