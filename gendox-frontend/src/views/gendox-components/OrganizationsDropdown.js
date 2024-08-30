@@ -73,9 +73,12 @@ const OrganizationsDropdown = ({ settings }) => {
       localStorage.setItem(authConfig.selectedOrganizationId, organization.id);
       localStorage.setItem(authConfig.selectedProjectId, newProjectId);
       setActiveOrganizationId(organization.id);
-      const newPath = router.pathname === '/gendox/chat'
-        ? `/gendox/chat?organizationId=${organization.id}`
-        : `/gendox/home?organizationId=${organization.id}&projectId=${newProjectId}`;
+      const newPath =
+        router.pathname === "/gendox/chat"
+          ? `/gendox/chat?organizationId=${organization.id}`
+          : router.pathname === "/gendox/organization-settings"
+          ? `/gendox/organization-settings?organizationId=${organization.id}`
+          : `/gendox/home?organizationId=${organization.id}&projectId=${newProjectId}`;      
       router.push(newPath);
     },
     [dispatch, handleDropdownClose, router]
@@ -168,52 +171,54 @@ const OrganizationsDropdown = ({ settings }) => {
         }}
       >
         {auth.user.organizations.map((organization) => {
-          const href = router.pathname === '/gendox/chat'
-          ? `/gendox/chat?organizationId=${organization.id}`
-          : `/gendox/home?organizationId=${organization.id}&projectId=${organization.projects?.[0]?.id ?? ""}`;
-        return (
-          <Link
-            href={href}
-            passHref
-            key={organization.id}
-            style={{ textDecoration: "none" }}
-          >
-            <MenuItem              
-              sx={{ p: 0 }}              
-              onClick={(e) => {
-                e.preventDefault();
-                handleOrganizations(organization);
-              }}
-              selected={organization.id === activeOrganizationId}
-              
+          const href =
+            router.pathname === "/gendox/chat"
+              ? `/gendox/chat?organizationId=${organization.id}`
+              : `/gendox/home?organizationId=${organization.id}&projectId=${
+                  organization.projects?.[0]?.id ?? ""
+                }`;
+          return (
+            <Link
+              href={href}
+              passHref
+              key={organization.id}
+              style={{ textDecoration: "none" }}
             >
-              <Box
-                sx={{
-                  py: 2,
-                  px: 4,
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  textDecoration: "none",
-                  backgroundColor:
-                    organization.id === activeOrganizationId
-                      ? "primary.light"
-                      : "inherit",
-                  "& svg": {
-                    mr: 2,
-                    fontSize: "1.375rem",
-                  },
+              <MenuItem
+                sx={{ p: 0 }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleOrganizations(organization);
                 }}
+                selected={organization.id === activeOrganizationId}
               >
-                <ListItemIcon sx={{ color: "primary.main" }}>
-                  <Icon icon="mdi:domain" fontSize={20} />
-                </ListItemIcon>
-                <ListItemText primary={organization.name} />
-              </Box>
-            </MenuItem>
-          </Link>
-        );
-      })}
+                <Box
+                  sx={{
+                    py: 2,
+                    px: 4,
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    textDecoration: "none",
+                    backgroundColor:
+                      organization.id === activeOrganizationId
+                        ? "primary.light"
+                        : "inherit",
+                    "& svg": {
+                      mr: 2,
+                      fontSize: "1.375rem",
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ color: "primary.main" }}>
+                    <Icon icon="mdi:domain" fontSize={20} />
+                  </ListItemIcon>
+                  <ListItemText primary={organization.name} />
+                </Box>
+              </MenuItem>
+            </Link>
+          );
+        })}
       </Menu>
     </Fragment>
   );

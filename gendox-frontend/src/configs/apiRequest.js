@@ -19,8 +19,8 @@ export default {
   getProjectsByOrganization: (organizationId) =>
     `${url}organizations/${organizationId}/projects`,
 
-  getDocumentsByProject: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/documents`,
+  getDocumentsByProject: (organizationId, projectId, page) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/documents?page=${page}`,
 
   getUsersInOrganizationByOrgId: (organizationId) =>
     `${url}organizations/${organizationId}/users`,
@@ -78,6 +78,9 @@ export default {
 
   getDocumentById: (documentId) => `${url}documents/${documentId}`,
 
+  updateSectionsOrder: (documentId) => 
+    `${url}documents/${documentId}/sections-order`,
+
   uploadDocument: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,
 
@@ -90,7 +93,7 @@ export default {
   addProjectMember: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/members`,
 
-  deleteProjectMember: (organizationId, projectId, userId) =>
+  removeProjectMember: (organizationId, projectId, userId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/users/${userId}`,
 
   inviteProjectMember: (organizationId) =>
@@ -98,6 +101,12 @@ export default {
 
   addOrganizationMember: (organizationId) =>
     `${url}organizations/${organizationId}/users`,
+
+  removeOrganizationMember: (organizationId, userId) =>
+    `${url}organizations/${organizationId}/users/${userId}`,
+
+  updateOrganizationMember: (organizationId, userId) =>
+    `${url}organizations/${organizationId}/users/${userId}/roles`,
 
   getAiModelByCategory: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/ai-models/categories`,
@@ -107,6 +116,9 @@ export default {
 
   acceptInvitation: (email, token) =>
     `${url}invitations/acceptance?email=${email}&token=${token}`,
+
+  organizationPlans: (organizationId) =>
+    `${url}organizations/${organizationId}/organization-plans`,
 
 
 

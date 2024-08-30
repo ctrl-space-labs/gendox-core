@@ -25,10 +25,7 @@ const GeneralProjectSettings = () => {
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
-  if (!storedToken) {
-    console.error("No token found");
-    return;
-  }
+  
   const project = useSelector((state) => state.activeProject.projectDetails);
   const provenAiUrl = process.env.NEXT_PUBLIC_PROVEN_AI_URL;
 
@@ -115,8 +112,7 @@ const GeneralProjectSettings = () => {
                 fullWidth
                 id="project-name"
                 label="Name"
-                // value={project.name}
-                defaultValue={project.name}
+                value={name}                
                 onChange={handleNameChange}
               />
             </Grid>
@@ -167,7 +163,7 @@ const GeneralProjectSettings = () => {
                 multiline
                 label="Description"
                 id="project-description"
-                defaultValue={project.description}
+                value={description}
                 onChange={handleDescriptionChange}
               />
             </Grid>

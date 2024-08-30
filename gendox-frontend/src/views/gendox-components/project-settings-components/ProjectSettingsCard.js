@@ -11,14 +11,10 @@ import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import TabList from "@mui/lab/TabList";
 import TabPanel from "@mui/lab/TabPanel";
-import Button from "@mui/material/Button";
-import Divider from "@mui/material/Divider";
 import TabContext from "@mui/lab/TabContext";
 import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
-import CardActions from "@mui/material/CardActions";
 import Icon from "src/@core/components/icon";
-import Tooltip from "@mui/material/Tooltip";
 
 // ** Project Setting Components Imports
 import GeneralProjectSettings from "src/views/gendox-components/project-settings-components/GeneralProjectSettings";
@@ -69,7 +65,7 @@ const ProjectSettingsCard = () => {
                 </Box>
               </Box>
             }
-          />          
+          />
           <Tab
             value="ai-agent"
             label={
@@ -85,15 +81,15 @@ const ProjectSettingsCard = () => {
 
         <CardContent>
           <TabPanel value="general">
-            <GeneralProjectSettings project={project} />
+            <GeneralProjectSettings  />
           </TabPanel>
 
           <TabPanel value="members">
-            <MembersProjectSettings project={project} />
-          </TabPanel>          
+            <MembersProjectSettings  />
+          </TabPanel>
 
           <TabPanel value="ai-agent">
-            <AiAgentProjectSettings project={project} />
+            <AiAgentProjectSettings  />
           </TabPanel>
         </CardContent>
       </TabContext>

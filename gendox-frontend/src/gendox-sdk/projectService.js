@@ -115,8 +115,8 @@ const addProjectMember = async (organizationId, projectId, userIds, storedToken)
    * @param storedToken
    * @returns {Promise<axios.AxiosResponse<String>>}
    */
-  const deleteProjectMember = async (organizationId, projectId, userId, storedToken) => {
-    return axios.delete(apiRequests.deleteProjectMember(organizationId, projectId, userId), {
+  const removeProjectMember = async (organizationId, projectId, userId, storedToken) => {
+    return axios.delete(apiRequests.removeProjectMember(organizationId, projectId, userId), {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${storedToken}`
@@ -176,7 +176,7 @@ export default {
     updateProject,
     createProject,
     addProjectMember,
-    deleteProjectMember,
+    removeProjectMember,
     getAiModels,
     getAiModelByCategory
 }

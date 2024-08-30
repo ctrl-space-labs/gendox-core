@@ -195,8 +195,7 @@ public class ProjectMemberService {
 
 
     public void removeMemberFromProject(UUID projectId, UUID userId) throws GendoxException {
-        User user = userService.getById(userId);
-        Project project = projectService.getProjectById(projectId);
+
 
         ProjectMember projectMember = projectMemberRepository.findByProjectIdAndUserId(projectId, userId);
 

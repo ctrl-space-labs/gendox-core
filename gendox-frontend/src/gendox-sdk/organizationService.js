@@ -63,11 +63,30 @@ const updateOrganization = async (organizationId, updatedOrganizationPayload, st
       'Content-Type': 'application/json',
       Authorization: `Bearer ${storedToken}`
     }
+    
   });
 };
 
 /**
- * update project
+ * update members role
+ * @param organizationId
+ * @param userId
+ * @param data
+ * @param storedToken
+ * @returns {Promise<axios.AxiosResponse<String>>}
+ */
+const updateMembersRole = async (organizationId, userId, data, storedToken) => {
+  return axios.put(apiRequests.updateOrganizationMember(organizationId, userId), data, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${storedToken}`
+    }
+  });
+}
+
+
+/**
+ * add organization member
  * @param organizationId
  * @param userOrganization 
  * @param storedToken
@@ -83,11 +102,46 @@ const addOrganizationMember = async (organizationId, userOrganization, storedTok
 };
 
 
+/**
+ * remove organization member
+ * @param organizationId
+ * @param userId
+ * @param storedToken
+ * @returns {Promise<axios.AxiosResponse<String>>}
+ */
+const removeOrganizationMember = async (organizationId, userId, storedToken) => {  
+  return axios.delete(apiRequests.removeOrganizationMember(organizationId, userId), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${storedToken}`
+    }
+  });
+}
+
+/**
+ * Get organization Plans
+ * @param organizationId
+ * @param storedToken
+ * @returns {Promise<axios.AxiosResponse<OrganizationPlan>>}
+ */
+const getOrganizationPlans = async (organizationId, storedToken) => {
+  return axios.get(apiRequests.organizationPlans(organizationId), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${storedToken}`
+    }
+  });
+}
+
+
 
 export default {
   getUsersInOrganizationByOrgId,
   getOrganizationById,
   createOrganization,
   updateOrganization,
-  addOrganizationMember
+  updateMembersRole,
+  addOrganizationMember,
+  removeOrganizationMember,
+  getOrganizationPlans
 }

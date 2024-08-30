@@ -59,9 +59,9 @@ const AppBarContent = (props) => {
             <Icon icon="mdi:menu" />
           </IconButton>
         ) : null}
-        {/* {auth.user && !settings.navHidden && (
-          <Autocomplete hidden={hidden} settings={settings} />
-        )} */}
+        {auth.user && !settings.navHidden && (
+          <Autocomplete hidden={hidden} settings={settings} user={auth.user}/>
+        )}
       </Box>
       <Box
         className="actions-right"
@@ -84,10 +84,8 @@ const AppBarContent = (props) => {
         )}
         <ModeToggler settings={settings} saveSettings={saveSettings} />
         {(settings.showOrganizationDropdown) && (
-
             <UserDropdown settings={settings} />
-        )}
-        {/*<UserDropdown settings={settings} />*/}
+        )}        
       </Box>
     </Box>
   );

@@ -4,8 +4,6 @@ import { useSelector } from "react-redux";
 import { useAuth } from "src/hooks/useAuth";
 import documentService from "src/gendox-sdk/documentService";
 import authConfig from "src/configs/auth";
-
-// MUI components
 import Typography from "@mui/material/Typography";
 import CardContent from "@mui/material/CardContent";
 import Card from "@mui/material/Card";
@@ -14,23 +12,22 @@ import IconButton from "@mui/material/IconButton";
 import Icon from "src/@core/components/icon";
 import Tooltip from "@mui/material/Tooltip";
 import Link from "next/link";
-
-
-
-// Custom components
+import Button from "@mui/material/Button";
 import ProjectButtons from "src/views/gendox-components/home-page-components/project-buttons-components/ProjectButtons";
 import Documents from "src/views/gendox-components/home-page-components/document-components/Documents";
 import useRedirectOr404ForHome from "src/utils/useRedirectOr404ForHome";
-import { StyledCardContent }  from "src/utils/styledCardsContent";
-
-
+import { StyledCardContent } from "src/utils/styledCardsContent";
 
 const GendoxHome = () => {
   const router = useRouter();
   const { organizationId, projectId } = router.query;
   const auth = useAuth();
   const [documents, setDocuments] = useState([]);
-  
+  const [isBlurring, setIsBlurring] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [showAll, setShowAll] = useState(false);
+
   const project = useSelector((state) => state.activeProject.projectDetails);
   useRedirectOr404ForHome(organizationId, projectId);
 
@@ -39,19 +36,15 @@ const GendoxHome = () => {
   );
 
   useEffect(() => {
-    initDocuments();
-  }, [organizationId, projectId]);
+    initDocuments(currentPage);
+  }, [organizationId, projectId, currentPage]);
 
   const handleSettingsClick = () => {
     const path = `/gendox/project-settings?organizationId=${organizationId}&projectId=${projectId}`;
     router.push(path);
   };
 
-  
-
- 
-
-  const initDocuments = async () => {
+  const initDocuments = async (page) => {
     const activeOrganization = auth.user.organizations.find(
       (org) => org.id === organizationId
     );
@@ -62,18 +55,22 @@ const GendoxHome = () => {
     const selectedProject = activeOrganization.projects.find(
       (proj) => proj.id === projectId
     );
-    
 
     if (storedToken && selectedProject) {
-      // auth.setLoading(true)
+      setIsBlurring(true);
       documentService
         .getDocumentByProject(
           activeOrganization.id,
           selectedProject.id,
-          storedToken
+          storedToken,
+          page
         )
         .then((response) => {
           setDocuments(response.data.content);
+          setTotalPages(response.data.totalPages);
+          setTimeout(() => {
+            setIsBlurring(false); // Remove blur effect after 300ms
+          }, 300);
         })
         .catch((error) => {
           if (
@@ -84,55 +81,117 @@ const GendoxHome = () => {
           }
         });
     } else {
-      // auth.setLoading(false)
+      setTimeout(() => {
+        setIsBlurring(false); // Remove blur effect after 300ms
+      }, 300);
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
     }
   };
 
   return (
-    <Card sx={{ backgroundColor: "transparent", boxShadow: "none" }}>
-      <StyledCardContent sx={{ backgroundColor: "background.paper" }}>
+    <Card
+      sx={{
+        backgroundColor: "transparent",
+        boxShadow: "none",
+        filter: isBlurring ? "blur(6px)" : "none",
+        transition: "filter 0.3s ease",
+      }}
+    >
+      <StyledCardContent sx={{ backgroundColor: "background.paper", mb: -7 }}>
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            mb: 6,
           }}
         >
-          <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
+          <Box
+            sx={{
+              flexGrow: 1,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
             <Typography
-              variant="h3"
-              sx={{ mb: 3, fontWeight: 600, textAlign: "left" }}
+              variant="h4"
+              sx={{ fontWeight: 600, textAlign: "left" }}
             >
               {project?.name || "No Selected "} Project
             </Typography>
-            <Box sx={{ mt: 3 }}>
-            <ProjectButtons />
-            </Box>
           </Box>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-          <Tooltip title="Project Settings">
-          <Link href={`/gendox/project-settings?organizationId=${organizationId}&projectId=${projectId}`} passHref>
 
-            <IconButton onClick={handleSettingsClick} sx={{ ml: 2, fontSize: "2rem" }}>
-              <Icon icon="mdi:cog-outline" fontSize="inherit"/>
-            </IconButton>
-            </Link>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Tooltip title="Project Settings">
+              <Link
+                href={`/gendox/project-settings?organizationId=${organizationId}&projectId=${projectId}`}
+                passHref
+              >
+                <IconButton
+                  onClick={handleSettingsClick}
+                  sx={{ ml: 2, fontSize: "2rem" }}
+                >
+                  <Icon icon="mdi:cog-outline" fontSize="inherit" />
+                </IconButton>
+              </Link>
             </Tooltip>
-            
           </Box>
         </Box>
       </StyledCardContent>
+      <StyledCardContent sx={{ backgroundColor: "background.paper" }}>
+        <ProjectButtons />
+      </StyledCardContent>
       <Box sx={{ height: 20 }} />
       {documents.length > 0 ? (
-        <StyledCardContent sx={{ backgroundColor: "action.hover" }}>
+        <StyledCardContent
+          sx={{
+            backgroundColor: "action.hover",
+            filter: isBlurring ? "blur(6px)" : "none",
+            transition: "filter 0.3s ease",
+          }}
+        >
           <Typography
             variant="h5"
             sx={{ mb: 6, fontWeight: 600, textAlign: "left" }}
           >
             Recent Documents
           </Typography>
-          <Documents documents={documents} />
+          <Documents
+            documents={documents}
+            showAll={showAll}
+            setShowAll={setShowAll}
+          />
+          {showAll && (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                mt: 4,
+              }}
+            >
+              <Button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 0}
+                sx={{ mr: 2 }}
+              >
+                Previous
+              </Button>
+              <Typography sx={{ mt: 1.5 }}>{`Page ${
+                currentPage + 1
+              } of ${totalPages}`}</Typography>
+              <Button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages - 1}
+                sx={{ ml: 2 }}
+              >
+                Next
+              </Button>
+            </Box>
+          )}
         </StyledCardContent>
       ) : (
         <CardContent
@@ -164,9 +223,7 @@ const GendoxHome = () => {
           </Box>
         </CardContent>
       )}
-      
     </Card>
-    
   );
 };
 

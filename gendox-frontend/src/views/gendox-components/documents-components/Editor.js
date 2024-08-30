@@ -1,80 +1,86 @@
-// React and MUI imports
+// Editor.js
+import React from "react";
 import { useState } from "react";
 import Box from "@mui/material/Box";
-import Input from "@mui/material/Input";
+import Tooltip from "@mui/material/Tooltip";
 import IconButton from "@mui/material/IconButton";
-import InputLabel from "@mui/material/InputLabel";
-import { EditorState } from "draft-js";
-import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
-
-// Icon and Custom Components
 import Icon from "src/@core/components/icon";
+import Input from "@mui/material/Input";
+import InputLabel from "@mui/material/InputLabel";
 import ReactDraftWysiwyg from "src/@core/components/react-draft-wysiwyg";
 import { EditorWrapper } from "src/@core/styles/libs/react-draft-wysiwyg";
+import { EditorState, convertToRaw } from "draft-js";
+// import draftToMarkdown from 'draftjs-to-markdown/lib/draftjs-to-markdown';
+import draftToMarkdown from 'draftjs-to-markdown';
+import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 
-// Util function
-import { getInitials } from "src/@core/utils/get-initials";
+const EditorToolbar = ({
+  isSectionMinimized,
+  handleMinimize,
+  handleRestore,
+  handleDeleteConfirmOpen,
+}) => (
+  <Box sx={{ display: "flex", alignItems: "center" }}>
+    <Tooltip title={isSectionMinimized ? "Maximize" : "Minimize"}>
+      <IconButton sx={{ p: 1, color: "primary.main" }} onClick={handleMinimize}>
+        <Icon icon="mdi:minus" />
+      </IconButton>
+    </Tooltip>
+    <Tooltip title="Restore">
+      <IconButton sx={{ p: 1, color: "primary.main" }} onClick={handleRestore}>
+        <Icon icon="mdi:restore" />
+      </IconButton>
+    </Tooltip>
+    <Tooltip title="Delete">
+      <IconButton
+        sx={{ p: 1, color: "primary.main" }}
+        onClick={handleDeleteConfirmOpen}
+      >
+        <Icon icon="mdi:delete" />
+      </IconButton>
+    </Tooltip>
+  </Box>
+);
 
-const Editor = (props) => {
-  // ** Props
-  const { value, title, mdAbove, composeOpen, composePopupWidth, toggleComposeOpen } = props;
+const Editor = ({
+  sectionValue,
+  setSectionValue,
+  sectionTitle,
+  setSectionTitle,
+  isSectionMinimized,
+  handleMinimize,
+  handleRestore,
+  handleDeleteConfirmOpen,
+}) => {
 
-  // ** States
-  const [emailTo, setEmailTo] = useState([]);
-  const [subjectValue, setSubjectValue] = useState(value);
-  const [messageValue, setMessageValue] = useState(EditorState.createEmpty());
+//   const rawContentState = convertToRaw(sectionValue.getCurrentContent());
+// const markup = draftToMarkdown(contentState, hashConfig, customEntityTransform, config);
+  const [markdownValue, setMarkdownValue] = useState("");
 
-  const handleDelete = () => {};
+  // const onEditorStateChange = (editorState) => {
+  //   setSectionValue(editorState);
+  //   const markdown = draftToMarkdown(
+  //     convertToRaw(editorState.getCurrentContent())
+  //   );
+  //   setMarkdownValue(markdown);
+  //   // setSectionValue(markdown);
+  // };
 
-  const handlePopupClose = () => {
-    toggleComposeOpen();
-    setEmailTo([]);
-    setSubjectValue("");
-    setMessageValue(EditorState.createEmpty());
+  const onEditorStateChange = (editorState) => {
+    // Update the editor state
+    setSectionValue(editorState);
+    
+    // Convert to Markdown (without setting it back to the editor state)
+    // const markdown = draftToMarkdown(convertToRaw(editorState.getCurrentContent()));
+    // console.log("Converted Markdown:", markdown);
+    // Here you would likely update some state or pass this markdown value up to be saved later
   };
 
-  const handleMinimize = () => {
-    toggleComposeOpen();
-    setEmailTo(emailTo);
-    setMessageValue(messageValue);
-    setSubjectValue(subjectValue);
-  };
-
-  // JSX Structure breakdown
-  const EditorToolbar = () => (
-    <Box sx={{ display: "flex", alignItems: "center" }}>
-      <IconButton
-        sx={{ p: 1, mr: 2, color: "action.active" }}
-        onClick={() => toggleComposeOpen()}
-      >
-        <Icon icon="mdi:minus" fontSize={20} />
-      </IconButton>
-      <IconButton
-        sx={{ p: 1, color: "action.active" }}
-        onClick={handlePopupClose}
-      >
-        <Icon icon="mdi:close" fontSize={20} />
-      </IconButton>
-    </Box>
-  );
+  console.log("markdownValue", markdownValue);
+  console.log("sectionValue", sectionValue);
 
   return (
-    <Box
-      anchor="bottom"            
-      sx={{
-        top: "auto",
-        left: "auto",
-        right: mdAbove ? "1.5rem" : "1rem",
-        bottom: "1.5rem",
-        display: "block",
-        zIndex: (theme) => `${theme.zIndex.drawer} + 1`,
-        "& .MuiDrawer-paper": {
-          borderRadius: 1,
-          position: "static",
-          width: composePopupWidth,
-        },
-      }}
-    >
+    <Box>
       <Box
         sx={{
           py: 1,
@@ -84,39 +90,41 @@ const Editor = (props) => {
           borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
         }}
       >
-        <InputLabel sx={{ mr: 3, color: "text.disabled" }}>Title: </InputLabel>
-
+        <div>
+          <InputLabel sx={{ mr: 3, color: "primary.main" }}>Title: </InputLabel>
+        </div>
         <Input
           fullWidth
-          value={subjectValue}
+          value={sectionTitle}
           id="title-input"
-          onChange={(e) => setSubjectValue(e.target.value)}
+          onChange={(e) => setSectionTitle(e.target.value)}
           sx={{
             "&:before, &:after": { display: "none" },
             "& .MuiInput-input": { py: 1.875 },
           }}
         />
-        <EditorToolbar />
-      </Box>
-      <EditorWrapper
-        sx={{
-          "& .rdw-editor-wrapper": { border: "0 !important" },
-          "& .rdw-editor-toolbar": { p: "0.35rem 1rem !important" },
-        }}
-      >
-        <ReactDraftWysiwyg
-          editorState={messageValue}
-          onEditorStateChange={(editorState) => setMessageValue(editorState)}
-          placeholder="Message"
-          toolbar={{
-            options: ["inline", "textAlign"],
-            inline: {
-              inDropdown: false,
-              options: ["bold", "italic", "underline", "strikethrough"],
-            },
-          }}
+        <EditorToolbar
+          isSectionMinimized={isSectionMinimized}
+          handleMinimize={handleMinimize}
+          handleRestore={handleRestore}
+          handleDeleteConfirmOpen={handleDeleteConfirmOpen}
         />
-      </EditorWrapper>
+      </Box>
+      {!isSectionMinimized && (
+        <EditorWrapper>
+          <ReactDraftWysiwyg
+            editorState={sectionValue}
+            // onEditorStateChange={(editorState) => setSectionValue(editorState)}
+            onEditorStateChange={onEditorStateChange}
+            placeholder="Message"
+            editorStyle={{
+              height: "25rem", // Set fixed height for the editor
+              overflow: "auto", // Enable scrolling
+              padding: "0 1rem", // Add padding for better readability
+            }}
+          />
+        </EditorWrapper>
+      )}
     </Box>
   );
 };

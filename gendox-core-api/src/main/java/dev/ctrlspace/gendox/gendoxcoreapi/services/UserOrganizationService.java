@@ -112,16 +112,37 @@ public class UserOrganizationService {
         return userOrganization;
     }
 
-    public void removeUserFromOrganization(UUID organizationId, UUID userId) throws GendoxException {
-        // Fetch the UserOrganization entity
-        UserOrganization userOrganization = userOrganizationRepository
-                .findByUserIdAndOrganizationId(userId, organizationId)
-                .orElseThrow(() -> new GendoxException(
-                        "USER_ORGANIZATION_NOT_FOUND",
-                        "User is not associated with the organization",
-                        HttpStatus.NOT_FOUND));
 
-        // Remove the user-organization association
+    public UserOrganization updateUserRole(UUID userId, UUID organizationId, String roleName) throws GendoxException {
+        UserOrganization userOrganization = userOrganizationRepository.findByUserIdAndOrganizationId(userId, organizationId);
+        if (userOrganization == null) {
+            throw new GendoxException("USER_ORGANIZATION_NOT_FOUND", "User-organization combination not found", HttpStatus.BAD_REQUEST);
+        }
+        Type role = typeService.getOrganizationRolesByName(roleName);
+        userOrganization.setRole(role);
+        return userOrganizationRepository.save(userOrganization);
+    }
+
+    public UserOrganization updateUserRole(UUID userOrganizationId, String roleName) throws GendoxException {
+        UserOrganization userOrganization = userOrganizationRepository.findById(userOrganizationId).orElse(null);
+        if (userOrganization == null) {
+            throw new GendoxException("USER_ORGANIZATION_NOT_FOUND", "User-organization combination not found", HttpStatus.BAD_REQUEST);
+        }
+        Type role = typeService.getOrganizationRolesByName(roleName);
+        userOrganization.setRole(role);
+        return userOrganizationRepository.save(userOrganization);
+    }
+
+
+    public void deleteUserOrganization(UserOrganization userOrganization) throws GendoxException {
+        userOrganizationRepository.delete(userOrganization);
+    }
+
+    public void deleteUserOrganization(UUID organizationId, UUID userId) throws GendoxException {
+        UserOrganization userOrganization = userOrganizationRepository.findByUserIdAndOrganizationId(organizationId, userId);
+        if (userOrganization == null) {
+            throw new GendoxException("USER_ORGANIZATION_NOT_FOUND", "User-organization combination not found", HttpStatus.BAD_REQUEST);
+        }
         userOrganizationRepository.delete(userOrganization);
     }
 
