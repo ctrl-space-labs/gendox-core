@@ -3,9 +3,11 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OrganizationConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.EventPayloadDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserOrganizationDTO;
@@ -13,6 +15,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriter
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectMemberService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
@@ -52,6 +55,7 @@ public class OrganizationController {
     private JWTUtils jwtUtils;
     private UserService userService;
     private SecurityUtils securityUtils;
+    private ProjectMemberService projectMemberService;
 
 
     @Autowired
@@ -60,13 +64,15 @@ public class OrganizationController {
                                   UserOrganizationService userOrganizationService,
                                   OrganizationConverter organizationConverter,
                                   UserService userService,
-                                  SecurityUtils securityUtils) {
+                                  SecurityUtils securityUtils,
+                                  ProjectMemberService projectMemberService) {
         this.organizationService = organizationService;
         this.organizationConverter = organizationConverter;
         this.userOrganizationService = userOrganizationService;
         this.jwtUtils = jwtUtils;
         this.userService = userService;
         this.securityUtils = securityUtils;
+        this.projectMemberService = projectMemberService;
 
     }
 
@@ -211,8 +217,6 @@ public class OrganizationController {
     }
 
 
-//    TODO validate that the role level is not higher than the user's role level for this organization
-
     @PreAuthorize("@securityUtils.hasAuthority('OP_ADD_USERS', 'getRequestedOrgIdFromPathVariable')")
     @Operation(summary = "Create a User - Organization association",
             description = """
@@ -235,7 +239,32 @@ public class OrganizationController {
         if (!organizationId.equals(userOrganizationDTO.getOrganization().getId())) {
             throw new GendoxException("ORGANIZATION_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserProfile userProfile = (UserProfile) authentication.getPrincipal();
+
+        // Fetch the organizationUserDTO from the user's profile
+        OrganizationUserDTO organizationUserDTO = userProfile.getOrganizations().stream()
+                .filter(org -> org.getId().equals(organizationId.toString()))
+                .findFirst()
+                .orElseThrow(() -> new GendoxException("USER_NOT_IN_ORGANIZATION", "User is not in the organization", HttpStatus.BAD_REQUEST));
+
+        // Retrieve the user's role from their authorities
+        String invitingUserRole = organizationUserDTO.getAuthorities().stream()
+                .filter(auth -> auth.startsWith("ROLE_"))
+                .findFirst()
+                .orElseThrow(() -> new GendoxException("USER_ROLE_NOT_FOUND", "User's role not found", HttpStatus.BAD_REQUEST));
+
+
         User invitedUser = userService.getById(userOrganizationDTO.getUser().getId());
+
+        int invitingUserRoleLevel = userService.getUserOrganizationRoleLevel(invitingUserRole);
+        int invitedUserRoleLevel = userService.getUserOrganizationRoleLevel(userOrganizationDTO.getRole().getName());
+
+        if (invitedUserRoleLevel > invitingUserRoleLevel) {
+            throw new GendoxException("INSUFFICIENT_ROLE", "You cannot assign a role higher than your own", HttpStatus.FORBIDDEN);
+        }
+
         userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser));
 
         return userOrganizationService.createUserOrganization(
@@ -247,6 +276,24 @@ public class OrganizationController {
 
 
     // TODO Remove user from organization
+    @PreAuthorize("@securityUtils.hasAuthority('OP_REMOVE_USERS', 'getRequestedOrgIdFromPathVariable')")
+    @DeleteMapping("/organizations/{organizationId}/users/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete organization user by user ID",
+            description = "Delete an existing organization member by specifying its unique ID.")
+    @Observed(name = "OrganizationController.removeUserFromOrganization",
+            contextualName = "OrganizationController#removeUserFromOrganization",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
+    public void removeUserFromOrganization(@PathVariable UUID organizationId, @PathVariable UUID userId) throws Exception {
+
+        userOrganizationService.removeUserFromOrganization(organizationId, userId);
+    }
+
 
 
 
