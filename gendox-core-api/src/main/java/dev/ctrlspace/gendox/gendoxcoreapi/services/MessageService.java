@@ -81,6 +81,10 @@ public class MessageService {
         ChatThread chatThread = new ChatThread();
         chatThread.setName("Chat Thread");
         chatThread.setProjectId(projectId);
+        // message from anonymous user
+        if (userId == null) {
+            chatThread.setPublicThread(true);
+        }
 
         // connect the objects
         chatThread.getChatThreadMembers().add(userMember);
