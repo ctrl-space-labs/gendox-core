@@ -39,6 +39,7 @@ public class UserOrganizationService {
     private TypeService typeService;
     private UserRepository userRepository;
 
+
     @Autowired
     private JWTUtils jwtUtils;
     private final OrganizationRepository organizationRepository;
@@ -49,13 +50,13 @@ public class UserOrganizationService {
                                    @Lazy UserService userService,
                                    @Lazy OrganizationService organizationService,
                                    UserRepository userRepository,
-                                   OrganizationRepository organizationRepository) {
+                                   OrganizationRepository organizationRepository
+                                   ) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.typeService = typeRepository;
         this.userRepository = userRepository;
         this.userService = userService;
         this.organizationService = organizationService;
-
         this.organizationRepository = organizationRepository;
     }
 
@@ -111,9 +112,19 @@ public class UserOrganizationService {
         return userOrganization;
     }
 
-    public void deleteUserOrganization(UserOrganization userOrganization) throws GendoxException {
+    public void removeUserFromOrganization(UUID organizationId, UUID userId) throws GendoxException {
+        // Fetch the UserOrganization entity
+        UserOrganization userOrganization = userOrganizationRepository
+                .findByUserIdAndOrganizationId(userId, organizationId)
+                .orElseThrow(() -> new GendoxException(
+                        "USER_ORGANIZATION_NOT_FOUND",
+                        "User is not associated with the organization",
+                        HttpStatus.NOT_FOUND));
+
+        // Remove the user-organization association
         userOrganizationRepository.delete(userOrganization);
     }
+
 }
 
 
