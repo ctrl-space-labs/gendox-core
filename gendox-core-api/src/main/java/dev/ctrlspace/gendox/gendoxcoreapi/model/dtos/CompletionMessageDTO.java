@@ -17,8 +17,7 @@ import java.util.UUID;
 public class CompletionMessageDTO {
     private Message message;
     private UUID threadID;
-    private List<SectionAdditionalInfo> sectionsAdditionalInfo;
-    private List<UUID> sectionId; // List of section IDs
+    private List<ProvenAiMetadata> provenAiMetadata;
     // TODO review this to add more metadata about the sections involved in the response
 
 }

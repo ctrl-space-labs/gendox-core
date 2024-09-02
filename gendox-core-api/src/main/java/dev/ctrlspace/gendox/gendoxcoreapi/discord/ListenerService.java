@@ -105,7 +105,6 @@ public class ListenerService {
         CompletionMessageDTO completionMessageDTO = getCompletionSearchRestClient(token, message, projectId);
         logger.debug("Received getCompletionSearchRestClient for chat command");
         completionMessageDTO.getMessage().setThreadId(completionMessageDTO.getThreadID());
-        completionMessageDTO.getMessage().setProjectId(projectId);
         //save the answer as message
 
         // https://github.com/ctrl-space-labs/gendox-core/issues/213
@@ -169,7 +168,6 @@ public class ListenerService {
 
 
     public CompletionMessageDTO getCompletionSearchRestClient(String token, Message message, UUID projectId) throws GendoxException {
-        CompletionMessageDTO completionMessageDTO = new CompletionMessageDTO();
 
         var bearerHeader = httpUtils.getBearerTokenHeader(token);
 
@@ -185,7 +183,6 @@ public class ListenerService {
                 responseDTO = responseDTO.toBuilder()
                         .message(moderationMessage)
                         .threadID(null)
-                        .sectionId(null)
                         .build();
 
                 logger.debug("GendoxException caught: " + e.getMessage());
@@ -199,13 +196,7 @@ public class ListenerService {
         logger.debug("Received completionMessageDTO for chat command");
 
 
-        // Extract values and set them in the completionMessageDTO
-        completionMessageDTO.setMessage(responseDTO.getMessage());
-        completionMessageDTO.setSectionId(responseDTO.getSectionId());
-        completionMessageDTO.setThreadID(responseDTO.getThreadID());
-
-
-        return completionMessageDTO;
+        return responseDTO;
     }
 
     public String getJwtToken(String userIdentifier) throws GendoxException {
