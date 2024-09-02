@@ -4,7 +4,7 @@ import Typography from "@mui/material/Typography";
 
 const GendoxAppBrand = () => {
     return (
-        <a href="/gendox/home" style={{ textDecoration: 'none' }}>
+        <Link href="/gendox/home" passHref style={{ textDecoration: 'none' }}>
             <Box
                 sx={{
                     display: "flex",
@@ -32,7 +32,7 @@ const GendoxAppBrand = () => {
                     Gendox
                 </Typography>
             </Box>
-        </a>
+        </Link>
     );
 };
 

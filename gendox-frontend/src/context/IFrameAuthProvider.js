@@ -10,6 +10,7 @@ import { fetchOrganization } from "src/store/apps/activeOrganization/activeOrgan
 import { fetchProject } from "src/store/apps/activeProject/activeProject";
 import {AuthContext} from "./AuthContext";
 import { generalConstants } from "src/utils/generalConstants";
+import {useIFrameMessageManager} from "./IFrameMessageManagerContext";
 
 
 
@@ -24,10 +25,11 @@ import { generalConstants } from "src/utils/generalConstants";
  */
 const IFrameAuthProvider = ({ children, defaultProvider }) => {
   const [user, setUser] = useState(defaultProvider.user);
-  const [accessToken, setAccessToken] = useState(null);
+  const [accessToken, setAccessToken] = useState(generalConstants.NO_AUTH_TOKEN);
   const [loading, setLoading] = useState(defaultProvider.loading);
   const router = useRouter();
   const dispatch = useDispatch();
+  const iFrameMessageManager = useIFrameMessageManager();
 
 
   const handleLogout = () => {
@@ -127,7 +129,7 @@ const IFrameAuthProvider = ({ children, defaultProvider }) => {
 
   const receiveAccessTokenMessage = (event) => {
     // console.log("event.data", event.data)
-    if (event.data && event.data.type === 'ACCESS_TOKEN') {
+    if (event.data && event.data.type === 'gendox.events.initialization.response') {
 
       console.log("event.data.accessToken", event.data.accessToken)
       window.localStorage.setItem(authConfig.storageTokenKeyName, event.data.accessToken);
@@ -142,24 +144,19 @@ const IFrameAuthProvider = ({ children, defaultProvider }) => {
     if (storedToken) {
       setAccessToken(storedToken);
     }
-
-    //get access token from browser PostMessage API
-    window.addEventListener("message", receiveAccessTokenMessage);
-
-    if (!storedToken) {
-      window.parent.postMessage({ type: 'gendox.events.initialization.request' }, "*");
-      // TODO actually wait for the token
-    //   wait one sec and then set custom token
-      setTimeout(() => {
-        console.log("setAccessToken to empty")
-        setAccessToken(generalConstants.NO_AUTH_TOKEN);
-      } , 1000)
-    }
     return () => {
       window.parent.postMessage({ type: 'GENDOX_EVENTS_LISTENER_REMOVED' }, "*");
-      window.removeEventListener("message", receiveAccessTokenMessage);
+      iFrameMessageManager.messageManager.removeHandler(receiveAccessTokenMessage);
     };
   }, []);
+
+  useEffect(() => {
+
+    if (iFrameMessageManager && iFrameMessageManager?.iFrameConfiguration?.externalToken) {
+      setAccessToken(iFrameMessageManager?.iFrameConfiguration?.externalToken);
+    }
+
+  }, [iFrameMessageManager?.iFrameConfiguration?.externalToken]);
 
   useEffect(() => {
     loadUserProfileFromAccessToken(accessToken);

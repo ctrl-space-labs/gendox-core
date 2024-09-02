@@ -11,7 +11,7 @@ import ReactDraftWysiwyg from "src/@core/components/react-draft-wysiwyg";
 import { EditorWrapper } from "src/@core/styles/libs/react-draft-wysiwyg";
 import { EditorState, convertToRaw } from "draft-js";
 // import draftToMarkdown from 'draftjs-to-markdown/lib/draftjs-to-markdown';
-import draftToMarkdown from 'draftjs-to-markdown';
+// import draftToMarkdown from 'draftjs-to-markdown';
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 
 const EditorToolbar = ({
@@ -56,6 +56,19 @@ const Editor = ({
 //   const rawContentState = convertToRaw(sectionValue.getCurrentContent());
 // const markup = draftToMarkdown(contentState, hashConfig, customEntityTransform, config);
   const [markdownValue, setMarkdownValue] = useState("");
+  const [dynamicDraftToMarkdown, setDynamicDraftToMarkdown] = useState(null);
+
+
+  // useEffect(() => {
+  //     // It is bad practice, to load a lib in the useEffect. It is here only to test that it works
+  //     async function loadDraftToMarkdown() {
+  //
+  //         const { default: draftToMarkdown } = await import('draftjs-to-markdown');
+  //         setDynamicDraftToMarkdown(draftToMarkdown);
+  //     }
+  //     loadDraftToMarkdown();
+  //
+  // }, []);
 
   // const onEditorStateChange = (editorState) => {
   //   setSectionValue(editorState);
@@ -76,8 +89,8 @@ const Editor = ({
     // Here you would likely update some state or pass this markdown value up to be saved later
   };
 
-  console.log("markdownValue", markdownValue);
-  console.log("sectionValue", sectionValue);
+  // console.log("markdownValue", markdownValue);
+  // console.log("sectionValue", sectionValue);
 
   return (
     <Box>
@@ -123,6 +136,10 @@ const Editor = ({
               padding: "0 1rem", // Add padding for better readability
             }}
           />
+          {/*<textarea*/}
+          {/*  disabled*/}
+          {/*  value={markdownValue}*/}
+          {/*/>*/}
         </EditorWrapper>
       )}
     </Box>
