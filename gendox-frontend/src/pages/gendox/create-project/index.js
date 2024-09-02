@@ -29,10 +29,7 @@ const ProjectCreate = () => {
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
-  if (!storedToken) {
-    console.error("No token found");
-    return;
-  }
+  console.log("AUTH", auth);
 
   const [autoTraining, setAutoTraining] = useState(false);
   const [name, setName] = useState("");
@@ -67,6 +64,8 @@ const ProjectCreate = () => {
         newProjectPayload,
         storedToken
       );
+
+      
       
 
       setSnackbar({ open: true, message: 'Project created successfully!', severity: 'success' });

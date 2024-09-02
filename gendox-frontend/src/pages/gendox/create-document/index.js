@@ -21,6 +21,7 @@ import Input from "@mui/material/Input";
 import InputLabel from "@mui/material/InputLabel";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 import { convertToRaw } from "draft-js";
+import toast from "react-hot-toast";
 
 
 const CreateDocument = () => {
@@ -40,10 +41,7 @@ const CreateDocument = () => {
     );
   };
 
-  // const handleSave = async () => {
-  //   console.log("Saving document...");
-  // };
-
+  
   const handleSave = async () => {
     setIsCreatingDocument(true);
     try {
@@ -66,8 +64,11 @@ const CreateDocument = () => {
       // Upload the document
       await documentService.uploadDocument(organizationId, projectId, formData, storedToken);
 
-      console.log("Document uploaded successfully");
+      toast.success("Document created successfully");
+      router.push(`/gendox/home?organizationId=${organizationId}&projectId=${projectId}`);
+
     } catch (error) {
+      toast.error("Failed to create document");
       console.error("Error saving document:", error);
     } finally {
       setIsCreatingDocument(false);

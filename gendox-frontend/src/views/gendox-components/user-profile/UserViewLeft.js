@@ -315,9 +315,10 @@ const UserViewLeft = ({ userData }) => {
                   id="user-view-edit-description"
                   sx={{ textAlign: "center", mb: 7 }}
                 >
-                  Updating user details will receive a privacy audit.
+                  {/* Updating user details will receive a privacy audit. */}
+                  This feature is not available yet. We're working hard to get it up and running soon. Stay tuned!
                 </DialogContentText>
-                <form>
+                {/* <form>
                   <Grid container spacing={6}>
                     <Grid item xs={12} sm={6}>
                       <TextField
@@ -425,7 +426,7 @@ const UserViewLeft = ({ userData }) => {
                       />
                     </Grid>
                   </Grid>
-                </form>
+                </form> */}
               </DialogContent>
               <DialogActions
                 sx={{
@@ -440,13 +441,13 @@ const UserViewLeft = ({ userData }) => {
                   ],
                 }}
               >
-                <Button
+                {/* <Button
                   variant="contained"
                   sx={{ mr: 2 }}
                   onClick={handleEditClose}
                 >
                   Submit
-                </Button>
+                </Button> */}
                 <Button
                   variant="outlined"
                   color="secondary"

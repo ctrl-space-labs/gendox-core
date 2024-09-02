@@ -50,7 +50,6 @@ const SectionEdit = ({ section, isMinimized }) => {
   const lastSavedValue = useRef(sectionValue);
   const lastSavedTitle = useRef(sectionTitle);
 
-  console.log("activeSection", activeSection);
 
   useEffect(() => {
     const intervalId = setInterval(() => {

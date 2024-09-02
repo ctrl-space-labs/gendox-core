@@ -8,7 +8,7 @@ import activeOrganization from 'src/store/apps/activeOrganization/activeOrganiza
 import activeProject from 'src/store/apps/activeProject/activeProject'
 import activeDocument from 'src/store/apps/activeDocument/activeDocument'
 import chat from 'src/store/apps/chat'
-import autocompleteSearch from 'src/store/apps/autocompleteSearch/autocompleteSearch'
+import globalSearch from 'src/store/apps/globalSearch/globalSearch'
 
 export const store = configureStore({
   reducer: {
@@ -17,7 +17,7 @@ export const store = configureStore({
     activeOrganization,
     activeDocument,
     chat, 
-    autocompleteSearch
+    globalSearch
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({

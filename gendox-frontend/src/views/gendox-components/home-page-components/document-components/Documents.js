@@ -84,7 +84,7 @@ const Documents = ({ documents, showAll, setShowAll }) => {
               <Typography
                 variant="h6"
                 component={Link}
-                href={`/gendox/document-instance?documentId=${document.id}`}
+                href={`/gendox/document-instance?organizationId=${organizationId}&documentId=${document.id}`}
                 sx={{
                   fontWeight: 600,
                   textDecoration: "none",
@@ -108,7 +108,7 @@ const Documents = ({ documents, showAll, setShowAll }) => {
                 <Typography
                   // component={Link}
                   sx={{ color: "inherit", textDecoration: "none" }}
-                  // href={`/gendox/document-instance?documentId=${document.id}`}
+                  // href={`/gendox/document-instance?organizationId=${organizationId}&documentId=${document.id}`}
                 >
                   {documentAuthor ? documentAuthor.user.name : "Unknown Author"}
                 </Typography>
@@ -117,7 +117,7 @@ const Documents = ({ documents, showAll, setShowAll }) => {
                 <Typography
                   sx={{ color: "inherit", textDecoration: "none" }}
                   // component={Link}
-                  // href={`/gendox/document-instance?documentId=${document.id}`}
+                  // href={`/gendox/document-instance?organizationId=${organizationId}&documentId=${document.id}`}
                 >
                   {documentAuthor
                     ? documentAuthor.user.email
@@ -128,7 +128,7 @@ const Documents = ({ documents, showAll, setShowAll }) => {
 
             <Typography
               // component={Link}
-              // href={`/gendox/document-instance?documentId=${document.id}`}
+              // href={`/gendox/document-instance?organizationId=${organizationId}&documentId=${document.id}`}
               sx={{
                 mt: "auto",
                 textDecoration: "none",

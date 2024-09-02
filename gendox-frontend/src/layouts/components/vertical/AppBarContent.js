@@ -11,7 +11,7 @@ import Icon from "src/@core/components/icon";
 import { useRouter } from "next/router";
 
 // ** Components
-import Autocomplete from "src/layouts/components/Autocomplete";
+import GlobalSearch from "src/layouts/components/GlobalSearch";
 import ModeToggler from "src/@core/layouts/components/shared-components/ModeToggler";
 import UserDropdown from "src/@core/layouts/components/shared-components/UserDropdown";
 import LanguageDropdown from "src/@core/layouts/components/shared-components/LanguageDropdown";
@@ -60,7 +60,7 @@ const AppBarContent = (props) => {
           </IconButton>
         ) : null}
         {auth.user && !settings.navHidden && (
-          <Autocomplete hidden={hidden} settings={settings} user={auth.user}/>
+          <GlobalSearch hidden={hidden} settings={settings} user={auth.user}/>
         )}
       </Box>
       <Box

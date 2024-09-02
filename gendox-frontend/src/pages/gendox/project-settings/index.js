@@ -23,17 +23,14 @@ const ProjectSettings = () => {
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
-  if (!storedToken) {
-    console.error("No token found");
-    return;
-  }
+ 
 
   useEffect(() => {
     if (organizationId && projectId && storedToken) {
       dispatch(fetchOrganization({ organizationId, storedToken }));
       dispatch(fetchProject({ organizationId, projectId, storedToken }));
     }
-  }, [organizationId, projectId, storedToken]);
+  }, [organizationId, projectId, storedToken, dispatch]);
 
   useEffect(() => {
     const loadProjectDetails = async () => {
@@ -60,7 +57,7 @@ const ProjectSettings = () => {
       }
     };
     loadProjectDetails();
-  }, [auth, organizationId, projectId, router]);
+  }, [auth, organizationId, projectId]);
 
   return (
     <Card

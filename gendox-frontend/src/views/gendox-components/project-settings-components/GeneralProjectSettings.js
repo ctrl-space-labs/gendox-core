@@ -26,6 +26,7 @@ const GeneralProjectSettings = () => {
     authConfig.storageTokenKeyName
   );
   
+  const dispatch = useDispatch();
   const project = useSelector((state) => state.activeProject.projectDetails);
   const provenAiUrl = process.env.NEXT_PUBLIC_PROVEN_AI_URL;
 
@@ -36,6 +37,18 @@ const GeneralProjectSettings = () => {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [error, setError] = useState("");
+  const [isBlurring, setIsBlurring] = useState(true);
+
+  useEffect(() => {
+    if (project) {
+      // Initialize state with project data when available
+      setAutoTraining(!!project.autoTraining);
+      setName(project.name);
+      setDescription(project.description);
+      setIsBlurring(false); 
+    }
+  }, [project]);
+
 
   const handleNameChange = (event) => setName(event.target.value);
   const handleDescriptionChange = (event) => setDescription(event.target.value);
