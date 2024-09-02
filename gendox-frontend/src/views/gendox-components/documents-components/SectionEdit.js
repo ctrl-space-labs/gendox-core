@@ -11,7 +11,7 @@ import {
   fetchDocument,
   updateSectionsOrder,
 } from "src/store/apps/activeDocument/activeDocument";
-import Editor from "src/views/gendox-components/documents-components/Editor";
+import EditorConverToMarkdown from "src/views/gendox-components/documents-components/EditorConverToMarkdown";
 import { markdownToDraft } from 'markdown-draft-js';
 
 const SectionEdit = ({ section, isMinimized }) => {
@@ -130,6 +130,13 @@ const SectionEdit = ({ section, isMinimized }) => {
         updatedSectionPayload,
         storedToken
       );
+      dispatch({
+        type: 'activeDocument/updateSection', 
+        payload: {
+          sectionId: section.id,
+          updatedSection: response.data,
+        }
+      });
       setActiveSection(response.data);
     } catch (error) {
       console.error("Error updating section", error);
@@ -138,7 +145,7 @@ const SectionEdit = ({ section, isMinimized }) => {
 
   return (
     <Box>
-      <Editor
+      <EditorConverToMarkdown
         sectionValue={sectionValue}
         setSectionValue={setSectionValue}
         sectionTitle={sectionTitle}

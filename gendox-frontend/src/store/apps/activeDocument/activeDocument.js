@@ -81,6 +81,13 @@ const activeDocumentSlice = createSlice({
       })
       .addCase(updateSectionsOrder.rejected, (state, action) => {
         state.error = action.payload;
+      })
+      .addCase('activeDocument/updateSection', (state, action) => {
+        state.sections = state.sections.map(section =>
+          section.id === action.payload.sectionId
+            ? { ...section, ...action.payload.updatedSection }
+            : section
+        );
       });
   },
 });

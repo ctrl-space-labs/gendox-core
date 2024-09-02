@@ -1,4 +1,4 @@
-// Editor.js
+
 import React from "react";
 import { useState } from "react";
 import Box from "@mui/material/Box";
@@ -11,7 +11,7 @@ import ReactDraftWysiwyg from "src/@core/components/react-draft-wysiwyg";
 import { EditorWrapper } from "src/@core/styles/libs/react-draft-wysiwyg";
 import { EditorState, convertToRaw } from "draft-js";
 // import draftToMarkdown from 'draftjs-to-markdown/lib/draftjs-to-markdown';
-import draftToMarkdown from 'draftjs-to-markdown';
+// import draftToMarkdown from 'draftjs-to-markdown';
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 
 const EditorToolbar = ({
@@ -23,14 +23,14 @@ const EditorToolbar = ({
   <Box sx={{ display: "flex", alignItems: "center" }}>
     <Tooltip title={isSectionMinimized ? "Maximize" : "Minimize"}>
       <IconButton sx={{ p: 1, color: "primary.main" }} onClick={handleMinimize}>
-        <Icon icon="mdi:minus" />
+        <Icon icon={isSectionMinimized ? "mdi:arrow-expand" : "mdi:arrow-collapse"}/>
       </IconButton>
     </Tooltip>
-    <Tooltip title="Restore">
+    {/* <Tooltip title="Restore">
       <IconButton sx={{ p: 1, color: "primary.main" }} onClick={handleRestore}>
         <Icon icon="mdi:restore" />
       </IconButton>
-    </Tooltip>
+    </Tooltip> */}
     <Tooltip title="Delete">
       <IconButton
         sx={{ p: 1, color: "primary.main" }}
@@ -42,7 +42,7 @@ const EditorToolbar = ({
   </Box>
 );
 
-const Editor = ({
+const EditorConverToMarkdown = ({
   sectionValue,
   setSectionValue,
   sectionTitle,
@@ -71,8 +71,8 @@ const Editor = ({
     setSectionValue(editorState);
     
     // Convert to Markdown (without setting it back to the editor state)
-    const markdown = draftToMarkdown(convertToRaw(editorState.getCurrentContent()));
-    console.log("Converted Markdown:", markdown);
+    // const markdown = draftToMarkdown(convertToRaw(editorState.getCurrentContent()));
+    // console.log("Converted Markdown:", markdown);
     // Here you would likely update some state or pass this markdown value up to be saved later
   };
 
@@ -129,4 +129,4 @@ const Editor = ({
   );
 };
 
-export default Editor;
+export default EditorConverToMarkdown;
