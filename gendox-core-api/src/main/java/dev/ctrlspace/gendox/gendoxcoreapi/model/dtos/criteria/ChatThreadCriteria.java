@@ -16,7 +16,9 @@ import java.util.UUID;
 @Builder(toBuilder = true)
 public class ChatThreadCriteria {
     @Size(min = 1, message = "At least one project ID must be provided")
-    private List<UUID> projectIdIn = new ArrayList<>();
-    private List<UUID> memberIdIn = new ArrayList<>();
+    private List<UUID> projectIdIn;
+    private List<UUID> memberIdIn;
+    private List<UUID> threadIdIn;
+    private Boolean isPublicThread;
 
 }

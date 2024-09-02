@@ -77,8 +77,11 @@ public class ProjectController {
     }
 
 
+    // If the request isAnonymous, the API will return only the public projects.
+    // Otherwise the hasAuthority will validate the requested params.
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable') " +
-            "|| @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
+            "|| @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams') " +
+            "|| isAnonymous()")
     @GetMapping("organizations/{organizationId}/projects")
     @Operation(summary = "Get all projects",
             description = "Retrieve a list of all projects based on the provided criteria. The user must have the necessary permissions to access these projects.")
@@ -86,6 +89,11 @@ public class ProjectController {
     public Page<Project> getAllProjects(@Valid ProjectCriteria criteria, @PathVariable("organizationId") String organizationId, Pageable pageable, Authentication authentication) throws GendoxException {
         // override requested org id with the path variable
         criteria.setOrganizationId(organizationId);
+        // if it is anonymous, gets only the public projects
+        if (!(authentication instanceof GendoxAuthenticationToken)) {
+            criteria.setPrivateProjectAgent(false);
+        }
+
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
         }
@@ -93,6 +101,7 @@ public class ProjectController {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 100", HttpStatus.BAD_REQUEST);
         }
 
+        // make sure that only the projects that the user has access to, are returned
         if (securityUtils.isUser()) {
             UserProfile userProfile = (UserProfile) authentication.getPrincipal();
 //            find user profile organization by organization id

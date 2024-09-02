@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.MessageCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageSectionRepository;
@@ -10,6 +11,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.MessagePre
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -85,6 +87,10 @@ public class MessageService {
         ChatThread chatThread = new ChatThread();
         chatThread.setName("Chat Thread");
         chatThread.setProjectId(projectId);
+        // message from anonymous user
+        if (userId == null) {
+            chatThread.setPublicThread(true);
+        }
 
         // connect the objects
         chatThread.getChatThreadMembers().add(userMember);
@@ -133,6 +139,13 @@ public class MessageService {
         messageSectionRepository.deleteAll(messageSections);
 //        messageSectionRepository.deleteAllBySectionId(sectionId);
     }
+
+    public  List<MessageMetadataDTO> getAllMessagesMetadataByMessageId(UUID messageId){
+
+        return messageRepository.getMessageMetadataByMessageId(messageId);
+
+    }
+
 
     /**
      * Get the previous messages from the same thread for a given message

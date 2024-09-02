@@ -8,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SectionAdditionalInfo;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
@@ -29,6 +30,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 public class EmbeddingsController {
@@ -217,25 +219,30 @@ public class EmbeddingsController {
 
         completion = messageService.updateMessageWithSections(completion, messageSections);
 
-        CompletionMessageDTO completionMessageDTO = CompletionMessageDTO.builder()
+
+        List<UUID> sectionIds = sections.stream()
+                .map(DocumentInstanceSectionDTO::getId)
+                .collect(Collectors.toList());
+
+        List<SectionAdditionalInfo> sectionInfos = sections.stream()
+                .map(section -> SectionAdditionalInfo.builder()
+                        .sectionId(section.getId()) // Section ID
+                        .iscc(section.getDocumentSectionIsccCode())
+                        .title(section.getDocumentSectionMetadata().getTitle())
+                        .documentURL(section.getDocumentURL())
+                        .tokens(section.getTokenCount())
+                        .ownerName(section.getOwnerName())
+                        .signedPermissionOfUseVc(section.getSignedPermissionOfUseVc())
+                        .aiModelName(section.getAiModelName())
+                        .build())
+                .collect(Collectors.toList());
+
+
+        return CompletionMessageDTO.builder()
                 .message(completion)
                 .threadID(message.getThreadId())
-                .sectionId(instanceSections.stream().map(DocumentInstanceSection::getId).toList())
-                .tokens(sections.stream().map(DocumentInstanceSectionDTO::getTokenCount).toList())
-                .iscc(sections.stream().map(DocumentInstanceSectionDTO::getDocumentSectionIsccCode).toList())
-                .documentURL(sections.stream().map(DocumentInstanceSectionDTO::getDocumentURL).toList())
-                .ownerName(sections.stream().map(DocumentInstanceSectionDTO::getOwnerName).toList())
-                .title(sections.stream()
-                        .map(section -> section.getDocumentSectionMetadata().getTitle()).toList())
-                .signedPermissionOfUseVc(sections.stream()
-                        .map(DocumentInstanceSectionDTO::getSignedPermissionOfUseVc).toList())
-                .aiModelName(sections.stream()
-                        .map(DocumentInstanceSectionDTO::getAiModelName).toList())
-
+                .sectionsAdditionalInfo(sectionInfos) // Populate with detailed section info
                 .build();
-
-
-        return completionMessageDTO;
     }
 
 

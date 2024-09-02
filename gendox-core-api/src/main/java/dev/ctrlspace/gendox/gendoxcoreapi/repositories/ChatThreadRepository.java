@@ -17,6 +17,9 @@ public interface ChatThreadRepository extends JpaRepository<ChatThread, UUID>, Q
 
     public boolean existsByIdAndProjectIdIn(UUID id, List<UUID> projectId);
 
+    // is public thread
+    public boolean existsByIdAndPublicThreadIsTrue(UUID id);
+
     @EntityGraph(attributePaths = {"chatThreadMembers"})
     Page<ChatThread> findAll(Predicate predicate, Pageable pageable);
 }

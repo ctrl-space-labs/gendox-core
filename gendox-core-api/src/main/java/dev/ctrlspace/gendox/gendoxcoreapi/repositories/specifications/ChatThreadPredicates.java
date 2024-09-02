@@ -15,19 +15,35 @@ public class ChatThreadPredicates {
     public static Predicate build(ChatThreadCriteria criteria) {
         return ExpressionUtils.allOf(
                 projectIdIn(criteria.getProjectIdIn()),
-                memberIdIn(criteria.getMemberIdIn())
+                memberIdIn(criteria.getMemberIdIn()),
+                threadIdIn(criteria.getThreadIdIn()),
+                isPublicThread(criteria.getIsPublicThread())
         );
     }
 
+    private static Predicate threadIdIn(List<UUID> threadIdIn) {
+        if (threadIdIn == null) {
+            return null;
+        }
+        return qChatThread.id.in(threadIdIn);
+    }
+
+    private static Predicate isPublicThread(Boolean isPublicThread) {
+        if (isPublicThread == null) {
+            return null;
+        }
+        return qChatThread.publicThread.eq(isPublicThread);
+    }
+
     private static Predicate projectIdIn(List<UUID> projectIdIn) {
-        if (projectIdIn == null || projectIdIn.isEmpty()) {
+        if (projectIdIn == null) {
             return null;
         }
         return qChatThread.projectId.in(projectIdIn);
     }
 
     private static Predicate memberIdIn(List<UUID> memberIdIn) {
-        if (memberIdIn == null || memberIdIn.isEmpty()) {
+        if (memberIdIn == null) {
             return null;
         }
         return qChatThread.chatThreadMembers.any().userId.in(memberIdIn);
