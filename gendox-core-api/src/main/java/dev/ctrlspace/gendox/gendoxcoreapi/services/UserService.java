@@ -19,6 +19,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredic
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -286,5 +287,22 @@ public class UserService implements UserDetailsService {
             return email;
         }
         return user.getUserName();
+    }
+
+
+    private static final Map<String, Integer> ROLE_LEVEL_MAP = new HashMap<>();
+
+    static {
+        ROLE_LEVEL_MAP.put(OrganizationRolesConstants.READER, 1);
+        ROLE_LEVEL_MAP.put(OrganizationRolesConstants.EDITOR, 2);
+        ROLE_LEVEL_MAP.put(OrganizationRolesConstants.ADMIN, 3);
+    }
+
+    public int getUserOrganizationRoleLevel(String roleName) throws GendoxException {
+        Integer level = ROLE_LEVEL_MAP.get(roleName);
+        if (level == null) {
+            throw new GendoxException("UNKNOWN_ROLE", "Unknown role: " + roleName, HttpStatus.BAD_REQUEST);
+        }
+        return level;
     }
 }

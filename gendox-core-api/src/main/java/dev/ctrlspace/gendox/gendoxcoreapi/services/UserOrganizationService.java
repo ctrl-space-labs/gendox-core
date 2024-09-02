@@ -39,6 +39,7 @@ public class UserOrganizationService {
     private TypeService typeService;
     private UserRepository userRepository;
 
+
     @Autowired
     private JWTUtils jwtUtils;
     private final OrganizationRepository organizationRepository;
@@ -49,13 +50,13 @@ public class UserOrganizationService {
                                    @Lazy UserService userService,
                                    @Lazy OrganizationService organizationService,
                                    UserRepository userRepository,
-                                   OrganizationRepository organizationRepository) {
+                                   OrganizationRepository organizationRepository
+                                   ) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.typeService = typeRepository;
         this.userRepository = userRepository;
         this.userService = userService;
         this.organizationService = organizationService;
-
         this.organizationRepository = organizationRepository;
     }
 
@@ -144,6 +145,7 @@ public class UserOrganizationService {
         }
         userOrganizationRepository.delete(userOrganization);
     }
+
 }
 
 

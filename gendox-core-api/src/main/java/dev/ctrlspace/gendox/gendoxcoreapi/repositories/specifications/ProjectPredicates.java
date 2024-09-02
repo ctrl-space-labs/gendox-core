@@ -19,7 +19,8 @@ public class ProjectPredicates {
                 organizationId(criteria.getOrganizationId()),
                 userId(criteria.getUserId()),
                 name(criteria.getName()),
-                projectIdIn(criteria.getProjectIdIn())
+                projectIdIn(criteria.getProjectIdIn()),
+                privateProjectAgent(criteria.getPrivateProjectAgent())
         );
     }
 
@@ -51,4 +52,10 @@ public class ProjectPredicates {
         return qProject.id.in(projectIdIn.stream().map(UUID::fromString).toArray(UUID[]::new));
     }
 
+    private static Predicate privateProjectAgent(Boolean privateProjectAgent) {
+        if (privateProjectAgent == null) {
+            return null;
+        }
+        return qProject.projectAgent.privateAgent.eq(privateProjectAgent);
+    }
 }

@@ -11,6 +11,7 @@ const appChatConfig = {
     authProviderOption: 'IFrameAuthProvider',
     footerContent: 'poweredBy',
     embedView: true,
+    chatUrlPath: '/gendox/embed/embedded-chat',
 };
 const EmbeddedChatApp = (props) => {
     const theme = useTheme();
@@ -28,5 +29,7 @@ const EmbeddedChatApp = (props) => {
 
 
 EmbeddedChatApp.authProviderOption = appChatConfig.authProviderOption;
+// // Allow both authenticated and unauthenticated users to access the embedded chat
+EmbeddedChatApp.authGuard = false
 
 export default EmbeddedChatApp;

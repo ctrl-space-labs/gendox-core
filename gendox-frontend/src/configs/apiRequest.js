@@ -47,9 +47,20 @@ export default {
   //   return `${url}threads?projectIdIn=${projectIds}`;
   // },
 
-  getThreadsByCriteria: (projectIdIn) => {
-    const projectIds = projectIdIn.join(",");
-    return `${url}threads?projectIdIn=${projectIds}&size=100&sort=createdAt,desc`;
+  getThreadsByCriteria: (projectIdIn, threadIdIn) => {
+    let urlWithParams = `${url}threads?size=100&sort=createdAt,desc`;
+
+    if (projectIdIn?.length > 0) {
+      const projectIds = projectIdIn.join(",");
+      urlWithParams += `&projectIdIn=${projectIds}`;
+    }
+
+    if (threadIdIn?.length > 0) {
+      const threadIds = threadIdIn.join(",");
+      urlWithParams += `&threadIdIn=${threadIds}`;
+    }
+
+    return urlWithParams;
   },
 
   getThreadMessagesByCriteria: (

@@ -26,6 +26,7 @@ import AclGuard from 'src/@core/components/auth/AclGuard'
 import ThemeComponent from 'src/@core/theme/ThemeComponent'
 import AuthGuard from 'src/@core/components/auth/AuthGuard'
 import GuestGuard from 'src/@core/components/auth/GuestGuard'
+import DefaultGuard from 'src/components/DefaultGuard'
 
 // ** Spinner Import
 import Spinner from 'src/@core/components/spinner'
@@ -54,6 +55,7 @@ import 'src/iconify-bundle/icons-bundle-react'
 import '../../styles/globals.css'
 import '../../styles/markdown-renderer.css'
 import GendoxFallbackSpinner from "../views/gendox-components/spinner";
+import {IFrameMessageManagerProvider} from "../context/IFrameMessageManagerContext";
 
 const clientSideEmotionCache = createEmotionCache()
 
@@ -74,7 +76,8 @@ const Guard = ({ children, authGuard, guestGuard }) => {
   if (guestGuard) {
     return <GuestGuard fallback={<GendoxFallbackSpinner />}>{children}</GuestGuard>
   } else if (!guestGuard && !authGuard) {
-    return <>{children}</>
+    // return <>{children}</>
+    return <DefaultGuard fallback={<GendoxFallbackSpinner />}>{children}</DefaultGuard>
   } else {
     return <AuthGuard fallback={<GendoxFallbackSpinner />}>{children}</AuthGuard>
   }
@@ -111,26 +114,28 @@ const App = props => {
           <meta name='viewport' content='initial-scale=1, width=device-width' />
         </Head>
 
-        <AuthProvider option={authProviderOption}>
-          <SettingsProvider {...(setConfig ? { pageSettings: setConfig() } : {})}>
-            <SettingsConsumer>
-              {({ settings }) => {
-                return (
-                  <ThemeComponent settings={settings}>
-                    <Guard authGuard={authGuard} guestGuard={guestGuard}>
-                      <AclGuard aclAbilities={aclAbilities} guestGuard={guestGuard} authGuard={authGuard}>
-                        {getLayout(<Component {...pageProps} />)}
-                      </AclGuard>
-                    </Guard>
-                    <ReactHotToast>
-                      <Toaster position={settings.toastPosition} toastOptions={{ className: 'react-hot-toast' }} />
-                    </ReactHotToast>
-                  </ThemeComponent>
-                )
-              }}
-            </SettingsConsumer>
-          </SettingsProvider>
-        </AuthProvider>
+        <IFrameMessageManagerProvider>
+          <AuthProvider option={authProviderOption}>
+            <SettingsProvider {...(setConfig ? { pageSettings: setConfig() } : {})}>
+              <SettingsConsumer>
+                {({ settings }) => {
+                  return (
+                    <ThemeComponent settings={settings}>
+                      <Guard authGuard={authGuard} guestGuard={guestGuard}>
+                        <AclGuard aclAbilities={aclAbilities} guestGuard={guestGuard} authGuard={authGuard}>
+                          {getLayout(<Component {...pageProps} />)}
+                        </AclGuard>
+                      </Guard>
+                      <ReactHotToast>
+                        <Toaster position={settings.toastPosition} toastOptions={{ className: 'react-hot-toast' }} />
+                      </ReactHotToast>
+                    </ThemeComponent>
+                  )
+                }}
+              </SettingsConsumer>
+            </SettingsProvider>
+          </AuthProvider>
+        </IFrameMessageManagerProvider>
       </CacheProvider>
     </Provider>
   )

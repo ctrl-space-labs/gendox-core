@@ -79,6 +79,10 @@ public class ProjectAgentService {
         return projectAgentRepository.findByProjectId(projectId);
     }
 
+    public Boolean isPublicAgent(UUID projectId) {
+        return projectAgentRepository.existsByProjectIdAndPrivateAgentIsFalse(projectId);
+    }
+
     public ProjectAgent getAgentByDocumentId(UUID documentId) {
         return projectAgentRepository.findAgentByDocumentInstanceId(documentId)
                 .orElse(null);

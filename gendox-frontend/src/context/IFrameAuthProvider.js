@@ -9,6 +9,8 @@ import { userDataActions } from "src/store/apps/userData/userData";
 import { fetchOrganization } from "src/store/apps/activeOrganization/activeOrganization";
 import { fetchProject } from "src/store/apps/activeProject/activeProject";
 import {AuthContext} from "./AuthContext";
+import { generalConstants } from "src/utils/generalConstants";
+import {useIFrameMessageManager} from "./IFrameMessageManagerContext";
 
 
 
@@ -23,10 +25,11 @@ import {AuthContext} from "./AuthContext";
  */
 const IFrameAuthProvider = ({ children, defaultProvider }) => {
   const [user, setUser] = useState(defaultProvider.user);
-  const [accessToken, setAccessToken] = useState(null);
+  const [accessToken, setAccessToken] = useState(generalConstants.NO_AUTH_TOKEN);
   const [loading, setLoading] = useState(defaultProvider.loading);
   const router = useRouter();
   const dispatch = useDispatch();
+  const iFrameMessageManager = useIFrameMessageManager();
 
 
   const handleLogout = () => {
@@ -51,8 +54,17 @@ const IFrameAuthProvider = ({ children, defaultProvider }) => {
   const loadUserProfileFromAccessToken = async () => {
     setLoading(true);
     if (!accessToken) {
-      setLoading(false);
       // clearLocalStorage();
+      return;
+    }
+
+    if (accessToken === generalConstants.NO_AUTH_TOKEN) {
+      setUser({
+        id: "anonymous",
+        name: "Anonymous",
+        organizations: [],
+      });
+      setLoading(false);
       return;
     }
 
@@ -102,6 +114,9 @@ const IFrameAuthProvider = ({ children, defaultProvider }) => {
       })
 
       .catch((userDataError) => {
+        console.log("set loading to false");
+        // TODO in case of expired token the hole app brakes and the user is not able to login again
+        // check if the token is expired and redirect user to login page
         setLoading(false);
         console.error(
           "Error occurred while fetching user data:",
@@ -109,13 +124,12 @@ const IFrameAuthProvider = ({ children, defaultProvider }) => {
         );        
       });
 
-    setLoading(false);
   };
 
 
   const receiveAccessTokenMessage = (event) => {
-    console.log("event.data", event.data)
-    if (event.data && event.data.type === 'ACCESS_TOKEN') {
+    // console.log("event.data", event.data)
+    if (event.data && event.data.type === 'gendox.events.initialization.response') {
 
       console.log("event.data.accessToken", event.data.accessToken)
       window.localStorage.setItem(authConfig.storageTokenKeyName, event.data.accessToken);
@@ -130,18 +144,19 @@ const IFrameAuthProvider = ({ children, defaultProvider }) => {
     if (storedToken) {
       setAccessToken(storedToken);
     }
-
-    //get access token from browser PostMessage API
-    window.addEventListener("message", receiveAccessTokenMessage);
-
-    if (!storedToken) {
-      window.parent.postMessage({ type: 'gendox.events.initialization.request' }, "*");
-    }
     return () => {
       window.parent.postMessage({ type: 'GENDOX_EVENTS_LISTENER_REMOVED' }, "*");
-      window.removeEventListener("message", receiveAccessTokenMessage);
+      iFrameMessageManager.messageManager.removeHandler(receiveAccessTokenMessage);
     };
   }, []);
+
+  useEffect(() => {
+
+    if (iFrameMessageManager && iFrameMessageManager?.iFrameConfiguration?.externalToken) {
+      setAccessToken(iFrameMessageManager?.iFrameConfiguration?.externalToken);
+    }
+
+  }, [iFrameMessageManager?.iFrameConfiguration?.externalToken]);
 
   useEffect(() => {
     loadUserProfileFromAccessToken(accessToken);

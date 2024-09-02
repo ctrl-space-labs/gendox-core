@@ -70,6 +70,9 @@ public class SecurityUtils {
     }
 
     public boolean isSuperAdmin(Authentication authentication) {
+        if (!(SecurityContextHolder.getContext().getAuthentication() instanceof GendoxAuthenticationToken)) {
+            return false;
+        }
         GendoxAuthenticationToken principal = (GendoxAuthenticationToken)SecurityContextHolder.getContext()
                 .getAuthentication();
         return principal != null &&
@@ -79,6 +82,9 @@ public class SecurityUtils {
     }
 
     public boolean isUser() {
+        if (!(SecurityContextHolder.getContext().getAuthentication() instanceof GendoxAuthenticationToken)) {
+            return false;
+        }
         GendoxAuthenticationToken principal = (GendoxAuthenticationToken)SecurityContextHolder.getContext()
                 .getAuthentication();
         return principal != null &&
@@ -88,6 +94,9 @@ public class SecurityUtils {
     }
 
     public boolean isAgent(Authentication authentication) {
+        if (!(SecurityContextHolder.getContext().getAuthentication() instanceof GendoxAuthenticationToken)) {
+            return false;
+        }
         GendoxAuthenticationToken principal = (GendoxAuthenticationToken)SecurityContextHolder.getContext()
                 .getAuthentication();
         return principal != null &&
@@ -339,8 +348,14 @@ public class SecurityUtils {
     }
 
     public boolean isPublicProject(String projectId) {
-        ProjectAgent projectAgent = projectAgentService.getAgentByProjectId(UUID.fromString(projectId));
-        return Boolean.FALSE.equals(projectAgent.getPrivateAgent());
+//        ProjectAgent projectAgent = projectAgentService.getAgentByProjectId(UUID.fromString(projectId));
+//        return Boolean.FALSE.equals(projectAgent.getPrivateAgent());
+        return projectAgentService.isPublicAgent(UUID.fromString(projectId));
+    }
+
+    public boolean isPublicThread(UUID threadId) {
+
+        return chatThreadRepository.existsByIdAndPublicThreadIsTrue(threadId);
     }
 
 
