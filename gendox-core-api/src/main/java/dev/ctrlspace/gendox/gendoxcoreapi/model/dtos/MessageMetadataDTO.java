@@ -32,8 +32,9 @@ import java.util.UUID;
                                 @ColumnResult(name = "iscccode", type = String.class),
                                 @ColumnResult(name = "createdat", type = Instant.class),
                                 @ColumnResult(name = "threadid", type = UUID.class),
-                                @ColumnResult(name = "documentid", type = UUID.class),  // Ensure this matches the query
-                                @ColumnResult(name = "documenturl", type = String.class),  // Ensure this matches the query
+                                @ColumnResult(name = "documentid", type = UUID.class),
+                                @ColumnResult(name = "documenturl", type = String.class),
+                                @ColumnResult(name = "sectiontitle", type = String.class),
                                 @ColumnResult(name = "policytypename", type = String.class),
                                 @ColumnResult(name = "policyvalue", type = String[].class)
                         }
@@ -55,6 +56,7 @@ import java.util.UUID;
                     m.thread_id AS threadid,
                     d.id AS documentid,
                     d.remote_url AS documenturl,
+                    dsm.title AS sectiontitle,
                     pt.name AS policytypename,
                     ARRAY_AGG(acp.value) AS policyvalue
                 FROM
@@ -65,6 +67,8 @@ import java.util.UUID;
                     gendox_core.document_instance_sections dis ON ms.section_id = dis.id
                         INNER JOIN
                     gendox_core.document_instance d ON dis.document_instance_id = d.id
+                    INNER JOIN
+                    gendox_core.document_section_metadata dsm ON dis.document_section_metadata_id = dsm.id
                         INNER JOIN
                     gendox_core.users u ON d.created_by = u.id
                         INNER JOIN
@@ -79,7 +83,7 @@ import java.util.UUID;
                     m.id = :messageId
                     AND pt.name = 'ATTRIBUTION_POLICY'
                 GROUP BY
-                    ms.section_id, m.id, ms.section_url, u.name, o.name, dis.section_iscc_code, m.created_at, m.thread_id, d.id, d.remote_url, pt.name
+                    ms.section_id, m.id, ms.section_url, u.name, o.name, dis.section_iscc_code, m.created_at, m.thread_id, d.id, d.remote_url, dsm.title, pt.name
                                  
             """,
         resultSetMapping = "MessageMetadataDTOMapping"
@@ -95,14 +99,15 @@ public class MessageMetadataDTO {
     private String isccCode;
     private Instant createdAt;
     private UUID threadId;
-    private UUID documentId;  // Ensure this matches the query alias
-    private String documentUrl;  // Ensure this matches the query alias
+    private UUID documentId;
+    private String documentUrl;
+    private String sectionTitle;
     private String policyTypeName;
     private List<String> policyValue;
 
     public MessageMetadataDTO(UUID sectionId, UUID messageId, String sectionUrl, String userName, String organizationName,
                               String isccCode, Instant createdAt, UUID threadId, UUID documentId, String documentUrl,
-                              String policyTypeName, String[] policyValueArray) {
+                              String sectionTitle, String policyTypeName, String[] policyValueArray) {
         this.sectionId = sectionId;
         this.messageId = messageId;
         this.sectionUrl = sectionUrl;
@@ -113,6 +118,7 @@ public class MessageMetadataDTO {
         this.threadId = threadId;
         this.documentId = documentId;
         this.documentUrl = documentUrl;
+        this.sectionTitle = sectionTitle;
         this.policyTypeName = policyTypeName;
         this.policyValue = Arrays.asList(policyValueArray);
     }
