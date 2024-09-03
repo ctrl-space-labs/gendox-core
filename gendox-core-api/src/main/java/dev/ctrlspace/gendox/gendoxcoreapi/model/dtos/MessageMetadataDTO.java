@@ -50,10 +50,10 @@ import java.util.UUID;
                 dis.section_iscc_code AS iscccode,
                 m.created_at AS createdat,
                 m.thread_id AS threadid,
-                d.id AS documentid,  -- Ensure this alias matches the @ColumnResult name
-                d.remote_url AS documenturl,  -- Ensure this alias matches the @ColumnResult name
+                d.id AS documentid,
+                d.remote_url AS documenturl,
                 pt.name AS policytypename,
-                acp.value AS policyvalue  -- Directly retrieves the policy value
+                acp.value AS policyvalue
             FROM
                 gendox_core.message m
             INNER JOIN
@@ -61,7 +61,7 @@ import java.util.UUID;
             INNER JOIN
                 gendox_core.document_instance_sections dis ON ms.section_id = dis.id
             INNER JOIN
-                gendox_core.document_instance d ON dis.document_instance_id = d.id  -- Join to include document details
+                gendox_core.document_instance d ON dis.document_instance_id = d.id
             INNER JOIN
                 gendox_core.users u ON d.created_by = u.id
             INNER JOIN
