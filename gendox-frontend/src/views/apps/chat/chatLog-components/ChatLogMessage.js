@@ -5,6 +5,7 @@ import Link from "@mui/material/Link";
 import GendoxMarkdownRenderer from "/src/views/gendox-components/markdown-renderer/GendoxMarkdownRenderer";
 import ChatLogMessageFeedback from "/src/views/apps/chat/chatLog-components/ChatLogMessageFeedback";
 import ChatLogActionButtons from "/src/views/apps/chat/chatLog-components/ChatLogActionButtons";
+import ChatLogInfo from "/src/views/apps/chat/chatLog-components/ChatLogInfo";
 import { fakeData } from "/src/utils/chatLogUtils";
 
 const ChatLogMessage = ({ chat, isSender, showInfo, setShowInfo }) => {
@@ -32,56 +33,46 @@ const ChatLogMessage = ({ chat, isSender, showInfo, setShowInfo }) => {
             backgroundColor: isSender ? "primary.main" : "background.paper",
           }}
         >
-          <GendoxMarkdownRenderer  markdownText={chat.msg} />
-          {!isSender && (
-            <ChatLogActionButtons showInfo={showInfo} setShowInfo={setShowInfo} />
-          )}
+          <GendoxMarkdownRenderer markdownText={chat.msg} />
+        </Typography>
 
-          {showInfo && !isSender && fakeData && fakeData.length > 0 ? (
-            <Box sx={{ display: "flex", mt: 3 }}>
-              {fakeData.map((answerInfo, idx) => (
-                <Link
-                  key={idx}
-                  href={`/gendox/document-instance/?documentId=${answerInfo.documentId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{
-                    ml: { xs: 1, sm: 2, md: idx !== 0 ? 5 : 0 },
-                    color: isSender ? "common.white" : "primary.main",
-                    textDecoration: "none",
-                    "&:hover": {
-                      textDecoration: "underline",
-                      backgroundColor: isSender
-                        ? "primary.dark"
-                        : "secondary.light",
-                      color: "common.white",
-                    },
-                    p: 1,
-                    borderRadius: 1,
-                    flexGrow: 1,
-                    textAlign: "center",
-                  }}
-                >
-                  Link-{idx + 1}
-                </Link>
-              ))}
-            </Box>
-          ) : null}
-        </Typography>
+        <Box
+          sx={{
+            mt: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+
+            {isSender && (
+              <ChatLogMessageFeedback
+                
+                feedback={chat.feedback}
+              />
+            )}
+
+            <Typography
+              variant="caption"
+              sx={{ color: "text.disabled", ml: 1 }}
+            >
+              {formattedTime ? formattedTime : null}
+            </Typography>
+          </Box>
+
+          {!isSender && (
+            <ChatLogActionButtons
+              showInfo={showInfo}
+              setShowInfo={setShowInfo}
+            />
+          )}
+        </Box>
+
+        {showInfo && !isSender ? (
+          <ChatLogInfo fakeData={fakeData} />
+        ) : null}
       </div>
-      <Box
-        sx={{
-          mt: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: isSender ? "flex-end" : "flex-start",
-        }}
-      >
-        <ChatLogMessageFeedback isSender={isSender} feedback={chat.feedback} />
-        <Typography variant="caption" sx={{ color: "text.disabled" }}>
-          {formattedTime ? formattedTime : null}
-        </Typography>
-      </Box>
     </Box>
   );
 };
