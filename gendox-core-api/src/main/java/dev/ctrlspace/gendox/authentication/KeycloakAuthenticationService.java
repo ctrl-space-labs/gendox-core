@@ -198,5 +198,23 @@ public class KeycloakAuthenticationService implements AuthenticationService {
                 .findFirst();
     }
 
+    public void deactivateUser(String userName) throws GendoxException {
+        Optional<UserRepresentation> userOptional = keycloakClient.realm(realm)
+                .users()
+                .searchByUsername(userName, true)
+                .stream()
+                .findFirst();
+
+        if (userOptional.isPresent()) {
+            UserRepresentation user = userOptional.get();
+            user.setEnabled(false);
+            keycloakClient.realm(realm).users().get(user.getId()).update(user);
+        } else {
+            throw new GendoxException("USER_NOT_FOUND", "User not found", HttpStatus.NOT_FOUND);
+        }
+    }
+
+
+
 
 }
