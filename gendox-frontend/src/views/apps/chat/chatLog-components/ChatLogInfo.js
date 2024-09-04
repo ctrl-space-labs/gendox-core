@@ -1,84 +1,142 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Icon from "src/@core/components/icon";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
+import Tooltip from "@mui/material/Tooltip";
+import Grid from "@mui/material/Grid";
+import { ListItemButton } from "@mui/material";
 
+import { useRouter } from "next/router";
+import { formatDocumentTitle } from "src/utils/documentUtils";
 
-const ChatLogInfo = ({ fakeData }) => {
+const ChatLogInfo = ({ messageMetadata }) => {
+  const router = useRouter();
+  const { organizationId } = router.query;
 
-  return (
-    <Box sx={{ display: "flex", flexDirection: "column", mt: 3 }}>
-    {fakeData.map((answerInfo, idx) => (
+  if (!messageMetadata || messageMetadata.length === 0) {
+    return (
       <Box
-        key={idx}
         sx={{
           display: "flex",
-          flexDirection: "column",
-          alignItems: "start",
-          mb: 2,
+          justifyContent: "center",
+          alignItems: "center",
           p: 2,
           borderRadius: 1,
           boxShadow: 1,
-          backgroundColor: "background.paper",
+          backgroundColor: "action.hover",
+          mt: 3,
         }}
       >
-        {/* First Row: User Name */}
-        <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-          <Icon icon="mdi:account" fontSize="1rem" sx={{ mr: 1 }} />
-          <Typography variant="body2">
-            {answerInfo.policyValue.includes("OWNER_NAME")
-              ? answerInfo.userName
-              : "Secret Owner"}
-          </Typography>
-        </Box>
-
-        {/* Second Row: Policy Type Name */}
-        <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-          <Icon icon="mdi:file-document-outline" fontSize="1rem" sx={{ mr: 1 }} />
-          <Typography variant="body2">
-            {answerInfo.policyValue.includes("ORIGINAL DOCUMENT")
-              ? answerInfo.policyTypeName
-              : "Secret"}
-          </Typography>
-        </Box>
-
-        {/* Third Row: Section Title */}
-        <Box sx={{ display: "flex", alignItems: "center" }}>
-          <Icon icon="mdi:file-tree-outline" fontSize="1rem" sx={{ mr: 1 }} />
-          <Typography variant="body2">
-            {answerInfo.policyValue.includes("ORIGINAL DOCUMENT")
-              ? answerInfo.sectionTitle
-              : "Secret"}
-          </Typography>
-        </Box>
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          No additional information available.
+        </Typography>
       </Box>
-    ))}
-  </Box>
-    // <Box sx={{ display: "flex", mt: 3 }}>
-    //   {fakeData.map((answerInfo, idx) => (
-    //     <Link
-    //       key={idx}
-    //       href={`/gendox/document-instance/?documentId=${answerInfo.documentId}`}
-    //       target="_blank"
-    //       rel="noopener noreferrer"
-    //       sx={{
-    //         ml: { xs: 1, sm: 2, md: idx !== 0 ? 5 : 0 },
-    //         color: "primary.main",
-    //         textDecoration: "none",
-    //         "&:hover": {
-    //           textDecoration: "underline",
-    //           backgroundColor: "secondary.light",
-    //           color: "common.white",
-    //         },
-    //         p: 1,
-    //         borderRadius: 1,
-    //         flexGrow: 1,
-    //         textAlign: "center",
-    //       }}
-    //     >
-    //       Link-{idx + 1}
-    //     </Link>
-    //   ))}
-    // </Box>
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        mt: 3,
+        p: 2,
+        borderRadius: 1,
+        boxShadow: 1,
+        backgroundColor: "action.hover",
+      }}
+    >
+      <Grid container spacing={3}>
+        {messageMetadata.map((sectionData, idx) => {
+          const documentName = formatDocumentTitle(sectionData.documentUrl);
+          const documentUrl = `/gendox/document-instance?organizationId=${organizationId}&documentId=${sectionData.documentId}`;
+          const sectionUrl = `/gendox/document-instance?organizationId=${organizationId}&sectionId=${sectionData.sectionId}`;
+
+          return (
+            <Grid item xs={12} md={6} key={idx}>
+              <List
+                component="nav"
+                aria-label="main mailbox"
+                sx={{
+                  p: 3,
+                  borderRadius: 1,
+                  backgroundColor: "background.paper",
+                  transition: "transform 0.2s",
+                  "&:hover": {
+                    transform: "translateY(-5px)",
+                    boxShadow: 3,
+                  },
+                }}
+              >
+                <ListItem disablePadding>
+                  {/* <ListItemButton> */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      width: "100%",
+                      paddingY: "12px",
+                      paddingX: "16px",
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: "primary.main" }}>
+                      <Icon icon="mdi:account" fontSize={20} />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        sectionData.policyValue.includes("OWNER_PROFILE")
+                          ? sectionData.userName
+                          : "Secret Owner"
+                      }
+                    />
+                    </Box>
+                  {/* </ListItemButton> */}
+                </ListItem>
+
+                <Tooltip title="View document">
+                  <ListItem disablePadding>
+                    <ListItemButton
+                      component="a"
+                      href={documentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ListItemIcon sx={{ color: "primary.main" }}>
+                        <Icon icon="mdi:file-document-outline" fontSize={20} />
+                      </ListItemIcon>
+                      <ListItemText primary={documentName} />
+                    </ListItemButton>
+                  </ListItem>
+                </Tooltip>
+
+                <Tooltip title="View section">
+                  <ListItem disablePadding>
+                    <ListItemButton
+                      component="a"
+                      href={sectionUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ListItemIcon sx={{ color: "primary.main" }}>
+                        <Icon icon="mdi:file-tree-outline" fontSize={20} />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          sectionData.policyValue.includes("ORIGINAL_DOCUMENT")
+                            ? sectionData.sectionTitle
+                            : "Secret"
+                        }
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                </Tooltip>
+              </List>
+            </Grid>
+          );
+        })}
+      </Grid>
+    </Box>
   );
 };
 

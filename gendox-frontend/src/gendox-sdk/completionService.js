@@ -10,7 +10,6 @@ const postCompletionMessage = async (projectId, threadId, message, storedToken) 
         headers.Authorization = 'Bearer ' + storedToken;
     }
 
-    console.log('headers:', headers);
     return axios.post(
         apiRequests.postCompletionModel(projectId),
         {

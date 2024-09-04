@@ -4,8 +4,11 @@ import { getInitials } from "src/@core/utils/get-initials";
 import ChatLogMessage from "src/views/apps/chat/chatLog-components/ChatLogMessage";
 
 
-const ChatLogMessageGroup = ({ item, data, showInfo, setShowInfo }) => {
-  const isSender = item.senderId === data.userContact.id;
+const ChatLogMessageGroup = ({ messageData, data }) => {
+  const isSender = messageData.senderId === data.userContact.id;
+
+  
+  
 
   return (
     <Box
@@ -47,13 +50,12 @@ const ChatLogMessageGroup = ({ item, data, showInfo, setShowInfo }) => {
         className="chat-body"
         sx={{ maxWidth: ["calc(100% - 5.75rem)", "75%", "65%"] }}
       >
-        {item.messages.map((chat, index, { length }) => (
+        {messageData.message.map((message, index, { length }) => (
           <ChatLogMessage
             key={index}
-            chat={chat}
+            message={message}
             isSender={isSender}
-            showInfo={showInfo}
-            setShowInfo={setShowInfo}
+            
           />
         ))}
       </Box>

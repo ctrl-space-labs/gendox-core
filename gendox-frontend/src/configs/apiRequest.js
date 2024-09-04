@@ -120,6 +120,7 @@ export default {
   organizationPlans: (organizationId) =>
     `${url}organizations/${organizationId}/organization-plans`,
 
-
+  getThreadMessageMetadata: (threadId, messageId) =>
+    `${url}threads/${threadId}/message-metadata/${messageId}`,  
 
 };

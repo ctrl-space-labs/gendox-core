@@ -76,6 +76,7 @@ const gendoxMessageToChatMessage = (message) => {
     return {
         senderId: message.createdBy || 'anonymous',
         message: message.value,
+        messageId : message.id,
         sections: message.messageSections,
         time: message.createdAt,
         feedback: {

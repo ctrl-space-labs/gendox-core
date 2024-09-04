@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -6,16 +7,47 @@ import GendoxMarkdownRenderer from "/src/views/gendox-components/markdown-render
 import ChatLogMessageFeedback from "/src/views/apps/chat/chatLog-components/ChatLogMessageFeedback";
 import ChatLogActionButtons from "/src/views/apps/chat/chatLog-components/ChatLogActionButtons";
 import ChatLogInfo from "/src/views/apps/chat/chatLog-components/ChatLogInfo";
-import { fakeData } from "/src/utils/chatLogUtils";
+import chatThreadService from "src/gendox-sdk/chatThreadService";
+import authConfig from "src/configs/auth";
 
-const ChatLogMessage = ({ chat, isSender, showInfo, setShowInfo }) => {
-  const formattedTime = formatDistanceToNow(parseISO(chat.time), {
+const ChatLogMessage = ({ message, isSender }) => {
+  const [messageMetadata, setMessageMetadata] = useState(null);
+  const [showInfo, setShowInfo] = useState(false);
+  const storedToken = localStorage.getItem(authConfig.storageTokenKeyName);
+
+  const formattedTime = formatDistanceToNow(parseISO(message.time), {
     addSuffix: true,
   });
 
+
+
+  const fetchChatMessageInfo = async () => {
+    
+    try {
+      const response = await chatThreadService.getThreadMessageMetadataByMessageId(
+        message.threadId,
+        message.messageId,
+        storedToken
+      );
+      setMessageMetadata(response.data);
+      
+    }
+    catch (error) {
+      console.error(error);
+    }
+  }
+
+
+
+
+
+
+
+      
+
   return (
     <Box sx={{ "&:not(:last-of-type)": { mb: 3.5 } }}>
-      <div>
+      
         <Typography
           sx={{
             position: "relative",
@@ -33,7 +65,7 @@ const ChatLogMessage = ({ chat, isSender, showInfo, setShowInfo }) => {
             backgroundColor: isSender ? "primary.main" : "background.paper",
           }}
         >
-          <GendoxMarkdownRenderer markdownText={chat.msg} />
+          <GendoxMarkdownRenderer markdownText={message.msg} />
         </Typography>
 
         <Box
@@ -49,7 +81,7 @@ const ChatLogMessage = ({ chat, isSender, showInfo, setShowInfo }) => {
             {isSender && (
               <ChatLogMessageFeedback
                 
-                feedback={chat.feedback}
+                feedback={message.feedback}
               />
             )}
 
@@ -65,14 +97,16 @@ const ChatLogMessage = ({ chat, isSender, showInfo, setShowInfo }) => {
             <ChatLogActionButtons
               showInfo={showInfo}
               setShowInfo={setShowInfo}
+              fetchChatMessageInfo={fetchChatMessageInfo}
+              messageToCopy={message.msg}
             />
           )}
         </Box>
 
         {showInfo && !isSender ? (
-          <ChatLogInfo fakeData={fakeData} />
+          <ChatLogInfo messageMetadata={messageMetadata} />
         ) : null}
-      </div>
+      
     </Box>
   );
 };

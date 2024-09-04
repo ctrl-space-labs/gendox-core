@@ -5,7 +5,6 @@ import Box from "@mui/material/Box";
 import ChatLogScrollWrapper from "./chatLog-components/ChatLogScrollWrapper";
 import ChatLogMessageGroup from "./chatLog-components/ChatLogMessageGroup";
 import {
-  fakeData,
   formattedChatData,
   scrollToBottom,
 } from "/src/utils/chatLogUtils";
@@ -13,10 +12,8 @@ import {
 const ChatLog = (props) => {
   const chatArea = useRef(null);
   const { data, hidden } = props;
-  const projectId = data.contact.projectId;
-  const [showInfo, setShowInfo] = useState(false);
+  const projectId = data.contact.projectId;  
 
-  console.log("ChatLog data", data);
 
   useEffect(() => {
     if (data && data.chat && data.chat.chat.length) {
@@ -27,13 +24,11 @@ const ChatLog = (props) => {
   
 
   const renderChats = () => {
-    return formattedChatData(data).map((item, index) => (
+    return formattedChatData(data).map((messageData, index) => (
       <ChatLogMessageGroup
         key={index}
-        item={item}
-        data={data}
-        showInfo={showInfo}
-        setShowInfo={setShowInfo}
+        messageData={messageData}
+        data={data}        
       />
     ));
   };

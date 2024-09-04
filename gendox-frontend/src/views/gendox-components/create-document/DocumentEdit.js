@@ -24,9 +24,6 @@ const DocumentEdit = ({ documentTitle, setDocumentTitle, documentValue, setDocum
 
 
 
-  console.log("sectionValue", documentValue);
-  console.log("sectionTitle", documentTitle);
-
   return (
     <Box>
       <Box
