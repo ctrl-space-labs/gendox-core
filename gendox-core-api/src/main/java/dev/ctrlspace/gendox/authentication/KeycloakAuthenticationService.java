@@ -198,10 +198,10 @@ public class KeycloakAuthenticationService implements AuthenticationService {
                 .findFirst();
     }
 
-    public void deactivateUser(String userName) throws GendoxException {
+    public void deactivateUser(String email) throws GendoxException {
         Optional<UserRepresentation> userOptional = keycloakClient.realm(realm)
                 .users()
-                .searchByUsername(userName, true)
+                .searchByEmail(email, true)
                 .stream()
                 .findFirst();
 

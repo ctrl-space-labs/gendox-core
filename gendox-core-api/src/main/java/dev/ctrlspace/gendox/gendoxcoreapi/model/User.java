@@ -51,11 +51,11 @@ public class User {
     private Instant updatedAt;
 
     @JsonBackReference(value = "userOrg")
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE,  orphanRemoval = true)
     private List<UserOrganization> userOrganizations;
 
     @JsonBackReference(value = "user")
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE,  orphanRemoval = true )
     private List<ProjectMember> projectMembers = new ArrayList<>();
 
     public UUID getId() {

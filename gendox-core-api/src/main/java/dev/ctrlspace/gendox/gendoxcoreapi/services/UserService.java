@@ -55,7 +55,6 @@ public class UserService implements UserDetailsService {
     private final UserConverter userConverter;
 
 
-
     private OrganizationService organizationService;
 
     private ProjectService projectService;
@@ -91,7 +90,7 @@ public class UserService implements UserDetailsService {
         return this.getAllUsers(criteria, pageable);
     }
 
-    public Page<UserPublicDTO> getAllPublicUsers(UserCriteria criteria, Pageable pageable) throws GendoxException{
+    public Page<UserPublicDTO> getAllPublicUsers(UserCriteria criteria, Pageable pageable) throws GendoxException {
         if (pageable == null) {
             throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
         }
@@ -115,6 +114,7 @@ public class UserService implements UserDetailsService {
         return getOptionalByEmail(email)
                 .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with email: " + email, HttpStatus.NOT_FOUND));
     }
+
     public Optional<User> getOptionalByEmail(String email) throws GendoxException {
         return userRepository.findByEmail(email);
     }
@@ -149,7 +149,7 @@ public class UserService implements UserDetailsService {
     public UserProfile getUserProfileByUserId(UUID userId) throws GendoxException {
 
         User user = this.getById(userId);
-        List<UserOrganizationProjectAgentDTO> rawUser =  userRepository.findRawUserProfileById(user.getId());
+        List<UserOrganizationProjectAgentDTO> rawUser = userRepository.findRawUserProfileById(user.getId());
 
         return userProfileConverter.toDTO(rawUser);
     }
@@ -163,7 +163,7 @@ public class UserService implements UserDetailsService {
     public UserProfile getUserProfileByUniqueIdentifier(String userIdentifier) throws GendoxException {
 
         User user = this.getUserByUniqueIdentifier(userIdentifier);
-        List<UserOrganizationProjectAgentDTO> rawUser =  userRepository.findRawUserProfileById(user.getId());
+        List<UserOrganizationProjectAgentDTO> rawUser = userRepository.findRawUserProfileById(user.getId());
 
         return userProfileConverter.toDTO(rawUser);
     }
@@ -172,7 +172,7 @@ public class UserService implements UserDetailsService {
         // Evict the cache entry for the user
         Cache cache = cacheManager.getCache("UserProfileByIdentifier");
         if (cache != null) {
-            cache.evict("UserService:getUserProfileByUniqueIdentifier:"+userIdentifier);
+            cache.evict("UserService:getUserProfileByUniqueIdentifier:" + userIdentifier);
         }
         logger.debug("Evicting UserProfile cache for userIdentifier: {}", userIdentifier);
     }
@@ -199,7 +199,7 @@ public class UserService implements UserDetailsService {
 
     }
 
-    public User updateUser(User user) throws GendoxException{
+    public User updateUser(User user) throws GendoxException {
         Instant now = Instant.now();
 
         User existingUser = this.getById(user.getId());
@@ -216,7 +216,6 @@ public class UserService implements UserDetailsService {
         user = userRepository.save(existingUser);
 
         return user;
-
 
 
     }
@@ -278,6 +277,7 @@ public class UserService implements UserDetailsService {
     /**
      * Get the user identifier from the user Entity.
      * The logic should be the same as {@link SecurityUtils#getUserIdentifier()}
+     *
      * @param user
      * @return
      */
@@ -305,4 +305,22 @@ public class UserService implements UserDetailsService {
         }
         return level;
     }
+
+    public void deleteUserById(UUID userId) throws GendoxException {
+        User user = getById(userId);
+
+        deactivateUser(user);
+
+        userRepository.delete(user);
+    }
+
+    private void deactivateUser(User user) throws GendoxException {
+
+        authenticationService.deactivateUser(user.getEmail());
+    }
+
+
+
+
+
 }
