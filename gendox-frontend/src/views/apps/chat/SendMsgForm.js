@@ -58,7 +58,8 @@ const SendMsgForm = (props) => {
       <Box
         sx={{
           flexGrow: 1,
-          mr: 2,          
+          mr: 2,
+          "margin-bottom": "0.5rem",
         }}
       >
         <TextField
@@ -94,11 +95,18 @@ const SendMsgForm = (props) => {
               padding: "10px 15px",
               fontSize: "1rem",
               backgroundColor: "background.paper",
-              borderRadius: 2,
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-              overflow: "hidden",
-              position: "absolute",
-              bottom: 0,
+              borderRadius: "0.5rem",  // Set the border-radius here
+              boxShadow: "rgba(20, 21, 33, 0.2) 0px 2px 1px -1px, rgba(20, 21, 33, 0.14) 0px 1px 1px 0px, rgba(20, 21, 33, 0.12) 0px 1px 3px 0px",
+              // overflow: "hidden",
+              // position: "absolute",
+              // bottom: 0,
+              // Target the fieldset to remove the border color
+              "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "transparent", // Removes border in default state
+              },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "transparent", // Removes border in focus state
+              },
             },
           }}
         />

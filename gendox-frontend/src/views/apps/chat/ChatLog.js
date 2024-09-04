@@ -34,7 +34,11 @@ const ChatLog = (props) => {
   };
 
   return (
-    <Box sx={{ height: "calc(100% - 8.4375rem)" }}>
+    <Box sx={{
+      height: "calc(100% - 8.4375rem)",
+      "flex-grow": 1,
+      "overflow-y": "auto",
+    }}>
       <ChatLogScrollWrapper hidden={hidden} chatArea={chatArea}>
         {renderChats()}
       </ChatLogScrollWrapper>

@@ -107,6 +107,8 @@ const ChatContent = (props) => {
               flexGrow: 1,
               height: "100%",
               backgroundColor: "action.hover",
+              display: "flex",
+              "flex-direction": "column"
             }}
           >
             <Box
