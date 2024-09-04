@@ -81,7 +81,7 @@ import java.util.UUID;
                     proven_ai.policy_types pt ON acp.policy_type_id = pt.id
                 WHERE
                     m.id = :messageId
-                    AND pt.name = 'ATTRIBUTION_POLICY'
+                    AND (pt.name = 'ATTRIBUTION_POLICY' OR pt.name IS NULL)
                 GROUP BY
                     ms.section_id, m.id, ms.section_url, u.name, o.name, dis.section_iscc_code, m.created_at, m.thread_id, d.id, d.remote_url, dsm.title, pt.name
                                  
