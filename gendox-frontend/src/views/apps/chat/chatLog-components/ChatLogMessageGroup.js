@@ -18,7 +18,7 @@ const ChatLogMessageGroup = ({ messageData, data }) => {
         mb: 9.75,       
       }}
     >
-      <div>
+      <Box>
         <CustomAvatar
           skin="light"
           color={data.contact.avatarColor ? data.contact.avatarColor : undefined}
@@ -44,7 +44,7 @@ const ChatLogMessageGroup = ({ messageData, data }) => {
         >
           {data.contact.avatarColor ? getInitials(data.contact.fullName) : null}
         </CustomAvatar>
-      </div>
+      </Box>
 
       <Box
         className="chat-body"

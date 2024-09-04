@@ -55,8 +55,6 @@ const ChatContent = (props) => {
     }
   };
 
-  
-
   const renderContent = () => {
     if (store) {
       const selectedChat = store.selectedChat;
@@ -210,15 +208,23 @@ const ChatContent = (props) => {
                 />
               </Box> */}
             </Box>
-
+            
             {selectedChat && store.userProfile ? (
               <ChatLog
                 hidden={hidden}
-                data={{ ...selectedChat, userContact: store.userProfile }}
+                data={{ ...selectedChat, userContact: store.userProfile }}               
               />
             ) : null}
 
-            <SendMsgForm store={store} dispatch={dispatch} sendMsg={sendMsg} organizationId={organizationId}/>
+            
+              <SendMsgForm
+                store={store}
+                dispatch={dispatch}
+                sendMsg={sendMsg}
+                organizationId={organizationId}
+              />
+            
+
 
             <UserProfileRight
               store={store}

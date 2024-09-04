@@ -22,7 +22,8 @@ const ChatLogMessage = ({ message, isSender }) => {
 
 
   const fetchChatMessageInfo = async () => {
-    
+    console.log("Fetching message info");
+    console.log("Message ID: ", message.messageId);
     try {
       const response = await chatThreadService.getThreadMessageMetadataByMessageId(
         message.threadId,
@@ -35,15 +36,7 @@ const ChatLogMessage = ({ message, isSender }) => {
     catch (error) {
       console.error(error);
     }
-  }
-
-
-
-
-
-
-
-      
+  }      
 
   return (
     <Box sx={{ "&:not(:last-of-type)": { mb: 3.5 } }}>
