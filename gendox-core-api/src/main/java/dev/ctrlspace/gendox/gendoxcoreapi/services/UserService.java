@@ -31,6 +31,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -53,13 +54,15 @@ public class UserService implements UserDetailsService {
     private TypeService typeService;
     private AuthenticationService authenticationService;
     private final UserConverter userConverter;
-
+    private ProjectMemberService projectMemberService;
 
     private OrganizationService organizationService;
 
     private ProjectService projectService;
 
     private CacheManager cacheManager;
+
+    private UserOrganizationService userOrganizationService;
 
 
     @Autowired
@@ -71,7 +74,10 @@ public class UserService implements UserDetailsService {
                        OrganizationService organizationService,
                        ProjectService projectService,
                        CacheManager cacheManager,
-                       AuthenticationService authenticationService, UserConverter userConverter) {
+                       AuthenticationService authenticationService,
+                       UserConverter userConverter,
+                       UserOrganizationService userOrganizationService,
+                       ProjectMemberService projectMemberService) {
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
@@ -82,6 +88,8 @@ public class UserService implements UserDetailsService {
         this.cacheManager = cacheManager;
         this.authenticationService = authenticationService;
         this.userConverter = userConverter;
+        this.userOrganizationService = userOrganizationService;
+        this.projectMemberService = projectMemberService;
     }
 
     public Page<User> getAllUsers(UserCriteria criteria) {
@@ -306,17 +314,43 @@ public class UserService implements UserDetailsService {
         return level;
     }
 
-    public void deleteUserById(UUID userId) throws GendoxException {
+    public void deactivateUserById(UUID userId, Authentication authentication) throws GendoxException {
+        // Fetch user by ID
         User user = getById(userId);
 
+        removeUserAssociations(user, authentication);
+        clearUserData(user);
         deactivateUser(user);
-
-        userRepository.delete(user);
+        userRepository.save(user);
     }
 
     private void deactivateUser(User user) throws GendoxException {
-
         authenticationService.deactivateUser(user.getEmail());
+    }
+
+    private void clearUserData(User user) {
+        user.setName(null);
+        user.setFirstName(null);
+        user.setLastName(null);
+        user.setUserName(null);
+        user.setEmail(null);
+        user.setPhone(null);
+        user.setUserType(null);
+        user.setCreatedAt(null);
+        user.setUpdatedAt(null);
+    }
+
+    private void removeUserAssociations(User user,Authentication authentication) throws GendoxException {
+        UserProfile userProfile = (UserProfile) authentication.getPrincipal();
+        for (OrganizationUserDTO organization : userProfile.getOrganizations()) {
+            UUID organizationId = UUID.fromString(organization.getId());
+            userOrganizationService.deleteUserOrganization(organizationId, user.getId());
+
+            for (ProjectOrganizationDTO project : organization.getProjects()) {
+                UUID projectId = UUID.fromString(project.getId());
+                projectMemberService.removeMemberFromProject(projectId, user.getId());
+            }
+        }
     }
 
 
