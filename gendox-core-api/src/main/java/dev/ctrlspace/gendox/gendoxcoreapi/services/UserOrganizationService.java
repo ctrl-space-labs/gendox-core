@@ -138,8 +138,8 @@ public class UserOrganizationService {
         userOrganizationRepository.delete(userOrganization);
     }
 
-    public void deleteUserOrganization(UUID organizationId, UUID userId) throws GendoxException {
-        UserOrganization userOrganization = userOrganizationRepository.findByUserIdAndOrganizationId(organizationId, userId);
+    public void deleteUserOrganization(UUID userId,UUID organizationId) throws GendoxException {
+        UserOrganization userOrganization = userOrganizationRepository.findByUserIdAndOrganizationId(userId,organizationId);
         if (userOrganization == null) {
             throw new GendoxException("USER_ORGANIZATION_NOT_FOUND", "User-organization combination not found", HttpStatus.BAD_REQUEST);
         }

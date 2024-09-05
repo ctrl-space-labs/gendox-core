@@ -21,6 +21,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import io.micrometer.observation.annotation.Observed;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -319,8 +320,8 @@ public class UserService implements UserDetailsService {
         User user = getById(userId);
 
         removeUserAssociations(user, authentication);
-        clearUserData(user);
         deactivateUser(user);
+        clearUserData(user);
         userRepository.save(user);
     }
 
@@ -344,7 +345,8 @@ public class UserService implements UserDetailsService {
         UserProfile userProfile = (UserProfile) authentication.getPrincipal();
         for (OrganizationUserDTO organization : userProfile.getOrganizations()) {
             UUID organizationId = UUID.fromString(organization.getId());
-            userOrganizationService.deleteUserOrganization(organizationId, user.getId());
+
+            userOrganizationService.deleteUserOrganization(user.getId(),organizationId);
 
             for (ProjectOrganizationDTO project : organization.getProjects()) {
                 UUID projectId = UUID.fromString(project.getId());
