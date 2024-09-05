@@ -51,15 +51,36 @@ const ChatLogInfo = ({ messageMetadata }) => {
         {messageMetadata.map((sectionData, idx) => {
           const documentName = formatDocumentTitle(sectionData.documentUrl);
           const documentUrl = `/gendox/document-instance?organizationId=${organizationId}&documentId=${sectionData.documentId}`;
-          const sectionUrl = `/gendox/document-instance?organizationId=${organizationId}&sectionId=${sectionData.sectionId}`;
+          // const sectionUrl = `/gendox/document-instance?organizationId=${organizationId}&sectionId=${sectionData.sectionId}`;
+
+          let gridSize;
+
+          // Adjust grid sizes based on the total number of objects
+          switch (messageMetadata.length) {
+            case 1:
+              gridSize = { xs: 12, sm: 12, md: 12, lg: 12, xl: 12 };
+              break;
+            case 2:
+              gridSize = { xs: 12, sm: 6, md: 6, lg: 6, xl: 6 };
+              break;
+            case 3:
+              gridSize = { xs: 12, sm: 6, md: 4, lg: 4, xl: 4 };
+              break;
+            case 4:
+              gridSize = { xs: 12, sm: 6, md: 3, lg: 3, xl: 3 };
+              break;
+            default: // Case 5 or more objects
+              gridSize = { xs: 12, sm: 6, md: 6, lg: 4, xl: 2.4 }; // 5 items per row on large screens
+              break;
+          }
 
           return (
-            <Grid item xs={12} md={6} key={idx}>
+            <Grid item {...gridSize} key={idx}>
               <List
                 component="nav"
                 aria-label="main mailbox"
                 sx={{
-                  p: 3,
+                  // p: 3,
                   borderRadius: 1,
                   backgroundColor: "background.paper",
                   transition: "transform 0.2s",
@@ -85,12 +106,14 @@ const ChatLogInfo = ({ messageMetadata }) => {
                     </ListItemIcon>
                     <ListItemText
                       primary={
-                        sectionData.policyValue.includes("OWNER_PROFILE")
-                          ? sectionData.userName
-                          : "Secret Owner"
+                        <Typography sx={{ fontSize: "0.75rem" }}>
+                          {sectionData.policyValue.includes("OWNER_PROFILE")
+                            ? sectionData.userName
+                            : "Secret Owner"}
+                        </Typography>
                       }
                     />
-                    </Box>
+                  </Box>
                   {/* </ListItemButton> */}
                 </ListItem>
 
@@ -105,12 +128,22 @@ const ChatLogInfo = ({ messageMetadata }) => {
                       <ListItemIcon sx={{ color: "primary.main" }}>
                         <Icon icon="mdi:file-document-outline" fontSize={20} />
                       </ListItemIcon>
-                      <ListItemText primary={documentName} />
+                      <ListItemText
+                        primary={
+                          <Typography sx={{ fontSize: "0.75rem" }}>
+                            {sectionData.policyValue.includes(
+                              "ORIGINAL_DOCUMENT"
+                            )
+                              ? documentName
+                              : "Secret Document"}
+                          </Typography>
+                        }
+                      />
                     </ListItemButton>
                   </ListItem>
                 </Tooltip>
 
-                <Tooltip title="View section">
+                {/* <Tooltip title="View section">
                   <ListItem disablePadding>
                     <ListItemButton
                       component="a"
@@ -130,7 +163,7 @@ const ChatLogInfo = ({ messageMetadata }) => {
                       />
                     </ListItemButton>
                   </ListItem>
-                </Tooltip>
+                </Tooltip> */}
               </List>
             </Grid>
           );
