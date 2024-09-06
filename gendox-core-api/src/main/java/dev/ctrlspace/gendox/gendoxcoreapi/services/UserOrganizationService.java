@@ -6,7 +6,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserOrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
@@ -40,6 +42,7 @@ public class UserOrganizationService {
     private UserRepository userRepository;
 
 
+
     @Autowired
     private JWTUtils jwtUtils;
     private final OrganizationRepository organizationRepository;
@@ -51,7 +54,7 @@ public class UserOrganizationService {
                                    @Lazy OrganizationService organizationService,
                                    UserRepository userRepository,
                                    OrganizationRepository organizationRepository
-                                   ) {
+    ) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.typeService = typeRepository;
         this.userRepository = userRepository;
@@ -77,7 +80,7 @@ public class UserOrganizationService {
 
     }
 
-    public boolean isUserOrganizationMember(UUID userId, UUID organizationID){
+    public boolean isUserOrganizationMember(UUID userId, UUID organizationID) {
         return userOrganizationRepository.existsByUserIdAndOrganizationId(userId, organizationID);
     }
 
@@ -138,12 +141,48 @@ public class UserOrganizationService {
         userOrganizationRepository.delete(userOrganization);
     }
 
-    public void deleteUserOrganization(UUID userId,UUID organizationId) throws GendoxException {
-        UserOrganization userOrganization = userOrganizationRepository.findByUserIdAndOrganizationId(userId,organizationId);
+    public void deleteUserOrganization(UUID userId, UUID organizationId) throws GendoxException {
+        UserOrganization userOrganization = userOrganizationRepository.findByUserIdAndOrganizationId(userId, organizationId);
         if (userOrganization == null) {
             throw new GendoxException("USER_ORGANIZATION_NOT_FOUND", "User-organization combination not found", HttpStatus.BAD_REQUEST);
         }
         userOrganizationRepository.delete(userOrganization);
+    }
+
+
+    public UserOrganization addUserToOrganization(UUID organizationId, UserOrganizationDTO userOrganizationDTO) throws Exception {
+        if (!organizationId.equals(userOrganizationDTO.getOrganization().getId())) {
+            throw new GendoxException("ORGANIZATION_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserProfile userProfile = (UserProfile) authentication.getPrincipal();
+
+        // Fetch the organizationUserDTO from the user's profile
+        OrganizationUserDTO organizationUserDTO = userProfile.getOrganizations().stream()
+                .filter(org -> org.getId().equals(organizationId.toString()))
+                .findFirst()
+                .orElseThrow(() -> new GendoxException("USER_NOT_IN_ORGANIZATION", "User is not in the organization", HttpStatus.BAD_REQUEST));
+
+        // Retrieve the user's role from their authorities
+        String invitingUserRole = organizationUserDTO.getAuthorities().stream()
+                .filter(auth -> auth.startsWith("ROLE_"))
+                .findFirst()
+                .orElseThrow(() -> new GendoxException("USER_ROLE_NOT_FOUND", "User's role not found", HttpStatus.BAD_REQUEST));
+
+        User invitedUser = userService.getById(userOrganizationDTO.getUser().getId());
+
+        int invitingUserRoleLevel = userService.getUserOrganizationRoleLevel(invitingUserRole);
+        int invitedUserRoleLevel = userService.getUserOrganizationRoleLevel(userOrganizationDTO.getRole().getName());
+
+        if (invitedUserRoleLevel > invitingUserRoleLevel) {
+            throw new GendoxException("INSUFFICIENT_ROLE", "You cannot assign a role higher than your own", HttpStatus.FORBIDDEN);
+        }
+
+        userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser));
+
+        return this.createUserOrganization(invitedUser.getId(), organizationId, userOrganizationDTO.getRole().getName());
+
     }
 
 }

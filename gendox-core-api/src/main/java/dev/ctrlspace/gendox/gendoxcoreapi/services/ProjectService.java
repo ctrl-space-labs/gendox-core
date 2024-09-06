@@ -4,6 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
@@ -100,11 +101,29 @@ public class ProjectService {
     }
 
 
-    public void deleteProject(UUID id) throws Exception {
+    public void deactivateProject(UUID id) throws GendoxException {
 
         Project project = this.getProjectById(id);
+
+        if ("DEACTIVATED".equals(project.getName())) {
+            return;
+        }
+
         projectMemberService.deleteAllProjectMembers(project);
-        projectRepository.delete(project);
+        clearProjectData(project);
+        projectRepository.save(project);
+
+    }
+
+    private void clearProjectData(Project project) {
+        project.setName("DEACTIVATED");
+        project.setDescription(null);
+        project.setAutoTraining(null);
+        project.setUpdatedAt(null);
+        project.setCreatedAt(null);
+        project.setCreatedBy(null);
+        project.setUpdatedBy(null);
+
 
     }
 
