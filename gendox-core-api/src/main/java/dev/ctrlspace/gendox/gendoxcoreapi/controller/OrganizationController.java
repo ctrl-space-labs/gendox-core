@@ -178,7 +178,7 @@ public class OrganizationController {
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_DELETE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
-    @PutMapping("/organizations-deactivate/{organizationId}")
+    @PutMapping("/organizations/{organizationId}/deactivate")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Deactivate organization by ID",
             description = "Deactivate an existing organization and its projects by specifying its unique ID.")
