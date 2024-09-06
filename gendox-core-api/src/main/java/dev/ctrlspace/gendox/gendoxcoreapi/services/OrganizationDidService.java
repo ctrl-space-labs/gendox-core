@@ -162,6 +162,12 @@ public class OrganizationDidService {
 
 
     }
+
+    public void deleteOrganizationDidByOrganizationId(UUID organizationId) throws GendoxException {
+        OrganizationDid organizationDid = getOrganizationDidByOrganizationId(organizationId);
+        organizationDidRepository.delete(organizationDid);
+
+    }
 }
 
 

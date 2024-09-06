@@ -178,10 +178,10 @@ public class OrganizationController {
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_DELETE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
-    @DeleteMapping("/organizations/{organizationId}")
+    @PutMapping("/organizations-deactivate/{organizationId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete organization by ID",
-            description = "Delete an existing organization by specifying its unique ID.")
+    @Operation(summary = "Deactivate organization by ID",
+            description = "Deactivate an existing organization and its projects by specifying its unique ID.")
     @Observed(name = "OrganizationController.deleteOrganization",
             contextualName = "OrganizationController#deleteOrganization",
             lowCardinalityKeyValues = {
@@ -190,8 +190,8 @@ public class OrganizationController {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public void deleteOrganization(@PathVariable UUID organizationId) throws Exception {
-        organizationService.deleteOrganization(organizationId);
+    public void deactivateOrganization(@PathVariable UUID organizationId) throws Exception {
+        organizationService.deactivateOrganization(organizationId);
     }
 
 
@@ -238,42 +238,7 @@ public class OrganizationController {
             })
     public UserOrganization addUserToOrganization(@PathVariable UUID organizationId, @RequestBody UserOrganizationDTO userOrganizationDTO) throws Exception {
 
-        if (!organizationId.equals(userOrganizationDTO.getOrganization().getId())) {
-            throw new GendoxException("ORGANIZATION_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
-        }
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UserProfile userProfile = (UserProfile) authentication.getPrincipal();
-
-        // Fetch the organizationUserDTO from the user's profile
-        OrganizationUserDTO organizationUserDTO = userProfile.getOrganizations().stream()
-                .filter(org -> org.getId().equals(organizationId.toString()))
-                .findFirst()
-                .orElseThrow(() -> new GendoxException("USER_NOT_IN_ORGANIZATION", "User is not in the organization", HttpStatus.BAD_REQUEST));
-
-        // Retrieve the user's role from their authorities
-        String invitingUserRole = organizationUserDTO.getAuthorities().stream()
-                .filter(auth -> auth.startsWith("ROLE_"))
-                .findFirst()
-                .orElseThrow(() -> new GendoxException("USER_ROLE_NOT_FOUND", "User's role not found", HttpStatus.BAD_REQUEST));
-
-
-        User invitedUser = userService.getById(userOrganizationDTO.getUser().getId());
-
-        int invitingUserRoleLevel = userService.getUserOrganizationRoleLevel(invitingUserRole);
-        int invitedUserRoleLevel = userService.getUserOrganizationRoleLevel(userOrganizationDTO.getRole().getName());
-
-        if (invitedUserRoleLevel > invitingUserRoleLevel) {
-            throw new GendoxException("INSUFFICIENT_ROLE", "You cannot assign a role higher than your own", HttpStatus.FORBIDDEN);
-        }
-
-        userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser));
-
-        return userOrganizationService.createUserOrganization(
-                userOrganizationDTO.getUser().getId(),
-                userOrganizationDTO.getOrganization().getId(),
-                userOrganizationDTO.getRole().getName());
-
+        return userOrganizationService.addUserToOrganization(organizationId, userOrganizationDTO);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_REMOVE_USERS', 'getRequestedOrgIdFromPathVariable')")
@@ -293,4 +258,6 @@ public class OrganizationController {
     public void removeUserFromOrganization(@PathVariable UUID organizationId, @PathVariable UUID userId) throws Exception {
         userOrganizationService.deleteUserOrganization(userId, organizationId);
     }
+
+
 }
