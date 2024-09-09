@@ -120,6 +120,14 @@ export default {
   organizationPlans: (organizationId) =>
     `${url}organizations/${organizationId}/organization-plans`,
 
+  deactivateUserById: (userId) =>
+    `${url}users/${userId}/deactivate`,
+
+  deactivateOrganizationById: (organizationId) =>
+    `${url}organizations/${organizationId}/deactivate`,
+
+  deactivateProjectById: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/deactivate`,
 
 
 };

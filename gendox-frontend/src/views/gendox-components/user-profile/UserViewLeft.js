@@ -32,6 +32,8 @@ import Icon from "src/@core/components/icon";
 // ** Custom Components
 import CustomChip from "src/@core/components/mui/chip";
 import CustomAvatar from "src/@core/components/mui/avatar";
+import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
+
 // import UserSuspendDialog from 'src/views/apps/user/view/UserSuspendDialog'
 // import UserSubscriptionDialog from 'src/views/apps/user/view/UserSubscriptionDialog'
 
@@ -88,7 +90,7 @@ const UserViewLeft = ({ userData }) => {
   const [openPlans, setOpenPlans] = useState(false);
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
-
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false); 
 
   // Handle Edit dialog
   const handleEditClickOpen = () => setOpenEdit(true);
@@ -97,6 +99,24 @@ const UserViewLeft = ({ userData }) => {
   // Handle Upgrade Plan dialog
   const handlePlansClickOpen = () => setOpenPlans(true);
   const handlePlansClose = () => setOpenPlans(false);
+
+  // Handle Delete dialog
+  const handleDeleteClickOpen = () => setOpenDeleteDialog(true);
+  const handleDeleteClose = () => setOpenDeleteDialog(false);
+
+
+// Handle Delete User
+  const handleDeleteUser = async () => {
+    try {
+      await userService.deactivateUserById(userData.id, storedToken); 
+    } catch (error) {
+      toast.error("Error deactivating user");
+    } finally {
+      handleDeleteClose(); 
+    }
+};
+
+
   if (userData) {
     return (
       <Grid container spacing={6}>
@@ -266,7 +286,7 @@ const UserViewLeft = ({ userData }) => {
               </Box>
             </CardContent>
 
-            <CardActions sx={{ display: "flex", justifyContent: "center" }}>
+            <CardActions sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
               <Button
                 variant="contained"
                 sx={{ mr: 2 }}
@@ -274,8 +294,14 @@ const UserViewLeft = ({ userData }) => {
               >
                 Edit
               </Button>
-              
-            </CardActions>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleDeleteClickOpen} 
+              >
+                Delete
+              </Button>
+          </CardActions>
 
             <Dialog
               open={openEdit}
@@ -457,12 +483,19 @@ const UserViewLeft = ({ userData }) => {
                 </Button>
               </DialogActions>
             </Dialog>
-
             
           </Card>
         </Grid>
-
-        
+          {/* Delete Confirmation Dialog */}
+          <DeleteConfirmDialog
+            open={openDeleteDialog}
+            onClose={handleDeleteClose}
+            onConfirm={handleDeleteUser}
+            title="Confirm User Deletion"
+            contentText={`Are you sure you want to delete ${userData.name}? This action cannot be undone.`}
+            confirmButtonText="Delete Account"
+            cancelButtonText="Cancel"
+          />
       </Grid>
     );
   } else {
