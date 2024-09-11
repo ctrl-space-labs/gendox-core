@@ -147,9 +147,14 @@ public class OrganizationService {
     }
 
     public void deactivateOrganization(UUID organizationId) throws GendoxException {
-        List<UserOrganization> userOrganizations = userOrganizationService.getUserOrganizationByOrganizationId(organizationId);
 
         Organization organization = getById(organizationId);
+
+        if ( organization.getName().startsWith("DEACTIVATED-")) {
+            return;
+        }
+
+        List<UserOrganization> userOrganizations = userOrganizationService.getUserOrganizationByOrganizationId(organizationId);
 
         deactivateAllOrgProjects(organizationId);
 
@@ -177,7 +182,7 @@ public class OrganizationService {
     }
 
     private void clearOrgData(Organization organization) {
-        organization.setName("DEACTIVATED");
+        organization.setName("DEACTIVATED-" + organization.getId());
         organization.setDisplayName(null);
         organization.setAddress(null);
         organization.setPhone(null);
