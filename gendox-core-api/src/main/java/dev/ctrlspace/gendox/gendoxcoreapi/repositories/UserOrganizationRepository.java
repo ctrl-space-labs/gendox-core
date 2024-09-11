@@ -20,6 +20,8 @@ public interface UserOrganizationRepository extends JpaRepository<UserOrganizati
 
     public List<UserOrganization> findByOrganizationId(UUID organizationId);
 
+    long countByUserId(UUID userId);
+
     @Query("SELECT uo FROM UserOrganization uo WHERE uo.user.id = :userId AND uo.organization.id = :organizationId")
     UserOrganization findByUserIdAndOrganizationId(UUID userId, UUID organizationId);
 }
