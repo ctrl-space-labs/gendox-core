@@ -23,14 +23,13 @@ export const IFrameMessageManagerProvider = ({ children }) => {
     };
 
     useEffect(() => {
-
-        messageManager.init();
         //get url param named 'origin'
         const urlParams = new URLSearchParams(window.location.search);
         const originParam = decodeURIComponent(urlParams.get('origin'));
 
         if (originParam && !originUrl) {
             setOriginUrl(originParam);
+            messageManager.init(originParam, [originParam]);
             messageManager.setTargetOrigin(originParam);
             messageManager.addTrustedOrigin(originParam);
         }
@@ -38,7 +37,7 @@ export const IFrameMessageManagerProvider = ({ children }) => {
         if (_inIframe()) {
             setIsEmbedded(true);
             messageManager.addHandler(initializationHandler)
-            messageManager.sendMessage({ type: 'gendox.events.initialization.request', payload: {} }, originParam);
+            messageManager.sendMessage({ type: 'gendox.events.initialization.request', payload: {} });
             // console.log("In iframe. Sending initialization request to parent...");
 
         }

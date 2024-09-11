@@ -68,14 +68,15 @@ const AppChat = (props) => {
   useEffect(() => {
     // Hide navigation on mount
     settings.navHidden = true
-    if (props.embedView) {
-      // show the 'Powered By' in the iframe
-      settings.footerContent = 'poweredBy'
-      settings.showOrganizationDropdown = false
-    } else {
+    // no need to handle embedded view, no the embedded chat has a separate Layout
+    // if (props.embedView) {
+    //   // show the 'Powered By' in the iframe
+    //   settings.footerContent = 'poweredBy'
+    //   settings.showOrganizationDropdown = false
+    // } else {
       //hide the footer in chat
       settings.footer = 'hidden'
-    }
+    // }
     
     // Show navigation on unmount
     return () => {

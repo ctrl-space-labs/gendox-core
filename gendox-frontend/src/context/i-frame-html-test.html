@@ -18,11 +18,19 @@
 </div>
 <!--<iframe id="myIframe" src="http://localhost:3000/gendox/chat/?organizationId=0c1eedb0-fa61-4528-b15c-d5ad832155e3&threadId=018f00b0-3805-4c45-b4fb-f7cec8efb589"></iframe>-->
 <script>
+    const fullUrl = window.location.href;
+    const url = new URL(fullUrl);
+
+    const baseUrl = `${url.protocol}//${url.hostname}${url.port ? ':' + url.port : ''}`;
+    console.log(baseUrl);
+
     var messageListener = function(event) {
         if (event.data && event.data.type === 'gendox.events.initialization.request') {
             // var iframeWindow = document.getElementById("myIframe").contentWindow;
-            // var message = { type: "gendox.events.initialization.response", accessToken: "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJDR0NpMlNTX2lQNkdGYTBKQmVqRjAxYzNpcDBTdm43d2FLMGNYQnJHR19RIn0.eyJleHAiOjE3MjMxMzc2OTgsImlhdCI6MTcyMzEwODg5OCwiYXV0aF90aW1lIjoxNzIzMTA3ODQ0LCJqdGkiOiIwNmE3YTg5MS1mYTRmLTQ1MmQtYmUyYS1kOTBhMTBhZWJkMzciLCJpc3MiOiJodHRwczovL2Rldi5nZW5kb3guY3RybHNwYWNlLmRldi9pZHAvcmVhbG1zL2dlbmRveC1pZHAtZGV2IiwiYXVkIjoiYWNjb3VudCIsInN1YiI6ImFiZDllN2NiLWRhOGItNGUzZi04YWU5LTc4NDI2ZmJkNzdlZSIsInR5cCI6IkJlYXJlciIsImF6cCI6ImdlbmRveC1wa2NlLXB1YmxpYy1jbGllbnQtbG9jYWwiLCJzZXNzaW9uX3N0YXRlIjoiMGY3NTA0ZjktNTc5Mi00NGVjLTljNjItOTM3ZDc5YTQ5NGI4IiwiYWNyIjoiMCIsImFsbG93ZWQtb3JpZ2lucyI6WyJodHRwOi8vbG9jYWxob3N0OjMwMDAiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtZ2VuZG94LWlkcC1kZXYiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJvcGVuaWQgZW1haWwgcHJvZmlsZSIsInNpZCI6IjBmNzUwNGY5LTU3OTItNDRlYy05YzYyLTkzN2Q3OWE0OTRiOCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYW1lIjoiQ2hyaXMgVGVzdCBTZWthcyAiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJjc2VrYXNAdGVzdC5jb20iLCJnaXZlbl9uYW1lIjoiQ2hyaXMgVGVzdCIsImZhbWlseV9uYW1lIjoiU2VrYXMgIiwiZW1haWwiOiJjc2VrYXNAdGVzdC5jb20ifQ.jWoKE287MYsqHpK_d8oQ8VaT_D3ti6qUQuqVdAmkXy8CPHjHUcG7pZduBYLl3QETxRMUSJY-vRtnxxHKL0PYzbKCeUwsUtVpAvMczwpcTT0Uhi_5lzFEPP7Aq4vKOdtWOZYOQmv36-XHGUk54VuAqjJ9FDN0gIYGbab7iuk8cYJ8U_1WAJjD3o6LNaeDWo1ABBFIadM9Kv-d_RTtIdJywhEzThzyjeiYiibiE6T-g9i8zbZeZ9u8a_uhihfLgXMNe_Psw8ThAtEFC-O-bADzwrWJ3XvtHOE0P2JqgdQegtz8dRcT3f4QSDQMAXmLxS7EfhQQjDoaIOKV2FM05E6GjA" };
-            // iframeWindow.postMessage(message, "*");
+            var message = { type: "gendox.events.initialization.response", page: "..." };
+
+            iframeWindow.postMessage(message, "*");
+            console.log('Received message from iframe', event.data);
         }
     }
 
