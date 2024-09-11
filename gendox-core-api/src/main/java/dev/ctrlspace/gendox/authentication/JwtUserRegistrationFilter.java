@@ -26,6 +26,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Filter to register a user if it does not exist in the database
@@ -69,7 +70,11 @@ public class JwtUserRegistrationFilter extends OncePerRequestFilter {
             if (userOptional.isEmpty()) {
                 logger.info("User with email {} not found in the database, registering a new user!", email);
                 User user = new User();
+                user.setId(UUID.fromString(jwt.getClaim("sub")));
+                user.setFirstName(jwt.getClaimAsString("given_name"));
+                user.setLastName(jwt.getClaimAsString("family_name"));
                 user.setEmail(email);
+                user.setUserName(email);
                 user = userService.createUser(user);
 
                 Page<Invitation> invitations = userInvitationService.getInvitationsByCriteria(
