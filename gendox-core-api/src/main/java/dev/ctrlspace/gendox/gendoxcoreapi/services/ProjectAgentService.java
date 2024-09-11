@@ -113,7 +113,9 @@ public class ProjectAgentService {
         // Enable Agent to become User
         User user = new User();
         user.setName(projectAgent.getAgentName());
-        user.setUserName(projectAgent.getAgentName().toLowerCase());
+        // ensure uniqueness of Agent username
+        user.setUserName(projectAgent.getAgentName().toLowerCase() + "-" + UUID.randomUUID());
+
         user.setUserType(typeService.getUserTypeByName(UserNamesConstants.GENDOX_AGENT));
         // TODO: this is just a Hack... Use Keycloak Attributes when the Gendox's Keycloak Service starts support attributes .
         //  So the Agent's surname is set to 'GENDOX_AGENT' for now
