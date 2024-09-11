@@ -122,6 +122,7 @@ export default {
 
   getThreadMessageMetadata: (threadId, messageId) =>
     `${url}threads/${threadId}/message-metadata/${messageId}`,
+  
   deactivateUserById: (userId) =>
     `${url}users/${userId}/deactivate`,
 

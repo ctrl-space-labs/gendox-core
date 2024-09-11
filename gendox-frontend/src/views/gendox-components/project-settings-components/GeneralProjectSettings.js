@@ -19,6 +19,8 @@ import Icon from "src/@core/components/icon";
 import Tooltip from "@mui/material/Tooltip";
 import projectService from "src/gendox-sdk/projectService";
 import documentService from "src/gendox-sdk/documentService";
+import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
+
 
 const GeneralProjectSettings = () => {
   const router = useRouter();
@@ -38,6 +40,7 @@ const GeneralProjectSettings = () => {
   const [alertMessage, setAlertMessage] = useState("");
   const [error, setError] = useState("");
   const [isBlurring, setIsBlurring] = useState(true);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
   useEffect(() => {
     if (project) {
@@ -99,6 +102,29 @@ const GeneralProjectSettings = () => {
         setAlertMessage("Error triggering training: " + error.message);
         setAlertOpen(true);
       });
+  };
+
+
+  const handleDeleteClickOpen = () => setOpenDeleteDialog(true);
+  const handleDeleteClose = () => setOpenDeleteDialog(false);
+
+  const handleDeleteProject = async () => {
+    try {
+      await projectService.deactivateProjectById(
+        project.organizationId,
+        project.id,
+        storedToken
+      );
+      console.log("Project Deactivation successful");
+      setAlertMessage("Project deleted successfully!");
+      setAlertOpen(true);
+      handleDeleteClose();
+      router.push("/gendox/home"); // Redirect after deletion
+    } catch (error) {
+      console.error("Failed to delete project", error);
+      setAlertMessage("Failed to delete the project!");
+      setAlertOpen(true);
+    }
   };
 
   return (
@@ -210,6 +236,17 @@ const GeneralProjectSettings = () => {
         <Divider sx={{ m: "0 !important" }} />
 
         <CardActions sx={{ justifyContent: "flex-end", p: 2 }}>
+          
+        <Button
+            size="large"
+            variant="outlined"
+            color="error"
+            onClick={handleDeleteClickOpen}
+            sx={{ px: 22, py: 3 }}
+          >
+            Delete
+          </Button>
+          
           <Button
             size="large"
             type="submit"
@@ -234,6 +271,15 @@ const GeneralProjectSettings = () => {
           {alertMessage}
         </Alert>
       </Snackbar>
+      <DeleteConfirmDialog
+          open={openDeleteDialog}
+          onClose={handleDeleteClose}
+          onConfirm={handleDeleteProject}
+          title="Delete Project"
+          contentText={`Are you sure you want to delete ${project.name}? All member users will be removed and you will lose access to all related documents. This action cannot be undone.`}
+          confirmButtonText="Delete"
+          cancelButtonText="Cancel"
+        />
     </Card>
   );
 };

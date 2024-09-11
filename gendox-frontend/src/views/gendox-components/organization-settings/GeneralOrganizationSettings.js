@@ -110,7 +110,7 @@ const GeneralOrganizationSettings = () => {
       setAlertMessage("Organization deleted successfully!");
       setAlertOpen(true);
       setDeleteDialogOpen(false);
-      router.push("/gendox/organizations"); // Redirect after deletion
+      router.push("/gendox/user-profile"); // Redirect after deletion
     } catch (error) {
       console.error("Failed to delete organization", error);
       setAlertMessage("Failed to delete the organization!");
@@ -246,7 +246,7 @@ const GeneralOrganizationSettings = () => {
         onClose={handleDeleteClose}
         onConfirm={handleDeleteOrganization}
         title="Delete"
-        contentText={`Are you sure you want to delete ${organization.name}? This action cannot be undone.`}
+        contentText={`Are you sure you want to delete ${organization.name}? All member users will be removed and you will lose access to all related documents. This action cannot be undone.`}
         confirmButtonText="Delete"
         cancelButtonText="Cancel"
       />

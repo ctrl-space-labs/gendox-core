@@ -343,14 +343,19 @@ public class UserService implements UserDetailsService {
 
     private void removeUserAssociations(User user,Authentication authentication) throws GendoxException {
         UserProfile userProfile = (UserProfile) authentication.getPrincipal();
-        for (OrganizationUserDTO organization : userProfile.getOrganizations()) {
-            UUID organizationId = UUID.fromString(organization.getId());
+        if (userProfile != null && userProfile.getOrganizations() != null) {
+            for (OrganizationUserDTO organization : userProfile.getOrganizations()) {
+                UUID organizationId = UUID.fromString(organization.getId());
 
-            userOrganizationService.deleteUserOrganization(user.getId(),organizationId);
+                // Remove user associations with organizations and projects
+                userOrganizationService.deleteUserOrganization(user.getId(), organizationId);
 
-            for (ProjectOrganizationDTO project : organization.getProjects()) {
-                UUID projectId = UUID.fromString(project.getId());
-                projectMemberService.removeMemberFromProject(projectId, user.getId());
+                if (organization.getProjects() != null) {
+                    for (ProjectOrganizationDTO project : organization.getProjects()) {
+                        UUID projectId = UUID.fromString(project.getId());
+                        projectMemberService.removeMemberFromProject(projectId, user.getId());
+                    }
+                }
             }
         }
     }
@@ -358,5 +363,9 @@ public class UserService implements UserDetailsService {
 
 
 
+    }
 
-}
+
+
+
+

@@ -1,6 +1,11 @@
 // ** React Imports
 import { useState } from "react";
 
+import { useRouter } from "next/router";
+
+// ** Config
+import authConfig from "src/configs/auth";
+
 // ** MUI Imports
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
@@ -25,6 +30,9 @@ import InputAdornment from "@mui/material/InputAdornment";
 import LinearProgress from "@mui/material/LinearProgress";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import DialogContentText from "@mui/material/DialogContentText";
+import toast from "react-hot-toast";
+import userService from "src/gendox-sdk/userService";
+import Alert from "@mui/material/Alert";
 
 // ** Icon Imports
 import Icon from "src/@core/components/icon";
@@ -85,12 +93,20 @@ const Sub = styled("sub")({
 });
 
 const UserViewLeft = ({ userData }) => {
+
+  const router = useRouter();
+  const storedToken = window.localStorage.getItem(
+    authConfig.storageTokenKeyName
+  );
+
   // ** States
   const [openEdit, setOpenEdit] = useState(false);
   const [openPlans, setOpenPlans] = useState(false);
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false); 
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
 
   // Handle Edit dialog
   const handleEditClickOpen = () => setOpenEdit(true);
@@ -104,17 +120,33 @@ const UserViewLeft = ({ userData }) => {
   const handleDeleteClickOpen = () => setOpenDeleteDialog(true);
   const handleDeleteClose = () => setOpenDeleteDialog(false);
 
+  const handleAlertClose = () => setAlertOpen(false);
 
-// Handle Delete User
+  // Handle Delete User
   const handleDeleteUser = async () => {
-    try {
-      await userService.deactivateUserById(userData.id, storedToken); 
-    } catch (error) {
-      toast.error("Error deactivating user");
-    } finally {
-      handleDeleteClose(); 
+    console.log("Attempting to delete user:", userData.id); // Debugging log
+    if (!storedToken) {
+      toast.error("Authentication token missing.");
+      return;
     }
-};
+  
+    try {
+      // Call the API function and pass the user ID and stored token
+      await userService.deactivateUserById(userData.id, storedToken);
+      setAlertMessage("Account deleted successfully!");
+      setAlertOpen(true);
+      setDeleteDialogOpen(false);
+      router.push("/login"); 
+    } catch (error) {
+      console.error("Error deactivating user:", error); // Log the error for debugging
+      setAlertMessage("Failed to delete the user account!");
+      setAlertOpen(true);
+    } finally {
+      handleDeleteClose(); // Close the delete confirmation dialog
+    }
+  };
+  
+
 
 
   if (userData) {
@@ -492,7 +524,7 @@ const UserViewLeft = ({ userData }) => {
             onClose={handleDeleteClose}
             onConfirm={handleDeleteUser}
             title="Confirm User Deletion"
-            contentText={`Are you sure you want to delete ${userData.name}? This action cannot be undone.`}
+            contentText={`Are you sure you want to delete ${userData.name}? You will lose access to all organizations and documents. This action cannot be undone.`}
             confirmButtonText="Delete Account"
             cancelButtonText="Cancel"
           />
