@@ -150,24 +150,43 @@ public class OrganizationService {
 
         Organization organization = getById(organizationId);
 
-        if ( organization.getName().startsWith("DEACTIVATED-")) {
+
+        if (("DEACTIVATED").equals(organization.getName())) {
             return;
         }
 
+        // Fetch all user organizations for this organization
         List<UserOrganization> userOrganizations = userOrganizationService.getUserOrganizationByOrganizationId(organizationId);
 
+        // Deactivate all projects associated with the organization
         deactivateAllOrgProjects(organizationId);
 
+        // Iterate through user organizations to handle both deletion and exception
         for (UserOrganization userOrganization : userOrganizations) {
-            userOrganizationRepository.delete(userOrganization);
+            UUID userId = userOrganization.getUser().getId();
+
+            // Count the number of organizations the user is associated with
+            long count = userOrganizationRepository.countByUserId(userId);
+
+            if (count <= 1) {
+                // If the user has exactly one organization, throw an exception
+                throw new GendoxException("ORGANIZATION_DEACTIVATION_FAILED", "Cannot deactivate organization. User is associated with only one organization", HttpStatus.BAD_REQUEST);
+            } else {
+                // If the user has more than one organization, delete the association
+                userOrganizationRepository.delete(userOrganization);
+            }
         }
 
+        // Delete other associated data
         organizationDidService.deleteOrganizationDidByOrganizationId(organizationId);
         walletKeyService.deleteWalletKeyByOrganizationId(organizationId);
 
+        // Clear organization data and save the changes
         clearOrgData(organization);
         organizationRepository.save(organization);
     }
+
+
 
     private void deactivateAllOrgProjects(UUID organizationId) throws GendoxException {
 
@@ -182,7 +201,7 @@ public class OrganizationService {
     }
 
     private void clearOrgData(Organization organization) {
-        organization.setName("DEACTIVATED-" + organization.getId());
+        organization.setName("DEACTIVATED");
         organization.setDisplayName(null);
         organization.setAddress(null);
         organization.setPhone(null);

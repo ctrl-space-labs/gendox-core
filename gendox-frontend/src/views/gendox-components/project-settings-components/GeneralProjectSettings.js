@@ -118,7 +118,7 @@ const GeneralProjectSettings = () => {
       console.log("Project Deactivation successful");
       setAlertMessage("Project deleted successfully!");
       setAlertOpen(true);
-      handleDeleteClose();
+      handleDeleteClose(false);
       router.push("/gendox/home"); // Redirect after deletion
     } catch (error) {
       console.error("Failed to delete project", error);

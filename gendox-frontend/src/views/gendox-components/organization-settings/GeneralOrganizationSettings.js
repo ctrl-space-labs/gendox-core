@@ -109,8 +109,8 @@ const GeneralOrganizationSettings = () => {
       console.log("Organization Deactivation successful");
       setAlertMessage("Organization deleted successfully!");
       setAlertOpen(true);
-      setDeleteDialogOpen(false);
-      router.push("/gendox/user-profile"); // Redirect after deletion
+      handleDeleteClose(false);
+      router.push("/gendox/home") 
     } catch (error) {
       console.error("Failed to delete organization", error);
       setAlertMessage("Failed to delete the organization!");

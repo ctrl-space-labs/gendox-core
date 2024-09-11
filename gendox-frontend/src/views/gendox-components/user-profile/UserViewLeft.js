@@ -33,7 +33,6 @@ import DialogContentText from "@mui/material/DialogContentText";
 import toast from "react-hot-toast";
 import userService from "src/gendox-sdk/userService";
 import Alert from "@mui/material/Alert";
-
 // ** Icon Imports
 import Icon from "src/@core/components/icon";
 
@@ -47,6 +46,10 @@ import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 
 // ** Utils Import
 import { getInitials } from "src/@core/utils/get-initials";
+
+import { useAuth } from "src/hooks/useAuth";
+
+
 
 const data = {
   id: 1,
@@ -93,11 +96,14 @@ const Sub = styled("sub")({
 });
 
 const UserViewLeft = ({ userData }) => {
-
+  const auth = useAuth();
   const router = useRouter();
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
+
+  const { logout } = useAuth();
+
 
   // ** States
   const [openEdit, setOpenEdit] = useState(false);
@@ -107,6 +113,8 @@ const UserViewLeft = ({ userData }) => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false); 
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+
+  
 
   // Handle Edit dialog
   const handleEditClickOpen = () => setOpenEdit(true);
@@ -122,6 +130,12 @@ const UserViewLeft = ({ userData }) => {
 
   const handleAlertClose = () => setAlertOpen(false);
 
+
+  const handleLogout = () => {
+    logout();
+  };
+
+
   // Handle Delete User
   const handleDeleteUser = async () => {
     console.log("Attempting to delete user:", userData.id); // Debugging log
@@ -135,8 +149,10 @@ const UserViewLeft = ({ userData }) => {
       await userService.deactivateUserById(userData.id, storedToken);
       setAlertMessage("Account deleted successfully!");
       setAlertOpen(true);
-      setDeleteDialogOpen(false);
-      router.push("/login"); 
+      setOpenDeleteDialog(false);
+      
+      handleLogout();
+      
     } catch (error) {
       console.error("Error deactivating user:", error); // Log the error for debugging
       setAlertMessage("Failed to delete the user account!");
