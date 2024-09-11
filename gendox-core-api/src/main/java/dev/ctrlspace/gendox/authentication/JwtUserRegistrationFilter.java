@@ -73,6 +73,7 @@ public class JwtUserRegistrationFilter extends OncePerRequestFilter {
                 user.setId(UUID.fromString(jwt.getClaim("sub")));
                 user.setFirstName(jwt.getClaimAsString("given_name"));
                 user.setLastName(jwt.getClaimAsString("family_name"));
+                user.setName(user.getFirstName() + " " + user.getLastName());
                 user.setEmail(email);
                 user.setUserName(email);
                 user = userService.createUser(user);
