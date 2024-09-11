@@ -110,11 +110,18 @@ const GeneralOrganizationSettings = () => {
       setAlertMessage("Organization deleted successfully!");
       setAlertOpen(true);
       handleDeleteClose(false);
-      router.push("/gendox/home") 
+      setTimeout(() => {
+        router.push("/gendox/home");
+      }, 2000); // Adjust the delay as neede
     } catch (error) {
       console.error("Failed to delete organization", error);
       setAlertMessage("Failed to delete the organization!");
       setAlertOpen(true);
+  
+      // Delay the redirection to ensure alert is displayed
+      setTimeout(() => {
+        router.push("/gendox/home");
+      }, 2000); // Adjust the delay as needed
     }
   };
 
