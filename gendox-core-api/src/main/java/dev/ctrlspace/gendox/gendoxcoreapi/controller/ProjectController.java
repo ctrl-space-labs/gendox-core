@@ -122,7 +122,7 @@ public class ProjectController {
             description = "Create a new project for the organization. " +
                     "The user must have the necessary permissions to create projects for the organization. " +
                     "This endpoint accepts a JSON payload describing the project details.")
-    public Project createProject(@PathVariable UUID organizationId, @RequestBody ProjectDTO projectDTO) throws Exception {
+    public Project createProject(@PathVariable UUID organizationId, @Valid @RequestBody ProjectDTO projectDTO) throws Exception {
 
         if (projectDTO.getId() != null) {
             throw new GendoxException("PROJECT_ID_MUST_BE_NULL", "Project id is not null", HttpStatus.BAD_REQUEST);
