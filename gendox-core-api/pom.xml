@@ -313,14 +313,14 @@
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-admin-client</artifactId>
-            <version>24.0.3</version>
+            <version>25.0.5</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.keycloak/keycloak-core -->
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-core</artifactId>
-            <version>24.0.3</version>
+            <version>25.0.5</version>
         </dependency>
 
         <dependency>
