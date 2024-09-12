@@ -158,9 +158,6 @@ public class OrganizationService {
         // Fetch all user organizations for this organization
         List<UserOrganization> userOrganizations = userOrganizationService.getUserOrganizationByOrganizationId(organizationId);
 
-        // Deactivate all projects associated with the organization
-        deactivateAllOrgProjects(organizationId);
-
         // Iterate through user organizations to handle both deletion and exception
         for (UserOrganization userOrganization : userOrganizations) {
             UUID userId = userOrganization.getUser().getId();
@@ -172,7 +169,8 @@ public class OrganizationService {
                 // If the user has exactly one organization, throw an exception
                 throw new GendoxException("ORGANIZATION_DEACTIVATION_FAILED", "Cannot deactivate organization. User is associated with only one organization", HttpStatus.BAD_REQUEST);
             } else {
-                // If the user has more than one organization, delete the association
+
+                deactivateAllOrgProjects(organizationId);
                 userOrganizationRepository.delete(userOrganization);
             }
         }

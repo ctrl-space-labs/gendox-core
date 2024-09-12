@@ -2,11 +2,10 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ProjectConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
@@ -35,18 +34,27 @@ public class ProjectService {
 
     private ProjectConverter projectConverter;
 
+    private ProjectMemberRepository projectMemberRepository;
+
+    private TypeService typeService;
+
 
     @Autowired
     public ProjectService(ProjectRepository projectRepository,
                           ProjectAgentService projectAgentService,
                           ProjectConverter projectConverter,
                           ProjectMemberService projectMemberService,
-                          UserOrganizationService userOrganizationService) {
+                          UserOrganizationService userOrganizationService,
+                          ProjectMemberRepository projectMemberRepository,
+                          TypeService typeService) {
         this.projectRepository = projectRepository;
         this.projectAgentService = projectAgentService;
         this.projectConverter = projectConverter;
         this.projectMemberService = projectMemberService;
         this.userOrganizationService = userOrganizationService;
+        this.projectMemberRepository = projectMemberRepository;
+        this.typeService = typeService;
+
     }
 
     public Project getProjectById(UUID id) throws GendoxException {
@@ -109,10 +117,39 @@ public class ProjectService {
             return;
         }
 
+        // Fetch all project members for this project
+        List<ProjectMember> projectMembers = projectMemberService.getProjectMembersByProjectId(id);
+
+        // Fetch the type for GENDOX_AGENT to compare against user types
+        Type agentType = typeService.getUserTypeByName("GENDOX_AGENT");
+
+        // Iterate through project members to handle both deletion and exception
+        for (ProjectMember projectMember : projectMembers) {
+            UUID userId = projectMember.getUser().getId();
+
+            // Check if the user is an agent and skip the count check if they are
+            if (projectMember.getUser().getUserType().equals(agentType)) {
+                // Skip checking for GENDOX_AGENT users
+                continue;
+            }
+
+            // Count the number of projects the user is associated with
+            long count = projectMemberRepository.countByUserId(userId);
+
+            if (count <= 1) {
+                // If the user has exactly one project, throw an exception
+                throw new GendoxException(
+                        "PROJECT_DEACTIVATION_FAILED",
+                        "Cannot deactivate project. User is associated with only one project",
+                        HttpStatus.BAD_REQUEST
+                );
+            }
+        }
+
+        // Delete other associated data
         projectMemberService.deleteAllProjectMembers(project);
         clearProjectData(project);
         projectRepository.save(project);
-
     }
 
     private void clearProjectData(Project project) {
