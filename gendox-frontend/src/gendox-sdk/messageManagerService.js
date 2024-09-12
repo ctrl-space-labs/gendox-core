@@ -35,6 +35,14 @@ class MessageManagerService {
         if (targetOrigin) {
             target = targetOrigin;
         }
+
+        // I can't find why sometimes it is initiated as 'null'
+        // usually when an embedded page, is not actually embedded, but viewed directly in the browser
+        // Prize: 1 hug to the person who finds the bug!
+        if (!target || target === 'null') {
+            console.error("Target origin not set. Cannot send message.");
+            return;
+        }
         window.parent.postMessage(message, target);
     }
 

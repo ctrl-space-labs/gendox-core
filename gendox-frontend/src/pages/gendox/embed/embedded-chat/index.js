@@ -97,7 +97,7 @@ const EmbeddedChatApp = (props) => {
                             : `url('/images/gendox-background-dark.webp')`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
-                    backgroundRepeat: "no-repeat",
+                    backgroundRepeat: "no-repeat"
                 }}
             >
                 {/* "X" button to close the chat window */}
@@ -116,7 +116,8 @@ const EmbeddedChatApp = (props) => {
                     </IconButton>
                 )}
 
-                <Box className="embedded-app-chat" sx={{ flex: 1 }}>
+                <Box className="embedded-app-chat" sx={{ flex: 1,
+                    "max-height":"calc(100% - 3rem)" }}>
                     <AppChat {...appChatConfig} />
                 </Box>
                 <footer>
@@ -138,7 +139,8 @@ EmbeddedChatApp.authGuard = false
 
 EmbeddedChatApp.setConfig = () => {
     return {
-        skin: 'embedded'
+        skin: 'embedded',
+        mode: "light",
     }
 }
 

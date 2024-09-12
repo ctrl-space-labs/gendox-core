@@ -127,8 +127,7 @@
         window.gendox.widget = {};
         window.gendox.widget.config = config;
 
-        document.addEventListener('DOMContentLoaded', function () {
-
+        function runChatInitializationOnLoadedDOM() {
             // Create container and iframe elements dynamically
             createChatElements(config.gendoxContainerId, config.gendoxIframeId, config.organizationId, config.threadId, config.origin);
 
@@ -138,8 +137,18 @@
             }
 
             initializeChat(config);
+        }
 
-        });
+        // Check if DOM is already loaded
+        if (document.readyState === 'loading') {
+            // Still loading, wait for the DOMContentLoaded event
+            document.addEventListener('DOMContentLoaded', function () {
+                runChatInitializationOnLoadedDOM();
+            });
+        } else {
+            // DOM is already loaded, run the initialization immediately
+            runChatInitializationOnLoadedDOM();
+        }
 
     };
 
