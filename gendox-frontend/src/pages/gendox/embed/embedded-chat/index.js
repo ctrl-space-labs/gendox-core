@@ -8,6 +8,7 @@ import BlankLayout from "../../../../@core/layouts/BlankLayout";
 import PoweredByGendox from "../../../../layouts/components/shared-components/PoweredByGendox";
 import IconButton from "@mui/material/IconButton";
 import {CloseIcon} from "next/dist/client/components/react-dev-overlay/internal/icons/CloseIcon";
+import {useIFrameMessageManager} from "../../../../context/IFrameMessageManagerContext";
 
 
 // Add any extra configurations here
@@ -34,9 +35,27 @@ const EmbeddedChatApp = (props) => {
     const theme = useTheme();
     const { settings } = useSettings();
     const [isOpen, setIsOpen] = useState(false); // Manage chat window visibility
+    const iFrameMessageManager = useIFrameMessageManager();
 
 
-    const toggleChatWindow = () => setIsOpen(!isOpen);
+    const toggleChatWindow = () => {
+        const nextState = !isOpen;
+        const sendMessage = () => {
+            iFrameMessageManager.messageManager.sendMessage({
+                type: 'GENDOX_EVENTS_EMBEDDED_CHAT_TOGGLE_ACTION',
+                data: { isOpen: nextState }
+            });
+        };
+
+        // Delay logic depending on whether we're opening or closing
+        if (nextState) {
+            sendMessage(); // Opening: send the message immediately
+            setTimeout(() => setIsOpen(nextState), 10); // Delay state update
+        } else {
+            setIsOpen(nextState); // Closing: update state immediately
+            setTimeout(sendMessage, 320); // Delay message
+        }
+    };
 
     return (
         <>
@@ -46,13 +65,13 @@ const EmbeddedChatApp = (props) => {
                     onClick={toggleChatWindow}
                     sx={{
                         position: 'fixed',
-                        bottom: theme.spacing(2), // Place the bubble near the bottom
-                        right: theme.spacing(2), // Place it near the right
-                        width: 60,
-                        height: 60,
+                        bottom: theme.spacing(0), // Place the bubble near the bottom
+                        right: theme.spacing(0), // Place it near the right
+                        // width: 60,
+                        // height: 60,
                         borderRadius: "50%",
-                        zIndex: 1001, // Keep above other content
-                        boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)', // Add a shadow for effect
+                        zIndex: 999, // Keep above other content
+                        // boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)', // Add a shadow for effect
                         display: 'flex', // Show the bubble when chat window is closed
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -116,6 +135,12 @@ const EmbeddedChatApp = (props) => {
 EmbeddedChatApp.authProviderOption = appChatConfig.authProviderOption;
 // // Allow both authenticated and unauthenticated users to access the embedded chat
 EmbeddedChatApp.authGuard = false
+
+EmbeddedChatApp.setConfig = () => {
+    return {
+        skin: 'embedded'
+    }
+}
 
 EmbeddedChatApp.getLayout = page => <BlankLayout>{page}</BlankLayout>
 
