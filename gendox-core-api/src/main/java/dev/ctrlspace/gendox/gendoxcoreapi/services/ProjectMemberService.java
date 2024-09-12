@@ -208,5 +208,9 @@ public class ProjectMemberService {
 
     }
 
+    public List<ProjectMember> getProjectMembersByProjectId(UUID projectId) {
+        return projectMemberRepository.findByProjectId(projectId);
+    }
+
 
 }
