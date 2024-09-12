@@ -119,11 +119,17 @@ const GeneralProjectSettings = () => {
       setAlertMessage("Project deleted successfully!");
       setAlertOpen(true);
       handleDeleteClose(false);
-      router.push("/gendox/home"); // Redirect after deletion
+      setTimeout(() => {
+        router.push("/gendox/home");
+      }, 2000);  
     } catch (error) {
       console.error("Failed to delete project", error);
       setAlertMessage("Failed to delete the project!");
       setAlertOpen(true);
+
+      setTimeout(() => {
+        router.push("/gendox/home");
+      }, 2000); 
     }
   };
 
