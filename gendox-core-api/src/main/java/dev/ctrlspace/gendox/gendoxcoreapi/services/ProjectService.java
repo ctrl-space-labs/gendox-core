@@ -110,18 +110,31 @@ public class ProjectService {
 
 
     public void deactivateProject(UUID id) throws GendoxException {
-
         Project project = this.getProjectById(id);
 
         if ("DEACTIVATED".equals(project.getName())) {
             return;
         }
 
+        // Fetch the organization ID for this project
+        UUID organizationId = project.getOrganizationId();
+
         // Fetch all project members for this project
         List<ProjectMember> projectMembers = projectMemberService.getProjectMembersByProjectId(id);
 
         // Fetch the type for GENDOX_AGENT to compare against user types
         Type agentType = typeService.getUserTypeByName("GENDOX_AGENT");
+
+        // Check if this is the last project of its organization
+        long projectCountInOrganization = projectRepository.countByOrganizationId(organizationId);
+
+        if (projectCountInOrganization <= 1) {
+            throw new GendoxException(
+                    "PROJECT_DEACTIVATION_FAILED",
+                    "Cannot deactivate project. Organization must have at least one project.",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
 
         // Iterate through project members to handle both deletion and exception
         for (ProjectMember projectMember : projectMembers) {
