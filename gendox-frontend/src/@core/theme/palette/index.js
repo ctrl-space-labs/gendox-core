@@ -8,6 +8,8 @@ const DefaultPalette = (mode, skin) => {
   const defaultBgColor = () => {
     if (skin === 'bordered' && mode === 'light') {
       return whiteColor
+    } else if (skin === 'embedded') {
+      return 'rgba(255,255,255,0)'
     } else if (skin === 'bordered' && mode === 'dark') {
       return '#30334E'
     } else if (mode === 'light') {

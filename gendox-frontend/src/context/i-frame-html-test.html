@@ -2,45 +2,30 @@
 <html>
 <head>
     <title>Post Message Example</title>
-    <style>
-        iframe {
-            /*fill parent div*/
-            width: 100%;
-            height: 100%;
-        }
-    </style>
+    <script
+            id="gendox-chat-script"
+            src="http://localhost:3000/gendox-sdk/gendox-widget-plugin.js"
+            data-trusted-origin="http://localhost:3000"
+            data-organization-id="f5f50e50-c483-47ed-94eb-57923c2ccfdd"
+            data-thread-id="dd64a7ca-9fc3-43c2-bca3-477051eaa860"
+            data-gendox-container-id="gendox-chat-container-id"
+            data-gendox-iframe-id="gendox-chat-iframe-id">
+    </script>
+<!--    <style>-->
+<!--        iframe {-->
+<!--            /*fill parent div*/-->
+<!--            width: 100%;-->
+<!--            height: 100%;-->
+<!--        }-->
+<!--    </style>-->
+
 </head>
 <body>
 <h1>PARENT!!!</h1>
 <!--div with inline style red border-->
-<div style="border: 1px solid red; width: 500px; height: 700px;">
-    <iframe id="myIframe" src="http://localhost:3000/gendox/embed/embedded-chat/?organizationId=f5f50e50-c483-47ed-94eb-57923c2ccfdd&threadId=dd64a7ca-9fc3-43c2-bca3-477051eaa860&origin=http%3A%2F%2Flocalhost%3A63342"></iframe>
-</div>
-<!--<iframe id="myIframe" src="http://localhost:3000/gendox/chat/?organizationId=0c1eedb0-fa61-4528-b15c-d5ad832155e3&threadId=018f00b0-3805-4c45-b4fb-f7cec8efb589"></iframe>-->
-<script>
-    const fullUrl = window.location.href;
-    const url = new URL(fullUrl);
-
-    const baseUrl = `${url.protocol}//${url.hostname}${url.port ? ':' + url.port : ''}`;
-    console.log(baseUrl);
-
-    var messageListener = function(event) {
-        if (event.data && event.data.type === 'gendox.events.initialization.request') {
-            // var iframeWindow = document.getElementById("myIframe").contentWindow;
-            var message = { type: "gendox.events.initialization.response", page: "..." };
-
-            iframeWindow.postMessage(message, "*");
-            console.log('Received message from iframe', event.data);
-        }
-    }
-
-    window.onload = function() {
-        window.addEventListener('message', messageListener);
-    }
-
-    window.onunload = function() {
-        window.removeEventListener('message', messageListener);
-    }
-</script>
+<!--<div id="gendox-chat-container-id" style="border: 1px solid red; width: 500px; height: 700px;">-->
+<!--    <iframe id="gendox-chat-iframe-id" class="gendox-chat-iframe" src="http://localhost:3000/gendox/embed/embedded-chat/?organizationId=f5f50e50-c483-47ed-94eb-57923c2ccfdd&threadId=dd64a7ca-9fc3-43c2-bca3-477051eaa860&origin=http%3A%2F%2Flocalhost%3A63342"></iframe>-->
+<!--</div>-->
+<!--<iframe id="gendox-chat-iframe-id" src="http://localhost:3000/gendox/chat/?organizationId=0c1eedb0-fa61-4528-b15c-d5ad832155e3&threadId=018f00b0-3805-4c45-b4fb-f7cec8efb589"></iframe>-->
 </body>
 </html>
