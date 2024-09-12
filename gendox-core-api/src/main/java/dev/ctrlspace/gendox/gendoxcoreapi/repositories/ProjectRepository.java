@@ -27,6 +27,8 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, Queryds
     @EntityGraph(attributePaths = {"projectAgent"})
     Page<Project> findAll(Predicate predicate, Pageable pageable);
 
+    long countByOrganizationId(UUID organizationId);
+
 
 
 
