@@ -241,7 +241,7 @@ public class OrganizationController {
         return userOrganizationService.addUserToOrganization(organizationId, userOrganizationDTO);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_REMOVE_USERS', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_REMOVE_PROJECT_MEMBERS', 'getRequestedOrgIdFromPathVariable')")
     @PutMapping("/organizations/{organizationId}/users/{userId}/roles")
     @Operation(summary = "Update user role in organization",
             description = "Update a user's role in an organization by specifying the user's unique ID, the organization's unique ID, and the new role name.")
@@ -250,7 +250,7 @@ public class OrganizationController {
 
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_REMOVE_USERS', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_REMOVE_PROJECT_MEMBERS', 'getRequestedOrgIdFromPathVariable')")
     @DeleteMapping("/organizations/{organizationId}/users/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Remove user from organization",
