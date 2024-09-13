@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -15,7 +16,10 @@ public class OrganizationUserConverter {
     @Autowired
     private ProjectUserConverter projectUserConverter;
 
-    public OrganizationUserDTO toDTO(Organization organization, Set<String> userAuthorities, List<Project> projectAuthorities) {
+    @Autowired
+    private AgentUserConverter agentUserConverter;
+
+    public OrganizationUserDTO toDTO(Organization organization, Set<String> userAuthorities, List<Project> projectAuthorities, List<ProjectAgent> agentAuthorities) {
         return OrganizationUserDTO
                 .builder()
                 .id(String.valueOf(organization.getId()))
@@ -29,6 +33,10 @@ public class OrganizationUserConverter {
                         .map(project ->
                                 projectUserConverter.toDTO(project)).toList()
                 )
+                .projectAgents(agentAuthorities
+                        .stream()
+                        .map(projectAgent ->
+                                agentUserConverter.toDTO(projectAgent)).toList())
                 .createdAt(organization.getCreatedAt())
                 .updatedAt(organization.getUpdatedAt())
                 .build();

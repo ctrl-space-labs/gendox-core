@@ -134,12 +134,12 @@ public class DocumentInstanceSection {
         this.updatedBy = updatedBy;
     }
 
-    public Boolean getModerationFlagged() {
+    public Boolean getHasContentWarning() {
         return hasContentWarning;
     }
 
-    public void setModerationFlagged(Boolean moderationFlagged) {
-        hasContentWarning = moderationFlagged;
+    public void setHasContentWarning(Boolean hasContentWarning) {
+        this.hasContentWarning = hasContentWarning;
     }
 
     @Override

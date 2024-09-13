@@ -10,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
@@ -75,7 +76,7 @@ public class ListenerService {
     }
 
 
-    public List<DocumentInstanceSection> semanticSearchForQuestion(String question, String channelName, String token, String threadId) throws GendoxException {
+    public List<DocumentInstanceSectionDTO> semanticSearchForQuestion(String question, String channelName, String token, String threadId) throws GendoxException {
 
 
         Message message = new Message();
@@ -86,7 +87,7 @@ public class ListenerService {
         UUID projectId = projectRepository.findIdByName(channelName);
         message.setProjectId(projectId);
 
-        List<DocumentInstanceSection> sectionList = findClosestSectionRestClient(token, message, projectId);
+        List<DocumentInstanceSectionDTO> sectionList = findClosestSectionRestClient(token, message, projectId);
 
         return sectionList;
     }
@@ -104,7 +105,6 @@ public class ListenerService {
         CompletionMessageDTO completionMessageDTO = getCompletionSearchRestClient(token, message, projectId);
         logger.debug("Received getCompletionSearchRestClient for chat command");
         completionMessageDTO.getMessage().setThreadId(completionMessageDTO.getThreadID());
-        completionMessageDTO.getMessage().setProjectId(projectId);
         //save the answer as message
 
         // https://github.com/ctrl-space-labs/gendox-core/issues/213
@@ -141,24 +141,24 @@ public class ListenerService {
     }
 
 
-    public List<DocumentInstanceSection> findClosestSectionRestClient(String token, Message message, UUID projectId) throws GendoxException {
-        List<DocumentInstanceSection> sectionList = new ArrayList<>();
+    public List<DocumentInstanceSectionDTO> findClosestSectionRestClient(String token, Message message, UUID projectId) throws GendoxException {
+        List<DocumentInstanceSectionDTO> sectionList = new ArrayList<>();
 
         var bearerHeader = httpUtils.getBearerTokenHeader(token);
 
 
-        List<LinkedHashMap> documentSectionsMap = messageRestClientService.searchMessage(bearerHeader, message, projectId, 5);
+        List<LinkedHashMap> documentSectionsDTOMap = messageRestClientService.searchMessage(bearerHeader, message, projectId, 5);
 
         // Iterate through the LinkedHashMap objects and extract values
-        for (LinkedHashMap documentSectionMap : documentSectionsMap) {
+        for (LinkedHashMap documentSectionDTOMap : documentSectionsDTOMap) {
             // Create a DocumentInstanceSection and set its properties from the LinkedHashMap
-            DocumentInstanceSection section = new DocumentInstanceSection();
+            DocumentInstanceSectionDTO section = new DocumentInstanceSectionDTO();
             // Convert the String ID to UUID
-            String idString = (String) documentSectionMap.get("id");
+            String idString = (String) documentSectionDTOMap.get("id");
             UUID id = UUID.fromString(idString);
 
             section.setId(id);
-            section.setSectionValue((String) documentSectionMap.get("sectionValue")); // Replace "name" with the actual key
+            section.setSectionValue((String) documentSectionDTOMap.get("sectionValue")); // Replace "name" with the actual key
 
             sectionList.add(section);
         }
@@ -168,7 +168,6 @@ public class ListenerService {
 
 
     public CompletionMessageDTO getCompletionSearchRestClient(String token, Message message, UUID projectId) throws GendoxException {
-        CompletionMessageDTO completionMessageDTO = new CompletionMessageDTO();
 
         var bearerHeader = httpUtils.getBearerTokenHeader(token);
 
@@ -184,7 +183,6 @@ public class ListenerService {
                 responseDTO = responseDTO.toBuilder()
                         .message(moderationMessage)
                         .threadID(null)
-                        .sectionId(null)
                         .build();
 
                 logger.debug("GendoxException caught: " + e.getMessage());
@@ -198,13 +196,7 @@ public class ListenerService {
         logger.debug("Received completionMessageDTO for chat command");
 
 
-        // Extract values and set them in the completionMessageDTO
-        completionMessageDTO.setMessage(responseDTO.getMessage());
-        completionMessageDTO.setSectionId(responseDTO.getSectionId());
-        completionMessageDTO.setThreadID(responseDTO.getThreadID());
-
-
-        return completionMessageDTO;
+        return responseDTO;
     }
 
     public String getJwtToken(String userIdentifier) throws GendoxException {

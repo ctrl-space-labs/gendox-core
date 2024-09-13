@@ -67,5 +67,6 @@ public class JwtClaimName {
      * The "projects:organization" claim identifies the user.
      */
     public static final String PROJECTS_ORGANIZATION = "projects:organization";
+    public static final String PROJECT_AGENTS = "agents:organization";
 
 }

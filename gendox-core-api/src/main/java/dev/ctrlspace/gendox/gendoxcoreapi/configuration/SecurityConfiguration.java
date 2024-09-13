@@ -71,6 +71,10 @@ public class SecurityConfiguration {
                                 .requestMatchers("/actuator/health").permitAll()
                                 .requestMatchers("/auth/signup").permitAll()
                                 .requestMatchers("/users/login").permitAll()
+                                .requestMatchers("/messages/semantic-completion").permitAll() // Allow requests when the Project Agent is Public
+                                .requestMatchers("/organizations/*/projects").permitAll()
+                                .requestMatchers("/threads/*/messages").permitAll()
+                                .requestMatchers("/threads").permitAll()
                                 .requestMatchers("/api-documentation",
                                         "/swagger-ui.html",
                                         "/swagger-ui/**",

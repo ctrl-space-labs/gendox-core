@@ -36,6 +36,9 @@ services:
     build:
        context: ./gendox-core-api
        dockerfile: Dockerfile
+       args:
+         - PROVEN_AI_GIT_REPOSITORY=${PROVEN_AI_GIT_REPOSITORY}
+         - PROVEN_AI_GIT_BRANCH=${PROVEN_AI_GIT_BRANCH}
     container_name: gendox-core-api
     volumes:
       - ~/.aws/:/root/.aws:ro
@@ -58,8 +61,10 @@ services:
       - GENDOX_SPRING_EMAIL_PORT=${GENDOX_SPRING_EMAIL_PORT}
       - GENDOX_SPRING_EMAIL_USERNAME=${GENDOX_SPRING_EMAIL_USERNAME}
       - GENDOX_SPRING_EMAIL_PASSWORD=${GENDOX_SPRING_EMAIL_PASSWORD}
+      - PROVEN_AI_ENABLED=${PROVEN_AI_ENABLED}
       - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+
     networks:
       - gendox_network
     ports:

@@ -3,15 +3,20 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OrganizationConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.EventPayloadDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UpdateUserRoleRequestDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserOrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectMemberService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
@@ -23,6 +28,7 @@ import jakarta.validation.Valid;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +42,7 @@ import org.springframework.web.bind.annotation.*;
 
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 
@@ -50,6 +57,7 @@ public class OrganizationController {
     private JWTUtils jwtUtils;
     private UserService userService;
     private SecurityUtils securityUtils;
+    private ProjectMemberService projectMemberService;
 
 
     @Autowired
@@ -58,13 +66,15 @@ public class OrganizationController {
                                   UserOrganizationService userOrganizationService,
                                   OrganizationConverter organizationConverter,
                                   UserService userService,
-                                  SecurityUtils securityUtils) {
+                                  SecurityUtils securityUtils,
+                                  ProjectMemberService projectMemberService) {
         this.organizationService = organizationService;
         this.organizationConverter = organizationConverter;
         this.userOrganizationService = userOrganizationService;
         this.jwtUtils = jwtUtils;
         this.userService = userService;
         this.securityUtils = securityUtils;
+        this.projectMemberService = projectMemberService;
 
     }
 
@@ -100,6 +110,7 @@ public class OrganizationController {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public Organization getOrganizationById(@PathVariable UUID organizationId, Authentication authentication) throws Exception {
+
 
         //run code to get the organization from the database
         Organization organization = organizationService.getById(organizationId);
@@ -167,10 +178,10 @@ public class OrganizationController {
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_DELETE_ORGANIZATION', 'getRequestedOrgIdFromPathVariable')")
-    @DeleteMapping("/organizations/{organizationId}")
+    @PutMapping("/organizations/{organizationId}/deactivate")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete organization by ID",
-            description = "Delete an existing organization by specifying its unique ID.")
+    @Operation(summary = "Deactivate organization by ID",
+            description = "Deactivate an existing organization and its projects by specifying its unique ID.")
     @Observed(name = "OrganizationController.deleteOrganization",
             contextualName = "OrganizationController#deleteOrganization",
             lowCardinalityKeyValues = {
@@ -179,8 +190,8 @@ public class OrganizationController {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public void deleteOrganization(@PathVariable UUID organizationId) throws Exception {
-        organizationService.deleteOrganization(organizationId);
+    public void deactivateOrganization(@PathVariable UUID organizationId) throws Exception {
+        organizationService.deactivateOrganization(organizationId);
     }
 
 
@@ -208,8 +219,6 @@ public class OrganizationController {
     }
 
 
-//    TODO validate that the role level is not higher than the user's role level for this organization
-
     @PreAuthorize("@securityUtils.hasAuthority('OP_ADD_USERS', 'getRequestedOrgIdFromPathVariable')")
     @Operation(summary = "Create a User - Organization association",
             description = """
@@ -229,21 +238,26 @@ public class OrganizationController {
             })
     public UserOrganization addUserToOrganization(@PathVariable UUID organizationId, @RequestBody UserOrganizationDTO userOrganizationDTO) throws Exception {
 
-        if (!organizationId.equals(userOrganizationDTO.getOrganization().getId())) {
-            throw new GendoxException("ORGANIZATION_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
-        }
-        User invitedUser = userService.getById(userOrganizationDTO.getUser().getId());
-        userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser));
+        return userOrganizationService.addUserToOrganization(organizationId, userOrganizationDTO);
+    }
 
-        return userOrganizationService.createUserOrganization(
-                userOrganizationDTO.getUser().getId(),
-                userOrganizationDTO.getOrganization().getId(),
-                userOrganizationDTO.getRole().getName());
+    @PreAuthorize("@securityUtils.hasAuthority('OP_REMOVE_PROJECT_MEMBERS', 'getRequestedOrgIdFromPathVariable')")
+    @PutMapping("/organizations/{organizationId}/users/{userId}/roles")
+    @Operation(summary = "Update user role in organization",
+            description = "Update a user's role in an organization by specifying the user's unique ID, the organization's unique ID, and the new role name.")
+    public UserOrganization updateUserRoleInOrganization(@RequestBody UpdateUserRoleRequestDTO request) throws Exception {
+        return userOrganizationService.updateUserRole(request.getUserOrganizationId(), request.getRoleName());
 
     }
 
-
-    // TODO Remove user from organization
+    @PreAuthorize("@securityUtils.hasAuthority('OP_REMOVE_PROJECT_MEMBERS', 'getRequestedOrgIdFromPathVariable')")
+    @DeleteMapping("/organizations/{organizationId}/users/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Remove user from organization",
+            description = "Remove a user from an organization by specifying the user's unique ID and the organization's unique ID.")
+    public void removeUserFromOrganization(@PathVariable UUID organizationId, @PathVariable UUID userId) throws Exception {
+        userOrganizationService.deleteUserOrganization(userId, organizationId);
+    }
 
 
 }

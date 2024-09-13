@@ -1,0 +1,8 @@
+
+ALTER TABLE gendox_core.wallet_keys
+ALTER COLUMN created_at DROP NOT NULL,
+ALTER COLUMN updated_at DROP NOT NULL,
+ALTER COLUMN created_by DROP NOT NULL,
+ALTER COLUMN updated_by DROP NOT NULL,
+ALTER COLUMN created_at SET DEFAULT NOW(),
+ALTER COLUMN updated_at SET DEFAULT NOW();

@@ -3,31 +3,40 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.BotRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProvenAiMetadata;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.TrainingService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 public class EmbeddingsController {
+
+    Logger logger = LoggerFactory.getLogger(EmbeddingsController.class);
+
 
     private EmbeddingRepository embeddingRepository;
     private EmbeddingService embeddingService;
@@ -35,47 +44,35 @@ public class EmbeddingsController {
     private CompletionService completionService;
     private MessageService messageService;
 
+    private OrganizationPlanService organizationPlanService;
+
+    private DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter;
+
+    private OrganizationModelKeyService organizationModelKeyService;
+
+
+
+    @Value("${proven-ai.enabled}")
+    private Boolean provenAiEnabled;
+
     @Autowired
     public EmbeddingsController(EmbeddingRepository embeddingRepository,
                                 EmbeddingService embeddingService,
                                 TrainingService trainingService,
                                 CompletionService completionService,
-                                MessageService messageService
+                                DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter,
+                                MessageService messageService,
+                                OrganizationPlanService organizationPlanService,
+                                OrganizationModelKeyService organizationModelKeyService
     ) {
         this.embeddingRepository = embeddingRepository;
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
         this.completionService = completionService;
         this.messageService = messageService;
-    }
-
-    @PostMapping("/embeddings")
-    @Operation(summary = "Get embeddings",
-            description = "Retrieve embeddings for a given text input using an AI model. " +
-                    "This endpoint accepts a BotRequest containing the text input and returns an Ada2Response " +
-                    "containing the embeddings for the input text. Additionally, it stores the embeddings in the database " +
-                    "as an Embedding entity with a unique ID.")
-    @Observed(name = "EmbeddingsController.getEmbeddings",
-            contextualName = "EmbeddingsController#getEmbeddings",
-            lowCardinalityKeyValues = {
-                    ObservabilityTags.LOGGABLE, "true",
-                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
-                    ObservabilityTags.LOG_METHOD_NAME, "true",
-                    ObservabilityTags.LOG_ARGS, "false"
-            })
-    public EmbeddingResponse getEmbeddings(@RequestBody BotRequest botRequest, @RequestParam String aiModel) throws GendoxException {
-
-        AiModel aiModelObj = new AiModel();
-        aiModelObj.setModel(aiModel);
-        EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(botRequest, aiModelObj);
-        Embedding embedding = new Embedding();
-
-        embedding.setEmbeddingVector(embeddingResponse.getData().get(0).getEmbedding());
-        embedding.setId(UUID.randomUUID());
-
-        embedding = embeddingRepository.save(embedding);
-
-        return embeddingResponse;
+        this.documentInstanceSectionWithDocumentConverter = documentInstanceSectionWithDocumentConverter;
+        this.organizationPlanService = organizationPlanService;
+        this.organizationModelKeyService = organizationModelKeyService;
     }
 
 
@@ -125,9 +122,16 @@ public class EmbeddingsController {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public List<DocumentInstanceSection> findCloserSections(@RequestBody Message message,
+    public List<DocumentInstanceSectionDTO> findCloserSections(@RequestBody Message message,
                                                             @RequestParam String projectId,
-                                                            Pageable pageable) throws GendoxException {
+                                                            Authentication authentication,
+                                                            HttpServletRequest request,
+                                                            Pageable pageable) throws GendoxException, IOException {
+
+        String requestIP = request.getRemoteAddr();
+        organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
+
+
         if (pageable == null) {
             pageable = PageRequest.of(0, 5);
         }
@@ -138,14 +142,23 @@ public class EmbeddingsController {
         message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
 
-        List<DocumentInstanceSection> instanceSections = new ArrayList<>();
-        instanceSections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
+        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
 
-        return instanceSections;
+//        List<DocumentInstanceSectionDTO> sections = instanceSections
+//                .stream()
+//                .map(section -> documentInstanceSectionWithDocumentConverter.toDTO(section))
+//                .toList();
+        return sections;
     }
 
 
-    @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
+
+
+
+
+
+    @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams') || " +
+            "@securityUtils.isPublicProject(#projectId)")
     @PostMapping("/messages/semantic-completion")
     @Operation(summary = "Semantic completion of message",
             description = "Find a message within a project that semantically completes the given input message. " +
@@ -160,13 +173,45 @@ public class EmbeddingsController {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public CompletionMessageDTO getCompletionSearch(@RequestBody Message message,
-                                                    @RequestParam String projectId) throws GendoxException {
+                                                    @RequestParam String projectId,
+                                                    Authentication authentication,
+                                                    HttpServletRequest request) throws GendoxException, IOException {
 
+        String requestIP = request.getRemoteAddr();
+        organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
 
         message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
 
-        List<DocumentInstanceSection> instanceSections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
+//        sections.stream()
+//                .map(DocumentInstanceSectionDTO::getDocumentUrl)
+//                .collect(Collectors.toList());
+//
+//        List<Integer> tokens = sections.stream()
+//                .map(DocumentInstanceSectionDTO::getTokens)
+//                .collect(Collectors.toList())
+
+        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
+
+
+        if (provenAiEnabled) {
+            try {
+                List<DocumentInstanceSectionDTO> provenAiSections = embeddingService.findProvenAiClosestSections(message, UUID.fromString(projectId));
+                sections.addAll(provenAiSections);
+            } catch (GendoxException e) {
+                // swallow exception
+                if ("PROVENAI_AGENT_NOT_FOUND".equals(e.getErrorCode())) {
+                    logger.debug("ProvenAI agent not found");
+                } else {
+                    throw e;
+                }
+            }
+        }
+
+        List<DocumentInstanceSection> instanceSections = sections.stream()
+                .map(dto -> documentInstanceSectionWithDocumentConverter.toEntity(dto))
+                .toList();
+
 
         Message completion = completionService.getCompletion(message, instanceSections, UUID.fromString(projectId));
 
@@ -174,14 +219,30 @@ public class EmbeddingsController {
 
         completion = messageService.updateMessageWithSections(completion, messageSections);
 
-        CompletionMessageDTO completionMessageDTO = CompletionMessageDTO.builder()
+
+        List<UUID> sectionIds = sections.stream()
+                .map(DocumentInstanceSectionDTO::getId)
+                .collect(Collectors.toList());
+
+        List<ProvenAiMetadata> sectionInfos = sections.stream()
+                .map(section -> ProvenAiMetadata.builder()
+                        .sectionId(section.getId()) // Section ID
+                        .iscc(section.getDocumentSectionIsccCode())
+                        .title(section.getDocumentSectionMetadata().getTitle())
+                        .documentURL(section.getDocumentURL())
+                        .tokens(section.getTokenCount())
+                        .ownerName(section.getOwnerName())
+                        .signedPermissionOfUseVc(section.getSignedPermissionOfUseVc())
+                        .aiModelName(section.getAiModelName())
+                        .build())
+                .collect(Collectors.toList());
+
+
+        return CompletionMessageDTO.builder()
                 .message(completion)
-                .sectionId(instanceSections.stream().map(DocumentInstanceSection::getId).toList())
                 .threadID(message.getThreadId())
+                .provenAiMetadata(sectionInfos) // Populate with detailed section info
                 .build();
-
-
-        return completionMessageDTO;
     }
 
 
@@ -189,7 +250,8 @@ public class EmbeddingsController {
 
     @PostMapping("/messages/moderation")
     public OpenAiGpt35ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(message);
+        String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
+        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(message, moderationApiKey);
         return openAiGpt35ModerationResponse;
     }
 
@@ -197,5 +259,8 @@ public class EmbeddingsController {
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
         return trainingService.getModerationForDocumentSections(documentId);
     }
+
+
+
 
 }

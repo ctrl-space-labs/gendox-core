@@ -9,10 +9,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserD
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.ProjectOrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectAgentVPCredential;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectMemberDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectMemberCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.request.ProjectAgentVPOfferRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
@@ -21,6 +23,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
+import kotlinx.serialization.json.JsonElement;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -41,7 +44,6 @@ public class ProjectController {
     private ProjectMemberService projectMemberService;
     private ProjectMemberConverter projectMemberConverter;
     private ProjectAgentService projectAgentService;
-
     private SecurityUtils securityUtils;
 
     private UserService userService;
@@ -75,8 +77,11 @@ public class ProjectController {
     }
 
 
+    // If the request isAnonymous, the API will return only the public projects.
+    // Otherwise the hasAuthority will validate the requested params.
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable') " +
-            "|| @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
+            "|| @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams') " +
+            "|| isAnonymous()")
     @GetMapping("organizations/{organizationId}/projects")
     @Operation(summary = "Get all projects",
             description = "Retrieve a list of all projects based on the provided criteria. The user must have the necessary permissions to access these projects.")
@@ -84,6 +89,11 @@ public class ProjectController {
     public Page<Project> getAllProjects(@Valid ProjectCriteria criteria, @PathVariable("organizationId") String organizationId, Pageable pageable, Authentication authentication) throws GendoxException {
         // override requested org id with the path variable
         criteria.setOrganizationId(organizationId);
+        // if it is anonymous, gets only the public projects
+        if (!(authentication instanceof GendoxAuthenticationToken)) {
+            criteria.setPrivateProjectAgent(false);
+        }
+
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
         }
@@ -91,6 +101,7 @@ public class ProjectController {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 100", HttpStatus.BAD_REQUEST);
         }
 
+        // make sure that only the projects that the user has access to, are returned
         if (securityUtils.isUser()) {
             UserProfile userProfile = (UserProfile) authentication.getPrincipal();
 //            find user profile organization by organization id
@@ -111,7 +122,7 @@ public class ProjectController {
             description = "Create a new project for the organization. " +
                     "The user must have the necessary permissions to create projects for the organization. " +
                     "This endpoint accepts a JSON payload describing the project details.")
-    public Project createProject(@PathVariable UUID organizationId, @RequestBody ProjectDTO projectDTO) throws Exception {
+    public Project createProject(@PathVariable UUID organizationId, @Valid @RequestBody ProjectDTO projectDTO) throws Exception {
 
         if (projectDTO.getId() != null) {
             throw new GendoxException("PROJECT_ID_MUST_BE_NULL", "Project id is not null", HttpStatus.BAD_REQUEST);
@@ -171,12 +182,12 @@ public class ProjectController {
 
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_DELETE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
-    @DeleteMapping("organizations/{organizationId}/projects/{projectId}")
-    @Operation(summary = "Delete project by ID",
-            description = "Delete a project by its unique ID. To perform this operation, " +
+    @PutMapping("organizations/{organizationId}/projects/{projectId}/deactivate")
+    @Operation(summary = "Deactivate project by ID",
+            description = "Deactivate a project by its unique ID. To perform this operation, " +
                     "the user must have the necessary permissions to delete the specified project.")
-    public void delete(@PathVariable UUID projectId) throws Exception {
-        projectService.deleteProject(projectId);
+    public void deactivateProjectById(@PathVariable UUID projectId) throws Exception {
+        projectService.deactivateProject(projectId);
     }
 
 
@@ -286,6 +297,26 @@ public class ProjectController {
         userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser));
 
         projectMemberService.removeMemberFromProject(projectId, userId);
+    }
+
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PostMapping("projects/{projectId}/agents-vp-offer/{agentId}")
+    @Operation(summary = "Create project agent verifiable presentation offer",
+            description = "Create a verifiable presentation offer for the project agent. " +
+                    "The user must have the necessary permissions to create a verifiable presentation offer for the project agent.")
+    public ProjectAgentVPCredential createProjectAgentVerifiablePresentationOffer(@PathVariable UUID agentId,
+                                                                                  @RequestBody ProjectAgentVPOfferRequest projectAgentVPOfferRequest) throws Exception {
+        ProjectAgent projectAgent = projectAgentService.getAgentById(agentId);
+        ProjectAgentVPCredential projectAgentVPCredential = new ProjectAgentVPCredential();
+
+        Object agentVpJwt = projectAgentService.createVerifiablePresentation( projectAgent,projectAgentVPOfferRequest.getSubjectKey(),
+                projectAgentVPOfferRequest.getSubjectDid());
+
+        projectAgentVPCredential.setAgentId(projectAgent.getId().toString());
+        projectAgentVPCredential.setAgentVpJwt(agentVpJwt.toString());
+
+        return projectAgentVPCredential;
     }
 
 
