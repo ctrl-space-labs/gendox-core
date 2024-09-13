@@ -34,4 +34,6 @@ public interface AuthenticationService {
 
     public Optional<UserRepresentation> getUsersByUsername(String userName);
 
+    public void deactivateUser(String userName) throws GendoxException;
+
 }

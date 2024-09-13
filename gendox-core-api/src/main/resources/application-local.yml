@@ -13,11 +13,11 @@ logging:
 #  pattern:
 #    correlation : "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
 
-#
+
 spring:
   mail:
     host: ${GENDOX_SPRING_EMAIL_HOST:no-env-variable}
-    port: ${GENDOX_SPRING_EMAIL_PORT:no-env-variable}
+    port: ${GENDOX_SPRING_EMAIL_PORT:0}
     username: ${GENDOX_SPRING_EMAIL_USERNAME:no-env-variable}
     password: ${GENDOX_SPRING_EMAIL_PASSWORD:no-env-variable}
     properties:
@@ -54,10 +54,6 @@ spring:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
-#  datasource:
-#    url: jdbc:postgresql://localhost:5432/postgres
-#    username: postgres
-#    password: 1234
     hikari:
       maximum-pool-size: 3
       minimum-idle: 1
@@ -146,9 +142,9 @@ gendox:
         wait-time-seconds: 1 #not in use
         visibility-timeout-seconds: 300
   models:
-    openai:
-      ada2:
-        key: ${OPENAI_KEY}
+    #    It is important these fields to have the same names as the DB ai_model_provider.api_type_id.name
+    open_ai:
+      key: ${OPENAI_KEY}
     cohere:
       key: ${COHERE_KEY}
     groq:
@@ -220,7 +216,7 @@ discord:
 
 
 proven-ai:
-  enabled: ${PROVEN_AI_ENABLED:no-env-variable}
+  enabled: ${PROVEN_AI_ENABLED:false}
 #  base-url: https://dev.provenai.ctrlspace.dev
   base-url: http://localhost:8082
   context-path: /proven-ai/api/v1

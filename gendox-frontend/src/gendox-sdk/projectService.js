@@ -9,12 +9,13 @@ import apiRequests from "src/configs/apiRequest.js";
  * @returns {Promise<axios.AxiosResponse<ProjectAgent>>}
  */
 const getProjectsByOrganization = async (organizationId, storedToken) => {
-    return axios.get(apiRequests.getProjectsByOrganization(organizationId), {
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer ' + storedToken
-        }
-    });
+    let headers = {
+        'Content-Type': 'application/json',
+    };
+    if (storedToken) {
+        headers.Authorization = 'Bearer ' + storedToken;
+    }
+    return axios.get(apiRequests.getProjectsByOrganization(organizationId), { headers });
 }
 
 /**
@@ -89,7 +90,7 @@ const createProject = async (organizationId, newProjectPayload, storedToken) => 
 };
 
   /**
- * update project
+ * add Project Members
  * @param organizationId
  * @param projectId
  * @param userIds
@@ -104,6 +105,24 @@ const addProjectMember = async (organizationId, projectId, userIds, storedToken)
       }
     });
   };
+
+
+  /**
+   * delete Project Members
+   * @param organizationId
+   * @Param projectId
+   * @param userId
+   * @param storedToken
+   * @returns {Promise<axios.AxiosResponse<String>>}
+   */
+  const removeProjectMember = async (organizationId, projectId, userId, storedToken) => {
+    return axios.delete(apiRequests.removeProjectMember(organizationId, projectId, userId), {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${storedToken}`
+      }
+    });
+  }
 
    /**
  * get Ai models by categories 
@@ -141,6 +160,22 @@ const getAiModelByCategory = async (organizationId, projectId, categories, store
     });
   };
 
+  /**
+ * Deactivate project by ID
+ * @param organizationId
+ * @param projectId
+ * @param storedToken
+ * @returns {Promise<axios.AxiosResponse>}
+ */
+const deactivateProjectById = async (organizationId, projectId, storedToken) => {
+  return axios.put(apiRequests.deactivateProjectById(organizationId, projectId), null, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + storedToken,
+    },
+  });
+};
+
 
   
 
@@ -157,6 +192,8 @@ export default {
     updateProject,
     createProject,
     addProjectMember,
+    removeProjectMember,
     getAiModels,
-    getAiModelByCategory
+    getAiModelByCategory,
+    deactivateProjectById
 }

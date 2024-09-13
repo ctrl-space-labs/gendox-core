@@ -101,8 +101,7 @@ const UserViewOverviewOrganizations = ({ userData }) => {
 
 
   const handleRowClick = (params) => {
-    
-    const organizationId = params.row.organizationId;
+    const organizationId = params.row.id;
     router.push(`/gendox/home?organizationId=${organizationId}&projectId=null`);
 };
 

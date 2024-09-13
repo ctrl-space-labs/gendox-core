@@ -1,69 +1,70 @@
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { useSelector, useDispatch } from 'react-redux';
-import { useAuth } from 'src/hooks/useAuth';
-import authConfig from 'src/configs/auth';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { useSelector, useDispatch } from "react-redux";
+import { useAuth } from "src/hooks/useAuth";
+import Card from "@mui/material/Card";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import authConfig from "src/configs/auth";
+import { StyledCardContent } from "src/utils/styledCardsContent";
 import { fetchOrganization } from "src/store/apps/activeOrganization/activeOrganization";
-import OrganizationSettingsCard from 'src/views/gendox-components/organization-settings/OrganizationSettingsCard';
-
+import OrganizationSettingsCard from "src/views/gendox-components/organization-settings/OrganizationSettingsCard";
 
 const OrganizationSettings = () => {
-  const auth = useAuth()
+  const auth = useAuth();
   const dispatch = useDispatch();
   const router = useRouter();
-  const { organizationId } = router.query; 
+  const { organizationId } = router.query;
+  const [isBlurring, setIsBlurring] = useState(false);
 
-  const storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName);
-    if (!storedToken) {
-      console.error('No token found');      
-      return;
-    }
-
-    
-
-  useEffect(() => {
-    console.log("organizationId", organizationId)
-    if (organizationId && storedToken) {
-      dispatch(fetchOrganization({ organizationId, storedToken}))
-     console.log("dispatched")
-    }
-  }, [organizationId, storedToken, dispatch]); 
-  
-
-  
-  
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const loadOrganizationDetails = async () => {
-      if (organizationId) {
-        setLoading(true);
-        const activeOrganization = auth.user.organizations.find(org => org.id === organizationId)
-        
-        
-        if (!activeOrganization) {
-          setError('Organization not found in the users organizations.');
-          setLoading(false);
-          return;
-        } 
-        else {
-          setLoading(false);
-        }
-        
-      }
-    };
-    loadOrganizationDetails();
-  }, [auth, organizationId, router]);
-
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-
-  return (
-    <OrganizationSettingsCard />
+  const organization = useSelector(
+    (state) => state.activeOrganization.activeOrganization
   );
 
-}
+  const storedToken = window.localStorage.getItem(
+    authConfig.storageTokenKeyName
+  );
 
-export default OrganizationSettings
+  useEffect(() => {
+    if (organizationId) {
+      setIsBlurring(true);
+      dispatch(fetchOrganization({ organizationId, storedToken }));
+      setTimeout(() => {
+        setIsBlurring(false);
+      }, 300);
+    }
+    // }
+  }, [organizationId, router, dispatch]);
+
+  return (
+    <Card
+      sx={{
+        backgroundColor: "transparent",
+        boxShadow: "none",
+        filter: isBlurring ? "blur(6px)" : "none",
+        transition: "filter 0.3s ease",
+      }}
+    >
+      <StyledCardContent sx={{ backgroundColor: "background.paper" }}>
+        <Box sx={{ textAlign: "left" }}>
+          <Typography
+            variant="h4"
+            sx={{ fontWeight: 600, color: "text.secondary", mb: 2 }}
+          >
+            Organization Settings
+          </Typography>
+          <Typography
+            variant="h6"
+            sx={{ fontWeight: 400, color: "primary.main" }}
+          >
+            {organization?.name || "No Selected"}
+          </Typography>
+        </Box>
+      </StyledCardContent>
+      <Box sx={{ height: 20 }} />
+      <OrganizationSettingsCard />
+    </Card>
+  );
+};
+
+export default OrganizationSettings;

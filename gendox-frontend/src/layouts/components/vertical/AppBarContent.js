@@ -11,7 +11,7 @@ import Icon from "src/@core/components/icon";
 import { useRouter } from "next/router";
 
 // ** Components
-import Autocomplete from "src/layouts/components/Autocomplete";
+import GlobalSearch from "src/layouts/components/GlobalSearch";
 import ModeToggler from "src/@core/layouts/components/shared-components/ModeToggler";
 import UserDropdown from "src/@core/layouts/components/shared-components/UserDropdown";
 import LanguageDropdown from "src/@core/layouts/components/shared-components/LanguageDropdown";
@@ -21,6 +21,7 @@ import OrganizationsDropdown from "src/views/gendox-components/OrganizationsDrop
 
 // ** Hook Import
 import { useAuth } from "src/hooks/useAuth";
+import GendoxAppBrand from "../shared-components/GendoxAppBrand";
 
 
 
@@ -33,41 +34,6 @@ const AppBarContent = (props) => {
   // ** Hook
   const auth = useAuth();
   const router = useRouter();
- 
-
-  const AppBrand = () => {
-    return (
-      <Link href="/gendox/home" passHref style={{ textDecoration: 'none' }}>
-        <Box          
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            cursor: "pointer",
-            padding: "20px 20px",    
-          }}          
-        >
-          <div
-            style={{
-              width: "30px",
-              height: "30px",
-              backgroundImage: "url('/images/gendoxLogo.svg')",
-              backgroundSize: "20px 20px",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "center",
-            }}
-          />
-          <Typography
-            variant="h6"
-            sx={{
-              ml: 2,              
-            }}
-          >
-            Gendox
-          </Typography>
-        </Box>
-      </Link>
-    );
-  };
 
   return (
     <Box
@@ -82,7 +48,7 @@ const AppBarContent = (props) => {
         className="actions-left"
         sx={{ mr: 2, display: "flex", alignItems: "center" }}
       >
-        {settings.navHidden && <AppBrand />}
+        {settings.navHidden && <GendoxAppBrand />}
         {hidden && !settings.navHidden ? (
            
           <IconButton
@@ -93,9 +59,9 @@ const AppBarContent = (props) => {
             <Icon icon="mdi:menu" />
           </IconButton>
         ) : null}
-        {/* {auth.user && !settings.navHidden && (
-          <Autocomplete hidden={hidden} settings={settings} />
-        )} */}
+        {auth.user && !settings.navHidden && (
+          <GlobalSearch hidden={hidden} settings={settings} user={auth.user}/>
+        )}
       </Box>
       <Box
         className="actions-right"
@@ -108,7 +74,7 @@ const AppBarContent = (props) => {
         <NotificationDropdown settings={settings} notifications={notifications} />
            
          */}
-        {auth.user && (
+        {auth.user && settings.showOrganizationDropdown && (
           <>
             <OrganizationsDropdown
               settings={settings}
@@ -117,7 +83,9 @@ const AppBarContent = (props) => {
           </>
         )}
         <ModeToggler settings={settings} saveSettings={saveSettings} />
-        <UserDropdown settings={settings} />
+        {(settings.showOrganizationDropdown) && (
+            <UserDropdown settings={settings} />
+        )}        
       </Box>
     </Box>
   );

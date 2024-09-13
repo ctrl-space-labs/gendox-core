@@ -55,12 +55,9 @@ const ChatContent = (props) => {
     }
   };
 
-  
-
   const renderContent = () => {
     if (store) {
       const selectedChat = store.selectedChat;
-      console.log("selectedChat: ", selectedChat);
       if (!selectedChat) {
         return (
           <ChatWrapperStartChat
@@ -110,6 +107,8 @@ const ChatContent = (props) => {
               flexGrow: 1,
               height: "100%",
               backgroundColor: "action.hover",
+              display: "flex",
+              "flex-direction": "column"
             }}
           >
             <Box
@@ -211,15 +210,23 @@ const ChatContent = (props) => {
                 />
               </Box> */}
             </Box>
-
+            
             {selectedChat && store.userProfile ? (
               <ChatLog
                 hidden={hidden}
-                data={{ ...selectedChat, userContact: store.userProfile }}
+                data={{ ...selectedChat, userContact: store.userProfile }}               
               />
             ) : null}
 
-            <SendMsgForm store={store} dispatch={dispatch} sendMsg={sendMsg} organizationId={organizationId}/>
+            
+              <SendMsgForm
+                store={store}
+                dispatch={dispatch}
+                sendMsg={sendMsg}
+                organizationId={organizationId}
+              />
+            
+
 
             <UserProfileRight
               store={store}

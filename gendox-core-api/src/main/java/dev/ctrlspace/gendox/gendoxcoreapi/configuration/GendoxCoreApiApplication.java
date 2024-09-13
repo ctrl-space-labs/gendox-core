@@ -1,9 +1,16 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeService;
 import dev.ctrlspace.gendox.spring.batch.jobs.SpringBatchConfiguration;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.controller.UserController;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.Listener;
@@ -16,11 +23,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import org.slf4j.Logger;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -37,7 +41,7 @@ import java.util.StringJoiner;
         GendoxException.class,
         UserService.class,
         UserRepository.class,
-        AiModelTypeService.class,
+        AiModelApiAdapterService.class,
         Listener.class,
         SpringBatchConfiguration.class,
         LoggingObservationHandler.class,
@@ -47,7 +51,10 @@ import java.util.StringJoiner;
         })
 @EnableCaching
 @EnableJpaRepositories(basePackageClasses = {UserRepository.class})
-@EntityScan(basePackageClasses = {User.class})
+@EntityScan(basePackageClasses = {
+        User.class,
+        AiModelMessage.class
+})
 public class GendoxCoreApiApplication {
     Logger logger = org.slf4j.LoggerFactory.getLogger(getClass());
 
@@ -67,5 +74,26 @@ public class GendoxCoreApiApplication {
             return joiner.toString();
         };
     }
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        // Register the JavaTimeModule
+        objectMapper.registerModule(new JavaTimeModule());
+
+        objectMapper.addMixIn(Object.class, IgnoreHibernatePropertiesInJackson.class);
+
+        // Disable unwanted serialization features
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+        objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+
+        return objectMapper;
+    }
+
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private abstract class IgnoreHibernatePropertiesInJackson{ }
 
 }

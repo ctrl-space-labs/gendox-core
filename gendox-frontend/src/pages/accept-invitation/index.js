@@ -77,5 +77,6 @@ const AcceptInvitationPage = () => {
 };
 
 AcceptInvitationPage.getLayout = page => <BlankLayout>{page}</BlankLayout>
+// Allow both authenticated and unauthenticated users to access the page
 AcceptInvitationPage.authGuard = false
 export default AcceptInvitationPage;

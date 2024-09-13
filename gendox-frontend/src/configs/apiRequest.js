@@ -1,23 +1,28 @@
 // const url = "http://localhost:5000/gendox/api/v1/"; // Local Environment
+
 //const url= 'https://gendox-api.ctrlspace.dev/gendox/api/v1/' // Production Environment (AWS)
 //  const url= 'http://localhost:8080/gendox/api/v1/' // Local Environment
 //const url = 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/' // Development Environment (Hetzner)
 const url = process.env.NEXT_PUBLIC_GENDOX_URL;
 
 
+
 export default {
   getProfile: url + "profile",
-  deleteProfileCaches: () => `${url}profile/caches`,
+  deleteProfileCaches: () =>
+    `${url}profile/caches`,
 
-  getAllUsers:() => `${url}users`,
+  getAllUsers: () => `${url}users`,
+
+  getPublicUsers: (page = 0, size = 10000) => `${url}users/public?page=${page}&size=${size}`,
 
   getProjectById: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}`,
   getProjectsByOrganization: (organizationId) =>
     `${url}organizations/${organizationId}/projects`,
 
-  getDocumentsByProject: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/documents`,
+  getDocumentsByProject: (organizationId, projectId, page) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/documents?page=${page}`,
 
   getUsersInOrganizationByOrgId: (organizationId) =>
     `${url}organizations/${organizationId}/users`,
@@ -44,9 +49,20 @@ export default {
   //   return `${url}threads?projectIdIn=${projectIds}`;
   // },
 
-  getThreadsByCriteria: (projectIdIn) => {
-    const projectIds = projectIdIn.join(",");
-    return `${url}threads?projectIdIn=${projectIds}&size=100&sort=createdAt,desc`;
+  getThreadsByCriteria: (projectIdIn, threadIdIn) => {
+    let urlWithParams = `${url}threads?size=100&sort=createdAt,desc`;
+
+    if (projectIdIn?.length > 0) {
+      const projectIds = projectIdIn.join(",");
+      urlWithParams += `&projectIdIn=${projectIds}`;
+    }
+
+    if (threadIdIn?.length > 0) {
+      const threadIds = threadIdIn.join(",");
+      urlWithParams += `&threadIdIn=${threadIds}`;
+    }
+
+    return urlWithParams;
   },
 
   getThreadMessagesByCriteria: (
@@ -64,6 +80,9 @@ export default {
 
   getDocumentById: (documentId) => `${url}documents/${documentId}`,
 
+  updateSectionsOrder: (documentId) => 
+    `${url}documents/${documentId}/sections-order`,
+
   uploadDocument: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,
 
@@ -76,8 +95,20 @@ export default {
   addProjectMember: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/members`,
 
+  removeProjectMember: (organizationId, projectId, userId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/users/${userId}`,
+
+  inviteProjectMember: (organizationId) =>
+    `${url}organizations/${organizationId}/invitations`,
+
   addOrganizationMember: (organizationId) =>
     `${url}organizations/${organizationId}/users`,
+
+  removeOrganizationMember: (organizationId, userId) =>
+    `${url}organizations/${organizationId}/users/${userId}`,
+
+  updateOrganizationMember: (organizationId, userId) =>
+    `${url}organizations/${organizationId}/users/${userId}/roles`,
 
   getAiModelByCategory: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/ai-models/categories`,
@@ -87,5 +118,21 @@ export default {
 
   acceptInvitation: (email, token) =>
     `${url}invitations/acceptance?email=${email}&token=${token}`,
+
+  organizationPlans: (organizationId) =>
+    `${url}organizations/${organizationId}/organization-plans`,
+
+  getThreadMessageMetadata: (threadId, messageId) =>
+    `${url}threads/${threadId}/message-metadata/${messageId}`,
+  
+  deactivateUserById: (userId) =>
+    `${url}users/${userId}/deactivate`,
+
+  deactivateOrganizationById: (organizationId) =>
+    `${url}organizations/${organizationId}/deactivate`,
+
+  deactivateProjectById: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/deactivate`,
+
 
 };

@@ -198,6 +198,11 @@ public class WalletKeyService {
         return walletKey.getJwkKeyFormat();
     }
 
+    public void deleteWalletKeyByOrganizationId(UUID organizationId) throws GendoxException {
+        WalletKey walletKey = this.getWalletKeybyOrganizationId(organizationId);
+        walletKeyRepository.delete(walletKey);
+    }
+
 
 
 }

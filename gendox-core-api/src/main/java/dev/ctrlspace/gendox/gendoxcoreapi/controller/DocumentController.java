@@ -9,6 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionOrderDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
@@ -156,13 +157,29 @@ public class DocumentController {
     }
 
 
-@PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedDocumentIdFromPathVariable')")
-@PutMapping("/documents/{documentId}")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedDocumentIdFromPathVariable')")
+    @PostMapping("/documents/{documentId}/sections")
+    @Operation(summary = "Create a new document section",
+            description = "Create a new document section based on the provided section details. " +
+                    "This operation creates a new section instance with associated metadata, " +
+                    "incorporating the provided section information.")
+    public DocumentInstanceSection createSection(@PathVariable UUID documentId) throws GendoxException {
+        DocumentInstance documentInstance = documentService.getDocumentInstanceById(documentId);
+        DocumentInstanceSection newSection = new DocumentInstanceSection();
+        newSection = documentSectionService.createNewSection(documentInstance);
+
+        return newSection;
+
+    }
+
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedDocumentIdFromPathVariable')")
+    @PutMapping("/documents/{documentId}")
     @Operation(summary = "Update document by ID",
             description = "Update an existing document by specifying its unique ID and providing updated document details. " +
                     "This operation allows you to modify the document's properties, sections, and metadata. " +
                     "Ensure that the ID in the path matches the ID in the provided document details.")
-    public DocumentInstance update(Authentication authentication, @PathVariable UUID documentId,  @RequestBody DocumentDTO documentDTO) throws GendoxException {
+    public DocumentInstance update(Authentication authentication, @PathVariable UUID documentId, @RequestBody DocumentDTO documentDTO) throws GendoxException {
         // TODO: Store the sections. The metadata should be updated only if documentTemplate is empty/null
 
         // ID Validation checks
@@ -213,14 +230,22 @@ public class DocumentController {
         }
 
 
-
         documentSection = documentSectionService.updateSection(documentSection);
 
         return documentSection;
     }
 
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedDocumentIdFromPathVariable')")
+    @PutMapping("/documents/{documentId}/sections-order")
+    @Operation(summary = "Update document sections order",
+            description = "Update the order of document sections by specifying the document ID and providing the updated order of sections. " +
+                    "This operation allows you to modify the order of the sections within the document. " +
+                    "Ensure that the ID in the path matches the ID in the provided section details.")
+    public void updateSectionsOrder(Authentication authentication, @PathVariable UUID documentId, @RequestBody List<DocumentInstanceSectionOrderDTO> sectionsOrder) throws GendoxException {
+        documentSectionService.updateSectionsOrder(sectionsOrder);
 
+    }
 
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
@@ -232,6 +257,18 @@ public class DocumentController {
     public void delete(@PathVariable UUID documentId,
                        @PathVariable UUID projectId) throws GendoxException {
         documentService.deleteDocument(documentId, projectId);
+    }
+
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedDocumentIdFromPathVariable')")
+    @DeleteMapping("/documents/{documentId}/sections/{sectionId}")
+    @Operation(summary = "Delete document section by ID",
+            description = "Delete an existing document section by specifying its unique ID. " +
+                    "This operation permanently removes the section and its associated metadata.")
+    public void deleteSection(@PathVariable UUID sectionId) throws GendoxException {
+        DocumentInstanceSection documentSection = documentSectionService.getSectionById(sectionId);
+        documentSectionService.deleteSection(documentSection);
+
     }
 
 

@@ -82,6 +82,7 @@ const SidebarLeft = (props) => {
     handleUserProfileLeftSidebarToggle,
     organizationId,
     storedToken,
+    chatUrlPath= '/gendox/chat', // Set default value here, it has different value when it is embedded
   } = props;
 
   const router = useRouter();
@@ -91,8 +92,6 @@ const SidebarLeft = (props) => {
   const [active, setActive] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [hoveredChat, setHoveredChat] = useState(null);
-
-  console.log("store", store)
 
   const groupChatsByDate = (chats) => {
     const today = [];
@@ -131,7 +130,7 @@ const SidebarLeft = (props) => {
   };
 
   const handleChatClick = (type, id) => {    
-    const newPath = `/gendox/chat?organizationId=${organizationId}&threadId=${id}`;
+    const newPath = `${chatUrlPath}?organizationId=${organizationId}&threadId=${id}`;
     router.push(newPath); 
     if (!mdAbove) {
       handleLeftSidebarToggle();

@@ -30,8 +30,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-import static dev.ctrlspace.gendox.gendoxcoreapi.model.QUser.user;
-
 @Component
 public class CommonCommandUtility {
 

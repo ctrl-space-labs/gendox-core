@@ -1,67 +1,119 @@
 // ** React Imports
-import { useState } from 'react'
+import { useState, useEffect, useRef } from "react";
 
 // ** MUI Imports
-import Button from '@mui/material/Button'
-import { styled } from '@mui/material/styles'
-import TextField from '@mui/material/TextField'
-import IconButton from '@mui/material/IconButton'
-import Box from '@mui/material/Box'
+import Button from "@mui/material/Button";
+import { styled } from "@mui/material/styles";
+import TextField from "@mui/material/TextField";
+import InputAdornment from "@mui/material/InputAdornment";
+import IconButton from "@mui/material/IconButton";
+import Box from "@mui/material/Box";
 
 // ** Icon Imports
-import Icon from 'src/@core/components/icon'
+import Icon from "src/@core/components/icon";
 
-// ** Styled Components
-const ChatFormWrapper = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  borderRadius: 8,
-  alignItems: 'center',
-  boxShadow: theme.shadows[1],
-  padding: theme.spacing(1.25, 4),
-  justifyContent: 'space-between',
-  backgroundColor: theme.palette.background.paper
-}))
+// // ** Styled Form
+const Form = styled("form")(({ theme }) => ({
+  padding: theme.spacing(2),
+}));
 
-const Form = styled('form')(({ theme }) => ({
-  padding: theme.spacing(0, 5, 5)
-}))
-
-const SendMsgForm = props => {
+const SendMsgForm = (props) => {
   // ** Props
-  const { store, dispatch, sendMsg, organizationId } = props
+  const { store, dispatch, sendMsg, organizationId } = props;
 
   // ** State
-  const [msg, setMsg] = useState('')
+  const [msg, setMsg] = useState("");
+  const textFieldRef = useRef(null);
 
-  const handleSendMsg = e => {
-    e.preventDefault()
-    if (store && store.selectedChat && msg.trim().length) {
-      dispatch(sendMsg({ ...store.selectedChat, message: msg, organizationId }))
+  useEffect(() => {
+    if (textFieldRef.current) {
+      textFieldRef.current.scrollTop = textFieldRef.current.scrollHeight;
     }
-    setMsg('')
-  }
+  }, [msg]);
+
+  const handleSendMsg = (e) => {
+    e.preventDefault();
+    if (store && store.selectedChat && msg.trim().length) {
+      dispatch(
+        sendMsg({ ...store.selectedChat, message: msg, organizationId })
+      );
+    }
+    setMsg("");
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      if (!e.shiftKey) {
+        // If Enter is pressed without Shift, send the message
+        e.preventDefault();
+        handleSendMsg(e);
+      }
+      e.preventDefault();
+      setMsg((prevMsg) => prevMsg + "\n");
+    }
+  };
 
   return (
     <Form onSubmit={handleSendMsg}>
-      <ChatFormWrapper>
-        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-          <TextField
-            fullWidth
-            value={msg}
-            size='small'
-            placeholder='Type your message here…'
-            onChange={e => setMsg(e.target.value)}
-            sx={{ '& .MuiOutlinedInput-input': { pl: 0 }, '& fieldset': { border: '0 !important' } }}
-          />
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>          
-          <Button type='submit' variant='contained'>
-            Send
-          </Button>
-        </Box>
-      </ChatFormWrapper>
-    </Form>
-  )
-}
+      <Box
+        sx={{
+          flexGrow: 1,
+          mr: 2,
+          "margin-bottom": "0.5rem",
+        }}
+      >
+        <TextField
+          fullWidth
+          value={msg}
+          size="small"
+          placeholder="Type your message here…"
+          multiline
+          maxRows={5}
+          inputRef={textFieldRef} // Reference for the textarea
+          onChange={(e) => setMsg(e.target.value)}
+          onKeyDown={handleKeyDown}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <Button
+                  type="submit"
+                  variant="contained"
+                  sx={{
+                    minWidth: "fit-content", 
+                    padding: "6px 12px", 
+                    fontSize: "0.875rem",
+                    marginLeft: "4px",
+                    boxShadow: "none",
+                  }}
+                >
+                  Send
+                </Button>
+              </InputAdornment>
+            ),
 
-export default SendMsgForm
+            sx: {
+              padding: "10px 15px",
+              fontSize: "1rem",
+              backgroundColor: "background.paper",
+              borderRadius: "0.5rem",  // Set the border-radius here
+              boxShadow: "rgba(20, 21, 33, 0.2) 0px 2px 1px -1px, rgba(20, 21, 33, 0.14) 0px 1px 1px 0px, rgba(20, 21, 33, 0.12) 0px 1px 3px 0px",
+              // overflow: "hidden",
+              // position: "absolute",
+              // bottom: 0,
+              // Target the fieldset to remove the border color
+              "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "transparent", // Removes border in default state
+              },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "transparent", // Removes border in focus state
+              },
+            },
+          }}
+        />
+      </Box>
+    </Form>
+  );
+};
+
+
+export default SendMsgForm;
