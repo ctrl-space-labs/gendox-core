@@ -47,7 +47,7 @@ public class Organization {
 
 
     @JsonBackReference(value = "organizationUser")
-    @OneToMany(mappedBy = "organization")
+    @OneToMany(mappedBy = "organization", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<UserOrganization> userOrganizations;
 
     public UUID getId() {

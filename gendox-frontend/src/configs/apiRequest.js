@@ -121,6 +121,16 @@ export default {
     `${url}organizations/${organizationId}/organization-plans`,
 
   getThreadMessageMetadata: (threadId, messageId) =>
-    `${url}threads/${threadId}/message-metadata/${messageId}`,  
+    `${url}threads/${threadId}/message-metadata/${messageId}`,
+  
+  deactivateUserById: (userId) =>
+    `${url}users/${userId}/deactivate`,
+
+  deactivateOrganizationById: (organizationId) =>
+    `${url}organizations/${organizationId}/deactivate`,
+
+  deactivateProjectById: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/deactivate`,
+
 
 };

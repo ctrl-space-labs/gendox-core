@@ -1,6 +1,11 @@
 // ** React Imports
 import { useState } from "react";
 
+import { useRouter } from "next/router";
+
+// ** Config
+import authConfig from "src/configs/auth";
+
 // ** MUI Imports
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
@@ -25,18 +30,26 @@ import InputAdornment from "@mui/material/InputAdornment";
 import LinearProgress from "@mui/material/LinearProgress";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import DialogContentText from "@mui/material/DialogContentText";
-
+import toast from "react-hot-toast";
+import userService from "src/gendox-sdk/userService";
+import Alert from "@mui/material/Alert";
 // ** Icon Imports
 import Icon from "src/@core/components/icon";
 
 // ** Custom Components
 import CustomChip from "src/@core/components/mui/chip";
 import CustomAvatar from "src/@core/components/mui/avatar";
+import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
+
 // import UserSuspendDialog from 'src/views/apps/user/view/UserSuspendDialog'
 // import UserSubscriptionDialog from 'src/views/apps/user/view/UserSubscriptionDialog'
 
 // ** Utils Import
 import { getInitials } from "src/@core/utils/get-initials";
+
+import { useAuth } from "src/hooks/useAuth";
+
+
 
 const data = {
   id: 1,
@@ -83,12 +96,25 @@ const Sub = styled("sub")({
 });
 
 const UserViewLeft = ({ userData }) => {
+  const auth = useAuth();
+  const router = useRouter();
+  const storedToken = window.localStorage.getItem(
+    authConfig.storageTokenKeyName
+  );
+
+  const { logout } = useAuth();
+
+
   // ** States
   const [openEdit, setOpenEdit] = useState(false);
   const [openPlans, setOpenPlans] = useState(false);
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false); 
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
 
+  
 
   // Handle Edit dialog
   const handleEditClickOpen = () => setOpenEdit(true);
@@ -97,6 +123,48 @@ const UserViewLeft = ({ userData }) => {
   // Handle Upgrade Plan dialog
   const handlePlansClickOpen = () => setOpenPlans(true);
   const handlePlansClose = () => setOpenPlans(false);
+
+  // Handle Delete dialog
+  const handleDeleteClickOpen = () => setOpenDeleteDialog(true);
+  const handleDeleteClose = () => setOpenDeleteDialog(false);
+
+  const handleAlertClose = () => setAlertOpen(false);
+
+
+  const handleLogout = () => {
+    logout();
+  };
+
+
+  // Handle Delete User
+  const handleDeleteUser = async () => {
+    console.log("Attempting to delete user:", userData.id); // Debugging log
+    if (!storedToken) {
+      toast.error("Authentication token missing.");
+      return;
+    }
+  
+    try {
+      // Call the API function and pass the user ID and stored token
+      await userService.deactivateUserById(userData.id, storedToken);
+      setAlertMessage("Account deleted successfully!");
+      setAlertOpen(true);
+      setOpenDeleteDialog(false);
+      
+      handleLogout();
+      
+    } catch (error) {
+      console.error("Error deactivating user:", error); // Log the error for debugging
+      setAlertMessage("Failed to delete the user account!");
+      setAlertOpen(true);
+    } finally {
+      handleDeleteClose(); // Close the delete confirmation dialog
+    }
+  };
+  
+
+
+
   if (userData) {
     return (
       <Grid container spacing={6}>
@@ -266,7 +334,7 @@ const UserViewLeft = ({ userData }) => {
               </Box>
             </CardContent>
 
-            <CardActions sx={{ display: "flex", justifyContent: "center" }}>
+            <CardActions sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
               <Button
                 variant="contained"
                 sx={{ mr: 2 }}
@@ -274,8 +342,14 @@ const UserViewLeft = ({ userData }) => {
               >
                 Edit
               </Button>
-              
-            </CardActions>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleDeleteClickOpen} 
+              >
+                Delete
+              </Button>
+          </CardActions>
 
             <Dialog
               open={openEdit}
@@ -457,12 +531,19 @@ const UserViewLeft = ({ userData }) => {
                 </Button>
               </DialogActions>
             </Dialog>
-
             
           </Card>
         </Grid>
-
-        
+          {/* Delete Confirmation Dialog */}
+          <DeleteConfirmDialog
+            open={openDeleteDialog}
+            onClose={handleDeleteClose}
+            onConfirm={handleDeleteUser}
+            title="Confirm User Deletion"
+            contentText={`Are you sure you want to delete ${userData.name}? You will lose access to all organizations and documents. This action cannot be undone.`}
+            confirmButtonText="Delete Account"
+            cancelButtonText="Cancel"
+          />
       </Grid>
     );
   } else {

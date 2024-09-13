@@ -28,6 +28,7 @@ import Icon from "src/@core/components/icon";
 import Tooltip from "@mui/material/Tooltip";
 
 import organizationService from "src/gendox-sdk/organizationService";
+import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 
 const GeneralOrganizationSettings = () => {
   const router = useRouter();
@@ -48,6 +49,7 @@ const GeneralOrganizationSettings = () => {
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false); 
 
   useEffect(() => {
     setName(organization.name);
@@ -63,6 +65,10 @@ const GeneralOrganizationSettings = () => {
   const handlePhoneChange = (event) => setPhone(event.target.value);
   const handleCloseSnackbar = () => setOpenSnackbar(false);
   const handleAlertClose = () => setAlertOpen(false);
+
+  // Handle Delete dialog
+  const handleDeleteClickOpen = () => setOpenDeleteDialog(true);
+  const handleDeleteClose = () => setOpenDeleteDialog(false);
 
   // submit put request
   const handleSubmit = async (e) => {
@@ -91,6 +97,34 @@ const GeneralOrganizationSettings = () => {
       console.error("Failed to update Organization", error);
     }
   };
+
+  
+  // Handler for deleting organization
+  const handleDeleteOrganization = async () => {
+    try {
+      await organizationService.deactivateOrganizationById(
+        organization.id,
+        storedToken
+      );
+      console.log("Organization Deactivation successful");
+      setAlertMessage("Organization deleted successfully!");
+      setAlertOpen(true);
+      handleDeleteClose(false);
+      setTimeout(() => {
+        router.push("/gendox/home");
+      }, 2000); 
+    } catch (error) {
+      console.error("Failed to delete organization", error);
+      setAlertMessage("Failed to delete the organization!");
+      setAlertOpen(true);
+  
+      // Delay the redirection to ensure alert is displayed
+      setTimeout(() => {
+        router.push("/gendox/home");
+      }, 2000); // Adjust the delay as needed
+    }
+  };
+
 
   return (
     <Card>
@@ -181,6 +215,16 @@ const GeneralOrganizationSettings = () => {
         <CardActions sx={{ justifyContent: "flex-end", p: 2 }}>
           <Button
             size="large"
+            variant="outlined"
+            color="error"
+            onClick={handleDeleteClickOpen}
+            sx={{ px: 22, py: 3 }}
+          >
+            Delete
+          </Button>
+          
+          <Button
+            size="large"
             type="submit"
             onClick={handleSubmit}
             variant="contained"
@@ -188,6 +232,7 @@ const GeneralOrganizationSettings = () => {
           >
             Save Changes
           </Button>
+          
         </CardActions>
       </form>
       <Snackbar
@@ -203,6 +248,15 @@ const GeneralOrganizationSettings = () => {
           {alertMessage}
         </Alert>
       </Snackbar>
+      <DeleteConfirmDialog
+        open={openDeleteDialog}
+        onClose={handleDeleteClose}
+        onConfirm={handleDeleteOrganization}
+        title="Delete"
+        contentText={`Are you sure you want to delete ${organization.name}? All member users will be removed and you will lose access to all related documents. This action cannot be undone.`}
+        confirmButtonText="Delete"
+        cancelButtonText="Cancel"
+      />
     </Card>
   );
 };

@@ -160,6 +160,22 @@ const getAiModelByCategory = async (organizationId, projectId, categories, store
     });
   };
 
+  /**
+ * Deactivate project by ID
+ * @param organizationId
+ * @param projectId
+ * @param storedToken
+ * @returns {Promise<axios.AxiosResponse>}
+ */
+const deactivateProjectById = async (organizationId, projectId, storedToken) => {
+  return axios.put(apiRequests.deactivateProjectById(organizationId, projectId), null, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + storedToken,
+    },
+  });
+};
+
 
   
 
@@ -178,5 +194,6 @@ export default {
     addProjectMember,
     removeProjectMember,
     getAiModels,
-    getAiModelByCategory
+    getAiModelByCategory,
+    deactivateProjectById
 }

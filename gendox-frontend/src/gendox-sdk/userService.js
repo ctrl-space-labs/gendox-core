@@ -45,9 +45,21 @@ const deleteProfileCaches = async (storedToken) => {
     });
 }
 
-
-
-  
+/**
+ * Deactivate user by ID
+ * @param userId
+ * @param storedToken
+ * @returns {Promise<axios.AxiosResponse>}
+ */
+const deactivateUserById = async (userId, storedToken) => {
+    // No data to send in the body, so we pass null
+    return axios.put(apiRequests.deactivateUserById(userId), null, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + storedToken,
+      },
+    });
+  };
 
 
 
@@ -57,5 +69,6 @@ const deleteProfileCaches = async (storedToken) => {
 
 export default {
    getAllUsers,
-   getPublicUsers
+   getPublicUsers,
+   deactivateUserById
 }
