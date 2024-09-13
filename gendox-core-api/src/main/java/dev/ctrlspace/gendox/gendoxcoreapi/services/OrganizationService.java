@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDidDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WalletKeyDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.WalletKeyRepository;
@@ -41,6 +42,8 @@ public class OrganizationService {
 
     private TypeService typeService;
 
+    private ProjectService projectService;
+
     @Value("${walt-id.default-key.type}")
     private String keyTypeName;
     @Value("${walt-id.default-key.size}")
@@ -53,13 +56,15 @@ public class OrganizationService {
                                UserOrganizationService userOrganizationService,
                                OrganizationDidService organizationDidService,
                                WalletKeyService walletKeyService,
-                               TypeService typeService) {
+                               TypeService typeService,
+                               ProjectService projectService) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.organizationRepository = organizationRepository;
         this.userOrganizationService = userOrganizationService;
         this.organizationDidService = organizationDidService;
         this.walletKeyService = walletKeyService;
         this.typeService = typeService;
+        this.projectService = projectService;
 
     }
 
@@ -141,19 +146,66 @@ public class OrganizationService {
 
     }
 
-    public void deleteOrganization(UUID organizationId) throws Exception {
+    public void deactivateOrganization(UUID organizationId) throws GendoxException {
+
+        Organization organization = getById(organizationId);
+
+
+        if (("DEACTIVATED").equals(organization.getName())) {
+            return;
+        }
+
+        // Fetch all user organizations for this organization
         List<UserOrganization> userOrganizations = userOrganizationService.getUserOrganizationByOrganizationId(organizationId);
-        Organization organization = organizationRepository.findById(organizationId).orElse(null);
 
-        for(UserOrganization userOrganization: userOrganizations){
-            userOrganizationRepository.delete(userOrganization);
+        // Iterate through user organizations to handle both deletion and exception
+        for (UserOrganization userOrganization : userOrganizations) {
+            UUID userId = userOrganization.getUser().getId();
+
+            // Count the number of organizations the user is associated with
+            long count = userOrganizationRepository.countByUserId(userId);
+
+            if (count <= 1) {
+                // If the user has exactly one organization, throw an exception
+                throw new GendoxException("ORGANIZATION_DEACTIVATION_FAILED", "Cannot deactivate organization. User is associated with only one organization", HttpStatus.BAD_REQUEST);
+            } else {
+
+                deactivateAllOrgProjects(organizationId);
+                userOrganizationRepository.delete(userOrganization);
+            }
         }
 
-        if (organization != null) {
-            organizationRepository.deleteById(organizationId);
-        } else {
-            throw new GendoxException("ORGANIZATION_NOT_FOUND", "Organization not found with id: " + organizationId, HttpStatus.NOT_FOUND);
+        // Delete other associated data
+        organizationDidService.deleteOrganizationDidByOrganizationId(organizationId);
+        walletKeyService.deleteWalletKeyByOrganizationId(organizationId);
+
+        // Clear organization data and save the changes
+        clearOrgData(organization);
+        organizationRepository.save(organization);
+    }
+
+
+
+    private void deactivateAllOrgProjects(UUID organizationId) throws GendoxException {
+
+        ProjectCriteria criteria = new ProjectCriteria();
+        criteria.setOrganizationId(organizationId.toString());
+
+        Page<Project> projects = projectService.getAllProjects(criteria);
+
+        for (Project project : projects.getContent()) {
+            projectService.deactivateProject(project.getId());
         }
+    }
+
+    private void clearOrgData(Organization organization) {
+        organization.setName("DEACTIVATED");
+        organization.setDisplayName(null);
+        organization.setAddress(null);
+        organization.setPhone(null);
+        organization.setDeveloperEmail(null);
+        organization.setUpdatedAt(null);
+        organization.setCreatedAt(null);
     }
 
 

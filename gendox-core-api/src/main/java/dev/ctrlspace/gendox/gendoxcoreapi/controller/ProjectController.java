@@ -182,12 +182,12 @@ public class ProjectController {
 
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_DELETE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
-    @DeleteMapping("organizations/{organizationId}/projects/{projectId}")
-    @Operation(summary = "Delete project by ID",
-            description = "Delete a project by its unique ID. To perform this operation, " +
+    @PutMapping("organizations/{organizationId}/projects/{projectId}/deactivate")
+    @Operation(summary = "Deactivate project by ID",
+            description = "Deactivate a project by its unique ID. To perform this operation, " +
                     "the user must have the necessary permissions to delete the specified project.")
-    public void delete(@PathVariable UUID projectId) throws Exception {
-        projectService.deleteProject(projectId);
+    public void deactivateProjectById(@PathVariable UUID projectId) throws Exception {
+        projectService.deactivateProject(projectId);
     }
 
 

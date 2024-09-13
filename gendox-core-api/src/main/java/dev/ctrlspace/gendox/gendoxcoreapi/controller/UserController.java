@@ -188,4 +188,8 @@ public class UserController {
         return user;
     }
 
+    @PutMapping("/users/{userId}/deactivate")
+    public void deactivateUserById(@PathVariable UUID userId, Authentication authentication) throws GendoxException {
+        userService.deactivateUserById(userId, authentication);
+    }
 }
