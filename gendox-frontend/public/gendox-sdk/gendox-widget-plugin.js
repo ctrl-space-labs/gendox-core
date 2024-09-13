@@ -1,7 +1,7 @@
 (function() {
     // Default CSS styles
     const defaultStyles = `
-        .gendox-chat-container-bottom-right {
+        .gendox-chat-container-position {
             position: fixed;
             bottom: 1rem;
             right: 1rem;
@@ -55,7 +55,7 @@
         if (!container) {
             container = document.createElement('div');
             container.id = containerId;
-            container.classList.add('gendox-chat-container-bottom-right', 'gendox-chat-closed');
+            container.classList.add('gendox-chat-container-position', 'gendox-chat-closed');
             document.body.appendChild(container);
         }
 

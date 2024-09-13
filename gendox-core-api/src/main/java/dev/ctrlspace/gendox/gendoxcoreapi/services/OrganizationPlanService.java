@@ -131,7 +131,19 @@ public class OrganizationPlanService {
     }
 
 
-
+    /**
+     * validates the Rate Limits for the API Key.
+     * If it is a public request, it uses the public rate limits.
+     * If it is a private request, it uses the private rate limits.
+     *
+     * If the request is within the rate limits, it returns the consumption probe object.
+     *
+     * @param authentication
+     * @param requestIP
+     * @param plan
+     * @return
+     * @throws GendoxException if the rate limits are exceeded.
+     */
     private ConsumptionProbe validateRateLimits(Authentication authentication, String requestIP, OrganizationPlan plan) throws GendoxException {
         String bucketKey = requestIP;
         int requests = plan.getApiRateLimit().getPublicCompletionsPerMinute();
