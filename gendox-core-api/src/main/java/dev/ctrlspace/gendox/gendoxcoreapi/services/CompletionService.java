@@ -4,7 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.CompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelTypeService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -35,10 +35,12 @@ public class CompletionService {
     private ProjectAgentRepository projectAgentRepository;
     private TemplateRepository templateRepository;
     private TypeService typeService;
-    private List<AiModelTypeService> aiModelTypeServices;
+    private List<AiModelApiAdapterService> aiModelApiAdapterServices;
     private TrainingService trainingService;
     private ProjectAgentService projectAgentService;
     private MessageService messageService;
+
+    private OrganizationModelKeyService organizationModelKeyService;
 
     private AiModelUtils aiModelUtils;
     @Autowired
@@ -48,11 +50,12 @@ public class CompletionService {
                              ProjectAgentRepository projectAgentRepository,
                              TemplateRepository templateRepository,
                              TypeService typeService,
-                             List<AiModelTypeService> aiModelTypeServices,
+                             List<AiModelApiAdapterService> aiModelApiAdapterServices,
                              DocumentInstanceSectionRepository documentInstanceSectionRepository,
                              AiModelUtils aiModelUtils,
                              ProjectAgentService projectAgentService,
                              TrainingService trainingService,
+                             OrganizationModelKeyService organizationModelKeyService,
                              MessageService messageService) {
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
@@ -63,25 +66,16 @@ public class CompletionService {
         this.typeService = typeService;
         this.aiModelUtils = aiModelUtils;
         this.projectAgentService = projectAgentService;
+        this.organizationModelKeyService = organizationModelKeyService;
         this.messageService = messageService;
     }
 
-    private CompletionResponse getCompletionForMessages(List<Message> messages, String agentRole, AiModel aiModel,
-                                                 AiModelRequestParams aiModelRequestParams) throws GendoxException {
+    private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
+                                                 AiModelRequestParams aiModelRequestParams, String apiKey) throws GendoxException {
 
-        //TODO add in DB table message, a field for the role of the message
-        // if the message is from a user it will have role: "user" (or the role: ${userName})
-        // if the message is from the agent it will have the role: ${agentName}
-        // for the time being only 1 message will be in the list, from the user
-
-        List<AiModelMessage> aiModelMessages = new ArrayList<>();
-        for (Message message : messages) {
-            AiModelMessage aiModelMessage = messageAiMessageConverter.toDTO(message);
-            aiModelMessages.add(aiModelMessage);
-        }
         //choose the correct aiModel adapter
-        AiModelTypeService aiModelTypeService = aiModelUtils.getAiModelServiceImplementation(aiModel);
-        CompletionResponse completionResponse = aiModelTypeService.askCompletion(aiModelMessages, agentRole, aiModel.getModel(), aiModelRequestParams);
+        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
+        CompletionResponse completionResponse = aiModelApiAdapterService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey);
         return completionResponse;
     }
 
@@ -89,16 +83,26 @@ public class CompletionService {
     public Message getCompletion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
         String question = convertToAiModelTextQuestion(message, nearestSections, projectId);
         // check moderation
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(question);
+        String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
+        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(question, moderationApiKey);
         if (openAiGpt35ModerationResponse.getResults().get(0).isFlagged()) {
             throw new GendoxException("MODERATION_CHECK_FAILED", "The question did not pass moderation.", HttpStatus.NOT_ACCEPTABLE);
         }
 
 
         Project project = projectService.getProjectById(projectId);
+        ProjectAgent agent = project.getProjectAgent();
+        List<AiModelMessage> previousMessages = messageService.getPreviousMessages(message, 4);
 
         // clone message to avoid changing the original message text in DB
-        Message promptMessage = message.toBuilder().value(question).build();
+        AiModelMessage promptMessage = AiModelMessage.builder()
+                .content(question)
+                .role("user")
+                .build();
+
+        previousMessages.add(promptMessage);
+
+         String apiKey = embeddingService.getApiKey(agent, "COMPLETION_MODEL");
 
          AiModelRequestParams aiModelRequestParams = AiModelRequestParams.builder()
                 .maxTokens(project.getProjectAgent().getMaxToken())
@@ -106,18 +110,20 @@ public class CompletionService {
                 .topP(project.getProjectAgent().getTopP())
                 .build();
 
-        CompletionResponse completionResponse = getCompletionForMessages(List.of(promptMessage),
+        CompletionResponse completionResponse = getCompletionForMessages(previousMessages,
                 project.getProjectAgent().getAgentBehavior(),
                 project.getProjectAgent().getCompletionModel(),
-                aiModelRequestParams);
+                aiModelRequestParams,
+                apiKey);
+
+
+
 
         Type completionType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
         // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)
         AuditLogs auditLogs = embeddingService.createAuditLogs(projectId, (long) completionResponse.getUsage().getTotalTokens(), completionType);
         Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
 
-        // TODO save the above response message
-        ProjectAgent agent = projectAgentService.getAgentByProjectId(projectId);
         completionResponseMessage.setProjectId(projectId);
         completionResponseMessage.setThreadId(message.getThreadId());
         completionResponseMessage.setCreatedBy(agent.getUserId());

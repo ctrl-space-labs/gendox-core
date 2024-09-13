@@ -6,11 +6,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.*;
@@ -28,13 +26,14 @@ public class AiModelController {
         this.securityUtils = securityUtils;
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
     @GetMapping("organizations/{organizationId}/projects/{projectId}/ai-models")
     @Operation(summary = "Get all ai-models by project ID",
             description = "Retrieve all ai-models by project ID. The user must have the appropriate permissions to access this.")
-    public List<AiModel> getAllAiModels(@PathVariable UUID projectId) throws GendoxException {
+    public List<AiModel> getAllAiModels(@PathVariable UUID organizationId) throws GendoxException {
 
-        return aiModelService.getAllAiModels();
+//        TODO: Implement the logic to get all ai-models by org ID and moler tier related to subscription plan
+        return aiModelService.getAllAiModelsByOrganizationId(organizationId);
     }
 
    

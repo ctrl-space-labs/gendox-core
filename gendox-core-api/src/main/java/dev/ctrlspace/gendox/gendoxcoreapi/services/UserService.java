@@ -3,13 +3,15 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.authentication.AuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.JwtDTOUserProfileConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserDetailsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserPublicDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
@@ -17,8 +19,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserPredic
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import io.micrometer.observation.annotation.Observed;
-import io.swagger.models.auth.In;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,10 +29,10 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -37,10 +40,7 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -54,12 +54,16 @@ public class UserService implements UserDetailsService {
     private UserProfileConverter userProfileConverter;
     private TypeService typeService;
     private AuthenticationService authenticationService;
+    private final UserConverter userConverter;
+    private ProjectMemberService projectMemberService;
 
     private OrganizationService organizationService;
 
     private ProjectService projectService;
 
     private CacheManager cacheManager;
+
+    private UserOrganizationService userOrganizationService;
 
 
     @Autowired
@@ -71,7 +75,10 @@ public class UserService implements UserDetailsService {
                        OrganizationService organizationService,
                        ProjectService projectService,
                        CacheManager cacheManager,
-                       AuthenticationService authenticationService) {
+                       AuthenticationService authenticationService,
+                       UserConverter userConverter,
+                       UserOrganizationService userOrganizationService,
+                       ProjectMemberService projectMemberService) {
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
@@ -81,12 +88,24 @@ public class UserService implements UserDetailsService {
         this.projectService = projectService;
         this.cacheManager = cacheManager;
         this.authenticationService = authenticationService;
+        this.userConverter = userConverter;
+        this.userOrganizationService = userOrganizationService;
+        this.projectMemberService = projectMemberService;
     }
 
     public Page<User> getAllUsers(UserCriteria criteria) {
 
         Pageable pageable = PageRequest.of(0, 100);
         return this.getAllUsers(criteria, pageable);
+    }
+
+    public Page<UserPublicDTO> getAllPublicUsers(UserCriteria criteria, Pageable pageable) throws GendoxException {
+        if (pageable == null) {
+            throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
+        }
+        Page<User> users = userRepository.findAll(UserPredicate.build(criteria), pageable);
+
+        return users.map(userConverter::toPublicDTO);
     }
 
     public Page<User> getAllUsers(UserCriteria criteria, Pageable pageable) {
@@ -104,6 +123,7 @@ public class UserService implements UserDetailsService {
         return getOptionalByEmail(email)
                 .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with email: " + email, HttpStatus.NOT_FOUND));
     }
+
     public Optional<User> getOptionalByEmail(String email) throws GendoxException {
         return userRepository.findByEmail(email);
     }
@@ -135,6 +155,14 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new GendoxException("USER_NOT_FOUND", "User not found with identifier: " + userIdentifier, HttpStatus.NOT_FOUND));
     }
 
+    public UserProfile getUserProfileByUserId(UUID userId) throws GendoxException {
+
+        User user = this.getById(userId);
+        List<UserOrganizationProjectAgentDTO> rawUser = userRepository.findRawUserProfileById(user.getId());
+
+        return userProfileConverter.toDTO(rawUser);
+    }
+
     /**
      * @param userIdentifier can be either the email or username or phone number
      * @return
@@ -144,14 +172,16 @@ public class UserService implements UserDetailsService {
     public UserProfile getUserProfileByUniqueIdentifier(String userIdentifier) throws GendoxException {
 
         User user = this.getUserByUniqueIdentifier(userIdentifier);
-        return userProfileConverter.toDTO(user);
+        List<UserOrganizationProjectAgentDTO> rawUser = userRepository.findRawUserProfileById(user.getId());
+
+        return userProfileConverter.toDTO(rawUser);
     }
 
     public void evictUserProfileByUniqueIdentifier(String userIdentifier) {
         // Evict the cache entry for the user
         Cache cache = cacheManager.getCache("UserProfileByIdentifier");
         if (cache != null) {
-            cache.evict("UserService:getUserProfileByUniqueIdentifier:"+userIdentifier);
+            cache.evict("UserService:getUserProfileByUniqueIdentifier:" + userIdentifier);
         }
         logger.debug("Evicting UserProfile cache for userIdentifier: {}", userIdentifier);
     }
@@ -178,7 +208,7 @@ public class UserService implements UserDetailsService {
 
     }
 
-    public User updateUser(User user) throws GendoxException{
+    public User updateUser(User user) throws GendoxException {
         Instant now = Instant.now();
 
         User existingUser = this.getById(user.getId());
@@ -195,7 +225,6 @@ public class UserService implements UserDetailsService {
         user = userRepository.save(existingUser);
 
         return user;
-
 
 
     }
@@ -257,6 +286,7 @@ public class UserService implements UserDetailsService {
     /**
      * Get the user identifier from the user Entity.
      * The logic should be the same as {@link SecurityUtils#getUserIdentifier()}
+     *
      * @param user
      * @return
      */
@@ -267,4 +297,75 @@ public class UserService implements UserDetailsService {
         }
         return user.getUserName();
     }
-}
+
+
+    private static final Map<String, Integer> ROLE_LEVEL_MAP = new HashMap<>();
+
+    static {
+        ROLE_LEVEL_MAP.put(OrganizationRolesConstants.READER, 1);
+        ROLE_LEVEL_MAP.put(OrganizationRolesConstants.EDITOR, 2);
+        ROLE_LEVEL_MAP.put(OrganizationRolesConstants.ADMIN, 3);
+    }
+
+    public int getUserOrganizationRoleLevel(String roleName) throws GendoxException {
+        Integer level = ROLE_LEVEL_MAP.get(roleName);
+        if (level == null) {
+            throw new GendoxException("UNKNOWN_ROLE", "Unknown role: " + roleName, HttpStatus.BAD_REQUEST);
+        }
+        return level;
+    }
+
+    public void deactivateUserById(UUID userId, Authentication authentication) throws GendoxException {
+        // Fetch user by ID
+        User user = getById(userId);
+
+        removeUserAssociations(user, authentication);
+        deactivateUser(user);
+        clearUserData(user);
+        userRepository.save(user);
+    }
+
+    private void deactivateUser(User user) throws GendoxException {
+        authenticationService.deactivateUser(user.getEmail());
+    }
+
+    private void clearUserData(User user) {
+        user.setName(null);
+        user.setFirstName(null);
+        user.setLastName(null);
+        user.setUserName(null);
+        user.setEmail(null);
+        user.setPhone(null);
+        user.setUserType(null);
+        user.setCreatedAt(null);
+        user.setUpdatedAt(null);
+    }
+
+    private void removeUserAssociations(User user,Authentication authentication) throws GendoxException {
+        UserProfile userProfile = (UserProfile) authentication.getPrincipal();
+        if (userProfile != null && userProfile.getOrganizations() != null) {
+            for (OrganizationUserDTO organization : userProfile.getOrganizations()) {
+                UUID organizationId = UUID.fromString(organization.getId());
+
+                // Remove user associations with organizations and projects
+                userOrganizationService.deleteUserOrganization(user.getId(), organizationId);
+
+                if (organization.getProjects() != null) {
+                    for (ProjectOrganizationDTO project : organization.getProjects()) {
+                        UUID projectId = UUID.fromString(project.getId());
+                        projectMemberService.removeMemberFromProject(projectId, user.getId());
+                    }
+                }
+            }
+        }
+    }
+
+
+
+
+    }
+
+
+
+
+
