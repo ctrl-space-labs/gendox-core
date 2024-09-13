@@ -9,6 +9,10 @@ const navigation = () => {
   const [navigationItems, setNavigationItems] = useState([]);
 
 
+
+
+  
+
   useEffect(() => {
     if (auth.user && auth.user.organizations) {
       const activeOrganization = auth.user.organizations.find(
@@ -31,7 +35,7 @@ const navigation = () => {
         ]);
       }
     }
-  }, [auth, organizationId, projectId, router]);
+  }, [auth, organizationId, router]);
 
   return navigationItems;
 };

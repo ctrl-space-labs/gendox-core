@@ -17,7 +17,6 @@ import java.util.UUID;
 @Table(name = "users", schema = "gendox_core")
 public class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", nullable = false)
     private UUID id;
     @Basic
@@ -57,6 +56,12 @@ public class User {
     @JsonBackReference(value = "user")
     @OneToMany(mappedBy = "user")
     private List<ProjectMember> projectMembers = new ArrayList<>();
+
+    public User() {
+        // it generates on, where the programmer can overwrite it later
+        // this is because @GeneratedValue always overwrites the custom id, which is not what we want
+        this.id = UUID.randomUUID();
+    }
 
     public UUID getId() {
         return id;

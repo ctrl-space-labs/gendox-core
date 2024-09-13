@@ -5,6 +5,8 @@ import { formatDistanceToNow, parseISO } from "date-fns";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Grid from "@mui/material/Grid";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
 import { styled } from "@mui/material/styles";
 import { Button } from "@mui/material";
 import Divider from "@mui/material/Divider";
@@ -21,14 +23,13 @@ import { useRouter } from "next/router";
 import { formatDocumentTitle } from "src/utils/documentUtils";
 import authConfig from "src/configs/auth";
 
-const Documents = ({ documents }) => {
+const Documents = ({ documents, showAll, setShowAll }) => {
   const router = useRouter();
   const dispatch = useDispatch();
   const { projectDetails, projectMembers } = useSelector(
     (state) => state.activeProject
   );
   const { id: projectId, organizationId } = projectDetails;
-  const [showAll, setShowAll] = useState(false);
   const storedToken = localStorage.getItem(authConfig.storageTokenKeyName);
 
   useEffect(() => {
@@ -83,7 +84,7 @@ const Documents = ({ documents }) => {
               <Typography
                 variant="h6"
                 component={Link}
-                href={`/gendox/document-instance?documentId=${document.id}`}
+                href={`/gendox/document-instance?organizationId=${organizationId}&documentId=${document.id}`}
                 sx={{
                   fontWeight: 600,
                   textDecoration: "none",
@@ -107,7 +108,7 @@ const Documents = ({ documents }) => {
                 <Typography
                   // component={Link}
                   sx={{ color: "inherit", textDecoration: "none" }}
-                  // href={`/gendox/document-instance?documentId=${document.id}`}
+                  // href={`/gendox/document-instance?organizationId=${organizationId}&documentId=${document.id}`}
                 >
                   {documentAuthor ? documentAuthor.user.name : "Unknown Author"}
                 </Typography>
@@ -116,7 +117,7 @@ const Documents = ({ documents }) => {
                 <Typography
                   sx={{ color: "inherit", textDecoration: "none" }}
                   // component={Link}
-                  // href={`/gendox/document-instance?documentId=${document.id}`}
+                  // href={`/gendox/document-instance?organizationId=${organizationId}&documentId=${document.id}`}
                 >
                   {documentAuthor
                     ? documentAuthor.user.email
@@ -127,7 +128,7 @@ const Documents = ({ documents }) => {
 
             <Typography
               // component={Link}
-              // href={`/gendox/document-instance?documentId=${document.id}`}
+              // href={`/gendox/document-instance?organizationId=${organizationId}&documentId=${document.id}`}
               sx={{
                 mt: "auto",
                 textDecoration: "none",
@@ -154,14 +155,14 @@ const Documents = ({ documents }) => {
               },
             }}
           />
-          <Button
-            onClick={toggleShowAll}
-            endIcon={
-              <Icon icon={showAll ? "mdi:chevron-up" : "mdi:chevron-down"} />
-            }
-          >
-            {showAll ? "" : ""}
-          </Button>
+          <Tooltip title={showAll ? "Show Less" : "Show More"}>
+            <IconButton onClick={toggleShowAll} sx={{ color: "primary.main" }} >
+              <Icon
+                icon={showAll ? "mdi:chevron-up" : "mdi:chevron-down"}
+                
+              />
+            </IconButton>
+          </Tooltip>
         </Grid>
       )}
     </Grid>

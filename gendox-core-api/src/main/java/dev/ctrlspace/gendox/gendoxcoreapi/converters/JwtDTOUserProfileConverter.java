@@ -19,6 +19,8 @@ public class JwtDTOUserProfileConverter {
 
         Map<String, JwtDTO.OrganizationProject> organizationProjectMap = convertOrganizationProjectToMap(userProfile);
 
+        Map<String, JwtDTO.ProjectAgent> projectAgentMap = convertProjectAgentToMap(userProfile);
+
         Instant now = Instant.now();
 
         JwtDTO jwtDTO = JwtDTO.builder()
@@ -32,9 +34,10 @@ public class JwtDTOUserProfileConverter {
                 .userId(userProfile.getId())
                 .email(userProfile.getEmail())
                 .userName(userProfile.getUserName())
-                .globalRole(userProfile.getUserTypeId())
+                .globalRole(userProfile.getGlobalUserRoleType().getName())
                 .orgAuthoritiesMap(organizationAuthoritiesMap)
                 .orgProjectsMap(organizationProjectMap)
+                .projectAgentsMap(projectAgentMap)
                 .build();
         return jwtDTO;
     }
@@ -58,7 +61,22 @@ public class JwtDTOUserProfileConverter {
                                 .map(project -> project.getId().toString())
                                 .collect(Collectors.toSet()))
 
+
                 ));
         return organizationProjectMap;
+    }
+
+    private static Map<String, JwtDTO.ProjectAgent> convertProjectAgentToMap(UserProfile userProfile) {
+        //convert user profile organization projects to map of projects
+        Map<String, JwtDTO.ProjectAgent> projectAgentMap = userProfile.getOrganizations().stream()
+                .collect(Collectors.toMap(
+                        organization -> organization.getId().toString(),
+                        organization -> new JwtDTO.ProjectAgent(organization.getProjectAgents().stream()
+                                .map(projectAgent -> projectAgent.getId().toString())
+                                .collect(Collectors.toSet()))
+
+
+                ));
+        return projectAgentMap;
     }
 }

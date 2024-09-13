@@ -17,7 +17,7 @@
  * @property {string|null} createdBy - The ID of the user who created the document instance section.
  * @property {DocumentSectionMetadata} documentSectionMetadata - The metadata of the document section.
  * @property {string} id - The ID of the document instance section.
- * @property {boolean} moderationFlagged - Indicates if the section is flagged for moderation.
+ * @property {boolean} hasContentWarning - Indicates if the section is flagged for moderation.
  * @property {string} sectionValue - The content value of the document section.
  * @property {string} updatedAt - The last update date of the document instance section.
  * @property {string|null} updatedBy - The ID of the user who last updated the document instance section.

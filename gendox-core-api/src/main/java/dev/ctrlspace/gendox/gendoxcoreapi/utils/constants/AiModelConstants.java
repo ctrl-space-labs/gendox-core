@@ -9,6 +9,7 @@ public class AiModelConstants {
     public static final String GPT_4 = "GPT_4";
     public static final String GPT_4_TURBO = "GPT_4_TURBO";
     public static final String GPT_4_OMNI = "GPT_4_OMNI";
+    public static final String GPT_4_OMNI_MINI = "GPT_4_OMNI_MINI";
     public static final String GROQ_LLAMA_3_8B_8192 = "GROQ_LLAMA_3_8B_8192";
     public static final String GROQ_LLAMA_3_70B_8192 = "GROQ_LLAMA_3_70B_8192";
     public static final String OLLAMA_MISTRAL_8B = "OLLAMA_MISTRAL_8B";

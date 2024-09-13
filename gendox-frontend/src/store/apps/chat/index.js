@@ -11,6 +11,9 @@ import { uid } from "chart.js/helpers";
 import apiRequests from "../../../configs/apiRequest";
 import authConfig from "src/configs/auth";
 import projectService from "src/gendox-sdk/projectService";
+import { generalConstants } from "src/utils/generalConstants";
+import completionService from "../../../gendox-sdk/completionService";
+import chatThreadService from "../../../gendox-sdk/chatThreadService";
 
 
 
@@ -32,15 +35,16 @@ export const fetchChatsContacts = createAsyncThunk(
         };
       }
 
-      const threadsResponse = await axios.get(
-        apiRequests.getThreadsByCriteria(projectIds),
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + storedToken,
-          },
-        }
-      );
+      let localThreadIds = null;
+
+      // unauthenticated user
+      if (!storedToken || storedToken === generalConstants.NO_AUTH_TOKEN) {
+        const localThreads = JSON.parse(localStorage.getItem(generalConstants.LOCAL_STORAGE_THREAD_IDS_NAME)) || [];
+        localThreadIds = localThreads.map((thread) => thread.threadId);
+      }
+
+      const threadsResponse = await chatThreadService.getThreadsByCriteria(projectIds, localThreadIds, storedToken);
+
 
       const threads = threadsResponse.data.content;
 
@@ -150,19 +154,7 @@ export const sendMsg = createAsyncThunk(
         })
       );
 
-      const response = await axios.post(
-        apiRequests.postCompletionModel(obj.contact.projectId),
-        {
-          value: obj.message,
-          threadId: obj.contact.threadId,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + storedToken,
-          },
-        }
-      );
+      const response = await completionService.postCompletionMessage(obj.contact.projectId, obj.contact.threadId, obj.message, storedToken);
 
       dispatch(
         addMessage({
@@ -177,6 +169,7 @@ export const sendMsg = createAsyncThunk(
       let newThread = !obj.contact.threadId;
       if (newThread) {
         let newThreadId = response.data.message.threadId;
+        _updateThreadsToLocalStorage(newThreadId);
         await dispatch(fetchChatsContacts({ organizationId: obj.organizationId, storedToken })); // Await to load the new thread before selecting it
         // Select the newly created thread, keep the chat content instead of showing the message loader
         dispatch(selectChat({ id: newThreadId, keepChatContent: true, organizationId: obj.organizationId, storedToken }));
@@ -226,18 +219,14 @@ export const appChatSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(fetchChatsContacts.fulfilled, (state, action) => {
-      console.log("fetchChatsContacts fulfilled: ", action);
       state.contacts = action.payload.contacts;
       state.chats = action.payload.chatsContacts;
     });
     builder.addCase(fetchChatsContacts.pending, (state, action) => {
-      console.log("fetchChatsContacts pending: ", action);
     });
     builder.addCase(fetchChatsContacts.rejected, (state, action) => {
-      console.log("fetchChatsContacts rejected: ", action);
     });
     builder.addCase(selectChat.pending, (state, action) => {
-      console.log("selectChat pending: ", action);
       if (!action.meta.arg.keepChatContent) {
         state.selectedChat = null;
       }
@@ -273,20 +262,37 @@ function _createNewThreadChat(state, id) {
   return newThreadChat;
 }
 
+/**
+ * Update the threads in localStorage by removing the old ones and adding the new one
+ *
+ * @param newThreadId
+ * @private
+ */
+function _updateThreadsToLocalStorage(newThreadId) {
+  // Retrieve the existing array from localStorage
+  let threads = JSON.parse(localStorage.getItem(generalConstants.LOCAL_STORAGE_THREAD_IDS_NAME)) || [];
+
+  // remove threads older than 2 weeks old
+  const twoWeeksAgo = new Date();
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  threads = threads.filter((thread) => new Date(thread.createdAt) > twoWeeksAgo);
+
+  // Push the newThreadId to the array
+  threads.push({
+    threadId: newThreadId,
+    createdAt: new Date().toISOString(),
+  });
+
+  // Save the updated array back to localStorage
+  localStorage.setItem(generalConstants.LOCAL_STORAGE_THREAD_IDS_NAME, JSON.stringify(threads));
+}
+
 
 async function _fetchExistingChatWithMessages(id, dispatch, thread) {
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
-  const messagesResponse = await axios.get(
-    apiRequests.getThreadMessagesByCriteria(id, 0, 100),
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + storedToken,
-      },
-    }
-  );
+  const messagesResponse = await chatThreadService.getThreadMessagesByCriteria(id, storedToken);
 
   const chatMessages = messagesResponse.data.content.map((message) =>
     chatConverters.gendoxMessageToChatMessage(message)

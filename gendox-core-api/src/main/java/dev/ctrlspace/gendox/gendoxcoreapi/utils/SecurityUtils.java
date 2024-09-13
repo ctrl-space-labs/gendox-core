@@ -3,9 +3,14 @@ package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,11 +38,30 @@ public class SecurityUtils {
 
     Logger logger = org.slf4j.LoggerFactory.getLogger(SecurityUtils.class);
 
-    @Autowired
+    private ObjectMapper objectMapper;
+
     private JWTUtils jwtUtils;
 
+    private ChatThreadRepository chatThreadRepository;
+
+    private ProjectAgentService projectAgentService;
+
+    private DocumentInstanceRepository documentInstanceRepository;
+
     @Autowired
-    private ObjectMapper objectMapper;
+    public SecurityUtils(ObjectMapper objectMapper,
+                         JWTUtils jwtUtils,
+                         ChatThreadRepository chatThreadRepository,
+                            ProjectAgentService projectAgentService,
+                         DocumentInstanceRepository documentInstanceRepository) {
+        this.objectMapper = objectMapper;
+        this.jwtUtils = jwtUtils;
+        this.chatThreadRepository = chatThreadRepository;
+        this.projectAgentService = projectAgentService;
+        this.documentInstanceRepository = documentInstanceRepository;
+    }
+
+
 
     public boolean isSuperAdmin() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -46,22 +70,39 @@ public class SecurityUtils {
     }
 
     public boolean isSuperAdmin(Authentication authentication) {
-        return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith(UserNamesConstants.GENDOX_SUPER_ADMIN));
+        if (!(SecurityContextHolder.getContext().getAuthentication() instanceof GendoxAuthenticationToken)) {
+            return false;
+        }
+        GendoxAuthenticationToken principal = (GendoxAuthenticationToken)SecurityContextHolder.getContext()
+                .getAuthentication();
+        return principal != null &&
+                UserNamesConstants.GENDOX_SUPER_ADMIN.equals(
+                        principal.getPrincipal().getGlobalUserRoleType().getName()
+                );
     }
 
     public boolean isUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(grantedAuthority -> {
-                    String authority = grantedAuthority.getAuthority();
-                    return authority.contains(UserNamesConstants.GENDOX_USER);
-                });
+        if (!(SecurityContextHolder.getContext().getAuthentication() instanceof GendoxAuthenticationToken)) {
+            return false;
+        }
+        GendoxAuthenticationToken principal = (GendoxAuthenticationToken)SecurityContextHolder.getContext()
+                .getAuthentication();
+        return principal != null &&
+                UserNamesConstants.GENDOX_USER.equals(
+                        principal.getPrincipal().getGlobalUserRoleType().getName()
+                );
     }
 
     public boolean isAgent(Authentication authentication) {
-        return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().startsWith(UserNamesConstants.GENDOX_AGENT));
+        if (!(SecurityContextHolder.getContext().getAuthentication() instanceof GendoxAuthenticationToken)) {
+            return false;
+        }
+        GendoxAuthenticationToken principal = (GendoxAuthenticationToken)SecurityContextHolder.getContext()
+                .getAuthentication();
+        return principal != null &&
+                UserNamesConstants.GENDOX_AGENT.equals(
+                        principal.getPrincipal().getGlobalUserRoleType().getName()
+                );
     }
 
 
@@ -75,6 +116,15 @@ public class SecurityUtils {
         // Check if orgIds is not null and not empty, then check organization access
         if (accessCriteria.getOrgIds() != null && !accessCriteria.getOrgIds().isEmpty()) {
             return canAccessOrganizations(authority, authentication, accessCriteria.getOrgIds());
+        }
+
+
+        if (accessCriteria.getThreadId() != null && !accessCriteria.getThreadId().isEmpty()) {
+            return canAccessThread(authority, authentication, UUID.fromString(accessCriteria.getThreadId()));
+        }
+
+        if (accessCriteria.getDocumentId() != null && !accessCriteria.getDocumentId().isEmpty()) {
+            return canAccessDocument(authority, authentication, UUID.fromString(accessCriteria.getDocumentId()));
         }
 
 
@@ -116,6 +166,34 @@ public class SecurityUtils {
         return true;
     }
 
+    private boolean canAccessThread(String authority, GendoxAuthenticationToken authentication, UUID threadId) {
+
+        List<UUID> authorizedProjectIds = authentication
+                .getPrincipal()
+                .getOrganizations()
+                .stream()
+                .filter(org -> org.getAuthorities().contains(authority))
+                .flatMap(org -> org.getProjects().stream())
+                .map(project -> UUID.fromString(project.getId()))
+                .collect(Collectors.toList());
+
+        return chatThreadRepository.existsByIdAndProjectIdIn(threadId, authorizedProjectIds);
+    }
+
+    private boolean canAccessDocument(String authority, GendoxAuthenticationToken authentication, UUID documentId) {
+
+        List<UUID> authorizedProjectIds = authentication
+                .getPrincipal()
+                .getOrganizations()
+                .stream()
+                .filter(org -> org.getAuthorities().contains(authority))
+                .flatMap(org -> org.getProjects().stream())
+                .map(project -> UUID.fromString(project.getId()))
+                .collect(Collectors.toList());
+
+        return documentInstanceRepository.existsByDocumentIdAndProjectIds(documentId, authorizedProjectIds);
+    }
+
 
     private AccessCriteria getRequestedOrgsFromRequestParams() {
         HttpServletRequest request = getCurrentHttpRequest();
@@ -139,6 +217,7 @@ public class SecurityUtils {
         return AccessCriteria.builder()
                 .orgIds(requestedOrgIds)
                 .projectIds(new HashSet<>())
+                .threadId(new String())
                 .build();
     }
 
@@ -164,6 +243,7 @@ public class SecurityUtils {
                 .builder()
                 .orgIds(requestedOrgIds)
                 .projectIds(new HashSet<>())
+                .threadId(new String())
                 .build();
     }
 
@@ -198,6 +278,7 @@ public class SecurityUtils {
                 .builder()
                 .orgIds(new HashSet<>())
                 .projectIds(requestedProjectIds)
+                .threadId(new String())
                 .build();
     }
 
@@ -221,7 +302,60 @@ public class SecurityUtils {
                 .builder()
                 .orgIds(new HashSet<>())
                 .projectIds(requestedProjectIds)
+                .threadId(new String())
                 .build();
+    }
+
+    private AccessCriteria getRequestedThreadIdFromPathVariable() {
+        // Extract threadId from the request path
+        HttpServletRequest request = getCurrentHttpRequest();
+        Map<String, String> uriTemplateVariables = (Map<String, String>) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+
+        String threadId = new String();
+
+        if (uriTemplateVariables != null) {
+            threadId = uriTemplateVariables.get(QueryParamNames.THREAD_ID);
+        }
+
+        return AccessCriteria
+                .builder()
+                .orgIds(new HashSet<>())
+                .projectIds(new HashSet<>())
+                .threadId(threadId)
+                .documentId(new String())
+                .build();
+    }
+
+    private AccessCriteria getRequestedDocumentIdFromPathVariable() {
+        // Extract documentId from the request path
+        HttpServletRequest request = getCurrentHttpRequest();
+        Map<String, String> uriTemplateVariables = (Map<String, String>) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+
+        String documentId = new String();
+
+        if (uriTemplateVariables != null) {
+            documentId = uriTemplateVariables.get(QueryParamNames.DOCUMENT_INSTANCE_ID);
+        }
+
+
+        return AccessCriteria
+                .builder()
+                .orgIds(new HashSet<>())
+                .projectIds(new HashSet<>())
+                .threadId(new String())
+                .documentId(documentId)
+                .build();
+    }
+
+    public boolean isPublicProject(String projectId) {
+//        ProjectAgent projectAgent = projectAgentService.getAgentByProjectId(UUID.fromString(projectId));
+//        return Boolean.FALSE.equals(projectAgent.getPrivateAgent());
+        return projectAgentService.isPublicAgent(UUID.fromString(projectId));
+    }
+
+    public boolean isPublicThread(UUID threadId) {
+
+        return chatThreadRepository.existsByIdAndPublicThreadIsTrue(threadId);
     }
 
 
@@ -233,6 +367,8 @@ public class SecurityUtils {
         public static final String PROJECT_IDS_FROM_REQUEST_PARAMS = "getRequestedProjectsFromRequestParams";
         public static final String PROJECT_ID_FROM_PATH_VARIABLE = "getRequestedProjectIdFromPathVariable";
 
+        public static final String THREAD_ID_FROM_PATH_VARIABLE = "getRequestedThreadIdFromPathVariable";
+        public static final String DOCUMENT_ID_FROM_PATH_VARIABLE = "getRequestedDocumentIdFromPathVariable";
     }
 
 
@@ -241,10 +377,13 @@ public class SecurityUtils {
      *
      * @param authority      the authority that the user should have
      * @param getterFunction this is used to find the appropriate function, that will extract the {@link AccessCriteria}
-     *                       from path variables or requstparams or JSON body
+     *                       from path variables or requestparams or JSON body
      * @return
      */
     public boolean hasAuthority(String authority, String getterFunction) throws IOException {
+        if (!(SecurityContextHolder.getContext().getAuthentication() instanceof GendoxAuthenticationToken)) {
+            return false;
+        }
         GendoxAuthenticationToken authentication = (GendoxAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
 
         if (isSuperAdmin(authentication)) {
@@ -267,6 +406,14 @@ public class SecurityUtils {
         }
         if (AccessCriteriaGetterFunction.PROJECT_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
             accessCriteria = getRequestedProjectIdFromPathVariable();
+        }
+
+        if (AccessCriteriaGetterFunction.THREAD_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
+            accessCriteria = getRequestedThreadIdFromPathVariable();
+        }
+
+        if (AccessCriteriaGetterFunction.DOCUMENT_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
+            accessCriteria = getRequestedDocumentIdFromPathVariable();
         }
 
         if (accessCriteria == null) {

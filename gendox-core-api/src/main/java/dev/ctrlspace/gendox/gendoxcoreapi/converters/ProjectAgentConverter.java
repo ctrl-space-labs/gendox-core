@@ -27,6 +27,9 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         projectAgentDTO.setTopP(projectAgent.getTopP());
         projectAgentDTO.setModerationCheck(projectAgent.getModerationCheck());
         projectAgentDTO.setModerationModel(projectAgent.getModerationModel());
+        projectAgentDTO.setAgentVcJwt(projectAgent.getAgentVcJwt());
+        projectAgentDTO.setOrganizationDid(projectAgent.getOrganizationDid());
+
 
 
         return projectAgentDTO;
@@ -53,6 +56,8 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         projectAgent.setTopP(projectAgentDTO.getTopP());
         projectAgent.setModerationCheck(projectAgentDTO.getModerationCheck());
         projectAgent.setModerationModel(projectAgentDTO.getModerationModel());
+        projectAgent.setAgentVcJwt(projectAgentDTO.getAgentVcJwt());
+        projectAgent.setOrganizationDid(projectAgentDTO.getOrganizationDid());
 
         return projectAgent;
     }

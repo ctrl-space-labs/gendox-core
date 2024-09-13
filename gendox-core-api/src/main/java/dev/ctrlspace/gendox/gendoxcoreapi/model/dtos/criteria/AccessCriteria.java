@@ -13,4 +13,6 @@ import java.util.Set;
 public class AccessCriteria {
     private Set<String> orgIds;
     private Set<String> projectIds;
+    private String threadId;
+    private String documentId;
 }

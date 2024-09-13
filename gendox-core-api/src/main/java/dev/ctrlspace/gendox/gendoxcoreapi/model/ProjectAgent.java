@@ -92,6 +92,14 @@ public class ProjectAgent {
     @JoinColumn(name = "moderation_model_id", referencedColumnName = "id", nullable = true)
     private AiModel moderationModel;
 
+    @Basic
+    @Column(name = "agent_vc_jwt", nullable = true)
+    private String agentVcJwt;
+
+    @Basic
+    @Column(name = "organization_did", nullable = true)
+    private String organizationDid;
+
     public UUID getId() {
         return id;
     }
@@ -253,62 +261,24 @@ public class ProjectAgent {
         this.moderationModel = moderationModel;
     }
 
+    public String getAgentVcJwt() {return agentVcJwt;}
+
+    public void setAgentVcJwt(String agentVcJwt) {this.agentVcJwt = agentVcJwt;}
+
+    public String getOrganizationDid() {return organizationDid;}
+
+    public void setOrganizationDid(String organizationDid) {this.organizationDid = organizationDid;}
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof ProjectAgent that)) return false;
-
-        if (!Objects.equals(id, that.id)) return false;
-        if (!Objects.equals(project, that.project)) return false;
-        if (!Objects.equals(userId, that.userId)) return false;
-        if (!Objects.equals(semanticSearchModel, that.semanticSearchModel))
-            return false;
-        if (!Objects.equals(completionModel, that.completionModel))
-            return false;
-        if (!Objects.equals(agentName, that.agentName)) return false;
-        if (!Objects.equals(agentBehavior, that.agentBehavior))
-            return false;
-        if (!Objects.equals(privateAgent, that.privateAgent)) return false;
-        if (!Objects.equals(createdAt, that.createdAt)) return false;
-        if (!Objects.equals(updatedAt, that.updatedAt)) return false;
-        if (!Objects.equals(createdBy, that.createdBy)) return false;
-        if (!Objects.equals(updatedBy, that.updatedBy)) return false;
-        if (!Objects.equals(documentSplitterType, that.documentSplitterType))
-            return false;
-        if (!Objects.equals(chatTemplateId, that.chatTemplateId))
-            return false;
-        if (!Objects.equals(sectionTemplateId, that.sectionTemplateId))
-            return false;
-        if (!Objects.equals(maxToken, that.maxToken)) return false;
-        if (!Objects.equals(temperature, that.temperature)) return false;
-        if (!Objects.equals(topP, that.topP)) return false;
-        if (!Objects.equals(moderationCheck, that.moderationCheck))
-            return false;
-        return Objects.equals(moderationModel, that.moderationModel);
+        if (o == null || getClass() != o.getClass()) return false;
+        ProjectAgent that = (ProjectAgent) o;
+        return Objects.equals(id, that.id) && Objects.equals(project, that.project) && Objects.equals(userId, that.userId) && Objects.equals(semanticSearchModel, that.semanticSearchModel) && Objects.equals(completionModel, that.completionModel) && Objects.equals(agentName, that.agentName) && Objects.equals(agentBehavior, that.agentBehavior) && Objects.equals(privateAgent, that.privateAgent) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(documentSplitterType, that.documentSplitterType) && Objects.equals(chatTemplateId, that.chatTemplateId) && Objects.equals(sectionTemplateId, that.sectionTemplateId) && Objects.equals(maxToken, that.maxToken) && Objects.equals(temperature, that.temperature) && Objects.equals(topP, that.topP) && Objects.equals(moderationCheck, that.moderationCheck) && Objects.equals(moderationModel, that.moderationModel) && Objects.equals(agentVcJwt, that.agentVcJwt) && Objects.equals(organizationDid, that.organizationDid);
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (project != null ? project.hashCode() : 0);
-        result = 31 * result + (userId != null ? userId.hashCode() : 0);
-        result = 31 * result + (semanticSearchModel != null ? semanticSearchModel.hashCode() : 0);
-        result = 31 * result + (completionModel != null ? completionModel.hashCode() : 0);
-        result = 31 * result + (agentName != null ? agentName.hashCode() : 0);
-        result = 31 * result + (agentBehavior != null ? agentBehavior.hashCode() : 0);
-        result = 31 * result + (privateAgent != null ? privateAgent.hashCode() : 0);
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        result = 31 * result + (createdBy != null ? createdBy.hashCode() : 0);
-        result = 31 * result + (updatedBy != null ? updatedBy.hashCode() : 0);
-        result = 31 * result + (documentSplitterType != null ? documentSplitterType.hashCode() : 0);
-        result = 31 * result + (chatTemplateId != null ? chatTemplateId.hashCode() : 0);
-        result = 31 * result + (sectionTemplateId != null ? sectionTemplateId.hashCode() : 0);
-        result = 31 * result + (maxToken != null ? maxToken.hashCode() : 0);
-        result = 31 * result + (temperature != null ? temperature.hashCode() : 0);
-        result = 31 * result + (topP != null ? topP.hashCode() : 0);
-        result = 31 * result + (moderationCheck != null ? moderationCheck.hashCode() : 0);
-        result = 31 * result + (moderationModel != null ? moderationModel.hashCode() : 0);
-        return result;
+        return Objects.hash(id, project, userId, semanticSearchModel, completionModel, agentName, agentBehavior, privateAgent, createdAt, updatedAt, createdBy, updatedBy, documentSplitterType, chatTemplateId, sectionTemplateId, maxToken, temperature, topP, moderationCheck, moderationModel, agentVcJwt, organizationDid);
     }
 }

@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.messages;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.ListenerService;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.utils.constants.DiscordGendoxConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.MessageBuilder;
@@ -17,10 +18,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class ChatGendoxMessage {
@@ -66,21 +66,26 @@ public class ChatGendoxMessage {
         MessageBuilder messageBuilder = new MessageBuilder()
                 .setEmbeds(messageEmbed);
 
-
-        // return message if pass the moderation check
-        if (!completionMessageDTO.getSectionId().isEmpty()) {
-            Map<String, String> sectionIdMap = new HashMap<>();
-            List<String> sourcesUrls = completionMessageDTO.getSectionId().stream()
-                    .map(sectionId -> {
-                        sectionIdMap.put("id", sectionId.toString());
-                        return StringSubstitutor.replace(pathTemplate, sectionIdMap);
-                    })
+        if (completionMessageDTO.getMessage().getMessageSections() != null) {
+            List<UUID> sectionIds = completionMessageDTO.getMessage().getMessageSections().stream()
+                    .map(MessageSection::getSectionId)
                     .toList();
-            List<Button> linkButtons = new ArrayList<>();
-            for (int i = 0; i < sourcesUrls.size(); i++) {
-                linkButtons.add(Button.link(sourcesUrls.get(i), "Link " + (i + 1)));
+
+            // return message if pass the moderation check
+            if (!sectionIds.isEmpty()) {
+                Map<String, String> sectionIdMap = new HashMap<>();
+                List<String> sourcesUrls = sectionIds.stream()
+                        .map(sectionId -> {
+                            sectionIdMap.put("id", sectionId.toString());
+                            return StringSubstitutor.replace(pathTemplate, sectionIdMap);
+                        })
+                        .toList();
+                List<Button> linkButtons = new ArrayList<>();
+                for (int i = 0; i < sourcesUrls.size(); i++) {
+                    linkButtons.add(Button.link(sourcesUrls.get(i), "Link " + (i + 1)));
+                }
+                messageBuilder.setActionRows(ActionRow.of(linkButtons.toArray(new Button[0])));
             }
-            messageBuilder.setActionRows(ActionRow.of(linkButtons.toArray(new Button[0])));
         }
 
 

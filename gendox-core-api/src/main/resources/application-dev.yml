@@ -1,7 +1,7 @@
 
 
 server:
-  port: 5000
+  port: 5001
   servlet:
     context-path: /gendox/api/v1
 logging:
@@ -38,12 +38,9 @@ spring:
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
     hikari:
-      maximum-pool-size: 50
+      maximum-pool-size: 100
       minimum-idle: 10
-#  datasource:
-#    url: jdbc:postgresql://localhost:5432/postgres
-#    username: postgres
-#    password: 123456789
+
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -110,7 +107,7 @@ gendox:
     contact-email: contact@ctrlspace.dev
   documents:
     upload-dir: s3://gendox.organization.documents.dev
-#    upload-dir: file:c:\\Users\\sekas\\gendox-documents
+#    upload-dir: file:c:\\Users\\myrto\\projects
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
@@ -125,9 +122,9 @@ gendox:
         wait-time-seconds: 1 #not in use
         visibility-timeout-seconds: 300
   models:
-    openai:
-      ada2:
-        key: ${OPENAI_KEY}
+#    It is important these fields to have the same names as the DB ai_model_provider.api_type_id.name
+    open_ai:
+      key: ${OPENAI_KEY}
     cohere:
       key: ${COHERE_KEY}
     groq:
@@ -198,3 +195,28 @@ discord:
       token: ${DISCORD_TOKEN:default-token}
   server:
     group-name: gendox-agents
+
+
+proven-ai:
+  enabled: ${PROVEN_AI_ENABLED:false}
+  base-url: https://dev.provenai.ctrlspace.dev
+  context-path: /proven-ai/api/v1
+  apis:
+    agent-authentication:
+      endpoint: /agents/token
+      scope: openid email
+      grant_type: vp_token
+    search:
+      endpoint: /search
+
+# Walt.id
+
+walt-id:
+  default-key:
+    type: ECDSA_SECP256K1
+    size: 2048
+
+#ISCC Code
+iscc:
+  apis:
+    code-generation: http://localhost:8970/api/v1/iscc

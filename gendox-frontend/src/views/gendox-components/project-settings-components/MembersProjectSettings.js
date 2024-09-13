@@ -1,190 +1,46 @@
+// ** React Imports
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { useSelector } from "react-redux";
-import { visuallyHidden } from "@mui/utils";
-import { alpha } from "@mui/material/styles";
 import { useSettings } from "src/@core/hooks/useSettings";
+
+// ** MUI Imports
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
-import CardActions from "@mui/material/CardActions";
-import CardContent from "@mui/material/CardContent";
-import CardHeader from "@mui/material/CardHeader";
-import Checkbox from "@mui/material/Checkbox";
-import Divider from "@mui/material/Divider";
-import Grid from "@mui/material/Grid";
+import Alert from "@mui/material/Alert";
 import IconButton from "@mui/material/IconButton";
-import Paper from "@mui/material/Paper";
-import Snackbar from "@mui/material/Snackbar";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TablePagination from "@mui/material/TablePagination";
-import TableRow from "@mui/material/TableRow";
-import TableSortLabel from "@mui/material/TableSortLabel";
-import Toolbar from "@mui/material/Toolbar";
-import Tooltip from "@mui/material/Tooltip";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
-
+import CardHeader from "@mui/material/CardHeader";
+import { DataGrid } from "@mui/x-data-grid";
 import Icon from "src/@core/components/icon";
-import authConfig from "src/configs/auth";
+
+// ** Custom Components
+import CustomChip from "src/@core/components/mui/chip";
+import CustomAvatar from "src/@core/components/mui/avatar";
+import QuickSearchToolbar from "src/views/gendox-components/project-settings-components/members-components/QuickSearchToolbar";
+import InviteDialog from "src/views/gendox-components/project-settings-components/members-components/InviteDialog";
 import projectService from "src/gendox-sdk/projectService";
 import organizationService from "src/gendox-sdk/organizationService";
+import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 
-function descendingComparator(a, b, orderBy) {
-  if (b[orderBy] < a[orderBy]) {
-    return -1;
-  }
-  if (b[orderBy] > a[orderBy]) {
-    return 1;
-  }
+import authConfig from "src/configs/auth";
+import { styled, useTheme } from "@mui/material/styles";
 
-  return 0;
-}
+// ** Utils Import
+import { getInitials } from "src/@core/utils/get-initials";
+import { set } from "nprogress";
+import toast from "react-hot-toast";
 
-function getComparator(order, orderBy) {
-  return order === "desc"
-    ? (a, b) => descendingComparator(a, b, orderBy)
-    : (a, b) => -descendingComparator(a, b, orderBy);
-}
+import {
+  userTypeStatus,
+  memberRoleStatus,
+  escapeRegExp,
+  renderClientAvatar
+} from "src/utils/membersUtils";
 
-// This method is created for cross-browser compatibility, if you don't
-// need to support IE11, you can use Array.prototype.sort() directly
-function stableSort(array, comparator) {
-  const stabilizedThis = array.map((el, index) => [el, index]);
-  stabilizedThis.sort((a, b) => {
-    const order = comparator(a[0], b[0]);
-    if (order !== 0) return order;
-
-    return a[1] - b[1];
-  });
-
-  return stabilizedThis.map((el) => el[0]);
-}
-
-const headCells = [
-  { id: "name", numeric: false, disablePadding: true, label: "Name" },
-  { id: "userName", numeric: true, disablePadding: false, label: "Username" },
-  { id: "email", numeric: true, disablePadding: false, label: "Email" },
-  { id: "user-type", numeric: true, disablePadding: false, label: "User Type" },
-  {
-    id: "is-project-member",
-    numeric: true,
-    disablePadding: false,
-    label: "Plan",
-  },
-];
-
-function EnhancedTableHead(props) {
-  // ** Props
-  const {
-    onSelectAllClick,
-    order,
-    orderBy,
-    numSelected,
-    rowCount,
-    onRequestSort,
-    showProjectMemberColumn,
-  } = props;
-
-  const createSortHandler = (property) => (event) => {
-    onRequestSort(event, property);
-  };
-
-  return (
-    <TableHead>
-      <TableRow>
-        {/* {headCells.map((headCell) => ( */}
-        {headCells
-          .filter(
-            (cell) => showProjectMemberColumn || cell.id !== "isProjectMember"
-          )
-          .map((headCell) => (
-            <TableCell
-              key={headCell.id}
-              align={headCell.numeric ? "right" : "left"}
-              padding={headCell.disablePadding ? "none" : "normal"}
-              sortDirection={orderBy === headCell.id ? order : false}
-            >
-              <TableSortLabel
-                active={orderBy === headCell.id}
-                onClick={createSortHandler(headCell.id)}
-                direction={orderBy === headCell.id ? order : "asc"}
-              >
-                {headCell.label}
-                {orderBy === headCell.id ? (
-                  <Box component="span" sx={visuallyHidden}>
-                    {order === "desc"
-                      ? "sorted descending"
-                      : "sorted ascending"}
-                  </Box>
-                ) : null}
-              </TableSortLabel>
-            </TableCell>
-          ))}
-        {showProjectMemberColumn && (
-          <TableCell padding="checkbox">
-            <Checkbox
-              onChange={onSelectAllClick}
-              checked={rowCount > 0 && numSelected === rowCount}
-              inputProps={{ "aria-label": "select all users" }}
-              indeterminate={numSelected > 0 && numSelected < rowCount}
-            />
-          </TableCell>
-        )}
-      </TableRow>
-    </TableHead>
-  );
-}
-
-const EnhancedTableToolbar = (props) => {
-  // ** Prop
-  const { numSelected } = props;
-
-  return (
-    <Toolbar
-      sx={{
-        px: (theme) => `${theme.spacing(5)} !important`,
-        ...(numSelected > 0 && {
-          bgcolor: (theme) =>
-            alpha(
-              theme.palette.primary.main,
-              theme.palette.action.activatedOpacity
-            ),
-        }),
-      }}
-    >
-      {numSelected > 0 ? (
-        <Typography
-          sx={{ flex: "1 1 100%" }}
-          color="inherit"
-          variant="subtitle1"
-          component="div"
-        >
-          {numSelected} selected
-        </Typography>
-      ) : (
-        <Typography
-          sx={{ flex: "1 1 100%" }}
-          variant="h6"
-          id="tableTitle"
-          component="div"
-        >
-          Project Members
-        </Typography>
-      )}
-      {numSelected > 0 ? (
-        <Tooltip title="Delete">
-          <IconButton sx={{ color: "text.secondary" }}>
-            <Icon icon="mdi:delete-outline" />
-          </IconButton>
-        </Tooltip>
-      ) : null}
-    </Toolbar>
-  );
-};
 
 const MembersProjectSettings = () => {
   const router = useRouter();
@@ -195,20 +51,26 @@ const MembersProjectSettings = () => {
   );
   const project = useSelector((state) => state.activeProject.projectDetails);
   const { id: projectId, organizationId } = project;
-
-  const [order, setOrder] = useState("asc");
-  const [orderBy, setOrderBy] = useState("name");
-  const [selected, setSelected] = useState([]);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [projectMembers, setProjectMembers] = useState([]);
+  const [searchText, setSearchText] = useState([]);
+  const [filteredProjectMembers, setFilteredProjectMembers] = useState([]);
+  const [paginationModel, setPaginationModel] = useState({
+    page: 0,
+    pageSize: 7,
+  });
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+ 
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [organizationMembers, setOrganizationMembers] = useState([]);
-  const [projectMembers, setProjectMembers] = useState([]);  
-  const [showInviteButton, setShowInviteButton] = useState(true); 
 
-  
+
   useEffect(() => {
     if (projectId) {
       fetchProjectMembers();
+      fetchProjectMembersRole();
     }
   }, [projectId, organizationId, router]);
 
@@ -225,274 +87,307 @@ const MembersProjectSettings = () => {
         activeProjectMember: true,
       }));
       setProjectMembers(fetchedProjectMembers);
+      setFilteredProjectMembers(fetchedProjectMembers);
     } catch (error) {
       console.error("Failed to fetch project members:", error);
     }
   };
 
-  const fetchOrganizationMembers = async () => {
+  const fetchProjectMembersRole = async () => {
     try {
+      setLoading(true); // Start loading
       const response = await organizationService.getUsersInOrganizationByOrgId(
-        organizationId,        
-        storedToken
-      );
-      const fetchedOrgMembers = response.data.map((user) => ({
-        ...user.user,
-        userType: user.user.userType.name,
-        activeProjectMember: false,
-      }));
-      // Filter out organization members who are already project members
-      const projectMemberIds = new Set(projectMembers.map(pm => pm.id));
-      const filteredOrgMembers = fetchedOrgMembers.filter(om => !projectMemberIds.has(om.id));
-
-      setOrganizationMembers(filteredOrgMembers);
-      setShowInviteButton(false);
-    } catch (error) {
-      console.error("Failed to fetch organization members:", error);
-    }
-  };
-
-  const handleRequestSort = (event, property) => {
-    const isAsc = orderBy === property && order === "asc";
-    setOrder(isAsc ? "desc" : "asc");
-    setOrderBy(property);
-  };
-
-  const handleSelectAllClick = (event) => {
-    if (event.target.checked) {
-        const newSelected = membersToShow.map((n) => n.id);
-        setSelected(newSelected);
-        return;
-    }
-    setSelected([]);
-};
-
-  const handleClick = (event, id) => {
-    const selectedIndex = selected.indexOf(id);
-    let newSelected = [];
-
-    if (selectedIndex === -1) {
-        newSelected = newSelected.concat(selected, id);
-    } else if (selectedIndex === 0) {
-        newSelected = newSelected.concat(selected.slice(1));
-    } else if (selectedIndex === selected.length - 1) {
-        newSelected = newSelected.concat(selected.slice(0, -1));
-    } else if (selectedIndex > 0) {
-        newSelected = newSelected.concat(
-            selected.slice(0, selectedIndex),
-            selected.slice(selectedIndex + 1)
-        );
-    }
-
-    setSelected(newSelected);
-};
-
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  const isSelected = (name) => selected.indexOf(name) !== -1;
-
-  // Avoid a layout jump when reaching the last page with empty rows.
-  const emptyRows =
-    page > 0
-      ? Math.max(0, (1 + page) * rowsPerPage - projectMembers.length)
-      : 0;
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();  // Prevent the default form submission
-    if (!selected.length) {
-        console.log("No users selected.");
-        return;
-    }
-
-
-
-    try {
-      const response = await projectService.addProjectMember(
         organizationId,
-        projectId,
-        selected,
         storedToken
       );
-      console.log("Update successful", response);
-      setShowInviteButton(true);
-      setOrganizationMembers([]);
-      setProjectMembers([]);
-      setSelected([]);
-      const path = `/gendox/project-settings?organizationId=${organizationId}&projectId=${projectId}`
-      router.push(path);
+      setOrganizationMembers(response.data);
+      const organizationUsers = response.data;
+      // Update the existing project members with roles from organization users
+      setProjectMembers((prevProjectMembers) => {
+        const updatedProjectMembers = prevProjectMembers.map(
+          (projectMember) => {
+            const orgUser = organizationUsers.find(
+              (orgUser) => orgUser.user.id === projectMember.id
+            );
+            return {
+              ...projectMember,
+              role: orgUser ? orgUser.role : null, // Assign role if found
+            };
+          }
+        );
+
+        // Update filteredProjectMembers as well
+        setFilteredProjectMembers(updatedProjectMembers);
+
+        return updatedProjectMembers;
+      });
     } catch (error) {
-      console.error("Failed to update project", error);
+      console.error("Failed to fetch project members role:", error);
+    } finally {
+      setLoading(false); // Stop loading once fetch is done
     }
   };
 
-  const handleInviteNewMembers = (event) => {
-    event.preventDefault(); // This prevents the form from submitting.
-    fetchOrganizationMembers();
-    setShowInviteButton(false);
+  const handleSearch = (searchValue) => {
+    setSearchText(searchValue);
+    const searchRegex = new RegExp(escapeRegExp(searchValue), "i");
+
+    const filteredRows = projectMembers.filter((row) => {
+      return Object.keys(row).some((field) => {
+        const fieldValue = row[field];
+        return fieldValue && searchRegex.test(fieldValue.toString());
+      });
+    });
+    setFilteredProjectMembers(
+      searchValue.length ? filteredRows : projectMembers
+    );
   };
 
-  const handleBack = (event) => {
-    event.preventDefault(); // This prevents the form from submitting.
-    setShowInviteButton(true); // Reset to show the invite button again
-    setOrganizationMembers([]); // Optionally clear the organization members list
+  const handleMenuClick = (event, row) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedUser(row);
   };
 
-  const membersToShow = showInviteButton ? projectMembers : organizationMembers;
-  const showProjectMemberColumn = !showInviteButton;
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleDeleteUser = async () => {
+    if (selectedUser) {
+      try {
+        await projectService.removeProjectMember(
+          organizationId,
+          projectId,
+          selectedUser.id,
+          storedToken
+        );
+        setProjectMembers((prevData) =>
+          prevData.filter((user) => user.id !== selectedUser.id)
+        );
+        setFilteredProjectMembers((prevData) =>
+          prevData.filter((user) => user.id !== selectedUser.id)
+        );
+        toast.success("User deleted successfully");
+        
+      } catch (error) {
+        console.error("Failed to delete user:", error);
+        toast.error("Failed to delete user");
+        
+      }
+      setConfirmDelete(false);
+      handleMenuClose();
+    }
+  };
+
+  const handleBanUser = () => {
+    // Implement the ban user logic here
+    console.log("Banning user:", selectedUser);
+    handleMenuClose();
+  };
+
+  const handleDeleteConfirmOpen = () => {
+    handleMenuClose();
+    setConfirmDelete(true);
+  };
+
+  const handleDeleteConfirmClose = () => {
+    setConfirmDelete(false);
+  };
+
+  const handleInviteNewMembers = () => {
+    setShowInviteDialog(true);
+  };
+
+  const columns = [
+    {
+      flex: 0.275,
+      minWidth: 290,
+      field: "name",
+      headerName: "Name",
+      renderCell: (params) => {
+        const { row } = params;
+
+        return (
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            {renderClientAvatar(params)}
+            <Box sx={{ display: "flex", flexDirection: "column" }}>
+              <Typography
+                noWrap
+                variant="body2"
+                sx={{ color: "text.primary", fontWeight: 600 }}
+              >
+                {row.name}
+              </Typography>
+              <Typography noWrap variant="caption">
+                {row.userName}
+              </Typography>
+            </Box>
+          </Box>
+        );
+      },
+    },
+    {
+      flex: 0.2,
+      minWidth: 120,
+      headerName: "Email",
+      field: "email",
+      renderCell: (params) => (
+        <Typography variant="body2" sx={{ color: "text.primary" }}>
+          {params.row.email}
+        </Typography>
+      ),
+    },
+    {
+      flex: 0.2,
+      minWidth: 120,
+      field: "role",
+      headerName: "Organization Role",
+      renderCell: (params) => {
+        if (loading) {
+          // Render a loader or placeholder
+          return <Typography variant="body2">Loading...</Typography>;
+        }
+        const role = params.row.role?.name || "UNKNOWN";
+        const status = memberRoleStatus[role] || memberRoleStatus.UNKNOWN;
+        return (
+          <Typography
+            variant="body2"
+            sx={{ display: "flex", alignItems: "center" }}
+          >
+            {status.icon && (
+              <Icon
+                icon={status.icon}
+                style={{ color: status.color, marginRight: "0.5rem" }}
+              />
+            )}
+
+            {status.title}
+          </Typography>
+        );
+      },
+    },
+
+    {
+      flex: 0.2,
+      minWidth: 140,
+      field: "userType",
+      headerName: "User Type",
+      renderCell: (params) => {
+        const userType = params.row.userType;
+        const status = userTypeStatus[userType] || userTypeStatus.UNKNOWN;
+        return (
+          <CustomChip
+            size="small"
+            skin="light"
+            color={status.color}
+            label={status.title}
+            sx={{ "& .MuiChip-label": { textTransform: "capitalize" } }}
+          />
+        );
+      },
+    },
+
+    {
+      flex: 0.125,
+      field: "phone",
+      minWidth: 80,
+      headerName: "Phone",
+      renderCell: (params) => (
+        <Typography variant="body2" sx={{ color: "text.primary" }}>
+          {params.row.phone}
+        </Typography>
+      ),
+    },
+    {
+      field: "actions",
+      headerName: "",
+      width: 80,
+      renderCell: (params) => (
+        <>
+          <IconButton onClick={(event) => handleMenuClick(event, params.row)}>
+            <Icon icon="mdi:dots-vertical" />
+          </IconButton>
+          <Menu
+            id="actions-menu"
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
+            anchorOrigin={{
+              vertical: "bottom",
+              horizontal: "center",
+            }}
+            transformOrigin={{
+              vertical: "top",
+              horizontal: "center",
+            }}
+          >
+            <MenuItem onClick={handleDeleteConfirmOpen}>Remove User</MenuItem>
+            {/* <MenuItem onClick={handleBanUser}>Ban User</MenuItem> */}
+          </Menu>
+        </>
+      ),
+    },
+  ];
 
   return (
     <Card>
-      <CardHeader title="Project Settings" />
-      {/* <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-        <Alert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
-          Project updated successfully!
-        </Alert>
-      </Snackbar> */}
-      <Divider />
-      <form onSubmit={handleSubmit}>
-        <CardContent>
-          <Grid>
-            <Paper sx={{ width: "100%", mb: 2 }}>
-              <EnhancedTableToolbar numSelected={selected.length} />
-              <TableContainer component={Paper}>
-                <Table
-                  sx={{ minWidth: 750 }}
-                  aria-labelledby="tableTitle"
-                  size={"medium"}
-                >
-                  <EnhancedTableHead
-                    order={order}
-                    orderBy={orderBy}
-                    rowCount={membersToShow.length}
-                    numSelected={selected.length}
-                    onRequestSort={handleRequestSort}
-                    onSelectAllClick={handleSelectAllClick}
-                    showProjectMemberColumn={showProjectMemberColumn}
-                  />
-                  <TableBody>
-                    {/* if you don't need to support IE11, you can replace the `stableSort` call with: rows.slice().sort(getComparator(order, orderBy)) */}
-                    {stableSort(membersToShow, getComparator(order, orderBy))
-                      .slice(
-                        page * rowsPerPage,
-                        page * rowsPerPage + rowsPerPage
-                      )
-                      .map((row, index) => {
-                        const isItemSelected = isSelected(
-                          row.name || row.userName
-                        );
-                        const labelId = `enhanced-table-checkbox-${index}`;
+      <CardHeader />
+      <DataGrid
+        autoHeight
+        columns={columns}
+        disableRowSelectionOnClick
+        pageSizeOptions={[7, 10, 25, 50]}
+        paginationModel={paginationModel}
+        slots={{ toolbar: QuickSearchToolbar }}
+        onPaginationModelChange={setPaginationModel}
+        rows={
+          filteredProjectMembers.length
+            ? filteredProjectMembers
+            : projectMembers
+        }
+        slotProps={{
+          baseButton: {
+            variant: "outlined",
+          },
+          toolbar: {
+            value: searchText,
+            clearSearch: () => handleSearch(""),
+            onChange: (event) => handleSearch(event.target.value),
+          },
+        }}
+      />
+      
+      <DeleteConfirmDialog
+        open={confirmDelete}
+        onClose={handleDeleteConfirmClose}
+        onConfirm={handleDeleteUser}
+        title="Confirm Deletion User"
+        contentText={`Are you sure you want to delete ${selectedUser?.name || selectedUser?.userName || "this user"}? This action cannot be undone.`}
+        confirmButtonText="Remove Member"
+        cancelButtonText="Cancel"        
+      />
 
-                        return (
-                          <TableRow
-                            hover
-                            tabIndex={-1}
-                            key={row.id}
-                            role="checkbox"
-                            selected={isItemSelected}
-                            aria-checked={isItemSelected}
-                            onClick={(event) =>
-                              handleClick(event, row.id)
-                            }
-                          >
-                            <TableCell
-                              component="th"
-                              id={labelId}
-                              scope="row"
-                              padding="none"
-                            >
-                              {row.name}
-                            </TableCell>
-                            <TableCell align="right">{row.userName}</TableCell>
-                            <TableCell align="right">{row.email}</TableCell>
-                            <TableCell align="right">{row.userType}</TableCell>
-                            {showProjectMemberColumn && (
-                              <TableCell align="right">
-                                {row.activeProjectMember ? "Yes" : "No"}
-                              </TableCell>
-                            )}
-                            {showProjectMemberColumn && (
-                              <TableCell padding="checkbox">
-                                <Checkbox
-                                  checked={isItemSelected}
-                                  inputProps={{ "aria-labelledby": labelId }}
-                                />
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        );
-                      })}
-                    {emptyRows > 0 && (
-                      <TableRow
-                        sx={{
-                          height: 53 * emptyRows,
-                        }}
-                      >
-                        <TableCell colSpan={showProjectMemberColumn ? 6 : 5} />
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <TablePagination
-                page={page}
-                component="div"
-                count={membersToShow.length}
-                rowsPerPage={rowsPerPage}
-                onPageChange={handleChangePage}
-                rowsPerPageOptions={[5, 10, 25]}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-              />
-            </Paper>
-          </Grid>
-        </CardContent>
-        <Divider />
-        {showInviteButton ? (
-          <CardActions sx={{ justifyContent: "flex-end" }}>
-            <Tooltip title={isDemo ? "Feature not available in demo mode" : ""}>
-              <span>                
-                <Button
-                  size="large"
-                  variant="contained"                  
-                  onClick={handleInviteNewMembers}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  disabled={isDemo} 
-                >
-                  Invite new members
-                </Button>
-              </span>
-            </Tooltip>            
-          </CardActions>
-        ) : (
-          <CardActions>
-            <Button
-              size="large"
-              type="submit"
-              sx={{ mr: 2 }}
-              onClick={handleSubmit}
-              variant="contained"
-            >
-              Submit
-            </Button>
-            <Button
-              type="reset"
-              size="large"
-              color="secondary"
-              onClick={handleBack}
-              variant="outlined"
-            >
-              Back
-            </Button>
-          </CardActions>
-        )}
-      </form>
+      
+
+      {/* Invite New Members Button */}
+      <Box sx={{ padding: 4, display: "flex", justifyContent: "flex-end" }}>
+        <Button
+          size="large"
+          variant="contained"
+          onClick={handleInviteNewMembers}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Invite new members
+        </Button>
+      </Box>
+
+      {/* Invite Dialog */}
+      <InviteDialog
+        open={showInviteDialog}
+        handleClose={() => setShowInviteDialog(false)}
+        organizationMembers={organizationMembers}
+      />
     </Card>
   );
 };

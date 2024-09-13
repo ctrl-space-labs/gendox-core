@@ -1,16 +1,7 @@
-// ** React Imports
 import { useState, useEffect } from "react";
-
-// ** Next Import
 import { useRouter } from "next/router";
-
-// ** Redux
 import { useSelector, useDispatch } from "react-redux";
-
-// ** Config
 import authConfig from "src/configs/auth";
-
-// ** MUI Imports
 import Grid from "@mui/material/Grid";
 import TextField from "@mui/material/TextField";
 import FormControlLabel from "@mui/material/FormControlLabel";
@@ -26,41 +17,52 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Icon from "src/@core/components/icon";
 import Tooltip from "@mui/material/Tooltip";
-
 import projectService from "src/gendox-sdk/projectService";
 import documentService from "src/gendox-sdk/documentService";
+import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
+
 
 const GeneralProjectSettings = () => {
   const router = useRouter();
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
-  if (!storedToken) {
-    console.error("No token found");
-    return;
-  }
+  
+  const dispatch = useDispatch();
   const project = useSelector((state) => state.activeProject.projectDetails);
+  const provenAiUrl = process.env.NEXT_PUBLIC_PROVEN_AI_URL;
 
-  // Explicitly handle all falsey values (including undefined and null) as false
   const [autoTraining, setAutoTraining] = useState(!!project.autoTraining);
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [error, setError] = useState("");
+  const [isBlurring, setIsBlurring] = useState(true);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
-  // Handlers for form inputs
+  useEffect(() => {
+    if (project) {
+      // Initialize state with project data when available
+      setAutoTraining(!!project.autoTraining);
+      setName(project.name);
+      setDescription(project.description);
+      setIsBlurring(false); 
+    }
+  }, [project]);
+
+
   const handleNameChange = (event) => setName(event.target.value);
   const handleDescriptionChange = (event) => setDescription(event.target.value);
   const handleAutoTrainingChange = (event) =>
     setAutoTraining(event.target.checked);
   const handleCloseSnackbar = () => setOpenSnackbar(false);
+  const handleAlertClose = () => setAlertOpen(false);
 
-  // submit put request
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent default form submission
 
-    // Construct the JSON project
     const updatedProjectPayload = {
       id: project.id,
       organizationId: project.organizationId,
@@ -83,6 +85,7 @@ const GeneralProjectSettings = () => {
       router.push(path);
     } catch (error) {
       console.error("Failed to update project", error);
+      setError("Failed to update project: " + error.message);
     }
   };
 
@@ -101,13 +104,38 @@ const GeneralProjectSettings = () => {
       });
   };
 
-  const handleAlertClose = () => {
-    setAlertOpen(false);
+
+  const handleDeleteClickOpen = () => setOpenDeleteDialog(true);
+  const handleDeleteClose = () => setOpenDeleteDialog(false);
+
+  const handleDeleteProject = async () => {
+    try {
+      await projectService.deactivateProjectById(
+        project.organizationId,
+        project.id,
+        storedToken
+      );
+      console.log("Project Deactivation successful");
+      setAlertMessage("Project deleted successfully!");
+      setAlertOpen(true);
+      handleDeleteClose(false);
+      setTimeout(() => {
+        router.push("/gendox/home");
+      }, 2000);  
+    } catch (error) {
+      console.error("Failed to delete project", error);
+      setAlertMessage("Failed to delete the project!");
+      setAlertOpen(true);
+
+      setTimeout(() => {
+        router.push("/gendox/home");
+      }, 2000); 
+    }
   };
 
   return (
     <Card>
-      <CardHeader title="Project s settings" />
+      <CardHeader />
       <Snackbar
         open={openSnackbar}
         autoHideDuration={6000}
@@ -121,22 +149,20 @@ const GeneralProjectSettings = () => {
           Project updated successfully!
         </Alert>
       </Snackbar>
-      <Divider sx={{ m: "0 !important" }} />
       <form onSubmit={handleSubmit}>
         <CardContent>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
+          <Grid container spacing={5}>
+            <Grid item xs={12} sm={12} md={4}>
               <TextField
-                required
+                fullWidth
                 id="project-name"
                 label="Name"
-                // value={project.name}
-                defaultValue={project.name}
+                value={name}                
                 onChange={handleNameChange}
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} md={2}>
               <FormControlLabel
                 label="auto-training"
                 control={
@@ -148,56 +174,94 @@ const GeneralProjectSettings = () => {
                 }
               />
             </Grid>
+            <Grid
+              item
+              xs={12}
+              sm={6}
+              sx={{
+                display: "flex",
+                alignItems: "flex-end",
+                justifyContent: "flex-end",
+              }}
+            >
+              <Tooltip title="Training Projects">
+                <Button
+                  size="large"
+                  variant="contained"
+                  onClick={handleTrainingClick}
+                  sx={{ ml: 2 }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <Box component="span" sx={{ mr: 5 }}>
+                      Training
+                    </Box>
+                    <Icon icon="mdi:brain" />{" "}
+                  </Box>
+                </Button>
+              </Tooltip>
+            </Grid>
 
             <Grid item xs={12} sm={6}>
               <TextField
+                fullWidth
                 rows={4}
                 multiline
                 label="Description"
                 id="project-description"
-                defaultValue={project.description}
+                value={description}
                 onChange={handleDescriptionChange}
               />
+            </Grid>
+            <Grid item xs={12} sm={6} md={6}></Grid>
+
+            <Grid
+              item
+              xs={12}
+              sm={6}
+              sx={{
+                display: "flex",
+                alignItems: "flex-end",
+                justifyContent: "flex-end",
+              }}
+            >
+              <Button
+                size="large"
+                variant="outlined"
+                href={`${provenAiUrl}/provenAi/data-pods-control/?organizationId=${project.organizationId}&dataPodId=${project.id}`} 
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Box component="span" sx={{ mr: 5 }}>
+                  Go to Proven-Ai
+                </Box>
+                <Icon icon="mdi:arrow-right-thin" />{" "}
+              </Button>
             </Grid>
           </Grid>
         </CardContent>
         <Divider sx={{ m: "0 !important" }} />
-        <CardActions>
-          <Box sx={{ flexGrow: 1 }}>
-            <Button
-              size="large"
-              type="submit"
-              sx={{ mr: 2 }}
-              onClick={handleSubmit}
-              variant="contained"
-            >
-              Submit
-            </Button>
-            <Button
-              type="reset"
-              size="large"
-              color="secondary"
-              variant="outlined"
-            >
-              Reset
-            </Button>
-          </Box>
 
-          <Tooltip title="Training Projects">
-            <Button
-              size="large"
-              variant="contained"
-              onClick={handleTrainingClick}
-              sx={{ ml: 2 }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center" }}>
-                <Icon icon="mdi:brain" />{" "}
-                <Box component="span" sx={{ ml: 5 }}>
-                  Training
-                </Box>
-              </Box>
-            </Button>
-          </Tooltip>
+        <CardActions sx={{ justifyContent: "flex-end", p: 2 }}>
+          
+        <Button
+            size="large"
+            variant="outlined"
+            color="error"
+            onClick={handleDeleteClickOpen}
+            sx={{ px: 22, py: 3 }}
+          >
+            Delete
+          </Button>
+          
+          <Button
+            size="large"
+            type="submit"
+            onClick={handleSubmit}
+            variant="contained"
+            sx={{ px: 22, py: 3 }}
+          >
+            Save Changes
+          </Button>
         </CardActions>
       </form>
       <Snackbar
@@ -213,6 +277,15 @@ const GeneralProjectSettings = () => {
           {alertMessage}
         </Alert>
       </Snackbar>
+      <DeleteConfirmDialog
+          open={openDeleteDialog}
+          onClose={handleDeleteClose}
+          onConfirm={handleDeleteProject}
+          title="Delete Project"
+          contentText={`Are you sure you want to delete ${project.name}? All member users will be removed and you will lose access to all related documents. This action cannot be undone.`}
+          confirmButtonText="Delete"
+          cancelButtonText="Cancel"
+        />
     </Card>
   );
 };

@@ -30,7 +30,7 @@ import { formatDateToMonthShort } from "src/@core/utils/format";
 import SidebarLeft from "src/views/apps/chat/SidebarLeft";
 import ChatContent from "src/views/apps/chat/ChatContent";
 
-const AppChat = () => {
+const AppChat = (props) => {
   const router = useRouter();
   const { organizationId, threadId } = router.query;
 
@@ -68,12 +68,22 @@ const AppChat = () => {
   useEffect(() => {
     // Hide navigation on mount
     settings.navHidden = true
-    settings.footer = 'hidden'
+    // no need to handle embedded view, no the embedded chat has a separate Layout
+    // if (props.embedView) {
+    //   // show the 'Powered By' in the iframe
+    //   settings.footerContent = 'poweredBy'
+    //   settings.showOrganizationDropdown = false
+    // } else {
+      //hide the footer in chat
+      settings.footer = 'hidden'
+    // }
     
     // Show navigation on unmount
     return () => {
       settings.navHidden = false
       settings.footer = 'static'
+      settings.footerContent = undefined
+      settings.showOrganizationDropdown = true
     };
   }, [dispatch]);
 
@@ -102,6 +112,7 @@ const AppChat = () => {
       className="app-chat"
       sx={{
         width: "100%",
+        height: "100%",
         display: "flex",
         borderRadius: 1,
         "@media (max-width:600px)": {
@@ -134,6 +145,7 @@ const AppChat = () => {
         handleUserProfileLeftSidebarToggle={handleUserProfileLeftSidebarToggle}
         organizationId={organizationId}
         storedToken={storedToken}
+        chatUrlPath={props.chatUrlPath}
       />
       <ChatContent
         store={store}

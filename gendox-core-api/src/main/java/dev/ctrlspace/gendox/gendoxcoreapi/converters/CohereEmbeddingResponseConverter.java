@@ -4,6 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereEmbedMultilingualResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.EmbeddingData;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Usage;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -16,7 +17,7 @@ public class CohereEmbeddingResponseConverter {
     private static List<Double> zeros = Collections.nCopies(512, 0.0);
 
     public EmbeddingResponse coheretoEmbeddingResponse(CohereEmbedMultilingualResponse cohereEmbedMultilingualResponse,
-                                                       String aiModel) {
+                                                       AiModel aiModel) {
         int i = 0;
 
         List<EmbeddingData> embeddingDataList = new ArrayList<>();
@@ -33,7 +34,7 @@ public class CohereEmbeddingResponseConverter {
                         cohereEmbedMultilingualResponse.getMeta().getBilledUnits().getOutputTokens())
                 .build();
         EmbeddingResponse embeddingResponse = EmbeddingResponse.builder()
-                .model(aiModel)
+                .model(aiModel.getModel())
                 .usage(usage)
                 .data(embeddingDataList)
                 .build();

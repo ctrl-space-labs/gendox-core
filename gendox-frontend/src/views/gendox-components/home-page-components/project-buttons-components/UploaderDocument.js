@@ -22,6 +22,21 @@ const HeadingTypography = styled(Typography)(({ theme }) => ({
   },
 }));
 
+const LinearProgressWithLabel = (props) => {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center" }}>
+      <Box sx={{ width: "100%", mr: 1 }}>
+        <LinearProgress variant="determinate" {...props} />
+      </Box>
+      <Box sx={{ minWidth: 35 }}>
+        <Typography variant="body2" color="text.secondary">
+          {`${Math.round(props.value)}%`}
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
+
 const UploaderDocument = ({ closeUploader }) => {
   const [files, setFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState({});
@@ -41,6 +56,28 @@ const UploaderDocument = ({ closeUploader }) => {
       ]);
     },
   });
+
+  const uploadBatch = async (batch) => {
+    const uploadPromises = batch.map(async (file) => {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        simulateProgress(file);
+        await documentService.uploadDocument(
+          organizationId,
+          projectId,
+          formData,
+          storedToken
+        );
+      } catch (error) {
+        console.error("Error uploading files", error);
+      }
+    });
+
+    await Promise.all(uploadPromises);
+  };
+
 
   const simulateProgress = (file) => {
     return new Promise((resolve) => {
@@ -63,46 +100,20 @@ const UploaderDocument = ({ closeUploader }) => {
     });
   };
 
-  
-
   const uploadFiles = async () => {
-    const newUploadProgress = {};
-    files.forEach((file) => {
-      newUploadProgress[file.id] = { progress: 0, uploading: true };
-    });
-    setUploadProgress(newUploadProgress);
+    const batchSize = 10; // Configurable batch size
+    let start = 0;
 
-    const uploadPromises = files.map(
-      (file) =>
-        new Promise(async (resolve, reject) => {
-          const formData = new FormData();
-          formData.append("file", file);
-
-          try {
-            simulateProgress(file),
-            await documentService.uploadDocument(
-              organizationId,
-              projectId,
-              formData,
-              storedToken,              
-            );    
-            resolve();
-          } catch (error) {
-            console.error("Error uploading files", error);
-            reject();
-          }
-        })
-    );
-
-    try {
-      await Promise.all(uploadPromises);
-      console.log("All files uploaded successfully");
-      setAlertOpen(true);
-      setFiles([]);
-      closeUploader();
-    } catch (error) {
-      console.error("Error uploading some files", error);
+    while (start < files.length) {
+      const batch = files.slice(start, start + batchSize);
+      await uploadBatch(batch);
+      start += batchSize;
     }
+
+    console.log("All files uploaded successfully");
+    setAlertOpen(true);
+    setFiles([]);
+    closeUploader();
   };
 
   const renderFilePreview = (file) => {
@@ -180,11 +191,9 @@ const UploaderDocument = ({ closeUploader }) => {
       </Box>
 
       {uploadProgress[file.id] && uploadProgress[file.id].uploading && (
-        <LinearProgress
-          variant="determinate"
-          value={uploadProgress[file.id].progress}
-          sx={{ width: "100%", marginTop: "8px" }}
-        />
+        
+        <LinearProgressWithLabel value={uploadProgress[file.id].progress} />
+
       )}
     </ListItem>
   ));
@@ -195,17 +204,12 @@ const UploaderDocument = ({ closeUploader }) => {
         sx={{
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
           alignItems: "center",
           width: "100%",
-          height: "100%",
           padding: "12px",
           borderRadius: "8px",
-          margin: "5px auto",
           backgroundColor: "background.paper",
-          position: "relative",
           minWidth: { xs: "300px", sm: "351px", md: "400px", lg: "450px" },
-          minHeight: { xs: "300px", sm: "351px", md: "400px", lg: "450px" },
         }}
       >
         <Box

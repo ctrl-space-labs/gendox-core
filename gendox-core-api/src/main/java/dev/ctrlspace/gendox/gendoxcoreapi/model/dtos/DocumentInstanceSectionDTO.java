@@ -17,9 +17,17 @@ public class DocumentInstanceSectionDTO {
     private UUID id;
     private DocumentDTO documentDTO;
     private DocumentSectionMetadataDTO documentSectionMetadata;
+    private String documentSectionIsccCode;
+    private Double tokenCount;
+    private String aiModelName;
     private String sectionValue;
     private UUID createdBy;
     private UUID updatedBy;
     private Instant createdAt;
     private Instant updatedAt;
+    private String documentURL;
+    private String ownerName;
+    private Object signedPermissionOfUseVc;
+    private Double distanceFromQuestion;
+    private String distanceModelName;
 }

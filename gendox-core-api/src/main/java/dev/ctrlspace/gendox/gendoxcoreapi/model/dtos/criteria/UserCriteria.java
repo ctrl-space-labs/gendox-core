@@ -16,7 +16,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-@AtLeastOneFieldIsNotEmpty(fieldNames = {QueryParamNames.ORGANIZATION_ID, QueryParamNames.PROJECT_ID})
+//@AtLeastOneFieldIsNotEmpty(fieldNames = {QueryParamNames.ORGANIZATION_ID, QueryParamNames.PROJECT_ID}) // with this the fetchAll will not work
 public class UserCriteria {
     private String email;
     private String organizationId;
@@ -24,6 +24,8 @@ public class UserCriteria {
     private String orgRoleName;
     private String userIdentifier; // email or username or phone
     private List<UUID> usersIds;
+    private boolean fetchAll;
+
 
 
 }

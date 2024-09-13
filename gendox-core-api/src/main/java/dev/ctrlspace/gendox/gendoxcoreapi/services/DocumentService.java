@@ -5,6 +5,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
+import dev.ctrlspace.provenai.iscc.IsccCodeResponse;
+import dev.ctrlspace.provenai.iscc.IsccCodeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,11 +31,15 @@ public class DocumentService {
 
     private ProjectDocumentService projectDocumentService;
 
+//    private IsccCodeService isccCodeService;
+
+
     @Autowired
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
                            DocumentSectionService documentSectionService,
                            DocumentInstanceSectionRepository documentInstanceSectionRepository,
                            ProjectDocumentService projectDocumentService) {
+
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentSectionService = documentSectionService;
         this.projectDocumentService = projectDocumentService;
@@ -85,13 +91,14 @@ public class DocumentService {
     public DocumentInstance updateDocument(DocumentInstance updatedDocument) throws GendoxException {
         UUID documentId = updatedDocument.getId();
         DocumentInstance existingDocument = this.getDocumentInstanceById(documentId);
+        String fileName = documentSectionService.getFileNameFromUrl(existingDocument.getRemoteUrl());
+
 
         // Update the properties of the existingDocument with the values from the updated document
         existingDocument.setDocumentTemplateId(updatedDocument.getDocumentTemplateId());
         existingDocument.setRemoteUrl(updatedDocument.getRemoteUrl());
         existingDocument.setUpdatedBy(updatedDocument.getUpdatedBy());
         existingDocument.setUpdatedAt(Instant.now());
-
         existingDocument = documentInstanceRepository.save(existingDocument);
         updateExistingSectionsList(updatedDocument, existingDocument);
 

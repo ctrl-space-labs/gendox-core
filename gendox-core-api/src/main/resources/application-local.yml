@@ -17,7 +17,7 @@ logging:
 spring:
   mail:
     host: ${GENDOX_SPRING_EMAIL_HOST:no-env-variable}
-    port: ${GENDOX_SPRING_EMAIL_PORT:no-env-variable}
+    port: ${GENDOX_SPRING_EMAIL_PORT:0}
     username: ${GENDOX_SPRING_EMAIL_USERNAME:no-env-variable}
     password: ${GENDOX_SPRING_EMAIL_PASSWORD:no-env-variable}
     properties:
@@ -51,12 +51,12 @@ spring:
 #      minimum-idle: 10
 
   datasource:
-     url: ${DATABASE_URL}
-     username: ${DATABASE_USERNAME}
-     password: ${DATABASE_PASSWORD}
-     hikari:
-       maximum-pool-size: 100
-       minimum-idle: 10
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
 
   jackson:
     serialization:
@@ -142,9 +142,9 @@ gendox:
         wait-time-seconds: 1 #not in use
         visibility-timeout-seconds: 300
   models:
-    openai:
-      ada2:
-        key: ${OPENAI_KEY}
+    #    It is important these fields to have the same names as the DB ai_model_provider.api_type_id.name
+    open_ai:
+      key: ${OPENAI_KEY}
     cohere:
       key: ${COHERE_KEY}
     groq:
@@ -213,3 +213,28 @@ discord:
       token: ${DISCORD_TOKEN:default-token}
   server:
     group-name: gendox-agents
+
+
+proven-ai:
+  enabled: ${PROVEN_AI_ENABLED:false}
+#  base-url: https://dev.provenai.ctrlspace.dev
+  base-url: http://localhost:8082
+  context-path: /proven-ai/api/v1
+  apis:
+    agent-authentication:
+      endpoint: /agents/token
+      scope: openid email
+      grant_type: vp_token
+    search:
+      endpoint: /search
+
+# Walt.id
+walt-id:
+  default-key:
+    type: ECDSA_SECP256K1
+    size: 2048
+
+#ISCC Code
+iscc:
+  apis:
+    code-generation: http://localhost:8970/api/v1/iscc

@@ -7,6 +7,7 @@ import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import { EditorState, ContentState } from "draft-js";
 import ReactDraftWysiwyg from "src/@core/components/react-draft-wysiwyg";
+import { StyledCardContent } from "src/utils/styledCardsContent";
 import { EditorWrapper } from "src/@core/styles/libs/react-draft-wysiwyg";
 import documentService from "src/gendox-sdk/documentService";
 import authConfig from "src/configs/auth";
@@ -14,18 +15,14 @@ import Icon from "src/@core/components/icon";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import IconButton from "@mui/material/IconButton";
+import SectionEdit from "src/views/gendox-components/documents-components/SectionEdit";
+import DocumentEdit from "src/views/gendox-components/create-document/DocumentEdit";
 import Input from "@mui/material/Input";
 import InputLabel from "@mui/material/InputLabel";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
+import { convertToRaw } from "draft-js";
+import toast from "react-hot-toast";
 
-const StyledCardContent = styled(CardContent)(({ theme }) => ({
-  paddingTop: `${theme.spacing(10)} !important`,
-  paddingBottom: `${theme.spacing(8)} !important`,
-  [theme.breakpoints.up("sm")]: {
-    paddingLeft: `${theme.spacing(20)} !important`,
-    paddingRight: `${theme.spacing(20)} !important`,
-  },
-}));
 
 const CreateDocument = () => {
   const router = useRouter();
@@ -34,59 +31,50 @@ const CreateDocument = () => {
     authConfig.storageTokenKeyName
   );
 
-  const [isMinimized, setIsMinimized] = useState(false);
-
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentValue, setDocumentValue] = useState("");
-
-  const lastSavedValue = useRef(documentValue);
-  const lastSavedTitle = useRef(documentTitle);
+  const [isCreatingDocument, setIsCreatingDocument] = useState(false);
 
   const handleGoBack = () => {
-    router.push(`/gendox/home?organizationId=${organizationId}&projectId=${projectId}`);
-  };
-
-  const handleDelete = async () => {
-    console.log("Delete section");
-  };
-
-  const handleRestore = () => {
-    console.log("Restore section");
-    handleSave();
-    setDocumentValue(initialContent);
-    setDocumentTitle(initialTitle);
-  };
-
-  const handleSave = async () => {
-    // e.preventDefault(); // Prevent default form submission
-
-    const updatedSectionPayload = {
-      ...activeSection,
-      sectionValue: documentValue.getCurrentContent().getPlainText(),
-      documentDTO: document,
-      documentSectionMetadata: {
-        ...activeSection.documentSectionMetadata,
-        title: documentTitle,
-      },
-    };
-
-    try {
-      const response = await documentService.updateDocumentSection(
-        document.id,
-        section.id,
-        updatedSectionPayload,
-        storedToken
-      );
-      console.log("Section updated", response);
-      setActiveSection(response.data);
-      // const path = `/gendox/document-instance?documentId=${document.id}`;
-      // router.push(path);
-    } catch (error) {
-      console.error("Error updating section", error);
-    }
+    router.push(
+      `/gendox/home?organizationId=${organizationId}&projectId=${projectId}`
+    );
   };
 
   
+  const handleSave = async () => {
+    setIsCreatingDocument(true);
+    try {
+      
+      // Convert documentValue (EditorState) to plain text
+      const plainText = documentValue.getCurrentContent().getPlainText();
+
+      console.log("plainText", plainText);
+
+      // Create a Blob from the plain text
+      const blob = new Blob([plainText], { type: "text/plain" });
+      const file = new File([blob], `${documentTitle}.txt`, { type: "text/plain" });
+
+      // Prepare form data
+      const formData = new FormData();
+      formData.append("file", file);
+
+      console.log("formData", formData.get("file"));
+
+      // Upload the document
+      await documentService.uploadDocument(organizationId, projectId, formData, storedToken);
+
+      toast.success("Document created successfully");
+      router.push(`/gendox/home?organizationId=${organizationId}&projectId=${projectId}`);
+
+    } catch (error) {
+      toast.error("Failed to create document");
+      console.error("Error saving document:", error);
+    } finally {
+      setIsCreatingDocument(false);
+    }
+  };
+
   return (
     <Card sx={{ backgroundColor: "transparent", boxShadow: "none" }}>
       <StyledCardContent sx={{ backgroundColor: "background.paper" }}>
@@ -98,7 +86,7 @@ const CreateDocument = () => {
           }}
         >
           <Typography
-            variant="h3"
+            variant="h4"
             sx={{ mb: 6, fontWeight: 600, textAlign: "left" }}
           >
             Create New Document
@@ -137,70 +125,23 @@ const CreateDocument = () => {
         </Box>
       </StyledCardContent>
       <Box sx={{ height: 20 }} />
-      {/* ************************************** *************************** */}
+
       <StyledCardContent
-        sx={{ backgroundColor: "background.paper", pt: 3, pb: 3, mb: 6 }}
+        sx={{
+          backgroundColor: "background.paper",
+          pt: 3,
+          pb: 3,
+          mb: 6,
+          filter: isCreatingDocument ? "blur(6px)" : "none", // Apply blur during loading
+          transition: "filter 0.3s ease",
+        }}
       >
-        <Box
-          anchor="bottom"
-          variant="temporary"
-          sx={{
-            top: "auto",
-            left: "auto",
-            bottom: "1.5rem",
-            display: "block",
-            zIndex: (theme) => `${theme.zIndex.drawer} + 1`,
-            "& .MuiDrawer-paper": {
-              borderRadius: 1,
-              position: "static",
-            },
-          }}          
-        >
-          <Box
-            sx={{
-              py: 1,
-              px: 4,
-              display: "flex",
-              alignItems: "center",
-              borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-            }}
-          >
-            <div>
-              <InputLabel sx={{ mr: 3, color: "primary.main" }}>
-                Document Title:{" "}
-              </InputLabel>
-            </div>
-            <Input
-              fullWidth
-              value={documentTitle}
-              id="title-input"
-              onChange={(e) => setDocumentTitle(e.target.value)}
-              sx={{
-                "&:before, &:after": { display: "none" },
-                "& .MuiInput-input": { py: 1.875 },
-              }}
-            />
-            
-          </Box>
-          {!isMinimized && (
-            <EditorWrapper>
-              <ReactDraftWysiwyg
-                editorState={documentValue}
-                onEditorStateChange={(editorState) =>
-                  setDocumentValue(editorState)
-                }
-                placeholder="Document Value"
-                toolbar={{
-                  options: ["inline", "textAlign"],
-                  inline: {
-                    inDropdown: false,
-                    options: ["bold", "italic", "underline", "strikethrough"],
-                  },
-                }}
-              />
-            </EditorWrapper>
-          )}
-        </Box>
+        <DocumentEdit
+          documentTitle={documentTitle}
+          setDocumentTitle={setDocumentTitle}
+          documentValue={documentValue}
+          setDocumentValue={setDocumentValue}
+        />
       </StyledCardContent>
     </Card>
   );

@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TypeRepository;
@@ -24,10 +25,20 @@ public class TypeService {
         return typeRepository.findByTypeCategory("ORGANIZATION_ROLE_TYPE");
     }
 
+    //by category and name
+    public Type getByCategoryAndName(String category, String name) throws GendoxException {
+        return typeRepository.findByTypeCategoryAndName(category, name)
+                .orElseThrow(() -> new GendoxException("TYPE_NOT_FOUND", "Type not found with category: " + category + " and name: " + name, HttpStatus.NOT_FOUND));
+    }
 
-    public Type getOrganizationRolesByName(String roleName) {
+    //by keyType using getByCategoryAndName
+    public Type getKeyTypeByName(String keyTypeName) throws GendoxException {
+        return getByCategoryAndName("KEY_TYPE", keyTypeName);
+    }
+
+    public Type getOrganizationRolesByName(String roleName) throws GendoxException {
         return typeRepository.findByTypeCategoryAndName("ORGANIZATION_ROLE_TYPE", roleName)
-                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "ROLE_NOT_FOUND", "Role not found with name: " + roleName));
+                .orElseThrow(() -> new GendoxException("ROLE_NOT_FOUND", "Role not found with name: " + roleName, HttpStatus.NOT_FOUND));
     }
 
     public Type getDocumentTypeByName(String documentName) {
@@ -97,11 +108,5 @@ public class TypeService {
 
 
 
-    /**
-     * Multiple handy service methods can go here like
-     * getOrganizationRoles()
-     * getOrganizationPermissions()
-     * getDocumentFieldTypes()
-     * ...
-     */
+
 }
