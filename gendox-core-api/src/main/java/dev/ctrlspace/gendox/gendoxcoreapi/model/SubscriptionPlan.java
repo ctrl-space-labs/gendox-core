@@ -48,10 +48,6 @@ public class SubscriptionPlan {
     @Column(name = "user_message_monthly_limit_count", nullable = false)
     private Integer userMessageMonthlyLimitCount;
 
-    @ManyToOne
-    @JoinColumn(name = "ai_models_tier_type_id", referencedColumnName = "id", nullable = false)
-    private Type aiModelsTierType;
-
     @Basic
     @Column(name = "active", nullable = false)
     private Boolean active;
@@ -85,14 +81,6 @@ public class SubscriptionPlan {
 
     public void setSkuType(Type skuType) {
         this.skuType = skuType;
-    }
-
-    public Type getAiModelsTierType() {
-        return aiModelsTierType;
-    }
-
-    public void setAiModelsTierType(Type aiModelsTierType) {
-        this.aiModelsTierType = aiModelsTierType;
     }
 
     public String getName() {
@@ -183,17 +171,16 @@ public class SubscriptionPlan {
         this.updatedAt = updatedAt;
     }
 
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         SubscriptionPlan that = (SubscriptionPlan) o;
-        return Objects.equals(id, that.id) && Objects.equals(sku, that.sku) && Objects.equals(skuType, that.skuType) && Objects.equals(name, that.name) && Objects.equals(description, that.description) && Objects.equals(price, that.price) && Objects.equals(currency, that.currency) && Objects.equals(moq, that.moq) && Objects.equals(userUploadLimitFileCount, that.userUploadLimitFileCount) && Objects.equals(userUploadLimitMb, that.userUploadLimitMb) && Objects.equals(userMessageMonthlyLimitCount, that.userMessageMonthlyLimitCount) && Objects.equals(aiModelsTierType, that.aiModelsTierType) && Objects.equals(active, that.active) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt);
+        return Objects.equals(id, that.id) && Objects.equals(sku, that.sku) && Objects.equals(skuType, that.skuType) && Objects.equals(name, that.name) && Objects.equals(description, that.description) && Objects.equals(price, that.price) && Objects.equals(currency, that.currency) && Objects.equals(moq, that.moq) && Objects.equals(userUploadLimitFileCount, that.userUploadLimitFileCount) && Objects.equals(userUploadLimitMb, that.userUploadLimitMb) && Objects.equals(userMessageMonthlyLimitCount, that.userMessageMonthlyLimitCount) && Objects.equals(active, that.active) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, sku, skuType, name, description, price, currency, moq, userUploadLimitFileCount, userUploadLimitMb, userMessageMonthlyLimitCount, aiModelsTierType, active, createdAt, updatedAt);
+        return Objects.hash(id, sku, skuType, name, description, price, currency, moq, userUploadLimitFileCount, userUploadLimitMb, userMessageMonthlyLimitCount, active, createdAt, updatedAt);
     }
 }
