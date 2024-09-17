@@ -227,7 +227,7 @@ const GeneralProjectSettings = () => {
               <Button
                 size="large"
                 variant="outlined"
-                href={`${provenAiUrl}/provenAi/data-pods-control/?organizationId=${project.organizationId}&dataPodId=${project.id}`} 
+                href={`${provenAiUrl}/provenAI/data-pods-control/?organizationId=${project.organizationId}&dataPodId=${project.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >

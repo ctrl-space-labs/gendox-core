@@ -474,7 +474,7 @@ const AiAgentProjectSettings = () => {
               <Button
                 size="large"
                 variant="outlined"
-                href={`${provenAiUrl}/provenAi/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`}
+                href={`${provenAiUrl}/provenAI/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
