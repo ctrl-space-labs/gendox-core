@@ -163,9 +163,9 @@ public class AiModel {
         this.aiModelProvider = aiModelProvider;
     }
 
-    public Boolean getActive() {return isActive;}
+    public Boolean getIsActive() {return isActive;}
 
-    public void setActive(Boolean active) {isActive = active;}
+    public void setIsActive(Boolean active) {isActive = active;}
 
     @Override
     public boolean equals(Object o) {
