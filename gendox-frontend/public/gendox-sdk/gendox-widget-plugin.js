@@ -39,7 +39,7 @@
     function getDataAttributes() {
         const scriptTag = document.getElementById('gendox-chat-script');
         return {
-            trustedOrigin: scriptTag.getAttribute('data-trusted-origin') || '',
+            gendoxSrc: scriptTag.getAttribute('data-gendox-src') || '',
             organizationId: scriptTag.getAttribute('data-organization-id') || '',
             threadId: scriptTag.getAttribute('data-thread-id') || '',
             gendoxContainerId: scriptTag.getAttribute('data-gendox-container-id') || 'gendox-chat-container-id',
@@ -48,7 +48,7 @@
     }
 
     // Create container and iframe dynamically if they don't exist
-    function createChatElements(containerId, iframeId, organizationId, threadId, origin) {
+    function createChatElements(containerId, iframeId, gendoxSrc, organizationId, threadId, origin) {
         let container = document.getElementById(containerId);
         let iframe = document.getElementById(iframeId);
 
@@ -63,14 +63,14 @@
             iframe = document.createElement('iframe');
             iframe.id = iframeId;
             iframe.classList.add('gendox-chat-iframe');
-            iframe.src = `http://localhost:3000/gendox/embed/embedded-chat/?organizationId=${organizationId}&threadId=${threadId}&origin=${encodeURIComponent(origin)}`;
+            iframe.src = `${gendoxSrc}/gendox/embed/embedded-chat/?organizationId=${organizationId}&threadId=${threadId}&origin=${encodeURIComponent(origin)}`;
             container.appendChild(iframe);
         }
     }
 
     // Main logic for the chat window handling
     function initializeChat(config) {
-        const { trustedOrigin, gendoxContainerId, gendoxIframeId } = config;
+        const { gendoxSrc, gendoxContainerId, gendoxIframeId } = config;
 
         const iframeWindow = document.getElementById(gendoxIframeId);
         const chatContainer = document.getElementById(gendoxContainerId);
@@ -87,7 +87,7 @@
 
         function handleIframeMessage(event) {
 
-            if (event.origin !== trustedOrigin) {
+            if (event.origin !== gendoxSrc) {
                 return;
             }
 
@@ -129,7 +129,7 @@
 
         function runChatInitializationOnLoadedDOM() {
             // Create container and iframe elements dynamically
-            createChatElements(config.gendoxContainerId, config.gendoxIframeId, config.organizationId, config.threadId, config.origin);
+            createChatElements(config.gendoxContainerId, config.gendoxIframeId, config.gendoxSrc, config.organizationId, config.threadId, config.origin);
 
             // Inject user-defined styles if provided
             if (userConfig.customStyles) {
