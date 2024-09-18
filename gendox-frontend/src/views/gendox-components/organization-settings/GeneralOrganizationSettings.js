@@ -199,7 +199,7 @@ const GeneralOrganizationSettings = () => {
               <Button
                 size="large"
                 variant="outlined"
-                href={`${provenAiUrl}/provenAi/home/?organizationId=${organization.id}`}
+                href={`${provenAiUrl}/provenAI/home/?organizationId=${organization.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
