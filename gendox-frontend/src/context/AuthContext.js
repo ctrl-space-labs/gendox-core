@@ -30,13 +30,13 @@ const AuthProvider = ({ children, option }) => {
 
   switch (option) {
     case 'IFrameAuthProvider':
-      console.log("AuthProviderSwitch - IFrameAuthProvider")
+      // console.log("AuthProviderSwitch - IFrameAuthProvider")
       return IFrameAuthProvider({children, defaultProvider});
     case 'UserPassAuthProvider':
       throw new Error('userPassAuthProvider not implemented')
     case 'PKCEAuthProvider':
     default:
-      console.log("AuthProviderSwitch - PKCEAuthProvider")
+      // console.log("AuthProviderSwitch - PKCEAuthProvider")
       return PKCEAuthProvider({children, defaultProvider});
 
   }

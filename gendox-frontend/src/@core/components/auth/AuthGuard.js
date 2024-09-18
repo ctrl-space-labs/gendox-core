@@ -13,23 +13,20 @@ const AuthGuard = props => {
   const router = useRouter()
   useEffect(
     () => {
-      console.log('AuthGuard router.route effect')
       if (!router.isReady) {
         return
       }
-      if (auth.user === null && !window.localStorage.getItem('userData')) {
-        if (router.asPath !== '/') {
-          router.replace({
-            pathname: '/',
-            query: { returnUrl: router.asPath }
-          })
-        } else {
-          router.replace('/login')
-        }
+
+      // TODO: add a validation to check if the user token has expired
+      if (auth.user === null &&
+          !window.localStorage.getItem('userData') &&
+          !auth.loading) {
+
+          auth.login(router.asPath)
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [router.route]
+    [router.route, router.isReady, auth.loading]
   )
   if (auth.loading || auth.user === null) {
     return fallback
