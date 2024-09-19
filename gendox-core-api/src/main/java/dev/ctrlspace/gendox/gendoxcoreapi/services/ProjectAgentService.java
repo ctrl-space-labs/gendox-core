@@ -202,6 +202,13 @@ public class ProjectAgentService {
 
         UUID subscriptionPlanId = organizationPlanRepository.findSubscriptionPlanIdByOrganizationId(existingProjectAgent.getProject().getOrganizationId());
 
+        if (!completionModel.getIsActive()) {
+            throw new GendoxException("INACTIVE_COMPLETION_MODEL", "The selected completion model is inactive", HttpStatus.FORBIDDEN);
+        }
+
+        if (!semanticSearchModel.getIsActive()) {
+            throw new GendoxException("INACTIVE_SEMANTIC_SEARCH_MODEL", "The selected semantic search model is inactive", HttpStatus.FORBIDDEN);
+        }
 
         if (!subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, completionModel.getModelTierType().getId())) {
             throw new GendoxException("NO_ACCESS_TO_COMPLETION_MODEL", "No access to the completion model", HttpStatus.FORBIDDEN);
