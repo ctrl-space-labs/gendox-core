@@ -45,6 +45,8 @@ import CustomAvatar from "src/@core/components/mui/avatar";
 
 // ** Chat App Components Imports
 import authConfig from "src/configs/auth";
+import { sortByField } from "src/utils/orderUtils";
+
 
 const ScrollWrapper = ({ children, hidden }) => {
   if (hidden) {
@@ -82,14 +84,16 @@ const SidebarLeft = (props) => {
     handleUserProfileLeftSidebarToggle,
     organizationId,
     storedToken,
-    chatUrlPath= '/gendox/chat', // Set default value here, it has different value when it is embedded
+    chatUrlPath 
   } = props;
 
   const router = useRouter();
 
+console.log('store', store);
   // ** States
 
   const [active, setActive] = useState(null);
+  const [activeProjectId, setActiveProjectId] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [hoveredChat, setHoveredChat] = useState(null);
 
@@ -129,13 +133,20 @@ const SidebarLeft = (props) => {
     return { today, yesterday, last7Days, last30Days, older };
   };
 
-  const handleChatClick = (type, id) => {    
-    const newPath = `${chatUrlPath}?organizationId=${organizationId}&threadId=${id}`;
+  const handleChatClick = (type, id, projectId) => {    
+    const newPath = `${chatUrlPath}?organizationId=${organizationId}&threadId=${id}&projectId=${projectId}`;
     router.push(newPath); 
     if (!mdAbove) {
       handleLeftSidebarToggle();
     }
   };
+
+  useEffect(() => {
+    const { projectId } = router.query;  // Extract projectId from URL
+    if (projectId) {
+      setActiveProjectId(projectId); // Set the active project ID
+    }
+  }, [router.query]);
 
  
 
@@ -169,7 +180,7 @@ const SidebarLeft = (props) => {
   const handleMenuClick = (event, chatId) => {
     event.stopPropagation();
     setAnchorEl(event.currentTarget);
-    // setActive({ type: "chat", id: chatId });
+    setActive({ type: "chat", id: chatId });
   };
 
   const handleMenuClose = () => {
@@ -232,7 +243,7 @@ const SidebarLeft = (props) => {
               >
                 <ListItemButton
                   disableRipple
-                  onClick={() => handleChatClick("chat", chat.id)}
+                  onClick={() => handleChatClick("chat", chat.id, chat.projectId)}
                   sx={{
                     px: 2.5,
                     py: 2.5,
@@ -318,16 +329,14 @@ const SidebarLeft = (props) => {
   };
 
   const renderContacts = () => {
-    if (store && store.contacts && store.contacts.length) {
-      const arrToMap = store.contacts;
+    if (store && store.contacts && store.contacts.length) {   
+      const selectedContact = store.contacts?.find(contact => contact.projectId === activeProjectId);   
+      const sortedContacts = sortByField(store.contacts, 'fullName', selectedContact?.id);
 
-      return arrToMap !== null
-        ? arrToMap.map((contact, index) => {
-            const activeCondition =
-              active !== null &&
-              active.id === contact.id &&
-              active.type === "contact" &&
-              !hasActiveId(contact.id);
+      return sortedContacts !== null
+        ? sortedContacts.map((contact, index) => {
+
+          const activeProjectCondition = activeProjectId === contact.projectId;        
 
             return (
               <ListItem
@@ -340,7 +349,8 @@ const SidebarLeft = (props) => {
                   onClick={() =>
                     handleChatClick(
                       hasActiveId(contact.id) ? "chat" : "contact",
-                      contact.id
+                      contact.id,
+                      contact.projectId
                     )
                   }
                   sx={{
@@ -348,10 +358,10 @@ const SidebarLeft = (props) => {
                     py: 2.5,
                     width: "100%",
                     borderRadius: 1,
-                    height: 72,
-                    ...(activeCondition && {
+                    height: 72,                    
+                    ...(activeProjectCondition && {
                       backgroundColor: (theme) =>
-                        `${theme.palette.primary.main} !important`,
+                        `${theme.palette.primary.main} !important`,  
                     }),
                   }}
                 >
@@ -375,7 +385,7 @@ const SidebarLeft = (props) => {
                             }.main`,
                             boxShadow: (theme) =>
                               `0 0 0 2px ${
-                                !activeCondition
+                                !activeProjectCondition
                                   ? theme.palette.background.paper
                                   : theme.palette.common.white
                               }`,
@@ -401,14 +411,14 @@ const SidebarLeft = (props) => {
                       ) : (
                         <CustomAvatar
                           color={contact.avatarColor}
-                          skin={activeCondition ? "light-static" : "light"}
+                          skin={activeProjectCondition ? "light-static" : "light"}
                           sx={{
                             width: 40,
                             height: 40,
                             fontSize: "1rem",
                             outline: (theme) =>
                               `2px solid ${
-                                activeCondition
+                                activeProjectCondition
                                   ? theme.palette.common.white
                                   : "transparent"
                               }`,
@@ -423,14 +433,14 @@ const SidebarLeft = (props) => {
                     sx={{
                       my: 0,
                       ml: 4,
-                      ...(activeCondition && {
+                      ...(activeProjectCondition && {
                         "& .MuiTypography-root": { color: "common.white" },
                       }),
                     }}
                     primary={
                       <Typography
                         sx={{
-                          ...(!activeCondition
+                          ...(!activeProjectCondition
                             ? { color: "text.secondary" }
                             : {}),
                         }}
@@ -443,7 +453,7 @@ const SidebarLeft = (props) => {
                         noWrap
                         variant="body2"
                         sx={{
-                          ...(!activeCondition && { color: "text.disabled" }),
+                          ...(!activeProjectCondition && { color: "text.disabled" }),
                         }}
                       >
                         {contact.about}

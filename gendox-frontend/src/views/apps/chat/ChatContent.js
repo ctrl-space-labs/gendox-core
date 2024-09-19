@@ -1,5 +1,6 @@
 // ** React Imports
 import { Fragment } from "react";
+import { useRouter } from "next/router";
 
 // ** MUI Imports
 import Badge from "@mui/material/Badge";
@@ -47,9 +48,44 @@ const ChatContent = (props) => {
     handleUserProfileRightSidebarToggle,
     organizationId,
     storedToken,
+    chatUrlPath,
   } = props;
 
+  const router = useRouter();
+  const { projectId } = router.query;
+  const selectedContact = store.contacts?.find(
+    (contact) => contact.projectId === projectId
+  );
+
+  const fallbackContact = store.contacts?.[0] || null;
+  const threadId = selectedContact
+    ? selectedContact.id
+    : fallbackContact
+    ? fallbackContact.id
+    : null;
+  const resolvedProjectId = selectedContact
+    ? selectedContact.projectId
+    : fallbackContact
+    ? fallbackContact.projectId
+    : null;
+
+  
+
   const handleStartConversation = () => {
+    if (
+      projectId === "undefined" ||
+      projectId === undefined ||
+      projectId === null
+    ) { 
+      // Use fallback contact's threadId and projectId
+      const newPath = `${chatUrlPath}?organizationId=${organizationId}&threadId=${fallbackContact?.id}&projectId=${fallbackContact?.projectId}`;
+      router.push(newPath);
+    } else {
+      // Use the selectedContact's threadId and projectId from URL
+      const newPath = `${chatUrlPath}?organizationId=${organizationId}&threadId=${threadId}&projectId=${resolvedProjectId}`;
+      router.push(newPath);
+    }
+    
     if (!mdAbove) {
       handleLeftSidebarToggle();
     }
@@ -108,7 +144,7 @@ const ChatContent = (props) => {
               height: "100%",
               backgroundColor: "action.hover",
               display: "flex",
-              "flex-direction": "column"
+              "flex-direction": "column",
             }}
           >
             <Box
@@ -210,23 +246,20 @@ const ChatContent = (props) => {
                 />
               </Box> */}
             </Box>
-            
+
             {selectedChat && store.userProfile ? (
               <ChatLog
                 hidden={hidden}
-                data={{ ...selectedChat, userContact: store.userProfile }}               
+                data={{ ...selectedChat, userContact: store.userProfile }}
               />
             ) : null}
 
-            
-              <SendMsgForm
-                store={store}
-                dispatch={dispatch}
-                sendMsg={sendMsg}
-                organizationId={organizationId}
-              />
-            
-
+            <SendMsgForm
+              store={store}
+              dispatch={dispatch}
+              sendMsg={sendMsg}
+              organizationId={organizationId}
+            />
 
             <UserProfileRight
               store={store}

@@ -33,6 +33,7 @@ import ChatContent from "src/views/apps/chat/ChatContent";
 const AppChat = (props) => {
   const router = useRouter();
   const { organizationId, threadId } = router.query;
+  const chatUrlPath= '/gendox/chat';
 
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
@@ -145,7 +146,7 @@ const AppChat = (props) => {
         handleUserProfileLeftSidebarToggle={handleUserProfileLeftSidebarToggle}
         organizationId={organizationId}
         storedToken={storedToken}
-        chatUrlPath={props.chatUrlPath}
+        chatUrlPath={chatUrlPath}
       />
       <ChatContent
         store={store}
@@ -163,6 +164,7 @@ const AppChat = (props) => {
         }
         organizationId={organizationId}
         storedToken={storedToken}
+        chatUrlPath={chatUrlPath}
       />
     </Box>
   );

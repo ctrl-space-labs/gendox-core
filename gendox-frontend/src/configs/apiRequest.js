@@ -19,10 +19,10 @@ export default {
   getProjectById: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}`,
   getProjectsByOrganization: (organizationId) =>
-    `${url}organizations/${organizationId}/projects`,
+    `${url}organizations/${organizationId}/projects`,  
 
-  getDocumentsByProject: (organizationId, projectId, page) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/documents?page=${page}`,
+  getDocumentsByProject: (organizationId, projectId, page, sort = "createdAt,desc") =>
+    `${url}organizations/${organizationId}/projects/${projectId}/documents?page=${page}&sort=${sort}`,  
 
   getUsersInOrganizationByOrgId: (organizationId) =>
     `${url}organizations/${organizationId}/users`,
