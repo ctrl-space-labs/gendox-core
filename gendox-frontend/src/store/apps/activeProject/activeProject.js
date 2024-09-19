@@ -8,8 +8,13 @@ export const fetchProject = createAsyncThunk(
       const projectPromise = projectService.getProjectById(organizationId, projectId, storedToken);
       const membersPromise = projectService.getProjectMembers(organizationId, projectId, storedToken);
 
+  
       // Use Promise.all to wait for both promises to resolve
       const [projectData, membersData] = await Promise.all([projectPromise, membersPromise]);
+
+
+      // console.log("projectData", projectData.data);
+      // console.log("membersData", membersData.data);
 
       // Return combined data
       return { project: projectData.data, members: membersData.data };

@@ -32,6 +32,7 @@ const Documents = ({ documents, showAll, setShowAll }) => {
   const { id: projectId, organizationId } = projectDetails;
   const storedToken = localStorage.getItem(authConfig.storageTokenKeyName);
 
+
   useEffect(() => {
     setShowAll(false);
   }, [projectDetails]);
@@ -84,7 +85,7 @@ const Documents = ({ documents, showAll, setShowAll }) => {
               <Typography
                 variant="h6"
                 component={Link}
-                href={`/gendox/document-instance?organizationId=${organizationId}&documentId=${document.id}`}
+                href={`/gendox/document-instance?organizationId=${organizationId}&documentId=${document.id}&projectId=${projectId}`}
                 sx={{
                   fontWeight: 600,
                   textDecoration: "none",

@@ -49,8 +49,8 @@ const ProjectButtons = () => {
       href: "#",
       isDemoOff: false,
     },
-    { text: "NEW TEMPLATE", action: () => {}, href: "#", isDemoOff: true },
-    { text: "UPLOAD TEMPLATE", action: () => {}, href: "#", isDemoOff: true },
+    // { text: "NEW TEMPLATE", action: () => {}, href: "#", isDemoOff: true },
+    // { text: "UPLOAD TEMPLATE", action: () => {}, href: "#", isDemoOff: true },
   ];
 
   return (

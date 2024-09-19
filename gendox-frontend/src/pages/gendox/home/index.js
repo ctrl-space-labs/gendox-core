@@ -31,6 +31,8 @@ const GendoxHome = () => {
   const project = useSelector((state) => state.activeProject.projectDetails);
   useRedirectOr404ForHome(organizationId, projectId);
 
+
+
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
@@ -70,7 +72,7 @@ const GendoxHome = () => {
           setTotalPages(response.data.totalPages);
           setTimeout(() => {
             setIsBlurring(false); // Remove blur effect after 300ms
-          }, 300);
+          }, 300);          
         })
         .catch((error) => {
           if (
