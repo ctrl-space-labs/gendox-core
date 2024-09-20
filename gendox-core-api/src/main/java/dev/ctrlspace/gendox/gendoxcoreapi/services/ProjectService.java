@@ -146,6 +146,12 @@ public class ProjectService {
                 continue;
             }
 
+            if  (projectMember.getUser().getEmail() == null &&
+                    projectMember.getUser().getName() == null &&
+                    projectMember.getUser().getUserType() == null) {
+                continue;
+            }
+
             // Count the number of projects the user is associated with
             long count = projectMemberRepository.countByUserId(userId);
 

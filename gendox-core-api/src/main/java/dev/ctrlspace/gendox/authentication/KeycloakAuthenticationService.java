@@ -144,6 +144,7 @@ public class KeycloakAuthenticationService implements AuthenticationService {
         String username = user.getEmail();
         if (username == null) {
             username = user.getUserName();
+            username = username.replaceAll("\\s+", "");
         }
         UserRepresentation userRepresentation = new UserRepresentation();
         userRepresentation.setUsername(username);
@@ -170,6 +171,7 @@ public class KeycloakAuthenticationService implements AuthenticationService {
 
         if (response.getStatus() != 201) {
             logger.error("Keycloak create user error " + response.getStatusInfo().getReasonPhrase());
+            String responseBody = response.readEntity(String.class);
             throw new GendoxException("CREATE_USER_ERROR", "An error occurred while creating user", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
