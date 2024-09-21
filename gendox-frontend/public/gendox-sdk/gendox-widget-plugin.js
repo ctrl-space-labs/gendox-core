@@ -41,14 +41,14 @@
         return {
             gendoxSrc: scriptTag.getAttribute('data-gendox-src') || '',
             organizationId: scriptTag.getAttribute('data-organization-id') || '',
-            threadId: scriptTag.getAttribute('data-thread-id') || '',
+            projectId: scriptTag.getAttribute('data-project-id') || '',
             gendoxContainerId: scriptTag.getAttribute('data-gendox-container-id') || 'gendox-chat-container-id',
             gendoxIframeId: scriptTag.getAttribute('data-gendox-iframe-id') || 'gendox-chat-iframe-id'
         };
     }
 
     // Create container and iframe dynamically if they don't exist
-    function createChatElements(containerId, iframeId, gendoxSrc, organizationId, threadId, origin) {
+    function createChatElements(containerId, iframeId, gendoxSrc, organizationId, projectId, origin) {
         let container = document.getElementById(containerId);
         let iframe = document.getElementById(iframeId);
 
@@ -63,7 +63,7 @@
             iframe = document.createElement('iframe');
             iframe.id = iframeId;
             iframe.classList.add('gendox-chat-iframe');
-            iframe.src = `${gendoxSrc}/gendox/embed/embedded-chat/?organizationId=${organizationId}&threadId=${threadId}&origin=${encodeURIComponent(origin)}`;
+            iframe.src = `${gendoxSrc}/gendox/embed/embedded-chat/?organizationId=${organizationId}&projectId=${projectId}&origin=${encodeURIComponent(origin)}`;
             container.appendChild(iframe);
         }
     }
@@ -129,7 +129,7 @@
 
         function runChatInitializationOnLoadedDOM() {
             // Create container and iframe elements dynamically
-            createChatElements(config.gendoxContainerId, config.gendoxIframeId, config.gendoxSrc, config.organizationId, config.threadId, config.origin);
+            createChatElements(config.gendoxContainerId, config.gendoxIframeId, config.gendoxSrc, config.organizationId, config.projectId, config.origin);
 
             // Inject user-defined styles if provided
             if (userConfig.customStyles) {
