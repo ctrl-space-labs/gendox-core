@@ -56,7 +56,7 @@ public class ProjectAgentService {
 
     private AuthenticationService authenticationService;
 
-    private OrganizationPlanRepository organizationPlanRepository;
+    private OrganizationPlanService organizationPlanService;
 
 
     @Autowired
@@ -69,7 +69,7 @@ public class ProjectAgentService {
                                AiModelService aiModelService,
                                CryptographyUtils cryptographyUtils,
                                SubscriptionAiModelTierService subscriptionAiModelTierService,
-                               OrganizationPlanRepository organizationPlanRepository
+                               OrganizationPlanService organizationPlanService
 
                                ) {
         this.authenticationService = authenticationService;
@@ -81,7 +81,7 @@ public class ProjectAgentService {
         this.aiModelService = aiModelService;
         this.cryptographyUtils = cryptographyUtils;
         this.subscriptionAiModelTierService = subscriptionAiModelTierService;
-        this.organizationPlanRepository = organizationPlanRepository;
+        this.organizationPlanService = organizationPlanService;
     }
 
     public ProjectAgent getAgentByProjectId(UUID projectId) {
@@ -200,7 +200,10 @@ public class ProjectAgentService {
         AiModel completionModel = aiModelService.getByName(projectAgent.getCompletionModel().getName());
         AiModel semanticSearchModel = aiModelService.getByName(projectAgent.getSemanticSearchModel().getName());
 
-        UUID subscriptionPlanId = organizationPlanRepository.findSubscriptionPlanIdByOrganizationId(existingProjectAgent.getProject().getOrganizationId());
+        UUID subscriptionPlanId = organizationPlanService
+                .getActiveOrganizationPlan(existingProjectAgent.getProject().getOrganizationId())
+                .getSubscriptionPlan()
+                .getId();
 
         if (!completionModel.getIsActive()) {
             throw new GendoxException("INACTIVE_COMPLETION_MODEL", "The selected completion model is inactive", HttpStatus.FORBIDDEN);

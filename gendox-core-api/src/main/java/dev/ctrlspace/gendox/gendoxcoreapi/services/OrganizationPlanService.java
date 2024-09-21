@@ -11,6 +11,7 @@ import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -40,7 +41,7 @@ public class OrganizationPlanService {
     @Autowired
     public OrganizationPlanService(OrganizationPlanRepository organizationPlanRepository,
                                    ApiRateLimitService apiRateLimitService,
-                                      ProjectService projectService,
+                                   @Lazy ProjectService projectService,
 
                                    SubscriptionPlanService subscriptionPlanService) {
         this.organizationPlanRepository = organizationPlanRepository;
