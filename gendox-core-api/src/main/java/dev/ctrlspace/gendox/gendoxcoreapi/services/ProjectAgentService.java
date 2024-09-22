@@ -124,6 +124,8 @@ public class ProjectAgentService {
         user.setName(projectAgent.getAgentName());
         // ensure uniqueness of Agent username
         user.setUserName(projectAgent.getAgentName().toLowerCase() + "-" + UUID.randomUUID());
+        // remove whitespaces from username
+        user.setUserName(user.getUserName().replaceAll("\\s+", ""));
 
         user.setUserType(typeService.getUserTypeByName(UserNamesConstants.GENDOX_AGENT));
         // TODO: this is just a Hack... Use Keycloak Attributes when the Gendox's Keycloak Service starts support attributes .
