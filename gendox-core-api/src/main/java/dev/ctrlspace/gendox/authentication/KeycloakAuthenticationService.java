@@ -144,7 +144,6 @@ public class KeycloakAuthenticationService implements AuthenticationService {
         String username = user.getEmail();
         if (username == null) {
             username = user.getUserName();
-            username = username.replaceAll("\\s+", "");
         }
         UserRepresentation userRepresentation = new UserRepresentation();
         userRepresentation.setUsername(username);
