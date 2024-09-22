@@ -89,7 +89,6 @@ const SidebarLeft = (props) => {
 
   const router = useRouter();
 
-console.log('store', store);
   // ** States
 
   const [active, setActive] = useState(null);

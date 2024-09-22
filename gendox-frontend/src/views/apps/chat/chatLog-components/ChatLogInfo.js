@@ -1,3 +1,4 @@
+import React from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Icon from "src/@core/components/icon";
@@ -16,7 +17,8 @@ const ChatLogInfo = ({ messageMetadata }) => {
   const router = useRouter();
   const { organizationId } = router.query;
 
-  if (!messageMetadata || messageMetadata.length === 0) {
+  // Handle if messageMetadata is not an array or is empty
+  if (!Array.isArray(messageMetadata) || messageMetadata.length === 0) {
     return (
       <Box
         sx={{
@@ -37,6 +39,61 @@ const ChatLogInfo = ({ messageMetadata }) => {
     );
   }
 
+
+  // Check if at least one sectionData has "ORIGINAL_DOCUMENT"
+  const hasOriginalDocument = messageMetadata.some((sectionData) =>
+    sectionData.policyValue.includes("ORIGINAL_DOCUMENT")
+  );
+
+  // Check if at least one sectionData has "OWNER_PROFILE"
+  const hasOwnerProfile = messageMetadata.some((sectionData) =>
+    sectionData.policyValue.includes("OWNER_PROFILE")
+  );
+
+  // Create a Set to track unique combinations of `userName` and `documentName`
+  const seenUniqueEntries = new Set();
+  const filteredMessageMetadata = messageMetadata.filter((sectionData) => {
+    const documentName = sectionData.policyValue.includes("ORIGINAL_DOCUMENT")
+      ? formatDocumentTitle(sectionData.documentUrl)
+      : "Secret Document";
+    const uniqueKey = `${sectionData.userName}-${documentName}`;
+
+    // Include if it's an "ORIGINAL_DOCUMENT" or not yet seen
+    if (
+      sectionData.policyValue.includes("ORIGINAL_DOCUMENT") ||
+      !seenUniqueEntries.has(uniqueKey)
+    ) {
+      seenUniqueEntries.add(uniqueKey);
+      return true;
+    }
+
+    // Exclude duplicates
+    return false;
+  });
+
+  // Handle case when there's no original document or owner profile
+  if (!hasOriginalDocument && !hasOwnerProfile) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          p: 2,
+          borderRadius: 1,
+          boxShadow: 1,
+          backgroundColor: "action.hover",
+          mt: 3,
+        }}
+      >
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          No original documents or owner profiles available.
+        </Typography>
+      </Box>
+    );
+  }
+
+
   return (
     <Box
       sx={{
@@ -48,7 +105,7 @@ const ChatLogInfo = ({ messageMetadata }) => {
       }}
     >
       <Grid container spacing={3}>
-        {messageMetadata.map((sectionData, idx) => {
+        {filteredMessageMetadata.map((sectionData, idx) => {
           const documentName = formatDocumentTitle(sectionData.documentUrl);
           const documentUrl = `/gendox/document-instance?organizationId=${organizationId}&documentId=${sectionData.documentId}`;
           // const sectionUrl = `/gendox/document-instance?organizationId=${organizationId}&sectionId=${sectionData.sectionId}`;
@@ -101,53 +158,74 @@ const ChatLogInfo = ({ messageMetadata }) => {
                       paddingX: "16px",
                     }}
                   >
-                    <ListItemIcon sx={{ color: "primary.main" }}>
-                      <Icon icon="mdi:account" fontSize={20} />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={
-                        <Typography sx={{ fontSize: "0.75rem" }}>
-                          {sectionData.policyValue.includes("OWNER_PROFILE")
-                            ? sectionData.userName
-                            : "Secret Owner"}
-                        </Typography>
-                      }
-                    />
+                    {hasOwnerProfile && (
+                      <>
+                        <ListItemIcon sx={{ color: "primary.main" }}>
+                          <Icon icon="mdi:account" fontSize={20} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Typography sx={{ fontSize: "0.75rem" }}>
+                              {sectionData.userName}{" "}
+                            </Typography>
+                          }
+                        />
+                      </>
+                    )}
                   </Box>
                   {/* </ListItemButton> */}
                 </ListItem>
 
-                <Tooltip title="View document">
-                  <ListItem disablePadding>
-                    <ListItemButton
-                      component="a"
-                      href={documentUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ListItemIcon sx={{ color: "primary.main" }}>
-                        <Icon icon="mdi:file-document-outline" fontSize={20} />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Typography sx={{ fontSize: "0.75rem" }}>
-                            {sectionData.policyValue.includes(
-                              "ORIGINAL_DOCUMENT"
-                            )
-                              ? documentName
-                              : "Secret Document"}
-                          </Typography>
-                        }
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                </Tooltip>
+                <ListItem disablePadding>
+                  {sectionData.policyValue.includes("ORIGINAL_DOCUMENT") ? (
+                    <Tooltip title="View document">
+                      <ListItemButton
+                        component="a"
+                        href={documentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ListItemIcon sx={{ color: "primary.main" }}>
+                          <Icon
+                            icon="mdi:file-document-outline"
+                            fontSize={20}
+                          />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Typography sx={{ fontSize: "0.75rem" }}>
+                              {documentName}
+                            </Typography>
+                          }
+                        />
+                      </ListItemButton>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip title=" This document is secret.">
+                      <ListItem>
+                        <ListItemIcon sx={{ color: "primary.main" }}>
+                          <Icon
+                            icon="mdi:file-document-outline"
+                            fontSize={20}
+                          />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Typography sx={{ fontSize: "0.75rem" }}>
+                              Secret Document
+                            </Typography>
+                          }
+                        />
+                      </ListItem>
+                    </Tooltip>
+                  )}
+                </ListItem>
 
                 {/* <Tooltip title="View section">
                   <ListItem disablePadding>
                     <ListItemButton
                       component="a"
-                      href={sectionUrl}
+                      href={documentUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
