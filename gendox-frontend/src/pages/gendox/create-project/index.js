@@ -63,13 +63,13 @@ const ProjectCreate = () => {
         organizationId,
         newProjectPayload,
         storedToken
-      );
+      );    
 
       
       
 
       setSnackbar({ open: true, message: 'Project created successfully!', severity: 'success' });
-      router.push(`/gendox/project-settings?organizationId=${organizationId}&projectId=${response.data.id}`);
+      router.reload(`/gendox/project-settings?organizationId=${organizationId}&projectId=${response.data.id}`);
       
     } catch (error) {
       console.error("Failed to update project", error);
