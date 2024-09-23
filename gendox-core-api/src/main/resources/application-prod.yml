@@ -200,7 +200,7 @@ discord:
 
 proven-ai:
   enabled: ${PROVEN_AI_ENABLED:false}
-  base-url: https://provenai.ctrlspace.dev
+  base-url: https://proven-ai.ctrlspace.dev
   context-path: /proven-ai/api/v1
   apis:
     agent-authentication:
