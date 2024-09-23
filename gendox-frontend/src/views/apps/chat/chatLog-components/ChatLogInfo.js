@@ -17,6 +17,8 @@ const ChatLogInfo = ({ messageMetadata }) => {
   const router = useRouter();
   const { organizationId } = router.query;
 
+  console.log("messageMetadata", messageMetadata);
+
   // Handle if messageMetadata is not an array or is empty
   if (!Array.isArray(messageMetadata) || messageMetadata.length === 0) {
     return (
@@ -53,14 +55,15 @@ const ChatLogInfo = ({ messageMetadata }) => {
   // Create a Set to track unique combinations of `userName` and `documentName`
   const seenUniqueEntries = new Set();
   const filteredMessageMetadata = messageMetadata.filter((sectionData) => {
-    const documentName = sectionData.policyValue.includes("ORIGINAL_DOCUMENT")
-      ? formatDocumentTitle(sectionData.documentUrl)
-      : "Secret Document";
+    const documentName = formatDocumentTitle(sectionData.documentUrl)
+    // sectionData.policyValue.includes("ORIGINAL_DOCUMENT")
+    //   ? formatDocumentTitle(sectionData.documentUrl)
+    //   : "Secret Document";
     const uniqueKey = `${sectionData.userName}-${documentName}`;
 
     // Include if it's an "ORIGINAL_DOCUMENT" or not yet seen
     if (
-      sectionData.policyValue.includes("ORIGINAL_DOCUMENT") ||
+      // sectionData.policyValue.includes("ORIGINAL_DOCUMENT") ||
       !seenUniqueEntries.has(uniqueKey)
     ) {
       seenUniqueEntries.add(uniqueKey);
@@ -72,26 +75,26 @@ const ChatLogInfo = ({ messageMetadata }) => {
   });
 
   // Handle case when there's no original document or owner profile
-  if (!hasOriginalDocument && !hasOwnerProfile) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          p: 2,
-          borderRadius: 1,
-          boxShadow: 1,
-          backgroundColor: "action.hover",
-          mt: 3,
-        }}
-      >
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          No original documents or owner profiles available.
-        </Typography>
-      </Box>
-    );
-  }
+  // if (!hasOriginalDocument && !hasOwnerProfile) {
+  //   return (
+  //     <Box
+  //       sx={{
+  //         display: "flex",
+  //         justifyContent: "center",
+  //         alignItems: "center",
+  //         p: 2,
+  //         borderRadius: 1,
+  //         boxShadow: 1,
+  //         backgroundColor: "action.hover",
+  //         mt: 3,
+  //       }}
+  //     >
+  //       <Typography variant="body2" sx={{ color: "text.secondary" }}>
+  //         No original documents or owner profiles available.
+  //       </Typography>
+  //     </Box>
+  //   );
+  // }
 
 
   return (
@@ -158,8 +161,8 @@ const ChatLogInfo = ({ messageMetadata }) => {
                       paddingX: "16px",
                     }}
                   >
-                    {hasOwnerProfile && (
-                      <>
+                    {/* {hasOwnerProfile && (
+                      <> */}
                         <ListItemIcon sx={{ color: "primary.main" }}>
                           <Icon icon="mdi:account" fontSize={20} />
                         </ListItemIcon>
@@ -170,14 +173,14 @@ const ChatLogInfo = ({ messageMetadata }) => {
                             </Typography>
                           }
                         />
-                      </>
-                    )}
+                      {/* </> */}
+                    {/* )} */}
                   </Box>
                   {/* </ListItemButton> */}
                 </ListItem>
 
                 <ListItem disablePadding>
-                  {sectionData.policyValue.includes("ORIGINAL_DOCUMENT") ? (
+                  {/* {sectionData.policyValue.includes("ORIGINAL_DOCUMENT") ? ( */}
                     <Tooltip title="View document">
                       <ListItemButton
                         component="a"
@@ -200,7 +203,7 @@ const ChatLogInfo = ({ messageMetadata }) => {
                         />
                       </ListItemButton>
                     </Tooltip>
-                  ) : (
+                  {/* ) : (
                     <Tooltip title=" This document is secret.">
                       <ListItem>
                         <ListItemIcon sx={{ color: "primary.main" }}>
@@ -218,7 +221,7 @@ const ChatLogInfo = ({ messageMetadata }) => {
                         />
                       </ListItem>
                     </Tooltip>
-                  )}
+                  )} */}
                 </ListItem>
 
                 {/* <Tooltip title="View section">
