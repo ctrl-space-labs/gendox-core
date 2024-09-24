@@ -81,7 +81,7 @@ const GeneralProjectSettings = () => {
       );
       console.log("Update successful", response);
       setOpenSnackbar(true);
-      const path = `/gendox/project-settings?organizationId=${project.organizationId}&projectId=${project.id}`;
+      const path = `/gendox/project-settings/?organizationId=${project.organizationId}&projectId=${project.id}`;
       router.push(path);
     } catch (error) {
       console.error("Failed to update project", error);

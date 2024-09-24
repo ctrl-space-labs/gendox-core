@@ -29,7 +29,7 @@ const CreateDocument = () => {
 
   const handleGoBack = () => {
     router.push(
-      `/gendox/home?organizationId=${organizationId}&projectId=${projectId}`
+      `/gendox/home/?organizationId=${organizationId}&projectId=${projectId}`
     );
   };
 
@@ -64,7 +64,7 @@ const CreateDocument = () => {
       await documentService.uploadDocument(organizationId, projectId, formData, storedToken);
 
       toast.success("Document created successfully");
-      router.push(`/gendox/home?organizationId=${organizationId}&projectId=${projectId}`);
+      router.push(`/gendox/home/?organizationId=${organizationId}&projectId=${projectId}`);
 
     } catch (error) {
       toast.error("Failed to create document");

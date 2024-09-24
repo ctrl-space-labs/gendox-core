@@ -157,12 +157,12 @@ const UserDropdown = (props) => {
           sx={{ p: 0 }}
           onClick={() =>
             handleDropdownClose(
-              `/gendox/user-profile?organizationId=${organizationId}&userId=${auth.user.id}`
+              `/gendox/user-profile/?organizationId=${organizationId}&userId=${auth.user.id}`
             )
           }
         >
           <Link
-            href={`/gendox/user-profile?organizationId=${organizationId}&userId=${auth.user.id}`}
+            href={`/gendox/user-profile/?organizationId=${organizationId}&userId=${auth.user.id}`}
             passHref
             style={{ textDecoration: "none" }}
           >
@@ -192,12 +192,12 @@ const UserDropdown = (props) => {
           sx={{ p: 0 }}
           onClick={() =>
             handleDropdownClose(
-              `/gendox/organization-settings?organizationId=${organizationId}`
+              `/gendox/organization-settings/?organizationId=${organizationId}`
             )
           }
         >
           <Link
-            href={`/gendox/organization-settings?organizationId=${organizationId}`}
+            href={`/gendox/organization-settings/?organizationId=${organizationId}`}
             passHref
             style={{ textDecoration: "none" }}
           >

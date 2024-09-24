@@ -25,12 +25,12 @@ const ProjectButtons = () => {
 
   const handleCreateDocument = () => {
     router.push(
-      `/gendox/create-document?organizationId=${project.organizationId}&projectId=${project.id}`
+      `/gendox/create-document/?organizationId=${project.organizationId}&projectId=${project.id}`
     );
   };
 
   // const buttons = [
-  //   { text: "NEW DOCUMENT" , action: handleCreateDocument, href: `/gendox/create-document?organizationId=${project.organizationId}&projectId=${project.id}`},
+  //   { text: "NEW DOCUMENT" , action: handleCreateDocument, href: `/gendox/create-document/?organizationId=${project.organizationId}&projectId=${project.id}`},
   //   { text: "UPLOAD DOCUMENT", action: handleOpenUploader,  href: '#' },
   //   // { text: "NEW TEMPLATE" },
   //   // { text: "UPLOAD TEMPLATE" }
@@ -40,7 +40,7 @@ const ProjectButtons = () => {
     {
       text: "NEW DOCUMENT",
       action: handleCreateDocument,
-      href: `/gendox/create-document?organizationId=${project.organizationId}&projectId=${project.id}`,
+      href: `/gendox/create-document/?organizationId=${project.organizationId}&projectId=${project.id}`,
       isDemoOff: true,
     },
     {

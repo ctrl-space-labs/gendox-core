@@ -21,7 +21,7 @@ const navigation = () => {
           return {
             title: project.name,
             icon: "mdi:view-grid-outline",
-            path: `/gendox/home?organizationId=${activeOrganization.id}&projectId=${project.id}`,
+            path: `/gendox/home/?organizationId=${activeOrganization.id}&projectId=${project.id}`,
             itemId: project.id,
           };
         });

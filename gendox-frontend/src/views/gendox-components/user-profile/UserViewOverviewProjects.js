@@ -99,7 +99,7 @@ const UserViewOverviewProjects = ({ userData }) => {
     
     const organizationId = params.row.organizationId;
     const projectId = params.row.id;
-    router.push(`/gendox/home?organizationId=${organizationId}&projectId=${projectId}`);
+    router.push(`/gendox/home/?organizationId=${organizationId}&projectId=${projectId}`);
 };
 
 

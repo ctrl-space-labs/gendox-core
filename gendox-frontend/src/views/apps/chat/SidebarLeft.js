@@ -133,7 +133,7 @@ const SidebarLeft = (props) => {
   };
 
   const handleChatClick = (type, id, projectId) => {    
-    const newPath = `${chatUrlPath}?organizationId=${organizationId}&threadId=${id}&projectId=${projectId}`;
+    const newPath = `${chatUrlPath}/?organizationId=${organizationId}&threadId=${id}&projectId=${projectId}`;
     router.push(newPath); 
     if (!mdAbove) {
       handleLeftSidebarToggle();

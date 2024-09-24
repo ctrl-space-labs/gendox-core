@@ -78,11 +78,11 @@ const ChatContent = (props) => {
       projectId === null
     ) { 
       // Use fallback contact's threadId and projectId
-      const newPath = `${chatUrlPath}?organizationId=${organizationId}&threadId=${fallbackContact?.id}&projectId=${fallbackContact?.projectId}`;
+      const newPath = `${chatUrlPath}/?organizationId=${organizationId}&threadId=${fallbackContact?.id}&projectId=${fallbackContact?.projectId}`;
       router.push(newPath);
     } else {
       // Use the selectedContact's threadId and projectId from URL
-      const newPath = `${chatUrlPath}?organizationId=${organizationId}&threadId=${threadId}&projectId=${resolvedProjectId}`;
+      const newPath = `${chatUrlPath}/?organizationId=${organizationId}&threadId=${threadId}&projectId=${resolvedProjectId}`;
       router.push(newPath);
     }
     

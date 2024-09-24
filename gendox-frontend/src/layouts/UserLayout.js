@@ -63,7 +63,7 @@ const UserLayout = ({ children, contentHeightFixed }) => {
   const AppBrand = () => {
     return (
       <Link
-        href={`/gendox/home?organizationId=${organizationId}&projectId=${projectId}`}
+        href={`/gendox/home/?organizationId=${organizationId}&projectId=${projectId}`}
         passHref
         style={{ textDecoration: "none" }}
       >

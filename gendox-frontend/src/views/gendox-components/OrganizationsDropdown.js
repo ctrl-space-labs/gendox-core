@@ -76,10 +76,10 @@ const OrganizationsDropdown = ({ settings }) => {
       setActiveOrganizationId(organization.id);
       const newPath =
         router.pathname === "/gendox/chat"
-          ? `/gendox/chat?organizationId=${organization.id}`
+          ? `/gendox/chat/?organizationId=${organization.id}`
           : router.pathname === "/gendox/organization-settings"
-          ? `/gendox/organization-settings?organizationId=${organization.id}`
-          : `/gendox/home?organizationId=${organization.id}&projectId=${newProjectId}`;
+          ? `/gendox/organization-settings/?organizationId=${organization.id}`
+          : `/gendox/home/?organizationId=${organization.id}&projectId=${newProjectId}`;
       router.push(newPath);
     },
     [dispatch, handleDropdownClose, router]
@@ -169,8 +169,8 @@ const OrganizationsDropdown = ({ settings }) => {
           .map((organization) => {
             const href =
               router.pathname === "/gendox/chat"
-                ? `/gendox/chat?organizationId=${organization.id}`
-                : `/gendox/home?organizationId=${organization.id}&projectId=${
+                ? `/gendox/chat/?organizationId=${organization.id}`
+                : `/gendox/home/?organizationId=${organization.id}&projectId=${
                     organization.projects?.[0]?.id ?? ""
                   }`;
             return (

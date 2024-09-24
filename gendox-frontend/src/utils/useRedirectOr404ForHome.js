@@ -19,7 +19,7 @@ const useRedirectOr404ForHome = (organizationId, projectId) => {
       router.push("/404");
     } else if (!organizationId || !projectId) {
       router.push(
-        `/gendox/home?organizationId=${effectiveOrgId}&projectId=${effectiveProjId}`
+        `/gendox/home/?organizationId=${effectiveOrgId}&projectId=${effectiveProjId}`
       );
     }
   }, [organizationId, projectId, router]);
