@@ -93,7 +93,6 @@ public class UploadService {
             return documentInstance;
 
         } else {
-//            String fullFilePath = saveFile(file, organizationId, projectId);
             instance.setRemoteUrl(fullFilePath);
             instance.setDocumentIsccCode(documentIsccCode);
 
