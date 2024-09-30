@@ -217,6 +217,9 @@ discord:
 
 proven-ai:
   enabled: ${PROVEN_AI_ENABLED:false}
+  sdk:
+    iscc:
+      enabled: ${PROVEN_AI_SDK_ISCC_ENABLED:false}
 #  base-url: https://dev.provenai.ctrlspace.dev
   base-url: http://localhost:8082
   context-path: /proven-ai/api/v1
