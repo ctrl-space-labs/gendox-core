@@ -9,9 +9,27 @@ import ListItemText from "@mui/material/ListItemText";
 import Tooltip from "@mui/material/Tooltip";
 import Grid from "@mui/material/Grid";
 import { ListItemButton } from "@mui/material";
-
 import { useRouter } from "next/router";
 import { formatDocumentTitle } from "src/utils/documentUtils";
+
+const EmptyStateMessage = ({ message }) => (
+  <Box
+    sx={{
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      p: 2,
+      borderRadius: 1,
+      boxShadow: 1,
+      backgroundColor: "action.hover",
+      mt: 3,
+    }}
+  >
+    <Typography variant="body2" sx={{ color: "text.secondary" }}>
+      {message}
+    </Typography>
+  </Box>
+);
 
 const ChatLogInfo = ({ messageMetadata }) => {
   const router = useRouter();
@@ -19,83 +37,39 @@ const ChatLogInfo = ({ messageMetadata }) => {
 
   console.log("messageMetadata", messageMetadata);
 
-  // Handle if messageMetadata is not an array or is empty
   if (!Array.isArray(messageMetadata) || messageMetadata.length === 0) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          p: 2,
-          borderRadius: 1,
-          boxShadow: 1,
-          backgroundColor: "action.hover",
-          mt: 3,
-        }}
-      >
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          No additional information available.
-        </Typography>
-      </Box>
-    );
+    return <EmptyStateMessage message="No additional information available." />;
   }
 
-
-  // Check if at least one sectionData has "ORIGINAL_DOCUMENT"
   const hasOriginalDocument = messageMetadata.some((sectionData) =>
     sectionData.policyValue.includes("ORIGINAL_DOCUMENT")
   );
 
-  // Check if at least one sectionData has "OWNER_PROFILE"
   const hasOwnerProfile = messageMetadata.some((sectionData) =>
     sectionData.policyValue.includes("OWNER_PROFILE")
   );
 
-  // Create a Set to track unique combinations of `userName` and `documentName`
   const seenUniqueEntries = new Set();
   const filteredMessageMetadata = messageMetadata.filter((sectionData) => {
-    const documentName = formatDocumentTitle(sectionData.documentUrl)
-    // sectionData.policyValue.includes("ORIGINAL_DOCUMENT")
-    //   ? formatDocumentTitle(sectionData.documentUrl)
-    //   : "Secret Document";
+    const documentName = formatDocumentTitle(sectionData.documentUrl);
+    sectionData.policyValue.includes("ORIGINAL_DOCUMENT")
+      ? formatDocumentTitle(sectionData.documentUrl)
+      : "Secret Document";
     const uniqueKey = `${sectionData.userName}-${documentName}`;
 
-    // Include if it's an "ORIGINAL_DOCUMENT" or not yet seen
-    if (
-      // sectionData.policyValue.includes("ORIGINAL_DOCUMENT") ||
-      !seenUniqueEntries.has(uniqueKey)
-    ) {
+    if (!seenUniqueEntries.has(uniqueKey)) {
       seenUniqueEntries.add(uniqueKey);
       return true;
     }
 
-    // Exclude duplicates
     return false;
   });
 
-  // Handle case when there's no original document or owner profile
-  // if (!hasOriginalDocument && !hasOwnerProfile) {
-  //   return (
-  //     <Box
-  //       sx={{
-  //         display: "flex",
-  //         justifyContent: "center",
-  //         alignItems: "center",
-  //         p: 2,
-  //         borderRadius: 1,
-  //         boxShadow: 1,
-  //         backgroundColor: "action.hover",
-  //         mt: 3,
-  //       }}
-  //     >
-  //       <Typography variant="body2" sx={{ color: "text.secondary" }}>
-  //         No original documents or owner profiles available.
-  //       </Typography>
-  //     </Box>
-  //   );
-  // }
-
+  if (!hasOriginalDocument && !hasOwnerProfile) {
+    return (
+      <EmptyStateMessage message="No documents or owner profiles available." />
+    );
+  }
 
   return (
     <Box
@@ -118,16 +92,16 @@ const ChatLogInfo = ({ messageMetadata }) => {
           // Adjust grid sizes based on the total number of objects
           switch (messageMetadata.length) {
             case 1:
-              gridSize = { xs: 12, sm: 12, md: 12, lg: 12, xl: 12 };
+              gridSize = { xs: 12 };
               break;
             case 2:
-              gridSize = { xs: 12, sm: 6, md: 6, lg: 6, xl: 6 };
+              gridSize = { xs: 12, sm: 6 };
               break;
             case 3:
-              gridSize = { xs: 12, sm: 6, md: 4, lg: 4, xl: 4 };
+              gridSize = { xs: 12, sm: 6, md: 4 };
               break;
             case 4:
-              gridSize = { xs: 12, sm: 6, md: 3, lg: 3, xl: 3 };
+              gridSize = { xs: 12, sm: 6, md: 3 };
               break;
             default: // Case 5 or more objects
               gridSize = { xs: 12, sm: 6, md: 6, lg: 4, xl: 2.4 }; // 5 items per row on large screens
@@ -161,8 +135,8 @@ const ChatLogInfo = ({ messageMetadata }) => {
                       paddingX: "16px",
                     }}
                   >
-                    {/* {hasOwnerProfile && (
-                      <> */}
+                    {hasOwnerProfile && (
+                      <>
                         <ListItemIcon sx={{ color: "primary.main" }}>
                           <Icon icon="mdi:account" fontSize={20} />
                         </ListItemIcon>
@@ -173,14 +147,14 @@ const ChatLogInfo = ({ messageMetadata }) => {
                             </Typography>
                           }
                         />
-                      {/* </> */}
-                    {/* )} */}
+                      </>
+                    )}
                   </Box>
                   {/* </ListItemButton> */}
                 </ListItem>
 
                 <ListItem disablePadding>
-                  {/* {sectionData.policyValue.includes("ORIGINAL_DOCUMENT") ? ( */}
+                  {sectionData.policyValue.includes("ORIGINAL_DOCUMENT") ? (
                     <Tooltip title="View document">
                       <ListItemButton
                         component="a"
@@ -203,7 +177,7 @@ const ChatLogInfo = ({ messageMetadata }) => {
                         />
                       </ListItemButton>
                     </Tooltip>
-                  {/* ) : (
+                  ) : (
                     <Tooltip title=" This document is secret.">
                       <ListItem>
                         <ListItemIcon sx={{ color: "primary.main" }}>
@@ -221,9 +195,10 @@ const ChatLogInfo = ({ messageMetadata }) => {
                         />
                       </ListItem>
                     </Tooltip>
-                  )} */}
+                  )}
                 </ListItem>
 
+                {/* Sections */}
                 {/* <Tooltip title="View section">
                   <ListItem disablePadding>
                     <ListItemButton
