@@ -44,7 +44,6 @@ import java.util.UUID;
 @NamedNativeQuery(
         name = "MessageMetadataDTO.getMessageMetadataByMessageId",
         query = """
-            
                 SELECT
                     ms.section_id AS sectionid,
                     m.id AS messageid,
@@ -58,7 +57,11 @@ import java.util.UUID;
                     d.remote_url AS documenturl,
                     dsm.title AS sectiontitle,
                     pt.name AS policytypename,
-                    ARRAY_AGG(acp.value) AS policyvalue
+                    CASE
+                        WHEN ARRAY_AGG(acp.value) IS NULL AND pd.project_id = ct.project_id THEN ARRAY['ORIGINAL_DOCUMENT']
+                        WHEN ARRAY_AGG(acp.value) IS NULL THEN NULL
+                        ELSE ARRAY_AGG(acp.value)
+                    END AS policyvalue
                 FROM
                     gendox_core.message m
                         INNER JOIN
@@ -67,7 +70,7 @@ import java.util.UUID;
                     gendox_core.document_instance_sections dis ON ms.section_id = dis.id
                         INNER JOIN
                     gendox_core.document_instance d ON dis.document_instance_id = d.id
-                    INNER JOIN
+                        INNER JOIN
                     gendox_core.document_section_metadata dsm ON dis.document_section_metadata_id = dsm.id
                         INNER JOIN
                     gendox_core.users u ON d.created_by = u.id
@@ -75,6 +78,8 @@ import java.util.UUID;
                     gendox_core.organizations o ON d.organization_id = o.id
                         INNER JOIN
                     gendox_core.project_documents pd ON d.id = pd.document_id
+                        INNER JOIN
+                    gendox_core.chat_threads ct ON m.thread_id = ct.id
                         LEFT JOIN
                     proven_ai.acl_policies acp ON acp.data_pod_id = pd.project_id
                         LEFT JOIN
@@ -83,11 +88,11 @@ import java.util.UUID;
                     m.id = :messageId
                     AND (pt.name = 'ATTRIBUTION_POLICY' OR pt.name IS NULL)
                 GROUP BY
-                    ms.section_id, m.id, ms.section_url, u.name, o.name, dis.section_iscc_code, m.created_at, m.thread_id, d.id, d.remote_url, dsm.title, pt.name
-                                 
+                    ms.section_id, m.id, ms.section_url, u.name, o.name, dis.section_iscc_code, m.created_at, m.thread_id, d.id, d.remote_url, dsm.title, pt.name, pd.project_id, ct.project_id
             """,
         resultSetMapping = "MessageMetadataDTOMapping"
 )
+
 
 public class MessageMetadataDTO {
     @Id

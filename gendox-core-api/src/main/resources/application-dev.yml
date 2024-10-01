@@ -222,4 +222,4 @@ walt-id:
 #ISCC Code
 iscc:
   apis:
-    code-generation: http://localhost:8970/api/v1/iscc
+    code-generation: https://proven-ai-dev.ctrlspace.dev/api/v1/iscc
