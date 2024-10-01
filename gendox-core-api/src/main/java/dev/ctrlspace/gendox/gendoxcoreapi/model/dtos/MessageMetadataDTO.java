@@ -57,11 +57,12 @@ import java.util.UUID;
                     d.remote_url AS documenturl,
                     dsm.title AS sectiontitle,
                     pt.name AS policytypename,
-                    CASE
-                        WHEN ARRAY_AGG(acp.value) IS NULL AND pd.project_id = ct.project_id THEN ARRAY['ORIGINAL_DOCUMENT']
-                        WHEN ARRAY_AGG(acp.value) IS NULL THEN NULL
-                        ELSE ARRAY_AGG(acp.value)
-                    END AS policyvalue
+                     COALESCE(ARRAY_AGG(acp.value) FILTER (WHERE acp.value IS NOT NULL),
+                        CASE
+                            WHEN pd.project_id = ct.project_id THEN ARRAY['ORIGINAL_DOCUMENT']\s
+                            ELSE NULL
+                        END
+               ) AS policyvalue
                 FROM
                     gendox_core.message m
                         INNER JOIN
