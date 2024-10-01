@@ -135,7 +135,7 @@ const ChatLogInfo = ({ messageMetadata }) => {
                       paddingX: "16px",
                     }}
                   >
-                    {hasOwnerProfile && (
+                    {sectionData.policyValue.includes("OWNER_PROFILE") && (
                       <>
                         <ListItemIcon sx={{ color: "primary.main" }}>
                           <Icon icon="mdi:account" fontSize={20} />
@@ -149,7 +149,9 @@ const ChatLogInfo = ({ messageMetadata }) => {
                         />
                       </>
                     )}
+                    
                   </Box>
+                  
                   {/* </ListItemButton> */}
                 </ListItem>
 
