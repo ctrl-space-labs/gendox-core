@@ -59,7 +59,7 @@ import java.util.UUID;
                     pt.name AS policytypename,
                      COALESCE(ARRAY_AGG(acp.value) FILTER (WHERE acp.value IS NOT NULL),
                         CASE
-                            WHEN pd.project_id = ct.project_id THEN ARRAY['ORIGINAL_DOCUMENT']\s
+                            WHEN pd.project_id = ct.project_id THEN ARRAY['ORIGINAL_DOCUMENT']
                             ELSE NULL
                         END
                ) AS policyvalue
