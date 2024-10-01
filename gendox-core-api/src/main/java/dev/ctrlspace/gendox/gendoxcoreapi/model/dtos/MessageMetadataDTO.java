@@ -79,7 +79,7 @@ import java.util.UUID;
                         INNER JOIN
                     gendox_core.project_documents pd ON d.id = pd.document_id
                         INNER JOIN
-                    gendox_core.chat_threads ct ON m.thread_id = ct.id
+                    gendox_core.chat_thread ct ON m.thread_id = ct.id
                         LEFT JOIN
                     proven_ai.acl_policies acp ON acp.data_pod_id = pd.project_id
                         LEFT JOIN
