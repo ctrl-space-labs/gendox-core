@@ -7,6 +7,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationDidService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.WalletKeyService;
+import org.junit.platform.commons.logging.Logger;
+import org.junit.platform.commons.logging.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,9 @@ public class ProvenAiService {
     private ProvenAiAgentAuthenticationAdapter provenAiAgentAuthenticationAdapter;
 
     private ProvenAiQueryAdapter provenAiQueryAdapter;
+
+    private static final Logger logger = LoggerFactory.getLogger(ProvenAiService.class);
+
 
 
     @Autowired
@@ -49,8 +54,14 @@ public class ProvenAiService {
     public String getAgentToken(ProjectAgent projectAgent) throws GendoxException, IOException {
 
 
+        String organizationDid = projectAgent.getOrganizationDid();
+
+        logger.debug(() -> "Organization DID: " + organizationDid);
+
         Object agentVpJwt = projectAgentService.createVerifiablePresentation(projectAgent,
-                walletKeyService.getWalletKeybyOrganizationId(projectAgent.getProject().getOrganizationId()).getJwkKeyFormat(),projectAgent.getOrganizationDid());
+                walletKeyService.getWalletKeybyOrganizationId(projectAgent.getProject().getOrganizationId()).getJwkKeyFormat(),organizationDid);
+
+        logger.debug(() -> "Agent VP JWT created");
 
         return provenAiAgentAuthenticationAdapter.provenAiAgentAuthentication((String) agentVpJwt).getToken();
 

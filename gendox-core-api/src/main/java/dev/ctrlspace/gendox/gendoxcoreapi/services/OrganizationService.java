@@ -12,6 +12,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepositor
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.WalletKeyRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
+import org.junit.platform.commons.logging.Logger;
+import org.junit.platform.commons.logging.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -31,6 +33,7 @@ import java.util.UUID;
 @Service
 public class OrganizationService {
 
+    private static final Logger logger = LoggerFactory.getLogger(OrganizationService.class);
 
     private UserOrganizationRepository userOrganizationRepository;
     private OrganizationRepository organizationRepository;
@@ -104,6 +107,9 @@ public class OrganizationService {
 
         organization = organizationRepository.save(organization);
 
+        final String organizationId = organization.getId().toString();
+        logger.debug(() -> "Organization created with id: "+ organizationId);
+
         userOrganizationService.createUserOrganization(ownerUserId, organization.getId(), OrganizationRolesConstants.ADMIN);
 
         Type walletKeyType = typeService.getKeyTypeByName(keyTypeName);
@@ -121,6 +127,11 @@ public class OrganizationService {
                         .organizationId(organization.getId())
                         .keyId(walletKey.getId())
                 .build(), "key");
+
+        logger.debug(() -> "OrganizationDid created with id: "+ organizationDid.getId());
+        logger.debug(() -> "WalletKey created with id: "+ walletKey.getId());
+        logger.debug(() -> "OrganizationDid created with kid: "+ organizationDid.getKeyId());
+        logger.debug(() -> "OrganizationDid created with did: "+ organizationDid.getDid());
 
 
         return organization;
