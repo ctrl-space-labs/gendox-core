@@ -29,6 +29,7 @@ import java.util.UUID;
                                 @ColumnResult(name = "sectionurl", type = String.class),
                                 @ColumnResult(name = "username", type = String.class),
                                 @ColumnResult(name = "organizationname", type = String.class),
+                                @ColumnResult(name = "organizationid", type = UUID.class),
                                 @ColumnResult(name = "iscccode", type = String.class),
                                 @ColumnResult(name = "createdat", type = Instant.class),
                                 @ColumnResult(name = "threadid", type = UUID.class),
@@ -50,6 +51,7 @@ import java.util.UUID;
                     ms.section_url AS sectionurl,
                     u.name AS username,
                     o.name AS organizationname,
+                    o.id AS organizationid,
                     dis.section_iscc_code AS iscccode,
                     m.created_at AS createdat,
                     m.thread_id AS threadid,
@@ -89,7 +91,7 @@ import java.util.UUID;
                     m.id = :messageId
                     AND (pt.name = 'ATTRIBUTION_POLICY' OR pt.name IS NULL)
                 GROUP BY
-                    ms.section_id, m.id, ms.section_url, u.name, o.name, dis.section_iscc_code, m.created_at, m.thread_id, d.id, d.remote_url, dsm.title, pt.name, pd.project_id, ct.project_id
+                    ms.section_id, m.id, ms.section_url, u.name, o.name, o.id, dis.section_iscc_code, m.created_at, m.thread_id, d.id, d.remote_url, dsm.title, pt.name, pd.project_id, ct.project_id
             """,
         resultSetMapping = "MessageMetadataDTOMapping"
 )
@@ -102,6 +104,7 @@ public class MessageMetadataDTO {
     private String sectionUrl;
     private String userName;
     private String organizationName;
+    private UUID organizationId;
     private String isccCode;
     private Instant createdAt;
     private UUID threadId;
@@ -112,13 +115,14 @@ public class MessageMetadataDTO {
     private List<String> policyValue;
 
     public MessageMetadataDTO(UUID sectionId, UUID messageId, String sectionUrl, String userName, String organizationName,
-                              String isccCode, Instant createdAt, UUID threadId, UUID documentId, String documentUrl,
-                              String sectionTitle, String policyTypeName, String[] policyValueArray) {
+                              UUID organizationId, String isccCode, Instant createdAt, UUID threadId, UUID documentId,
+                              String documentUrl, String sectionTitle, String policyTypeName, String[] policyValueArray) {
         this.sectionId = sectionId;
         this.messageId = messageId;
         this.sectionUrl = sectionUrl;
         this.userName = userName;
         this.organizationName = organizationName;
+        this.organizationId = organizationId;
         this.isccCode = isccCode;
         this.createdAt = createdAt;
         this.threadId = threadId;
