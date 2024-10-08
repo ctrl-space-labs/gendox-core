@@ -7,7 +7,7 @@ server:
 logging:
   level:
     dev.ctrlspace: DEBUG
-    org.springframework.security: INFO
+    org.springframework.security: DEBUG
     org.springframework: INFO
 #    This is how to change the micrometer tracing pattern, we'll use the default now
 #  pattern:
@@ -51,9 +51,9 @@ spring:
 #      minimum-idle: 10
 
   datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USERNAME}
-    password: ${DATABASE_PASSWORD}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/postgres}
+    username: ${DATABASE_USERNAME:gendox_user}
+    password: ${DATABASE_PASSWORD:root}
     hikari:
       maximum-pool-size: 3
       minimum-idle: 1
@@ -75,14 +75,14 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8443/idp/realms/gendox-idp-dev
-          jwk-set-uri: http://localhost:8443/idp/realms/gendox-idp-dev/protocol/openid-connect/certs
+          issuer-uri: http://gendox-keycloak8080/idp/realms/gendox-idp-dev
+          jwk-set-uri: http://gendox-keycloak:8080/idp/realms/gendox-idp-dev/protocol/openid-connect/certs
 
 
 
 keycloak:
-    base-url: http://localhost:8443/idp
-    token-uri: http://localhost:8443/idp/realms/gendox-idp-dev/protocol/openid-connect/token
+    base-url: http://gendox-keycloak:8080/idp
+    token-uri: http://gendox-keycloak:8080/idp/realms/gendox-idp-dev/protocol/openid-connect/token
     realm: gendox-idp-dev
     client-id: ${KEYCLOAK_CLIENT_ID}
     client-secret: ${KEYCLOAK_CLIENT_SECRET}
