@@ -35,7 +35,6 @@ const ChatLogInfo = ({ messageMetadata }) => {
   const router = useRouter();
   const { organizationId } = router.query;
 
-  console.log("messageMetadata", messageMetadata);
 
   if (!Array.isArray(messageMetadata) || messageMetadata.length === 0) {
     return <EmptyStateMessage message="No additional information available." />;
@@ -44,19 +43,20 @@ const ChatLogInfo = ({ messageMetadata }) => {
   const hasOriginalDocument = messageMetadata.some((sectionData) =>
     sectionData.policyValue.includes("ORIGINAL_DOCUMENT")
   );
+  
 
   const hasOwnerProfile = messageMetadata.some((sectionData) =>
     sectionData.policyValue.includes("OWNER_PROFILE")
   );
 
+
+
   const seenUniqueEntries = new Set();
   const filteredMessageMetadata = messageMetadata.filter((sectionData) => {
-    const documentName = formatDocumentTitle(sectionData.documentUrl);
     sectionData.policyValue.includes("ORIGINAL_DOCUMENT")
       ? formatDocumentTitle(sectionData.documentUrl)
       : "Secret Document";
-    const uniqueKey = `${sectionData.userName}-${documentName}`;
-
+    const uniqueKey = `${sectionData.userName}-${sectionData.documentId}`;
     if (!seenUniqueEntries.has(uniqueKey)) {
       seenUniqueEntries.add(uniqueKey);
       return true;
@@ -64,6 +64,7 @@ const ChatLogInfo = ({ messageMetadata }) => {
 
     return false;
   });
+
 
   if (!hasOriginalDocument && !hasOwnerProfile) {
     return (
