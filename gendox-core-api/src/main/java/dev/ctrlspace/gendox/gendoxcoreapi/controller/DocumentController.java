@@ -12,6 +12,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionOrderDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import jakarta.validation.Valid;
@@ -52,6 +53,8 @@ public class DocumentController {
 
     private SecurityUtils securityUtils;
 
+    private DocumentInstanceSectionRepository documentInstanceSectionRepository;
+
 
     @Autowired
     public DocumentController(DocumentService documentService,
@@ -61,7 +64,9 @@ public class DocumentController {
                               SplitFileService splitFileService,
                               SecurityUtils securityUtils,
                               DocumentSectionService documentSectionService,
-                              DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter) {
+                              DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter,
+                                DocumentInstanceSectionRepository documentInstanceSectionRepository
+                              ) {
         this.documentService = documentService;
         this.documentOnlyConverter = documentOnlyConverter;
         this.documentConverter = documentConverter;
@@ -70,6 +75,7 @@ public class DocumentController {
         this.documentSectionService = documentSectionService;
         this.securityUtils = securityUtils;
         this.documentInstanceSectionWithoutDocumentConverter = documentInstanceSectionWithoutDocumentConverter;
+        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
     }
 
 

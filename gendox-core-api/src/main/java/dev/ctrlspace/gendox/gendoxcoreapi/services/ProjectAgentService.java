@@ -4,10 +4,12 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.authentication.AuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectAgentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationPlanRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
@@ -47,13 +49,14 @@ public class ProjectAgentService {
     private TemplateRepository templateRepository;
     private UserService userService;
     private AiModelRepository aiModelRepository;
-
+    private SubscriptionAiModelTierService subscriptionAiModelTierService;
     private CryptographyUtils cryptographyUtils;
-
 
     private AiModelService aiModelService;
 
     private AuthenticationService authenticationService;
+
+    private OrganizationPlanService organizationPlanService;
 
 
     @Autowired
@@ -64,7 +67,11 @@ public class ProjectAgentService {
                                @Lazy UserService userService,
                                AiModelRepository aiModelRepository,
                                AiModelService aiModelService,
-                               CryptographyUtils cryptographyUtils) {
+                               CryptographyUtils cryptographyUtils,
+                               SubscriptionAiModelTierService subscriptionAiModelTierService,
+                               OrganizationPlanService organizationPlanService
+
+                               ) {
         this.authenticationService = authenticationService;
         this.projectAgentRepository = projectAgentRepository;
         this.typeService = typeService;
@@ -73,6 +80,8 @@ public class ProjectAgentService {
         this.aiModelRepository = aiModelRepository;
         this.aiModelService = aiModelService;
         this.cryptographyUtils = cryptographyUtils;
+        this.subscriptionAiModelTierService = subscriptionAiModelTierService;
+        this.organizationPlanService = organizationPlanService;
     }
 
     public ProjectAgent getAgentByProjectId(UUID projectId) {
@@ -115,6 +124,8 @@ public class ProjectAgentService {
         user.setName(projectAgent.getAgentName());
         // ensure uniqueness of Agent username
         user.setUserName(projectAgent.getAgentName().toLowerCase() + "-" + UUID.randomUUID());
+        // remove whitespaces from username
+        user.setUserName(user.getUserName().replaceAll("\\s+", ""));
 
         user.setUserType(typeService.getUserTypeByName(UserNamesConstants.GENDOX_AGENT));
         // TODO: this is just a Hack... Use Keycloak Attributes when the Gendox's Keycloak Service starts support attributes .
@@ -188,9 +199,33 @@ public class ProjectAgentService {
         ProjectAgent existingProjectAgent = projectAgentRepository.getById(projectAgentId);
 
         // Update the properties         existingProjectAgent.setCompletionModelId(aiModelRepo.findByName(projectAgent.getCompletionModelId().getName()));
+        AiModel completionModel = aiModelService.getByName(projectAgent.getCompletionModel().getName());
+        AiModel semanticSearchModel = aiModelService.getByName(projectAgent.getSemanticSearchModel().getName());
+
+        UUID subscriptionPlanId = organizationPlanService
+                .getActiveOrganizationPlan(existingProjectAgent.getProject().getOrganizationId())
+                .getSubscriptionPlan()
+                .getId();
+
+        if (!completionModel.getIsActive()) {
+            throw new GendoxException("INACTIVE_COMPLETION_MODEL", "The selected completion model is inactive", HttpStatus.FORBIDDEN);
+        }
+
+        if (!semanticSearchModel.getIsActive()) {
+            throw new GendoxException("INACTIVE_SEMANTIC_SEARCH_MODEL", "The selected semantic search model is inactive", HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, completionModel.getModelTierType().getId())) {
+            throw new GendoxException("NO_ACCESS_TO_COMPLETION_MODEL", "No access to the completion model", HttpStatus.FORBIDDEN);
+        }
+
+        if (!subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, semanticSearchModel.getModelTierType().getId())) {
+            throw new GendoxException("NO_ACCESS_TO_SEMANTIC_SEARCH_MODEL", "No access to the semantic search model", HttpStatus.FORBIDDEN);
+        }
+
         existingProjectAgent.setAgentName(projectAgent.getAgentName());
-        existingProjectAgent.setCompletionModel(aiModelService.getByName(projectAgent.getCompletionModel().getName()));
-        existingProjectAgent.setSemanticSearchModel(aiModelService.getByName(projectAgent.getSemanticSearchModel().getName()));
+        existingProjectAgent.setCompletionModel(completionModel);
+        existingProjectAgent.setSemanticSearchModel(semanticSearchModel);
         existingProjectAgent.setAgentName(projectAgent.getAgentName());
         existingProjectAgent.setAgentBehavior(projectAgent.getAgentBehavior());
         existingProjectAgent.setPrivateAgent(projectAgent.getPrivateAgent());

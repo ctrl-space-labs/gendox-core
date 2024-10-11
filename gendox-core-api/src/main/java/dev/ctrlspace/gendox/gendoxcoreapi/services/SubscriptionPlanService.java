@@ -37,7 +37,7 @@ public class SubscriptionPlanService {
     public OrganizationPlan createDefaultFreePlan() {
         OrganizationPlan plan = new OrganizationPlan();
         plan.setApiRateLimit(apiRateLimitRepository.findByTierTypeName(ApiRateLimitTypes.RATE_LIMIT_FREE));
-        plan.setSubscriptionPlan(subscriptionPlanRepository.findBySkuTypeNameAndActiveIsTrue(SubscriptionTypes.SKU_TYPE_FREE));
+        plan.setSubscriptionPlan(subscriptionPlanRepository.findBySkuAndActiveIsTrue(SubscriptionTypes.SKU_FREE));
         plan.setNumberOfSeats(1);
         Instant now = Instant.now();
         plan.setStartDate(now);

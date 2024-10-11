@@ -190,8 +190,11 @@ public class OrganizationController {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public void deactivateOrganization(@PathVariable UUID organizationId) throws Exception {
+    public void deactivateOrganization(@PathVariable UUID organizationId, Authentication authentication) throws Exception {
         organizationService.deactivateOrganization(organizationId);
+        UserProfile userProfile = (UserProfile) authentication.getPrincipal();
+        userService.evictUserProfileByUniqueIdentifier(userProfile.getId());
+
     }
 
 
@@ -257,6 +260,7 @@ public class OrganizationController {
             description = "Remove a user from an organization by specifying the user's unique ID and the organization's unique ID.")
     public void removeUserFromOrganization(@PathVariable UUID organizationId, @PathVariable UUID userId) throws Exception {
         userOrganizationService.deleteUserOrganization(userId, organizationId);
+
     }
 
 

@@ -9,5 +9,5 @@ import java.util.UUID;
 
 public interface SubscriptionPlanRepository extends JpaRepository<SubscriptionPlan, UUID> {
 
-    SubscriptionPlan findBySkuTypeNameAndActiveIsTrue(String skuTypeName);
+    SubscriptionPlan findBySkuAndActiveIsTrue(String sku);
 }

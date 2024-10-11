@@ -1,7 +1,7 @@
 
 
 server:
-  port: 5001
+  port: 8080
   servlet:
     context-path: /gendox/api/v1
 logging:
@@ -199,7 +199,10 @@ discord:
 
 proven-ai:
   enabled: ${PROVEN_AI_ENABLED:false}
-  base-url: https://dev.provenai.ctrlspace.dev
+  sdk:
+    iscc:
+      enabled: ${PROVEN_AI_SDK_ISCC_ENABLED:false}
+  base-url: https://dev.proven-ai.ctrlspace.dev
   context-path: /proven-ai/api/v1
   apis:
     agent-authentication:
@@ -219,4 +222,4 @@ walt-id:
 #ISCC Code
 iscc:
   apis:
-    code-generation: http://localhost:8970/api/v1/iscc
+    code-generation: https://proven-ai-dev.ctrlspace.dev/api/v1/iscc

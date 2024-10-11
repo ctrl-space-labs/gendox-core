@@ -33,7 +33,7 @@ public class AiModelController {
     public List<AiModel> getAllAiModels(@PathVariable UUID organizationId) throws GendoxException {
 
 //        TODO: Implement the logic to get all ai-models by org ID and moler tier related to subscription plan
-        return aiModelService.getAllAiModelsByOrganizationId(organizationId);
+        return aiModelService.getAllActiveAiModelsByOrganizationId(organizationId);
     }
 
    
