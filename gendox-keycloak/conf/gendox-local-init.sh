@@ -7,7 +7,7 @@
 # Admin credentials
 ADMIN_USER="gendox_admin"
 ADMIN_PASSWORD="changeit"
-KEYCLOAK_URL="http://localhost:8880/idp"
+KEYCLOAK_URL="http://localhost:8080/idp"
 
 # Realm name
 REALM_NAME="gendox-idp-dev"

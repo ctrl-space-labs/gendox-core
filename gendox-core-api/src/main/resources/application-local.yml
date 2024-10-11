@@ -221,7 +221,7 @@ proven-ai:
     iscc:
       enabled: ${PROVEN_AI_SDK_ISCC_ENABLED:false}
 #  base-url: https://dev.provenai.ctrlspace.dev
-  base-url: http://localhost:8082
+  base-url: http://host.docker.internal:8082
   context-path: /proven-ai/api/v1
   apis:
     agent-authentication:
@@ -240,4 +240,5 @@ walt-id:
 #ISCC Code
 iscc:
   apis:
-    code-generation: http://localhost:8970/api/v1/iscc
+#    code-generation: http://host.docker.internal:8970/api/v1/iscc
+    code-generation: http://host.docker.internal:8970
