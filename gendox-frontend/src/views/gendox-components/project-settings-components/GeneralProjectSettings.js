@@ -81,7 +81,7 @@ const GeneralProjectSettings = () => {
       );
       console.log("Update successful", response);
       setOpenSnackbar(true);
-      const path = `/gendox/project-settings?organizationId=${project.organizationId}&projectId=${project.id}`;
+      const path = `/gendox/project-settings/?organizationId=${project.organizationId}&projectId=${project.id}`;
       router.push(path);
     } catch (error) {
       console.error("Failed to update project", error);
@@ -227,7 +227,7 @@ const GeneralProjectSettings = () => {
               <Button
                 size="large"
                 variant="outlined"
-                href={`${provenAiUrl}/provenAi/data-pods-control/?organizationId=${project.organizationId}&dataPodId=${project.id}`} 
+                href={`${provenAiUrl}/provenAI/data-pods-control/?organizationId=${project.organizationId}&dataPodId=${project.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >

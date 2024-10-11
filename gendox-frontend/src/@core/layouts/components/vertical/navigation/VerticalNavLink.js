@@ -80,6 +80,15 @@ const VerticalNavLink = ({
     }
   }
 
+  const isGendoxNavLinkActive = () => {
+    if (!item.itemId) {
+      return false;
+    }
+
+    return Object.values(router.query).some(queryValue => queryValue === item.itemId);
+    
+  };
+
   return (
     <CanViewNavLink navLink={item}>
       <ListItem
@@ -95,7 +104,7 @@ const VerticalNavLink = ({
         <MenuNavLink
           component={Link}
           {...(item.disabled && { tabIndex: -1 })}
-          className={isNavLinkActive() ? 'active' : ''}
+          className={isGendoxNavLinkActive() ? 'active' : ''}
           href={item.path === undefined ? '/' : `${item.path}`}
           {...(item.openInNewTab ? { target: '_blank' } : null)}
           onClick={e => {

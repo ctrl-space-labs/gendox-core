@@ -91,7 +91,7 @@ const GeneralOrganizationSettings = () => {
       );
       console.log("Organization Update successful", response);
       setOpenSnackbar(true);
-      const path = `/gendox/organization-settings?organizationId=${response.data.id}`;
+      const path = `/gendox/organization-settings/?organizationId=${response.data.id}`;
       router.push(path);
     } catch (error) {
       console.error("Failed to update Organization", error);
@@ -199,7 +199,7 @@ const GeneralOrganizationSettings = () => {
               <Button
                 size="large"
                 variant="outlined"
-                href={`${provenAiUrl}/provenAi/home/?organizationId=${organization.id}`}
+                href={`${provenAiUrl}/provenAI/home/?organizationId=${organization.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >

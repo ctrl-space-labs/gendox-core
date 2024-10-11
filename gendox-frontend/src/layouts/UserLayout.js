@@ -31,6 +31,7 @@ import PoweredByGendox from "./components/shared-components/PoweredByGendox";
 
 const UserLayout = ({ children, contentHeightFixed }) => {
   const router = useRouter();
+  const { organizationId, projectId } = router.query;
 
   // ** Hooks
   const { settings, saveSettings } = useSettings();
@@ -55,23 +56,24 @@ const UserLayout = ({ children, contentHeightFixed }) => {
 
   const { footerContent } = settings;
   let footerContentComponent = null;
-  if (footerContent === 'poweredBy') {
-      footerContentComponent = () => <PoweredByGendox/>
+  if (footerContent === "poweredBy") {
+    footerContentComponent = () => <PoweredByGendox />;
   }
-
 
   const AppBrand = () => {
     return (
-      <Link href="/gendox/home" passHref style={{ textDecoration: 'none' }}>
+      <Link
+        href={`/gendox/home/?organizationId=${organizationId}&projectId=${projectId}`}
+        passHref
+        style={{ textDecoration: "none" }}
+      >
         <Box
-          
           sx={{
             display: "flex",
             alignItems: "center",
             cursor: "pointer",
-            padding: "20px 20px",    
+            padding: "20px 20px",
           }}
-          
         >
           <div
             style={{
@@ -86,7 +88,7 @@ const UserLayout = ({ children, contentHeightFixed }) => {
           <Typography
             variant="h6"
             sx={{
-              ml: 2,              
+              ml: 2,
             }}
           >
             Gendox
@@ -102,8 +104,8 @@ const UserLayout = ({ children, contentHeightFixed }) => {
       settings={settings}
       saveSettings={saveSettings}
       contentHeightFixed={contentHeightFixed}
-      footerProps= {{
-          content: footerContentComponent
+      footerProps={{
+        content: footerContentComponent,
       }}
       verticalLayoutProps={{
         navMenu: {

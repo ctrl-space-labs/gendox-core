@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "src/hooks/useAuth";
+import { sortByField } from "src/utils/orderUtils";
+
 
 const navigation = () => {
   const auth = useAuth();
   const router = useRouter();
   const { organizationId, projectId } = router.query;
   const [navigationItems, setNavigationItems] = useState([]);
-
-
-
-
   
 
   useEffect(() => {
@@ -23,15 +21,18 @@ const navigation = () => {
           return {
             title: project.name,
             icon: "mdi:view-grid-outline",
-            path: `/gendox/home?organizationId=${activeOrganization.id}&projectId=${project.id}`,
+            path: `/gendox/home/?organizationId=${activeOrganization.id}&projectId=${project.id}`,
+            itemId: project.id,
           };
         });
+
+        const sortedProjects = sortByField(projects, "title", projectId);
         
         setNavigationItems([          
           {
             sectionTitle: "PROJECTS",
           },
-          ...projects,          
+          ...sortedProjects,          
         ]);
       }
     }

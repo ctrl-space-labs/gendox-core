@@ -30,8 +30,9 @@ public class UploadService {
     @Value("${gendox.documents.upload-dir}")
     private String uploadDir;
 
-    @Value("${proven-ai.enabled}")
-    private Boolean provenAiEnabled;
+
+    @Value("${proven-ai.sdk.iscc.enabled}")
+    private Boolean isccEnabled;
 
     private DocumentService documentService;
     private ProjectDocumentService projectDocumentService;
@@ -64,7 +65,7 @@ public class UploadService {
                 documentService.getDocumentByFileName(projectId, organizationId, fileName);
         String fullFilePath = saveFile(file, organizationId, projectId);
         String documentIsccCode = new String();
-        if (provenAiEnabled) {
+        if (isccEnabled) {
             IsccCodeResponse isccCodeResponse = isccCodeService.getDocumentIsccCode(file, fileName);
             documentIsccCode = isccCodeResponse.getIscc();
         }
@@ -92,7 +93,6 @@ public class UploadService {
             return documentInstance;
 
         } else {
-//            String fullFilePath = saveFile(file, organizationId, projectId);
             instance.setRemoteUrl(fullFilePath);
             instance.setDocumentIsccCode(documentIsccCode);
 

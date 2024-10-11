@@ -26,7 +26,7 @@ const getHomeRoute = role => {
   else {
     // Check if selectedOrganizationId and selectedProjectId are not null before constructing the URL
     if (selectedOrganizationId !== null && selectedProjectId !== null) {
-      return `/gendox/home?organizationId=${selectedOrganizationId}&projectId=${selectedProjectId}`
+      return `/gendox/home/?organizationId=${selectedOrganizationId}&projectId=${selectedProjectId}`
     } else {
       // Return a default URL if selectedOrganizationId or selectedProjectId is null
       return '/gendox/home'

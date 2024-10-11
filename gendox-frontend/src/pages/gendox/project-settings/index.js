@@ -44,7 +44,6 @@ const ProjectSettings = () => {
         );
 
         if (!selectedProject) {
-          setError("Project not found in the selected organization.");
           setTimeout(() => {
             setIsBlurring(false); // Remove blur effect after 300ms
           }, 300);

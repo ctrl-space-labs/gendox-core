@@ -1,26 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useSelector } from "react-redux";
 import Tooltip from "@mui/material/Tooltip";
 import { useRouter } from "next/router";
-import { styled } from "@mui/material/styles";
-import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
-import { EditorState, ContentState } from "draft-js";
-import ReactDraftWysiwyg from "src/@core/components/react-draft-wysiwyg";
 import { StyledCardContent } from "src/utils/styledCardsContent";
-import { EditorWrapper } from "src/@core/styles/libs/react-draft-wysiwyg";
 import documentService from "src/gendox-sdk/documentService";
 import authConfig from "src/configs/auth";
 import Icon from "src/@core/components/icon";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import IconButton from "@mui/material/IconButton";
-import SectionEdit from "src/views/gendox-components/documents-components/SectionEdit";
 import DocumentEdit from "src/views/gendox-components/create-document/DocumentEdit";
-import Input from "@mui/material/Input";
-import InputLabel from "@mui/material/InputLabel";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
-import { convertToRaw } from "draft-js";
 import toast from "react-hot-toast";
 
 
@@ -34,15 +24,24 @@ const CreateDocument = () => {
   const [documentTitle, setDocumentTitle] = useState("");
   const [documentValue, setDocumentValue] = useState("");
   const [isCreatingDocument, setIsCreatingDocument] = useState(false);
+  const [titleError, setTitleError] = useState(false); // State for title validation
+
 
   const handleGoBack = () => {
     router.push(
-      `/gendox/home?organizationId=${organizationId}&projectId=${projectId}`
+      `/gendox/home/?organizationId=${organizationId}&projectId=${projectId}`
     );
   };
 
   
   const handleSave = async () => {
+    if (!documentTitle) {
+      setTitleError(true);
+      toast.error("Document title is required.");
+      return; // Prevent saving if the title is empty
+    }
+
+    setTitleError(false);
     setIsCreatingDocument(true);
     try {
       
@@ -65,7 +64,7 @@ const CreateDocument = () => {
       await documentService.uploadDocument(organizationId, projectId, formData, storedToken);
 
       toast.success("Document created successfully");
-      router.push(`/gendox/home?organizationId=${organizationId}&projectId=${projectId}`);
+      router.push(`/gendox/home/?organizationId=${organizationId}&projectId=${projectId}`);
 
     } catch (error) {
       toast.error("Failed to create document");
@@ -141,6 +140,7 @@ const CreateDocument = () => {
           setDocumentTitle={setDocumentTitle}
           documentValue={documentValue}
           setDocumentValue={setDocumentValue}
+          titleError={titleError}
         />
       </StyledCardContent>
     </Card>

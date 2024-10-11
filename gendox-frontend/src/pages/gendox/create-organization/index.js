@@ -69,7 +69,7 @@ const CreateOrganization = () => {
       );      
 
       setSnackbar({ open: true, message: 'Organization created successfully!', severity: 'success' });
-      router.push(`/gendox/home?organizationId=${response.data.id}&projectId=null`);
+      router.push(`/gendox/home/?organizationId=${response.data.id}&projectId=null`);
       
     } catch (error) {
       console.error("Failed to update organization", error);

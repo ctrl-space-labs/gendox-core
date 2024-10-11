@@ -30,8 +30,7 @@ import java.util.stream.Collectors;
 @Service
 public class EmbeddingService {
 
-    Logger logger = LoggerFactory.getLogger(EmbeddingService.class);
-
+    private static final Logger logger = LoggerFactory.getLogger(EmbeddingService.class);
 
     private EmbeddingRepository embeddingRepository;
     private AuditLogsRepository auditLogsRepository;
@@ -292,13 +291,16 @@ public class EmbeddingService {
             throw new GendoxException("PROVENAI_AGENT_NOT_FOUND", "Agent not found in ProvenAI", HttpStatus.NOT_FOUND);
         }
 
-        List<SearchResult> provenAiSearchResults = provenAiService.search(message.getValue(), projectAgent);
+        logger.debug("Starting search on provenAI");
 
+        List<SearchResult> provenAiSearchResults = provenAiService.search(message.getValue(), projectAgent);
         List<DocumentInstanceSectionDTO> provenAiSections = new ArrayList<>();
         for (SearchResult searchResult : provenAiSearchResults) {
             DocumentInstanceSectionDTO sectionDTO = searchResultConverter.toDocumentInstanceDTO(searchResult);
             provenAiSections.add(sectionDTO);
         }
+
+        logger.debug("Received provenAI results");
 
         return provenAiSections;
 

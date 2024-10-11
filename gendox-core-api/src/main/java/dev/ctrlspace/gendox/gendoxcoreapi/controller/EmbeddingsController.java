@@ -196,8 +196,10 @@ public class EmbeddingsController {
 
         if (provenAiEnabled) {
             try {
+                logger.info("ProvenAI enabled");
                 List<DocumentInstanceSectionDTO> provenAiSections = embeddingService.findProvenAiClosestSections(message, UUID.fromString(projectId));
                 sections.addAll(provenAiSections);
+                logger.info("ProvenAI sections added");
             } catch (GendoxException e) {
                 // swallow exception
                 if ("PROVENAI_AGENT_NOT_FOUND".equals(e.getErrorCode())) {

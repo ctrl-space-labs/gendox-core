@@ -29,6 +29,7 @@ import java.util.UUID;
                                 @ColumnResult(name = "sectionurl", type = String.class),
                                 @ColumnResult(name = "username", type = String.class),
                                 @ColumnResult(name = "organizationname", type = String.class),
+                                @ColumnResult(name = "organizationid", type = UUID.class),
                                 @ColumnResult(name = "iscccode", type = String.class),
                                 @ColumnResult(name = "createdat", type = Instant.class),
                                 @ColumnResult(name = "threadid", type = UUID.class),
@@ -44,13 +45,13 @@ import java.util.UUID;
 @NamedNativeQuery(
         name = "MessageMetadataDTO.getMessageMetadataByMessageId",
         query = """
-            
                 SELECT
                     ms.section_id AS sectionid,
                     m.id AS messageid,
                     ms.section_url AS sectionurl,
                     u.name AS username,
                     o.name AS organizationname,
+                    o.id AS organizationid,
                     dis.section_iscc_code AS iscccode,
                     m.created_at AS createdat,
                     m.thread_id AS threadid,
@@ -58,7 +59,12 @@ import java.util.UUID;
                     d.remote_url AS documenturl,
                     dsm.title AS sectiontitle,
                     pt.name AS policytypename,
-                    ARRAY_AGG(acp.value) AS policyvalue
+                     COALESCE(ARRAY_AGG(acp.value) FILTER (WHERE acp.value IS NOT NULL),
+                        CASE
+                            WHEN pd.project_id = ct.project_id THEN ARRAY['ORIGINAL_DOCUMENT']
+                            ELSE NULL
+                        END
+               ) AS policyvalue
                 FROM
                     gendox_core.message m
                         INNER JOIN
@@ -67,7 +73,7 @@ import java.util.UUID;
                     gendox_core.document_instance_sections dis ON ms.section_id = dis.id
                         INNER JOIN
                     gendox_core.document_instance d ON dis.document_instance_id = d.id
-                    INNER JOIN
+                        INNER JOIN
                     gendox_core.document_section_metadata dsm ON dis.document_section_metadata_id = dsm.id
                         INNER JOIN
                     gendox_core.users u ON d.created_by = u.id
@@ -75,6 +81,8 @@ import java.util.UUID;
                     gendox_core.organizations o ON d.organization_id = o.id
                         INNER JOIN
                     gendox_core.project_documents pd ON d.id = pd.document_id
+                        INNER JOIN
+                    gendox_core.chat_thread ct ON m.thread_id = ct.id
                         LEFT JOIN
                     proven_ai.acl_policies acp ON acp.data_pod_id = pd.project_id
                         LEFT JOIN
@@ -83,11 +91,11 @@ import java.util.UUID;
                     m.id = :messageId
                     AND (pt.name = 'ATTRIBUTION_POLICY' OR pt.name IS NULL)
                 GROUP BY
-                    ms.section_id, m.id, ms.section_url, u.name, o.name, dis.section_iscc_code, m.created_at, m.thread_id, d.id, d.remote_url, dsm.title, pt.name
-                                 
+                    ms.section_id, m.id, ms.section_url, u.name, o.name, o.id, dis.section_iscc_code, m.created_at, m.thread_id, d.id, d.remote_url, dsm.title, pt.name, pd.project_id, ct.project_id
             """,
         resultSetMapping = "MessageMetadataDTOMapping"
 )
+
 
 public class MessageMetadataDTO {
     @Id
@@ -96,6 +104,7 @@ public class MessageMetadataDTO {
     private String sectionUrl;
     private String userName;
     private String organizationName;
+    private UUID organizationId;
     private String isccCode;
     private Instant createdAt;
     private UUID threadId;
@@ -106,13 +115,14 @@ public class MessageMetadataDTO {
     private List<String> policyValue;
 
     public MessageMetadataDTO(UUID sectionId, UUID messageId, String sectionUrl, String userName, String organizationName,
-                              String isccCode, Instant createdAt, UUID threadId, UUID documentId, String documentUrl,
-                              String sectionTitle, String policyTypeName, String[] policyValueArray) {
+                              UUID organizationId, String isccCode, Instant createdAt, UUID threadId, UUID documentId,
+                              String documentUrl, String sectionTitle, String policyTypeName, String[] policyValueArray) {
         this.sectionId = sectionId;
         this.messageId = messageId;
         this.sectionUrl = sectionUrl;
         this.userName = userName;
         this.organizationName = organizationName;
+        this.organizationId = organizationId;
         this.isccCode = isccCode;
         this.createdAt = createdAt;
         this.threadId = threadId;

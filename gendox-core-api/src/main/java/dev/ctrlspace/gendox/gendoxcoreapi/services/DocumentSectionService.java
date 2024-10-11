@@ -40,8 +40,8 @@ public class DocumentSectionService {
 
     private IsccCodeService isccCodeService;
 
-    @Value("${proven-ai.enabled}")
-    private Boolean provenAiEnabled;
+    @Value("${proven-ai.sdk.iscc.enabled}")
+    private Boolean isccEnabled;
 
 
     @Lazy
@@ -167,18 +167,9 @@ public class DocumentSectionService {
         section.setSectionValue(fileContent);
         section.setDocumentInstance(documentInstance);
 
-        String fileName = getFileNameFromUrl(section.getDocumentInstance().getRemoteUrl());
 
-        String documentSectionIsccCode = new String();
-        if (provenAiEnabled) {
-            IsccCodeResponse sectionIsccCodeResponse = isccCodeService.getDocumentUniqueIdentifier(
-                    fileContent.getBytes(), fileName);
-            documentSectionIsccCode = sectionIsccCodeResponse.getIscc();
-        } else {
-            UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
-                    fileContent.getBytes(), fileName);
-            documentSectionIsccCode = sectionUniqueIdentifierCodeResponse.getUuid();
-        }
+        String documentSectionIsccCode = generateDocumentSectionIsccCode(section);
+
 
         section.setDocumentSectionIsccCode(documentSectionIsccCode);
 
@@ -210,14 +201,11 @@ public class DocumentSectionService {
 
         String fileName = getFileNameFromUrl(section.getDocumentInstance().getRemoteUrl());
 
-//        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
-//                fileContent.getBytes(), fileName);
 
-        IsccCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeService.getDocumentUniqueIdentifier(
-                fileContent.getBytes(), fileName);
+        String documentSectionIsccCode = generateDocumentSectionIsccCode(section);
 
-//        section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getUuid());
-        section.setDocumentSectionIsccCode(sectionUniqueIdentifierCodeResponse.getIscc());
+        section.setDocumentSectionIsccCode(documentSectionIsccCode);
+
 
         // take moderation check
 //        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(section.getSectionValue());
@@ -245,6 +233,24 @@ public class DocumentSectionService {
         newSection.setHasContentWarning(false);
         newSection = documentInstanceSectionRepository.save(newSection);
         return newSection;
+    }
+
+    public String generateDocumentSectionIsccCode(DocumentInstanceSection newSection) throws GendoxException {
+        String documentSectionIsccCode;
+        String fileName = getFileNameFromUrl(newSection.getDocumentInstance().getRemoteUrl());
+
+
+        if (isccEnabled) {
+            IsccCodeResponse sectionIsccCodeResponse = isccCodeService.getDocumentUniqueIdentifier(
+                    newSection.getSectionValue().getBytes(), fileName);
+            documentSectionIsccCode = sectionIsccCodeResponse.getIscc();
+        } else {
+            UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
+                    newSection.getSectionValue().getBytes(), fileName);
+            documentSectionIsccCode = sectionUniqueIdentifierCodeResponse.getUuid();
+        }
+
+        return documentSectionIsccCode;
     }
 
 

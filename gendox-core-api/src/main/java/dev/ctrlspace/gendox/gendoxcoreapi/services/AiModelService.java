@@ -29,8 +29,10 @@ public class AiModelService {
 
     }
 
-    public List<AiModel> getAllAiModelsByOrganizationId(UUID organizationId) {
-        return aiModelRepository.findAllModelsByOrganizationId(organizationId);
+
+
+    public List<AiModel> getAllActiveAiModelsByOrganizationId(UUID organizationId) {
+        return aiModelRepository.findAllActiveModelsByOrganizationId(organizationId);
     }
 
 

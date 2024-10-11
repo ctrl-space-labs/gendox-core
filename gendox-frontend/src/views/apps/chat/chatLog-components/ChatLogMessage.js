@@ -19,11 +19,8 @@ const ChatLogMessage = ({ message, isSender }) => {
     addSuffix: true,
   });
 
-
-
-  const fetchChatMessageInfo = async () => {
-    console.log("Fetching message info");
-    console.log("Message ID: ", message.messageId);
+  const fetchChatMessageInfo = async () => {  
+    
     try {
       const response = await chatThreadService.getThreadMessageMetadataByMessageId(
         message.threadId,

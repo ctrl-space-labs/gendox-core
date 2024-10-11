@@ -228,7 +228,7 @@ const AiAgentProjectSettings = () => {
       setOpenSnackbar(true);
       setSnackbarMessage("Project updated successfully!");
       setSnackbarSeverity("success");
-      const path = `/gendox/project-settings?organizationId=${organizationId}&projectId=${projectId}`;
+      const path = `/gendox/project-settings/?organizationId=${organizationId}&projectId=${projectId}`;
       router.push(path);
     } catch (error) {
       console.error("Failed to update project", error);
@@ -474,7 +474,7 @@ const AiAgentProjectSettings = () => {
               <Button
                 size="large"
                 variant="outlined"
-                href={`${provenAiUrl}/provenAi/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`}
+                href={`${provenAiUrl}/provenAI/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
