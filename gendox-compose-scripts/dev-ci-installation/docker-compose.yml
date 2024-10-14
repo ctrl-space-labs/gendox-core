@@ -2,11 +2,8 @@ version: '3'
 
 services:
   gendox-database:
-    # download image from docker.hub
-#    image: giannisy/gendox-database:dev.latest
-#     build image from directory
     build:
-      context: ./database
+      context: ../../database
       dockerfile: Dockerfile
     image: gendox-database:latest
     container_name: gendox-database
@@ -30,11 +27,8 @@ services:
       start_period: 60s
 
   gendox-core-api:
-    # download image from docker.hub
-#    image: giannisy/gendox-core-api:dev.latest
-    # build image from directory
     build:
-      context: ./gendox-core-api
+      context: ../../gendox-core-api
       dockerfile: Dockerfile
       args:
         - PROVEN_AI_GIT_REPOSITORY=${PROVEN_AI_GIT_REPOSITORY}
@@ -73,7 +67,7 @@ services:
 
   gendox-keycloak:
     build:
-      context: ./gendox-keycloak
+      context: ../../gendox-keycloak
       dockerfile: Dockerfile
     image: gendox-keycloak:latest
     container_name: gendox-keycloak
@@ -120,9 +114,6 @@ services:
       - "${KEYCLOAK_PORT}:8443"
     volumes:
       - keycloak-data:/opt/keycloak/conf
-
-
-
 
 networks:
   gendox_network:
