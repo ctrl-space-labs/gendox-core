@@ -11,7 +11,7 @@ logging:
 spring:
   mail:
     host: ${GENDOX_SPRING_EMAIL_HOST:no-env-variable}
-    port: ${GENDOX_SPRING_EMAIL_PORT:no-env-variable}
+    port: ${GENDOX_SPRING_EMAIL_PORT:0}
     username: ${GENDOX_SPRING_EMAIL_USERNAME:no-env-variable}
     password: ${GENDOX_SPRING_EMAIL_PASSWORD:no-env-variable}
     properties:
