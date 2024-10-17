@@ -59,22 +59,54 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
      * @param integration The integration to check for updates.
      * @return A list of multipart files representing the updated documents.
      */
+//    @Override
+//    public List<MultipartFile> checkForUpdates(Integration integration) {
+//
+//        String queueName = integration.getQueueName();
+//        List<MultipartFile> fileList = new ArrayList<>();
+//
+//        List<Message> sqsMessages = sqsService.receiveMessages(queueName);
+//
+//        for (Message sqsMessage : sqsMessages) {
+//            try {
+//                handleSqsMessage(sqsMessage, fileList, integration);
+//                sqsService.deleteMessage(sqsMessage, queueName);
+//            } catch (Exception e) {
+//                logger.error("An error occurred while checking for updates: " + e.getMessage(), e);
+//            }
+//        }
+//
+//        return fileList;
+//    }
     @Override
     public List<MultipartFile> checkForUpdates(Integration integration) {
-
         String queueName = integration.getQueueName();
         List<MultipartFile> fileList = new ArrayList<>();
 
-        List<Message> sqsMessages = sqsService.receiveMessages(queueName);
+        List<Message> sqsMessages;
 
-        for (Message sqsMessage : sqsMessages) {
-            try {
-                handleSqsMessage(sqsMessage, fileList, integration);
-                sqsService.deleteMessage(sqsMessage, queueName);
-            } catch (Exception e) {
-                logger.error("An error occurred while checking for updates: " + e.getMessage(), e);
+        do {
+            sqsMessages = sqsService.receiveMessages(queueName);
+
+            if (sqsMessages.isEmpty()) {
+                logger.debug("There are no more messages in the queue: {}", queueName);
+                break;
             }
-        }
+
+            for (Message sqsMessage : sqsMessages) {
+                try {
+                    handleSqsMessage(sqsMessage, fileList, integration);
+                    sqsService.deleteMessage(sqsMessage, queueName);
+                } catch (Exception e) {
+                    logger.error("An error occurred while checking for updates: " + e.getMessage(), e);
+
+                }
+            }
+
+            // Log the number of processed messages
+            logger.debug("Processed {} messages from the queue: {}", sqsMessages.size(), queueName);
+
+        } while (!sqsMessages.isEmpty());
 
         return fileList;
     }
