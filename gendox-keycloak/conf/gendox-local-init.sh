@@ -46,12 +46,25 @@ if ! $KCADM get realms/"$REALM_NAME" > /dev/null 2>&1; then
   echo "Creating realm '$REALM_NAME'..."
   $KCADM create realms -s realm="$REALM_NAME" -s enabled=true
   echo "Realm '$REALM_NAME' created successfully."
+  # Set default realm settings
+  echo "Setting default realm settings for '$REALM_NAME'..."
+  $KCADM update realms/"$REALM_NAME" \
+      -s registrationAllowed=true \
+      -s resetPasswordAllowed=true \
+      -s rememberMe=false \
+      -s registrationEmailAsUsername=false \
+      -s loginWithEmailAllowed=true \
+      -s duplicateEmailsAllowed=false \
+      -s verifyEmail=false \
+      -s editUsernameAllowed=true \
+      -s loginTheme="gendox"
+  echo "Default realm settings updated successfully."
 else
-  echo "Realm '$REALM_NAME' already exists."
+  echo "Realm '$REALM_NAME' already exists. Doing nothing..."
 fi
 
-# Function to create or update PKCE Client using JSON
-create_or_update_pkce_client() {
+# Function to create PKCE Client
+create_pkce_client() {
   CLIENT_ID=$1
   BASE_URL=$2
   POST_LOGOUT_REDIRECT_URI=$3
@@ -83,25 +96,12 @@ create_or_update_pkce_client() {
 EOF
     echo "PKCE client '$CLIENT_ID' created successfully."
   else
-    echo "Updating PKCE client '$CLIENT_ID'..."
-    $KCADM update clients/"$CLIENT_UUID" -r "$REALM_NAME" -f - <<EOF
-{
-  "rootUrl": "$BASE_URL",
-  "baseUrl": "$BASE_URL",
-  "alwaysDisplayInConsole": true,
-  "frontchannelLogout": true,
-  "attributes": {
-    "pkce.code.challenge.method": "S256",
-    "post.logout.redirect.uris": "$POST_LOGOUT_REDIRECT_URI"
-  }
-}
-EOF
-    echo "PKCE client '$CLIENT_ID' updated successfully."
+    echo "PKCE client '$CLIENT_ID' already exists. Doing nothing..."
   fi
 }
 
-# Function to create or update Private Client with Secret
-create_or_update_private_client() {
+# Function to create Private Client with Secret
+create_private_client() {
   CLIENT_ID=$1
   CLIENT_SECRET=$2
 
@@ -121,9 +121,7 @@ create_or_update_private_client() {
         -s secret="$CLIENT_SECRET"
     echo "Private client '$CLIENT_ID' created successfully."
   else
-    echo "Updating private client '$CLIENT_ID' secret..."
-    $KCADM update clients/"$CLIENT_UUID" -r "$REALM_NAME" -s secret="$CLIENT_SECRET"
-    echo "Private client '$CLIENT_ID' secret updated successfully."
+    echo "Private client '$CLIENT_ID' already exists. Doing nothing..."
   fi
 }
 
@@ -145,16 +143,16 @@ assign_role_to_service_account() {
   fi
 }
 
-# Create or Update PKCE Clients
-echo "=== Creating or Updating PKCE Clients ==="
-create_or_update_pkce_client "$GENDOX_PKCE_CLIENT" "$GENDOX_BASE_URL" "$GENDOX_BASE_URL/login"
-create_or_update_pkce_client "$PROVEN_PKCE_CLIENT" "$PROVEN_BASE_URL" "$PROVEN_BASE_URL/login"
+# Create PKCE Clients
+echo "=== Creating PKCE Clients ==="
+create_pkce_client "$GENDOX_PKCE_CLIENT" "$GENDOX_BASE_URL" "$GENDOX_BASE_URL/login"
+create_pkce_client "$PROVEN_PKCE_CLIENT" "$PROVEN_BASE_URL" "$PROVEN_BASE_URL/login"
 echo "=== PKCE Clients Processing Complete ==="
 
-# Create or Update Private Clients and Set Secrets
-echo "=== Creating or Updating Private Clients ==="
-create_or_update_private_client "$GENDOX_PRIVATE_CLIENT" "$GENDOX_PRIVATE_SECRET"
-create_or_update_private_client "$PROVEN_PRIVATE_CLIENT" "$PROVEN_PRIVATE_SECRET"
+# Create Private Clients and Set Secrets
+echo "=== Creating Private Clients ==="
+create_private_client "$GENDOX_PRIVATE_CLIENT" "$GENDOX_PRIVATE_SECRET"
+create_private_client "$PROVEN_PRIVATE_CLIENT" "$PROVEN_PRIVATE_SECRET"
 echo "=== Private Clients Processing Complete ==="
 
 # Assign Roles to Service Accounts
