@@ -8,9 +8,9 @@ import {themes as prismThemes} from 'prism-react-renderer';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'gendox.',
+  title: 'Gendox',
   tagline: 'RAG enabled AI Agent Platform',
-  favicon: 'img/gendox-logo-final-01.png',
+  favicon: 'img/gendoxLogo.svg',
 
   // Set the production url of your site here
   url: 'https://ctrl-space-labs.github.io',
