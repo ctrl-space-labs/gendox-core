@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkdocumentation=self.webpackChunkdocumentation||[]).push([[1903],{1912:o=>{o.exports=JSON.parse('{"blogBasePath":"/gendox-core/blog","blogTitle":"Blog","authorsListPath":"/gendox-core/blog/authors"}')}}]);

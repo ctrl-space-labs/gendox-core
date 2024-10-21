@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkdocumentation=self.webpackChunkdocumentation||[]).push([[7472],{5513:e=>{e.exports=JSON.parse('{"title":"Recent posts","items":[{"title":"What is GenDox?","permalink":"/gendox-core/blog/what-is-gendox","unlisted":false,"date":"2019-05-28T00:00:00.000Z"}]}')}}]);

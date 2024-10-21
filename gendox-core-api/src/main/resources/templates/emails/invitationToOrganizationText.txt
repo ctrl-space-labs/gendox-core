@@ -1,9 +1,0 @@
-Hello there!
-
-You have been invited to join the Gendox Organization [[${organizationName}]] by [[${inviterEmail}]].
-
-Click the following link to accept the invitation: [[${invitationLink}]]
-
-Regards,
-Gendox Team!
-
