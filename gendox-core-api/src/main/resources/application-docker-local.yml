@@ -20,8 +20,8 @@ spring:
     username: ${DATABASE_USERNAME:gendox_user}
     password: ${DATABASE_PASSWORD:root}
     hikari:
-      maximum-pool-size: 3
-      minimum-idle: 1
+      maximum-pool-size: 100
+      minimum-idle: 10
   security:
     oauth2:
       resourceserver:
