@@ -24,7 +24,8 @@ gendox:
   domains:
     frontend: https://gendox.ctrlspace.dev
 
-
+  domain:
+    base-url: http://localhost:5000
 
 
 proven-ai:
