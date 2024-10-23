@@ -108,7 +108,7 @@ gendox:
   documents:
     upload-dir: s3://gendox.organization.documents.dev
     #    upload-dir: file:c:\\Users\\myrto\\projects
-    wordCount: 300
+    wordCount: 500
     allowed:
       extensions: .txt,.md,.rst,.pdf
 
