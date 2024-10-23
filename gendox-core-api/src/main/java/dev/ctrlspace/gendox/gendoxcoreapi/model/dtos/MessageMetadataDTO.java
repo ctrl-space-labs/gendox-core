@@ -75,7 +75,7 @@ import java.util.UUID;
                     gendox_core.document_instance d ON dis.document_instance_id = d.id
                         INNER JOIN
                     gendox_core.document_section_metadata dsm ON dis.document_section_metadata_id = dsm.id
-                        INNER JOIN
+                        LEFT JOIN
                     gendox_core.users u ON d.created_by = u.id
                         INNER JOIN
                     gendox_core.organizations o ON d.organization_id = o.id
