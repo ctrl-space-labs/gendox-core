@@ -106,8 +106,8 @@ gendox:
   emails:
     contact-email: contact@ctrlspace.dev
   documents:
-    upload-dir: s3://gendox.organization.documents.dev
-    #    upload-dir: file:c:\\Users\\myrto\\projects
+#    upload-dir: s3://gendox.organization.documents.dev
+    upload-dir: file:${user.home}/gendox/documents
     wordCount: 500
     allowed:
       extensions: .txt,.md,.rst,.pdf
