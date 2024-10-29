@@ -82,7 +82,7 @@ public class TrainingService {
         EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(project.getProjectAgent(),
                 section.getSectionValue(),
                 project.getProjectAgent().getSemanticSearchModel());
-        Embedding embedding = embeddingService.upsertEmbeddingForText(embeddingResponse, projectId, null, section.getId());
+        Embedding embedding = embeddingService.upsertEmbeddingForText(embeddingResponse, projectId, null, section.getId(), project.getProjectAgent().getSemanticSearchModel().getId(), project.getOrganizationId());
 
         return embedding;
     }
