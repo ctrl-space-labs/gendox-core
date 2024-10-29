@@ -108,7 +108,7 @@ export const selectChat = createAsyncThunk(
       const state = getState();
       let thread = state.chat.chats.find((thread) => thread.id === id);
       let newThread = !thread;
-      
+
 
       if (newThread) {
         return _createNewThreadChat(state, id);
@@ -135,45 +135,65 @@ export const selectChat = createAsyncThunk(
 export const sendMsg = createAsyncThunk(
   "appChat/sendMsg",
   async (obj, { dispatch, getState, rejectWithValue }) => {
-    try {
-      
-      const state = getState();
-      
+
+    try {      
+      const state = getState();      
       let storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName);
 
-      if (!state.chat.userProfile || !state.chat.userProfile.id) {
+      const userProfile = state.chat.userProfile;
+      if (!userProfile?.id) {
         throw new Error("User profile is missing or invalid");
       }
+
+      const { projectId, threadId, userId } = obj.contact;
+      const { message } = obj;
 
       // Chat append string
       dispatch(
         addMessage({
-          senderId: state.chat.userProfile.id,
-          text: obj.message,
+          senderId: userProfile.id,
+          text: message,
           time: new Date(),
         })
       );
 
-      const response = await completionService.postCompletionMessage(obj.contact.projectId, obj.contact.threadId, obj.message, storedToken);
+      // Send the message to the server
+      const response = await completionService.postCompletionMessage(
+        projectId,
+        threadId,
+        message,
+        storedToken
+      );
+
+      console.log("response", response);
+      const { value, messageSections, threadId: responseThreadId } = response.data.message;
 
       dispatch(
         addMessage({
-          senderId: obj.contact.userId,
-          text: response.data.message.value,
-          sections: response.data.message.messageSections,
+          senderId: userId,
+          text: value,
+          sections: messageSections,
           time: new Date(),
         })
       );
 
-      // If threadId is null, then it is a new thread
-      let newThread = !obj.contact.threadId;
-      if (newThread) {
-        let newThreadId = response.data.message.threadId;
-        _updateThreadsToLocalStorage(newThreadId);
-        await dispatch(fetchChatsContacts({ organizationId: obj.organizationId, storedToken })); // Await to load the new thread before selecting it
-        // Select the newly created thread, keep the chat content instead of showing the message loader
-        dispatch(selectChat({ id: newThreadId, keepChatContent: true, organizationId: obj.organizationId, storedToken }));
+      const isNewThread = !threadId;
+      const finalThreadId = isNewThread ? responseThreadId : threadId;
+
+      if (isNewThread) {
+        _updateThreadsToLocalStorage(responseThreadId);
       }
+
+      // Fetch chats and select the chat thread
+      await dispatch(fetchChatsContacts({ organizationId: obj.organizationId, storedToken }));
+      dispatch(
+        selectChat({
+          id: finalThreadId,
+          keepChatContent: true,
+          organizationId: obj.organizationId,
+          storedToken,
+        })
+      );      
 
       return response.data;
     } catch (error) {
@@ -182,7 +202,6 @@ export const sendMsg = createAsyncThunk(
     }
   }
 );
-
 
 export const addMessage = createAsyncThunk(
   "appChat/pushMessage",
