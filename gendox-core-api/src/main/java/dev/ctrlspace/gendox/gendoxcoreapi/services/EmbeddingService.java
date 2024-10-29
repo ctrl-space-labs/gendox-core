@@ -14,7 +14,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SearchResult;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.provenAi.utils.ProvenAiService;
+import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,11 +111,14 @@ public class EmbeddingService {
      * @throws GendoxException
      */
 
-    public Embedding upsertEmbeddingForText(EmbeddingResponse embeddingResponse, UUID projectId, @Nullable UUID messageId, @Nullable UUID sectionId) throws GendoxException {
+    public Embedding upsertEmbeddingForText(EmbeddingResponse embeddingResponse, UUID projectId, @Nullable UUID messageId, @Nullable UUID sectionId, UUID semanticSearchModelId, UUID organizationId) throws GendoxException {
 
         Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_REQUEST");
         AuditLogs auditLogs = new AuditLogs();
         auditLogs = createAuditLogs(projectId, (long) embeddingResponse.getUsage().getTotalTokens(), embeddingType);
+
+
+        // TODO investigate merging Embedding and EmbeddingGroup to one table
 
         Embedding embedding = null;
         Optional<EmbeddingGroup> optionalEmbeddingGroup = embeddingGroupRepository.findBySectionIdOrMessageId(sectionId, messageId);
@@ -130,15 +135,17 @@ public class EmbeddingService {
             embeddingGroup.setTokenCount((double) embeddingResponse.getUsage().getTotalTokens());
             embeddingGroup.setGroupingStrategyType(typeService.getGroupingTypeByName("SIMPLE_SECTION").getId());
 
-            Project project = projectService.getProjectById(projectId);
-            embeddingGroup.setSemanticSearchModelId(project.getProjectAgent().
-                    getSemanticSearchModel().getId());
-
 
             embeddingRepository.save(embedding);
             embeddingGroupRepository.save(embeddingGroup);
         } else {
             embedding = aiModelEmbeddingConverter.toEntity(embeddingResponse);
+            embedding.setSemanticSearchModelId(semanticSearchModelId);
+            embedding.setProjectId(projectId);
+            embedding.setOrganizationId(organizationId);
+            embedding.setSectionId(sectionId);
+            embedding.setMessageId(messageId);
+
             embedding = createEmbedding(embedding);
 
 
@@ -252,12 +259,20 @@ public class EmbeddingService {
                 .collect(Collectors.joining(",")));
         sb.append("]");
 
-        nearestEmbeddings = embeddingRepository.findClosestSectionIdsWithDistance(projectId, sb.toString(), pageRequest.getPageSize());
+        nearestEmbeddings = embeddingRepository.findClosestSectionIdsWithDistance(projectId, sb.toString(), pageRequest.getPageSize(), embedding.getSemanticSearchModelId());
 
         return nearestEmbeddings;
     }
 
 
+    @Observed(name = "EmbeddingService.findClosestSections",
+            contextualName = "EmbeddingService#findClosestSections",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public List<DocumentInstanceSectionDTO> findClosestSections(Message message, UUID projectId) throws GendoxException, IOException {
 
         Project project = projectService.getProjectById(projectId);
@@ -265,7 +280,7 @@ public class EmbeddingService {
 
         EmbeddingResponse embeddingResponse = getEmbeddingForMessage(project.getProjectAgent(), message.getValue(),
                 project.getProjectAgent().getSemanticSearchModel());
-        Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse, projectId, message.getId(), null);
+        Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse, projectId, message.getId(), null, project.getProjectAgent().getSemanticSearchModel().getId(), project.getOrganizationId());
 
         List<SectionDistanceDTO> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, PageRequest.of(0, 5));
 
