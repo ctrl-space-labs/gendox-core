@@ -166,12 +166,13 @@ const UserDropdown = (props) => {
             passHref
             style={{ textDecoration: "none" }}
           >
-            <Box sx={styles} >
+            <Box sx={styles}>
               <Icon icon="mdi:account-outline" />
               Profile
             </Box>
           </Link>
-        </MenuItem>
+        </MenuItem>        
+
         <Divider />
         <MenuItem
           sx={{ p: 0 }}
@@ -182,7 +183,7 @@ const UserDropdown = (props) => {
             passHref
             style={{ textDecoration: "none" }}
           >
-            <Box sx={{ ...styles, textDecoration: "none" }} >
+            <Box sx={{ ...styles, textDecoration: "none" }}>
               <Icon icon="mdi:plus" />
               Add Organization
             </Box>
@@ -201,7 +202,7 @@ const UserDropdown = (props) => {
             passHref
             style={{ textDecoration: "none" }}
           >
-            <Box sx={{ ...styles, textDecoration: "none" }} >
+            <Box sx={{ ...styles, textDecoration: "none" }}>
               <Icon icon="mdi:cog-outline" />
               Organization Settings
             </Box>

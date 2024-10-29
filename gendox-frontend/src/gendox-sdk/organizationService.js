@@ -118,20 +118,6 @@ const removeOrganizationMember = async (organizationId, userId, storedToken) => 
   });
 }
 
-/**
- * Get organization Plans
- * @param organizationId
- * @param storedToken
- * @returns {Promise<axios.AxiosResponse<OrganizationPlan>>}
- */
-const getOrganizationPlans = async (organizationId, storedToken) => {
-  return axios.get(apiRequests.organizationPlans(organizationId), {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${storedToken}`
-    }
-  });
-}
 
 /**
  * Deactivate organization by ID
@@ -159,7 +145,6 @@ export default {
   updateOrganization,
   updateMembersRole,
   addOrganizationMember,
-  removeOrganizationMember,
-  getOrganizationPlans,
+  removeOrganizationMember, 
   deactivateOrganizationById
 }

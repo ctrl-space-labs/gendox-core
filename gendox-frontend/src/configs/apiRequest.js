@@ -117,6 +117,12 @@ export default {
   organizationPlans: (organizationId) =>
     `${url}organizations/${organizationId}/organization-plans`,
 
+  cancelSubscriptionPlan: (organizationPlanId, organizationId,) =>
+    `${url}organizations/${organizationId}/organization-plans/${organizationPlanId}/cancel`,
+
+  subscriptionPlans: (organizationId) =>
+    `${url}organizations/${organizationId}/subscription-plans`,
+
   getThreadMessageMetadata: (threadId, messageId) =>
     `${url}threads/${threadId}/message-metadata/${messageId}`,
   
