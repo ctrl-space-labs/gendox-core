@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 
@@ -39,8 +40,10 @@ public class CompletionService {
     private TrainingService trainingService;
     private ProjectAgentService projectAgentService;
     private MessageService messageService;
+    private DocumentSectionService documentSectionService;
 
     private OrganizationModelKeyService organizationModelKeyService;
+
 
     private AiModelUtils aiModelUtils;
     @Autowired
@@ -56,7 +59,8 @@ public class CompletionService {
                              ProjectAgentService projectAgentService,
                              TrainingService trainingService,
                              OrganizationModelKeyService organizationModelKeyService,
-                             MessageService messageService) {
+                             MessageService messageService,
+                             DocumentSectionService documentSectionService) {
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
         this.embeddingService = embeddingService;
@@ -68,6 +72,7 @@ public class CompletionService {
         this.projectAgentService = projectAgentService;
         this.organizationModelKeyService = organizationModelKeyService;
         this.messageService = messageService;
+        this.documentSectionService = documentSectionService;
     }
 
     private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
@@ -145,10 +150,14 @@ public class CompletionService {
         Template agentSectionTemplate = templateRepository.findByIdIs(agent.getSectionTemplateId());
         Template agentChatTemplate = templateRepository.findByIdIs(agent.getChatTemplateId());
 
+        List<String> documentTitles = nearestSections.stream()
+                .map(section -> documentSectionService.getFileNameFromUrl(section.getDocumentInstance().getRemoteUrl()))
+                .toList();
+
         // run sectionTemplate
         SectionTemplateAuthor sectionTemplateAuthor = new SectionTemplateAuthor();
 
-        String sectionValues = sectionTemplateAuthor.sectionValues(nearestSections, agentSectionTemplate.getText());
+        String sectionValues = sectionTemplateAuthor.sectionValues(nearestSections, agentSectionTemplate.getText(),documentTitles);
 
         // run chatTemplate
         ChatTemplateAuthor chatTemplateAuthor = new ChatTemplateAuthor();
