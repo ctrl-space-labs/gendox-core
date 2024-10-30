@@ -5,10 +5,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.O
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingGroupRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectDocumentRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.EmbeddingTemplateAuthor;
 import lombok.NonNull;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +38,10 @@ public class TrainingService {
 
     private OrganizationModelKeyService organizationModelKeyService;
 
+    private ProjectAgentRepository projectAgentRepository;
+
+    private TemplateRepository templateRepository;
+
 
     @Lazy
     @Autowired
@@ -60,7 +63,9 @@ public class TrainingService {
                            DocumentInstanceSectionRepository documentInstanceSectionRepository,
                            AiModelUtils aiModelUtils,
                            ProjectService projectService,
-                           OrganizationModelKeyService organizationModelKeyService) {
+                           OrganizationModelKeyService organizationModelKeyService,
+                           ProjectAgentRepository projectAgentRepository,
+                           TemplateRepository templateRepository) {
         this.sectionRepository = sectionRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
         this.projectDocumentRepository = projectDocumentRepository;
@@ -68,6 +73,8 @@ public class TrainingService {
         this.projectService = projectService;
         this.aiModelUtils = aiModelUtils;
         this.organizationModelKeyService = organizationModelKeyService;
+        this.projectAgentRepository = projectAgentRepository;
+        this.templateRepository = templateRepository;
 
     }
 
@@ -79,10 +86,25 @@ public class TrainingService {
 
     public Embedding runTrainingForSection(@NonNull DocumentInstanceSection section, UUID projectId) throws GendoxException {
         Project project = projectService.getProjectById(projectId);
+
+        // Create an instance of EmbeddingTemplateAuthor
+        EmbeddingTemplateAuthor embeddingTemplateAuthor = new EmbeddingTemplateAuthor();
+
+        ProjectAgent agent = projectAgentRepository.findByProjectId(projectId);
+
+        Template agentSectionTemplate = templateRepository.findByIdIs(agent.getSectionTemplateId());
+
+        String sectionValue = embeddingTemplateAuthor.sectionValueForEmbedding(
+                section,
+                documentSectionService.getFileNameFromUrl(section.getDocumentInstance().getRemoteUrl()),
+                agentSectionTemplate.getText() // Pass the template text here
+        );
+
         EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(project.getProjectAgent(),
-                section.getSectionValue(),
+                sectionValue,
                 project.getProjectAgent().getSemanticSearchModel());
         Embedding embedding = embeddingService.upsertEmbeddingForText(embeddingResponse, projectId, null, section.getId());
+
 
         return embedding;
     }
