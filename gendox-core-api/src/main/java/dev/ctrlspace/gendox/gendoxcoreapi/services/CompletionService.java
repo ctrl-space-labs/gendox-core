@@ -46,6 +46,8 @@ public class CompletionService {
 
     private OrganizationModelKeyService organizationModelKeyService;
 
+    private AiModelService aiModelService;
+
 
     private AiModelUtils aiModelUtils;
     @Autowired
@@ -62,7 +64,8 @@ public class CompletionService {
                              TrainingService trainingService,
                              OrganizationModelKeyService organizationModelKeyService,
                              MessageService messageService,
-                             DocumentSectionService documentSectionService) {
+                             DocumentSectionService documentSectionService,
+                             AiModelService aiModelService) {
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
         this.embeddingService = embeddingService;
@@ -75,6 +78,7 @@ public class CompletionService {
         this.organizationModelKeyService = organizationModelKeyService;
         this.messageService = messageService;
         this.documentSectionService = documentSectionService;
+        this.aiModelService = aiModelService;
     }
 
     private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
@@ -136,7 +140,7 @@ public class CompletionService {
 
         Type completionType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
         // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)
-        AuditLogs auditLogs = embeddingService.createAuditLogs(projectId, (long) completionResponse.getUsage().getTotalTokens(), completionType);
+        AuditLogs auditLogs = aiModelService.createAuditLogs(projectId, (long) completionResponse.getUsage().getTotalTokens(), completionType);
         Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
 
         completionResponseMessage.setProjectId(projectId);
