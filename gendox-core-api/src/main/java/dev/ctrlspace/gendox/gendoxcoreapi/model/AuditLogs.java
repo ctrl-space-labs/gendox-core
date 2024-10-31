@@ -38,6 +38,9 @@ public class AuditLogs {
     @Column(name = "span_id")
     private UUID spanId;
     @Basic
+    @Column(name = "organization_id")
+    private UUID organizationId;
+    @Basic
     @Column(name = "created_at")
     @CreatedDate
     private Instant createdAt;
@@ -78,7 +81,9 @@ public class AuditLogs {
         this.userId = userId;
     }
 
-    public Long getTokenCount() {return tokenCount;}
+    public Long getTokenCount() {
+        return tokenCount;
+    }
 
     public void setTokenCount(Long tokenCount) {
         this.tokenCount = tokenCount;
@@ -92,13 +97,29 @@ public class AuditLogs {
         this.type = type;
     }
 
-    public UUID getTraceId() {return traceId;}
+    public UUID getTraceId() {
+        return traceId;
+    }
 
-    public void setTraceId(UUID traceId) {this.traceId = traceId;}
+    public void setTraceId(UUID traceId) {
+        this.traceId = traceId;
+    }
 
-    public UUID getSpanId() {return spanId;}
+    public UUID getSpanId() {
+        return spanId;
+    }
 
-    public void setSpanId(UUID spanId) {this.spanId = spanId;}
+    public void setSpanId(UUID spanId) {
+        this.spanId = spanId;
+    }
+
+    public UUID getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(UUID organizationId) {
+        this.organizationId = organizationId;
+    }
 
     public Instant getCreatedAt() {
         return createdAt;
@@ -137,11 +158,11 @@ public class AuditLogs {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         AuditLogs auditLogs = (AuditLogs) o;
-        return Objects.equals(id, auditLogs.id) && Objects.equals(projectId, auditLogs.projectId) && Objects.equals(userId, auditLogs.userId) && Objects.equals(tokenCount, auditLogs.tokenCount) && Objects.equals(type, auditLogs.type) && Objects.equals(traceId, auditLogs.traceId) && Objects.equals(spanId, auditLogs.spanId) && Objects.equals(createdAt, auditLogs.createdAt) && Objects.equals(updatedAt, auditLogs.updatedAt) && Objects.equals(createdBy, auditLogs.createdBy) && Objects.equals(updatedBy, auditLogs.updatedBy);
+        return Objects.equals(id, auditLogs.id) && Objects.equals(projectId, auditLogs.projectId) && Objects.equals(userId, auditLogs.userId) && Objects.equals(tokenCount, auditLogs.tokenCount) && Objects.equals(type, auditLogs.type) && Objects.equals(traceId, auditLogs.traceId) && Objects.equals(spanId, auditLogs.spanId) && Objects.equals(organizationId, auditLogs.organizationId) && Objects.equals(createdAt, auditLogs.createdAt) && Objects.equals(updatedAt, auditLogs.updatedAt) && Objects.equals(createdBy, auditLogs.createdBy) && Objects.equals(updatedBy, auditLogs.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, projectId, userId, tokenCount, type, traceId, spanId, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, projectId, userId, tokenCount, type, traceId, spanId, organizationId, createdAt, updatedAt, createdBy, updatedBy);
     }
 }
