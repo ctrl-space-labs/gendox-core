@@ -26,14 +26,17 @@ public class AuditLogs {
     @Column(name = "user_id")
     private UUID userId;
     @Basic
-    @Column(name = "request_id")
-    private UUID requestId;
-    @Basic
     @Column(name = "token_count")
     private Long tokenCount;
     @ManyToOne
     @JoinColumn(name = "type_id", referencedColumnName = "id", nullable = false)
     private Type type;
+    @Basic
+    @Column(name = "trace_id")
+    private UUID traceId;
+    @Basic
+    @Column(name = "span_id")
+    private UUID spanId;
     @Basic
     @Column(name = "created_at")
     @CreatedDate
@@ -42,7 +45,6 @@ public class AuditLogs {
     @Column(name = "updated_at")
     @LastModifiedDate
     private Instant updatedAt;
-
     @Basic
     @Column(name = "created_by")
     @CreatedBy
@@ -76,17 +78,7 @@ public class AuditLogs {
         this.userId = userId;
     }
 
-    public UUID getRequestId() {
-        return requestId;
-    }
-
-    public void setRequestId(UUID requestId) {
-        this.requestId = requestId;
-    }
-
-    public Long getTokenCount() {
-        return tokenCount;
-    }
+    public Long getTokenCount() {return tokenCount;}
 
     public void setTokenCount(Long tokenCount) {
         this.tokenCount = tokenCount;
@@ -99,6 +91,14 @@ public class AuditLogs {
     public void setType(Type type) {
         this.type = type;
     }
+
+    public UUID getTraceId() {return traceId;}
+
+    public void setTraceId(UUID traceId) {this.traceId = traceId;}
+
+    public UUID getSpanId() {return spanId;}
+
+    public void setSpanId(UUID spanId) {this.spanId = spanId;}
 
     public Instant getCreatedAt() {
         return createdAt;
@@ -132,38 +132,16 @@ public class AuditLogs {
         this.updatedBy = updatedBy;
     }
 
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         AuditLogs auditLogs = (AuditLogs) o;
-
-        if (!Objects.equals(id, auditLogs.id)) return false;
-        if (!Objects.equals(projectId, auditLogs.projectId)) return false;
-        if (!Objects.equals(userId, auditLogs.userId)) return false;
-        if (!Objects.equals(requestId, auditLogs.requestId)) return false;
-        if (!Objects.equals(tokenCount, auditLogs.tokenCount)) return false;
-        if (!Objects.equals(type, auditLogs.type)) return false;
-        if (!Objects.equals(createdAt, auditLogs.createdAt)) return false;
-        if (!Objects.equals(updatedAt, auditLogs.updatedAt)) return false;
-        if (!Objects.equals(createdBy, auditLogs.createdBy)) return false;
-        return Objects.equals(updatedBy, auditLogs.updatedBy);
+        return Objects.equals(id, auditLogs.id) && Objects.equals(projectId, auditLogs.projectId) && Objects.equals(userId, auditLogs.userId) && Objects.equals(tokenCount, auditLogs.tokenCount) && Objects.equals(type, auditLogs.type) && Objects.equals(traceId, auditLogs.traceId) && Objects.equals(spanId, auditLogs.spanId) && Objects.equals(createdAt, auditLogs.createdAt) && Objects.equals(updatedAt, auditLogs.updatedAt) && Objects.equals(createdBy, auditLogs.createdBy) && Objects.equals(updatedBy, auditLogs.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (projectId != null ? projectId.hashCode() : 0);
-        result = 31 * result + (userId != null ? userId.hashCode() : 0);
-        result = 31 * result + (requestId != null ? requestId.hashCode() : 0);
-        result = 31 * result + (tokenCount != null ? tokenCount.hashCode() : 0);
-        result = 31 * result + (type != null ? type.hashCode() : 0);
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        result = 31 * result + (createdBy != null ? createdBy.hashCode() : 0);
-        result = 31 * result + (updatedBy != null ? updatedBy.hashCode() : 0);
-        return result;
+        return Objects.hash(id, projectId, userId, tokenCount, type, traceId, spanId, createdAt, updatedAt, createdBy, updatedBy);
     }
 }
