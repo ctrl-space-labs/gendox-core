@@ -54,6 +54,8 @@ public class EmbeddingService {
 
     private OrganizationModelKeyService organizationModelKeyService;
 
+    private AiModelService aiModelService;
+
 
     @Autowired
     public EmbeddingService(
@@ -70,7 +72,8 @@ public class EmbeddingService {
             ProvenAiService provenAiService,
             DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter,
             SearchResultConverter searchResultConverter,
-            OrganizationModelKeyService organizationModelKeyService
+            OrganizationModelKeyService organizationModelKeyService,
+            AiModelService aiModelService
     ) {
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
@@ -86,6 +89,7 @@ public class EmbeddingService {
         this.searchResultConverter = searchResultConverter;
         this.projectAgentService = projectAgentService;
         this.organizationModelKeyService = organizationModelKeyService;
+        this.aiModelService = aiModelService;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -115,7 +119,7 @@ public class EmbeddingService {
 
         Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_REQUEST");
         AuditLogs auditLogs = new AuditLogs();
-        auditLogs = createAuditLogs(projectId, (long) embeddingResponse.getUsage().getTotalTokens(), embeddingType);
+        auditLogs = aiModelService.createAuditLogs(projectId, (long) embeddingResponse.getUsage().getTotalTokens(), embeddingType);
 
 
         // TODO investigate merging Embedding and EmbeddingGroup to one table
@@ -184,17 +188,7 @@ public class EmbeddingService {
         return organizationModelProviderKey.getKey();
     }
 
-    public AuditLogs createAuditLogs(UUID projectId, Long tokenCount, Type auditType) {
-        AuditLogs auditLog = new AuditLogs();
-        auditLog.setUserId(securityUtils.getUserId());
-        auditLog.setProjectId(projectId);
-        auditLog.setTokenCount(tokenCount);
-        auditLog.setType(auditType);
 
-        auditLog = auditLogsRepository.save(auditLog);
-
-        return auditLog;
-    }
 
 
     public EmbeddingGroup createEmbeddingGroup(UUID embeddingId, Double tokenCount, UUID message_id, UUID sectionId, UUID projectId) throws GendoxException {
