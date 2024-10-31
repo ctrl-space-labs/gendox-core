@@ -14,8 +14,7 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Component
 @StepScope
@@ -40,25 +39,46 @@ public class DocumentSectionEmbeddingWriter implements ItemWriter<SectionEmbeddi
         this.projectDocumentRepository = projectDocumentRepository;
     }
     @Override
-    public void write(Chunk<? extends SectionEmbeddingDTO> sectionEmbedingChunk) throws Exception {
+    public void write(Chunk<? extends SectionEmbeddingDTO> sectionEmbeddingChunk) throws Exception {
 
         logger.debug("Start writing embeddings chunk");
 
+        // Collect all document IDs and section IDs
+        Set<UUID> documentIds = new HashSet<>();
+        Set<UUID> sectionIds = new HashSet<>();
 
-        for (SectionEmbeddingDTO sectionEmbeddingDTO : sectionEmbedingChunk.getItems()) {
+        for (SectionEmbeddingDTO sectionEmbeddingDTO : sectionEmbeddingChunk.getItems()) {
+            DocumentInstanceSection section = sectionEmbeddingDTO.section();
+            documentIds.add(section.getDocumentInstance().getId());
+            sectionIds.add(section.getId());
+        }
 
-            // TODO - refactor this to select the existing projects and the existing embeddings outside of the loop
+        // Fetch existing projects outside of the loop
+        List<ProjectDocument> projectDocuments = projectDocumentRepository.findByDocumentIdIn(documentIds);
+        Map<UUID, Project> documentIdToProject = new HashMap<>();
+        for (ProjectDocument pd : projectDocuments) {
+            documentIdToProject.put(pd.getDocumentId(), pd.getProject());
+        }
+
+        for (SectionEmbeddingDTO sectionEmbeddingDTO : sectionEmbeddingChunk.getItems()) {
+
+            // TODO - refactor this to select the existing embeddings outside of the loop
             // TODO - in the loop to update/create the Entities and the store them in the DB after the loop
 
             DocumentInstanceSection section = sectionEmbeddingDTO.section();
             EmbeddingResponse embeddingResponse = sectionEmbeddingDTO.embeddingResponse();
-            List<ProjectDocument> projectDocuments = projectDocumentRepository.findByDocumentId(section.getDocumentInstance().getId());
-            //get first, actually there should be exactly one project per document
-            UUID projectId = projectDocuments.get(0).getProject().getId();
+            UUID documentId = section.getDocumentInstance().getId();
+            // get project from map to not have multiple queries
+            Project project = documentIdToProject.get(documentId);
+            UUID organizationId = project.getOrganizationId();
+            UUID semanticSearchModelId = project.getProjectAgent().getSemanticSearchModel().getId();
+            UUID sectionId = section.getId();
+            UUID messageId = null;
 
-            embeddingService.upsertEmbeddingForText(embeddingResponse, projectId, null, section.getId());
 
-//            throw new RuntimeException("Not implemented yet");
+            embeddingService.upsertEmbeddingForText(embeddingResponse, project.getId(), null, sectionId, semanticSearchModelId, organizationId);
+
+
 
         }
 

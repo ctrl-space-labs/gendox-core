@@ -31,11 +31,13 @@ const GendoxHome = () => {
   const project = useSelector((state) => state.activeProject.projectDetails);
   useRedirectOr404ForHome(organizationId, projectId);
 
-
-
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
+
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [projectId]);
 
   useEffect(() => {
     initDocuments(currentPage);
