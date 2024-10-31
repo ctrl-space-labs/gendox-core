@@ -33,10 +33,10 @@ public class AuditLogs {
     private Type type;
     @Basic
     @Column(name = "trace_id")
-    private UUID traceId;
+    private String traceId;
     @Basic
     @Column(name = "span_id")
-    private UUID spanId;
+    private String spanId;
     @Basic
     @Column(name = "organization_id")
     private UUID organizationId;
@@ -97,19 +97,19 @@ public class AuditLogs {
         this.type = type;
     }
 
-    public UUID getTraceId() {
+    public String getTraceId() {
         return traceId;
     }
 
-    public void setTraceId(UUID traceId) {
+    public void setTraceId(String traceId) {
         this.traceId = traceId;
     }
 
-    public UUID getSpanId() {
+    public String getSpanId() {
         return spanId;
     }
 
-    public void setSpanId(UUID spanId) {
+    public void setSpanId(String spanId) {
         this.spanId = spanId;
     }
 
