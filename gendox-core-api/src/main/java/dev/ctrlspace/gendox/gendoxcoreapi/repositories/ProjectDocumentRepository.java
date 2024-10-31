@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectMember;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Repository
@@ -27,6 +29,9 @@ public interface ProjectDocumentRepository extends JpaRepository<ProjectDocument
     List<DocumentInstance> findDocumentInstancesByDocumentIds(List<UUID> documentIds);
 
     List<ProjectDocument> findByDocumentId(UUID documentId);
+
+    @EntityGraph(attributePaths = {"project", "project.projectAgent"})
+    List<ProjectDocument> findByDocumentIdIn(Set<UUID> documentIds);
 
     Optional<ProjectDocument> findByDocumentIdAndProjectId(UUID documentId, UUID projectId);
 
