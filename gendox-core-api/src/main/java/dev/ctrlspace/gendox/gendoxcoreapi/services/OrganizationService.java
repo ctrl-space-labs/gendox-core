@@ -47,6 +47,8 @@ public class OrganizationService {
 
     private ProjectService projectService;
 
+    private AuditLogsService auditLogsService;
+
     @Value("${walt-id.default-key.type}")
     private String keyTypeName;
     @Value("${walt-id.default-key.size}")
@@ -60,7 +62,8 @@ public class OrganizationService {
                                OrganizationDidService organizationDidService,
                                WalletKeyService walletKeyService,
                                TypeService typeService,
-                               ProjectService projectService) {
+                               ProjectService projectService,
+                               AuditLogsService auditLogsService) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.organizationRepository = organizationRepository;
         this.userOrganizationService = userOrganizationService;
@@ -68,6 +71,7 @@ public class OrganizationService {
         this.walletKeyService = walletKeyService;
         this.typeService = typeService;
         this.projectService = projectService;
+        this.auditLogsService = auditLogsService;
 
     }
 
@@ -183,6 +187,9 @@ public class OrganizationService {
 
                 deactivateAllOrgProjects(organizationId);
                 userOrganizationRepository.delete(userOrganization);
+                Type deleteOrganizationType = typeService.getAuditLogTypeByName("DELETE_ORGANIZATION");
+                AuditLogs deleteOrganizationAuditLogs = auditLogsService.createAuditLogs(deleteOrganizationType);
+                deleteOrganizationAuditLogs.setOrganizationId(organizationId);
             }
         }
 

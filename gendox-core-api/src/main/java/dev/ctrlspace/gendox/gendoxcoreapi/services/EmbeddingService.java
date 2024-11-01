@@ -54,7 +54,7 @@ public class EmbeddingService {
 
     private OrganizationModelKeyService organizationModelKeyService;
 
-    private AiModelService aiModelService;
+    private AuditLogsService auditLogsService;
 
 
     @Autowired
@@ -73,7 +73,7 @@ public class EmbeddingService {
             DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter,
             SearchResultConverter searchResultConverter,
             OrganizationModelKeyService organizationModelKeyService,
-            AiModelService aiModelService
+            AuditLogsService auditLogsService
     ) {
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
@@ -89,7 +89,7 @@ public class EmbeddingService {
         this.searchResultConverter = searchResultConverter;
         this.projectAgentService = projectAgentService;
         this.organizationModelKeyService = organizationModelKeyService;
-        this.aiModelService = aiModelService;
+        this.auditLogsService = auditLogsService;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -118,8 +118,10 @@ public class EmbeddingService {
     public Embedding upsertEmbeddingForText(EmbeddingResponse embeddingResponse, UUID projectId, @Nullable UUID messageId, @Nullable UUID sectionId, UUID semanticSearchModelId, UUID organizationId) throws GendoxException {
 
         Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_REQUEST");
-        AuditLogs auditLogs = new AuditLogs();
-        auditLogs = aiModelService.createAuditLogs(projectId, (long) embeddingResponse.getUsage().getTotalTokens(), embeddingType);
+        AuditLogs auditLogs = auditLogsService.createAuditLogs(embeddingType);
+        auditLogs.setTokenCount((long) embeddingResponse.getUsage().getTotalTokens());
+        auditLogs.setOrganizationId(organizationId);
+        auditLogs.setProjectId(projectId);
 
 
         // TODO investigate merging Embedding and EmbeddingGroup to one table
