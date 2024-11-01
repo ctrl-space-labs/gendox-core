@@ -31,6 +31,10 @@ public class DocumentService {
 
     private ProjectDocumentService projectDocumentService;
 
+    private TypeService typeService;
+
+    private AuditLogsService auditLogsService;
+
 //    private IsccCodeService isccCodeService;
 
 
@@ -38,13 +42,16 @@ public class DocumentService {
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
                            DocumentSectionService documentSectionService,
                            DocumentInstanceSectionRepository documentInstanceSectionRepository,
-                           ProjectDocumentService projectDocumentService) {
+                           ProjectDocumentService projectDocumentService,
+                           TypeService typeService,
+                           AuditLogsService auditLogsService) {
 
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentSectionService = documentSectionService;
         this.projectDocumentService = projectDocumentService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
-    }
+        this.typeService = typeService;
+        this.auditLogsService = auditLogsService;}
 
 
     public DocumentInstance getDocumentInstanceById(UUID id) throws GendoxException {
@@ -151,6 +158,13 @@ public class DocumentService {
         documentSectionService.deleteSections(documentInstance.getDocumentInstanceSections());
         projectDocumentService.deleteProjectDocument(documentIid, projectId);
         documentInstanceRepository.delete(documentInstance);
+
+        //delete Document Auditing
+        Type deleteDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_DELETE");
+        AuditLogs deleteDocumentAuditLogs = auditLogsService.createAuditLogs(deleteDocumentType);
+        deleteDocumentAuditLogs.setProjectId(projectId);
+        deleteDocumentAuditLogs.setOrganizationId(documentInstance.getOrganizationId());
+
     }
 
     public void deleteDocument(DocumentInstance documentInstance, UUID projectId) throws GendoxException {
@@ -158,6 +172,13 @@ public class DocumentService {
         projectDocumentService.deleteProjectDocument(documentInstance.getId(), projectId);
         documentInstance.setDocumentInstanceSections(null);
         documentInstanceRepository.delete(documentInstance);
+
+        //delete Document Auditing
+        Type deleteDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_DELETE");
+        AuditLogs deleteDocumentAuditLogs = auditLogsService.createAuditLogs(deleteDocumentType);
+        deleteDocumentAuditLogs.setProjectId(projectId);
+        deleteDocumentAuditLogs.setOrganizationId(documentInstance.getOrganizationId());
+
     }
 
 
