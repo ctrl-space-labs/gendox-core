@@ -16,6 +16,7 @@
     <properties>
         <java.version>17</java.version>
         <querydsl.version>5.0.0</querydsl.version>
+        <spring-ai.version>1.0.0-M3</spring-ai.version>
     </properties>
 
 
@@ -109,6 +110,14 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/group.springframework.ai/spring-ai-pdf-document-reader -->
+
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pdf-document-reader</artifactId>
+        </dependency>
+
         <!-- Explicitly add the newer Bouncy Castle version -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
@@ -425,6 +434,14 @@
                 <groupId>id.walt</groupId>
                 <artifactId>waltid-sdjwt-jvm</artifactId>
                 <version>0.4.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
 
         </dependencies>
