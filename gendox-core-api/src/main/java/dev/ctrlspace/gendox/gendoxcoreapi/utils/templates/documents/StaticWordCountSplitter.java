@@ -17,7 +17,6 @@ public class StaticWordCountSplitter implements DocumentSplitter {
     private int wordCount;
 
     /**
-     * TODO test this, the code is untested only for demo purposes
      * split the document in sections of wordCount words
      *
      * @param document
