@@ -8,9 +8,13 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AuditLogsRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.AuditLogsPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import io.micrometer.tracing.Tracer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -19,6 +23,8 @@ public class AuditLogsService {
     private AuditLogsRepository auditLogsRepository;
     private SecurityUtils securityUtils;
     private Tracer tracer;
+
+    private static final Logger logger = LoggerFactory.getLogger(AuditLogsService.class);
 
     @Autowired
     public AuditLogsService(AuditLogsRepository auditLogsRepository,
@@ -41,14 +47,18 @@ public class AuditLogsService {
 
     public AuditLogs createAuditLogs(Type auditType) {
         AuditLogs auditLog = new AuditLogs();
+        logger.trace("Creating audit log entry.");
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         auditLog.setUserId(securityUtils.getUserId());
+        logger.trace("Set user ID: {}", securityUtils.getUserId());
         auditLog.setType(auditType);
-
+        logger.trace("Set audit type: {}", auditType);
         auditLog.setSpanId(tracer.currentSpan().context().spanId());
+        logger.trace("Set span ID: {}", tracer.currentSpan().context().spanId());
         auditLog.setTraceId(tracer.currentSpan().context().traceId());
-
+        logger.trace("Set trace ID: {}", tracer.currentSpan().context().traceId());
         auditLog = auditLogsRepository.save(auditLog);
-
+        logger.trace("Saved audit log entry with ID: {}", auditLog.getId());
         return auditLog;
     }
 

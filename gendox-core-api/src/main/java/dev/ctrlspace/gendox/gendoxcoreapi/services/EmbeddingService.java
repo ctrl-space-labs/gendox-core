@@ -117,13 +117,6 @@ public class EmbeddingService {
 
     public Embedding upsertEmbeddingForText(EmbeddingResponse embeddingResponse, UUID projectId, @Nullable UUID messageId, @Nullable UUID sectionId, UUID semanticSearchModelId, UUID organizationId) throws GendoxException {
 
-        Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_REQUEST");
-        AuditLogs auditLogs = auditLogsService.createAuditLogs(embeddingType);
-        auditLogs.setTokenCount((long) embeddingResponse.getUsage().getTotalTokens());
-        auditLogs.setOrganizationId(organizationId);
-        auditLogs.setProjectId(projectId);
-
-
         // TODO investigate merging Embedding and EmbeddingGroup to one table
 
         Embedding embedding = null;
@@ -179,7 +172,7 @@ public class EmbeddingService {
         AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
         EmbeddingResponse embeddingResponse = aiModelApiAdapterService.askEmbedding(botRequest, aiModel, apiKey);
 
-        Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_REQUEST");
+        Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_RESPONSE");
         AuditLogs auditLogs = auditLogsService.createAuditLogs(embeddingType);
         auditLogs.setTokenCount((long) embeddingResponse.getUsage().getTotalTokens());
         auditLogs.setOrganizationId(agent.getProject().getOrganizationId());
