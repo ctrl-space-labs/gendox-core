@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import organizationService from "src/gendox-sdk/organizationService";
+import aiModelService from "src/gendox-sdk/aiModelService";
 
 // Define an async thunk for fetching an organization by ID
 export const fetchOrganization = createAsyncThunk(
@@ -18,9 +19,42 @@ export const fetchOrganization = createAsyncThunk(
   }
 );
 
+export const fetchAiModelProviders = createAsyncThunk(
+  "activeOrganization/fetchAiModelProviders",
+  async ({ organizationId, storedToken }, thunkAPI) => {
+    try {
+      const response = await aiModelService.getAllAiModelProviders(
+        organizationId,
+        storedToken
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response.data);
+    }
+  }
+);
+
+export const fetchOrganizationAiModelKeys = createAsyncThunk(
+  "activeOrganization/fetchOrganizationAiModelKeys",
+  async ({ organizationId, storedToken }, thunkAPI) => {
+    try {
+      const response = await aiModelService.getModelKeysByOrganizationId(
+        organizationId,
+        storedToken
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response.data);
+    }
+  }
+);
+
 // Define the initial state
 const initialActiveOrganizationState = {
   activeOrganization: {},
+  aiModelProviders: [],
+  aiModelKeys: [],
+  isBlurring: false,
   error: null,
 };
 
@@ -40,6 +74,31 @@ const activeOrganizationSlice = createSlice({
         state.activeOrganization = action.payload;
       })
       .addCase(fetchOrganization.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+
+      // For fetching AI model providers
+      .addCase(fetchAiModelProviders.pending, (state) => {
+        state.isBlurring = true;
+        state.error = null;
+      })
+      .addCase(fetchAiModelProviders.fulfilled, (state, action) => {
+        state.isBlurring = false;
+        state.aiModelProviders = action.payload;
+      })
+      .addCase(fetchAiModelProviders.rejected, (state, action) => {
+        state.isBlurring = false;
+        state.error = action.payload;
+      })
+
+      // For fetching AI model keys
+      .addCase(fetchOrganizationAiModelKeys.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(fetchOrganizationAiModelKeys.fulfilled, (state, action) => {
+        state.aiModelKeys = action.payload;
+      })
+      .addCase(fetchOrganizationAiModelKeys.rejected, (state, action) => {
         state.error = action.payload;
       });
   },

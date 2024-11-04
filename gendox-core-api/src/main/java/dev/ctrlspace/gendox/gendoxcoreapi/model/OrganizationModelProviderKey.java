@@ -75,8 +75,8 @@ public class OrganizationModelProviderKey {
         return key;
     }
 
-    public void setKey(String modelKey) {
-        this.key = modelKey;
+    public void setKey(String key) {
+        this.key = key;
     }
 
     public Instant getCreatedAt() {
@@ -95,16 +95,33 @@ public class OrganizationModelProviderKey {
         this.updatedAt = updatedAt;
     }
 
+    public UUID getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(UUID createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public UUID getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(UUID updatedBy) {
+        this.updatedBy = updatedBy;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         OrganizationModelProviderKey that = (OrganizationModelProviderKey) o;
-        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(aiModelProvider, that.aiModelProvider) && Objects.equals(key, that.key) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt);
+        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(aiModelProvider, that.aiModelProvider) && Objects.equals(key, that.key) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organizationId, aiModelProvider, key, createdAt, updatedAt);
+        return Objects.hash(id, organizationId, aiModelProvider, key, createdAt, updatedAt, createdBy, updatedBy);
     }
 }

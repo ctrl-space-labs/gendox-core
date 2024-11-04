@@ -6,6 +6,7 @@ import { useRouter } from "next/router";
 
 // ** Redux
 import { useSelector, useDispatch } from "react-redux";
+import { useTheme } from "@mui/material/styles";
 
 // ** Config
 import authConfig from "src/configs/auth";
@@ -25,13 +26,18 @@ import CardActions from "@mui/material/CardActions";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import Icon from "src/@core/components/icon";
+import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
 
 import organizationService from "src/gendox-sdk/organizationService";
+import aiModelService from "src/gendox-sdk/aiModelService";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
+import { fetchOrganizationAiModelKeys } from "src/store/apps/activeOrganization/activeOrganization";
 
 const GeneralOrganizationSettings = () => {
+  const theme = useTheme();
   const router = useRouter();
+  const dispatch = useDispatch();
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
@@ -39,9 +45,14 @@ const GeneralOrganizationSettings = () => {
   const organization = useSelector(
     (state) => state.activeOrganization.activeOrganization
   );
+  const aiModelProviders = useSelector(
+    (state) => state.activeOrganization.aiModelProviders
+  );
+  const aiModelKeys = useSelector(
+    (state) => state.activeOrganization.aiModelKeys
+  );
   const provenAiUrl = process.env.NEXT_PUBLIC_PROVEN_AI_URL;
 
-  
   const [name, setName] = useState(organization.name);
   const [displayName, setDisplayName] = useState(organization.displayName);
   const [address, setAddress] = useState(organization.address);
@@ -49,13 +60,22 @@ const GeneralOrganizationSettings = () => {
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false); 
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [providerKeys, setProviderKeys] = useState({});
+
+  console.log("Provider Keys", providerKeys);
 
   useEffect(() => {
     setName(organization.name);
     setDisplayName(organization.displayName);
     setAddress(organization.address);
     setPhone(organization.phone);
+
+    const initialKeys = {};
+    aiModelKeys.forEach((key) => {
+      initialKeys[key.aiModelProvider.id] = key.key;
+    });
+    setProviderKeys(initialKeys);
   }, [organization]);
 
   // Handlers for form inputs
@@ -69,6 +89,13 @@ const GeneralOrganizationSettings = () => {
   // Handle Delete dialog
   const handleDeleteClickOpen = () => setOpenDeleteDialog(true);
   const handleDeleteClose = () => setOpenDeleteDialog(false);
+
+  const handleProviderKeyChange = (providerId) => (event) => {
+    setProviderKeys((prevKeys) => ({
+      ...prevKeys,
+      [providerId]: event.target.value,
+    }));
+  };
 
   // submit put request
   const handleSubmit = async (e) => {
@@ -96,9 +123,51 @@ const GeneralOrganizationSettings = () => {
     } catch (error) {
       console.error("Failed to update Organization", error);
     }
+
+    // create new ai model provider keys
+    try {
+      for (const provider of aiModelProviders) {
+        const existingKey = aiModelKeys.find(
+          (key) => key.aiModelProvider.id === provider.id
+        );
+        const newKeyValue = providerKeys[provider.id];
+
+        if (existingKey) {
+          const payload = {
+            organizationId: organization.id,
+            aiModelProvider: provider,
+            key: newKeyValue,
+          };
+          await aiModelService.updateAiModelKey(
+            organization.id,
+            existingKey.id,
+            storedToken,
+            payload
+          );
+          console.log(`Updated AI Model Key for provider ${provider.id}`);
+        } else if (newKeyValue && newKeyValue.trim() !== "") {
+          const payload = {
+            organizationId: organization.id,
+            aiModelProvider: provider,
+            key: newKeyValue,
+          };
+          await aiModelService.createAiModelKey(
+            organization.id,
+            storedToken,
+            payload
+          );
+          console.log(`Created new AI Model Key for provider ${provider.id}`);
+        }
+      }      
+      // Fetch the updated keys
+      dispatch(fetchOrganizationAiModelKeys({ organizationId: organization.id, storedToken }));
+    } catch (error) {
+      console.error("Failed to create AI Model Keys", error);
+      setAlertMessage("Failed to create AI Model Keys!");
+      setAlertOpen(true);
+    }
   };
 
-  
   // Handler for deleting organization
   const handleDeleteOrganization = async () => {
     try {
@@ -112,19 +181,18 @@ const GeneralOrganizationSettings = () => {
       handleDeleteClose(false);
       setTimeout(() => {
         router.push("/gendox/home");
-      }, 2000); 
+      }, 2000);
     } catch (error) {
       console.error("Failed to delete organization", error);
       setAlertMessage("Failed to delete the organization!");
       setAlertOpen(true);
-  
+
       // Delay the redirection to ensure alert is displayed
       setTimeout(() => {
         router.push("/gendox/home");
       }, 2000); // Adjust the delay as needed
     }
   };
-
 
   return (
     <Card>
@@ -145,6 +213,15 @@ const GeneralOrganizationSettings = () => {
       <form onSubmit={handleSubmit}>
         <CardContent>
           <Grid container spacing={5}>
+            {/* Informations  Section */}
+            <Grid item xs={12}>
+              <Typography
+                variant="h6"
+                sx={{ mb: 2, color: theme.palette.primary.main }}
+              >
+                Information
+              </Typography>
+            </Grid>
             <Grid item xs={12} sm={12} md={6}>
               <TextField
                 fullWidth
@@ -210,7 +287,37 @@ const GeneralOrganizationSettings = () => {
               </Button>
             </Grid>
           </Grid>
+          <Divider sx={{ mt: 20, mb: 4 }} />
+          {/* LLMs  Section */}
+
+          <Grid item xs={12}>
+            <Typography
+              variant="h6"
+              sx={{ mb: 2, color: theme.palette.primary.main }}
+            >
+              Ai Model Provider Key
+            </Typography>
+          </Grid>
+
+          {aiModelProviders.map((item) => (
+            <Grid
+              item
+              xs={12}
+              sm={12}
+              md={6}
+              sx={{ mt: 3, mb: 4 }}
+              key={item.id}
+            >
+              <TextField
+                fullWidth
+                label={item.description}
+                value={providerKeys[item.id] || ""}
+                onChange={handleProviderKeyChange(item.id)}
+              />
+            </Grid>
+          ))}
         </CardContent>
+
         <Divider sx={{ m: "0 !important" }} />
         <CardActions sx={{ justifyContent: "flex-end", p: 2 }}>
           <Button
@@ -222,7 +329,7 @@ const GeneralOrganizationSettings = () => {
           >
             Delete
           </Button>
-          
+
           <Button
             size="large"
             type="submit"
@@ -232,7 +339,6 @@ const GeneralOrganizationSettings = () => {
           >
             Save Changes
           </Button>
-          
         </CardActions>
       </form>
       <Snackbar

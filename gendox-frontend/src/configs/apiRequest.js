@@ -111,6 +111,15 @@ export default {
   getAiModels: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/ai-models`,
 
+  getAiModelProviders: (organizationId) =>
+    `${url}organizations/${organizationId}/ai-models/providers`,
+
+  aiModelKeys: (organizationId) =>
+    `${url}organizations/${organizationId}/model-keys`,
+
+  updateAiModelKey: (organizationId, modelProviderKeyId) =>
+    `${url}organizations/${organizationId}/model-keys/${modelProviderKeyId}`,
+
   acceptInvitation: (email, token) =>
     `${url}invitations/acceptance?email=${email}&token=${token}`,
 

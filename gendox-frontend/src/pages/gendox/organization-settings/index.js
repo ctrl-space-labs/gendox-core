@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/router";
 import { useSelector, useDispatch } from "react-redux";
 import { useAuth } from "src/hooks/useAuth";
@@ -7,8 +7,9 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import authConfig from "src/configs/auth";
 import { StyledCardContent } from "src/utils/styledCardsContent";
-import { fetchOrganization } from "src/store/apps/activeOrganization/activeOrganization";
+import { fetchOrganization, fetchAiModelProviders, fetchOrganizationAiModelKeys } from "src/store/apps/activeOrganization/activeOrganization";
 import OrganizationSettingsCard from "src/views/gendox-components/organization-settings/OrganizationSettingsCard";
+import aiModelService from "src/gendox-sdk/aiModelService";
 
 const OrganizationSettings = () => {
   const auth = useAuth();
@@ -27,11 +28,9 @@ const OrganizationSettings = () => {
 
   useEffect(() => {
     if (organizationId) {
-      setIsBlurring(true);
+      dispatch(fetchAiModelProviders({ organizationId, storedToken }));
       dispatch(fetchOrganization({ organizationId, storedToken }));
-      setTimeout(() => {
-        setIsBlurring(false);
-      }, 300);
+      dispatch(fetchOrganizationAiModelKeys({ organizationId, storedToken }));
     }
     // }
   }, [organizationId, router, dispatch]);
