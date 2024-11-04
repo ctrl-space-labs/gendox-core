@@ -47,6 +47,10 @@ public class OrganizationModelKeyService {
                 .orElseThrow(() -> new GendoxException("ORGANIZATION_MODEL_KEY_NOT_FOUND", "Model key not found", HttpStatus.NOT_FOUND));
     }
 
+    public Page<OrganizationModelProviderKey> getAllByOrganizationId(UUID organizationId) {
+        return organizationModelProviderKeysRepository.findAllByOrganizationId(organizationId, Pageable.unpaged());
+    }
+
     public Page<OrganizationModelProviderKey> getAllByCriteria(OrganizationModelKeyCriteria criteria, Pageable pageable) {
 
         Page<OrganizationModelProviderKey> organizationModelKeys = organizationModelProviderKeysRepository.findAll(OrganizationModelKeysPredicates.build(criteria), pageable);

@@ -24,12 +24,20 @@ public class OrganizationModelKeysController {
     @GetMapping("/organizations/{organizationId}/model-keys")
     public Page<OrganizationModelProviderKey> getAllByCriteria(@PathVariable UUID organizationId) {
 
-
         return organizationModelKeyService.getAllByCriteriaWithHiddenKeys(OrganizationModelKeyCriteria
                 .builder()
                 .organizationId(organizationId)
                 .build());
     }
+
+    @GetMapping("/organizations/{organizationId}/model-keys/{modelKeyId}")
+    public OrganizationModelProviderKey getById(@PathVariable UUID organizationId,
+                                                @PathVariable UUID modelKeyId) throws GendoxException {
+
+        return organizationModelKeyService.getByIdAndOrganizationId(modelKeyId, organizationId);
+    }
+
+
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_MODEL_KEYS', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("/organizations/{organizationId}/model-keys")
