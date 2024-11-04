@@ -82,7 +82,7 @@ public class DocumentPageSplitter implements DocumentSplitter {
             mergedSections.add(mergedSection);
         }
 
-        return mergedSections;
+        return mergedSections.stream().map(Section::getContent).toList();
     }
 
     private List<Section> splitDocumentIntoSections(String document) {
