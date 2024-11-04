@@ -177,7 +177,13 @@ public class EmbeddingService {
     public EmbeddingResponse getEmbeddingForMessage(ProjectAgent agent, BotRequest botRequest, AiModel aiModel) throws GendoxException {
         String apiKey = this.getApiKey(agent, "SEMANTIC_SEARCH_MODEL");
         AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
-        EmbeddingResponse embeddingResponse = aiModelApiAdapterService.askEmbedding(botRequest, aiModel, apiKey );
+        EmbeddingResponse embeddingResponse = aiModelApiAdapterService.askEmbedding(botRequest, aiModel, apiKey);
+
+        Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_REQUEST");
+        AuditLogs auditLogs = auditLogsService.createAuditLogs(embeddingType);
+        auditLogs.setTokenCount((long) embeddingResponse.getUsage().getTotalTokens());
+        auditLogs.setOrganizationId(agent.getProject().getOrganizationId());
+        auditLogs.setProjectId(agent.getProject().getId());
 
         return embeddingResponse;
     }
