@@ -168,6 +168,14 @@ public class EmbeddingService {
         return this.getEmbeddingForMessage(agent, botRequest, aiModel);
     }
 
+    @Observed(name = "EmbeddingService.getEmbeddingForMessage",
+            contextualName = "EmbeddingService#getEmbeddingForMessage",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public EmbeddingResponse getEmbeddingForMessage(ProjectAgent agent, BotRequest botRequest, AiModel aiModel) throws GendoxException {
         String apiKey = this.getApiKey(agent, "SEMANTIC_SEARCH_MODEL");
         AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
