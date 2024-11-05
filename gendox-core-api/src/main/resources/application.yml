@@ -108,7 +108,14 @@ gendox:
   documents:
 #    upload-dir: s3://gendox.organization.documents.dev
     upload-dir: file:${user.home}/gendox/documents
+#    Word count per document section, used in static word count Splitter
     wordCount: 500
+#    Token count per document section, used in Page or Markdown Splitters
+    tokenCount: 768
+    # this adds new line before and after the separator
+    page-separator-template: |
+      
+      {%s}------------------------------------------------
     allowed:
       extensions: .txt,.md,.rst,.pdf
 
