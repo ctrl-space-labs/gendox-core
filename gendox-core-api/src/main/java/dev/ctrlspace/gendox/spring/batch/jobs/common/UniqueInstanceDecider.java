@@ -2,6 +2,8 @@ package dev.ctrlspace.gendox.spring.batch.jobs.common;
 
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
 import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.StepExecution;
@@ -15,6 +17,8 @@ import java.util.List;
 
 @Component
 public class UniqueInstanceDecider implements JobExecutionDecider {
+
+    Logger logger = LoggerFactory.getLogger(getClass());
 
     private final JobExplorer jobExplorer;
 
@@ -36,6 +40,8 @@ public class UniqueInstanceDecider implements JobExecutionDecider {
         if (batchJobExecutions.size() == 1 && batchJobExecutions.get(0).getJobExecutionId().equals(jobExecution.getId())) {
             return new FlowExecutionStatus("CONTINUE");
         }
+
+        logger.info("Job {} already running, skipping this execution", jobExecution.getJobInstance().getJobName());
 
         return new FlowExecutionStatus("DUPLICATE_EXECUTION");
     }

@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
  * TODO: Initial implementation, untested
  */
 @Service
-@ServiceName(DocumentSplitterConstants.STATIC_WORD_COUNT_SPLITTER)
+@ServiceName(DocumentSplitterConstants.DOCUMENT_PAGE_SPLITTER)
 public class DocumentPageSplitter implements DocumentSplitter {
 
     @Value("${gendox.documents.tokenCount}")
