@@ -177,6 +177,7 @@ public class EmbeddingService {
         auditLogs.setTokenCount((long) embeddingResponse.getUsage().getTotalTokens());
         auditLogs.setOrganizationId(agent.getProject().getOrganizationId());
         auditLogs.setProjectId(agent.getProject().getId());
+        auditLogsService.saveAuditLogs(auditLogs);
 
         return embeddingResponse;
     }

@@ -140,6 +140,7 @@ public class CompletionService {
         requestAuditLogs.setTokenCount((long) completionResponse.getUsage().getPromptTokens());
         requestAuditLogs.setProjectId(projectId);
         requestAuditLogs.setOrganizationId(project.getOrganizationId());
+        auditLogsService.saveAuditLogs(requestAuditLogs);
 
         //        completion completion audits
         Type completionResponseType = typeService.getAuditLogTypeByName("COMPLETION_RESPONSE");
@@ -147,6 +148,7 @@ public class CompletionService {
         completionAuditLogs.setTokenCount((long) completionResponse.getUsage().getCompletionTokens());
         completionAuditLogs.setProjectId(projectId);
         completionAuditLogs.setOrganizationId(project.getOrganizationId());
+        auditLogsService.saveAuditLogs(completionAuditLogs);
 
         Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
 

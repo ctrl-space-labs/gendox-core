@@ -7,6 +7,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
 import dev.ctrlspace.provenai.iscc.IsccCodeResponse;
 import dev.ctrlspace.provenai.iscc.IsccCodeService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -24,6 +26,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class DocumentService {
+
+    private static final Logger logger = LoggerFactory.getLogger(DocumentService.class);
 
     private DocumentInstanceRepository documentInstanceRepository;
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
@@ -163,7 +167,11 @@ public class DocumentService {
         Type deleteDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_DELETE");
         AuditLogs deleteDocumentAuditLogs = auditLogsService.createAuditLogs(deleteDocumentType);
         deleteDocumentAuditLogs.setProjectId(projectId);
+        logger.trace("Set project ID: {}", projectId);
         deleteDocumentAuditLogs.setOrganizationId(documentInstance.getOrganizationId());
+        logger.trace("Set organization ID: {}", documentInstance.getOrganizationId());
+
+        auditLogsService.saveAuditLogs(deleteDocumentAuditLogs);
 
     }
 

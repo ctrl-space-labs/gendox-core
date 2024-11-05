@@ -47,18 +47,7 @@ public class DocumentSectionEmbeddingWriter implements ItemWriter<SectionEmbeddi
     @Override
     public void write(Chunk<? extends SectionEmbeddingDTO> sectionEmbeddingChunk) throws Exception {
 
-//        // Create a new span for the write operation
-//        Span span = tracer.nextSpan().name("writeEmbeddings").start();
-//        try (Tracer.SpanInScope ws = tracer.withSpan(span)) {
-//            logger.debug("Start writing embeddings chunk");
-//
-//            // Check for the current span
-//            Span currentSpan = tracer.currentSpan();
-//            if (currentSpan == null) {
-//                logger.warn("No active span found for write method.");
-//            } else {
-//                logger.debug("Current span ID: {}", currentSpan.context().spanId());
-//            }
+
             // Collect all document IDs and section IDs
             Set<UUID> documentIds = new HashSet<>();
             Set<UUID> sectionIds = new HashSet<>();

@@ -79,6 +79,7 @@ public class UploadService {
         AuditLogs createDocumentAuditLogs = auditLogsService.createAuditLogs(createDocumentType);
         createDocumentAuditLogs.setOrganizationId(organizationId);
         createDocumentAuditLogs.setProjectId(projectId);
+        auditLogsService.saveAuditLogs(createDocumentAuditLogs);
 
         if (isccEnabled) {
             IsccCodeResponse isccCodeResponse = isccCodeService.getDocumentIsccCode(file, fileName);
@@ -118,6 +119,8 @@ public class UploadService {
             AuditLogs updateDocumentAuditLogs = auditLogsService.createAuditLogs(updateDocumentType);
             updateDocumentAuditLogs.setOrganizationId(organizationId);
             updateDocumentAuditLogs.setProjectId(projectId);
+
+            auditLogsService.saveAuditLogs(updateDocumentAuditLogs);
 
         }
 
