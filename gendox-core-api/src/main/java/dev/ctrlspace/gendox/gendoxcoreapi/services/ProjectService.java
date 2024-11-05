@@ -176,6 +176,7 @@ public class ProjectService {
         AuditLogs deleteProjectAuditLogs = auditLogsService.createAuditLogs(deleteProjectType);
         deleteProjectAuditLogs.setOrganizationId(organizationId);
         deleteProjectAuditLogs.setProjectId(id);
+        auditLogsService.saveAuditLogs(deleteProjectAuditLogs);
 
     }
 

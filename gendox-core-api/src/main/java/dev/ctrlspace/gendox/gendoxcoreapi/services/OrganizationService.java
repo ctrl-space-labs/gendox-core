@@ -190,6 +190,7 @@ public class OrganizationService {
                 Type deleteOrganizationType = typeService.getAuditLogTypeByName("DELETE_ORGANIZATION");
                 AuditLogs deleteOrganizationAuditLogs = auditLogsService.createAuditLogs(deleteOrganizationType);
                 deleteOrganizationAuditLogs.setOrganizationId(organizationId);
+                auditLogsService.saveAuditLogs(deleteOrganizationAuditLogs);
             }
         }
 
