@@ -188,7 +188,7 @@ public class OrganizationService {
                 deactivateAllOrgProjects(organizationId);
                 userOrganizationRepository.delete(userOrganization);
                 Type deleteOrganizationType = typeService.getAuditLogTypeByName("DELETE_ORGANIZATION");
-                AuditLogs deleteOrganizationAuditLogs = auditLogsService.createAuditLogs(deleteOrganizationType);
+                AuditLogs deleteOrganizationAuditLogs = auditLogsService.createDefaultAuditLogs(deleteOrganizationType);
                 deleteOrganizationAuditLogs.setOrganizationId(organizationId);
                 auditLogsService.saveAuditLogs(deleteOrganizationAuditLogs);
             }

@@ -76,7 +76,7 @@ public class UploadService {
         String documentIsccCode = new String();
         //create Document Auditing
         Type createDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_CREATE");
-        AuditLogs createDocumentAuditLogs = auditLogsService.createAuditLogs(createDocumentType);
+        AuditLogs createDocumentAuditLogs = auditLogsService.createDefaultAuditLogs(createDocumentType);
         createDocumentAuditLogs.setOrganizationId(organizationId);
         createDocumentAuditLogs.setProjectId(projectId);
         auditLogsService.saveAuditLogs(createDocumentAuditLogs);
@@ -116,7 +116,7 @@ public class UploadService {
 
             //update Document Auditing
             Type updateDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_UPDATE");
-            AuditLogs updateDocumentAuditLogs = auditLogsService.createAuditLogs(updateDocumentType);
+            AuditLogs updateDocumentAuditLogs = auditLogsService.createDefaultAuditLogs(updateDocumentType);
             updateDocumentAuditLogs.setOrganizationId(organizationId);
             updateDocumentAuditLogs.setProjectId(projectId);
 

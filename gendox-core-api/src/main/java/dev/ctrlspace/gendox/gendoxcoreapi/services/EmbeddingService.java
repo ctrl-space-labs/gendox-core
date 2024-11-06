@@ -181,7 +181,7 @@ public class EmbeddingService {
         EmbeddingResponse embeddingResponse = aiModelApiAdapterService.askEmbedding(botRequest, aiModel, apiKey);
 
         Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_RESPONSE");
-        AuditLogs auditLogs = auditLogsService.createAuditLogs(embeddingType);
+        AuditLogs auditLogs = auditLogsService.createDefaultAuditLogs(embeddingType);
         auditLogs.setTokenCount((long) embeddingResponse.getUsage().getTotalTokens());
         auditLogs.setOrganizationId(agent.getProject().getOrganizationId());
         auditLogs.setProjectId(agent.getProject().getId());

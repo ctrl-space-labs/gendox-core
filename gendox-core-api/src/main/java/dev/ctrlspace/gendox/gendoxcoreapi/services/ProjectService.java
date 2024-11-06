@@ -173,7 +173,7 @@ public class ProjectService {
         clearProjectData(project);
         projectRepository.save(project);
         Type deleteProjectType = typeService.getAuditLogTypeByName("DELETE_PROJECT");
-        AuditLogs deleteProjectAuditLogs = auditLogsService.createAuditLogs(deleteProjectType);
+        AuditLogs deleteProjectAuditLogs = auditLogsService.createDefaultAuditLogs(deleteProjectType);
         deleteProjectAuditLogs.setOrganizationId(organizationId);
         deleteProjectAuditLogs.setProjectId(id);
         auditLogsService.saveAuditLogs(deleteProjectAuditLogs);

@@ -159,33 +159,22 @@ public class DocumentService {
 
     public void deleteDocument(UUID documentIid, UUID projectId) throws GendoxException {
         DocumentInstance documentInstance = getDocumentInstanceById(documentIid);
-        documentSectionService.deleteSections(documentInstance.getDocumentInstanceSections());
-        projectDocumentService.deleteProjectDocument(documentIid, projectId);
-        documentInstanceRepository.delete(documentInstance);
-
-        //delete Document Auditing
-        Type deleteDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_DELETE");
-        AuditLogs deleteDocumentAuditLogs = auditLogsService.createAuditLogs(deleteDocumentType);
-        deleteDocumentAuditLogs.setProjectId(projectId);
-        logger.trace("Set project ID: {}", projectId);
-        deleteDocumentAuditLogs.setOrganizationId(documentInstance.getOrganizationId());
-        logger.trace("Set organization ID: {}", documentInstance.getOrganizationId());
-
-        auditLogsService.saveAuditLogs(deleteDocumentAuditLogs);
+        deleteDocument(documentInstance, projectId);
 
     }
 
     public void deleteDocument(DocumentInstance documentInstance, UUID projectId) throws GendoxException {
         documentSectionService.deleteSections(documentInstance.getDocumentInstanceSections());
         projectDocumentService.deleteProjectDocument(documentInstance.getId(), projectId);
-        documentInstance.setDocumentInstanceSections(null);
         documentInstanceRepository.delete(documentInstance);
 
         //delete Document Auditing
         Type deleteDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_DELETE");
-        AuditLogs deleteDocumentAuditLogs = auditLogsService.createAuditLogs(deleteDocumentType);
+        AuditLogs deleteDocumentAuditLogs = auditLogsService.createDefaultAuditLogs(deleteDocumentType);
         deleteDocumentAuditLogs.setProjectId(projectId);
         deleteDocumentAuditLogs.setOrganizationId(documentInstance.getOrganizationId());
+
+        auditLogsService.saveAuditLogs(deleteDocumentAuditLogs);
 
     }
 
