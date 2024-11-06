@@ -21,6 +21,7 @@ public class OrganizationModelKeysController {
         this.organizationModelKeyService = organizationModelKeyService;
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_ORGANIZATION_MODEL_KEYS', 'getRequestedOrgIdFromPathVariable')")
     @GetMapping("/organizations/{organizationId}/model-keys")
     public Page<OrganizationModelProviderKey> getAllByCriteria(@PathVariable UUID organizationId) {
 

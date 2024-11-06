@@ -60,7 +60,7 @@ public class OrganizationModelKeyService {
 
     public Page<OrganizationModelProviderKey> getAllByCriteriaWithHiddenKeys(OrganizationModelKeyCriteria criteria) {
 
-        Page<OrganizationModelProviderKey> organizationModelKeys = this.getAllByCriteria(criteria, Pageable.unpaged());
+        Page<OrganizationModelProviderKey> organizationModelKeys = this.getAllByCriteria(criteria, Pageable.ofSize(10000));
 
         return hideKeys(organizationModelKeys);
     }
@@ -160,7 +160,20 @@ public class OrganizationModelKeyService {
         List<OrganizationModelProviderKey> hiddenKeys = organizationModelKeys.stream().map(key -> {
                     OrganizationModelProviderKey hiddenKey = new OrganizationModelProviderKey();
                     hiddenKey.setId(key.getId());
-                    hiddenKey.setKey(key.getKey().substring(0, 4) + "*****");
+
+                    String originalKey = key.getKey();
+                    String maskedKey;
+
+                    if (originalKey.length() > 8) {
+                        maskedKey = originalKey.substring(0, 4) + "*****" + originalKey.substring(originalKey.length() - 4);
+                    } else {
+                        // Handle cases where the key might be shorter than 8 characters
+                        maskedKey = originalKey.substring(0, Math.min(4, originalKey.length()))
+                                + "*****"
+                                + originalKey.substring(Math.max(0, originalKey.length() - 4));
+                    }
+
+                    hiddenKey.setKey(maskedKey);
                     hiddenKey.setAiModelProvider(key.getAiModelProvider());
                     hiddenKey.setOrganizationId(key.getOrganizationId());
                     hiddenKey.setCreatedAt(key.getCreatedAt());
