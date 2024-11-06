@@ -14,8 +14,6 @@ import authConfig from "src/configs/auth";
 // ** MUI Imports
 import Grid from "@mui/material/Grid";
 import TextField from "@mui/material/TextField";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Checkbox from "@mui/material/Checkbox";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import Button from "@mui/material/Button";
@@ -27,10 +25,9 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import Icon from "src/@core/components/icon";
 import Typography from "@mui/material/Typography";
-import Tooltip from "@mui/material/Tooltip";
 
 import organizationService from "src/gendox-sdk/organizationService";
-import aiModelService from "src/gendox-sdk/aiModelService";
+import AiModelProviderKey from "src/views/gendox-components/organization-settings/general-components/AiModelProviderKey";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 import { fetchOrganizationAiModelKeys } from "src/store/apps/activeOrganization/activeOrganization";
 
@@ -42,40 +39,31 @@ const GeneralOrganizationSettings = () => {
     authConfig.storageTokenKeyName
   );
 
-  const organization = useSelector(
-    (state) => state.activeOrganization.activeOrganization
-  );
-  const aiModelProviders = useSelector(
-    (state) => state.activeOrganization.aiModelProviders
-  );
-  const aiModelKeys = useSelector(
-    (state) => state.activeOrganization.aiModelKeys
-  );
+  const {
+    activeOrganization: organization,
+    organizationPlan,
+    aiModelProviders,
+    aiModelKeys,
+  } = useSelector((state) => state.activeOrganization);
+
   const provenAiUrl = process.env.NEXT_PUBLIC_PROVEN_AI_URL;
 
-  const [name, setName] = useState(organization.name);
-  const [displayName, setDisplayName] = useState(organization.displayName);
-  const [address, setAddress] = useState(organization.address);
-  const [phone, setPhone] = useState(organization.phone);
+  const [name, setName] = useState(organization.name || "");
+  const [displayName, setDisplayName] = useState(
+    organization.displayName || ""
+  );
+  const [address, setAddress] = useState(organization.address || "");
+  const [phone, setPhone] = useState(organization.phone || "");
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [providerKeys, setProviderKeys] = useState({});
-
-  console.log("Provider Keys", providerKeys);
 
   useEffect(() => {
-    setName(organization.name);
-    setDisplayName(organization.displayName);
-    setAddress(organization.address);
-    setPhone(organization.phone);
-
-    const initialKeys = {};
-    aiModelKeys.forEach((key) => {
-      initialKeys[key.aiModelProvider.id] = key.key;
-    });
-    setProviderKeys(initialKeys);
+    setName(organization.name || "");
+    setDisplayName(organization.displayName || "");
+    setAddress(organization.address || "");
+    setPhone(organization.phone || "");
   }, [organization]);
 
   // Handlers for form inputs
@@ -89,13 +77,6 @@ const GeneralOrganizationSettings = () => {
   // Handle Delete dialog
   const handleDeleteClickOpen = () => setOpenDeleteDialog(true);
   const handleDeleteClose = () => setOpenDeleteDialog(false);
-
-  const handleProviderKeyChange = (providerId) => (event) => {
-    setProviderKeys((prevKeys) => ({
-      ...prevKeys,
-      [providerId]: event.target.value,
-    }));
-  };
 
   // submit put request
   const handleSubmit = async (e) => {
@@ -124,47 +105,17 @@ const GeneralOrganizationSettings = () => {
       console.error("Failed to update Organization", error);
     }
 
-    // create new ai model provider keys
     try {
-      for (const provider of aiModelProviders) {
-        const existingKey = aiModelKeys.find(
-          (key) => key.aiModelProvider.id === provider.id
-        );
-        const newKeyValue = providerKeys[provider.id];
-
-        if (existingKey) {
-          const payload = {
-            organizationId: organization.id,
-            aiModelProvider: provider,
-            key: newKeyValue,
-          };
-          await aiModelService.updateAiModelKey(
-            organization.id,
-            existingKey.id,
-            storedToken,
-            payload
-          );
-          console.log(`Updated AI Model Key for provider ${provider.id}`);
-        } else if (newKeyValue && newKeyValue.trim() !== "") {
-          const payload = {
-            organizationId: organization.id,
-            aiModelProvider: provider,
-            key: newKeyValue,
-          };
-          await aiModelService.createAiModelKey(
-            organization.id,
-            storedToken,
-            payload
-          );
-          console.log(`Created new AI Model Key for provider ${provider.id}`);
-        }
-      }      
-      // Fetch the updated keys
-      dispatch(fetchOrganizationAiModelKeys({ organizationId: organization.id, storedToken }));
+      await organizationService.updateOrganization(
+        organization.id,
+        updatedOrganizationPayload,
+        storedToken
+      );
+      setOpenSnackbar(true);
+      const path = `/gendox/organization-settings/?organizationId=${organization.id}`;
+      router.push(path);
     } catch (error) {
-      console.error("Failed to create AI Model Keys", error);
-      setAlertMessage("Failed to create AI Model Keys!");
-      setAlertOpen(true);
+      console.error("Failed to update Organization", error);
     }
   };
 
@@ -287,35 +238,6 @@ const GeneralOrganizationSettings = () => {
               </Button>
             </Grid>
           </Grid>
-          <Divider sx={{ mt: 20, mb: 4 }} />
-          {/* LLMs  Section */}
-
-          <Grid item xs={12}>
-            <Typography
-              variant="h6"
-              sx={{ mb: 2, color: theme.palette.primary.main }}
-            >
-              Ai Model Provider Key
-            </Typography>
-          </Grid>
-
-          {aiModelProviders.map((item) => (
-            <Grid
-              item
-              xs={12}
-              sm={12}
-              md={6}
-              sx={{ mt: 3, mb: 4 }}
-              key={item.id}
-            >
-              <TextField
-                fullWidth
-                label={item.description}
-                value={providerKeys[item.id] || ""}
-                onChange={handleProviderKeyChange(item.id)}
-              />
-            </Grid>
-          ))}
         </CardContent>
 
         <Divider sx={{ m: "0 !important" }} />
@@ -341,6 +263,12 @@ const GeneralOrganizationSettings = () => {
           </Button>
         </CardActions>
       </form>
+
+      <CardContent>
+        <Divider sx={{ mt: 10, mb: 8 }} />
+        <AiModelProviderKey />
+      </CardContent>
+
       <Snackbar
         open={alertOpen}
         autoHideDuration={6000}

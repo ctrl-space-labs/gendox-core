@@ -70,9 +70,28 @@ const updateAiModelKey = async (organizationId, modelProviderKeyId, storedToken,
 }
 
 
+/**
+ * Delete ai model key
+ * @param organizationId
+ * @param modelProviderKeyId
+ * @param storedToken
+ * @returns {Promise<axios.AxiosResponse<OrganizationUsers[]>>}
+ */
+const deleteAiModelKey = async (organizationId, modelProviderKeyId, storedToken) => {
+    return axios.delete(apiRequests.deleteAiModelKey(organizationId, modelProviderKeyId), {
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + storedToken
+        },
+        
+    });
+}
+
+
 export default {
     getAllAiModelProviders,
     getModelKeysByOrganizationId,
     createAiModelKey,
-    updateAiModelKey
+    updateAiModelKey,
+    deleteAiModelKey
 }

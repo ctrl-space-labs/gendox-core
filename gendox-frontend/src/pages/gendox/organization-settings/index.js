@@ -7,7 +7,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import authConfig from "src/configs/auth";
 import { StyledCardContent } from "src/utils/styledCardsContent";
-import { fetchOrganization, fetchAiModelProviders, fetchOrganizationAiModelKeys } from "src/store/apps/activeOrganization/activeOrganization";
+import { fetchOrganization, fetchAiModelProviders, fetchOrganizationAiModelKeys, fetchOrganizationPlans } from "src/store/apps/activeOrganization/activeOrganization";
 import OrganizationSettingsCard from "src/views/gendox-components/organization-settings/OrganizationSettingsCard";
 import aiModelService from "src/gendox-sdk/aiModelService";
 
@@ -31,6 +31,7 @@ const OrganizationSettings = () => {
       dispatch(fetchAiModelProviders({ organizationId, storedToken }));
       dispatch(fetchOrganization({ organizationId, storedToken }));
       dispatch(fetchOrganizationAiModelKeys({ organizationId, storedToken }));
+      dispatch(fetchOrganizationPlans({ organizationId, storedToken }));
     }
     // }
   }, [organizationId, router, dispatch]);

@@ -120,6 +120,9 @@ export default {
   updateAiModelKey: (organizationId, modelProviderKeyId) =>
     `${url}organizations/${organizationId}/model-keys/${modelProviderKeyId}`,
 
+  deleteAiModelKey: (organizationId, modelProviderKeyId) =>
+    `${url}organizations/${organizationId}/model-keys/${modelProviderKeyId}`,
+
   acceptInvitation: (email, token) =>
     `${url}invitations/acceptance?email=${email}&token=${token}`,
 
