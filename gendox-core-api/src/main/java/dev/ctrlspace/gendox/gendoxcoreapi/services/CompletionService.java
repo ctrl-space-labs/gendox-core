@@ -136,7 +136,7 @@ public class CompletionService {
 
         //        completion request audits
         Type completionRequestType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
-        AuditLogs requestAuditLogs = auditLogsService.createAuditLogs(completionRequestType);
+        AuditLogs requestAuditLogs = auditLogsService.createDefaultAuditLogs(completionRequestType);
         requestAuditLogs.setTokenCount((long) completionResponse.getUsage().getPromptTokens());
         requestAuditLogs.setProjectId(projectId);
         requestAuditLogs.setOrganizationId(project.getOrganizationId());
@@ -144,7 +144,7 @@ public class CompletionService {
 
         //        completion completion audits
         Type completionResponseType = typeService.getAuditLogTypeByName("COMPLETION_RESPONSE");
-        AuditLogs completionAuditLogs = auditLogsService.createAuditLogs( completionResponseType);
+        AuditLogs completionAuditLogs = auditLogsService.createDefaultAuditLogs( completionResponseType);
         completionAuditLogs.setTokenCount((long) completionResponse.getUsage().getCompletionTokens());
         completionAuditLogs.setProjectId(projectId);
         completionAuditLogs.setOrganizationId(project.getOrganizationId());

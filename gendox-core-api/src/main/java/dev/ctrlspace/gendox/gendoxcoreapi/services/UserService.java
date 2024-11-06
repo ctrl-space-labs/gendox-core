@@ -332,7 +332,8 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
 
         Type deleteUserType = typeService.getAuditLogTypeByName("DELETE_USER");
-        AuditLogs deleteProjectAuditLogs = auditLogsService.createAuditLogs(deleteUserType);
+        AuditLogs deleteProjectAuditLogs = auditLogsService.createDefaultAuditLogs(deleteUserType);
+        auditLogsService.saveAuditLogs(deleteProjectAuditLogs);
     }
 
     private void deactivateUser(User user) throws GendoxException {

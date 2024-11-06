@@ -45,7 +45,7 @@ public class AuditLogsService {
                 .sum();
     }
 
-    public AuditLogs createAuditLogs(Type auditType) {
+    public AuditLogs createDefaultAuditLogs(Type auditType) {
         AuditLogs auditLog = new AuditLogs();
         logger.trace("Creating audit log entry.");
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -57,8 +57,6 @@ public class AuditLogsService {
         logger.trace("Set audit type: {}", auditType);
         auditLog.setSpanId(tracer.currentSpan().context().spanId());
         logger.trace("Set trace ID: {}", tracer.currentSpan().context().traceId());
-        auditLog = auditLogsRepository.save(auditLog);
-        logger.trace("Saved audit log entry with ID: {}", auditLog.getId());
         return auditLog;
     }
 
