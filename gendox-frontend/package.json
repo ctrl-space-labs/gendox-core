@@ -50,6 +50,7 @@
     "i18next": "22.4.11",
     "i18next-browser-languagedetector": "7.0.1",
     "i18next-http-backend": "2.2.0",
+    "identicon.js": "^2.3.3",
     "jsonwebtoken": "8.5.1",
     "keen-slider": "6.8.5",
     "markdown-draft-js": "^2.4.0",
