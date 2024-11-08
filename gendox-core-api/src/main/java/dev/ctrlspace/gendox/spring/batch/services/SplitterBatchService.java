@@ -47,6 +47,7 @@ public class SplitterBatchService {
         BatchExecutionCriteria criteria = BatchExecutionCriteria.builder()
                 .jobName(documentSplitterJobName)
                 .status("COMPLETED")
+                .exitCode("COMPLETED")
                 .build();
 
         Sort sort = Sort.by(Sort.Direction.DESC, "createTime");

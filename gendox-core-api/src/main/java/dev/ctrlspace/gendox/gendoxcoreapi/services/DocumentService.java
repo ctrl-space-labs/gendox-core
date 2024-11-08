@@ -166,6 +166,7 @@ public class DocumentService {
     public void deleteDocument(DocumentInstance documentInstance, UUID projectId) throws GendoxException {
         documentSectionService.deleteSections(documentInstance.getDocumentInstanceSections());
         projectDocumentService.deleteProjectDocument(documentInstance.getId(), projectId);
+        documentInstance.getDocumentInstanceSections().clear();
         documentInstanceRepository.delete(documentInstance);
 
         //delete Document Auditing
