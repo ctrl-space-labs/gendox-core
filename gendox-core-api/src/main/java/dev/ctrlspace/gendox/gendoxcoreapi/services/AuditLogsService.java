@@ -52,11 +52,13 @@ public class AuditLogsService {
         auditLog.setUserId(securityUtils.getUserId());
         logger.trace("Set user ID: {}", securityUtils.getUserId());
         auditLog.setType(auditType);
-
-        auditLog.setTraceId(tracer.currentSpan().context().traceId());
         logger.trace("Set audit type: {}", auditType);
-        auditLog.setSpanId(tracer.currentSpan().context().spanId());
-        logger.trace("Set trace ID: {}", tracer.currentSpan().context().traceId());
+        if (tracer.currentSpan() != null) {
+            auditLog.setTraceId(tracer.currentSpan().context().traceId());
+            logger.trace("Set audit type: {}", auditType);
+            auditLog.setSpanId(tracer.currentSpan().context().spanId());
+            logger.trace("Set trace ID: {}", tracer.currentSpan().context().traceId());
+        }
         return auditLog;
     }
 

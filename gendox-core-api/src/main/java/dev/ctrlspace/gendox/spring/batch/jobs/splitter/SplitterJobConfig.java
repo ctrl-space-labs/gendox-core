@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.splitter;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
 import dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps.DocumentSectionDTO;
