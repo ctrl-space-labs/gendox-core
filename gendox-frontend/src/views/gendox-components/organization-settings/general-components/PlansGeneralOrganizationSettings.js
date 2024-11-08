@@ -71,7 +71,7 @@ const PlansOrganizationSettings = () => {
   const handleDeleteClose = () => setOpenDeleteDialog(false);
 
   return (
-    <Card>
+    <>
       <Box
         sx={{
           display: "flex",
@@ -153,7 +153,7 @@ const PlansOrganizationSettings = () => {
 
             {/* Date Section */}
             <Grid item xs={12}>
-              <Divider sx={{ mb: 2 }} />
+             
               <Typography
                 variant="h6"
                 sx={{ mb: 2, color: theme.palette.primary.main }}
@@ -191,7 +191,6 @@ const PlansOrganizationSettings = () => {
 
             {/* Rate Limits Section */}
             <Grid item xs={12}>
-              <Divider sx={{ mb: 2 }} />
               <Typography
                 variant="h6"
                 sx={{ mb: 2, color: theme.palette.primary.main }}
@@ -229,7 +228,6 @@ const PlansOrganizationSettings = () => {
 
             {/* Additional Info Section */}
             <Grid item xs={12}>
-              <Divider sx={{ mb: 2 }} />
               <Typography
                 variant="h6"
                 sx={{ mb: 2, color: theme.palette.primary.main }}
@@ -337,7 +335,7 @@ const PlansOrganizationSettings = () => {
         confirmButtonText="Yes, Cancel"
         cancelButtonText="No, Keep"
       />
-    </Card>
+    </>
   );
 };
 

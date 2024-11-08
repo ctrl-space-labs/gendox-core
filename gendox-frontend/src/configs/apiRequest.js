@@ -147,5 +147,14 @@ export default {
   deactivateProjectById: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/deactivate`,
 
+  aiApiKeys: (organizationId) =>
+    `${url}organizations/${organizationId}/api-keys`,
+
+  deleteApiKey: (organizationId, apiKeyId) =>
+    `${url}organizations/${organizationId}/api-keys/${apiKeyId}`,
+
+  updateApiKey: (organizationId, apiKeyId) =>
+    `${url}organizations/${organizationId}/api-keys/${apiKeyId}`,
+
 
 };

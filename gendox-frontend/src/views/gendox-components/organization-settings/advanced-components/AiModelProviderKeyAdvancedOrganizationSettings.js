@@ -7,17 +7,19 @@ import Grid from "@mui/material/Grid";
 import TextField from "@mui/material/TextField";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
+import CardHeader from "@mui/material/CardHeader";
+import CardContent from "@mui/material/CardContent";
 import Icon from "src/@core/components/icon";
 import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
 import IconButton from "@mui/material/IconButton";
 import toast from "react-hot-toast";
 import aiModelService from "src/gendox-sdk/aiModelService";
-import KeyChangeDialog from "src/views/gendox-components/organization-settings/general-components/KeyChangeDialog";
+import KeyChangeDialog from "src/views/gendox-components/organization-settings/advanced-components/ai-model-provider-key/KeyChangeDialog";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 import { fetchOrganizationAiModelKeys } from "src/store/apps/activeOrganization/activeOrganization";
 
-const GeneralOrganizationSettings = () => {
+const AiModelProviderKey = () => {
   const theme = useTheme();
   const router = useRouter();
   const dispatch = useDispatch();
@@ -138,54 +140,57 @@ const GeneralOrganizationSettings = () => {
   const handleDeleteClose = () => setOpenDeleteDialog(false);
 
   return (
-    <Card>
-      <Grid item xs={12}>
-        <Typography
-          variant="h6"
-          sx={{ mb: 6, color: theme.palette.primary.main }}
-        >
-          AI Model Provider Key
-        </Typography>
-      </Grid>
-
-      {aiModelProviders.map((item) => (
-        <Grid item xs={12} sm={12} md={6} sx={{ mt: 3, mb: 4 }} key={item.id}>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <TextField
-              fullWidth
-              label={item.description}
-              value={
-                aiModelKeys.find((key) => key.aiModelProvider.id === item.id)
-                  ?.key || ""
-              }
-              disabled
-            />
-            <Box sx={{ display: "flex", ml: 1 }}>
-              <Tooltip title="Add New Key">
-                <IconButton
-                  onClick={() => handleEditToggle(item.description, item.id)}
-                  color="primary"
-                >
-                  <Icon icon="mdi:pencil-outline" />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Delete Key">
-                <IconButton
-                  onClick={() => {
-                    const matchingKey = aiModelKeys.find(
-                      (key) => key.aiModelProvider.id === item.id
-                    );
-                    handleDeleteClickOpen(item.description, matchingKey?.id);
-                  }}
-                  color="error"
-                >
-                  <Icon icon="mdi:delete" />
-                </IconButton>
-              </Tooltip>
+    <>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          p: 2,
+        }}
+      >
+        <CardHeader title="AI Model Provider Key" />
+      </Box>
+      <CardContent>
+        {aiModelProviders.map((item) => (
+          <Grid item xs={12} sm={12} md={6} sx={{ mt: 3, mb: 4 }} key={item.id}>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <TextField
+                fullWidth
+                label={item.description}
+                value={
+                  aiModelKeys.find((key) => key.aiModelProvider.id === item.id)
+                    ?.key || ""
+                }
+                disabled
+              />
+              <Box sx={{ display: "flex", ml: 1 }}>
+                <Tooltip title="Add New Key">
+                  <IconButton
+                    onClick={() => handleEditToggle(item.description, item.id)}
+                    color="primary"
+                  >
+                    <Icon icon="mdi:pencil-outline" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Delete Key">
+                  <IconButton
+                    onClick={() => {
+                      const matchingKey = aiModelKeys.find(
+                        (key) => key.aiModelProvider.id === item.id
+                      );
+                      handleDeleteClickOpen(item.description, matchingKey?.id);
+                    }}
+                    color="error"
+                  >
+                    <Icon icon="mdi:delete" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </Box>
-          </Box>
-        </Grid>
-      ))}
+          </Grid>
+        ))}
+      </CardContent>
 
       {/* Render the KeyChangeDialog */}
       <KeyChangeDialog
@@ -204,8 +209,8 @@ const GeneralOrganizationSettings = () => {
         confirmButtonText="Delete"
         cancelButtonText="Cancel"
       />
-    </Card>
+    </>
   );
 };
 
-export default GeneralOrganizationSettings;
+export default AiModelProviderKey;

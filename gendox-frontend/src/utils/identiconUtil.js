@@ -19,7 +19,7 @@ export const generateIdenticon = (text) => {
             background: [255, 255, 255, 0]  // Transparent background
         }).toString();
 
-        console.log("Generating Identicon!!!!")
+        
 
         // Construct the src URL for the Avatar component
         return `data:image/svg+xml;base64,${data}`;

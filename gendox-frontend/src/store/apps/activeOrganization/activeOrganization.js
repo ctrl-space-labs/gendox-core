@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import organizationService from "src/gendox-sdk/organizationService";
 import aiModelService from "src/gendox-sdk/aiModelService";
 import subscriptionPlanService from "src/gendox-sdk/subscriptionPlanService";
+import apiKeyService from "src/gendox-sdk/apiKeyService";
 
 // Define an async thunk for fetching an organization by ID
 export const fetchOrganization = createAsyncThunk(
@@ -65,6 +66,22 @@ export const fetchOrganizationPlans = createAsyncThunk(
   }
 );
 
+export const fetchApiKeys = createAsyncThunk(
+  "activeOrganization/fetchApiKeys",
+  async ({ organizationId, storedToken }, thunkAPI) => {
+    try {
+      const response = await apiKeyService.getApiKeysByOrganizationId(
+        organizationId,
+        storedToken
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response.data);
+    }
+  }
+);
+
+
 
 // Define the initial state
 const initialActiveOrganizationState = {
@@ -72,6 +89,7 @@ const initialActiveOrganizationState = {
   aiModelProviders: [],
   aiModelKeys: [],
   organizationPlans: {},
+  apiKeys: [],
   isBlurring: false,
   error: null,
 };
@@ -135,7 +153,22 @@ const activeOrganizationSlice = createSlice({
       .addCase(fetchOrganizationPlans.rejected, (state, action) => {
         state.isBlurring = false;
         state.error = action.payload;
+      })
+
+      // For fetching API keys
+      .addCase(fetchApiKeys.pending, (state) => {
+        state.isBlurring = true;
+        state.error = null;
+      })
+      .addCase(fetchApiKeys.fulfilled, (state, action) => {
+        state.isBlurring = false;
+        state.apiKeys = action.payload;
+      })
+      .addCase(fetchApiKeys.rejected , (state, action) => {
+        state.isBlurring = false;
+        state.error = action.payload;
       });
+
   },
 });
 
