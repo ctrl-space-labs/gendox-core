@@ -7,7 +7,14 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import authConfig from "src/configs/auth";
 import { StyledCardContent } from "src/utils/styledCardsContent";
-import { fetchOrganization, fetchAiModelProviders, fetchOrganizationAiModelKeys, fetchOrganizationPlans, fetchApiKeys } from "src/store/apps/activeOrganization/activeOrganization";
+import {
+  fetchOrganization,
+  fetchAiModelProviders,
+  fetchOrganizationAiModelKeys,
+  fetchOrganizationPlans,
+  fetchApiKeys,
+  fetchOrganizationWebSites,
+} from "src/store/apps/activeOrganization/activeOrganization";
 import OrganizationSettingsCard from "src/views/gendox-components/organization-settings/OrganizationSettingsCard";
 
 const OrganizationSettings = () => {
@@ -21,6 +28,8 @@ const OrganizationSettings = () => {
     (state) => state.activeOrganization.activeOrganization
   );
 
+  
+
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
@@ -32,6 +41,7 @@ const OrganizationSettings = () => {
       dispatch(fetchOrganizationAiModelKeys({ organizationId, storedToken }));
       dispatch(fetchOrganizationPlans({ organizationId, storedToken }));
       dispatch(fetchApiKeys({ organizationId, storedToken }));
+      dispatch(fetchOrganizationWebSites({ organizationId, storedToken }));
     }
     // }
   }, [organizationId, router, dispatch]);

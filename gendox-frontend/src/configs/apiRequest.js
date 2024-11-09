@@ -156,5 +156,14 @@ export default {
   updateApiKey: (organizationId, apiKeyId) =>
     `${url}organizations/${organizationId}/api-keys/${apiKeyId}`,
 
+  organizationWebSite: (organizationId) =>
+    `${url}organizations/${organizationId}/websites`,
+
+  updateOrganizationWebSite: (organizationId, organizationWebSiteId) =>
+    `${url}organizations/${organizationId}/websites/${organizationWebSiteId}`,
+
+  deleteOrganizationWebSite: (organizationId, organizationWebSiteId) =>
+    `${url}organizations/${organizationId}/websites/${organizationWebSiteId}`,
+
 
 };

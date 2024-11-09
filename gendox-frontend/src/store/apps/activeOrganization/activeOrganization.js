@@ -3,6 +3,7 @@ import organizationService from "src/gendox-sdk/organizationService";
 import aiModelService from "src/gendox-sdk/aiModelService";
 import subscriptionPlanService from "src/gendox-sdk/subscriptionPlanService";
 import apiKeyService from "src/gendox-sdk/apiKeyService";
+import organizationWebSiteService from "src/gendox-sdk/organizationWebSiteService";
 
 // Define an async thunk for fetching an organization by ID
 export const fetchOrganization = createAsyncThunk(
@@ -73,6 +74,21 @@ export const fetchApiKeys = createAsyncThunk(
       const response = await apiKeyService.getApiKeysByOrganizationId(
         organizationId,
         storedToken
+      );      
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response.data);
+    }
+  }
+);
+
+export const fetchOrganizationWebSites = createAsyncThunk(
+  "activeOrganization/fetchOrganizationWebSites",  
+  async ({ organizationId, storedToken }, thunkAPI) => {    
+    try {
+      const response = await organizationWebSiteService.getOrganizationWebSitesByOrganizationId(
+        organizationId,
+        storedToken
       );
       return response.data;
     } catch (error) {
@@ -90,8 +106,10 @@ const initialActiveOrganizationState = {
   aiModelKeys: [],
   organizationPlans: {},
   apiKeys: [],
+  organizationWebSites: [],
   isBlurring: false,
   error: null,
+  
 };
 
 // Create the slice
@@ -167,6 +185,22 @@ const activeOrganizationSlice = createSlice({
       .addCase(fetchApiKeys.rejected , (state, action) => {
         state.isBlurring = false;
         state.error = action.payload;
+      })
+
+      // For fetching organization websites
+      .addCase(fetchOrganizationWebSites.pending, (state) => {
+        state.isBlurring = true;
+        state.error = null;
+      })
+      .addCase(fetchOrganizationWebSites.fulfilled, (state, action) => {
+        state.isBlurring = false;
+        state.organizationWebSites = action.payload;        
+      })
+      
+      .addCase(fetchOrganizationWebSites.rejected, (state, action) => {
+        state.isBlurring = false;
+        state.error = action.payload;
+        
       });
 
   },
