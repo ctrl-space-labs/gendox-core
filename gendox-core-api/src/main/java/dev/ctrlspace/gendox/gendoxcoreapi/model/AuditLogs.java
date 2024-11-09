@@ -41,6 +41,9 @@ public class AuditLogs {
     @Column(name = "organization_id")
     private UUID organizationId;
     @Basic
+    @Column(name = "audit_value")
+    private Long auditValue;
+    @Basic
     @Column(name = "created_at")
     @CreatedDate
     private Instant createdAt;
@@ -121,6 +124,10 @@ public class AuditLogs {
         this.organizationId = organizationId;
     }
 
+    public Long  getAuditValue() {return auditValue;}
+
+    public void setAuditValue(Long  auditValue) {this.auditValue = auditValue;}
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -158,11 +165,11 @@ public class AuditLogs {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         AuditLogs auditLogs = (AuditLogs) o;
-        return Objects.equals(id, auditLogs.id) && Objects.equals(projectId, auditLogs.projectId) && Objects.equals(userId, auditLogs.userId) && Objects.equals(tokenCount, auditLogs.tokenCount) && Objects.equals(type, auditLogs.type) && Objects.equals(traceId, auditLogs.traceId) && Objects.equals(spanId, auditLogs.spanId) && Objects.equals(organizationId, auditLogs.organizationId) && Objects.equals(createdAt, auditLogs.createdAt) && Objects.equals(updatedAt, auditLogs.updatedAt) && Objects.equals(createdBy, auditLogs.createdBy) && Objects.equals(updatedBy, auditLogs.updatedBy);
+        return Objects.equals(id, auditLogs.id) && Objects.equals(projectId, auditLogs.projectId) && Objects.equals(userId, auditLogs.userId) && Objects.equals(tokenCount, auditLogs.tokenCount) && Objects.equals(type, auditLogs.type) && Objects.equals(traceId, auditLogs.traceId) && Objects.equals(spanId, auditLogs.spanId) && Objects.equals(organizationId, auditLogs.organizationId) && Objects.equals(auditValue, auditLogs.auditValue) && Objects.equals(createdAt, auditLogs.createdAt) && Objects.equals(updatedAt, auditLogs.updatedAt) && Objects.equals(createdBy, auditLogs.createdBy) && Objects.equals(updatedBy, auditLogs.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, projectId, userId, tokenCount, type, traceId, spanId, organizationId, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, projectId, userId, tokenCount, type, traceId, spanId, organizationId, auditValue, createdAt, updatedAt, createdBy, updatedBy);
     }
 }

@@ -6,6 +6,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.JwtDTOUserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AuditLogs;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
@@ -65,6 +67,8 @@ public class UserService implements UserDetailsService {
 
     private UserOrganizationService userOrganizationService;
 
+    private AuditLogsService auditLogsService;
+
 
     @Autowired
     public UserService(UserRepository userRepository,
@@ -78,7 +82,9 @@ public class UserService implements UserDetailsService {
                        AuthenticationService authenticationService,
                        UserConverter userConverter,
                        UserOrganizationService userOrganizationService,
-                       ProjectMemberService projectMemberService) {
+                       ProjectMemberService projectMemberService,
+                       AiModelService aiModelService,
+                       AuditLogsService auditLogsService) {
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
@@ -91,6 +97,7 @@ public class UserService implements UserDetailsService {
         this.userConverter = userConverter;
         this.userOrganizationService = userOrganizationService;
         this.projectMemberService = projectMemberService;
+        this.auditLogsService = auditLogsService;
     }
 
     public Page<User> getAllUsers(UserCriteria criteria) {
@@ -323,6 +330,10 @@ public class UserService implements UserDetailsService {
         deactivateUser(user);
         clearUserData(user);
         userRepository.save(user);
+
+        Type deleteUserType = typeService.getAuditLogTypeByName("DELETE_USER");
+        AuditLogs deleteProjectAuditLogs = auditLogsService.createDefaultAuditLogs(deleteUserType);
+        auditLogsService.saveAuditLogs(deleteProjectAuditLogs);
     }
 
     private void deactivateUser(User user) throws GendoxException {

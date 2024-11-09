@@ -46,6 +46,8 @@ public class CompletionService {
 
     private OrganizationModelKeyService organizationModelKeyService;
 
+    private AuditLogsService auditLogsService;
+
 
     private AiModelUtils aiModelUtils;
     @Autowired
@@ -62,7 +64,8 @@ public class CompletionService {
                              TrainingService trainingService,
                              OrganizationModelKeyService organizationModelKeyService,
                              MessageService messageService,
-                             DocumentSectionService documentSectionService) {
+                             DocumentSectionService documentSectionService,
+                             AuditLogsService auditLogsService) {
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
         this.embeddingService = embeddingService;
@@ -75,7 +78,7 @@ public class CompletionService {
         this.organizationModelKeyService = organizationModelKeyService;
         this.messageService = messageService;
         this.documentSectionService = documentSectionService;
-    }
+        this.auditLogsService = auditLogsService;}
 
     private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
                                                  AiModelRequestParams aiModelRequestParams, String apiKey) throws GendoxException {
@@ -131,12 +134,22 @@ public class CompletionService {
                 aiModelRequestParams,
                 apiKey);
 
+        //        completion request audits
+        Type completionRequestType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
+        AuditLogs requestAuditLogs = auditLogsService.createDefaultAuditLogs(completionRequestType);
+        requestAuditLogs.setTokenCount((long) completionResponse.getUsage().getPromptTokens());
+        requestAuditLogs.setProjectId(projectId);
+        requestAuditLogs.setOrganizationId(project.getOrganizationId());
+        auditLogsService.saveAuditLogs(requestAuditLogs);
 
+        //        completion completion audits
+        Type completionResponseType = typeService.getAuditLogTypeByName("COMPLETION_RESPONSE");
+        AuditLogs completionAuditLogs = auditLogsService.createDefaultAuditLogs( completionResponseType);
+        completionAuditLogs.setTokenCount((long) completionResponse.getUsage().getCompletionTokens());
+        completionAuditLogs.setProjectId(projectId);
+        completionAuditLogs.setOrganizationId(project.getOrganizationId());
+        auditLogsService.saveAuditLogs(completionAuditLogs);
 
-
-        Type completionType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
-        // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)
-        AuditLogs auditLogs = embeddingService.createAuditLogs(projectId, (long) completionResponse.getUsage().getTotalTokens(), completionType);
         Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
 
         completionResponseMessage.setProjectId(projectId);

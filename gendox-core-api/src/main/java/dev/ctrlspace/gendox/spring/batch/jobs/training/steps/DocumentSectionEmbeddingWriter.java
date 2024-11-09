@@ -6,6 +6,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectDocumentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -27,62 +29,67 @@ public class DocumentSectionEmbeddingWriter implements ItemWriter<SectionEmbeddi
     private EmbeddingService embeddingService;
     private TypeService typeService;
     private ProjectDocumentRepository projectDocumentRepository;
+    private Tracer tracer;
 
     @Autowired
     public DocumentSectionEmbeddingWriter(OpenAiEmbeddingConverter openAiEmbeddingConverter,
                                           TypeService typeService,
                                           ProjectDocumentRepository projectDocumentRepository,
-                                          EmbeddingService embeddingService) {
+                                          EmbeddingService embeddingService,
+                                          Tracer tracer) {
         this.openAiEmbeddingConverter = openAiEmbeddingConverter;
         this.typeService = typeService;
         this.embeddingService = embeddingService;
         this.projectDocumentRepository = projectDocumentRepository;
+        this.tracer = tracer;
     }
+
     @Override
     public void write(Chunk<? extends SectionEmbeddingDTO> sectionEmbeddingChunk) throws Exception {
 
-        logger.debug("Start writing embeddings chunk");
 
-        // Collect all document IDs and section IDs
-        Set<UUID> documentIds = new HashSet<>();
-        Set<UUID> sectionIds = new HashSet<>();
+            // Collect all document IDs and section IDs
+            Set<UUID> documentIds = new HashSet<>();
+            Set<UUID> sectionIds = new HashSet<>();
 
-        for (SectionEmbeddingDTO sectionEmbeddingDTO : sectionEmbeddingChunk.getItems()) {
-            DocumentInstanceSection section = sectionEmbeddingDTO.section();
-            documentIds.add(section.getDocumentInstance().getId());
-            sectionIds.add(section.getId());
-        }
+            for (SectionEmbeddingDTO sectionEmbeddingDTO : sectionEmbeddingChunk.getItems()) {
+                DocumentInstanceSection section = sectionEmbeddingDTO.section();
+                documentIds.add(section.getDocumentInstance().getId());
+                sectionIds.add(section.getId());
+            }
 
-        // Fetch existing projects outside of the loop
-        List<ProjectDocument> projectDocuments = projectDocumentRepository.findByDocumentIdIn(documentIds);
-        Map<UUID, Project> documentIdToProject = new HashMap<>();
-        for (ProjectDocument pd : projectDocuments) {
-            documentIdToProject.put(pd.getDocumentId(), pd.getProject());
-        }
+            // Fetch existing projects outside of the loop
+            List<ProjectDocument> projectDocuments = projectDocumentRepository.findByDocumentIdIn(documentIds);
+            Map<UUID, Project> documentIdToProject = new HashMap<>();
+            for (ProjectDocument pd : projectDocuments) {
+                documentIdToProject.put(pd.getDocumentId(), pd.getProject());
+            }
 
-        for (SectionEmbeddingDTO sectionEmbeddingDTO : sectionEmbeddingChunk.getItems()) {
+            for (SectionEmbeddingDTO sectionEmbeddingDTO : sectionEmbeddingChunk.getItems()) {
 
-            // TODO - refactor this to select the existing embeddings outside of the loop
-            // TODO - in the loop to update/create the Entities and the store them in the DB after the loop
+                // TODO - refactor this to select the existing embeddings outside of the loop
+                // TODO - in the loop to update/create the Entities and the store them in the DB after the loop
 
-            DocumentInstanceSection section = sectionEmbeddingDTO.section();
-            EmbeddingResponse embeddingResponse = sectionEmbeddingDTO.embeddingResponse();
-            UUID documentId = section.getDocumentInstance().getId();
-            // get project from map to not have multiple queries
-            Project project = documentIdToProject.get(documentId);
-            UUID organizationId = project.getOrganizationId();
-            UUID semanticSearchModelId = project.getProjectAgent().getSemanticSearchModel().getId();
-            UUID sectionId = section.getId();
-            UUID messageId = null;
-
-
-            embeddingService.upsertEmbeddingForText(embeddingResponse, project.getId(), null, sectionId, semanticSearchModelId, organizationId);
+                DocumentInstanceSection section = sectionEmbeddingDTO.section();
+                EmbeddingResponse embeddingResponse = sectionEmbeddingDTO.embeddingResponse();
+                UUID documentId = section.getDocumentInstance().getId();
+                // get project from map to not have multiple queries
+                Project project = documentIdToProject.get(documentId);
+                UUID organizationId = project.getOrganizationId();
+                UUID semanticSearchModelId = project.getProjectAgent().getSemanticSearchModel().getId();
+                UUID sectionId = section.getId();
+                UUID messageId = null;
 
 
+                embeddingService.upsertEmbeddingForText(embeddingResponse, project.getId(), null, sectionId, semanticSearchModelId, organizationId);
 
-        }
 
-        logger.debug("Finished writing embeddings chunk");
+            }
 
+            logger.debug("Finished writing embeddings chunk");
+
+//        } finally {
+//            span.end();
+//        }
     }
 }

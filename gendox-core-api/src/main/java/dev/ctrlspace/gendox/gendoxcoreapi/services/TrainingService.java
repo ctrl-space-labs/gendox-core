@@ -100,6 +100,8 @@ public class TrainingService {
                 agentSectionTemplate.getText() // Pass the template text here
         );
 
+        logger.trace("Section value with template for embedding: {}", sectionValue);
+
         EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(project.getProjectAgent(),
                 sectionValue,
                 project.getProjectAgent().getSemanticSearchModel());

@@ -66,6 +66,8 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
                     agentSectionTemplate.getText()
             );
 
+            logger.trace("Section value with template for embedding: {}", sectionValue);
+
             embeddingResponse = embeddingService.getEmbeddingForMessage(projectAgent, sectionValue, projectAgent.getSemanticSearchModel());
         } catch (Exception e) {
             logger.warn("Error {} getting Embedding for section {}. Skipping...", e.getMessage(), item.getId());
