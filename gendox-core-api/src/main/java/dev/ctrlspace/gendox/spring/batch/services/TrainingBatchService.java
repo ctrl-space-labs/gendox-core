@@ -71,6 +71,7 @@ public class TrainingBatchService {
         BatchExecutionCriteria criteria = BatchExecutionCriteria.builder()
                 .jobName(documentTrainingJobName)
                 .status("COMPLETED")
+                .exitCode("COMPLETED")
                 .build();
 
         Sort sort = Sort.by(Sort.Direction.DESC, "createTime");
