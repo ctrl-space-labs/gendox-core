@@ -34,7 +34,7 @@ public class OrganizationWebSiteController {
     public OrganizationWebSite createOrganizationWebSite(@PathVariable UUID organizationId,
                                                          @RequestBody OrganizationWebSiteDTO organizationWebSiteDTO) {
 
-        return organizationWebSiteService.createOrganizationWebSite(organizationWebSiteDTO);
+        return organizationWebSiteService.createOrganizationWebSite(organizationWebSiteDTO, organizationId);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")

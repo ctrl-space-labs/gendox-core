@@ -11,6 +11,7 @@ import {
 const OrganizationWebSiteDialog = ({ open, onClose, onSave, name, url }) => {
   const [siteName, setSiteName] = useState(name || "");
   const [siteUrl, setSiteUrl] = useState(url || "");
+  const [urlError, setUrlError] = useState("");
 
   useEffect(() => {
     // Update local state whenever the props change
@@ -18,9 +19,19 @@ const OrganizationWebSiteDialog = ({ open, onClose, onSave, name, url }) => {
     setSiteUrl(url || "");
   }, [name, url]);
 
+  const validateUrl = (url) => {
+    // Regex to check for http(s)://, at least one letter before ".", and at least two letters after "."
+    const urlPattern = /^(https?:\/\/)([A-Za-z0-9.-]+)\.([A-Za-z]{2,})(\/.*)?$/;
+    return urlPattern.test(url);
+  };
+
   const handleSave = () => {
     if (siteName.trim() === "" || siteUrl.trim() === "") {
       return; // Validation - Ensure both fields are filled
+    }
+    if (!validateUrl(siteUrl)) {
+      setUrlError("URL must start with http:// or https:// and be a valid domain.");
+      return;
     }
     onSave(siteName, siteUrl);
     handleClose(); // Reset fields and close dialog after save
@@ -29,6 +40,7 @@ const OrganizationWebSiteDialog = ({ open, onClose, onSave, name, url }) => {
   const handleClose = () => {
     setSiteName("");
     setSiteUrl("");
+    setUrlError("");
     onClose();
   };
 
@@ -56,6 +68,8 @@ const OrganizationWebSiteDialog = ({ open, onClose, onSave, name, url }) => {
           value={siteUrl}
           onChange={(e) => setSiteUrl(e.target.value)}
           required
+          error={!!urlError}
+          helperText={urlError}
           sx={{ mt: 2 }}
         />
       </DialogContent>

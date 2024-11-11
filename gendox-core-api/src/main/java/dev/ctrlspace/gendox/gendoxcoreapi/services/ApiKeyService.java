@@ -35,7 +35,9 @@ public class ApiKeyService {
 
     public ApiKey createApiKey(ApiKeyDTO apiKeyDTO) {
         ApiKey apiKey=apiKeyConverter.toEntity(apiKeyDTO);
-        String generatedApiKey = "gendox-" + UUID.randomUUID().toString();
+        String generatedApiKey = "gxsk-" + UUID.randomUUID().toString().replace("-", "")
+                + UUID.randomUUID().toString().replace("-", "");
+
         apiKey.setApiKey(generatedApiKey);
         return apiKeyRepository.save(apiKey);
     }

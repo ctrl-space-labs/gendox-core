@@ -141,16 +141,19 @@ const AiModelProviderKey = () => {
 
   return (
     <>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          p: 2,
-        }}
-      >
-        <CardHeader title="AI Model Provider Key" />
-      </Box>
+      <CardHeader
+        title={
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <span>AI Model Provider Key</span>
+            <Tooltip title="Add or update API keys for AI services like OpenAI. Only the first and the last few characters of each key are shown for security.">
+              <IconButton color="primary" sx={{ ml: 1 }}>
+                <Icon icon="mdi:information-outline" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        }
+      />
+
       <CardContent>
         {aiModelProviders.map((item) => (
           <Grid item xs={12} sm={12} md={6} sx={{ mt: 3, mb: 4 }} key={item.id}>
