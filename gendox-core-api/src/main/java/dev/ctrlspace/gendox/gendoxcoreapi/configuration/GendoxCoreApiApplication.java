@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
+import dev.ctrlspace.gendox.integrations.gendoxnative.services.GendoxNativeIntegrationService;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeService;
 import dev.ctrlspace.gendox.spring.batch.jobs.SpringBatchConfiguration;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
@@ -47,6 +48,7 @@ import java.util.StringJoiner;
         LoggingObservationHandler.class,
         SpringBatchConfiguration.class,
         GendoxAuthenticationToken.class,
+        GendoxNativeIntegrationService.class,
         UniqueIdentifierCodeService.class
         })
 @EnableCaching
