@@ -70,10 +70,9 @@ public class UploadService {
 
     public DocumentInstance uploadFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException, GendoxException {
         String fileName = file.getOriginalFilename();
-        DocumentInstance instance =
-                documentService.getDocumentByFileName(projectId, organizationId, fileName);
+
         String fullFilePath = saveFile(file, organizationId, projectId);
-        String documentIsccCode = new String();
+
         //create Document Auditing
         Type createDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_CREATE");
         AuditLogs createDocumentAuditLogs = auditLogsService.createDefaultAuditLogs(createDocumentType);
@@ -81,6 +80,7 @@ public class UploadService {
         createDocumentAuditLogs.setProjectId(projectId);
         auditLogsService.saveAuditLogs(createDocumentAuditLogs);
 
+        String documentIsccCode = null;
         if (isccEnabled) {
             IsccCodeResponse isccCodeResponse = isccCodeService.getDocumentIsccCode(file, fileName);
             documentIsccCode = isccCodeResponse.getIscc();
@@ -92,21 +92,30 @@ public class UploadService {
             documentIsccCode = uniqueIdentifierCodeResponse.getUuid();
         }
 
+        DocumentInstance instance = upsertDocumentInstance(organizationId, projectId, fileName, fullFilePath, documentIsccCode);
+
+
+        return instance;
+    }
+
+    private DocumentInstance upsertDocumentInstance(UUID organizationId, UUID projectId, String fileName, String fullFilePath, String documentIsccCode) throws GendoxException {
+        DocumentInstance instance =
+                documentService.getDocumentByFileName(projectId, organizationId, fileName);
         if (instance == null) {
-            DocumentInstance documentInstance = new DocumentInstance();
+
+            instance = new DocumentInstance();
             // Generate a unique UUID
             UUID documentInstanceId = UUID.randomUUID();
 
-            documentInstance.setId(documentInstanceId);
-            documentInstance.setOrganizationId(organizationId);
-            documentInstance.setRemoteUrl(fullFilePath);
+            instance.setId(documentInstanceId);
+            instance.setOrganizationId(organizationId);
+            instance.setRemoteUrl(fullFilePath);
 //            ISCC code
 
-            documentInstance.setDocumentIsccCode(documentIsccCode);
-            documentInstance = documentService.createDocumentInstance(documentInstance);
+            instance.setDocumentIsccCode(documentIsccCode);
+            instance = documentService.createDocumentInstance(instance);
             // create project document
-            ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, documentInstance.getId());
-            return documentInstance;
+            ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, instance.getId());
 
         } else {
             instance.setRemoteUrl(fullFilePath);
@@ -123,8 +132,6 @@ public class UploadService {
             auditLogsService.saveAuditLogs(updateDocumentAuditLogs);
 
         }
-
-
         return instance;
     }
 
