@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface OrganizationPlanRepository extends JpaRepository<OrganizationPlan, UUID>, QuerydslPredicateExecutor<OrganizationPlan> {
@@ -20,6 +21,8 @@ public interface OrganizationPlanRepository extends JpaRepository<OrganizationPl
 
     @Query("SELECT o.subscriptionPlan.id FROM OrganizationPlan o WHERE o.organization.id = :organizationId")
     UUID findSubscriptionPlanIdByOrganizationId(@Param("organizationId") UUID organizationId);
+
+    List<OrganizationPlan> findAllByOrganizationId(UUID organizationId);
 
 
 

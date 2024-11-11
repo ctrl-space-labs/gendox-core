@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OrganizationWebSiteConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationPlan;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationWebSiteDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationWebSiteRepository;
@@ -14,12 +15,15 @@ import java.util.UUID;
 public class OrganizationWebSiteService {
     private OrganizationWebSiteRepository organizationWebSiteRepository;
     private OrganizationWebSiteConverter organizationWebSiteConverter;
+    private OrganizationPlanService organizationPlanService;
 
     @Autowired
     public OrganizationWebSiteService(OrganizationWebSiteRepository organizationWebSiteRepository,
-                                       OrganizationWebSiteConverter organizationWebSiteConverter) {
+                                       OrganizationWebSiteConverter organizationWebSiteConverter,
+                                       OrganizationPlanService organizationPlanService) {
         this.organizationWebSiteRepository = organizationWebSiteRepository;
         this.organizationWebSiteConverter = organizationWebSiteConverter;
+        this.organizationPlanService = organizationPlanService;
     }
 
     public OrganizationWebSite getById(UUID id) {
@@ -30,8 +34,19 @@ public class OrganizationWebSiteService {
         return organizationWebSiteRepository.findAllByOrganizationId(organizationId);
     }
 
-    public OrganizationWebSite createOrganizationWebSite(OrganizationWebSiteDTO organizationWebSiteDTO) {
+    public OrganizationWebSite createOrganizationWebSite(OrganizationWebSiteDTO organizationWebSiteDTO, UUID organizationId) {
         OrganizationWebSite organizationWebSite = organizationWebSiteConverter.toEntity(organizationWebSiteDTO);
+        List<OrganizationWebSite> organizationWebSites = this.getAllByOrganizationId(organizationId);
+        // Calculate the maximum allowed websites based on the organization's plan
+        int maxWebSites = organizationPlanService.getAllOrganizationPlansByOrganizationId(organizationId).stream()
+                .mapToInt(plan -> plan.getSubscriptionPlan().getOrganizationWebSites() * plan.getNumberOfSeats())
+                .sum();
+
+        // Check if adding a new website exceeds the allowed limit
+        if (organizationWebSites.size() >= maxWebSites) {
+            throw new IllegalStateException("Maximum number of websites reached for this organization");
+        }
+
         return organizationWebSiteRepository.save(organizationWebSite);
     }
 
