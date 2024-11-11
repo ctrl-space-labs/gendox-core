@@ -40,6 +40,8 @@ public class ProjectService {
 
     private AuditLogsService auditLogsService;
 
+    private OrganizationService organizationService;
+
 
     @Autowired
     public ProjectService(ProjectRepository projectRepository,
@@ -49,7 +51,8 @@ public class ProjectService {
                           UserOrganizationService userOrganizationService,
                           ProjectMemberRepository projectMemberRepository,
                           TypeService typeService,
-                          AuditLogsService auditLogsService) {
+                          AuditLogsService auditLogsService,
+                          OrganizationService organizationService) {
         this.projectRepository = projectRepository;
         this.projectAgentService = projectAgentService;
         this.projectConverter = projectConverter;
@@ -58,6 +61,7 @@ public class ProjectService {
         this.projectMemberRepository = projectMemberRepository;
         this.typeService = typeService;
         this.auditLogsService = auditLogsService;
+        this.organizationService = organizationService;
     }
 
     public Project getProjectById(UUID id) throws GendoxException {
@@ -155,7 +159,10 @@ public class ProjectService {
                 continue;
             }
 
+            Organization organization = organizationService.getById(organizationId);
+            boolean isOrganizationDeactivated = "DEACTIVATED".equals(organization.getName());
             // Count the number of projects the user is associated with
+            if (!isOrganizationDeactivated) {
             long count = projectMemberRepository.countByUserId(userId);
 
             if (count <= 1) {
@@ -167,6 +174,7 @@ public class ProjectService {
                 );
             }
         }
+            }
 
         // Delete other associated data
         projectMemberService.deleteAllProjectMembers(project);
