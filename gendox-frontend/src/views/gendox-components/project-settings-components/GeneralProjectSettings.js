@@ -20,6 +20,7 @@ import Tooltip from "@mui/material/Tooltip";
 import projectService from "src/gendox-sdk/projectService";
 import documentService from "src/gendox-sdk/documentService";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
+import { useAuth } from "src/hooks/useAuth";
 
 
 const GeneralProjectSettings = () => {
@@ -41,6 +42,7 @@ const GeneralProjectSettings = () => {
   const [error, setError] = useState("");
   const [isBlurring, setIsBlurring] = useState(true);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const auth = useAuth();
 
   useEffect(() => {
     if (project) {
@@ -119,17 +121,30 @@ const GeneralProjectSettings = () => {
       setAlertMessage("Project deleted successfully!");
       setAlertOpen(true);
       handleDeleteClose(false);
-      setTimeout(() => {
-        router.push("/gendox/home");
-      }, 2000);  
+
+      const updatedOrganization = auth.user.organizations.find(
+        (org) => org.id === project.organizationId
+      );
+
+      const updatedProjects = updatedOrganization?.projects.filter(
+        (proj) => proj.id !== project.id
+      );
+
+      const firstActiveProject = updatedProjects[0]; 
+
+
+      router.push(`/gendox/home/?organizationId=${project.organizationId}&projectId=${firstActiveProject.id}`);
+    
     } catch (error) {
       console.error("Failed to delete project", error);
       setAlertMessage("Failed to delete the project!");
       setAlertOpen(true);
 
-      setTimeout(() => {
-        router.push("/gendox/home");
-      }, 2000); 
+      router.push("/gendox/home");
+
+      // setTimeout(() => {
+      //   router.push("/gendox/home");
+      // }, 2000); 
     }
   };
 
