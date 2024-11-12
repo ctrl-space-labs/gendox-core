@@ -54,3 +54,11 @@ WHERE NOT EXISTS (
     WHERE type_category = 'AUDIT_LOG_TYPE' AND name = 'DOCUMENT_DELETE'
 );
 
+INSERT INTO gendox_core.types (type_category, name, description)
+SELECT 'AUDIT_LOG_TYPE', 'EMBEDDING_RESPONSE', 'This is for embedding response auditing.'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.types
+    WHERE type_category = 'AUDIT_LOG_TYPE' AND name = 'EMBEDDING_RESPONSE'
+);
+

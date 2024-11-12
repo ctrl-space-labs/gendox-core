@@ -54,6 +54,8 @@ public class EmbeddingService {
 
     private OrganizationModelKeyService organizationModelKeyService;
 
+    private AuditLogsService auditLogsService;
+
 
     @Autowired
     public EmbeddingService(
@@ -70,7 +72,8 @@ public class EmbeddingService {
             ProvenAiService provenAiService,
             DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter,
             SearchResultConverter searchResultConverter,
-            OrganizationModelKeyService organizationModelKeyService
+            OrganizationModelKeyService organizationModelKeyService,
+            AuditLogsService auditLogsService
     ) {
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
@@ -86,6 +89,7 @@ public class EmbeddingService {
         this.searchResultConverter = searchResultConverter;
         this.projectAgentService = projectAgentService;
         this.organizationModelKeyService = organizationModelKeyService;
+        this.auditLogsService = auditLogsService;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -112,11 +116,6 @@ public class EmbeddingService {
      */
 
     public Embedding upsertEmbeddingForText(EmbeddingResponse embeddingResponse, UUID projectId, @Nullable UUID messageId, @Nullable UUID sectionId, UUID semanticSearchModelId, UUID organizationId) throws GendoxException {
-
-        Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_REQUEST");
-        AuditLogs auditLogs = new AuditLogs();
-        auditLogs = createAuditLogs(projectId, (long) embeddingResponse.getUsage().getTotalTokens(), embeddingType);
-
 
         // TODO investigate merging Embedding and EmbeddingGroup to one table
 
@@ -168,10 +167,25 @@ public class EmbeddingService {
         return this.getEmbeddingForMessage(agent, botRequest, aiModel);
     }
 
+    @Observed(name = "EmbeddingService.getEmbeddingForMessage",
+            contextualName = "EmbeddingService#getEmbeddingForMessage",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public EmbeddingResponse getEmbeddingForMessage(ProjectAgent agent, BotRequest botRequest, AiModel aiModel) throws GendoxException {
         String apiKey = this.getApiKey(agent, "SEMANTIC_SEARCH_MODEL");
         AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
-        EmbeddingResponse embeddingResponse = aiModelApiAdapterService.askEmbedding(botRequest, aiModel, apiKey );
+        EmbeddingResponse embeddingResponse = aiModelApiAdapterService.askEmbedding(botRequest, aiModel, apiKey);
+
+        Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_RESPONSE");
+        AuditLogs auditLogs = auditLogsService.createDefaultAuditLogs(embeddingType);
+        auditLogs.setTokenCount((long) embeddingResponse.getUsage().getTotalTokens());
+        auditLogs.setOrganizationId(agent.getProject().getOrganizationId());
+        auditLogs.setProjectId(agent.getProject().getId());
+        auditLogsService.saveAuditLogs(auditLogs);
 
         return embeddingResponse;
     }
@@ -184,17 +198,7 @@ public class EmbeddingService {
         return organizationModelProviderKey.getKey();
     }
 
-    public AuditLogs createAuditLogs(UUID projectId, Long tokenCount, Type auditType) {
-        AuditLogs auditLog = new AuditLogs();
-        auditLog.setUserId(securityUtils.getUserId());
-        auditLog.setProjectId(projectId);
-        auditLog.setTokenCount(tokenCount);
-        auditLog.setType(auditType);
 
-        auditLog = auditLogsRepository.save(auditLog);
-
-        return auditLog;
-    }
 
 
     public EmbeddingGroup createEmbeddingGroup(UUID embeddingId, Double tokenCount, UUID message_id, UUID sectionId, UUID projectId) throws GendoxException {
