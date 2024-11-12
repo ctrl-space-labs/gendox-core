@@ -13,9 +13,8 @@ import java.util.UUID;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "organization_model_provider_keys", schema = "gendox_core")
-public class OrganizationModelProviderKey {
-
+@Table(name = "organization_web_sites", schema= "gendox_core" )
+public class OrganizationWebSite {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Id
     @Column(name = "id", nullable = false)
@@ -23,12 +22,12 @@ public class OrganizationModelProviderKey {
     @Basic
     @Column(name = "organization_id", nullable = false)
     private UUID organizationId;
-    @ManyToOne
-    @JoinColumn(name = "ai_model_provider_id", referencedColumnName = "id", nullable = false)
-    private AiModelProvider aiModelProvider;
     @Basic
-    @Column(name = "key", nullable = false, length = 1024)
-    private String key;
+    @Column(name = "name", nullable = false, length = 1024)
+    private String name;
+    @Basic
+    @Column(name = "url", nullable = false, length = 1024)
+    private String url;
     @Basic
     @Column(name = "created_at", nullable = true)
     @CreatedDate
@@ -37,7 +36,6 @@ public class OrganizationModelProviderKey {
     @Column(name = "updated_at", nullable = true)
     @LastModifiedDate
     private Instant updatedAt;
-
     @Basic
     @Column(name = "created_by")
     @CreatedBy
@@ -46,6 +44,7 @@ public class OrganizationModelProviderKey {
     @Column(name = "updated_by")
     @LastModifiedBy
     private UUID updatedBy;
+
 
     public UUID getId() {
         return id;
@@ -63,20 +62,20 @@ public class OrganizationModelProviderKey {
         this.organizationId = organizationId;
     }
 
-    public AiModelProvider getAiModelProvider() {
-        return aiModelProvider;
+    public String getName() {
+        return name;
     }
 
-    public void setAiModelProvider(AiModelProvider aiModelProvider) {
-        this.aiModelProvider = aiModelProvider;
+    public void setName(String name) {
+        this.name = name;
     }
 
-    public String getKey() {
-        return key;
+    public String getUrl() {
+        return url;
     }
 
-    public void setKey(String key) {
-        this.key = key;
+    public void setUrl(String url) {
+        this.url = url;
     }
 
     public Instant getCreatedAt() {
@@ -111,17 +110,16 @@ public class OrganizationModelProviderKey {
         this.updatedBy = updatedBy;
     }
 
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        OrganizationModelProviderKey that = (OrganizationModelProviderKey) o;
-        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(aiModelProvider, that.aiModelProvider) && Objects.equals(key, that.key) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy);
+        OrganizationWebSite that = (OrganizationWebSite) o;
+        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(name, that.name) && Objects.equals(url, that.url) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organizationId, aiModelProvider, key, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, organizationId, name, url, createdAt, updatedAt, createdBy, updatedBy);
     }
 }
