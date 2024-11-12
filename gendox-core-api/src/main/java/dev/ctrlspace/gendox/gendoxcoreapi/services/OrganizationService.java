@@ -12,6 +12,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepositor
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.WalletKeyRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
+import org.apache.commons.lang3.NotImplementedException;
 import org.junit.platform.commons.logging.Logger;
 import org.junit.platform.commons.logging.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -227,5 +228,24 @@ public class OrganizationService {
         organization.setCreatedAt(null);
     }
 
+
+    /**
+     * Get organization profile to be used when API key is used for authentication, instead of JWT
+     *
+     * @param organizationId the organization id
+     * @param roleType the user role level to get access
+     *                 eg. if ROLE_ADMIN, the api key has permissions as is it was an organization user
+     * @return
+     * @throws GendoxException
+     */
+//    TODO add evict cash upon key update for
+//    @Cacheable(value = "OrganizationProfileByApiKey", keyGenerator = "gendoxKeyGenerator")
+    public UserProfile getOrganizationProfileById(UUID organizationId, String roleType) throws GendoxException {
+
+        // TODO construct user profile similar to to user with role 'roleType' in the organization
+
+        throw new NotImplementedException("Not implemented yet");
+//        return userProfile;
+    }
 
 }
