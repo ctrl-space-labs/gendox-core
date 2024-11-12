@@ -29,12 +29,20 @@ public class ApiKeyService {
         return apiKeyRepository.findById(id).orElse(null);
     }
 
+    public ApiKey getOrganizationId(String apiKey) throws GendoxException {
+        return apiKeyRepository
+                .findByApiKey(apiKey)
+                .orElseThrow(
+                        () -> new GendoxException("API_KEY_NOT_FOUND", "ApiKey not found", HttpStatus.NOT_FOUND)
+                );
+    }
+
     public List<ApiKey> getAllByOrganizationId(UUID organizationId) {
         return apiKeyRepository.findAllByOrganizationId(organizationId);
     }
 
     public ApiKey createApiKey(ApiKeyDTO apiKeyDTO) {
-        ApiKey apiKey=apiKeyConverter.toEntity(apiKeyDTO);
+        ApiKey apiKey = apiKeyConverter.toEntity(apiKeyDTO);
         String generatedApiKey = "gxsk-" + UUID.randomUUID().toString().replace("-", "")
                 + UUID.randomUUID().toString().replace("-", "");
 
@@ -51,7 +59,7 @@ public class ApiKeyService {
         return apiKeyRepository.save(existingApiKey);
     }
 
-    public void deleteApiKey(UUID id) throws GendoxException{
+    public void deleteApiKey(UUID id) throws GendoxException {
         if (!apiKeyRepository.existsById(id)) {
             throw (new GendoxException("APIKEY_NOT_FOUND", "ApiKey not found", HttpStatus.NOT_FOUND));
         }
