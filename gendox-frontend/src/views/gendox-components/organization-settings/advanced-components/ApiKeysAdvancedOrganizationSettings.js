@@ -146,9 +146,18 @@ const ApiKeysAdvancedOrganizationSettings = () => {
   };
 
   return (
-    <Card>
+    <>
       <CardHeader
-        title="API Keys"
+        title={
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <span>API Keys</span>
+            <Tooltip title="Create and manage API keys for Gendox access. Keys are secure and only visible at creation, so keep them safe!">
+              <IconButton color="primary" sx={{ ml: 1 }}>
+                <Icon icon="mdi:information-outline" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        }
         action={
           <Tooltip title="Create New API Key">
             <IconButton color="primary" onClick={handleCreateClickOpen}>
@@ -230,7 +239,7 @@ const ApiKeysAdvancedOrganizationSettings = () => {
         onClose={() => setOpenCreateDialog(false)}
         onSave={handleCreateApiKey}
       />
-    </Card>
+    </>
   );
 };
 

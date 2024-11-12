@@ -31,7 +31,6 @@ const WebsitesAdvancedOrganizationSettings = () => {
     (state) => state.activeOrganization
   );
 
-
   const [selectedWebSiteUrl, setSelectedWebSiteUrl] = useState(null);
   const [selectedWebSiteName, setSelectedWebSiteName] = useState("");
   const [selectedWebSiteId, setSelectedWebSiteId] = useState(null);
@@ -47,7 +46,7 @@ const WebsitesAdvancedOrganizationSettings = () => {
   };
 
   const handleCreateClickOpen = () => {
-    setSelectedWebSiteUrl(null); 
+    setSelectedWebSiteUrl(null);
     setSelectedWebSiteName("");
     setOpenWebSiteDialog(true);
   };
@@ -65,7 +64,7 @@ const WebsitesAdvancedOrganizationSettings = () => {
       const payload = {
         organizationId,
         name,
-        url
+        url,
       };
 
       await organizationWebSiteService.createOrganizationWebSite(
@@ -93,7 +92,7 @@ const WebsitesAdvancedOrganizationSettings = () => {
       const payload = {
         organizationId,
         name: newName,
-        url: newUrl
+        url: newUrl,
       };
 
       await organizationWebSiteService.updateOrganizationWebSite(
@@ -137,22 +136,32 @@ const WebsitesAdvancedOrganizationSettings = () => {
       toast.error("Failed to delete Organization Website");
       handleDeleteClose();
     }
-  };  
+  };
 
   const handleDeleteClose = () => setOpenDeleteDialog(false);
 
   return (
-    <Card>
+    <>
       <CardHeader
-        title="Web Sites"
+        title={
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <span>Websites</span>
+            <Tooltip title="Add trusted websites here to allow embedding the Gendox widget. Only listed websites can host the widget.">
+              <IconButton color="primary" sx={{ ml: 1 }}>
+                <Icon icon="mdi:information-outline" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        }
         action={
-          <Tooltip title="Create New Web Site">
+          <Tooltip title="Create New Website">
             <IconButton color="primary" onClick={handleCreateClickOpen}>
               <Icon icon="mdi:plus" />
             </IconButton>
           </Tooltip>
         }
       />
+
       <CardContent>
         {organizationWebSites.map((item) => (
           <Grid item xs={12} sm={12} md={6} sx={{ mt: 3, mb: 4 }} key={item.id}>
@@ -196,10 +205,13 @@ const WebsitesAdvancedOrganizationSettings = () => {
       <OrganizationWebSiteDialog
         open={openWebSiteDialog}
         onClose={() => setOpenWebSiteDialog(false)}
-        onSave={selectedWebSiteUrl ? handleUpdateOrganizationWebsite : handleCreateOrganizationWebsite}
+        onSave={
+          selectedWebSiteUrl
+            ? handleUpdateOrganizationWebsite
+            : handleCreateOrganizationWebsite
+        }
         name={selectedWebSiteName}
         url={selectedWebSiteUrl}
-        
       />
 
       {/* Render the DeleteConfirmDialog */}
@@ -212,7 +224,7 @@ const WebsitesAdvancedOrganizationSettings = () => {
         confirmButtonText="Delete"
         cancelButtonText="Cancel"
       />
-    </Card>
+    </>
   );
 };
 
