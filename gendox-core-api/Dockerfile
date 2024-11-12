@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jdk
+FROM eclipse-temurin:21-jdk-alpine
 VOLUME /tmp
 
 # Copy the built JAR file from the local app.jar
