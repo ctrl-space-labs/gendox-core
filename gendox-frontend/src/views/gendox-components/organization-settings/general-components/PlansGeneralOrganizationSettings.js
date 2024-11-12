@@ -37,39 +37,17 @@ const PlansOrganizationSettings = () => {
   const organization = useSelector(
     (state) => state.activeOrganization.activeOrganization
   );
+
+  const organizationPlan = useSelector(
+    (state) => state.activeOrganization.organizationPlans
+  );
+
+
   const { id: organizationId } = organization;
 
-  const [organizationPlan, setOrganizationPlan] = useState([]);
   const [isBlurring, setIsBlurring] = useState(false);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-
-  useEffect(() => {
-    if (organizationId) {
-      fetchOrganizationPlans();
-    }
-  }, [organizationId]);
-
-  const fetchOrganizationPlans = async () => {
-    setIsBlurring(true);
-    try {
-      const response = await subscriptionPlanService.getOrganizationPlans(
-        organizationId,
-        storedToken
-      );
-      console.log("RESPONSE", response);
-      if (response.data) {
-        setOrganizationPlan(response.data);
-      } else {
-        // If no plans were found in the response, clear the organizationPlan
-        setOrganizationPlan(null);
-      }
-
-      setIsBlurring(false);
-    } catch (error) {
-      console.error("Failed to fetch organization plans.");
-      setIsBlurring(false);
-    }
-  };
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);  
+  
 
   const handleCancelSubscription = () => setOpenDeleteDialog(true);
 
@@ -79,8 +57,7 @@ const PlansOrganizationSettings = () => {
         organizationPlan.id,
         organizationId,
         storedToken
-      );
-      setOrganizationPlan(null);
+      );      
       toast.success("Subscription canceled successfully");
     } catch (error) {
       console.error("Failed to cancel subscription:", error);
@@ -94,7 +71,7 @@ const PlansOrganizationSettings = () => {
   const handleDeleteClose = () => setOpenDeleteDialog(false);
 
   return (
-    <Card>
+    <>
       <Box
         sx={{
           display: "flex",
@@ -176,7 +153,7 @@ const PlansOrganizationSettings = () => {
 
             {/* Date Section */}
             <Grid item xs={12}>
-              <Divider sx={{ mb: 2 }} />
+             
               <Typography
                 variant="h6"
                 sx={{ mb: 2, color: theme.palette.primary.main }}
@@ -214,7 +191,6 @@ const PlansOrganizationSettings = () => {
 
             {/* Rate Limits Section */}
             <Grid item xs={12}>
-              <Divider sx={{ mb: 2 }} />
               <Typography
                 variant="h6"
                 sx={{ mb: 2, color: theme.palette.primary.main }}
@@ -252,7 +228,6 @@ const PlansOrganizationSettings = () => {
 
             {/* Additional Info Section */}
             <Grid item xs={12}>
-              <Divider sx={{ mb: 2 }} />
               <Typography
                 variant="h6"
                 sx={{ mb: 2, color: theme.palette.primary.main }}
@@ -360,7 +335,7 @@ const PlansOrganizationSettings = () => {
         confirmButtonText="Yes, Cancel"
         cancelButtonText="No, Keep"
       />
-    </Card>
+    </>
   );
 };
 
