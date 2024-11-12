@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/router";
 import { useSelector, useDispatch } from "react-redux";
 import { useAuth } from "src/hooks/useAuth";
@@ -7,7 +7,14 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import authConfig from "src/configs/auth";
 import { StyledCardContent } from "src/utils/styledCardsContent";
-import { fetchOrganization } from "src/store/apps/activeOrganization/activeOrganization";
+import {
+  fetchOrganization,
+  fetchAiModelProviders,
+  fetchOrganizationAiModelKeys,
+  fetchOrganizationPlans,
+  fetchApiKeys,
+  fetchOrganizationWebSites,
+} from "src/store/apps/activeOrganization/activeOrganization";
 import OrganizationSettingsCard from "src/views/gendox-components/organization-settings/OrganizationSettingsCard";
 
 const OrganizationSettings = () => {
@@ -21,17 +28,20 @@ const OrganizationSettings = () => {
     (state) => state.activeOrganization.activeOrganization
   );
 
+  
+
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
 
   useEffect(() => {
     if (organizationId) {
-      setIsBlurring(true);
+      dispatch(fetchAiModelProviders({ organizationId, storedToken }));
       dispatch(fetchOrganization({ organizationId, storedToken }));
-      setTimeout(() => {
-        setIsBlurring(false);
-      }, 300);
+      dispatch(fetchOrganizationAiModelKeys({ organizationId, storedToken }));
+      dispatch(fetchOrganizationPlans({ organizationId, storedToken }));
+      dispatch(fetchApiKeys({ organizationId, storedToken }));
+      dispatch(fetchOrganizationWebSites({ organizationId, storedToken }));
     }
     // }
   }, [organizationId, router, dispatch]);

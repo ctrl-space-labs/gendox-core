@@ -1,7 +1,6 @@
 // ** React Imports
 import { useState } from "react";
 
-
 // ** MUI Imports
 import Tab from "@mui/material/Tab";
 import Card from "@mui/material/Card";
@@ -15,10 +14,9 @@ import Icon from "src/@core/components/icon";
 
 import GeneralOrganizationSettings from "src/views/gendox-components/organization-settings/GeneralOrganizationSettings";
 import MembersOrganizationSettings from "src/views/gendox-components/organization-settings/MembersOrganizationSettings";
-import PlansOrganizationSettings from "src/views/gendox-components/organization-settings/PlansOrganizationSettings";
+import AdvancedOrganizationSettings from "src/views/gendox-components/organization-settings/AdvancedOrganizationSettings";
 
-const OrganizationSettingsCard = () => { 
-
+const OrganizationSettingsCard = () => {
   // ** State for tabs
   const [value, setValue] = useState("general");
 
@@ -40,13 +38,14 @@ const OrganizationSettingsCard = () => {
             value="general"
             label={
               <Box sx={{ display: "flex", alignItems: "center" }}>
-                <Icon icon="mdi:cog" fontSize={20} />
+                <Icon icon="mdi:settings" fontSize={20} />
                 <Box component="span" sx={{ ml: 3 }}>
                   GENERAL
                 </Box>
               </Box>
             }
           />
+
           <Tab
             value="members"
             label={
@@ -58,13 +57,14 @@ const OrganizationSettingsCard = () => {
               </Box>
             }
           />
+
           <Tab
-            value="plans"
+            value="advancedSettings"
             label={
               <Box sx={{ display: "flex", alignItems: "center" }}>
-                <Icon icon="mdi:cash-sync" fontSize={20} />
+                <Icon icon="mdi:hammer-wrench" fontSize={20} />
                 <Box component="span" sx={{ ml: 3 }}>
-                  PLANS
+                  ADVANCED SETTINGS
                 </Box>
               </Box>
             }
@@ -80,8 +80,8 @@ const OrganizationSettingsCard = () => {
             <MembersOrganizationSettings />
           </TabPanel>
 
-          <TabPanel value="plans">
-            <PlansOrganizationSettings />
+          <TabPanel value="advancedSettings">
+            <AdvancedOrganizationSettings />
           </TabPanel>
         </CardContent>
       </TabContext>

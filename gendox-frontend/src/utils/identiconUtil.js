@@ -27,6 +27,7 @@ export const generateIdenticon = (text) => {
     }).toString();
 
 
+
     // Construct the src URL for the Avatar component
     return `data:image/svg+xml;base64,${data}`;
 };

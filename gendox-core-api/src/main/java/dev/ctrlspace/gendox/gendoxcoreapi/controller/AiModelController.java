@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModelProvider;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.AiModelService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,6 +35,16 @@ public class AiModelController {
 
 //        TODO: Implement the logic to get all ai-models by org ID and moler tier related to subscription plan
         return aiModelService.getAllActiveAiModelsByOrganizationId(organizationId);
+    }
+    
+
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @GetMapping("organizations/{organizationId}/ai-models/providers")
+    @Operation(summary = "Get all ai-model providers by organization ID",
+            description = "Retrieve all ai-model providers by organization ID. The user must have the appropriate permissions to access this.")
+    public List<AiModelProvider> getAllAiModelProviders(@PathVariable UUID organizationId) throws GendoxException {
+        return aiModelService.getAllAiModelProviders();
     }
 
    
