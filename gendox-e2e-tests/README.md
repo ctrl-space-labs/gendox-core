@@ -47,3 +47,4 @@ ADMIN_USER_PASSWORD=****
 
 The tests will be written using the Page Object Model pattern. For the time being, the tests are written in the `tests` directory and the page objects are in the `page-objects` directory.
 In there is also a directory `./page-objects/apis` that contains the equivalent of "page objects" for the API testing.
+

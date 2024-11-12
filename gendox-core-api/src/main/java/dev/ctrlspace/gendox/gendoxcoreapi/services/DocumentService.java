@@ -7,6 +7,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
 import dev.ctrlspace.provenai.iscc.IsccCodeResponse;
 import dev.ctrlspace.provenai.iscc.IsccCodeService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,11 +27,17 @@ import java.util.stream.Collectors;
 @Service
 public class DocumentService {
 
+    private static final Logger logger = LoggerFactory.getLogger(DocumentService.class);
+
     private DocumentInstanceRepository documentInstanceRepository;
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private DocumentSectionService documentSectionService;
 
     private ProjectDocumentService projectDocumentService;
+
+    private TypeService typeService;
+
+    private AuditLogsService auditLogsService;
 
 //    private IsccCodeService isccCodeService;
 
@@ -38,13 +46,16 @@ public class DocumentService {
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
                            DocumentSectionService documentSectionService,
                            DocumentInstanceSectionRepository documentInstanceSectionRepository,
-                           ProjectDocumentService projectDocumentService) {
+                           ProjectDocumentService projectDocumentService,
+                           TypeService typeService,
+                           AuditLogsService auditLogsService) {
 
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentSectionService = documentSectionService;
         this.projectDocumentService = projectDocumentService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
-    }
+        this.typeService = typeService;
+        this.auditLogsService = auditLogsService;}
 
 
     public DocumentInstance getDocumentInstanceById(UUID id) throws GendoxException {
@@ -148,16 +159,24 @@ public class DocumentService {
 
     public void deleteDocument(UUID documentIid, UUID projectId) throws GendoxException {
         DocumentInstance documentInstance = getDocumentInstanceById(documentIid);
-        documentSectionService.deleteSections(documentInstance.getDocumentInstanceSections());
-        projectDocumentService.deleteProjectDocument(documentIid, projectId);
-        documentInstanceRepository.delete(documentInstance);
+        deleteDocument(documentInstance, projectId);
+
     }
 
     public void deleteDocument(DocumentInstance documentInstance, UUID projectId) throws GendoxException {
         documentSectionService.deleteSections(documentInstance.getDocumentInstanceSections());
         projectDocumentService.deleteProjectDocument(documentInstance.getId(), projectId);
-        documentInstance.setDocumentInstanceSections(null);
+        documentInstance.getDocumentInstanceSections().clear();
         documentInstanceRepository.delete(documentInstance);
+
+        //delete Document Auditing
+        Type deleteDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_DELETE");
+        AuditLogs deleteDocumentAuditLogs = auditLogsService.createDefaultAuditLogs(deleteDocumentType);
+        deleteDocumentAuditLogs.setProjectId(projectId);
+        deleteDocumentAuditLogs.setOrganizationId(documentInstance.getOrganizationId());
+
+        auditLogsService.saveAuditLogs(deleteDocumentAuditLogs);
+
     }
 
 

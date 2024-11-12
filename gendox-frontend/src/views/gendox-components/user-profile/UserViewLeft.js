@@ -105,7 +105,7 @@ const UserViewLeft = ({ userData }) => {
 
   const { logout } = useAuth();
 
-  let identiconSrc = useMemo(() => generateIdenticon(userData.email), [userData.email]);
+  let identiconSrc = useMemo(() => generateIdenticon(userData.id), [userData.email]);
 
 
   // ** States

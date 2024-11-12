@@ -56,7 +56,7 @@ const UserDropdown = (props) => {
   // ** Vars
   const { direction } = settings;
 
-  const identiconSrc = useMemo(() => generateIdenticon(auth.user.email), [auth.user.email]);
+  const identiconSrc = useMemo(() => generateIdenticon(auth.user.id), [auth.user.email]);
 
 
   const handleDropdownOpen = (event) => {

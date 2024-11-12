@@ -19,7 +19,8 @@ public class EmbeddingTemplateAuthor {
         Map<String, String> values = new HashMap<>();
         values.put("documentTitle", documentTitle);
         values.put("sectionText", documentInstanceSection.getSectionValue());
-
+        values.put("source", "N/A");
+        values.put("user", "N/A");
         return values;
     }
 
