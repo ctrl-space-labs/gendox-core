@@ -31,6 +31,7 @@ public class OrganizationModelKeysController {
                 .build());
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_ORGANIZATION_MODEL_KEYS', 'getRequestedOrgIdFromPathVariable')")
     @GetMapping("/organizations/{organizationId}/model-keys/{modelKeyId}")
     public OrganizationModelProviderKey getById(@PathVariable UUID organizationId,
                                                 @PathVariable UUID modelKeyId) throws GendoxException {
