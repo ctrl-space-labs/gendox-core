@@ -10,6 +10,7 @@ import { fetchOrganization } from "src/store/apps/activeOrganization/activeOrgan
 import { fetchProject } from "src/store/apps/activeProject/activeProject";
 import userManager from "src/services/authService";
 import {AuthContext} from "./AuthContext";
+import {isInIframe} from "src/utils/commonUtils";
 
 
 const PKCEAuthProvider = ({ children, defaultProvider }) => {
@@ -32,13 +33,21 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
     if (returnUrl) {
       args = { redirect_uri: `${authConfig.oidcConfig.redirect_uri}?returnUrl=${encodeURIComponent(returnUrl)}` };
     }
-    userManager.signinRedirect(args);
+    if (isInIframe()) {
+      userManager.signinPopup(args);
+    } else {
+      userManager.signinRedirect(args);
+    }
   };
 
   const handleLogout = () => {
     // TODO call DELETE /profile/caches
     clearAuthState();
-    userManager.signoutRedirect();
+    if (isInIframe()) {
+      userManager.signoutPopup();
+    } else {
+      userManager.signoutRedirect();
+    }
   };
 
   const clearAuthState = () => {
