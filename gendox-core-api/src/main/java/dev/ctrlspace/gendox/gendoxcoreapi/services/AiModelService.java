@@ -61,6 +61,9 @@ public class AiModelService {
     }
 
 
+    public List<AiModelProvider> getAllAiModelProviders() {
+        return aiModelProviderRepository.findAll();
+    }
 
 
 }
