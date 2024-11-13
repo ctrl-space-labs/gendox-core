@@ -74,12 +74,7 @@ public class UploadService {
                 documentService.getDocumentByFileName(projectId, organizationId, fileName);
         String fullFilePath = saveFile(file, organizationId, projectId);
         String documentIsccCode = new String();
-        //create Document Auditing
-        Type createDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_CREATE");
-        AuditLogs createDocumentAuditLogs = auditLogsService.createDefaultAuditLogs(createDocumentType);
-        createDocumentAuditLogs.setOrganizationId(organizationId);
-        createDocumentAuditLogs.setProjectId(projectId);
-        auditLogsService.saveAuditLogs(createDocumentAuditLogs);
+
 
         if (isccEnabled) {
             IsccCodeResponse isccCodeResponse = isccCodeService.getDocumentIsccCode(file, fileName);
@@ -106,6 +101,14 @@ public class UploadService {
             documentInstance = documentService.createDocumentInstance(documentInstance);
             // create project document
             ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, documentInstance.getId());
+
+            //create Document Auditing
+            Type createDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_CREATE");
+            AuditLogs createDocumentAuditLogs = auditLogsService.createDefaultAuditLogs(createDocumentType);
+            createDocumentAuditLogs.setOrganizationId(organizationId);
+            createDocumentAuditLogs.setProjectId(projectId);
+            auditLogsService.saveAuditLogs(createDocumentAuditLogs);
+
             return documentInstance;
 
         } else {
