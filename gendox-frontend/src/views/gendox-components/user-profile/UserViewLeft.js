@@ -1,5 +1,5 @@
 // ** React Imports
-import { useState } from "react";
+import {useEffect, useMemo, useState} from "react";
 
 import { useRouter } from "next/router";
 
@@ -48,6 +48,7 @@ import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 import { getInitials } from "src/@core/utils/get-initials";
 
 import { useAuth } from "src/hooks/useAuth";
+import {generateIdenticon} from "src/utils/identiconUtil";
 
 
 
@@ -103,6 +104,8 @@ const UserViewLeft = ({ userData }) => {
   );
 
   const { logout } = useAuth();
+
+  let identiconSrc = useMemo(() => generateIdenticon(userData.id), [userData.email]);
 
 
   // ** States
@@ -183,7 +186,7 @@ const UserViewLeft = ({ userData }) => {
             >
               {data.avatar ? (
                 <CustomAvatar
-                  src={data.avatar}
+                  src={identiconSrc}
                   variant="rounded"
                   alt={userData.name}
                   sx={{ width: 120, height: 120, fontWeight: 600, mb: 4 }}

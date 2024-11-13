@@ -1,5 +1,5 @@
 // ** React Imports
-import { useState, Fragment } from "react";
+import {useState, Fragment, useEffect, useMemo} from "react";
 
 // ** Next Import
 import { useRouter } from "next/router";
@@ -21,6 +21,7 @@ import Icon from "src/@core/components/icon";
 // ** Context
 import { useAuth } from "src/hooks/useAuth";
 import authConfig from "src/configs/auth";
+import {generateIdenticon} from "src/utils/identiconUtil";
 
 // ** Styled Components
 const BadgeContentSpan = styled("span")(({ theme }) => ({
@@ -39,6 +40,7 @@ const UserDropdown = (props) => {
   // ** States
   const [anchorEl, setAnchorEl] = useState(null);
 
+
   // ** Hooks
   const router = useRouter();
   let { organizationId } = router.query;
@@ -53,6 +55,9 @@ const UserDropdown = (props) => {
 
   // ** Vars
   const { direction } = settings;
+
+  const identiconSrc = useMemo(() => generateIdenticon(auth.user.id), [auth.user.email]);
+
 
   const handleDropdownOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -101,7 +106,7 @@ const UserDropdown = (props) => {
           alt="John Doe"
           onClick={handleDropdownOpen}
           sx={{ width: 40, height: 40 }}
-          src="/images/avatars/1.png"
+          src={identiconSrc}
         />
       </Badge>
       <Menu
@@ -130,7 +135,7 @@ const UserDropdown = (props) => {
             >
               <Avatar
                 alt={auth.user.name}
-                src="/images/avatars/1.png"
+                src={identiconSrc}
                 sx={{ width: "2.5rem", height: "2.5rem" }}
               />
             </Badge>

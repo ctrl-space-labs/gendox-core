@@ -13,8 +13,8 @@ import java.util.UUID;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "organization_model_provider_keys", schema = "gendox_core")
-public class OrganizationModelProviderKey {
+@Table(name = "api_keys", schema= "gendox_core" )
+public class ApiKey {
 
     @GeneratedValue(strategy = GenerationType.UUID)
     @Id
@@ -23,12 +23,21 @@ public class OrganizationModelProviderKey {
     @Basic
     @Column(name = "organization_id", nullable = false)
     private UUID organizationId;
-    @ManyToOne
-    @JoinColumn(name = "ai_model_provider_id", referencedColumnName = "id", nullable = false)
-    private AiModelProvider aiModelProvider;
     @Basic
-    @Column(name = "key", nullable = false, length = 1024)
-    private String key;
+    @Column(name = "name", nullable = false, length = 1024)
+    private String name;
+    @Basic
+    @Column(name = "api_key", nullable = false, length = 1024)
+    private String apiKey;
+    @Basic
+    @Column(name="start_date", nullable = false)
+    private Instant startDate;
+    @Basic
+    @Column(name="end_date", nullable = false)
+    private Instant endDate;
+    @Basic
+    @Column(name="is_active", nullable = false)
+    private boolean isActive;
     @Basic
     @Column(name = "created_at", nullable = true)
     @CreatedDate
@@ -37,7 +46,6 @@ public class OrganizationModelProviderKey {
     @Column(name = "updated_at", nullable = true)
     @LastModifiedDate
     private Instant updatedAt;
-
     @Basic
     @Column(name = "created_by")
     @CreatedBy
@@ -63,20 +71,44 @@ public class OrganizationModelProviderKey {
         this.organizationId = organizationId;
     }
 
-    public AiModelProvider getAiModelProvider() {
-        return aiModelProvider;
+    public String getName() {
+        return name;
     }
 
-    public void setAiModelProvider(AiModelProvider aiModelProvider) {
-        this.aiModelProvider = aiModelProvider;
+    public void setName(String name) {
+        this.name = name;
     }
 
-    public String getKey() {
-        return key;
+    public String getApiKey() {
+        return apiKey;
     }
 
-    public void setKey(String key) {
-        this.key = key;
+    public void setApiKey(String apiKey) {
+        this.apiKey = apiKey;
+    }
+
+    public Instant getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(Instant startDate) {
+        this.startDate = startDate;
+    }
+
+    public Instant getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(Instant endDate) {
+        this.endDate = endDate;
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean active) {
+        isActive = active;
     }
 
     public Instant getCreatedAt() {
@@ -111,17 +143,16 @@ public class OrganizationModelProviderKey {
         this.updatedBy = updatedBy;
     }
 
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        OrganizationModelProviderKey that = (OrganizationModelProviderKey) o;
-        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(aiModelProvider, that.aiModelProvider) && Objects.equals(key, that.key) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy);
+        ApiKey apiKey1 = (ApiKey) o;
+        return isActive == apiKey1.isActive && Objects.equals(id, apiKey1.id) && Objects.equals(organizationId, apiKey1.organizationId) && Objects.equals(name, apiKey1.name) && Objects.equals(apiKey, apiKey1.apiKey) && Objects.equals(startDate, apiKey1.startDate) && Objects.equals(endDate, apiKey1.endDate) && Objects.equals(createdAt, apiKey1.createdAt) && Objects.equals(updatedAt, apiKey1.updatedAt) && Objects.equals(createdBy, apiKey1.createdBy) && Objects.equals(updatedBy, apiKey1.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organizationId, aiModelProvider, key, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, organizationId, name, apiKey, startDate, endDate, isActive, createdAt, updatedAt, createdBy, updatedBy);
     }
 }
