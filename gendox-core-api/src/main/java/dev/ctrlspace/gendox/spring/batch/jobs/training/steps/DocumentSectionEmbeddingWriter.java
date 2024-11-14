@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectDocumentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
@@ -30,18 +31,21 @@ public class DocumentSectionEmbeddingWriter implements ItemWriter<SectionEmbeddi
     private TypeService typeService;
     private ProjectDocumentRepository projectDocumentRepository;
     private Tracer tracer;
+    private CryptographyUtils cryptographyUtils;
 
     @Autowired
     public DocumentSectionEmbeddingWriter(OpenAiEmbeddingConverter openAiEmbeddingConverter,
                                           TypeService typeService,
                                           ProjectDocumentRepository projectDocumentRepository,
                                           EmbeddingService embeddingService,
-                                          Tracer tracer) {
+                                          Tracer tracer,
+                                          CryptographyUtils cryptographyUtils) {
         this.openAiEmbeddingConverter = openAiEmbeddingConverter;
         this.typeService = typeService;
         this.embeddingService = embeddingService;
         this.projectDocumentRepository = projectDocumentRepository;
         this.tracer = tracer;
+        this.cryptographyUtils = cryptographyUtils;
     }
 
     @Override
@@ -80,8 +84,10 @@ public class DocumentSectionEmbeddingWriter implements ItemWriter<SectionEmbeddi
                 UUID sectionId = section.getId();
                 UUID messageId = null;
 
+                String sectionSha256Hash = cryptographyUtils.calculateSHA256(section.getSectionValue());
 
-                embeddingService.upsertEmbeddingForText(embeddingResponse, project.getId(), null, sectionId, semanticSearchModelId, organizationId);
+
+                embeddingService.upsertEmbeddingForText(embeddingResponse, project.getId(), null, sectionId, semanticSearchModelId, organizationId,sectionSha256Hash);
 
 
             }
