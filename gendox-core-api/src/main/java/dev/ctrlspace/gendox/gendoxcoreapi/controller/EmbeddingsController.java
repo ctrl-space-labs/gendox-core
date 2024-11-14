@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -84,7 +85,7 @@ public class EmbeddingsController {
             description = "Retrieve the embedding for a specific section in a project based on the provided section ID and project ID. " +
                     "This endpoint calculates and returns the embedding of the text content within the specified section. " +
                     "It also associates the calculated embedding with the section in the database for further analysis.")
-    public Embedding getSectionEmbedding(@PathVariable UUID sectionId, @RequestParam String projectId) throws GendoxException {
+    public Embedding getSectionEmbedding(@PathVariable UUID sectionId, @RequestParam String projectId) throws GendoxException, NoSuchAlgorithmException {
         return trainingService.runTrainingForSection(sectionId, UUID.fromString(projectId));
     }
 
@@ -103,7 +104,7 @@ public class EmbeddingsController {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public List<Embedding> getProjectEmbeddings(@PathVariable UUID projectId) throws GendoxException {
+    public List<Embedding> getProjectEmbeddings(@PathVariable UUID projectId) throws GendoxException, NoSuchAlgorithmException {
         return trainingService.runTrainingForProject(projectId);
     }
 
@@ -126,7 +127,7 @@ public class EmbeddingsController {
                                                             @RequestParam String projectId,
                                                             Authentication authentication,
                                                             HttpServletRequest request,
-                                                            Pageable pageable) throws GendoxException, IOException {
+                                                            Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
 
         String requestIP = request.getRemoteAddr();
         organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
@@ -175,7 +176,7 @@ public class EmbeddingsController {
     public CompletionMessageDTO getCompletionSearch(@RequestBody Message message,
                                                     @RequestParam String projectId,
                                                     Authentication authentication,
-                                                    HttpServletRequest request) throws GendoxException, IOException {
+                                                    HttpServletRequest request) throws GendoxException, IOException, NoSuchAlgorithmException {
 
         String requestIP = request.getRemoteAddr();
         organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);

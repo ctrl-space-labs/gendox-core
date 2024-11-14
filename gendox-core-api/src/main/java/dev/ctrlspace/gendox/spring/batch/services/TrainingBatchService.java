@@ -98,6 +98,7 @@ public class TrainingBatchService {
         DocumentInstanceSectionCriteria sectionCriteria = DocumentInstanceSectionCriteria.builder()
                 .updatedBetween(new TimePeriodDTO(start, to))
                 .projectAutoTraining(true)
+                .reuseEmbeddings(true)
                 .build();
 
         JobParameters params = documentSectionCriteriaJobParamsConverter.toDTO(sectionCriteria);
