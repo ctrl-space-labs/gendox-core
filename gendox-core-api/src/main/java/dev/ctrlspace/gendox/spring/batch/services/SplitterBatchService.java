@@ -73,11 +73,13 @@ public class SplitterBatchService {
 //      prepare Job execution params
         DocumentCriteria documentCriteria = DocumentCriteria.builder()
                 .updatedBetween(new TimePeriodDTO(start, to))
+                .splitAllDocuments(true)
                 .build();
 
         JobParameters params = documentInstanceCriteriaJobParamsConverter.toDTO(documentCriteria);
         params = new JobParametersBuilder(params)
                 .addString("now", now.toString())
+                .addString("splitAllDocuments", String.valueOf(documentCriteria.getSplitAllDocuments()))
                 .toJobParameters();
 
         return jobLauncher.run(documentSplitterJob, params);

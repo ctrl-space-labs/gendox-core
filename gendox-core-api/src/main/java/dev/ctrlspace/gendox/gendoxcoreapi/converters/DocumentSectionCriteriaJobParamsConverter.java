@@ -40,8 +40,8 @@ public class DocumentSectionCriteriaJobParamsConverter implements GendoxConverte
             paramsBuilder.addString("projectAutoTraining", criteria.getProjectAutoTraining().toString());
         }
 
-        if (criteria.getEmbeddingCache() != null) {
-            paramsBuilder.addString("embeddingCache", criteria.getEmbeddingCache().toString());
+        if (criteria.getReuseEmbeddings() != null) {
+            paramsBuilder.addString("reuseEmbeddings", criteria.getReuseEmbeddings().toString());
         }
 
         return paramsBuilder.toJobParameters();

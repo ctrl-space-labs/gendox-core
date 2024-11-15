@@ -24,4 +24,6 @@ public class DocumentCriteria {
     private TimePeriodDTO createdBetween;
     private TimePeriodDTO updatedBetween;
     private Boolean splitAllDocuments;
+
+
 }

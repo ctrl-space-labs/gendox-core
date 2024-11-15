@@ -104,6 +104,7 @@ public class TrainingBatchService {
         JobParameters params = documentSectionCriteriaJobParamsConverter.toDTO(sectionCriteria);
         params = new JobParametersBuilder(params)
                 .addString("now", now.toString())
+                .addString("reuseEmbeddings", String.valueOf(sectionCriteria.getReuseEmbeddings()))
                 .toJobParameters();
 
         return jobLauncher.run(documentTrainingJob, params);
