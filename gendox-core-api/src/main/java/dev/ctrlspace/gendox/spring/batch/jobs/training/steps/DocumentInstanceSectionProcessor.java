@@ -64,7 +64,6 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
     }
 
 
-
     @Override
     public SectionEmbeddingDTO process(DocumentInstanceSection item) throws Exception {
         logger.debug("Start processing section: {}", item.getId());
@@ -84,25 +83,27 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
 
             logger.trace("Section value with template for embedding: {}", sectionValue);
 
-            //        if(value.sha exists in eg && embedding_cache == enabled ){
-//            return eg.embedding;
-//        } else {
-//
-//        }
-            EmbeddingGroup embeddingGroup = embeddingService.findBySectionOrMessage(item.getId(), null, projectAgent.getSemanticSearchModel().getId());
 
-            String sectionSha256Hash = cryptographyUtils.calculateSHA256(sectionValue);
+            if (Boolean.TRUE.equals(reuseEmbeddings)) {
+                EmbeddingGroup embeddingGroup = embeddingService.findBySectionOrMessage(item.getId(), null, projectAgent.getSemanticSearchModel().getId());
 
-            if (embeddingGroup == null || !embeddingGroup.getEmbeddingSha256Hash().equals(sectionSha256Hash)) {
+                String sectionSha256Hash = cryptographyUtils.calculateSHA256(sectionValue);
+
+                if (embeddingGroup == null || !embeddingGroup.getEmbeddingSha256Hash().equals(sectionSha256Hash)) {
 
 
-                embeddingResponse = embeddingService.getEmbeddingForMessage(projectAgent, sectionValue, projectAgent.getSemanticSearchModel());
+                    embeddingResponse = embeddingService.getEmbeddingForMessage(projectAgent, sectionValue, projectAgent.getSemanticSearchModel());
 
-            }
-            else {
-                // If no training needed, use the existing embedding from the embedding group
-                logger.debug("Embedding found in cache for section {}. Skipping...", item.getId());
-                return null;
+                } else {
+                    // If no training needed, use the existing embedding from the embedding group
+                    logger.debug("Embedding found in cache for section {}. Skipping...", item.getId());
+                    return null;
+                }
+            } else {
+                // If reuseEmbeddings is false, generate a new embedding
+                embeddingResponse = embeddingService.getEmbeddingForMessage(
+                        projectAgent, sectionValue, projectAgent.getSemanticSearchModel()
+                );
             }
         } catch (Exception e) {
             logger.warn("Error {} getting Embedding for section {}. Skipping...", e.getMessage(), item.getId());
