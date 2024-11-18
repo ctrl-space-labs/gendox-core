@@ -55,6 +55,16 @@ public class DocumentInstance {
     @LastModifiedDate
     private Instant updatedAt;
 
+    @ManyToOne
+    private Type documentType;
+
+    @Basic
+    private Long contentId;
+
+    @Basic
+    private String externalUrl;
+
+
 
 
     @JsonManagedReference(value = "DocumentInstanceSection")
@@ -145,16 +155,41 @@ public class DocumentInstance {
         this.updatedBy = updatedBy;
     }
 
+    public Type getDocumentType() {
+        return documentType;
+    }
+
+    public void setDocumentType(Type documentType) {
+        this.documentType = documentType;
+    }
+
+    public Long getContentId() {
+        return contentId;
+    }
+
+    public void setContentId(Long contentId) {
+        this.contentId = contentId;
+    }
+
+    public String getExternalUrl() {
+        return externalUrl;
+    }
+
+    public void setExternalUrl(String externalUrl) {
+        this.externalUrl = externalUrl;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DocumentInstance that = (DocumentInstance) o;
-        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(documentTemplateId, that.documentTemplateId) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(documentIsccCode, that.documentIsccCode) && Objects.equals(documentSha256Hash, that.documentSha256Hash) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(documentInstanceSections, that.documentInstanceSections);
+        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(documentTemplateId, that.documentTemplateId) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(documentIsccCode, that.documentIsccCode) && Objects.equals(documentSha256Hash, that.documentSha256Hash) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(documentType, that.documentType) && Objects.equals(contentId, that.contentId) && Objects.equals(externalUrl, that.externalUrl) && Objects.equals(documentInstanceSections, that.documentInstanceSections);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organizationId, documentTemplateId, remoteUrl, documentIsccCode, documentSha256Hash, createdBy, updatedBy, createdAt, updatedAt, documentInstanceSections);
+        return Objects.hash(id, organizationId, documentTemplateId, remoteUrl, documentIsccCode, documentSha256Hash, createdBy, updatedBy, createdAt, updatedAt, documentType, contentId, externalUrl, documentInstanceSections);
     }
 }

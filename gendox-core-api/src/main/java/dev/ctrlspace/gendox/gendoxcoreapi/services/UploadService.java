@@ -98,7 +98,9 @@ public class UploadService {
         return instance;
     }
 
-    private DocumentInstance upsertDocumentInstance(UUID organizationId, UUID projectId, String fileName, String fullFilePath, String documentIsccCode) throws GendoxException {
+    // TODO 1. merge with Myrto's changes for audit logs, 2. Then move it to the DocumentService
+    public DocumentInstance upsertDocumentInstance(UUID organizationId, UUID projectId, String fileName, String fullFilePath, String documentIsccCode) throws GendoxException {
+        // TODO @Giannis double check that this works for updated files in API integration
         DocumentInstance instance =
                 documentService.getDocumentByFileName(projectId, organizationId, fileName);
         if (instance == null) {
