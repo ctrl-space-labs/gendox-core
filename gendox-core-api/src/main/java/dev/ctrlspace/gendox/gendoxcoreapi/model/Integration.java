@@ -22,7 +22,10 @@ public class Integration {
     @Column(name = "id", nullable = false)
     private UUID id;
     @Basic
-    @Column(name = "project_id", nullable = false)
+    @Column(name = "organization_id")
+    private UUID organizationId;
+    @Basic
+    @Column(name = "project_id")
     private UUID projectId;
     @ManyToOne
     @JoinColumn(name = "type_id", referencedColumnName = "id", nullable = false)
@@ -73,12 +76,20 @@ public class Integration {
         this.id = id;
     }
 
+    public UUID getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(UUID organizationId) {
+        this.organizationId = organizationId;
+    }
+
     public UUID getProjectId() {
         return projectId;
     }
 
-    public void setProjectId(UUID agentId) {
-        this.projectId = agentId;
+    public void setProjectId(UUID projectId) {
+        this.projectId = projectId;
     }
 
     public Type getIntegrationType() {
@@ -95,6 +106,54 @@ public class Integration {
 
     public void setActive(Boolean active) {
         isActive = active;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public String getQueueName() {
+        return queueName;
+    }
+
+    public void setQueueName(String queueName) {
+        this.queueName = queueName;
+    }
+
+    public String getDirectoryPath() {
+        return directoryPath;
+    }
+
+    public void setDirectoryPath(String directoryPath) {
+        this.directoryPath = directoryPath;
+    }
+
+    public String getRepoHead() {
+        return repoHead;
+    }
+
+    public void setRepoHead(String repoHead) {
+        this.repoHead = repoHead;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public Instant getCreatedAt() {
@@ -127,54 +186,6 @@ public class Integration {
 
     public void setUpdatedBy(UUID updatedBy) {
         this.updatedBy = updatedBy;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public String getUserName() {
-        return userName;
-    }
-
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getDirectoryPath() {
-        return directoryPath;
-    }
-
-    public void setDirectoryPath(String directoryPath) {
-        this.directoryPath = directoryPath;
-    }
-
-    public String getRepoHead() {
-        return repoHead;
-    }
-
-    public void setRepoHead(String repoHead) {
-        this.repoHead = repoHead;
-    }
-
-    public String getQueueName() {
-        return queueName;
-    }
-
-    public void setQueueName(String queueName) {
-        this.queueName = queueName;
     }
 
     @Override

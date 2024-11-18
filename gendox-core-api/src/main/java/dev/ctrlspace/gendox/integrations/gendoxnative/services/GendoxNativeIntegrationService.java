@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.integrations.gendoxnative.services;
 
+import dev.ctrlspace.gendox.integrations.gendoxnative.model.dto.OrganizationAssignedContentDTO;
 import dev.ctrlspace.gendox.integrations.gendoxnative.model.dto.AssignedContentIdsDTO;
 import dev.ctrlspace.gendox.integrations.gendoxnative.model.dto.ContentDTO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,21 @@ public class GendoxNativeIntegrationService {
         HttpHeaders headers = new HttpHeaders();
         headers.add("X-WP-Gendox-API-Key", apiKey);
         return headers;
+    }
+
+public OrganizationAssignedContentDTO getProjectAssignedContentsByOrganizationId(String baseUrl, String organizationId, String apiKey) {
+        String url = baseUrl + "/gendox/v1/assigned-projects?organization_id=" + organizationId;
+        HttpEntity<String> entity = new HttpEntity<>(buildHeader(apiKey));
+
+
+        ResponseEntity<OrganizationAssignedContentDTO> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                OrganizationAssignedContentDTO.class
+        );
+
+        return response.getBody();
     }
 
     // Method to get Assigned Content IDs

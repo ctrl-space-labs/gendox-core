@@ -8,6 +8,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import com.amazonaws.services.sqs.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFilesDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DownloadService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
@@ -26,7 +28,9 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class S3BucketIntegrationUpdateService implements IntegrationUpdateService {
@@ -79,7 +83,8 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
 //        return fileList;
 //    }
     @Override
-    public List<MultipartFile> checkForUpdates(Integration integration) {
+    public Map<ProjectIntegrationDTO, IntegratedFilesDTO> checkForUpdates(Integration integration) throws GendoxException{
+        Map<ProjectIntegrationDTO, IntegratedFilesDTO> projectMap = new HashMap<>();
         String queueName = integration.getQueueName();
         List<MultipartFile> fileList = new ArrayList<>();
 
@@ -108,7 +113,8 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
 
         } while (!sqsMessages.isEmpty());
 
-        return fileList;
+        projectMap = createMap(fileList, integration);
+        return projectMap;
     }
 
     /**
@@ -173,6 +179,20 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
         List<DocumentInstanceSection> documentInstanceSections = documentSectionService.getSectionsByDocument(documentInstance.getId());
         documentInstance.setDocumentInstanceSections(documentInstanceSections);
         documentService.deleteDocument(documentInstance, project.getId());
+    }
+
+    private Map<ProjectIntegrationDTO, IntegratedFilesDTO> createMap(List<MultipartFile> fileList, Integration integration) {
+        Map<ProjectIntegrationDTO, IntegratedFilesDTO> map = new HashMap<>();
+        ProjectIntegrationDTO projectIntegrationDTO = ProjectIntegrationDTO.builder()
+                .projectId(integration.getProjectId())
+                .integrationId(integration.getId())
+                .integrationType(integration.getIntegrationType())
+                .build();
+        IntegratedFilesDTO integratedFilesDTO = IntegratedFilesDTO.builder()
+                .multipartFiles(fileList)
+                .build();
+        map.put(projectIntegrationDTO, integratedFilesDTO);
+        return map;
     }
 
 }
