@@ -8,7 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import com.amazonaws.services.sqs.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFilesDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFileDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DownloadService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class S3BucketIntegrationUpdateService implements IntegrationUpdateService {
@@ -83,8 +84,8 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
 //        return fileList;
 //    }
     @Override
-    public Map<ProjectIntegrationDTO, IntegratedFilesDTO> checkForUpdates(Integration integration) throws GendoxException{
-        Map<ProjectIntegrationDTO, IntegratedFilesDTO> projectMap = new HashMap<>();
+    public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> checkForUpdates(Integration integration) throws GendoxException{
+        Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> projectMap = new HashMap<>();
         String queueName = integration.getQueueName();
         List<MultipartFile> fileList = new ArrayList<>();
 
@@ -181,16 +182,19 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
         documentService.deleteDocument(documentInstance, project.getId());
     }
 
-    private Map<ProjectIntegrationDTO, IntegratedFilesDTO> createMap(List<MultipartFile> fileList, Integration integration) {
-        Map<ProjectIntegrationDTO, IntegratedFilesDTO> map = new HashMap<>();
+    private Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> createMap(List<MultipartFile> fileList, Integration integration) {
+        Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map = new HashMap<>();
         ProjectIntegrationDTO projectIntegrationDTO = ProjectIntegrationDTO.builder()
                 .projectId(integration.getProjectId())
-                .integrationId(integration.getId())
-                .integrationType(integration.getIntegrationType())
+                .integration(integration)
                 .build();
-        IntegratedFilesDTO integratedFilesDTO = IntegratedFilesDTO.builder()
-                .multipartFiles(fileList)
-                .build();
+        var integratedFilesDTO = fileList
+                .stream()
+                .map(file -> IntegratedFileDTO.builder()
+                        .multipartFile(file)
+                        .build())
+                .collect(Collectors.toList());
+
         map.put(projectIntegrationDTO, integratedFilesDTO);
         return map;
     }

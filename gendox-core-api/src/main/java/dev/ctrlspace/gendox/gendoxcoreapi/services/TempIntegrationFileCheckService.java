@@ -28,9 +28,9 @@ public class TempIntegrationFileCheckService {
 
 
 
-    public void createTempIntegrationFileChecksByOrganization(OrganizationAssignedContentDTO organizationAssignedContentDTO) {
+    public void createTempIntegrationFileChecksByOrganization(OrganizationAssignedContentDTO organizationAssignedContentDTO, UUID integrationId) {
+        List<TempIntegrationFileCheck> tempIntegrationFileChecks = new ArrayList<>();
         for (AssignedContentIdsDTO assignedContentIdsDTO : organizationAssignedContentDTO.getAssignedContentIdsDTOS()) {
-            List<TempIntegrationFileCheck> tempIntegrationFileChecks = new ArrayList<>();
             Stream.of(
                     assignedContentIdsDTO.getPosts().stream(),
                     assignedContentIdsDTO.getProducts().stream(),
@@ -39,13 +39,20 @@ public class TempIntegrationFileCheckService {
                 String url = baseUrl + "/gendox/v1/content?content_id=" + contentIdDTO.getContentId();
                 TempIntegrationFileCheck tempIntegrationFileCheck = new TempIntegrationFileCheck();
                 tempIntegrationFileCheck.setContentId(contentIdDTO.getContentId());
+                tempIntegrationFileCheck.setProjectID(assignedContentIdsDTO.getProjectId());
+                tempIntegrationFileCheck.setIntegrationId(integrationId);
+
                 tempIntegrationFileCheck.setCreatedAt(contentIdDTO.getCreatedAt());
                 tempIntegrationFileCheck.setUpdatedAt(contentIdDTO.getUpdatedAt());
-                tempIntegrationFileCheck.setExternalUrl(url);
+                tempIntegrationFileCheck.setRemoteUrl(url);
+                tempIntegrationFileCheck.setExternalUrl(contentIdDTO.getExternalUrl()); // null as of 2024-11-18
                 tempIntegrationFileChecks.add(tempIntegrationFileCheck);
 
             });
         }
+
+        // TODO @giannis Test this
+        tempIntegrationFileCheckRepository.saveAll(tempIntegrationFileChecks);
 
 
     }
@@ -53,22 +60,25 @@ public class TempIntegrationFileCheckService {
     /**
      * Retrieves the content IDs of documents to be created.
      */
-    public List<Long> getDocsToCreate() {
-        return tempIntegrationFileCheckRepository.findDocsToCreate();
+    public List<TempIntegrationFileCheck> getDocsToCreate(UUID integrationId) {
+        //TODO test this
+        return tempIntegrationFileCheckRepository.findDocsToCreateByIntegrationId(integrationId);
     }
 
     /**
      * Retrieves the content IDs of documents to be updated.
      */
-    public List<Long> getDocsToUpdate() {
-        return tempIntegrationFileCheckRepository.findDocsToUpdate();
+    public List<TempIntegrationFileCheck> getDocsToUpdate(UUID integrationId) {
+        //TODO test this
+        return tempIntegrationFileCheckRepository.findDocsToUpdate(integrationId);
     }
 
     /**
      * Retrieves the IDs of DocumentInstance entities to be deleted.
      */
-    public List<UUID> getDocsToDelete(UUID organizationId) {
-        return tempIntegrationFileCheckRepository.findDocsToDeleteByOrganizationId(organizationId);
+    public List<UUID> getDocsToDelete(UUID integrationId, UUID organizationId) {
+        //TODO test this
+        return tempIntegrationFileCheckRepository.findDocsToDeleteByOrganizationId(integrationId, organizationId);
     }
 
 

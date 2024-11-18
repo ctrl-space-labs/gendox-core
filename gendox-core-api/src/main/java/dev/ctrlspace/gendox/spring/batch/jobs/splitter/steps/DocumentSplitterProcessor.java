@@ -44,7 +44,15 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         logger.trace("Start processing split: {}", item.getId());
 
         try {
-            String fileContent = downloadService.readDocumentContent(item.getRemoteUrl());
+            String fileContent = null;
+            // TODO @Giannis: This is a temporary solution to get the content type from the API
+            if ("API_INTEGRATION_FILE".equals(item.getDocumentType().getName())) {
+                // TODO @Giannis think how to handle document title from the API
+                // get the content type from the API
+            } else {
+                fileContent = downloadService.readDocumentContent(item.getRemoteUrl());
+            }
+
             agent = projectAgentService.getAgentByDocumentId(item.getId());
 
             String splitterTypeName = agent.getDocumentSplitterType().getName();

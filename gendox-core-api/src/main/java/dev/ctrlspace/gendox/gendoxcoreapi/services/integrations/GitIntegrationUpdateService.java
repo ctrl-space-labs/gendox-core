@@ -4,7 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.ObjectIdConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.Listener;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFilesDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFileDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.IntegrationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.gitIntegration.FileSystemMultipartFile;
@@ -55,8 +55,8 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public Map<ProjectIntegrationDTO, IntegratedFilesDTO> checkForUpdates(Integration integration) throws GendoxException {
-        Map<ProjectIntegrationDTO, IntegratedFilesDTO> projectMap = new HashMap<>();
+    public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> checkForUpdates(Integration integration) throws GendoxException {
+        Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> projectMap = new HashMap<>();
         List<MultipartFile> fileList = new ArrayList<>();
 
         String path = temporaryStorage + "/" + integration.getId().toString();
@@ -138,17 +138,17 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
         return fileList;
     }
 
-    private Map<ProjectIntegrationDTO, IntegratedFilesDTO> createMap(List<MultipartFile> fileList, Integration integration) {
-        Map<ProjectIntegrationDTO, IntegratedFilesDTO> map = new HashMap<>();
+    private Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> createMap(List<MultipartFile> fileList, Integration integration) {
+        Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map = new HashMap<>();
         ProjectIntegrationDTO projectIntegrationDTO = ProjectIntegrationDTO.builder()
                 .projectId(integration.getProjectId())
-                .integrationId(integration.getId())
-                .integrationType(integration.getIntegrationType())
-                .directoryPath(integration.getDirectoryPath())
+                .integration(integration)
                 .build();
-        IntegratedFilesDTO integratedFilesDTO = IntegratedFilesDTO.builder()
-                .multipartFiles(fileList)
-                .build();
+        var integratedFilesDTO = fileList.stream()
+                .map(file -> IntegratedFileDTO.builder()
+                        .multipartFile(file)
+                        .build())
+                .toList();
         map.put(projectIntegrationDTO, integratedFilesDTO);
         return map;
     }

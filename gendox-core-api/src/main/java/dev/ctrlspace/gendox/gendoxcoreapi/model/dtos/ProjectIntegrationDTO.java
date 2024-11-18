@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,8 +15,5 @@ import java.util.UUID;
 @Builder(toBuilder = true)
 public class ProjectIntegrationDTO {
     private UUID projectId;
-    private UUID integrationId;
-    private Type integrationType;
-    // Integration object
-    private String directoryPath;
+    private Integration integration;
 }

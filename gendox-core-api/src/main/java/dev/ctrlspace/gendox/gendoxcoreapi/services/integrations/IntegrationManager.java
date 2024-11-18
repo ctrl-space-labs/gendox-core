@@ -3,7 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services.integrations;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFilesDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFileDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.IntegrationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 
@@ -52,8 +51,8 @@ public class IntegrationManager {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public Map<ProjectIntegrationDTO, IntegratedFilesDTO> dispatchToIntegrationServices() throws GendoxException {
-        Map<ProjectIntegrationDTO, IntegratedFilesDTO> map = new HashMap<>();
+    public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> dispatchToIntegrationServices() throws GendoxException {
+        Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map = new HashMap<>();
         List<Integration> activeIntegrations = findActiveIntegrations();
 
         for (Integration integration : activeIntegrations) {
@@ -72,7 +71,7 @@ public class IntegrationManager {
     }
 
 
-    private void processIntegration(Integration integration, Map<ProjectIntegrationDTO, IntegratedFilesDTO> map) throws GendoxException {
+    private void processIntegration(Integration integration, Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map) throws GendoxException {
 
         logger.debug("Processing integration");
 
@@ -89,28 +88,32 @@ public class IntegrationManager {
 
     }
 
-    private void processGitIntegration(Integration integration, Map<ProjectIntegrationDTO, IntegratedFilesDTO> map) throws GendoxException {
+    private void processGitIntegration(Integration integration, Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map) throws GendoxException {
         logger.debug("Processing Git integration...");
-        Map<ProjectIntegrationDTO, IntegratedFilesDTO> projectMap = gitIntegrationUpdateService.checkForUpdates(integration);
+        Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> projectMap = gitIntegrationUpdateService.checkForUpdates(integration);
         updateMap(projectMap, map);
     }
 
-    private void processS3Integration(Integration integration, Map<ProjectIntegrationDTO, IntegratedFilesDTO> map) throws GendoxException {
+    private void processS3Integration(Integration integration, Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map) throws GendoxException {
         logger.debug("Processing AWS S3 integration...");
-        Map<ProjectIntegrationDTO, IntegratedFilesDTO> projectMap = s3BucketIntegrationUpdateService.checkForUpdates(integration);
+        Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> projectMap = s3BucketIntegrationUpdateService.checkForUpdates(integration);
         updateMap(projectMap, map);
     }
 
-    private void processApiIntegration(Integration integration, Map<ProjectIntegrationDTO, IntegratedFilesDTO> map) throws GendoxException {
+    private void processApiIntegration(Integration integration, Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map) throws GendoxException {
         logger.debug("Processing API integration...");
-        Map<ProjectIntegrationDTO, IntegratedFilesDTO> projectMap = apiIntegrationUpdateService.checkForUpdates(integration);
+        Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> projectMap = apiIntegrationUpdateService.checkForUpdates(integration);
         updateMap(projectMap, map);
     }
 
-    private void updateMap(Map<ProjectIntegrationDTO, IntegratedFilesDTO> projectMap, Map<ProjectIntegrationDTO, IntegratedFilesDTO> map) throws GendoxException {
-
-            logger.debug("Integration update found");
-            map.put(projectMap.keySet().iterator().next(), projectMap.values().iterator().next());
+    private void updateMap(Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> projectMap, Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map) throws GendoxException {
+        // TODO @Gianni this will not work if an API Integration for 1 ORG, has 2 projects
+        logger.debug("Integration update found");
+        for (Map.Entry<ProjectIntegrationDTO, List<IntegratedFileDTO>> entry : projectMap.entrySet()) {
+            if (!entry.getValue().isEmpty()) {
+                map.put(entry.getKey(), entry.getValue());
+            }
+        }
 
     }
 

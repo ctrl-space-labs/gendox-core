@@ -15,23 +15,23 @@ public interface TempIntegrationFileCheckRepository extends JpaRepository<TempIn
      * Finds content IDs to create based on the absence of corresponding content_id in DocumentInstance.
      */
     @Query(nativeQuery = true, value = """
-            SELECT temp.content_id AS docs_to_create_id
+            SELECT temp.*
             FROM gendox_core.temp_integration_file_checks temp
                      LEFT JOIN gendox_core.document_instance di ON di.content_id = temp.content_id
-            WHERE di.content_id IS NULL
+            WHERE di.content_id IS NULL and temp.integration_id = :integrationId
             """)
-    List<Long> findDocsToCreate();
+    List<TempIntegrationFileCheck> findDocsToCreateByIntegrationId(UUID integrationId);
 
     /**
      * Finds content IDs to update where TempIntegrationFileCheck.updated_at is more recent than DocumentInstance.updated_at.
      */
     @Query(nativeQuery = true, value = """
-            SELECT di.content_id AS docs_to_update_id
+            SELECT temp.*
             FROM gendox_core.document_instance di
                      INNER JOIN gendox_core.temp_integration_file_checks temp ON di.content_id = temp.content_id
-            WHERE temp.updated_at > di.updated_at
+            WHERE temp.updated_at > di.updated_at and temp.integration_id = :integrationId
             """)
-    List<Long> findDocsToUpdate();
+    List<TempIntegrationFileCheck> findDocsToUpdate(UUID integrationId);
 
 
     /**
@@ -43,9 +43,9 @@ public interface TempIntegrationFileCheckRepository extends JpaRepository<TempIn
             FROM gendox_core.document_instance di
                      LEFT JOIN gendox_core.temp_integration_file_checks temp ON di.content_id = temp.content_id
             WHERE temp.content_id IS NULL
-              AND di.organization_id = :organizationId
+              AND di.organization_id = :organizationId and temp.integration_id = :integrationId
             """)
-    List<UUID> findDocsToDeleteByOrganizationId(@Param("organizationId") UUID organizationId);
+    List<UUID> findDocsToDeleteByOrganizationId(@Param("integrationId") UUID integrationId, @Param("organizationId") UUID organizationId);
 
 
 }
