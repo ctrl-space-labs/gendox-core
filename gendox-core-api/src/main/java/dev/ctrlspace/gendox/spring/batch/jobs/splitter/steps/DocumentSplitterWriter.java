@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.AuditLogsService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,14 +24,17 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
     private DocumentSectionService documentSectionService;
     private TypeService typeService;
     private AuditLogsService auditLogsService;
+    private DocumentService documentService;
 
     @Autowired
     public DocumentSplitterWriter(DocumentSectionService documentSectionService,
                                    TypeService typeService,
-                                   AuditLogsService auditLogsService) {
+                                   AuditLogsService auditLogsService,
+                                   DocumentService documentService) {
         this.documentSectionService = documentSectionService;
         this.typeService = typeService;
         this.auditLogsService = auditLogsService;
+        this.documentService = documentService;
     }
 
 
@@ -45,8 +49,13 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
             logger.debug("Create {} Sections for document instance: {}",
                     documentSectionDTO.contentSections().size(),
                     documentSectionDTO.documentInstance().getId());
-                List<DocumentInstanceSection> documentSections =
-                        documentSectionService.createSections(documentSectionDTO.documentInstance(), documentSectionDTO.contentSections());
+            List<DocumentInstanceSection> documentSections =
+                    documentSectionService.createSections(documentSectionDTO.documentInstance(), documentSectionDTO.contentSections());
+
+            if (documentSectionDTO.documentUpdated()) {
+                documentService.saveDocumentInstance(documentSectionDTO.documentInstance());
+
+            }
 
             //update Document Sections Auditing
             Type updateDocumentType = typeService.getAuditLogTypeByName("CREATE_DOCUMENT_SECTIONS");

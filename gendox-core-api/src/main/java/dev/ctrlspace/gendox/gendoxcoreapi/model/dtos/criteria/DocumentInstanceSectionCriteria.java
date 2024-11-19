@@ -20,5 +20,4 @@ public class DocumentInstanceSectionCriteria {
     private String documentId;
     private TimePeriodDTO createdBetween;
     private TimePeriodDTO updatedBetween;
-    private Boolean reuseEmbeddings;
 }
