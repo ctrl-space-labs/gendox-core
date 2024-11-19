@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.DownloadService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
+import dev.ctrlspace.gendox.integrations.gendoxnative.services.GendoxNativeIntegrationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -27,15 +28,21 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
     private ServiceSelector serviceSelector;
     private ProjectAgentService projectAgentService;
     private DownloadService downloadService;
+    private GendoxNativeIntegrationService gendoxNativeIntegrationService;
 
     @Autowired
     public DocumentSplitterProcessor(ServiceSelector serviceSelector,
                                      ProjectAgentService projectAgentService,
-                                     DownloadService downloadService) {
+                                     DownloadService downloadService,
+                                     GendoxNativeIntegrationService gendoxNativeIntegrationService) {
         this.serviceSelector = serviceSelector;
         this.projectAgentService = projectAgentService;
         this.downloadService = downloadService;
+        this.gendoxNativeIntegrationService = gendoxNativeIntegrationService;
     }
+    String baseUrl = "https://test.dma.com.gr/wp-json";
+    String apiKey = "k9gz4TUVuUtEdKZnMNWZk7fg4B63bquX";
+
 
     @Override
     public DocumentSectionDTO process(DocumentInstance item) throws Exception {
@@ -46,9 +53,8 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         try {
             String fileContent = null;
             // TODO @Giannis: This is a temporary solution to get the content type from the API
-            if ("API_INTEGRATION_FILE".equals(item.getDocumentType().getName())) {
-                // TODO @Giannis think how to handle document title from the API
-                // get the content type from the API
+            if ("API_INTEGRATION_FILE".equals(item.getFileType().getName())) {
+                fileContent = gendoxNativeIntegrationService.getContentById(baseUrl, item.getContentId(), apiKey).getContent();
             } else {
                 fileContent = downloadService.readDocumentContent(item.getRemoteUrl());
             }

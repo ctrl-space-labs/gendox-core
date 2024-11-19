@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TempIntegrationFileCheck;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TempIntegrationFileCheckRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.FileTypeConstants;
 import dev.ctrlspace.gendox.integrations.gendoxnative.model.dto.AssignedContentIdsDTO;
 import dev.ctrlspace.gendox.integrations.gendoxnative.model.dto.ContentDTO;
 import dev.ctrlspace.gendox.integrations.gendoxnative.model.dto.ContentIdDTO;
@@ -18,10 +19,13 @@ import java.util.stream.Stream;
 public class TempIntegrationFileCheckService {
 
     private TempIntegrationFileCheckRepository tempIntegrationFileCheckRepository;
+    private TypeService typeService;
 
     @Autowired
-    public TempIntegrationFileCheckService(TempIntegrationFileCheckRepository tempIntegrationFileCheckRepository) {
+    public TempIntegrationFileCheckService(TempIntegrationFileCheckRepository tempIntegrationFileCheckRepository,
+                                           TypeService typeService) {
         this.tempIntegrationFileCheckRepository = tempIntegrationFileCheckRepository;
+        this.typeService = typeService;
     }
 
     String baseUrl = "https://test.dma.com.gr/wp-json";
@@ -41,7 +45,7 @@ public class TempIntegrationFileCheckService {
                 tempIntegrationFileCheck.setContentId(contentIdDTO.getContentId());
                 tempIntegrationFileCheck.setProjectID(assignedContentIdsDTO.getProjectId());
                 tempIntegrationFileCheck.setIntegrationId(integrationId);
-
+                tempIntegrationFileCheck.setFileType(typeService.getFileTypeByName(FileTypeConstants.API_INTEGRATION_FILE));
                 tempIntegrationFileCheck.setCreatedAt(contentIdDTO.getCreatedAt());
                 tempIntegrationFileCheck.setUpdatedAt(contentIdDTO.getUpdatedAt());
                 tempIntegrationFileCheck.setRemoteUrl(url);

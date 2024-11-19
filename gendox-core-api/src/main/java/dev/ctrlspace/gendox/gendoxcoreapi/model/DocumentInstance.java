@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import org.checkerframework.checker.units.qual.C;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -56,16 +57,16 @@ public class DocumentInstance {
     private Instant updatedAt;
 
     @ManyToOne
-    private Type documentType;
+    @JoinColumn(name = "file_type_id", referencedColumnName = "id", nullable = false)
+    private Type fileType;
 
     @Basic
+    @Column(name = "content_id")
     private Long contentId;
 
     @Basic
+    @Column(name = "external_url")
     private String externalUrl;
-
-
-
 
     @JsonManagedReference(value = "DocumentInstanceSection")
     @OneToMany(mappedBy = "documentInstance")
@@ -95,6 +96,14 @@ public class DocumentInstance {
         this.documentTemplateId = documentTemplateId;
     }
 
+    public String getRemoteUrl() {
+        return remoteUrl;
+    }
+
+    public void setRemoteUrl(String remoteUrl) {
+        this.remoteUrl = remoteUrl;
+    }
+
     public String getDocumentIsccCode() {
         return documentIsccCode;
     }
@@ -103,40 +112,12 @@ public class DocumentInstance {
         this.documentIsccCode = documentIsccCode;
     }
 
-    public String getDocumentSha256Hash() {return documentSha256Hash;}
-
-    public void setDocumentSha256Hash(String documentSha256Hash) {this.documentSha256Hash = documentSha256Hash;}
-
-    public Instant getCreatedAt() {
-        return createdAt;
+    public String getDocumentSha256Hash() {
+        return documentSha256Hash;
     }
 
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public List<DocumentInstanceSection> getDocumentInstanceSections() {
-        return documentInstanceSections;
-    }
-
-    public void setDocumentInstanceSections(List<DocumentInstanceSection> documentInstanceSections) {
-        this.documentInstanceSections = documentInstanceSections;
-    }
-
-    public String getRemoteUrl() {
-        return remoteUrl;
-    }
-
-    public void setRemoteUrl(String remoteUrl) {
-        this.remoteUrl = remoteUrl;
+    public void setDocumentSha256Hash(String documentSha256Hash) {
+        this.documentSha256Hash = documentSha256Hash;
     }
 
     public UUID getCreatedBy() {
@@ -155,12 +136,28 @@ public class DocumentInstance {
         this.updatedBy = updatedBy;
     }
 
-    public Type getDocumentType() {
-        return documentType;
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 
-    public void setDocumentType(Type documentType) {
-        this.documentType = documentType;
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public Type getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(Type fileType) {
+        this.fileType = fileType;
     }
 
     public Long getContentId() {
@@ -179,17 +176,24 @@ public class DocumentInstance {
         this.externalUrl = externalUrl;
     }
 
+    public List<DocumentInstanceSection> getDocumentInstanceSections() {
+        return documentInstanceSections;
+    }
+
+    public void setDocumentInstanceSections(List<DocumentInstanceSection> documentInstanceSections) {
+        this.documentInstanceSections = documentInstanceSections;
+    }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DocumentInstance that = (DocumentInstance) o;
-        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(documentTemplateId, that.documentTemplateId) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(documentIsccCode, that.documentIsccCode) && Objects.equals(documentSha256Hash, that.documentSha256Hash) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(documentType, that.documentType) && Objects.equals(contentId, that.contentId) && Objects.equals(externalUrl, that.externalUrl) && Objects.equals(documentInstanceSections, that.documentInstanceSections);
+        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(documentTemplateId, that.documentTemplateId) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(documentIsccCode, that.documentIsccCode) && Objects.equals(documentSha256Hash, that.documentSha256Hash) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(fileType, that.fileType) && Objects.equals(contentId, that.contentId) && Objects.equals(externalUrl, that.externalUrl) && Objects.equals(documentInstanceSections, that.documentInstanceSections);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organizationId, documentTemplateId, remoteUrl, documentIsccCode, documentSha256Hash, createdBy, updatedBy, createdAt, updatedAt, documentType, contentId, externalUrl, documentInstanceSections);
+        return Objects.hash(id, organizationId, documentTemplateId, remoteUrl, documentIsccCode, documentSha256Hash, createdBy, updatedBy, createdAt, updatedAt, fileType, contentId, externalUrl, documentInstanceSections);
     }
 }

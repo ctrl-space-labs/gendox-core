@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
 import dev.ctrlspace.provenai.iscc.IsccCodeResponse;
 import dev.ctrlspace.provenai.iscc.IsccCodeService;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -177,6 +179,21 @@ public class DocumentService {
 
         auditLogsService.saveAuditLogs(deleteDocumentAuditLogs);
 
+    }
+
+    @Transactional
+    public void deleteAllDocumentInstances(List<UUID> documentIds) throws GendoxException {
+        if (documentIds == null || documentIds.isEmpty()) {
+            throw new GendoxException("INVALID_INPUT", "Document IDs list cannot be null or empty", HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+            documentInstanceRepository.deleteAllByIds(documentIds);
+            logger.info("Successfully deleted all provided DocumentInstances.");
+        } catch (Exception e) {
+            logger.error("Failed to delete DocumentInstances with IDs: {}", documentIds, e);
+            throw new GendoxException("DELETE_FAILED", "Failed to delete document instances", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
 

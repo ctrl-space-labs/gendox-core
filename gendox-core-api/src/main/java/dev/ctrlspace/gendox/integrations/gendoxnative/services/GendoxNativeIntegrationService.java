@@ -28,6 +28,8 @@ public class GendoxNativeIntegrationService {
         return headers;
     }
 
+
+
 public OrganizationAssignedContentDTO getProjectAssignedContentsByOrganizationId(String baseUrl, String organizationId, String apiKey) {
         String url = baseUrl + "/gendox/v1/assigned-projects?organization_id=" + organizationId;
         HttpEntity<String> entity = new HttpEntity<>(buildHeader(apiKey));

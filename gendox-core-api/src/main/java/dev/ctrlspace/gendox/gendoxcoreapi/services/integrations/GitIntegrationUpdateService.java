@@ -144,7 +144,8 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
                 .projectId(integration.getProjectId())
                 .integration(integration)
                 .build();
-        var integratedFilesDTO = fileList.stream()
+        var integratedFilesDTO = fileList
+                .stream()
                 .map(file -> IntegratedFileDTO.builder()
                         .multipartFile(file)
                         .build())
