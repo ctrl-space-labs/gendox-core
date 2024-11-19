@@ -41,5 +41,9 @@ public interface DocumentInstanceRepository extends JpaRepository<DocumentInstan
             "INNER JOIN gendox_core.project_documents pd ON di.id = pd.document_id " +
             "WHERE di.id = :documentId AND pd.project_id IN (:projectIds)")
     boolean existsByDocumentIdAndProjectIds(@Param("documentId") UUID documentId, @Param("projectIds") List<UUID> projectIds);
+
+
+    @Query("DELETE FROM DocumentInstance di WHERE di.id IN :documentIds")
+    void deleteAllByIds(@Param("documentIds") List<UUID> documentIds);
 }
 

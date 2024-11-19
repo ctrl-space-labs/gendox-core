@@ -84,7 +84,7 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
 //        return fileList;
 //    }
     @Override
-    public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> checkForUpdates(Integration integration) throws GendoxException{
+    public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> checkForUpdates(Integration integration) throws GendoxException {
         Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> projectMap = new HashMap<>();
         String queueName = integration.getQueueName();
         List<MultipartFile> fileList = new ArrayList<>();
@@ -193,7 +193,8 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
                 .map(file -> IntegratedFileDTO.builder()
                         .multipartFile(file)
                         .build())
-                .collect(Collectors.toList());
+                .collect(Collectors
+                        .toList());
 
         map.put(projectIntegrationDTO, integratedFilesDTO);
         return map;

@@ -57,9 +57,9 @@ public class TempIntegrationFileCheck {
     @Column(name = "updated_by")
     @LastModifiedBy
     private UUID updatedBy;
-    @Basic
-    @Column(name="file_type_id")
-    private String fileType;
+    @ManyToOne
+    @JoinColumn(name = "file_type_id", referencedColumnName = "id", nullable = false)
+    private Type fileType;
 
     public UUID getId() {
         return id;
@@ -93,10 +93,6 @@ public class TempIntegrationFileCheck {
         this.remoteUrl = remoteUrl;
     }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
     public UUID getProjectID() {
         return projectID;
     }
@@ -111,6 +107,10 @@ public class TempIntegrationFileCheck {
 
     public void setIntegrationId(UUID integrationId) {
         this.integrationId = integrationId;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 
     public void setCreatedAt(Instant createdAt) {
@@ -141,14 +141,13 @@ public class TempIntegrationFileCheck {
         this.updatedBy = updatedBy;
     }
 
-    public String getFileType() {
+    public Type getFileType() {
         return fileType;
     }
 
-    public void setFileType(String fileType) {
+    public void setFileType(Type fileType) {
         this.fileType = fileType;
     }
-
 
     @Override
     public boolean equals(Object o) {

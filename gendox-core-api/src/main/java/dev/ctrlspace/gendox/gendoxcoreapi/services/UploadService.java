@@ -121,6 +121,7 @@ public class UploadService {
 
         } else {
             instance.setRemoteUrl(fullFilePath);
+
             instance.setDocumentIsccCode(documentIsccCode);
 
             instance = documentService.updateDocument(instance);

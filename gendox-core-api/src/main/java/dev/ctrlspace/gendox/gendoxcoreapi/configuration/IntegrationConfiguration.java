@@ -131,7 +131,8 @@ public class IntegrationConfiguration {
                                 logger.debug("Upserting extrernal document Instance: {} for project: {}", file.getExternalFile().getContentId(), project.getId());
 
                                 // TODO @Gianni, upsert Document instances, Test this
-                                uploadService.upsertDocumentInstance(project.getOrganizationId(),
+                                uploadService.upsertDocumentInstance(
+                                        project.getOrganizationId(),
                                         project.getId(),
                                         file.getExternalFile().getRemoteUrl(),
                                         file.getExternalFile().getRemoteUrl(),
@@ -145,7 +146,6 @@ public class IntegrationConfiguration {
                         }
                     }
                     if (typeService.getIntegrationTypeByName(IntegrationTypesConstants.GIT_INTEGRATION).equals(projectIntegrationDTO.getIntegration().getIntegrationType())) {
-                        // TODO @Gianni, delete API Integration files, will be done similar to S3. Not here.
                         // Delete all the directory files except the .git folder
                         deleteDirectoryFiles(projectIntegrationDTO.getIntegration().getDirectoryPath());
                         logger.debug("Deleted files in directory: {}", projectIntegrationDTO.getIntegration().getDirectoryPath());

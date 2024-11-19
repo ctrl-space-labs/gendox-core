@@ -56,21 +56,22 @@ public class ApiIntegrationUpdateService implements IntegrationUpdateService {
         List<TempIntegrationFileCheck> docsToUpdate = tempIntegrationFileCheckService.getDocsToUpdate(integration.getId());
         List<UUID> docsToDelete = tempIntegrationFileCheckService.getDocsToDelete(integration.getId(), organizationId);
 
-        // TODO @Giannis DELETE files in docsToDelete
-
         // Log the results
         logger.debug("Docs to Create (content IDs): {}", docsToCreate.size());
         logger.debug("Docs to Update (content IDs): {}", docsToUpdate.size());
         logger.debug("Docs to Delete (DocumentInstance IDs): {}", docsToDelete.size());
 
+        //DELETE files in docsToDelete
+        documentService.deleteAllDocumentInstances(docsToDelete);
+
         //create from docsToCreate and docsToUpdate a map of Map<project_id, ContentIDDto>
 
-        Map<String, List<TempIntegrationFileCheck>> projectContentMap = new HashMap<>();
+        Map<UUID, List<TempIntegrationFileCheck>> projectContentMap = new HashMap<>();
         // populate the above map
         Stream.of(docsToUpdate.stream(), docsToCreate.stream())
                 .flatMap(tempFile -> tempFile)
                 .forEach(tempFile -> {
-                    String projectId = tempFile.getProjectID().toString();
+                    UUID projectId = tempFile.getProjectID();
                     if (!projectContentMap.containsKey(projectId)) {
                         projectContentMap.put(projectId, new ArrayList<>());
                     }
@@ -101,11 +102,12 @@ public class ApiIntegrationUpdateService implements IntegrationUpdateService {
 
 
 
-    private Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> createMap(Map<String, List<TempIntegrationFileCheck>> projectContentMap, Integration integration) {
+
+    private Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> createMap(Map<UUID, List<TempIntegrationFileCheck>> projectContentMap, Integration integration) {
         Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map = new HashMap<>();
-        for (Map.Entry<String, List<TempIntegrationFileCheck>> entry : projectContentMap.entrySet()) {
+        for (Map.Entry<UUID, List<TempIntegrationFileCheck>> entry : projectContentMap.entrySet()) {
             ProjectIntegrationDTO projectIntegrationDTO = ProjectIntegrationDTO.builder()
-                    .projectId(integration.getProjectId())
+                    .projectId(entry.getKey())
                     .integration(integration)
                     .build();
 
