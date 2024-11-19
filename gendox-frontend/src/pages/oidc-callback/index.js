@@ -1,8 +1,7 @@
 import React, {useContext, useEffect} from 'react';
 import userManager from 'src/services/authService';
 import BlankLayout from "../../@core/layouts/BlankLayout";
-import {useAuth} from "src/hooks/useAuth";
-import {isInIframe} from "../../utils/commonUtils"; // Ensure you have the correct path to your OIDC UserManager setup
+import {useAuth} from "src/hooks/useAuth"; // Ensure you have the correct path to your OIDC UserManager setup
 
 const OidcCallbackPage = () => {
     const auth = useAuth();
@@ -10,37 +9,18 @@ const OidcCallbackPage = () => {
     useEffect(() => {
         console.log('OidcCallbackPage mounted');
 
-        let signinCallback = userManager.signinRedirectCallback
-        if (isInIframe()) {
-            signinCallback = userManager.signinPopupCallback
-        }
 
-        if (isInIframe()) {
-            // Handle the OIDC callback when the component mounts
-            userManager.signinPopupCallback()
-                .then(() => {
-                    console.log('User signed in successfully! Waiting for user data to load...');
-                })
-                .catch(error => {
-                    // Log the error and redirect to an error page
-                    console.error('Error handling OIDC redirect callback:', error);
-                    // window.location.href = "/error";
-                });
-        } else {
-            // Handle the OIDC callback when the component mounts
-            userManager.signinRedirectCallback()
-                .then(() => {
-                    console.log('User signed in successfully! Waiting for user data to load...');
-                })
-                .catch(error => {
-                    // Log the error and redirect to an error page
-                    console.error('Error handling OIDC redirect callback:', error);
-                    // window.location.href = "/error";
-                });
+        // Handle the OIDC callback when the component mounts
+        userManager.signinRedirectCallback()
+            .then(() => {
+                console.log('User signed in successfully! Waiting for user data to load...');
 
-        }
-
-
+            })
+            .catch(error => {
+                // Log the error and redirect to an error page
+                console.error('Error handling OIDC redirect callback:', error);
+                // window.location.href = "/error";
+            });
     }, []);
 
     return (
