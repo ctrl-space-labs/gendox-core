@@ -139,6 +139,7 @@ public class EmbeddingService {
             embeddingGroup.setEmbeddingId(embedding.getId());
             embeddingGroup.setTokenCount((double) embeddingResponse.getUsage().getTotalTokens());
             embeddingGroup.setGroupingStrategyType(typeService.getGroupingTypeByName("SIMPLE_SECTION").getId());
+            embeddingGroup.setEmbeddingSha256Hash(sectionSha256Hash);
 
 
             embeddingRepository.save(embedding);
@@ -154,7 +155,7 @@ public class EmbeddingService {
             embedding = createEmbedding(embedding);
 
 
-            EmbeddingGroup group = createEmbeddingGroup(embedding.getId(), Double.valueOf(embeddingResponse.getUsage().getTotalTokens()), messageId, sectionId, projectId);
+            EmbeddingGroup group = createEmbeddingGroup(embedding.getId(), Double.valueOf(embeddingResponse.getUsage().getTotalTokens()), messageId, sectionId, projectId, sectionSha256Hash);
 
         }
 
@@ -207,7 +208,7 @@ public class EmbeddingService {
 
 
 
-    public EmbeddingGroup createEmbeddingGroup(UUID embeddingId, Double tokenCount, UUID message_id, UUID sectionId, UUID projectId) throws GendoxException {
+    public EmbeddingGroup createEmbeddingGroup(UUID embeddingId, Double tokenCount, UUID message_id, UUID sectionId, UUID projectId, String sectionSha256Hash) throws GendoxException {
         EmbeddingGroup embeddingGroup = new EmbeddingGroup();
 
         embeddingGroup.setId(UUID.randomUUID());
@@ -220,6 +221,7 @@ public class EmbeddingService {
 
         embeddingGroup.setSemanticSearchModelId(project.getProjectAgent().getSemanticSearchModel().getId());
         embeddingGroup.setMessageId(message_id);
+        embeddingGroup.setEmbeddingSha256Hash(sectionSha256Hash);
 
 
         embeddingGroup = embeddingGroupRepository.save(embeddingGroup);

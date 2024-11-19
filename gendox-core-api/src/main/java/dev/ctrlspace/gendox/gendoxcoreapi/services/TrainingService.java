@@ -112,7 +112,7 @@ public class TrainingService {
                 sectionValue,
                 project.getProjectAgent().getSemanticSearchModel());
 
-        String sectionSha256Hash = cryptographyUtils.calculateSHA256(section.getSectionValue());
+        String sectionSha256Hash = cryptographyUtils.calculateSHA256(sectionValue);
 
         Embedding embedding = embeddingService.upsertEmbeddingForText(embeddingResponse, projectId, null, section.getId(), project.getProjectAgent().getSemanticSearchModel().getId(), project.getOrganizationId(),sectionSha256Hash);
 

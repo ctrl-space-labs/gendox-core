@@ -84,10 +84,10 @@ public class DocumentSectionEmbeddingWriter implements ItemWriter<SectionEmbeddi
                 UUID sectionId = section.getId();
                 UUID messageId = null;
 
-                String sectionSha256Hash = cryptographyUtils.calculateSHA256(section.getSectionValue());
+//                String sectionSha256Hash = cryptographyUtils.calculateSHA256(section.getSectionValue());
 
 
-                embeddingService.upsertEmbeddingForText(embeddingResponse, project.getId(), null, sectionId, semanticSearchModelId, organizationId,sectionSha256Hash);
+                embeddingService.upsertEmbeddingForText(embeddingResponse, project.getId(), null, sectionId, semanticSearchModelId, organizationId,sectionEmbeddingDTO.sectionSha256Hash());
 
 
             }

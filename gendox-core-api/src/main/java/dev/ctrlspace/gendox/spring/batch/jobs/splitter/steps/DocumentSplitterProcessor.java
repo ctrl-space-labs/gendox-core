@@ -31,36 +31,34 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
     private ProjectAgentService projectAgentService;
     private DownloadService downloadService;
     private CryptographyUtils cryptographyUtils;
-    private DocumentService documentService;
 
 
-    @Value("#{jobParameters['splitAllDocuments']}")
-    protected Boolean splitAllDocuments;
+    @Value("#{jobParameters['skipUnchangedDocs']}")
+    protected Boolean skipUnchangedDocs;
 
     @Autowired
     public DocumentSplitterProcessor(ServiceSelector serviceSelector,
                                      ProjectAgentService projectAgentService,
                                      DownloadService downloadService,
-                                     CryptographyUtils cryptographyUtils,
-                                     DocumentService documentService) {
+                                     CryptographyUtils cryptographyUtils) {
         this.serviceSelector = serviceSelector;
         this.projectAgentService = projectAgentService;
         this.downloadService = downloadService;
         this.cryptographyUtils = cryptographyUtils;
-        this.documentService =  documentService;
     }
 
     @Override
     public DocumentSectionDTO process(DocumentInstance item) throws Exception {
         List<String> contentSections = new ArrayList<>();
         ProjectAgent agent = new ProjectAgent();
+        Boolean documentUpdated = false;
         logger.trace("Start processing split: {}", item.getId());
 
         try {
             String fileContent = downloadService.readDocumentContent(item.getRemoteUrl());
 
             // SHA-256 hash check only if splitAllDocuments is false
-            if (Boolean.FALSE.equals(splitAllDocuments)) {
+            if (Boolean.TRUE.equals(skipUnchangedDocs)) {
                 String documentSha256Hash = cryptographyUtils.calculateSHA256(fileContent);
                 logger.trace("SHA-256 hash of document {}: {}", item.getId(), documentSha256Hash);
 
@@ -72,6 +70,7 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
 
                 // Update hash to the new value since content has changed
                 item.setDocumentSha256Hash(documentSha256Hash);
+                documentUpdated = true;
             } else {
                 logger.trace("splitAllDocuments is true, skipping SHA-256 check for document {}.", item.getId());
             }
@@ -89,14 +88,13 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
 
             contentSections = documentSplitter.split(fileContent);
 
-            documentService.saveDocumentInstance(item);
 
         } catch (Exception e) {
             logger.warn("Error {} splitting document to sections {}. Skipping...", e.getMessage(), item.getId());
             return null;
         }
 
-        return new DocumentSectionDTO(item, contentSections);
+        return new DocumentSectionDTO(item, contentSections, documentUpdated);
     }
 }
 

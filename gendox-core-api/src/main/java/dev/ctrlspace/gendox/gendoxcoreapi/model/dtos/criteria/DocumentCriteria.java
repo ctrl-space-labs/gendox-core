@@ -23,7 +23,6 @@ public class DocumentCriteria {
     private List<String> documentInstanceIds;
     private TimePeriodDTO createdBetween;
     private TimePeriodDTO updatedBetween;
-    private Boolean splitAllDocuments;
 
 
 }

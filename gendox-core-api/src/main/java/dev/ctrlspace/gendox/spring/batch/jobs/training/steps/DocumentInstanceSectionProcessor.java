@@ -45,8 +45,8 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
     private CryptographyUtils cryptographyUtils;
 
 
-    @Value("#{jobParameters['reuseEmbeddings']}")
-    protected Boolean reuseEmbeddings;
+    @Value("#{jobParameters['skipKnownEmbeddings']}")
+    protected Boolean skipKnownEmbeddings;
 
 
 
@@ -70,6 +70,8 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
         ProjectAgent projectAgent = projectAgentRepository.findAgentByDocumentInstanceId(item.getDocumentInstance().getId())
                 .orElse(null);
         EmbeddingResponse embeddingResponse;
+        String sectionSha256Hash;
+
         try {
 
             Template agentSectionTemplate = templateRepository.findByIdIs(projectAgent.getSectionTemplateId());
@@ -81,36 +83,36 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
                     agentSectionTemplate.getText()
             );
 
+            sectionSha256Hash = cryptographyUtils.calculateSHA256(sectionValue);
+
+
             logger.trace("Section value with template for embedding: {}", sectionValue);
 
+            if (Boolean.TRUE.equals(skipKnownEmbeddings)) {
 
-            if (Boolean.TRUE.equals(reuseEmbeddings)) {
-                EmbeddingGroup embeddingGroup = embeddingService.findBySectionOrMessage(item.getId(), null, projectAgent.getSemanticSearchModel().getId());
+                // TODO: Move this to the DocumentInstanceSectionReader
 
-                String sectionSha256Hash = cryptographyUtils.calculateSHA256(sectionValue);
+                EmbeddingGroup embeddingGroup = embeddingService.findBySectionOrMessage(
+                        item.getId(), null, projectAgent.getSemanticSearchModel().getId()
+                );
 
-                if (embeddingGroup == null || !embeddingGroup.getEmbeddingSha256Hash().equals(sectionSha256Hash)) {
-
-
-                    embeddingResponse = embeddingService.getEmbeddingForMessage(projectAgent, sectionValue, projectAgent.getSemanticSearchModel());
-
-                } else {
-                    // If no training needed, use the existing embedding from the embedding group
+                if (embeddingGroup != null && embeddingGroup.getEmbeddingSha256Hash().equals(sectionSha256Hash)) {
+                    // Embedding found and hashes match; skip generating a new embedding
                     logger.debug("Embedding found in cache for section {}. Skipping...", item.getId());
                     return null;
                 }
-            } else {
-                // If reuseEmbeddings is false, generate a new embedding
-                embeddingResponse = embeddingService.getEmbeddingForMessage(
-                        projectAgent, sectionValue, projectAgent.getSemanticSearchModel()
-                );
             }
+
+            embeddingResponse = embeddingService.getEmbeddingForMessage(
+                    projectAgent, sectionValue, projectAgent.getSemanticSearchModel()
+            );
+
         } catch (Exception e) {
             logger.warn("Error {} getting Embedding for section {}. Skipping...", e.getMessage(), item.getId());
             return null;
         }
         logger.debug("Section processed with cost: {} tokens", embeddingResponse.getUsage().getTotalTokens());
-        return new SectionEmbeddingDTO(item, embeddingResponse);
+        return new SectionEmbeddingDTO(item, embeddingResponse, sectionSha256Hash);
     }
 
 

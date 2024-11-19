@@ -98,13 +98,12 @@ public class TrainingBatchService {
         DocumentInstanceSectionCriteria sectionCriteria = DocumentInstanceSectionCriteria.builder()
                 .updatedBetween(new TimePeriodDTO(start, to))
                 .projectAutoTraining(true)
-                .reuseEmbeddings(true)
                 .build();
 
         JobParameters params = documentSectionCriteriaJobParamsConverter.toDTO(sectionCriteria);
         params = new JobParametersBuilder(params)
                 .addString("now", now.toString())
-                .addString("reuseEmbeddings", String.valueOf(sectionCriteria.getReuseEmbeddings()))
+                .addString("skipKnownEmbeddings", "true")
                 .toJobParameters();
 
         return jobLauncher.run(documentTrainingJob, params);
