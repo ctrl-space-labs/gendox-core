@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AuditLogs;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.AuditLogsService;
@@ -15,7 +16,10 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Component
 @StepScope
@@ -45,6 +49,8 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
 
         logger.debug("Start writing sections chunk");
 
+        Set<DocumentInstance> updatedDocuments = new HashSet<>();
+
         for (DocumentSectionDTO documentSectionDTO : chunk.getItems()) {
             logger.debug("Create {} Sections for document instance: {}",
                     documentSectionDTO.contentSections().size(),
@@ -53,9 +59,10 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
                     documentSectionService.createSections(documentSectionDTO.documentInstance(), documentSectionDTO.contentSections());
 
             if (documentSectionDTO.documentUpdated()) {
-                documentService.saveDocumentInstance(documentSectionDTO.documentInstance());
-
+                updatedDocuments.add(documentSectionDTO.documentInstance());
             }
+
+
 
             //update Document Sections Auditing
             Type updateDocumentType = typeService.getAuditLogTypeByName("CREATE_DOCUMENT_SECTIONS");
@@ -68,5 +75,11 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
             auditLogsService.saveAuditLogs(updateDocumentAuditLogs);
 
         }
+
+        for (DocumentInstance documentInstance : updatedDocuments) {
+            documentService.updateDocument(documentInstance);
+        }
     }
 }
+
+
