@@ -77,7 +77,7 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
         }
 
         for (DocumentInstance documentInstance : updatedDocuments) {
-            documentService.updateDocument(documentInstance);
+            documentService.saveDocumentInstance(documentInstance);
         }
     }
 }
