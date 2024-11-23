@@ -27,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -62,57 +63,26 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
      * Retrieves messages from SQS and processes them accordingly.
      *
      * @param integration The integration to check for updates.
-     * @return A list of multipart files representing the updated documents.
+     * @return A map of projects and their updated files.
      */
-//    @Override
-//    public List<MultipartFile> checkForUpdates(Integration integration) {
-//
-//        String queueName = integration.getQueueName();
-//        List<MultipartFile> fileList = new ArrayList<>();
-//
-//        List<Message> sqsMessages = sqsService.receiveMessages(queueName);
-//
-//        for (Message sqsMessage : sqsMessages) {
-//            try {
-//                handleSqsMessage(sqsMessage, fileList, integration);
-//                sqsService.deleteMessage(sqsMessage, queueName);
-//            } catch (Exception e) {
-//                logger.error("An error occurred while checking for updates: " + e.getMessage(), e);
-//            }
-//        }
-//
-//        return fileList;
-//    }
     @Override
     public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> checkForUpdates(Integration integration) throws GendoxException {
         Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> projectMap = new HashMap<>();
         String queueName = integration.getQueueName();
         List<MultipartFile> fileList = new ArrayList<>();
 
-        List<Message> sqsMessages;
+        List<Message> sqsMessages = sqsService.receiveMessages(queueName);
 
-        do {
-            sqsMessages = sqsService.receiveMessages(queueName);
+        for (Message sqsMessage : sqsMessages) {
+            try {
+                handleSqsMessage(sqsMessage, fileList, integration);
+                sqsService.deleteMessage(sqsMessage, queueName);
+            } catch (Exception e) {
+                logger.error("An error occurred while checking for updates: " + e.getMessage(), e);
 
-            if (sqsMessages.isEmpty()) {
-                logger.debug("There are no more messages in the queue: {}", queueName);
-                break;
             }
+        }
 
-            for (Message sqsMessage : sqsMessages) {
-                try {
-                    handleSqsMessage(sqsMessage, fileList, integration);
-                    sqsService.deleteMessage(sqsMessage, queueName);
-                } catch (Exception e) {
-                    logger.error("An error occurred while checking for updates: " + e.getMessage(), e);
-
-                }
-            }
-
-            // Log the number of processed messages
-            logger.debug("Processed {} messages from the queue: {}", sqsMessages.size(), queueName);
-
-        } while (!sqsMessages.isEmpty());
 
         projectMap = createMap(fileList, integration);
         return projectMap;
@@ -156,6 +126,8 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
     private MultipartFile convertToMultipartFile(String bucketName, String objectKey) throws GendoxException, IOException {
         String encodedFilename = objectKey;
         String originalFilename = URLDecoder.decode(encodedFilename, StandardCharsets.UTF_8.toString());
+        // Remove any directory from the filename (keep only the file name)
+
         String s3Url = "s3://" + bucketName + "/" + originalFilename;
         String content = downloadService.readDocumentContent(s3Url);
         byte[] contentBytes = content.getBytes();
@@ -193,8 +165,9 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
                 .map(file -> IntegratedFileDTO.builder()
                         .multipartFile(file)
                         .build())
-                .collect(Collectors
-                        .toList());
+                .toList();
+//                .collect(Collectors
+//                        .toList());
 
         map.put(projectIntegrationDTO, integratedFilesDTO);
         return map;

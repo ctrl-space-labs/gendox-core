@@ -12,7 +12,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@EntityListeners(AuditingEntityListener.class)
 @Table(name = "temp_integration_file_checks", schema = "gendox_core")
 public class TempIntegrationFileCheck {
 
@@ -49,14 +48,7 @@ public class TempIntegrationFileCheck {
     @Column(name = "updated_at", nullable = true)
     @LastModifiedDate
     private Instant updatedAt;
-    @Basic
-    @Column(name = "created_by")
-    @CreatedBy
-    private UUID createdBy;
-    @Basic
-    @Column(name = "updated_by")
-    @LastModifiedBy
-    private UUID updatedBy;
+
     @ManyToOne
     @JoinColumn(name = "file_type_id", referencedColumnName = "id", nullable = false)
     private Type fileType;
@@ -125,21 +117,7 @@ public class TempIntegrationFileCheck {
         this.updatedAt = updatedAt;
     }
 
-    public UUID getCreatedBy() {
-        return createdBy;
-    }
 
-    public void setCreatedBy(UUID createdBy) {
-        this.createdBy = createdBy;
-    }
-
-    public UUID getUpdatedBy() {
-        return updatedBy;
-    }
-
-    public void setUpdatedBy(UUID updatedBy) {
-        this.updatedBy = updatedBy;
-    }
 
     public Type getFileType() {
         return fileType;
@@ -154,11 +132,11 @@ public class TempIntegrationFileCheck {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TempIntegrationFileCheck that = (TempIntegrationFileCheck) o;
-        return Objects.equals(id, that.id) && Objects.equals(contentId, that.contentId) && Objects.equals(externalUrl, that.externalUrl) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(projectID, that.projectID) && Objects.equals(integrationId, that.integrationId) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(fileType, that.fileType);
+        return Objects.equals(id, that.id) && Objects.equals(contentId, that.contentId) && Objects.equals(externalUrl, that.externalUrl) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(projectID, that.projectID) && Objects.equals(integrationId, that.integrationId) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(fileType, that.fileType);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, contentId, externalUrl, remoteUrl, projectID, integrationId, createdAt, updatedAt, createdBy, updatedBy, fileType);
+        return Objects.hash(id, contentId, externalUrl, remoteUrl, projectID, integrationId, createdAt, updatedAt, fileType);
     }
 }

@@ -10,7 +10,7 @@ where not exists(SELECT *
 
 INSERT into gendox_core.types
 (type_category, name, description)
-select 'INTEGRATION_TYPE', 'FILE_TYPE', 'PLAIN_TEXT_FILE'
+select 'FILE_TYPE', 'PLAIN_TEXT_FILE', 'Plain Text File'
 where not exists(SELECT *
                  FROM gendox_core.types
                  where type_category = 'FILE_TYPE'
@@ -18,7 +18,7 @@ where not exists(SELECT *
 
 INSERT into gendox_core.types
 (type_category, name, description)
-select 'INTEGRATION_TYPE', 'FILE_TYPE', 'PDF_FILE'
+select 'FILE_TYPE', 'PDF_FILE', 'PDF File'
 where not exists(SELECT *
                  FROM gendox_core.types
                  where type_category = 'FILE_TYPE'
@@ -26,7 +26,7 @@ where not exists(SELECT *
 
 INSERT into gendox_core.types
 (type_category, name, description)
-select 'INTEGRATION_TYPE', 'FILE_TYPE', 'API_INTEGRATION_FILE'
+select 'FILE_TYPE', 'API_INTEGRATION_FILE', 'API Integration File'
 where not exists(SELECT *
                  FROM gendox_core.types
                  where type_category = 'FILE_TYPE'
@@ -34,7 +34,7 @@ where not exists(SELECT *
 
 INSERT into gendox_core.types
 (type_category, name, description)
-select 'INTEGRATION_TYPE', 'FILE_TYPE', 'ADVANCED_PDF_FILE'
+select 'FILE_TYPE', 'ADVANCED_PDF_FILE', 'Advanced PDF File'
 where not exists(SELECT *
                  FROM gendox_core.types
                  where type_category = 'FILE_TYPE'

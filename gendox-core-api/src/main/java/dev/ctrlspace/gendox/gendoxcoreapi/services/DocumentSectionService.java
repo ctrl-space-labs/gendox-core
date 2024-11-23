@@ -21,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -109,6 +110,14 @@ public class DocumentSectionService {
             normalizedUrl = url.substring(5); // Remove "file:" prefix
         } else if (url.startsWith("s3:")) {
             normalizedUrl = url.substring(3); // Remove "s3:" prefix
+        } else if (url.startsWith("http:") || url.startsWith("https:")) {
+            try {
+                // Parse the URL and get the path
+                URI uri = new URI(url);
+                normalizedUrl = uri.getPath(); // Extract the path component
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Invalid HTTP/HTTPS URL format: " + url, e);
+            }
         } else {
             throw new IllegalArgumentException("Unsupported URL format: " + url);
         }
@@ -187,7 +196,7 @@ public class DocumentSectionService {
     }
 
     public DocumentInstanceSection createNewSection(DocumentInstance documentInstance, String fileContent, String sectionTitle) throws GendoxException {
-        Integer sectionOrder =2;
+        Integer sectionOrder = 2;
         DocumentInstanceSection section = new DocumentInstanceSection();
         // create section's metadata
         DocumentSectionMetadata metadata = new DocumentSectionMetadata();
@@ -252,9 +261,6 @@ public class DocumentSectionService {
 
         return documentSectionIsccCode;
     }
-
-
-
 
 
     public DocumentSectionMetadata createMetadata(DocumentInstanceSection section) throws GendoxException {

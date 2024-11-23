@@ -35,5 +35,10 @@ public interface ProjectDocumentRepository extends JpaRepository<ProjectDocument
 
     Optional<ProjectDocument> findByDocumentIdAndProjectId(UUID documentId, UUID projectId);
 
+    // Custom query to retrieve a projectId based on documentId
+    @Query("SELECT pd.project.id FROM ProjectDocument pd WHERE pd.documentId = :documentId")
+    Optional<UUID> findProjectIdByDocumentId(UUID documentId);
+
+
 
 }

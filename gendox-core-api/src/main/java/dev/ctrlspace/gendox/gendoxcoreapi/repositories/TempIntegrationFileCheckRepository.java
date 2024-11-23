@@ -41,9 +41,9 @@ public interface TempIntegrationFileCheckRepository extends JpaRepository<TempIn
     @Query(nativeQuery = true, value = """
             SELECT di.id AS docs_to_delete_id
             FROM gendox_core.document_instance di
-                     LEFT JOIN gendox_core.temp_integration_file_checks temp ON di.content_id = temp.content_id
+                     LEFT JOIN gendox_core.temp_integration_file_checks temp ON di.content_id = temp.content_id AND temp.integration_id = :integrationId
             WHERE temp.content_id IS NULL
-              AND di.organization_id = :organizationId and temp.integration_id = :integrationId
+              AND di.organization_id = :organizationId
             """)
     List<UUID> findDocsToDeleteByOrganizationId(@Param("integrationId") UUID integrationId, @Param("organizationId") UUID organizationId);
 

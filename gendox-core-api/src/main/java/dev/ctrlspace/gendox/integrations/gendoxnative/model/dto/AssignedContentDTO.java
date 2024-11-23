@@ -11,6 +11,13 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class OrganizationAssignedContentDTO {
-    private List<AssignedContentIdsDTO> projects;
+public class AssignedContentDTO {
+    private List<ContentIdDTO> posts;
+    private List<ContentIdDTO> products;
+    private List<ContentIdDTO> pages;
+
+//    private List<Long> posts;
+//    private List<Long> products;
+//    private List<Long> pages;
+
 }
