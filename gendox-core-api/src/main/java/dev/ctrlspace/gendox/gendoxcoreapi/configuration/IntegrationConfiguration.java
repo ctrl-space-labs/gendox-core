@@ -6,12 +6,13 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFileDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TempIntegrationFileCheckService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UploadService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.IntegrationManager;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
-import dev.ctrlspace.gendox.integrations.gendoxnative.model.dto.ContentIdDTO;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
 import io.micrometer.observation.annotation.Observed;
@@ -34,12 +35,10 @@ import org.springframework.messaging.MessagingException;
 import org.springframework.integration.core.MessageSource;
 import org.springframework.integration.annotation.Poller;
 import org.springframework.messaging.Message;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 
 @Configuration
@@ -57,6 +56,8 @@ public class IntegrationConfiguration {
     private SplitterBatchService splitterBatchService;
     private TrainingBatchService trainingBatchService;
     private TypeService typeService;
+    private DocumentUtils documentUtils;
+    private TempIntegrationFileCheckService tempIntegrationFileCheckService;
 
 
     @Autowired
@@ -65,13 +66,17 @@ public class IntegrationConfiguration {
                                     ProjectService projectService,
                                     SplitterBatchService splitterBatchService,
                                     TrainingBatchService trainingBatchService,
-                                    TypeService typeService) {
+                                    TypeService typeService,
+                                    DocumentUtils documentUtils,
+                                    TempIntegrationFileCheckService tempIntegrationFileCheckService) {
         this.integrationManager = integrationManager;
         this.uploadService = uploadService;
         this.projectService = projectService;
         this.splitterBatchService = splitterBatchService;
         this.trainingBatchService = trainingBatchService;
         this.typeService = typeService;
+        this.documentUtils = documentUtils;
+        this.tempIntegrationFileCheckService = tempIntegrationFileCheckService;
     }
 
 
@@ -130,14 +135,17 @@ public class IntegrationConfiguration {
                             } else {  // handle external files that the content is not downloaded here
                                 logger.debug("Upserting extrernal document Instance: {} for project: {}", file.getExternalFile().getContentId(), project.getId());
 
-                                // TODO @Gianni, upsert Document instances, Test this
-                                uploadService.upsertDocumentInstance(
-                                        project.getOrganizationId(),
-                                        project.getId(),
-                                        file.getExternalFile().getRemoteUrl(),
-                                        file.getExternalFile().getRemoteUrl(),
-                                        UUID.randomUUID().toString());
+                                DocumentInstance documentInstance = new DocumentInstance();
+                                documentInstance.setOrganizationId(project.getOrganizationId());
+                                documentInstance.setRemoteUrl(file.getExternalFile().getRemoteUrl());
+                                documentInstance.setContentId(file.getExternalFile().getContentId());
+                                documentInstance.setFileType(file.getExternalFile().getFileType());
+                                documentInstance.setTitle(documentUtils.getApiIntegrationDocumentTitle(file.getExternalFile().getContentId()));
+                                documentInstance.setDocumentIsccCode(documentUtils.getISCCCodeForApiIntegrationFile());
+
+                                uploadService.upsertDocumentInstance(project.getId(),documentInstance);
                                 logger.debug("extrernal document uploaded document: {} successfully", file.getExternalFile().getContentId());
+
                             }
 
                         } catch (Exception e) {
@@ -145,6 +153,12 @@ public class IntegrationConfiguration {
                             e.printStackTrace();
                         }
                     }
+                    // Delete all the files in the temp directory table
+                    if (projectIntegrationDTO.getIntegration().getIntegrationType().getName().equals(IntegrationTypesConstants.API_INTEGRATION)) {
+                        tempIntegrationFileCheckService.deleteTempIntegrationFileChecksByIntegrationId(projectIntegrationDTO.getIntegration().getId());
+                        logger.debug("Deleted TempIntegrationFileChecks for integration: {}", projectIntegrationDTO.getIntegration().getId());
+                    }
+
                     if (typeService.getIntegrationTypeByName(IntegrationTypesConstants.GIT_INTEGRATION).equals(projectIntegrationDTO.getIntegration().getIntegrationType())) {
                         // Delete all the directory files except the .git folder
                         deleteDirectoryFiles(projectIntegrationDTO.getIntegration().getDirectoryPath());

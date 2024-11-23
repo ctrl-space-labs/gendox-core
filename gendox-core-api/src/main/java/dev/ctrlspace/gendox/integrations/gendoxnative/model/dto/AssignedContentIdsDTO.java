@@ -16,11 +16,6 @@ public class AssignedContentIdsDTO {
     private UUID projectId;
     private String name;
     private String description;
-    private List<ContentIdDTO> posts;
-    private List<ContentIdDTO> products;
-    private List<ContentIdDTO> pages;
-//    private List<Long> posts;
-//    private List<Long> products;
-//    private List<Long> pages;
+    private AssignedContentDTO assignedContent;
 
 }
