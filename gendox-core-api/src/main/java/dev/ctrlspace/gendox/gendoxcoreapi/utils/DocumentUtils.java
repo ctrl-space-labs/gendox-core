@@ -6,25 +6,40 @@ import dev.ctrlspace.gendox.provenAi.utils.MockUniqueIdentifierServiceAdapter;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
 import dev.ctrlspace.provenai.iscc.IsccCodeResponse;
 import dev.ctrlspace.provenai.iscc.IsccCodeService;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.WritableResource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Component
 public class DocumentUtils {
 
+    Logger logger = LoggerFactory.getLogger(DocumentUtils.class);
+
     @Value("${proven-ai.sdk.iscc.enabled}")
     private Boolean isccEnabled;
+    @Value("${gendox.documents.upload-dir}")
+    private String uploadDir;
 
     private GendoxAPIIntegrationService gendoxAPIIntegrationService;
     private IsccCodeService isccCodeService;
     private MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter;
 
-
+    @Autowired
+    private ResourceLoader resourceLoader;
 
     @Autowired
     public DocumentUtils(GendoxAPIIntegrationService gendoxAPIIntegrationService,
@@ -49,19 +64,64 @@ public class DocumentUtils {
     }
 
 
-
     public String getIsccCode(MultipartFile file) throws IOException {
         String fileName = file.getOriginalFilename();
         String documentIsccCode = null;
         if (isccEnabled) {
             IsccCodeResponse isccCodeResponse = isccCodeService.getDocumentIsccCode(file, fileName);
             documentIsccCode = isccCodeResponse.getIscc();
-        }
-
-        else {
+        } else {
             UniqueIdentifierCodeResponse uniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(file, fileName);
             documentIsccCode = uniqueIdentifierCodeResponse.getUuid();
         }
         return documentIsccCode;
+    }
+
+    public String saveFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException {
+        String fileName = file.getOriginalFilename();
+        String cleanFileName = Paths.get(fileName).getFileName().toString();
+        String filePathPrefix = organizationId + "/" + projectId;
+        String fullFilePath = uploadDir + "/" + filePathPrefix + "/" + cleanFileName;
+
+        createLocalFileDirectory(filePathPrefix);
+
+        WritableResource writableResource = (WritableResource) resourceLoader.getResource(fullFilePath);
+        try (OutputStream outputStream = writableResource.getOutputStream()) {
+            byte[] bytes = file.getBytes();
+            outputStream.write(bytes);
+        }
+        return fullFilePath;
+    }
+
+
+    public void createLocalFileDirectory(String filePath) throws IOException {
+        // Create the directories if they don't exist in the local file system
+        if (uploadDir.startsWith("file:")) {
+            Path directoryPath = Paths.get(uploadDir.replaceFirst("^file:", ""), filePath);
+            if (!Files.exists(directoryPath)) {
+                Files.createDirectories(directoryPath);
+                logger.debug("Created directories at: {}", directoryPath);
+            } else {
+                logger.debug("Directories already exist at: {}", directoryPath);
+            }
+        }
+
+    }
+
+
+
+    @NotNull
+    private static String calculateFilePathPrefix(UUID organizationId) {
+        // Get the current date
+        LocalDate currentDate = LocalDate.now();
+
+        // Format the date components
+        String year = String.valueOf(currentDate.getYear());
+        String month = String.format("%02d", currentDate.getMonthValue()); // Zero-padded month
+        String day = String.format("%02d", currentDate.getDayOfMonth());   // Zero-padded day
+
+        // Construct the folder structure
+        String folderStructure = organizationId.toString() + "/" + year + "/" + month + "/" + day;
+        return folderStructure;
     }
 }
