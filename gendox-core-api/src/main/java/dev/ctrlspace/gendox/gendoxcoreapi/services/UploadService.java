@@ -65,9 +65,9 @@ public class UploadService {
 
     public DocumentInstance uploadFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException, GendoxException {
         String fileName = file.getOriginalFilename();
-        String fullFilePath = saveFile(file, organizationId, projectId);
+        String fullFilePath = documentUtils.saveFile(file, organizationId, projectId);
 
-        createAuditLog(organizationId, projectId, "DOCUMENT_CREATE");
+        auditLogsService.createAuditLog(organizationId, projectId, "DOCUMENT_CREATE");
 
         DocumentInstance instance = createDocumentInstance(file, organizationId, fileName, fullFilePath);
         instance = upsertDocumentInstance(projectId, instance);
@@ -86,7 +86,7 @@ public class UploadService {
         return instance;
     }
 
-    // TODO 1. merge with Myrto's changes for audit logs, 2. Then move it to the DocumentService
+
     public DocumentInstance upsertDocumentInstance(UUID projectId, DocumentInstance documentInstance) throws GendoxException {
         DocumentInstance existingInstance =
                 documentService.getDocumentByProjectIdAndOrganizationIdAndTitle(projectId, documentInstance);
@@ -111,63 +111,13 @@ public class UploadService {
     private DocumentInstance updateExistingDocumentInstance(UUID projectId, DocumentInstance documentInstance, DocumentInstance existingInstance) throws GendoxException {
         documentInstance.setId(existingInstance.getId());
         DocumentInstance updatedInstance = documentService.updateDocument(documentInstance);
-        createAuditLog(existingInstance.getOrganizationId(), projectId, "DOCUMENT_UPDATE");
+        auditLogsService.createAuditLog(existingInstance.getOrganizationId(), projectId, "DOCUMENT_UPDATE");
         return updatedInstance;
     }
 
-    private void createAuditLog(UUID organizationId, UUID projectId, String logType) throws GendoxException {
-        Type auditLogType = typeService.getAuditLogTypeByName(logType);
-        AuditLogs auditLogs = auditLogsService.createDefaultAuditLogs(auditLogType);
-        auditLogs.setOrganizationId(organizationId);
-        auditLogs.setProjectId(projectId);
-        auditLogsService.saveAuditLogs(auditLogs);
-    }
 
 
-    private String saveFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException {
-        String fileName = file.getOriginalFilename();
-        String cleanFileName = Paths.get(fileName).getFileName().toString();
-        String filePathPrefix = organizationId + "/" + projectId;
-        String fullFilePath = uploadDir + "/" + filePathPrefix + "/" + cleanFileName;
-
-        createLocalFileDirectory(filePathPrefix);
-
-        WritableResource writableResource = (WritableResource) resourceLoader.getResource(fullFilePath);
-        try (OutputStream outputStream = writableResource.getOutputStream()) {
-            byte[] bytes = file.getBytes();
-            outputStream.write(bytes);
-        }
-        return fullFilePath;
-    }
 
 
-    public void createLocalFileDirectory(String filePath) throws IOException {
-        // Create the directories if they don't exist in the local file system
-        if (uploadDir.startsWith("file:")) {
-            Path directoryPath = Paths.get(uploadDir.replaceFirst("^file:", ""), filePath);
-            if (!Files.exists(directoryPath)) {
-                Files.createDirectories(directoryPath);
-                logger.debug("Created directories at: {}", directoryPath);
-            } else {
-                logger.debug("Directories already exist at: {}", directoryPath);
-            }
-        }
-
-    }
-
-    @NotNull
-    private static String calculateFilePathPrefix(UUID organizationId) {
-        // Get the current date
-        LocalDate currentDate = LocalDate.now();
-
-        // Format the date components
-        String year = String.valueOf(currentDate.getYear());
-        String month = String.format("%02d", currentDate.getMonthValue()); // Zero-padded month
-        String day = String.format("%02d", currentDate.getDayOfMonth());   // Zero-padded day
-
-        // Construct the folder structure
-        String folderStructure = organizationId.toString() + "/" + year + "/" + month + "/" + day;
-        return folderStructure;
-    }
 
 }
