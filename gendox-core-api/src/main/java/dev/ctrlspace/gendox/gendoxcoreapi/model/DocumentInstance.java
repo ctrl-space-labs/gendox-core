@@ -39,6 +39,7 @@ public class DocumentInstance {
     @Basic
     @Column(name = "document_sha256_hash", nullable = true)
     private String documentSha256Hash;
+
     @Basic
     @Column(name="created_by", nullable = true)
     @CreatedBy
@@ -139,6 +140,7 @@ public class DocumentInstance {
     public void setUpdatedBy(UUID updatedBy) {
         this.updatedBy = updatedBy;
     }
+
 
     public Instant getCreatedAt() {
         return createdAt;

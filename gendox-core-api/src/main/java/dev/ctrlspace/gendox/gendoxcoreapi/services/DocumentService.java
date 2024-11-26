@@ -189,12 +189,16 @@ public class DocumentService {
 
     }
 
+    public DocumentInstance saveDocumentInstance(DocumentInstance documentInstance) {
+        return documentInstanceRepository.save(documentInstance);
+    }
+
+
     @Transactional
     public void deleteAllDocumentInstances(List<UUID> documentIds) throws GendoxException {
         if (documentIds == null || documentIds.isEmpty()) {
             throw new GendoxException("INVALID_INPUT", "Document IDs list cannot be null or empty", HttpStatus.BAD_REQUEST);
         }
-
         for (UUID documentId : documentIds) {
             UUID projectId = projectDocumentService.getProjectIdByDocumentId(documentId);
             try {

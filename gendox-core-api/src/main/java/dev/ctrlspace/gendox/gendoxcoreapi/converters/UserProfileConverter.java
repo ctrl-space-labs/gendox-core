@@ -23,11 +23,6 @@ public class UserProfileConverter {
     @Autowired
     private OrganizationUserConverter organizationUserConverter;
 
-
-
-    @Autowired
-    private ProjectService projectService;
-
     @Autowired
     private RolePermissionService rolePermissionService;
 
