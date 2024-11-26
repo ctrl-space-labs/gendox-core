@@ -59,10 +59,6 @@ public class UserService implements UserDetailsService {
     private final UserConverter userConverter;
     private ProjectMemberService projectMemberService;
 
-    private OrganizationService organizationService;
-
-    private ProjectService projectService;
-
     private CacheManager cacheManager;
 
     private UserOrganizationService userOrganizationService;
@@ -76,22 +72,17 @@ public class UserService implements UserDetailsService {
                        JwtDTOUserProfileConverter jwtDTOUserProfileConverter,
                        UserProfileConverter userProfileConverter,
                        TypeService typeService,
-                       OrganizationService organizationService,
-                       ProjectService projectService,
                        CacheManager cacheManager,
                        AuthenticationService authenticationService,
                        UserConverter userConverter,
                        UserOrganizationService userOrganizationService,
                        ProjectMemberService projectMemberService,
-                       AiModelService aiModelService,
                        AuditLogsService auditLogsService) {
         this.userRepository = userRepository;
         this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
         this.jwtDTOUserProfileConverter = jwtDTOUserProfileConverter;
         this.typeService = typeService;
-        this.organizationService = organizationService;
-        this.projectService = projectService;
         this.cacheManager = cacheManager;
         this.authenticationService = authenticationService;
         this.userConverter = userConverter;
