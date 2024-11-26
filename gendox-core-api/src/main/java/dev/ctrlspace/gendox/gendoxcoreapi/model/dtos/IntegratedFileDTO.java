@@ -1,7 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TempIntegrationFileCheck;
-import dev.ctrlspace.gendox.integrations.gendoxnative.model.dto.ContentIdDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

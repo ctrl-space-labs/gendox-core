@@ -130,17 +130,7 @@ public class UploadService {
         String filePathPrefix = organizationId + "/" + projectId;
         String fullFilePath = uploadDir + "/" + filePathPrefix + "/" + cleanFileName;
 
-        Path directoryPath = Paths.get(uploadDir.replaceFirst("^file:", ""), filePathPrefix);
-        if (!Files.exists(directoryPath)) {
-            Files.createDirectories(directoryPath);
-            logger.debug("Created directories at: {}", directoryPath);
-        } else {
-            logger.debug("Directories already exist at: {}", directoryPath);
-        }
-
-        Path filePath = Paths.get(directoryPath.toString(), cleanFileName);
-        logger.debug("Attempting to write file at: {}", filePath);
-
+        createLocalFileDirectory(filePathPrefix);
 
         WritableResource writableResource = (WritableResource) resourceLoader.getResource(fullFilePath);
         try (OutputStream outputStream = writableResource.getOutputStream()) {
@@ -151,18 +141,19 @@ public class UploadService {
     }
 
 
-    public void createLocalFileDirectory(String filePath) {
+    public void createLocalFileDirectory(String filePath) throws IOException {
         // Create the directories if they don't exist in the local file system
         if (uploadDir.startsWith("file:")) {
-            String basePath = uploadDir.substring(5);
-            File folder = new File(basePath, filePath);
-            if (!folder.exists()) {
-                folder.mkdirs(); // Create the folder and it's parent directories if needed
+            Path directoryPath = Paths.get(uploadDir.replaceFirst("^file:", ""), filePath);
+            if (!Files.exists(directoryPath)) {
+                Files.createDirectories(directoryPath);
+                logger.debug("Created directories at: {}", directoryPath);
+            } else {
+                logger.debug("Directories already exist at: {}", directoryPath);
             }
         }
 
     }
-
 
     @NotNull
     private static String calculateFilePathPrefix(UUID organizationId) {

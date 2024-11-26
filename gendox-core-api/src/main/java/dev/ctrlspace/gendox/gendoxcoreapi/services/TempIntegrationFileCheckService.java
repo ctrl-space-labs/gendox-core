@@ -1,10 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TempIntegrationFileCheck;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TempIntegrationFileCheckRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.FileTypeConstants;
-import dev.ctrlspace.gendox.integrations.gendoxnative.model.dto.AssignedContentIdsDTO;
-import dev.ctrlspace.gendox.integrations.gendoxnative.model.dto.OrganizationAssignedContentDTO;
+import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.AssignedContentIdsDTO;
+import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.OrganizationAssignedContentDTO;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,14 +29,14 @@ public class TempIntegrationFileCheckService {
         this.typeService = typeService;
     }
 
-    String baseUrl = "https://test.dma.com.gr/wp-json";
+
 
     public TempIntegrationFileCheck getById(UUID id) {
         return tempIntegrationFileCheckRepository.findById(id).orElse(null);
     }
 
 
-    public void createTempIntegrationFileChecksByOrganization(OrganizationAssignedContentDTO organizationAssignedContentDTO, UUID integrationId) {
+    public void createTempIntegrationFileChecksByOrganization(OrganizationAssignedContentDTO organizationAssignedContentDTO, Integration integration) {
         List<TempIntegrationFileCheck> tempIntegrationFileChecks = new ArrayList<>();
         Set<Long> processedContentIds = new HashSet<>();
         for (AssignedContentIdsDTO assignedContentIdsDTO : organizationAssignedContentDTO.getProjects()) {
@@ -56,15 +58,15 @@ public class TempIntegrationFileCheckService {
                             logger.info("Skipping duplicate contentId: {}", contentIdDTO.getContentId());
                             return;
                         }
-                        String url = baseUrl + "/gendox/v1/content?content_id=" + contentIdDTO.getContentId();
+
                         TempIntegrationFileCheck tempIntegrationFileCheck = new TempIntegrationFileCheck();
                         tempIntegrationFileCheck.setContentId(contentIdDTO.getContentId());
                         tempIntegrationFileCheck.setProjectID(assignedContentIdsDTO.getProjectId());
-                        tempIntegrationFileCheck.setIntegrationId(integrationId);
+                        tempIntegrationFileCheck.setIntegrationId(integration.getId());
                         tempIntegrationFileCheck.setFileType(typeService.getFileTypeByName(FileTypeConstants.API_INTEGRATION_FILE));
                         tempIntegrationFileCheck.setCreatedAt(contentIdDTO.getCreatedAt());
                         tempIntegrationFileCheck.setUpdatedAt(contentIdDTO.getUpdatedAt());
-                        tempIntegrationFileCheck.setRemoteUrl(url);
+                        tempIntegrationFileCheck.setRemoteUrl(integration.getUrl() + "/gendox/v1/content?content_id=" + contentIdDTO.getContentId());
                         tempIntegrationFileCheck.setExternalUrl(contentIdDTO.getExternalUrl()); // null as of 2024-11-18
                         tempIntegrationFileChecks.add(tempIntegrationFileCheck);
                         processedContentIds.add(contentIdDTO.getContentId());
@@ -108,11 +110,10 @@ public class TempIntegrationFileCheckService {
 
     }
 
+    @Transactional
     public void deleteTempIntegrationFileChecksByIntegrationId(UUID integrationId) {
-        List<TempIntegrationFileCheck> tempIntegrationFileChecks = tempIntegrationFileCheckRepository.findAll();
-        tempIntegrationFileChecks.stream()
-                .filter(tempIntegrationFileCheck -> tempIntegrationFileCheck.getIntegrationId().equals(integrationId))
-                .forEach(tempIntegrationFileCheck -> tempIntegrationFileCheckRepository.deleteById(tempIntegrationFileCheck.getId()));
+        tempIntegrationFileCheckRepository.deleteAllByIntegrationId(integrationId);
+
     }
 
 

@@ -1,9 +1,8 @@
-package dev.ctrlspace.gendox.integrations.gendoxnative.services;
+package dev.ctrlspace.gendox.integrations.gendox.api.services;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.ApiIntegrationUpdateService;
-import dev.ctrlspace.gendox.integrations.gendoxnative.model.dto.OrganizationAssignedContentDTO;
-import dev.ctrlspace.gendox.integrations.gendoxnative.model.dto.AssignedContentIdsDTO;
-import dev.ctrlspace.gendox.integrations.gendoxnative.model.dto.ContentDTO;
+import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.OrganizationAssignedContentDTO;
+import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.AssignedContentIdsDTO;
+import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.ContentDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,15 +17,15 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 
 @Service
-public class GendoxNativeIntegrationService {
+public class GendoxAPIIntegrationService {
 
-    Logger logger = LoggerFactory.getLogger(GendoxNativeIntegrationService.class);
+    Logger logger = LoggerFactory.getLogger(GendoxAPIIntegrationService.class);
 
 
     private final RestTemplate restTemplate;
 
     @Autowired
-    public GendoxNativeIntegrationService(RestTemplate restTemplate) {
+    public GendoxAPIIntegrationService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
 

@@ -122,37 +122,45 @@ public class IntegrationConfiguration {
                 for (Map.Entry<ProjectIntegrationDTO, List<IntegratedFileDTO>> entry : map.entrySet()) {
                     ProjectIntegrationDTO projectIntegrationDTO = entry.getKey();
                     List<IntegratedFileDTO> integratedFilesDTO = entry.getValue();
-                    for (IntegratedFileDTO file : integratedFilesDTO) {
-                        hasNewFiles = true;
-                        try {
-                            Project project = projectService.getProjectById(projectIntegrationDTO.getProjectId());
-                            // handle uploaded files
-                            if (file.getMultipartFile() != null) {
-                                logger.debug("Uploading document: {} for project: {}", file.getMultipartFile().getName(), project.getId());
-                                DocumentInstance documentInstance =
-                                        uploadService.uploadFile(file.getMultipartFile(), project.getOrganizationId(), project.getId());
-                                logger.debug("Uploaded document: {} successfully", file.getMultipartFile().getName());
-                            } else {  // handle external files that the content is not downloaded here
-                                logger.debug("Upserting extrernal document Instance: {} for project: {}", file.getExternalFile().getContentId(), project.getId());
 
-                                DocumentInstance documentInstance = new DocumentInstance();
-                                documentInstance.setOrganizationId(project.getOrganizationId());
-                                documentInstance.setRemoteUrl(file.getExternalFile().getRemoteUrl());
-                                documentInstance.setContentId(file.getExternalFile().getContentId());
-                                documentInstance.setFileType(file.getExternalFile().getFileType());
-                                documentInstance.setTitle(documentUtils.getApiIntegrationDocumentTitle(file.getExternalFile().getContentId()));
-                                documentInstance.setDocumentIsccCode(documentUtils.getISCCCodeForApiIntegrationFile());
+                    try {
+                        Project project = projectService.getProjectById(projectIntegrationDTO.getProjectId());
 
-                                uploadService.upsertDocumentInstance(project.getId(),documentInstance);
-                                logger.debug("extrernal document uploaded document: {} successfully", file.getExternalFile().getContentId());
+                        for (IntegratedFileDTO file : integratedFilesDTO) {
+                            hasNewFiles = true;
+                            try {
+                                // handle uploaded files
+                                if (file.getMultipartFile() != null) {
+                                    logger.debug("Uploading document: {} for project: {}", file.getMultipartFile().getName(), project.getId());
+                                    uploadService.uploadFile(file.getMultipartFile(), project.getOrganizationId(), project.getId());
+                                    logger.debug("Uploaded document: {} successfully", file.getMultipartFile().getName());
+                                } else {  // handle external files that the content is not downloaded here
+                                    logger.debug("Upserting extrernal document Instance: {} for project: {}", file.getExternalFile().getContentId(), project.getId());
 
+                                    DocumentInstance documentInstance = new DocumentInstance();
+                                    documentInstance.setOrganizationId(project.getOrganizationId());
+                                    documentInstance.setRemoteUrl(file.getExternalFile().getRemoteUrl());
+                                    documentInstance.setContentId(file.getExternalFile().getContentId());
+                                    documentInstance.setFileType(file.getExternalFile().getFileType());
+                                    documentInstance.setTitle(documentUtils.getApiIntegrationDocumentTitle(file.getExternalFile().getContentId(), projectIntegrationDTO.getIntegration().getUrl()));
+                                    documentInstance.setDocumentIsccCode(documentUtils.getISCCCodeForApiIntegrationFile());
+
+                                    uploadService.upsertDocumentInstance(project.getId(), documentInstance);
+                                    logger.debug("extrernal document uploaded document: {} successfully", file.getExternalFile().getContentId());
+
+                                }
+
+                            } catch (Exception e) {
+                                logger.error("Error uploading document: {}", e.getMessage(), e);
+                                e.printStackTrace();
                             }
-
-                        } catch (Exception e) {
-                            logger.error("Error uploading document: {}", e.getMessage(), e);
-                            e.printStackTrace();
                         }
+                    } catch (Exception e) {
+                        logger.error("Error fetching project: {}", e.getMessage(), e);
+                        throw new RuntimeException(e);
                     }
+
+
                     // Delete all the files in the temp directory table
                     if (projectIntegrationDTO.getIntegration().getIntegrationType().getName().equals(IntegrationTypesConstants.API_INTEGRATION)) {
                         tempIntegrationFileCheckService.deleteTempIntegrationFileChecksByIntegrationId(projectIntegrationDTO.getIntegration().getId());

@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TempIntegrationFileCheck;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
@@ -46,6 +47,14 @@ public interface TempIntegrationFileCheckRepository extends JpaRepository<TempIn
               AND di.organization_id = :organizationId
             """)
     List<UUID> findDocsToDeleteByOrganizationId(@Param("integrationId") UUID integrationId, @Param("organizationId") UUID organizationId);
+
+
+    @Query(nativeQuery = true, value = """
+        DELETE FROM gendox_core.temp_integration_file_checks
+        WHERE integration_id = :integrationId
+        """)
+    @Modifying
+    void deleteAllByIntegrationId(@Param("integrationId") UUID integrationId);
 
 
 }

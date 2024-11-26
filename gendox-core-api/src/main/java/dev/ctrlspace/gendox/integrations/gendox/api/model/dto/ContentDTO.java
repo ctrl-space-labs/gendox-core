@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.integrations.gendoxnative.model.dto;
+package dev.ctrlspace.gendox.integrations.gendox.api.model.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
