@@ -7,7 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.DownloadService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
-import dev.ctrlspace.gendox.integrations.gendoxnative.services.GendoxNativeIntegrationService;
+import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -28,17 +28,17 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
     private ServiceSelector serviceSelector;
     private ProjectAgentService projectAgentService;
     private DownloadService downloadService;
-    private GendoxNativeIntegrationService gendoxNativeIntegrationService;
+    private GendoxAPIIntegrationService gendoxAPIIntegrationService;
 
     @Autowired
     public DocumentSplitterProcessor(ServiceSelector serviceSelector,
                                      ProjectAgentService projectAgentService,
                                      DownloadService downloadService,
-                                     GendoxNativeIntegrationService gendoxNativeIntegrationService) {
+                                     GendoxAPIIntegrationService gendoxAPIIntegrationService) {
         this.serviceSelector = serviceSelector;
         this.projectAgentService = projectAgentService;
         this.downloadService = downloadService;
-        this.gendoxNativeIntegrationService = gendoxNativeIntegrationService;
+        this.gendoxAPIIntegrationService = gendoxAPIIntegrationService;
     }
 
     String baseUrl = "https://test.dma.com.gr/wp-json";
@@ -54,18 +54,14 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         try {
             String fileContent = null;
 
-            // Handle null fileType
+            fileContent = (item.getFileType() == null || !"API_INTEGRATION_FILE".equals(item.getFileType().getName()))
+                    ? downloadService.readDocumentContent(item.getRemoteUrl())
+                    : gendoxAPIIntegrationService.getContentById(baseUrl, item.getContentId(), apiKey).getContent();
+
             if (item.getFileType() == null) {
                 logger.warn("DocumentInstance {} has a null fileType. Using remoteUrl to retrieve content.", item.getId());
-                fileContent = downloadService.readDocumentContent(item.getRemoteUrl());
-            } else {
-                // Determine content source based on fileType
-                if ("API_INTEGRATION_FILE".equals(item.getFileType().getName())) {
-                    fileContent = gendoxNativeIntegrationService.getContentById(baseUrl, item.getContentId(), apiKey).getContent();
-                } else {
-                    fileContent = downloadService.readDocumentContent(item.getRemoteUrl());
-                }
             }
+
 
             agent = projectAgentService.getAgentByDocumentId(item.getId());
             String splitterTypeName = agent.getDocumentSplitterType().getName();

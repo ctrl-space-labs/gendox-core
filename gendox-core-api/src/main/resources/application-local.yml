@@ -16,9 +16,12 @@ logging:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5433/postgres
-    username: gendox_user
-    password: root
+#    url: jdbc:postgresql://localhost:5433/postgres
+#    username: gendox_user
+#    password: root
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
 
     hikari:
       maximum-pool-size: 10
@@ -50,9 +53,9 @@ gendox:
       extensions: .txt,.md,.rst,.pdf
 
   integrations:
-#    poller: 30000 # 30 seconds
+    poller: 120000 # 90 seconds
 #    poller: 300000
-    poller: 86400000 # 24 hours in milliseconds
+#    poller: 86400000 # 24 hours in milliseconds
     storage:
       temporary: C:\ProgramData\\gendox\\temporary_integration_files
 #      temporary: s3://gendox.organization.documents.local/gendox_wiki

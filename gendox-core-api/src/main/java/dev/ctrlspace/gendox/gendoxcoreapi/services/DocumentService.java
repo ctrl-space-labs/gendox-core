@@ -196,7 +196,6 @@ public class DocumentService {
         }
 
         for (UUID documentId : documentIds) {
-            // TODO Giannis: The document id in project_document table it is not necessary unique.
             UUID projectId = projectDocumentService.getProjectIdByDocumentId(documentId);
             try {
                 this.deleteDocument(documentId, projectId);

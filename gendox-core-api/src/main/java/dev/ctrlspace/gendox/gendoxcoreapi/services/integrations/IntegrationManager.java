@@ -108,7 +108,6 @@ public class IntegrationManager {
 
     private void updateMap(Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> projectMap, Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map) throws GendoxException {
 
-        // TODO @Giannis this will not work if an API Integration for 1 ORG, has 2 projects ----> check for this
         logger.debug("Integration update found");
         for (Map.Entry<ProjectIntegrationDTO, List<IntegratedFileDTO>> entry : projectMap.entrySet()) {
             if (!entry.getValue().isEmpty()) {

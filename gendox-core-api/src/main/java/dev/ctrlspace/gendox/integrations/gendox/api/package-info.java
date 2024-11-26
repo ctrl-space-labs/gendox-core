@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.integrations.gendoxnative;
+package dev.ctrlspace.gendox.integrations.gendox.api;
 
 /**
  * This is an experimental Gendox Native integration.
