@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,13 +15,18 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class DocumentDTO {
+public class DocumentInstanceDTO {
 
     private UUID id;
     private UUID organizationId;
     private UUID documentTemplateId;
     private String documentIsccCode;
     private String remoteUrl;
+    private String documentSha256Hash;
+    private Type fileType;
+    private Long contentId;
+    private String externalUrl;
+    private String title;
     private UUID createdBy;
     private UUID updatedBy;
     private Instant createAt;

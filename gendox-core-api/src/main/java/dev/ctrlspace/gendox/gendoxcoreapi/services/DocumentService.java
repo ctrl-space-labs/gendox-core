@@ -105,17 +105,38 @@ public class DocumentService {
     public DocumentInstance updateDocument(DocumentInstance updatedDocument) throws GendoxException {
         UUID documentId = updatedDocument.getId();
         DocumentInstance existingDocument = this.getDocumentInstanceById(documentId);
-        existingDocument.setDocumentTemplateId(updatedDocument.getDocumentTemplateId());
-        existingDocument.setRemoteUrl(updatedDocument.getRemoteUrl());
-        existingDocument.setDocumentIsccCode(updatedDocument.getDocumentIsccCode());
-        existingDocument.setTitle(updatedDocument.getTitle());
-        existingDocument.setFileType(updatedDocument.getFileType());
+
+        if (updatedDocument.getDocumentTemplateId() != null) {
+            existingDocument.setDocumentTemplateId(updatedDocument.getDocumentTemplateId());
+        }
+        if (updatedDocument.getRemoteUrl() != null) {
+            existingDocument.setRemoteUrl(updatedDocument.getRemoteUrl());
+        }
+        if (updatedDocument.getDocumentIsccCode() != null) {
+            existingDocument.setDocumentIsccCode(updatedDocument.getDocumentIsccCode());
+        }
+        if (updatedDocument.getTitle() != null) {
+            existingDocument.setTitle(updatedDocument.getTitle());
+        }
+        if (updatedDocument.getFileType() != null) {
+            existingDocument.setFileType(updatedDocument.getFileType());
+        }
         if (updatedDocument.getContentId() != null) {
             existingDocument.setContentId(updatedDocument.getContentId());
         }
         if (updatedDocument.getUpdatedBy() != null) {
             existingDocument.setUpdatedBy(updatedDocument.getUpdatedBy());
         }
+        if (updatedDocument.getOrganizationId() != null) {
+            existingDocument.setOrganizationId(updatedDocument.getOrganizationId());
+        }
+        if (updatedDocument.getExternalUrl() != null) {
+            existingDocument.setExternalUrl(updatedDocument.getExternalUrl());
+        }
+        if (updatedDocument.getDocumentSha256Hash() != null) {
+            existingDocument.setDocumentSha256Hash(updatedDocument.getDocumentSha256Hash());
+        }
+
         existingDocument.setUpdatedAt(Instant.now());
 
         existingDocument = documentInstanceRepository.save(existingDocument);

@@ -1,11 +1,13 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AuditLogs;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.provenAi.utils.MockUniqueIdentifierServiceAdapter;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
@@ -35,31 +37,28 @@ public class UploadService {
 
     Logger logger = LoggerFactory.getLogger(UploadService.class);
 
-    // Define the location where you want to save uploaded files
-    @Value("${gendox.documents.upload-dir}")
-    private String uploadDir;
 
     private DocumentService documentService;
     private ProjectDocumentService projectDocumentService;
     private AuditLogsService auditLogsService;
     private TypeService typeService;
     private DocumentUtils documentUtils;
+    private DocumentInstanceConverter documentInstanceConverter;
 
-
-    @Autowired
-    private ResourceLoader resourceLoader;
 
     @Autowired
     public UploadService(DocumentService documentService,
                          ProjectDocumentService projectDocumentService,
                          TypeService typeService,
                          AuditLogsService auditLogsService,
-                         DocumentUtils documentUtils) {
+                         DocumentUtils documentUtils,
+                         DocumentInstanceConverter documentInstanceConverter) {
         this.documentService = documentService;
         this.projectDocumentService = projectDocumentService;
         this.typeService = typeService;
         this.auditLogsService = auditLogsService;
         this.documentUtils = documentUtils;
+        this.documentInstanceConverter = documentInstanceConverter;
     }
 
 
@@ -67,57 +66,54 @@ public class UploadService {
         String fileName = file.getOriginalFilename();
         String fullFilePath = documentUtils.saveFile(file, organizationId, projectId);
 
-        auditLogsService.createAuditLog(organizationId, projectId, "DOCUMENT_CREATE");
+        DocumentInstanceDTO instanceDTO = createDocumentInstanceDTO(file, organizationId, fileName, fullFilePath);
 
-        DocumentInstance instance = createDocumentInstance(file, organizationId, fileName, fullFilePath);
-        instance = upsertDocumentInstance(projectId, instance);
-
-        return instance;
+        return upsertDocumentInstance(projectId, instanceDTO);
     }
 
-    private DocumentInstance createDocumentInstance(MultipartFile file, UUID organizationId, String fileName, String fullFilePath) throws IOException, GendoxException {
-        DocumentInstance instance = new DocumentInstance();
-        instance.setOrganizationId(organizationId);
-        instance.setRemoteUrl(fullFilePath);
-        instance.setTitle(fileName);
+    private DocumentInstanceDTO createDocumentInstanceDTO(MultipartFile file, UUID organizationId, String fileName, String fullFilePath) throws IOException, GendoxException {
+        DocumentInstanceDTO instanceDTO = new DocumentInstanceDTO();
+        instanceDTO.setOrganizationId(organizationId);
+        instanceDTO.setRemoteUrl(fullFilePath);
+        instanceDTO.setTitle(fileName);
         // TODO @Giannis: This should also take other parameters for document types
-        instance.setFileType(typeService.getFileTypeByName("PLAIN_TEXT_FILE"));
-        instance.setDocumentIsccCode(documentUtils.getIsccCode(file));
-        return instance;
+        instanceDTO.setFileType(typeService.getFileTypeByName("PLAIN_TEXT_FILE"));
+        instanceDTO.setDocumentIsccCode(documentUtils.getIsccCode(file));
+        return instanceDTO;
     }
 
 
-    public DocumentInstance upsertDocumentInstance(UUID projectId, DocumentInstance documentInstance) throws GendoxException {
+    public DocumentInstance upsertDocumentInstance(UUID projectId, DocumentInstanceDTO documentInstanceDTO) throws GendoxException {
+        String documentNameByRemoteUrl = documentUtils.extractDocumentNameFromUrl(documentInstanceDTO.getRemoteUrl());
         DocumentInstance existingInstance =
-                documentService.getDocumentByProjectIdAndOrganizationIdAndTitle(projectId, documentInstance);
+                documentService.getDocumentByFileName(projectId, documentInstanceDTO.getOrganizationId(), documentNameByRemoteUrl);
 
         if (existingInstance == null) {
-            return createNewDocumentInstance(projectId, documentInstance);
+            return createNewDocumentInstance(projectId, documentInstanceDTO);
         } else {
-            return updateExistingDocumentInstance(projectId, documentInstance, existingInstance);
+            return updateExistingDocumentInstance(projectId, documentInstanceDTO, existingInstance);
         }
 
     }
 
 
-    private DocumentInstance createNewDocumentInstance(UUID projectId, DocumentInstance documentInstance) throws GendoxException {
+    private DocumentInstance createNewDocumentInstance(UUID projectId, DocumentInstanceDTO documentInstanceDTO) throws GendoxException {
         UUID documentInstanceId = UUID.randomUUID();
-        documentInstance.setId(documentInstanceId);
-        DocumentInstance newInstance = documentService.createDocumentInstance(documentInstance);
+        documentInstanceDTO.setId(documentInstanceId);
+        DocumentInstance newInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
+        newInstance = documentService.createDocumentInstance(newInstance);
         projectDocumentService.createProjectDocument(projectId, newInstance.getId());
+        auditLogsService.createAuditLog(newInstance.getOrganizationId(), projectId, "DOCUMENT_CREATE");
         return newInstance;
     }
 
-    private DocumentInstance updateExistingDocumentInstance(UUID projectId, DocumentInstance documentInstance, DocumentInstance existingInstance) throws GendoxException {
-        documentInstance.setId(existingInstance.getId());
-        DocumentInstance updatedInstance = documentService.updateDocument(documentInstance);
+    private DocumentInstance updateExistingDocumentInstance(UUID projectId, DocumentInstanceDTO documentInstanceDTO, DocumentInstance existingInstance) throws GendoxException {
+        documentInstanceDTO.setId(existingInstance.getId());
+        DocumentInstance updatedInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
+        updatedInstance = documentService.updateDocument(updatedInstance);
         auditLogsService.createAuditLog(existingInstance.getOrganizationId(), projectId, "DOCUMENT_UPDATE");
         return updatedInstance;
     }
-
-
-
-
 
 
 }
