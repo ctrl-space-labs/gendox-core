@@ -1,3 +1,11 @@
+ALTER TABLE gendox_core.document_instance
+    ADD COLUMN IF NOT EXISTS document_sha256_hash TEXT;
+
+ALTER TABLE gendox_core.embedding_group
+    ADD COLUMN IF NOT EXISTS embedding_sha256_hash TEXT;
+
+
+
 -- Create the API_INTEGRATION types if it doesn't exist
 INSERT into gendox_core.types
 (type_category, name, description)
@@ -92,7 +100,7 @@ CREATE TABLE IF NOT EXISTS gendox_core.temp_integration_file_checks
     id uuid DEFAULT uuid_generate_v4(),
     project_id UUID NOT NULL,
     integration_id UUID NOT NULL,
-    content_id BIGINT not null UNIQUE,
+    content_id BIGINT not null,
     external_url VARCHAR(255),
     remote_url VARCHAR(255),
     created_at TIMESTAMP NOT NULL,
@@ -108,26 +116,6 @@ comment on table gendox_core.api_keys is 'Table to store temporary integration f
 -- Create the column if it doesn't exist in the document_instance table
 ALTER TABLE gendox_core.document_instance
     ADD COLUMN IF NOT EXISTS content_id BIGINT;
-
--- Add the foreign key constraint if it doesn't exist
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM information_schema.table_constraints AS tc
-        JOIN information_schema.key_column_usage AS kcu
-            ON tc.constraint_name = kcu.constraint_name
-        WHERE tc.table_schema = 'gendox_core'
-          AND tc.table_name = 'document_instance'
-          AND kcu.column_name = 'content_id'
-          AND tc.constraint_type = 'FOREIGN KEY'
-    ) THEN
-        ALTER TABLE gendox_core.document_instance
-        ADD CONSTRAINT fk_content_id
-        FOREIGN KEY (content_id)
-        REFERENCES gendox_core.temp_integration_file_checks(content_id);
-    END IF;
-END $$;
 
 -- Create the column if it doesn't exist in the document_instance table
 ALTER TABLE gendox_core.document_instance
@@ -156,4 +144,13 @@ END $$;
 -- Create the column if it doesn't exist in the document_instance table
 ALTER TABLE gendox_core.document_instance
     ADD COLUMN IF NOT EXISTS external_url VARCHAR(255);
+
+-- Create the column if it doesn't exist in the document_instance table
+ALTER TABLE gendox_core.document_instance
+    ADD COLUMN IF NOT EXISTS title TEXT;
+
+
+
+
+
 

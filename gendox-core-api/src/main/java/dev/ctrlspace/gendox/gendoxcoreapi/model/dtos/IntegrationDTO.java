@@ -11,32 +11,21 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder(toBuilder = true)
 public class IntegrationDTO {
+
     private UUID id;
-
+    private UUID organizationId;
     private UUID projectId;
-
     private Type integrationType;
-
     private Boolean Active;
-
     private String url;
-
     private String queueName;
-
     private String directoryPath;
-
     private String repoHead;
-
     private String userName;
-
     private String password;
-
     private Instant createdAt;
-
     private Instant updatedAt;
-
     private UUID createdBy;
-
     private UUID updatedBy;
 
 

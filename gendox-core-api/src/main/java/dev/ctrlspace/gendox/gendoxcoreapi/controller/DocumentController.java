@@ -1,16 +1,13 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithoutDocumentConverter;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentOnlyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionOrderDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
@@ -44,8 +41,7 @@ public class DocumentController {
     private String allowedExtensions;
 
     private DocumentService documentService;
-    private DocumentOnlyConverter documentOnlyConverter;
-    private DocumentConverter documentConverter;
+    private DocumentInstanceConverter documentInstanceConverter;
     private UploadService uploadService;
     private SplitFileService splitFileService;
     private DocumentSectionService documentSectionService;
@@ -58,8 +54,7 @@ public class DocumentController {
 
     @Autowired
     public DocumentController(DocumentService documentService,
-                              DocumentOnlyConverter documentOnlyConverter,
-                              DocumentConverter documentConverter,
+                              DocumentInstanceConverter documentInstanceConverter,
                               UploadService uploadService,
                               SplitFileService splitFileService,
                               SecurityUtils securityUtils,
@@ -68,8 +63,7 @@ public class DocumentController {
                                 DocumentInstanceSectionRepository documentInstanceSectionRepository
                               ) {
         this.documentService = documentService;
-        this.documentOnlyConverter = documentOnlyConverter;
-        this.documentConverter = documentConverter;
+        this.documentInstanceConverter = documentInstanceConverter;
         this.uploadService = uploadService;
         this.splitFileService = splitFileService;
         this.documentSectionService = documentSectionService;
@@ -95,7 +89,7 @@ public class DocumentController {
     @GetMapping("/organizations/{organizationId}/projects/{projectId}/documents")
     @Operation(summary = "Get all documents",
             description = "Retrieve a list of all documents based on the provided criteria.")
-    public Page<DocumentDTO> getAll(@Valid DocumentCriteria criteria, Pageable pageable) throws GendoxException {
+    public Page<DocumentInstanceDTO> getAll(@Valid DocumentCriteria criteria, Pageable pageable) throws GendoxException {
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
         }
@@ -106,7 +100,7 @@ public class DocumentController {
         Page<DocumentInstance> documentInstances = documentService.getAllDocuments(criteria, pageable);
 
         // Convert the Page of DocumentInstance to a Page of DocumentDTO using the converter
-        Page<DocumentDTO> documentDTOs = documentInstances.map(document -> documentOnlyConverter.toDTO(document));
+        Page<DocumentInstanceDTO> documentDTOs = documentInstances.map(document -> documentInstanceConverter.toDTO(document));
 
 
         return documentDTOs;
@@ -144,15 +138,15 @@ public class DocumentController {
             description = "Create a new document based on the provided document details. " +
                     "This operation creates a new document instance with associated sections and metadata, " +
                     "incorporating the provided document information.")
-    public DocumentInstance create(@RequestBody DocumentDTO documentDTO, @PathVariable UUID organizationId) throws GendoxException {
+    public DocumentInstance create(@RequestBody DocumentInstanceDTO documentInstanceDTO, @PathVariable UUID organizationId) throws GendoxException {
 
-        if (documentDTO.getId() != null) {
+        if (documentInstanceDTO.getId() != null) {
             throw new GendoxException("DOCUMENT_INSTANCE_ID_MUST_BE_NULL", "Document instant id is not null", HttpStatus.BAD_REQUEST);
         }
 
-        DocumentInstance documentInstance = documentConverter.toEntity(documentDTO);
+        DocumentInstance documentInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
 
-        if (!organizationId.equals(documentDTO.getOrganizationId())) {
+        if (!organizationId.equals(documentInstanceDTO.getOrganizationId())) {
             throw new GendoxException("ORGANIZATION_ID_MISMATCH", "Organization ID in path and Organization ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
 
@@ -185,16 +179,16 @@ public class DocumentController {
             description = "Update an existing document by specifying its unique ID and providing updated document details. " +
                     "This operation allows you to modify the document's properties, sections, and metadata. " +
                     "Ensure that the ID in the path matches the ID in the provided document details.")
-    public DocumentInstance update(Authentication authentication, @PathVariable UUID documentId, @RequestBody DocumentDTO documentDTO) throws GendoxException {
+    public DocumentInstance update(Authentication authentication, @PathVariable UUID documentId, @RequestBody DocumentInstanceDTO documentInstanceDTO) throws GendoxException {
         // TODO: Store the sections. The metadata should be updated only if documentTemplate is empty/null
 
         // ID Validation checks
-        if (!documentId.equals(documentDTO.getId())) {
+        if (!documentId.equals(documentInstanceDTO.getId())) {
             throw new GendoxException("DOCUMENT_ID_MISMATCH", "ID in path and ID in body are not the same", HttpStatus.BAD_REQUEST);
         }
 
 
-        DocumentInstance documentInstance = documentConverter.toEntity(documentDTO);
+        DocumentInstance documentInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
         documentInstance = documentService.updateDocument(documentInstance);
         return documentInstance;
     }
@@ -224,7 +218,7 @@ public class DocumentController {
 //        }
 
         DocumentInstanceSection documentSection = documentInstanceSectionWithoutDocumentConverter.toEntity(sectionDTO);
-        DocumentInstance documentInstance = documentConverter.toEntity(sectionDTO.getDocumentDTO());
+        DocumentInstance documentInstance = documentInstanceConverter.toEntity(sectionDTO.getDocumentInstanceDTO());
         documentSection.setDocumentInstance(documentInstance);
 
         if (!sectionId.equals(documentSection.getId())) {

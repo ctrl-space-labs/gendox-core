@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFileDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
@@ -137,15 +138,15 @@ public class IntegrationConfiguration {
                                 } else {  // handle external files that the content is not downloaded here
                                     logger.debug("Upserting extrernal document Instance: {} for project: {}", file.getExternalFile().getContentId(), project.getId());
 
-                                    DocumentInstance documentInstance = new DocumentInstance();
-                                    documentInstance.setOrganizationId(project.getOrganizationId());
-                                    documentInstance.setRemoteUrl(file.getExternalFile().getRemoteUrl());
-                                    documentInstance.setContentId(file.getExternalFile().getContentId());
-                                    documentInstance.setFileType(file.getExternalFile().getFileType());
-                                    documentInstance.setTitle(documentUtils.getApiIntegrationDocumentTitle(file.getExternalFile().getContentId(), projectIntegrationDTO.getIntegration().getUrl()));
-                                    documentInstance.setDocumentIsccCode(documentUtils.getISCCCodeForApiIntegrationFile());
+                                    DocumentInstanceDTO documentInstanceDTO = new DocumentInstanceDTO();
+                                    documentInstanceDTO.setOrganizationId(project.getOrganizationId());
+                                    documentInstanceDTO.setRemoteUrl(file.getExternalFile().getRemoteUrl());
+                                    documentInstanceDTO.setContentId(file.getExternalFile().getContentId());
+                                    documentInstanceDTO.setFileType(file.getExternalFile().getFileType());
+                                    documentInstanceDTO.setTitle(documentUtils.getApiIntegrationDocumentTitle(file.getExternalFile().getContentId(), projectIntegrationDTO.getIntegration().getUrl()));
+                                    documentInstanceDTO.setDocumentIsccCode(documentUtils.getISCCCodeForApiIntegrationFile());
 
-                                    uploadService.upsertDocumentInstance(project.getId(), documentInstance);
+                                    uploadService.upsertDocumentInstance(project.getId(), documentInstanceDTO);
                                     logger.debug("extrernal document uploaded document: {} successfully", file.getExternalFile().getContentId());
 
                                 }

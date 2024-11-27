@@ -11,6 +11,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.EmbeddingTemplateAuthor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +26,6 @@ import java.time.Instant;
 /**
  * Get Embeddings for each project that the section belongs.
  * This can run in parallel
- *
  */
 @Component
 @StepScope
@@ -33,34 +33,26 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
     Logger logger = LoggerFactory.getLogger(DocumentInstanceSectionProcessor.class);
 
     private EmbeddingService embeddingService;
-
-    private ProjectService projectService;
-
-    private DocumentSectionService documentSectionService;
-
     private ProjectAgentRepository projectAgentRepository;
-
     private TemplateRepository templateRepository;
-
     private CryptographyUtils cryptographyUtils;
-
+    private DocumentUtils documentUtils;
 
     @Value("#{jobParameters['skipKnownEmbeddings']}")
     protected Boolean skipKnownEmbeddings;
 
 
-
     @Autowired
     public DocumentInstanceSectionProcessor(EmbeddingService embeddingService,
                                             ProjectAgentRepository projectAgentRepository,
-                                            DocumentSectionService documentSectionService,
                                             TemplateRepository templateRepository,
-                                            CryptographyUtils cryptographyUtils) {
+                                            CryptographyUtils cryptographyUtils,
+                                            DocumentUtils documentUtils) {
         this.embeddingService = embeddingService;
         this.projectAgentRepository = projectAgentRepository;
-        this.documentSectionService = documentSectionService;
         this.templateRepository = templateRepository;
         this.cryptographyUtils = cryptographyUtils;
+        this.documentUtils = documentUtils;
     }
 
 
@@ -79,7 +71,7 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
             EmbeddingTemplateAuthor embeddingTemplateAuthor = new EmbeddingTemplateAuthor();
             String sectionValue = embeddingTemplateAuthor.sectionValueForEmbedding(
                     item,
-                    documentSectionService.getFileNameFromUrl(item.getDocumentInstance().getRemoteUrl()),
+                    documentUtils.extractDocumentNameFromUrl(item.getDocumentInstance().getRemoteUrl()),
                     agentSectionTemplate.getText()
             );
 

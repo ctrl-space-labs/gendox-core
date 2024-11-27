@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -111,7 +112,7 @@ public class DocumentUtils {
 
 
     @NotNull
-    private static String calculateFilePathPrefix(UUID organizationId) {
+    public static String calculateFilePathPrefix(UUID organizationId) {
         // Get the current date
         LocalDate currentDate = LocalDate.now();
 
@@ -124,4 +125,49 @@ public class DocumentUtils {
         String folderStructure = organizationId.toString() + "/" + year + "/" + month + "/" + day;
         return folderStructure;
     }
+
+
+    public String extractDocumentNameFromUrl(String url) {
+        Logger logger = LoggerFactory.getLogger(DocumentUtils.class);
+
+        if (url == null || url.isEmpty()) {
+            logger.error("URL cannot be null or empty");
+            return null; // Or return an empty string if preferred
+        }
+
+        String normalizedUrl;
+
+        if (url.startsWith("file:")) {
+            normalizedUrl = url.substring(5); // Remove "file:" prefix
+        } else if (url.startsWith("s3:")) {
+            normalizedUrl = url.substring(3); // Remove "s3:" prefix
+        } else if (url.startsWith("http:") || url.startsWith("https:")) {
+            try {
+                // Parse the URL and get the path
+                URI uri = new URI(url);
+                normalizedUrl = uri.getPath(); // Extract the path component
+            } catch (Exception e) {
+                logger.error("Invalid HTTP/HTTPS URL format: {}", url, e);
+                return null; // Return null for invalid format
+            }
+        } else {
+            logger.error("Unsupported URL format: {}", url);
+            return null; // Return null for unsupported formats
+        }
+
+        // Ensure normalized URL is not empty after processing
+        if (normalizedUrl.isEmpty()) {
+            logger.error("The URL path is empty: {}", url);
+            return null;
+        }
+
+        // Replace backslashes with forward slashes for consistency
+        normalizedUrl = normalizedUrl.replace('\\', '/');
+
+        // Extract the file name from the path
+        Path path = Paths.get(normalizedUrl);
+        return path.getFileName().toString();
+    }
+
+
 }
