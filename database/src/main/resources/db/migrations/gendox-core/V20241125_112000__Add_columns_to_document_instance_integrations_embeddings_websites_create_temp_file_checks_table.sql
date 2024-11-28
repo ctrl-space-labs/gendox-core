@@ -150,6 +150,55 @@ ALTER TABLE gendox_core.document_instance
     ADD COLUMN IF NOT EXISTS title TEXT;
 
 
+-- Create the column if it doesn't exist in the organization_web_sites table
+ALTER TABLE gendox_core.organization_web_sites
+    ADD COLUMN IF NOT EXISTS integration_id UUID;
+
+-- Add the foreign key constraint if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.table_constraints AS tc
+        JOIN information_schema.key_column_usage AS kcu
+            ON tc.constraint_name = kcu.constraint_name
+        WHERE tc.table_schema = 'gendox_core'
+          AND tc.table_name = 'organization_web_sites'
+          AND kcu.column_name = 'integration_id'
+          AND tc.constraint_type = 'FOREIGN KEY'
+    ) THEN
+        ALTER TABLE gendox_core.organization_web_sites
+        ADD CONSTRAINT fk_integration_id
+        FOREIGN KEY (integration_id)
+        REFERENCES gendox_core.integrations(id);
+    END IF;
+END $$;
+
+-- Create the column if it doesn't exist in the organization_web_sites table
+ALTER TABLE gendox_core.organization_web_sites
+    ADD COLUMN IF NOT EXISTS api_key_id UUID;
+
+-- Add the foreign key constraint if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.table_constraints AS tc
+        JOIN information_schema.key_column_usage AS kcu
+            ON tc.constraint_name = kcu.constraint_name
+        WHERE tc.table_schema = 'gendox_core'
+          AND tc.table_name = 'organization_web_sites'
+          AND kcu.column_name = 'api_key_id'
+          AND tc.constraint_type = 'FOREIGN KEY'
+    ) THEN
+        ALTER TABLE gendox_core.organization_web_sites
+        ADD CONSTRAINT fk_api_key_id
+        FOREIGN KEY (api_key_id)
+        REFERENCES gendox_core.api_keys(id);
+    END IF;
+END $$;
+
+
 
 
 

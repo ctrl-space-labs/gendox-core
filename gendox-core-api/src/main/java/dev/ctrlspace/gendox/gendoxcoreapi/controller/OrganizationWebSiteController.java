@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationWebSiteDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebsiteIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationWebSiteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,6 +27,19 @@ public class OrganizationWebSiteController {
     @GetMapping("/organizations/{organizationId}/websites")
     public List<OrganizationWebSite> getAllByOrganizationId(@PathVariable UUID organizationId) {
         return organizationWebSiteService.getAllByOrganizationId(organizationId);
+
+    }
+
+    /**
+     * Integrate an organization website with a third-party service
+     *
+     * @param websiteIntegrationDTO
+     */
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PostMapping("/organizations/{organizationId}/websites/integration")
+    public void integrateOrganizationWebSite(@PathVariable UUID organizationId, @RequestBody WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
+
+        organizationWebSiteService.integrateOrganizationWebSite(organizationId, websiteIntegrationDTO);
 
     }
 
@@ -52,12 +67,6 @@ public class OrganizationWebSiteController {
     public void deleteOrganizationWebSite(@PathVariable UUID organizationId, @PathVariable UUID websiteId) {
         organizationWebSiteService.deleteOrganizationWebSite(websiteId);
     }
-
-
-
-
-
-
 
 
 }

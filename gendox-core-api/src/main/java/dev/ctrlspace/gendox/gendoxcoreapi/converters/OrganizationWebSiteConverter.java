@@ -16,6 +16,12 @@ public class OrganizationWebSiteConverter implements GendoxConverter<Organizatio
         organizationWebSiteDTO.setOrganizationId(organizationWebSite.getOrganizationId());
         organizationWebSiteDTO.setName(organizationWebSite.getName());
         organizationWebSiteDTO.setUrl(organizationWebSite.getUrl());
+        if (organizationWebSite.getIntegrationId() != null) {
+            organizationWebSiteDTO.setIntegrationId(organizationWebSite.getIntegrationId());
+        }
+        if (organizationWebSite.getApiKeyId() != null) {
+            organizationWebSiteDTO.setApiKeyId(organizationWebSite.getApiKeyId());
+        }
         return organizationWebSiteDTO;
     }
 
@@ -25,6 +31,12 @@ public class OrganizationWebSiteConverter implements GendoxConverter<Organizatio
         organizationWebSite.setOrganizationId(organizationWebSiteDTO.getOrganizationId());
         organizationWebSite.setName(organizationWebSiteDTO.getName());
         organizationWebSite.setUrl(organizationWebSiteDTO.getUrl());
+        if (organizationWebSiteDTO.getIntegrationId() != null) {
+            organizationWebSite.setIntegrationId(organizationWebSiteDTO.getIntegrationId());
+        }
+        if (organizationWebSiteDTO.getApiKeyId() != null) {
+            organizationWebSite.setApiKeyId(organizationWebSiteDTO.getApiKeyId());
+        }
         return organizationWebSite;
     }
 }

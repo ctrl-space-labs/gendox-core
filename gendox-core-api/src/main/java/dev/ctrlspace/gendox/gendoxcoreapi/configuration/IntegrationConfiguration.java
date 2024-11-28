@@ -138,13 +138,15 @@ public class IntegrationConfiguration {
                                 } else {  // handle external files that the content is not downloaded here
                                     logger.debug("Upserting extrernal document Instance: {} for project: {}", file.getExternalFile().getContentId(), project.getId());
 
-                                    DocumentInstanceDTO documentInstanceDTO = new DocumentInstanceDTO();
-                                    documentInstanceDTO.setOrganizationId(project.getOrganizationId());
-                                    documentInstanceDTO.setRemoteUrl(file.getExternalFile().getRemoteUrl());
-                                    documentInstanceDTO.setContentId(file.getExternalFile().getContentId());
-                                    documentInstanceDTO.setFileType(file.getExternalFile().getFileType());
-                                    documentInstanceDTO.setTitle(documentUtils.getApiIntegrationDocumentTitle(file.getExternalFile().getContentId(), projectIntegrationDTO.getIntegration().getUrl()));
-                                    documentInstanceDTO.setDocumentIsccCode(documentUtils.getISCCCodeForApiIntegrationFile());
+                                    DocumentInstanceDTO documentInstanceDTO = DocumentInstanceDTO
+                                            .builder()
+                                            .organizationId(project.getOrganizationId())
+                                            .remoteUrl(file.getExternalFile().getRemoteUrl())
+                                            .contentId(file.getExternalFile().getContentId())
+                                            .fileType(file.getExternalFile().getFileType())
+                                            .title(documentUtils.getApiIntegrationDocumentTitle(file.getExternalFile().getContentId(), projectIntegrationDTO.getIntegration().getUrl()))
+                                            .documentIsccCode(documentUtils.getISCCCodeForApiIntegrationFile())
+                                            .build();
 
                                     uploadService.upsertDocumentInstance(project.getId(), documentInstanceDTO);
                                     logger.debug("extrernal document uploaded document: {} successfully", file.getExternalFile().getContentId());
