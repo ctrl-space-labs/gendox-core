@@ -3,6 +3,8 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ApiKeyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ApiKey;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ApiKeyDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ApiKeyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,21 @@ public class ApiKeyService {
 
     public List<ApiKey> getAllByOrganizationId(UUID organizationId) {
         return apiKeyRepository.findAllByOrganizationId(organizationId);
+    }
+
+    public ApiKey getByApiKey(String apiKey) throws GendoxException{
+        return apiKeyRepository.findByApiKey(apiKey)
+                .orElseThrow(() -> new GendoxException("APIKEY_NOT_FOUND", "ApiKey not found", HttpStatus.NOT_FOUND));
+    }
+
+
+
+    public ApiKey validateApiKey(String key) throws GendoxException {
+        ApiKey apiKey = this.getByApiKey(key);
+        if (apiKey == null) {
+            throw new GendoxException("API_KEY_NOT_FOUND", "No matching ApiKey found with the specified criteria", HttpStatus.NOT_FOUND);
+        }
+        return apiKey;
     }
 
     public ApiKey createApiKey(ApiKeyDTO apiKeyDTO) {

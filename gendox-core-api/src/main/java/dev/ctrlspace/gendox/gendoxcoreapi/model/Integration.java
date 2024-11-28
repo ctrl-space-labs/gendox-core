@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import org.eclipse.jgit.lib.ObjectId;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -12,6 +13,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
+
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)

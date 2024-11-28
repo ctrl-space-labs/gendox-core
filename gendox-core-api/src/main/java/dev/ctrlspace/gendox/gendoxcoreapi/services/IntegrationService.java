@@ -47,7 +47,7 @@ public class IntegrationService {
     }
 
 
-    public Integration createIntegration(Integration integration) throws Exception {
+    public Integration createIntegration(Integration integration) throws GendoxException {
 
         integration = integrationRepository.save(integration);
 

@@ -72,14 +72,15 @@ public class UploadService {
     }
 
     private DocumentInstanceDTO createDocumentInstanceDTO(MultipartFile file, UUID organizationId, String fileName, String fullFilePath) throws IOException, GendoxException {
-        DocumentInstanceDTO instanceDTO = new DocumentInstanceDTO();
-        instanceDTO.setOrganizationId(organizationId);
-        instanceDTO.setRemoteUrl(fullFilePath);
-        instanceDTO.setTitle(fileName);
-        // TODO @Giannis: This should also take other parameters for document types
-        instanceDTO.setFileType(typeService.getFileTypeByName("PLAIN_TEXT_FILE"));
-        instanceDTO.setDocumentIsccCode(documentUtils.getIsccCode(file));
-        return instanceDTO;
+
+        return DocumentInstanceDTO
+                .builder()
+                .organizationId(organizationId)
+                .remoteUrl(fullFilePath)
+                .title(fileName)
+                .fileType(typeService.getFileTypeByName("PLAIN_TEXT_FILE"))
+                .documentIsccCode(documentUtils.getIsccCode(file))
+                .build();
     }
 
 

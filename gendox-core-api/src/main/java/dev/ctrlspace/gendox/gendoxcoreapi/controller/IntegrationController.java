@@ -73,7 +73,7 @@ public class IntegrationController {
     @ResponseStatus(value = HttpStatus.CREATED)
     @Operation(summary = "Create integrations",
             description = "Create a new integration based on the provided integration details.")
-    public Integration createIntegration(@RequestBody IntegrationDTO integrationDTO) throws Exception {
+    public Integration createIntegration(@RequestBody IntegrationDTO integrationDTO) throws GendoxException {
 
         if (integrationDTO.getId() != null) {
             throw new GendoxException("INTEGRATION_ID_MUST_BE_NULL", "Integration id is not null", HttpStatus.BAD_REQUEST);

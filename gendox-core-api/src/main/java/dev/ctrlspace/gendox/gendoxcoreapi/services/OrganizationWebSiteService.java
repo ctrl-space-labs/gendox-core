@@ -1,29 +1,47 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OrganizationWebSiteConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ApiKey;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationPlan;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationWebSiteDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebsiteIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationWebSiteRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 public class OrganizationWebSiteService {
+    Logger logger = LoggerFactory.getLogger(OrganizationWebSiteService.class);
     private OrganizationWebSiteRepository organizationWebSiteRepository;
     private OrganizationWebSiteConverter organizationWebSiteConverter;
     private OrganizationPlanService organizationPlanService;
+    private ApiKeyService apiKeyService;
+    private IntegrationService integrationService;
+    private TypeService typeService;
 
     @Autowired
     public OrganizationWebSiteService(OrganizationWebSiteRepository organizationWebSiteRepository,
-                                       OrganizationWebSiteConverter organizationWebSiteConverter,
-                                       OrganizationPlanService organizationPlanService) {
+                                      OrganizationWebSiteConverter organizationWebSiteConverter,
+                                      OrganizationPlanService organizationPlanService,
+                                      ApiKeyService apiKeyService,
+                                      IntegrationService integrationService,
+                                      TypeService typeService) {
         this.organizationWebSiteRepository = organizationWebSiteRepository;
         this.organizationWebSiteConverter = organizationWebSiteConverter;
         this.organizationPlanService = organizationPlanService;
+        this.apiKeyService = apiKeyService;
+        this.integrationService = integrationService;
+        this.typeService = typeService;
     }
 
     public OrganizationWebSite getById(UUID id) {
@@ -33,6 +51,57 @@ public class OrganizationWebSiteService {
     public List<OrganizationWebSite> getAllByOrganizationId(UUID organizationId) {
         return organizationWebSiteRepository.findAllByOrganizationId(organizationId);
     }
+
+    private OrganizationWebSite getOrganizationWebSite(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
+        return organizationWebSiteRepository
+                .findMatchingOrganizationWebSite(
+                        organizationId,
+                        websiteIntegrationDTO.getDomain(),
+                        websiteIntegrationDTO.getApiKey().getApiKey(),
+                        websiteIntegrationDTO.getIntegrationType().getName())
+                .orElseThrow(() -> new GendoxException("ORGANIZATION_WEB_SITE_NOT_FOUND", "No matching OrganizationWebSite found with the specified criteria", HttpStatus.NOT_FOUND));
+    }
+
+
+    public void integrateOrganizationWebSite(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
+        ApiKey apiKey = apiKeyService.getByApiKey(websiteIntegrationDTO.getApiKey().getApiKey());
+
+        OrganizationWebSite organizationWebSite = getOrganizationWebSite(organizationId, websiteIntegrationDTO);
+
+        handleIntegrationLogic(organizationId, organizationWebSite, websiteIntegrationDTO);
+
+        updateApiKeyForOrganizationWebSite(organizationWebSite, apiKey);
+
+
+
+        Integration integration = integrationService.getIntegrationById(organizationWebSite.getIntegrationId());
+
+        if (integration == null) {
+            Integration newIntegration = new Integration();
+            newIntegration.setOrganizationId(organizationId);
+            newIntegration.setActive(websiteIntegrationDTO.getIntegrationStatus().getName().equals("ACTIVE")); // if Active then true else false
+            newIntegration.setUrl(websiteIntegrationDTO.getDomain() + websiteIntegrationDTO.getContextPath());
+            newIntegration.setIntegrationType(typeService.getIntegrationTypeByName(websiteIntegrationDTO.getIntegrationType().getName()));
+            integrationService.createIntegration(newIntegration);
+        } else {
+            if (websiteIntegrationDTO.getIntegrationStatus().getName().equals("ACTIVE") && !integration.getActive()) {
+                integration.setActive(true);
+                integrationService.updateIntegration(integration);
+            } else if (websiteIntegrationDTO.getIntegrationStatus().getName().equals("DISABLED")
+                    || websiteIntegrationDTO.getIntegrationStatus().getName().equals("PAUSED")
+                    && integration.getActive()) {
+                integration.setActive(false);
+                integrationService.updateIntegration(integration);
+            }
+        }
+
+        if (!apiKey.getId().equals(organizationWebSite.getApiKeyId())) {
+            organizationWebSite.setApiKeyId(apiKey.getId());
+            organizationWebSiteRepository.save(organizationWebSite);
+        }
+
+    }
+
 
     public OrganizationWebSite createOrganizationWebSite(OrganizationWebSiteDTO organizationWebSiteDTO, UUID organizationId) {
         OrganizationWebSite organizationWebSite = organizationWebSiteConverter.toEntity(organizationWebSiteDTO);
@@ -62,5 +131,49 @@ public class OrganizationWebSiteService {
 
     public void deleteOrganizationWebSite(UUID id) {
         organizationWebSiteRepository.deleteById(id);
+    }
+
+    private void handleIntegrationLogic(UUID organizationId, OrganizationWebSite organizationWebSite, WebsiteIntegrationDTO websiteIntegrationDTO) {
+        Integration integration = integrationService.getIntegrationById(organizationWebSite.getIntegrationId());
+
+        if (integration == null) {
+            createNewIntegration(organizationId, websiteIntegrationDTO);
+        } else {
+            updateExistingIntegration(integration, websiteIntegrationDTO);
+        }
+    }
+
+    private void createNewIntegration(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) {
+        Integration newIntegration = Integration.builder()
+                .organizationId(organizationId)
+                .active(websiteIntegrationDTO.getIntegrationStatus().getName().equals("ACTIVE"))
+                .url(websiteIntegrationDTO.getDomain() + websiteIntegrationDTO.getContextPath())
+                .integrationType(typeService.getIntegrationTypeByName(websiteIntegrationDTO.getIntegrationType().getName()))
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
+
+        integrationService.createIntegration(newIntegration);
+    }
+
+    private void updateExistingIntegration(Integration integration, WebsiteIntegrationDTO websiteIntegrationDTO) {
+        String statusName = websiteIntegrationDTO.getIntegrationStatus().getName();
+        boolean isActive = integration.getActive();
+
+        if ("ACTIVE".equals(statusName) && !isActive) {
+            integration.setActive(true);
+            integrationService.updateIntegration(integration);
+        } else if (("DISABLED".equals(statusName) || "PAUSED".equals(statusName)) && isActive) {
+            integration.setActive(false);
+            integrationService.updateIntegration(integration);
+        }
+    }
+
+
+    public void updateApiKeyForOrganizationWebSite(OrganizationWebSite organizationWebSite, ApiKey apiKey) {
+        if (!apiKey.getId().equals(organizationWebSite.getApiKeyId())) {
+            organizationWebSite.setApiKeyId(apiKey.getId());
+            organizationWebSiteRepository.save(organizationWebSite);
+        }
     }
 }
