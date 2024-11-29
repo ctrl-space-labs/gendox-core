@@ -263,5 +263,16 @@ public class OrganizationController {
 
     }
 
+    @GetMapping("/{organizationId}/profile")
+    @Operation(summary = "Get organization profile",
+            description = "Retrieve the profile of an organization by specifying its unique ID.")
+    public UserProfile getOrganizationProfile(@PathVariable UUID organizationId,  @RequestParam String roleType) throws GendoxException {
+
+        UserProfile userProfile = organizationService.getOrganizationProfileById(organizationId, roleType);
+
+        return userProfile;
+
+    }
+
 
 }

@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.OrganizationProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationProfileDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDidDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WalletKeyDTO;
@@ -50,6 +52,8 @@ public class OrganizationService {
 
     private AuditLogsService auditLogsService;
 
+    private OrganizationProfileConverter organizationProfileConverter;
+
     @Value("${walt-id.default-key.type}")
     private String keyTypeName;
     @Value("${walt-id.default-key.size}")
@@ -64,7 +68,8 @@ public class OrganizationService {
                                WalletKeyService walletKeyService,
                                TypeService typeService,
                                ProjectService projectService,
-                               AuditLogsService auditLogsService) {
+                               AuditLogsService auditLogsService,
+                               OrganizationProfileConverter organizationProfileConverter) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.organizationRepository = organizationRepository;
         this.userOrganizationService = userOrganizationService;
@@ -73,6 +78,7 @@ public class OrganizationService {
         this.typeService = typeService;
         this.projectService = projectService;
         this.auditLogsService = auditLogsService;
+        this.organizationProfileConverter = organizationProfileConverter;
 
     }
 
@@ -243,9 +249,14 @@ public class OrganizationService {
     public UserProfile getOrganizationProfileById(UUID organizationId, String roleType) throws GendoxException {
 
         // TODO construct user profile similar to to user with role 'roleType' in the organization
+        OrganizationProfileDTO rawOrganizationProfile =
+                organizationRepository.findRawOrganizationProfileById(organizationId, roleType);
 
-        throw new NotImplementedException("Not implemented yet");
-//        return userProfile;
+        UserProfile userProfile =  organizationProfileConverter.toDTO(rawOrganizationProfile);
+
+
+//        throw new NotImplementedException("Not implemented yet");
+        return userProfile;
     }
 
 }
