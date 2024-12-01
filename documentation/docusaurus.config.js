@@ -111,16 +111,16 @@ const config = {
             title: 'Community',
             items: [
               {
-                label: 'Stack Overflow',
-                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-              },
-              {
                 label: 'Discord',
-                href: 'https://discordapp.com/invite/docusaurus',
+                href: 'https://discord.gg/jWes2urauW',
               },
               {
-                label: 'Twitter',
-                href: 'https://twitter.com/docusaurus',
+                label: 'Instagram',
+                href: 'https://instagram.com/ctrlspace.dev',
+              },
+              {
+                label: 'LinkedIn',
+                href: 'https://www.linkedin.com/company/ctrl-space-labs',
               },
             ],
           },
@@ -138,7 +138,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} Ctrl+Space Labs Built with Docusaurus.`,
       },
       prism: {
         theme: prismThemes.github,
