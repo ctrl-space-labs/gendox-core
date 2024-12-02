@@ -80,25 +80,24 @@ public class IntegrationController {
 
         }
 
-        Integration integration = integrationConverter.toEntity(integrationDTO);
         // make projects auto-training true
-        if (integration.getProjectId() != null) {
-            Project project = projectService.getProjectById(integration.getProjectId());
+        if (integrationDTO.getProjectId() != null) {
+            Project project = projectService.getProjectById(integrationDTO.getProjectId());
             project.setAutoTraining(true);
             projectService.updateProject(project);
         }
 
-
-        integration = integrationService.createIntegration(integration);
-
-        return integration;
+        return integrationService.createIntegration(integrationDTO);
     }
+
+
+
     // TODO: preauthorize has OP_UPDATE_INTEGRATION
 
     @PutMapping("/integrations/{id}")
     @Operation(summary = "Update integration by ID",
             description = "Update an existing integration by specifying its unique ID and providing updated integration details.")
-    public Integration integration(@PathVariable UUID id, @RequestBody IntegrationDTO integrationDTO) throws Exception {
+    public Integration updateIntegration(@PathVariable UUID id, @RequestBody IntegrationDTO integrationDTO) throws Exception {
         UUID integrationId = integrationDTO.getId();
 
         Integration integration = new Integration();
