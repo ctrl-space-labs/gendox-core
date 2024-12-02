@@ -1,9 +1,11 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.IntegrationConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.IntegrationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.IntegrationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.IntegrationPredicates;
@@ -21,11 +23,14 @@ import java.util.UUID;
 @Service
 public class IntegrationService {
     private IntegrationRepository integrationRepository;
+    private IntegrationConverter integrationConverter;
 
 
     @Autowired
-    public IntegrationService(IntegrationRepository integrationRepository){
+    public IntegrationService(IntegrationRepository integrationRepository,
+                              IntegrationConverter integrationConverter) {
         this.integrationRepository = integrationRepository;
+        this.integrationConverter = integrationConverter;
 
     }
 
@@ -47,8 +52,9 @@ public class IntegrationService {
     }
 
 
-    public Integration createIntegration(Integration integration) throws GendoxException {
+    public Integration createIntegration(IntegrationDTO integrationDTO) throws GendoxException {
 
+        Integration integration = integrationConverter.toEntity(integrationDTO);
         integration = integrationRepository.save(integration);
 
         return integration;

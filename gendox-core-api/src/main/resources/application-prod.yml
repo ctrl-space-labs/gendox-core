@@ -8,7 +8,7 @@ logging:
   level:
     dev.ctrlspace: DEBUG
     org.springframework: INFO
-
+Spring:
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}

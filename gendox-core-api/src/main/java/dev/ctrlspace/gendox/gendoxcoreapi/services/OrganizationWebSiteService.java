@@ -4,8 +4,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.OrganizationWebSiteConverte
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ApiKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationPlan;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationWebSiteDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebsiteIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationWebSiteRepository;
@@ -65,41 +65,9 @@ public class OrganizationWebSiteService {
 
     public void integrateOrganizationWebSite(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
         ApiKey apiKey = apiKeyService.getByApiKey(websiteIntegrationDTO.getApiKey().getApiKey());
-
         OrganizationWebSite organizationWebSite = getOrganizationWebSite(organizationId, websiteIntegrationDTO);
-
         handleIntegrationLogic(organizationId, organizationWebSite, websiteIntegrationDTO);
-
         updateApiKeyForOrganizationWebSite(organizationWebSite, apiKey);
-
-
-
-        Integration integration = integrationService.getIntegrationById(organizationWebSite.getIntegrationId());
-
-        if (integration == null) {
-            Integration newIntegration = new Integration();
-            newIntegration.setOrganizationId(organizationId);
-            newIntegration.setActive(websiteIntegrationDTO.getIntegrationStatus().getName().equals("ACTIVE")); // if Active then true else false
-            newIntegration.setUrl(websiteIntegrationDTO.getDomain() + websiteIntegrationDTO.getContextPath());
-            newIntegration.setIntegrationType(typeService.getIntegrationTypeByName(websiteIntegrationDTO.getIntegrationType().getName()));
-            integrationService.createIntegration(newIntegration);
-        } else {
-            if (websiteIntegrationDTO.getIntegrationStatus().getName().equals("ACTIVE") && !integration.getActive()) {
-                integration.setActive(true);
-                integrationService.updateIntegration(integration);
-            } else if (websiteIntegrationDTO.getIntegrationStatus().getName().equals("DISABLED")
-                    || websiteIntegrationDTO.getIntegrationStatus().getName().equals("PAUSED")
-                    && integration.getActive()) {
-                integration.setActive(false);
-                integrationService.updateIntegration(integration);
-            }
-        }
-
-        if (!apiKey.getId().equals(organizationWebSite.getApiKeyId())) {
-            organizationWebSite.setApiKeyId(apiKey.getId());
-            organizationWebSiteRepository.save(organizationWebSite);
-        }
-
     }
 
 
@@ -133,7 +101,7 @@ public class OrganizationWebSiteService {
         organizationWebSiteRepository.deleteById(id);
     }
 
-    private void handleIntegrationLogic(UUID organizationId, OrganizationWebSite organizationWebSite, WebsiteIntegrationDTO websiteIntegrationDTO) {
+    private void handleIntegrationLogic(UUID organizationId, OrganizationWebSite organizationWebSite, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException{
         Integration integration = integrationService.getIntegrationById(organizationWebSite.getIntegrationId());
 
         if (integration == null) {
@@ -143,8 +111,9 @@ public class OrganizationWebSiteService {
         }
     }
 
-    private void createNewIntegration(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) {
-        Integration newIntegration = Integration.builder()
+    private void createNewIntegration(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
+        IntegrationDTO newIntegrationDTO = IntegrationDTO
+                .builder()
                 .organizationId(organizationId)
                 .active(websiteIntegrationDTO.getIntegrationStatus().getName().equals("ACTIVE"))
                 .url(websiteIntegrationDTO.getDomain() + websiteIntegrationDTO.getContextPath())
@@ -153,10 +122,10 @@ public class OrganizationWebSiteService {
                 .updatedAt(Instant.now())
                 .build();
 
-        integrationService.createIntegration(newIntegration);
+        integrationService.createIntegration(newIntegrationDTO);
     }
 
-    private void updateExistingIntegration(Integration integration, WebsiteIntegrationDTO websiteIntegrationDTO) {
+    private void updateExistingIntegration(Integration integration, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
         String statusName = websiteIntegrationDTO.getIntegrationStatus().getName();
         boolean isActive = integration.getActive();
 

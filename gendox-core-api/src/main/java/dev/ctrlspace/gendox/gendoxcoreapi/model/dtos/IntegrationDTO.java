@@ -16,7 +16,7 @@ public class IntegrationDTO {
     private UUID organizationId;
     private UUID projectId;
     private Type integrationType;
-    private Boolean Active;
+    private Boolean active;
     private String url;
     private String queueName;
     private String directoryPath;
