@@ -20,7 +20,9 @@ import java.time.Instant;
                         @ColumnResult(name = "phone", type = String.class),
                         @ColumnResult(name = "user_type_name", type = String.class),
                         @ColumnResult(name = "user_type_id", type = Long.class),
-                        @ColumnResult(name = "name", type = String.class)
+                        @ColumnResult(name = "name", type = String.class),
+                        @ColumnResult(name = "role_id", type = Long.class),
+                        @ColumnResult(name = "role_name", type = String.class)
                 }
         )
 )
@@ -35,6 +37,7 @@ import java.time.Instant;
             o.name as name
         FROM gendox_core.organizations o
         LEFT JOIN gendox_core.types t ON o.user_type_id = t.id
+        LEFT JOIN gendox_core.organization_roles r ON o.id = r.organization_id
         WHERE o.id = :orgId
         """,
         resultSetMapping = "OrganizationProfileMapping"
@@ -47,4 +50,6 @@ public class OrganizationProfileDTO {
     private String userTypeName;
     private Long userTypeId;
     private String name;
+    private Long roleId;
+    private String roleName;
 }

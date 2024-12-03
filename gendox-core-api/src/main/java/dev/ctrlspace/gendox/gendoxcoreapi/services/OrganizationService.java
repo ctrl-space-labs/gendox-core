@@ -54,6 +54,8 @@ public class OrganizationService {
 
     private OrganizationProfileConverter organizationProfileConverter;
 
+    private ApiKeyService apiKeyService;
+
     @Value("${walt-id.default-key.type}")
     private String keyTypeName;
     @Value("${walt-id.default-key.size}")
@@ -69,7 +71,8 @@ public class OrganizationService {
                                TypeService typeService,
                                ProjectService projectService,
                                AuditLogsService auditLogsService,
-                               OrganizationProfileConverter organizationProfileConverter) {
+                               OrganizationProfileConverter organizationProfileConverter,
+                               ApiKeyService apiKeyService) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.organizationRepository = organizationRepository;
         this.userOrganizationService = userOrganizationService;
@@ -79,6 +82,7 @@ public class OrganizationService {
         this.projectService = projectService;
         this.auditLogsService = auditLogsService;
         this.organizationProfileConverter = organizationProfileConverter;
+        this.apiKeyService = apiKeyService;
 
     }
 
@@ -234,6 +238,13 @@ public class OrganizationService {
         organization.setCreatedAt(null);
     }
 
+    public UserProfile getOrganizationProfileByApiKey(String roleType, String apiKey) throws GendoxException {
+
+        UUID organizationId = apiKeyService.getOrganizationIdByApiKey(apiKey);
+
+        return getOrganizationProfileById(organizationId, roleType);
+    }
+
 
     /**
      * Get organization profile to be used when API key is used for authentication, instead of JWT
@@ -247,6 +258,10 @@ public class OrganizationService {
 //    TODO add evict cash upon key update for
 //    @Cacheable(value = "OrganizationProfileByApiKey", keyGenerator = "gendoxKeyGenerator")
     public UserProfile getOrganizationProfileById(UUID organizationId, String roleType) throws GendoxException {
+
+        if (roleType == null || roleType.isEmpty()) {
+            throw new GendoxException("ROLE_TYPE_REQUIRED", "Role type is required for API key authentication.", HttpStatus.BAD_REQUEST);
+        }
 
         // TODO construct user profile similar to to user with role 'roleType' in the organization
         OrganizationProfileDTO rawOrganizationProfile =
