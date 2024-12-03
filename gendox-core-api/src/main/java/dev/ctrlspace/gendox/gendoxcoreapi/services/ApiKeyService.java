@@ -65,4 +65,9 @@ public class ApiKeyService {
         }
         apiKeyRepository.deleteById(id);
     }
+
+    public UUID getOrganizationIdByApiKey(String apiKey) throws GendoxException {
+        return apiKeyRepository.findOrganizationIdByApiKey(apiKey)
+                .orElseThrow(() -> new GendoxException("ORGANIZATION_NOT_FOUND", "OrganizationId not found", HttpStatus.NOT_FOUND));
+    }
 }

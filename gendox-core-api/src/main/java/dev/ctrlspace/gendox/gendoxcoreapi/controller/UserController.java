@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
+import dev.ctrlspace.gendox.authentication.ApiKeyAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -8,6 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserPublicDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
@@ -37,16 +39,19 @@ public class UserController {
     private JWTUtils jwtUtils;
     private UserProfileConverter userProfileConverter;
     private UserConverter userConverter;
+    private OrganizationService organizationService;
 
     @Autowired
     public UserController(UserService userService,
                           JWTUtils jwtUtils,
                           UserProfileConverter userProfileConverter,
-                          UserConverter userConverter) {
+                          UserConverter userConverter,
+                          OrganizationService organizationService) {
         this.userService = userService;
         this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
         this.userConverter = userConverter;
+        this.organizationService = organizationService;
     }
 
 
@@ -96,7 +101,17 @@ public class UserController {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public UserProfile getUserUserProfile(@PathVariable(required = false) UUID id, Authentication authentication) throws Exception {
+    public UserProfile getUserUserProfile(@PathVariable(required = false) UUID id,
+                                          @RequestParam(required = false) String roleType,
+                                          Authentication authentication) throws Exception {
+
+
+        if (authentication instanceof ApiKeyAuthenticationToken) {
+           String apiKey = (String) authentication.getPrincipal();
+            return organizationService.getOrganizationProfileByApiKey(roleType, apiKey);
+
+        }
+
 
         UserProfile loginUserProfile = (UserProfile) authentication.getPrincipal();
         if (id == null) {
