@@ -202,6 +202,8 @@ public class EmbeddingService {
         if (organizationModelProviderKey == null) {
             return organizationModelKeyService.getDefaultKeyForAgent(agent, aiModelType);
         }
+
+        logger.info("Using OrganizationModelProviderKey ID: {}", organizationModelProviderKey.getId());
         return organizationModelProviderKey.getKey();
     }
 
