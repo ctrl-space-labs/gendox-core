@@ -36,4 +36,22 @@ public class ApiRateLimitService {
     }
 
 
+    @Cacheable(value = "SubscriptionService#getOpenAIRateLimitBucketForApiKey", key = "#apiKey")
+    public Bucket getOpenAIRateLimitBucketForApiKey(String apiKey, int tokensPerMinute) {
+
+//        print 6 last digits of the api key
+        String lastFiveDigits = "****" + apiKey.substring(apiKey.length() - 6);
+        logger.debug("Creating new rate limit bucket for api: {} with tokens per minute: {}", lastFiveDigits, tokensPerMinute);
+
+        Bandwidth limit = Bandwidth
+                .builder()
+                .capacity(tokensPerMinute)
+                .refillGreedy(tokensPerMinute/60, Duration.ofSeconds(1)) // refill per second
+                .id(apiKey)
+                .build();
+        return Bucket.builder().addLimit(limit).build();
+
+    }
+
+
 }
