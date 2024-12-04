@@ -113,6 +113,8 @@ public class IntegrationConfiguration {
                 Boolean hasNewFiles = false;
 
                 for (Map.Entry<Integration, List<MultipartFile>> entry : map.entrySet()) {
+                    // TODO mode this in a seperate Integration Service, to handle the integration per "Integration" object
+                    // When extracted, that method should be handled as @Transactional
                     Integration integration = entry.getKey();
                     List<MultipartFile> files = entry.getValue();
                     for (MultipartFile file : files) {
