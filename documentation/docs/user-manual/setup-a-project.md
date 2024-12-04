@@ -1,4 +1,4 @@
-# Setup you first project
+# Setup your first project
 
 A Gendox Project is combining the 2 basic components of Gendox:
 - AI Agents
