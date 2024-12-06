@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.EmbeddingTemplateAuthor;
 import lombok.NonNull;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -42,6 +44,8 @@ public class TrainingService {
 
     private TemplateRepository templateRepository;
 
+    private CryptographyUtils cryptographyUtils;
+
 
     @Lazy
     @Autowired
@@ -65,7 +69,8 @@ public class TrainingService {
                            ProjectService projectService,
                            OrganizationModelKeyService organizationModelKeyService,
                            ProjectAgentRepository projectAgentRepository,
-                           TemplateRepository templateRepository) {
+                           TemplateRepository templateRepository,
+                           CryptographyUtils cryptographyUtils) {
         this.sectionRepository = sectionRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
         this.projectDocumentRepository = projectDocumentRepository;
@@ -75,16 +80,17 @@ public class TrainingService {
         this.organizationModelKeyService = organizationModelKeyService;
         this.projectAgentRepository = projectAgentRepository;
         this.templateRepository = templateRepository;
+        this.cryptographyUtils = cryptographyUtils;
 
     }
 
 
-    public Embedding runTrainingForSection(UUID sectionId, UUID projectId) throws GendoxException {
+    public Embedding runTrainingForSection(UUID sectionId, UUID projectId) throws GendoxException, NoSuchAlgorithmException {
         DocumentInstanceSection section = documentSectionService.getSectionById(sectionId);
         return this.runTrainingForSection(section, projectId);
     }
 
-    public Embedding runTrainingForSection(@NonNull DocumentInstanceSection section, UUID projectId) throws GendoxException {
+    public Embedding runTrainingForSection(@NonNull DocumentInstanceSection section, UUID projectId) throws GendoxException, NoSuchAlgorithmException {
         Project project = projectService.getProjectById(projectId);
 
         // Create an instance of EmbeddingTemplateAuthor
@@ -105,13 +111,16 @@ public class TrainingService {
         EmbeddingResponse embeddingResponse = embeddingService.getEmbeddingForMessage(project.getProjectAgent(),
                 sectionValue,
                 project.getProjectAgent().getSemanticSearchModel());
-        Embedding embedding = embeddingService.upsertEmbeddingForText(embeddingResponse, projectId, null, section.getId(), project.getProjectAgent().getSemanticSearchModel().getId(), project.getOrganizationId());
+
+        String sectionSha256Hash = cryptographyUtils.calculateSHA256(sectionValue);
+
+        Embedding embedding = embeddingService.upsertEmbeddingForText(embeddingResponse, projectId, null, section.getId(), project.getProjectAgent().getSemanticSearchModel().getId(), project.getOrganizationId(),sectionSha256Hash);
 
 
         return embedding;
     }
 
-    public List<Embedding> runTrainingForProject(UUID projectId) throws GendoxException {
+    public List<Embedding> runTrainingForProject(UUID projectId) throws GendoxException, NoSuchAlgorithmException {
         List<Embedding> projectEmbeddings = new ArrayList<>();
         List<DocumentInstance> documentInstances = new ArrayList<>();
         List<UUID> instanceIds = new ArrayList<>();

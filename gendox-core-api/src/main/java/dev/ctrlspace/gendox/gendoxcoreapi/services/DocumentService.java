@@ -179,6 +179,11 @@ public class DocumentService {
 
     }
 
+    public DocumentInstance saveDocumentInstance(DocumentInstance documentInstance) {
+        return documentInstanceRepository.save(documentInstance);
+    }
+
+
 
 
 

@@ -196,6 +196,7 @@ public class OrganizationService {
                 throw new GendoxException("ORGANIZATION_DEACTIVATION_FAILED", "Cannot deactivate organization. User is associated with only one organization", HttpStatus.BAD_REQUEST);
             } else {
 
+                clearOrgData(organization);
                 deactivateAllOrgProjects(organizationId);
                 userOrganizationRepository.delete(userOrganization);
                 Type deleteOrganizationType = typeService.getAuditLogTypeByName("DELETE_ORGANIZATION");
@@ -210,7 +211,6 @@ public class OrganizationService {
         walletKeyService.deleteWalletKeyByOrganizationId(organizationId);
 
         // Clear organization data and save the changes
-        clearOrgData(organization);
         organizationRepository.save(organization);
     }
 
