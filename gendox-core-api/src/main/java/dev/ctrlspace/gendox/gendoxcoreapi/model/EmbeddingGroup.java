@@ -48,6 +48,9 @@ public class EmbeddingGroup {
     @Basic
     @Column(name = "semantic_search_model_id")
     private UUID semanticSearchModelId;
+    @Basic
+    @Column(name = "embedding_sha256_hash", nullable = true)
+    private String embeddingSha256Hash;
 
     @Basic
     @Column(name = "created_at")
@@ -122,6 +125,10 @@ public class EmbeddingGroup {
         this.semanticSearchModelId = semanticSearchModelId;
     }
 
+    public String getEmbeddingSha256Hash() {return embeddingSha256Hash;}
+
+    public void setEmbeddingSha256Hash(String embeddingSha256Hash) {this.embeddingSha256Hash = embeddingSha256Hash;}
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -157,12 +164,13 @@ public class EmbeddingGroup {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof EmbeddingGroup that)) return false;
-        return Objects.equals(getId(), that.getId()) && Objects.equals(getSectionId(), that.getSectionId()) && Objects.equals(getMessageId(), that.getMessageId()) && Objects.equals(getEmbeddingId(), that.getEmbeddingId()) && Objects.equals(getTokenCount(), that.getTokenCount()) && Objects.equals(getGroupingStrategyType(), that.getGroupingStrategyType()) && Objects.equals(getSemanticSearchModelId(), that.getSemanticSearchModelId()) && Objects.equals(getCreatedAt(), that.getCreatedAt()) && Objects.equals(getUpdatedAt(), that.getUpdatedAt()) && Objects.equals(getCreatedBy(), that.getCreatedBy()) && Objects.equals(getUpdatedBy(), that.getUpdatedBy());
+        if (o == null || getClass() != o.getClass()) return false;
+        EmbeddingGroup that = (EmbeddingGroup) o;
+        return Objects.equals(id, that.id) && Objects.equals(sectionId, that.sectionId) && Objects.equals(messageId, that.messageId) && Objects.equals(embeddingId, that.embeddingId) && Objects.equals(tokenCount, that.tokenCount) && Objects.equals(groupingStrategyType, that.groupingStrategyType) && Objects.equals(semanticSearchModelId, that.semanticSearchModelId) && Objects.equals(embeddingSha256Hash, that.embeddingSha256Hash) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getSectionId(), getMessageId(), getEmbeddingId(), getTokenCount(), getGroupingStrategyType(), getSemanticSearchModelId(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy());
+        return Objects.hash(id, sectionId, messageId, embeddingId, tokenCount, groupingStrategyType, semanticSearchModelId, embeddingSha256Hash, createdAt, updatedAt, createdBy, updatedBy);
     }
 }

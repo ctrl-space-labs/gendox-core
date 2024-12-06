@@ -20,4 +20,12 @@ public class EmbeddingResponse implements Serializable {
     private String model;
     private String object;
     private Usage usage;
+
+    private Long totalRateLimitRequests;
+    private Long totalRateLimitTokens;
+    private Long rateLimitRemainingRequests;
+    private Long rateLimitRemainingTokens;
+    private Long rateLimitResetRequestsMilliseconds;
+    private Long rateLimitResetTokensMilliseconds;
+
 }

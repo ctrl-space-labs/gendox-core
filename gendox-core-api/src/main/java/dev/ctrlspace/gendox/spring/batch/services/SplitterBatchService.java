@@ -78,6 +78,7 @@ public class SplitterBatchService {
         JobParameters params = documentInstanceCriteriaJobParamsConverter.toDTO(documentCriteria);
         params = new JobParametersBuilder(params)
                 .addString("now", now.toString())
+                .addString("skipUnchangedDocs", "true")
                 .toJobParameters();
 
         return jobLauncher.run(documentSplitterJob, params);

@@ -41,6 +41,7 @@ public class DocumentInstanceCriteriaJobParamsConverter implements GendoxConvert
         if (criteria.getUpdatedBetween() != null && criteria.getUpdatedBetween().to() != null) {
             paramsBuilder.addString("updatedBetween.to", criteria.getUpdatedBetween().to().toString());
         }
+
         return paramsBuilder.toJobParameters();
     }
 

@@ -41,6 +41,7 @@ public class ProjectService {
     private AuditLogsService auditLogsService;
 
 
+
     @Autowired
     public ProjectService(ProjectRepository projectRepository,
                           ProjectAgentService projectAgentService,
@@ -155,6 +156,7 @@ public class ProjectService {
                 continue;
             }
 
+
             // Count the number of projects the user is associated with
             long count = projectMemberRepository.countByUserId(userId);
 
@@ -166,7 +168,8 @@ public class ProjectService {
                         HttpStatus.BAD_REQUEST
                 );
             }
-        }
+//        }
+            }
 
         // Delete other associated data
         projectMemberService.deleteAllProjectMembers(project);
