@@ -14,8 +14,11 @@ Spring:
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
     hikari:
-      maximum-pool-size: 100
+      maximum-pool-size: 90
       minimum-idle: 10
+      maxLifetime: 300000       # 5 minutes
+      idleTimeout: 120000       # 2 minutes
+      connectionTimeout: 30000  # 30 seconds
   flyway:
     enabled: false
 
