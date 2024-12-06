@@ -242,7 +242,7 @@ public class OrganizationService {
 
         UUID organizationId = apiKeyService.getOrganizationIdByApiKey(apiKey);
 
-        return getOrganizationProfileById(organizationId, roleType);
+        return getOrganizationProfileById(organizationId);
     }
 
 
@@ -250,22 +250,16 @@ public class OrganizationService {
      * Get organization profile to be used when API key is used for authentication, instead of JWT
      *
      * @param organizationId the organization id
-     * @param roleType the user role level to get access
-     *                 eg. if ROLE_ADMIN, the api key has permissions as is it was an organization user
      * @return
      * @throws GendoxException
      */
 //    TODO add evict cash upon key update for
 //    @Cacheable(value = "OrganizationProfileByApiKey", keyGenerator = "gendoxKeyGenerator")
-    public UserProfile getOrganizationProfileById(UUID organizationId, String roleType) throws GendoxException {
-
-        if (roleType == null || roleType.isEmpty()) {
-            throw new GendoxException("ROLE_TYPE_REQUIRED", "Role type is required for API key authentication.", HttpStatus.BAD_REQUEST);
-        }
+    public UserProfile getOrganizationProfileById(UUID organizationId) throws GendoxException {
 
         // TODO construct user profile similar to to user with role 'roleType' in the organization
         OrganizationProfileDTO rawOrganizationProfile =
-                organizationRepository.findRawOrganizationProfileById(organizationId, roleType);
+                organizationRepository.findRawOrganizationProfileById(organizationId);
 
         UserProfile userProfile =  organizationProfileConverter.toDTO(rawOrganizationProfile);
 

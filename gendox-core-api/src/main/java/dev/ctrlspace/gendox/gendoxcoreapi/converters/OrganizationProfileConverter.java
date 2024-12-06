@@ -33,17 +33,17 @@ public class OrganizationProfileConverter {
                 .name(organizationProfileDTO.getName());
 
         Set<String> authorities = new HashSet<>();
-        authorities.add(organizationProfileDTO.getRoleName());
+        authorities.add(organizationProfileDTO.getUserTypeName());
 
-        Long roleIds = organizationProfileDTO.getRoleId();
+        Long roleIds = organizationProfileDTO.getUserTypeId();
 
         Map<String, List<String>> rolePermissionMap = rolePermissionService.getRoleToPermissionMapping(RolePermissionCriteria
                 .builder()
-                .roleIdIn(Collections.singletonList(organizationProfileDTO.getRoleId()))
+                .roleIdIn(Collections.singletonList(organizationProfileDTO.getUserTypeId()))
                 .build());
 
-        if (rolePermissionMap.containsKey(organizationProfileDTO.getRoleName())) {
-            authorities.addAll(rolePermissionMap.get(organizationProfileDTO.getRoleName()));
+        if (rolePermissionMap.containsKey(organizationProfileDTO.getUserTypeName())) {
+            authorities.addAll(rolePermissionMap.get(organizationProfileDTO.getUserTypeName()));
         }
 
 

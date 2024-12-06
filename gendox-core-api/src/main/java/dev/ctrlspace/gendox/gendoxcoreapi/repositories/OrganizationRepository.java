@@ -19,6 +19,6 @@ public interface OrganizationRepository extends JpaRepository<Organization, UUID
 
 
     @Query(nativeQuery = true, name = "OrganizationProfileDTO.findOrganizationProfileById")
-    OrganizationProfileDTO findRawOrganizationProfileById(@Param("orgId") UUID organizationId, @Param("roleType") String roleType);
+    OrganizationProfileDTO findRawOrganizationProfileById(@Param("orgId") UUID organizationId);
 
 }
