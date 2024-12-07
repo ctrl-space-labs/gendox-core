@@ -25,14 +25,11 @@ public interface OrganizationWebSiteRepository extends JpaRepository<Organizatio
                 FROM gendox_core.organization_web_sites ows
                 INNER JOIN gendox_core.integrations i ON ows.integration_id = i.id
                 INNER JOIN gendox_core.api_keys ak ON ak.api_key = :apiKey
+                INNER JOIN gendox_core.types t ON i.type_id = t.id
                 WHERE ows.organization_id = :organizationId
                   AND ows.url = :domain
                   AND ak.organization_id = :organizationId
-                  AND i.type_id IN (
-                      SELECT id
-                      FROM gendox_core.integration_types
-                      WHERE name = :integrationTypeName
-                  )
+                  AND t.name = :integrationTypeName
                 LIMIT 1
             """)
     Optional<OrganizationWebSite> findMatchingOrganizationWebSite(
@@ -40,6 +37,18 @@ public interface OrganizationWebSiteRepository extends JpaRepository<Organizatio
             @Param("domain") String domain,
             @Param("apiKey") String apiKey,
             @Param("integrationTypeName") String integrationTypeName
+    );
+
+    @Query(nativeQuery = true, value = """
+                SELECT ows.*
+                FROM gendox_core.organization_web_sites ows
+                WHERE ows.organization_id = :organizationId
+                  AND ows.url = :domain
+                LIMIT 1
+            """)
+    Optional<OrganizationWebSite> findMatchingOrganizationWebSite(
+            @Param("organizationId") UUID organizationId,
+            @Param("domain") String domain
     );
 
 }

@@ -9,6 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationWebSiteDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebsiteIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationWebSiteRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,26 +53,36 @@ public class OrganizationWebSiteService {
         return organizationWebSiteRepository.findAllByOrganizationId(organizationId);
     }
 
-    private OrganizationWebSite getOrganizationWebSite(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
+    private OrganizationWebSite getOrganizationWebSite(UUID organizationId, String domain) throws GendoxException {
         return organizationWebSiteRepository
-                .findMatchingOrganizationWebSite(
-                        organizationId,
-                        websiteIntegrationDTO.getDomain(),
-                        websiteIntegrationDTO.getApiKey().getApiKey(),
-                        websiteIntegrationDTO.getIntegrationType().getName())
-                .orElseThrow(() -> new GendoxException("ORGANIZATION_WEB_SITE_NOT_FOUND", "No matching OrganizationWebSite found with the specified criteria", HttpStatus.NOT_FOUND));
+                .findMatchingOrganizationWebSite(organizationId, domain)
+                .orElseThrow(() -> {
+                    logger.error("No matching OrganizationWebSite found for Organization ID: {}, Domain: {}", organizationId, domain);
+                    return new GendoxException("ORGANIZATION_WEB_SITE_NOT_FOUND", "No matching OrganizationWebSite found with the specified criteria", HttpStatus.NOT_FOUND);
+                });
     }
 
 
     public void integrateOrganizationWebSite(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
+        logger.info("Integrating OrganizationWebSite for Organization ID: {}, WebsiteIntegrationDTO: {}", organizationId, websiteIntegrationDTO);
         ApiKey apiKey = apiKeyService.getByApiKey(websiteIntegrationDTO.getApiKey().getApiKey());
-        OrganizationWebSite organizationWebSite = getOrganizationWebSite(organizationId, websiteIntegrationDTO);
-        handleIntegrationLogic(organizationId, organizationWebSite, websiteIntegrationDTO);
-        updateApiKeyForOrganizationWebSite(organizationWebSite, apiKey);
+        if (!organizationId.equals(apiKey.getOrganizationId())) {
+            logger.error("Organization mismatch: API Key belongs to Organization ID: {}, but provided Organization ID is: {}", apiKey.getOrganizationId(), organizationId);
+            throw new GendoxException(
+                    "ORGANIZATION_MISMATCH",
+                    "The API key does not belong to the specified organization",
+                    HttpStatus.FORBIDDEN
+            );
+        }
+
+        OrganizationWebSite organizationWebSite = getOrganizationWebSite(organizationId, websiteIntegrationDTO.getDomain());
+        Integration integration = handleIntegrationLogic(organizationId, organizationWebSite, websiteIntegrationDTO);
+        updateOrganizationWebSite(organizationWebSite, apiKey, integration);
     }
 
 
     public OrganizationWebSite createOrganizationWebSite(OrganizationWebSiteDTO organizationWebSiteDTO, UUID organizationId) {
+        logger.info("Creating OrganizationWebSite for Organization ID: {}", organizationId);
         OrganizationWebSite organizationWebSite = organizationWebSiteConverter.toEntity(organizationWebSiteDTO);
         List<OrganizationWebSite> organizationWebSites = this.getAllByOrganizationId(organizationId);
         // Calculate the maximum allowed websites based on the organization's plan
@@ -101,48 +112,66 @@ public class OrganizationWebSiteService {
         organizationWebSiteRepository.deleteById(id);
     }
 
-    private void handleIntegrationLogic(UUID organizationId, OrganizationWebSite organizationWebSite, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException{
-        Integration integration = integrationService.getIntegrationById(organizationWebSite.getIntegrationId());
+    private Integration handleIntegrationLogic(UUID organizationId, OrganizationWebSite organizationWebSite, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
+        UUID integrationId = organizationWebSite.getIntegrationId();
 
-        if (integration == null) {
-            createNewIntegration(organizationId, websiteIntegrationDTO);
-        } else {
-            updateExistingIntegration(integration, websiteIntegrationDTO);
+        if (integrationId == null) {
+            logger.debug("No existing integration found, creating a new one.");
+            return createNewIntegration(organizationId, websiteIntegrationDTO);
         }
+
+        Integration integration = integrationService.getIntegrationById(integrationId);
+        return updateExistingIntegration(integration, websiteIntegrationDTO);
+
     }
 
-    private void createNewIntegration(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
+    private Integration createNewIntegration(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
+        logger.info("Creating new integration for Organization ID: {}, Domain: {}", organizationId, websiteIntegrationDTO.getDomain());
+        boolean activeState = isActiveStatus(websiteIntegrationDTO.getIntegrationStatus().getName());
         IntegrationDTO newIntegrationDTO = IntegrationDTO
                 .builder()
                 .organizationId(organizationId)
-                .active(websiteIntegrationDTO.getIntegrationStatus().getName().equals("ACTIVE"))
-                .url(websiteIntegrationDTO.getDomain() + websiteIntegrationDTO.getContextPath())
-                .integrationType(typeService.getIntegrationTypeByName(websiteIntegrationDTO.getIntegrationType().getName()))
+                .active(activeState)
+                .url(websiteIntegrationDTO.getDomain())
+                .directoryPath(websiteIntegrationDTO.getContextPath())
+                .integrationType(typeService.getIntegrationTypeByName(IntegrationTypesConstants.API_INTEGRATION))
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
                 .build();
 
-        integrationService.createIntegration(newIntegrationDTO);
+        return integrationService.createIntegration(newIntegrationDTO);
     }
 
-    private void updateExistingIntegration(Integration integration, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
+    private Integration updateExistingIntegration(Integration integration, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
+        logger.info("Updating existing integration ID: {}", integration.getId());
         String statusName = websiteIntegrationDTO.getIntegrationStatus().getName();
         boolean isActive = integration.getActive();
 
-        if ("ACTIVE".equals(statusName) && !isActive) {
-            integration.setActive(true);
-            integrationService.updateIntegration(integration);
-        } else if (("DISABLED".equals(statusName) || "PAUSED".equals(statusName)) && isActive) {
-            integration.setActive(false);
-            integrationService.updateIntegration(integration);
+        boolean newActiveState = isActiveStatus(statusName);
+
+        if (newActiveState != isActive) {
+            integration.setActive(newActiveState);
+            return integrationService.updateIntegration(integration);
         }
+
+        return integration;
+
+    }
+
+    private boolean isActiveStatus(String statusName) {
+        return "ACTIVE".equals(statusName);
     }
 
 
-    public void updateApiKeyForOrganizationWebSite(OrganizationWebSite organizationWebSite, ApiKey apiKey) {
-        if (!apiKey.getId().equals(organizationWebSite.getApiKeyId())) {
+    public void updateOrganizationWebSite(OrganizationWebSite organizationWebSite, ApiKey apiKey, Integration integration) {
+        logger.info("Updating OrganizationWebSite ID: {}", organizationWebSite.getId());
+        if (!apiKey.getId().equals(organizationWebSite.getApiKeyId()) ||
+                !integration.getId().equals(organizationWebSite.getIntegrationId())) {
+
             organizationWebSite.setApiKeyId(apiKey.getId());
+            organizationWebSite.setIntegrationId(integration.getId());
             organizationWebSiteRepository.save(organizationWebSite);
         }
     }
+
 }

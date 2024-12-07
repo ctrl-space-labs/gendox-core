@@ -38,7 +38,7 @@ public class GendoxAPIIntegrationService {
 
 
     public OrganizationAssignedContentDTO getProjectAssignedContentsByOrganizationId(String baseUrl, String organizationId, String apiKey) {
-        String url = baseUrl + "/gendox/v1/assigned-projects?organization_id=" + organizationId;
+        String url = baseUrl + "/assigned-projects?organization_id=" + organizationId;
         HttpEntity<String> entity = new HttpEntity<>(buildHeader(apiKey));
 
         try {
@@ -76,7 +76,7 @@ public class GendoxAPIIntegrationService {
 
     // Method to get Assigned Content IDs
     public AssignedContentIdsDTO getAssignedContentIds(String baseUrl, String projectId, String apiKey) {
-        String url = baseUrl + "/gendox/v1/assigned-ids?project_id=" + projectId;
+        String url = baseUrl + "/assigned-ids?project_id=" + projectId;
         HttpEntity<String> entity = new HttpEntity<>(buildHeader(apiKey));
 
         ResponseEntity<AssignedContentIdsDTO> response = restTemplate.exchange(
@@ -91,7 +91,7 @@ public class GendoxAPIIntegrationService {
 
     // Method to get Content by ID
     public ContentDTO getContentById(String baseUrl, Long contentId, String apiKey) {
-        String url = baseUrl + "/gendox/v1/content?content_id=" + contentId;
+        String url = baseUrl + "/content?content_id=" + contentId;
         HttpEntity<String> entity = new HttpEntity<>(buildHeader(apiKey));
 
         ResponseEntity<ContentDTO> response = restTemplate.exchange(
