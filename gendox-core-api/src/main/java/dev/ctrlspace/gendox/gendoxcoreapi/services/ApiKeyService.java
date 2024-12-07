@@ -37,8 +37,10 @@ public class ApiKeyService {
 
     public ApiKey getByApiKey(String apiKey) throws GendoxException{
         return apiKeyRepository.findByApiKey(apiKey)
-                .orElseThrow(() -> new GendoxException("APIKEY_NOT_FOUND", "ApiKey not found", HttpStatus.NOT_FOUND));
+                .orElse(null);
     }
+
+
 
 
 

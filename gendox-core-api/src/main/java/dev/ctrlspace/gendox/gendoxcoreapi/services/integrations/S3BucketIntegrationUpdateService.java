@@ -20,6 +20,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.S3BucketIntegrationCon
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -58,71 +59,66 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
         this.documentSectionService = documentSectionService;
     }
 
-    /**
-     * Checks for updates in the specified integration.
-     * Retrieves messages from SQS and processes them accordingly.
-     *
-     * @param integration The integration to check for updates.
-     * @return A map of projects and their updated files.
-     */
+
     @Override
     public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> checkForUpdates(Integration integration) throws GendoxException {
-        Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> projectMap = new HashMap<>();
+        logger.info("Checking for updates for Integration ID: {}", integration.getId());
+
         String queueName = integration.getQueueName();
         List<MultipartFile> fileList = new ArrayList<>();
-
         List<Message> sqsMessages = sqsService.receiveMessages(queueName);
 
         for (Message sqsMessage : sqsMessages) {
             try {
-                handleSqsMessage(sqsMessage, fileList, integration);
+                processSqsMessage(sqsMessage, fileList, integration);
                 sqsService.deleteMessage(sqsMessage, queueName);
             } catch (Exception e) {
-                logger.error("An error occurred while checking for updates: " + e.getMessage(), e);
+                logger.warn("An error occurred while checking for updates: " + e.getMessage(), e);
 
             }
         }
 
-
-        projectMap = createMap(fileList, integration);
-        return projectMap;
+        return createMap(fileList, integration);
     }
 
-    /**
-     * Handles a single SQS message received from the integration queue.
-     * Parses the message and takes appropriate actions based on the event.
-     *
-     * @param sqsMessage  The SQS message to handle.
-     * @param fileList    The list to store updated multipart files.
-     * @param integration The integration associated with the message.
-     */
-    private void handleSqsMessage(Message sqsMessage, List<MultipartFile> fileList, Integration integration) throws IOException, GendoxException {
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode rootNode = objectMapper.readTree(sqsMessage.getBody());
+    private void processSqsMessage(Message sqsMessage, List<MultipartFile> fileList, Integration integration) throws IOException, GendoxException {
 
-        String event = rootNode.at(S3BucketIntegrationConstants.OBJECT_ROOT_EVENT).asText();
-        String bucketName = rootNode.at(S3BucketIntegrationConstants.OBJECT_ROOT_BUCKET_NAME).asText();
-        String objectKey = rootNode.at(S3BucketIntegrationConstants.OBJECT_ROOT_KEY).asText();
+//        ObjectMapper objectMapper = new ObjectMapper();
+//        JsonNode rootNode = objectMapper.readTree(sqsMessage.getBody());
+        JsonNode messageBody = new ObjectMapper().readTree(sqsMessage.getBody());
 
-        if (event.equals(S3BucketIntegrationConstants.EVENT_PUT_DOCUMENT)) {
-            logger.debug("Upload file from S3 bucket");
-            MultipartFile multipartFile = convertToMultipartFile(bucketName, objectKey);
-            fileList.add(multipartFile);
-        } else if (event.equals(S3BucketIntegrationConstants.EVENT_DELETE_DOCUMENT)) {
-            logger.debug("Deleted file from S3 bucket");
-            handleDeletedDocuments(integration, objectKey);
+        String event = extractJsonValue(messageBody, S3BucketIntegrationConstants.OBJECT_ROOT_EVENT);
+        String bucketName = extractJsonValue(messageBody, S3BucketIntegrationConstants.OBJECT_ROOT_BUCKET_NAME);
+        String objectKey = extractJsonValue(messageBody, S3BucketIntegrationConstants.OBJECT_ROOT_KEY);
+
+        if (S3BucketIntegrationConstants.EVENT_PUT_DOCUMENT.equals(event)) {
+            logger.info("Detected file upload event for objectKey: {}", objectKey);
+            fileList.add(convertToMultipartFile(bucketName, objectKey));
+        } else if (S3BucketIntegrationConstants.EVENT_DELETE_DOCUMENT.equals(event)) {
+            logger.info("Detected file deletion event for objectKey: {}", objectKey);
+            handleFileDeletion(integration, objectKey);
+        } else {
+            logger.warn("Unhandled event type: {} in message: {}", event, sqsMessage.getBody());
         }
 
+
+//        String event = rootNode.at(S3BucketIntegrationConstants.OBJECT_ROOT_EVENT).asText();
+//        String bucketName = rootNode.at(S3BucketIntegrationConstants.OBJECT_ROOT_BUCKET_NAME).asText();
+//        String objectKey = rootNode.at(S3BucketIntegrationConstants.OBJECT_ROOT_KEY).asText();
+
+//        if (event.equals(S3BucketIntegrationConstants.EVENT_PUT_DOCUMENT)) {
+//            logger.info("Detected file upload event for objectKey: {}", objectKey);
+//            MultipartFile multipartFile = convertToMultipartFile(bucketName, objectKey);
+//            fileList.add(multipartFile);
+//        } else if (event.equals(S3BucketIntegrationConstants.EVENT_DELETE_DOCUMENT)) {
+//            logger.debug("Deleted file from S3 bucket");
+//            handleDeletedDocuments(integration, objectKey);
+//        }
+
     }
 
-    /**
-     * Converts a file from an S3 bucket to a multipart file.
-     *
-     * @param bucketName The name of the S3 bucket.
-     * @param objectKey  The key of the object in the S3 bucket.
-     * @return The multipart file representing the content of the S3 object.
-     */
+
     private MultipartFile convertToMultipartFile(String bucketName, String objectKey) throws GendoxException, IOException {
         String encodedFilename = objectKey;
         String originalFilename = URLDecoder.decode(encodedFilename, StandardCharsets.UTF_8.toString());
@@ -139,13 +135,22 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
         );
     }
 
-    /**
-     * Deletes a document from the database based on the integration information and object key.
-     *
-     * @param integration The integration associated with the document.
-     * @param objectKey   The key of the object to delete from the database.
-     */
-    private void handleDeletedDocuments(Integration integration, String objectKey) throws GendoxException {
+//    private MultipartFile convertToMultipartFile(String bucketName, String objectKey) throws GendoxException, IOException {
+//        String decodedFileName = decodeObjectKey(objectKey);
+//        logger.debug("Decoded filename for objectKey {}: {}", objectKey, decodedFileName);
+//
+//        String s3Url = String.format("s3://%s/%s", bucketName, decodedFileName);
+//        String fileContent = downloadService.readDocumentContent(s3Url);
+//
+//        return new ResourceMultipartFile(
+//                fileContent.getBytes(StandardCharsets.UTF_8),
+//                decodedFileName,
+//                "application/octet-stream"
+//        );
+//    }
+
+
+    private void handleFileDeletion(Integration integration, String objectKey) throws GendoxException {
         String fileName = objectKey.substring(objectKey.lastIndexOf('/') + 1);
         Project project = projectService.getProjectById(integration.getProjectId());
         DocumentInstance documentInstance = documentService.getDocumentByFileName(project.getId(), project.getOrganizationId(), fileName);
@@ -166,11 +171,29 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
                         .multipartFile(file)
                         .build())
                 .toList();
-//                .collect(Collectors
-//                        .toList());
+
+//        List<IntegratedFileDTO> integratedFiles = fileList.stream()
+//                .map(file -> IntegratedFileDTO.builder().multipartFile(file).build())
+//                .collect(Collectors.toList());
 
         map.put(projectIntegrationDTO, integratedFilesDTO);
         return map;
+    }
+
+    private String extractJsonValue(JsonNode rootNode, String jsonPath) throws GendoxException {
+        JsonNode valueNode = rootNode.at(jsonPath);
+        if (valueNode.isMissingNode() || valueNode.asText().isEmpty()) {
+            throw new GendoxException("INVALID_JSON", "Missing or empty value for path: " + jsonPath, HttpStatus.NOT_FOUND );
+        }
+        return valueNode.asText();
+    }
+
+    private String decodeObjectKey(String objectKey) {
+        return URLDecoder.decode(objectKey, StandardCharsets.UTF_8);
+    }
+
+    private String extractFileName(String objectKey) {
+        return Paths.get(objectKey).getFileName().toString();
     }
 
 }
