@@ -12,6 +12,13 @@ public class OpenAiEmbeddingResponseConverter {
                 .model(openAiAda2Response.getModel())
                 .usage(openAiAda2Response.getUsage())
                 .data(openAiAda2Response.getData())
+                .totalRateLimitRequests(openAiAda2Response.getTotalRateLimitRequests())
+                .totalRateLimitTokens(openAiAda2Response.getTotalRateLimitTokens())
+                .rateLimitRemainingRequests(openAiAda2Response.getRateLimitRemainingRequests())
+                .rateLimitRemainingTokens(openAiAda2Response.getRateLimitRemainingTokens())
+                .rateLimitResetRequestsMilliseconds(openAiAda2Response.getRateLimitResetRequestsMilliseconds())
+                .rateLimitResetTokensMilliseconds(openAiAda2Response.getRateLimitResetTokensMilliseconds())
+
                 .build();
 
         return embeddingResponse;
