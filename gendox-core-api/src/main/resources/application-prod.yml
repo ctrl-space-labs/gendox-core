@@ -16,7 +16,8 @@ Spring:
     hikari:
       maximum-pool-size: 100
       minimum-idle: 10
-
+  flyway:
+    enabled: false
 
 
 
@@ -26,6 +27,9 @@ gendox:
 
   domain:
     base-url: http://localhost:5000
+
+  documents:
+      upload-dir: s3://gendox.organization.documents.dev
 
 
 proven-ai:

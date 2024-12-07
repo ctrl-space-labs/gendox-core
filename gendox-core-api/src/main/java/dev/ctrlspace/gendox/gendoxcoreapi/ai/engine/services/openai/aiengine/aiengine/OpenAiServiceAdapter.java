@@ -1,4 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
+import com.knuddels.jtokkit.Encodings;
+import com.knuddels.jtokkit.api.Encoding;
+import com.knuddels.jtokkit.api.EncodingRegistry;
+import com.knuddels.jtokkit.api.ModelType;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
@@ -7,21 +11,23 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35Moderat
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiEmbeddingResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ApiRateLimitService;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.DurationUtils;
+import io.github.bucket4j.Bucket;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
-import java.util.Set;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 
 @Service
 public class OpenAiServiceAdapter implements AiModelApiAdapterService {
@@ -38,14 +44,23 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
     private OpenAiEmbeddingResponseConverter openAiEmbeddingResponseConverter;
 
+    private DurationUtils durationUtils;
+
+    private ApiRateLimitService apiRateLimitService;
+
     @Autowired
     public OpenAiServiceAdapter(AiModelRepository aiModelRepository,
+                                ApiRateLimitService apiRateLimitService,
                                 OpenAiCompletionResponseConverter openAiCompletionResponseConverter,
-                                OpenAiEmbeddingResponseConverter openAiEmbeddingResponseConverter){
+                                OpenAiEmbeddingResponseConverter openAiEmbeddingResponseConverter,
+                                DurationUtils durationUtils) {
         this.aiModelRepository = aiModelRepository;
+        this.apiRateLimitService = apiRateLimitService;
         this.openAiEmbeddingResponseConverter = openAiEmbeddingResponseConverter;
         this.openAiCompletionResponseConverter = openAiCompletionResponseConverter;
+        this.durationUtils = durationUtils;
     }
+
     private static final RestTemplate restTemplate = new RestTemplate();
 
     public HttpHeaders buildHeader(String apiKey) {
@@ -61,14 +76,100 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
     public OpenAiAda2Response getEmbeddingResponse(OpenAiAda2Request embeddingRequestHttpEntity, AiModel aiModel, String apiKey) {
         String embeddingsApiUrl = aiModel.getUrl();
+
+//        Bucket bucket = waitOpenAiRateLimit(embeddingRequestHttpEntity, apiKey);
+
         logger.trace("Sending Embedding Request to {}: {}", embeddingsApiUrl, embeddingRequestHttpEntity);
         ResponseEntity<OpenAiAda2Response> responseEntity = restTemplate.postForEntity(
                 embeddingsApiUrl,
                 new HttpEntity<>(embeddingRequestHttpEntity, buildHeader(apiKey)),
                 OpenAiAda2Response.class);
+
+        // Extract rate limit headers
+        HttpHeaders headers = responseEntity.getHeaders();
+        RateLimitInfo rateLimitInfo = extractRateLimitHeaders(headers);
+
         logger.info("Received Embedding Response from {}. Tokens billed: {}", embeddingsApiUrl, responseEntity.getBody().getUsage().getTotalTokens());
 
-        return responseEntity.getBody();
+
+        OpenAiAda2Response openAiAda2Response = responseEntity.getBody();
+
+        openAiAda2Response.setTotalRateLimitRequests(rateLimitInfo.getTotalRateLimitRequests());
+        openAiAda2Response.setTotalRateLimitTokens(rateLimitInfo.getTotalRateLimitTokens());
+        openAiAda2Response.setRateLimitRemainingRequests(rateLimitInfo.getRateLimitRemainingRequests());
+        openAiAda2Response.setRateLimitRemainingTokens(rateLimitInfo.getRateLimitRemainingTokens());
+        openAiAda2Response.setRateLimitResetRequestsMilliseconds(rateLimitInfo.getRateLimitResetRequestsMilliseconds());
+        openAiAda2Response.setRateLimitResetTokensMilliseconds(rateLimitInfo.getRateLimitResetTokensMilliseconds());
+
+        // TODO update rate limit bucket
+        // For now just sleep for a small amount of time when we are near the API limits
+
+        sleepIfLowRateLimit(openAiAda2Response);
+
+
+
+
+        return openAiAda2Response;
+    }
+
+    /**
+     *
+     * @param openAiAda2Response
+     */
+    private void sleepIfLowRateLimit(OpenAiAda2Response openAiAda2Response) {
+        // Check if remaining requests or tokens are less than 10% of the total
+        boolean isLowOnRequests = openAiAda2Response.getRateLimitRemainingRequests() < 0.1 * openAiAda2Response.getTotalRateLimitRequests();
+        boolean isLowOnTokens = openAiAda2Response.getRateLimitRemainingTokens() < 0.1 * openAiAda2Response.getTotalRateLimitTokens();
+
+        if (isLowOnRequests || isLowOnTokens) {
+            // Get the reset times in milliseconds
+            long resetRequestsMillis = openAiAda2Response.getRateLimitResetRequestsMilliseconds();
+            long resetTokensMillis = openAiAda2Response.getRateLimitResetTokensMilliseconds();
+
+            // Calculate the maximum of the reset times
+            long maxResetMillis = Math.max(resetRequestsMillis, resetTokensMillis);
+
+            // Compute sleep time as 10 times the maximum reset time
+            long sleepTimeMillis = 10 * maxResetMillis;
+
+            // Cap the sleep time at 3000 milliseconds (3 seconds)
+            sleepTimeMillis = Math.min(sleepTimeMillis, 3000);
+
+            // Log the sleep action (optional but recommended)
+            logger.info("Rate limits are low. Sleeping for {} milliseconds.", sleepTimeMillis);
+
+            // Sleep the thread
+            try {
+                Thread.sleep(sleepTimeMillis);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // Restore the interrupted status
+                // Handle interruption if necessary
+                logger.warn("Thread was interrupted while sleeping due to rate limiting.", e);
+            }
+        }
+    }
+
+    /**
+     * This limits requests sent to OpenAI to not pass the rate limits
+     * TODO Not implemented yet, complex logic should be applied to update the limits depending the actual usage of the API
+     * @param embeddingRequestHttpEntity
+     * @param apiKey
+     * @throws GendoxException
+     */
+    private Bucket waitOpenAiRateLimit(OpenAiAda2Request embeddingRequestHttpEntity, String apiKey) throws GendoxException {
+        logger.debug("Applying OpenAI rate Limit wait for Embedding API");
+        EncodingRegistry registry = Encodings.newDefaultEncodingRegistry();
+        Encoding enc = registry.getEncodingForModel(ModelType.TEXT_EMBEDDING_3_SMALL);
+        int requestTokens = enc.encode(embeddingRequestHttpEntity.getInput()).size();
+        Bucket bucket = apiRateLimitService.getOpenAIRateLimitBucketForApiKey(apiKey, 1000000);
+
+
+        boolean consumed = bucket.asBlocking().tryConsumeUninterruptibly(requestTokens, Duration.of(5, ChronoUnit.SECONDS));
+        if (!consumed) {
+            logger.error("Rate Limit Exceeded for Embedding API");
+            throw new GendoxException("RATE_LIMIT_EXCEEDED", "Rate Limit Exceeded", HttpStatus.TOO_MANY_REQUESTS);
+        }
+        return bucket;
     }
 
 
@@ -101,8 +202,8 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
     public EmbeddingResponse askEmbedding(BotRequest botRequest, AiModel aiModel, String apiKey) {
         String message = botRequest.getMessages().get(0);
         OpenAiAda2Response openAiAda2Response = this.getEmbeddingResponse((OpenAiAda2Request.builder()
-                .model(aiModel.getModel())
-                .input(message).build()),
+                        .model(aiModel.getModel())
+                        .input(message).build()),
                 aiModel,
                 apiKey);
 
@@ -135,10 +236,45 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
     public OpenAiGpt35ModerationResponse moderationCheck(String message, String apiKey) {
         return getModerationResponse(Gpt35ModerationRequest.builder()
-                .input(message)
-                .build(),
+                        .input(message)
+                        .build(),
                 apiKey);
     }
+
+    public RateLimitInfo extractRateLimitHeaders(HttpHeaders headers) {
+        RateLimitInfo rateLimitInfo = new RateLimitInfo();
+
+        // Extracting values and setting them if they exist
+        Optional.ofNullable(headers.getFirst("x-ratelimit-limit-requests"))
+                .map(Long::valueOf)
+                .ifPresent(rateLimitInfo::setTotalRateLimitRequests);
+
+        Optional.ofNullable(headers.getFirst("x-ratelimit-limit-tokens"))
+                .map(Long::valueOf)
+                .ifPresent(rateLimitInfo::setTotalRateLimitTokens);
+
+        Optional.ofNullable(headers.getFirst("x-ratelimit-remaining-requests"))
+                .map(Long::valueOf)
+                .ifPresent(rateLimitInfo::setRateLimitRemainingRequests);
+
+        Optional.ofNullable(headers.getFirst("x-ratelimit-remaining-tokens"))
+                .map(Long::valueOf)
+                .ifPresent(rateLimitInfo::setRateLimitRemainingTokens);
+
+        Optional.ofNullable(headers.getFirst("x-ratelimit-reset-requests"))
+                .map(durationUtils::convertToMilliseconds) // Using the injected DurationUtils
+                .ifPresent(rateLimitInfo::setRateLimitResetRequestsMilliseconds);
+
+        Optional.ofNullable(headers.getFirst("x-ratelimit-reset-tokens"))
+                .map(durationUtils::convertToMilliseconds) // Using the injected DurationUtils
+                .ifPresent(rateLimitInfo::setRateLimitResetTokensMilliseconds);
+
+        return rateLimitInfo;
+    }
+
+
+
+
 
     @Override
     public boolean supports(String apiTypeName) {

@@ -78,7 +78,7 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
             sectionSha256Hash = cryptographyUtils.calculateSHA256(sectionValue);
 
 
-            logger.trace("Section value with template for embedding: {}", sectionValue);
+            logger.trace("Section value prepared for embedding. Value: {}", sectionValue);
 
             if (Boolean.TRUE.equals(skipKnownEmbeddings)) {
 
