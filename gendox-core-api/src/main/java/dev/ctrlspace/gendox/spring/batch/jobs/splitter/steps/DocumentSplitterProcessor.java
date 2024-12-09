@@ -65,63 +65,70 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
 
     @Override
     public DocumentSectionDTO process(DocumentInstance instance) throws Exception {
-        List<String> contentSections = new ArrayList<>();
-        ProjectAgent agent = new ProjectAgent();
-        if ("API_INTEGRATION_FILE".equals(instance.getFileType().getName())) {
-            OrganizationWebSite organizationWebSite = organizationWebSiteService.getOrganizationWebSite(instance.getOrganizationId(), instance.getRemoteUrl());
-            ApiKey apiKey = apiKeyService.getById(organizationWebSite.getApiKeyId());
-        }
-        Boolean documentUpdated = false;
-        logger.trace("Start processing split: {}", instance.getId());
-
+        logger.trace("Start processing document: {}", instance.getId());
 
         try {
-            String fileContent = downloadService.readDocumentContent(instance.getRemoteUrl());
+            // Step 1: Fetch content
+            String fileContent = fetchContent(instance);
 
-            fileContent = (instance.getFileType() == null || !"API_INTEGRATION_FILE".equals(instance.getFileType().getName()))
-                    ? downloadService.readDocumentContent(instance.getRemoteUrl())
-                    : gendoxAPIIntegrationService.getContentById(instance.getRemoteUrl(), tempApiKey).getContent();
-
-            if (instance.getFileType() == null) {
-                logger.warn("DocumentInstance {} has a null fileType. Using remoteUrl to retrieve content.", instance.getId());
+            // Step 2: Skip unchanged documents if applicable
+            if (hasDocumentChanged(instance, fileContent)) {
+                logger.trace("No changes detected for document {}. Skipping processing.", instance.getId());
+                return null;
             }
 
-            // SHA-256 hash check only if splitAllDocuments is false
-            if (Boolean.TRUE.equals(skipUnchangedDocs)) {
-                String documentSha256Hash = cryptographyUtils.calculateSHA256(fileContent);
-                logger.trace("SHA-256 hash of document {}: {}", instance.getId(), documentSha256Hash);
+            // Step 3: Split content into sections
+            List<String> contentSections = splitContent(instance, fileContent);
 
-                // If hashes match, content hasn't changed; skip splitting
-                if (documentSha256Hash.equals(instance.getDocumentSha256Hash())) {
-                    logger.trace("No changes detected for document {}. Skipping split.", instance.getId());
-                    return null;
-                }
+            return new DocumentSectionDTO(instance, contentSections, true);
 
-                instance.setDocumentSha256Hash(documentSha256Hash);
-                documentUpdated = true;
-            } else {
-                logger.trace("splitAllDocuments is true, skipping SHA-256 check for document {}.", instance.getId());
-            }
+        } catch (Exception e) {
+            logger.warn("Error processing document {}: {}", instance.getId(), e.getMessage());
+            return null; // Skip processing on errors
+        }
+    }
 
+    private String fetchContent(DocumentInstance instance) throws GendoxException, Exception {
+        if ("API_INTEGRATION_FILE".equals(instance.getFileType().getName())) {
+            OrganizationWebSite organizationWebSite = organizationWebSiteService.getOrganizationWebSite(
+                    instance.getOrganizationId(),
+                    instance.getRemoteUrl()
+            );
 
-            agent = projectAgentService.getAgentByDocumentId(instance.getId());
-            String splitterTypeName = agent.getDocumentSplitterType().getName();
-            DocumentSplitter documentSplitter = serviceSelector.getDocumentSplitterByName(splitterTypeName);
-
-            if (documentSplitter == null) {
-                throw new GendoxException("DOCUMENT_SPLITTER_NOT_FOUND", "Document splitter not found with name: " + splitterTypeName, HttpStatus.NOT_FOUND);
-            }
-
-            contentSections = documentSplitter.split(fileContent);
-
-        } catch (
-                Exception e) {
-            logger.warn("Error {} split document to sections {}. Skipping...", e.getMessage(), instance.getId());
-            return null;
+            ApiKey apiKey = apiKeyService.getById(organizationWebSite.getApiKeyId());
+            return gendoxAPIIntegrationService.getContentById(instance.getRemoteUrl(), tempApiKey).getContent();
         }
 
-
-        return new DocumentSectionDTO(instance, contentSections, documentUpdated);
+        return downloadService.readDocumentContent(instance.getRemoteUrl());
     }
+
+    private boolean hasDocumentChanged(DocumentInstance instance, String fileContent) throws GendoxException, Exception {
+        if (Boolean.TRUE.equals(skipUnchangedDocs)) {
+            String newHash = cryptographyUtils.calculateSHA256(fileContent);
+            if (newHash.equals(instance.getDocumentSha256Hash())) {
+                return true; // No changes detected
+            }
+            instance.setDocumentSha256Hash(newHash); // Update the hash
+        }
+        return false;
+    }
+
+    private List<String> splitContent(DocumentInstance instance, String fileContent) throws GendoxException {
+        ProjectAgent agent = projectAgentService.getAgentByDocumentId(instance.getId());
+        DocumentSplitter splitter = serviceSelector.getDocumentSplitterByName(agent.getDocumentSplitterType().getName());
+
+        if (splitter == null) {
+            throw new GendoxException(
+                    "DOCUMENT_SPLITTER_NOT_FOUND",
+                    "No document splitter found for agent " + agent.getId(),
+                    HttpStatus.NOT_FOUND
+            );
+        }
+
+        return splitter.split(fileContent);
+    }
+
+
+
 }
 
