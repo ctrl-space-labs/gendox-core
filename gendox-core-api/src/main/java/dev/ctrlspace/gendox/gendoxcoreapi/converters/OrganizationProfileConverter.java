@@ -29,22 +29,12 @@ public class OrganizationProfileConverter {
         userType.setId(firstDto.getUserTypeId());
         userType.setName(firstDto.getUserTypeName());
 
-        // Collect authorities based on user type and permissions
-        Set<String> authorities = new HashSet<>();
-        authorities.add(firstDto.getUserTypeName());
-
-        Long roleId = firstDto.getUserTypeId();
-
         // Fetch permissions for the role
         Map<String, List<String>> rolePermissionMap = rolePermissionService.getRoleToPermissionMapping(
                 RolePermissionCriteria.builder()
-                        .roleIdIn(Collections.singletonList(roleId))
+                        .roleIdIn(Collections.singletonList(firstDto.getOrgRoleId()))
                         .build()
         );
-
-        if (rolePermissionMap != null && rolePermissionMap.containsKey(roleId.toString())) {
-            authorities.addAll(rolePermissionMap.get(roleId.toString()));
-        }
 
         // Group projects by project ID
         Map<String, List<OrganizationProfileProjectAgentDTO>> projectGrouped = dtos.stream()

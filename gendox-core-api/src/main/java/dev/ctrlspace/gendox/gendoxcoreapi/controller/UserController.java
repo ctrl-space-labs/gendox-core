@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.authentication.ApiKeyAuthenticationToken;
+import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -101,27 +102,16 @@ public class UserController {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public UserProfile getUserUserProfile(@PathVariable(required = false) UUID id,
-                                          Authentication authentication) throws Exception {
+    public UserProfile getUserUserProfile(Authentication authentication) throws Exception {
 
 
-        if (authentication instanceof ApiKeyAuthenticationToken) {
-            String apiKey = ((ApiKeyAuthenticationToken) authentication).getApiKey();
-            return organizationService.getOrganizationProfileByApiKey(apiKey);
+        if (authentication instanceof ApiKeyAuthenticationToken || authentication instanceof GendoxAuthenticationToken) {
+            UserProfile loginPrincipalProfile = (UserProfile) authentication.getPrincipal();
+            return loginPrincipalProfile;
 
         }
 
-
-        UserProfile loginUserProfile = (UserProfile) authentication.getPrincipal();
-        if (id == null) {
-            return loginUserProfile;
-        }
-
-        // run code to get the user from the database
-        // TODO change this to return user's public profile
-        UserProfile userProfile = userService.getUserProfileByUserId(id);
-
-        return userProfile;
+        throw new GendoxException("USER_PROFILE_NOT_FOUND", "User profile not found", HttpStatus.NOT_FOUND);
     }
 
     @DeleteMapping("/profile/caches")
