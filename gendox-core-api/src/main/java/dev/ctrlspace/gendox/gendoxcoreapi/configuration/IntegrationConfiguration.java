@@ -144,7 +144,7 @@ public class IntegrationConfiguration {
                                             .remoteUrl(file.getExternalFile().getRemoteUrl())
                                             .contentId(file.getExternalFile().getContentId())
                                             .fileType(file.getExternalFile().getFileType())
-                                            .title(documentUtils.getApiIntegrationDocumentTitle(file.getExternalFile().getContentId(), projectIntegrationDTO.getIntegration().getUrl()))
+                                            .title(documentUtils.getApiIntegrationDocumentTitle(file.getExternalFile().getContentId(), projectIntegrationDTO.getIntegration()))
                                             .documentIsccCode(documentUtils.getISCCCodeForApiIntegrationFile())
                                             .build();
 
@@ -154,7 +154,7 @@ public class IntegrationConfiguration {
                                 }
 
                             } catch (Exception e) {
-                                logger.error("Error uploading document: {}", e.getMessage(), e);
+                                logger.error("Error uploading document");
                                 e.printStackTrace();
                             }
                         }

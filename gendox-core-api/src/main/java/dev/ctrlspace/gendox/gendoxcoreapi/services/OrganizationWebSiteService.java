@@ -53,7 +53,7 @@ public class OrganizationWebSiteService {
         return organizationWebSiteRepository.findAllByOrganizationId(organizationId);
     }
 
-    private OrganizationWebSite getOrganizationWebSite(UUID organizationId, String domain) throws GendoxException {
+    public OrganizationWebSite getOrganizationWebSite(UUID organizationId, String domain) throws GendoxException {
         return organizationWebSiteRepository
                 .findMatchingOrganizationWebSite(organizationId, domain)
                 .orElseThrow(() -> {

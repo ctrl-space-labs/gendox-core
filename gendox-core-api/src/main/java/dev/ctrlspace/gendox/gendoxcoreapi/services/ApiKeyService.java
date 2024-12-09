@@ -40,9 +40,10 @@ public class ApiKeyService {
                 .orElse(null);
     }
 
-
-
-
+    public ApiKey getByIntegrationId(UUID integrationId) throws GendoxException {
+        return apiKeyRepository.findByIntegrationId(integrationId)
+                .orElseThrow(() -> new GendoxException("API_KEY_NOT_FOUND", "No ApiKey found for the given integration ID", HttpStatus.NOT_FOUND));
+    }
 
     public ApiKey validateApiKey(String key) throws GendoxException {
         ApiKey apiKey = this.getByApiKey(key);
