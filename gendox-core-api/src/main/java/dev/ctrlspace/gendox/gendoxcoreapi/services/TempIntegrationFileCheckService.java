@@ -66,14 +66,13 @@ public class TempIntegrationFileCheckService {
                         tempIntegrationFileCheck.setFileType(typeService.getFileTypeByName(FileTypeConstants.API_INTEGRATION_FILE));
                         tempIntegrationFileCheck.setCreatedAt(contentIdDTO.getCreatedAt());
                         tempIntegrationFileCheck.setUpdatedAt(contentIdDTO.getUpdatedAt());
-                        tempIntegrationFileCheck.setRemoteUrl(integration.getUrl() + "/gendox/v1/content?content_id=" + contentIdDTO.getContentId());
+                        tempIntegrationFileCheck.setRemoteUrl(integration.getUrl() + integration.getDirectoryPath() + "/content?content_id=" + contentIdDTO.getContentId());
                         tempIntegrationFileCheck.setExternalUrl(contentIdDTO.getExternalUrl()); // null as of 2024-11-18
                         tempIntegrationFileChecks.add(tempIntegrationFileCheck);
                         processedContentIds.add(contentIdDTO.getContentId());
                     });
         }
 
-        // TODO @giannis Test this
         if (!tempIntegrationFileChecks.isEmpty()) {
             tempIntegrationFileCheckRepository.saveAll(tempIntegrationFileChecks);
             logger.info("Saved {} new TempIntegrationFileCheck entities.", tempIntegrationFileChecks.size());

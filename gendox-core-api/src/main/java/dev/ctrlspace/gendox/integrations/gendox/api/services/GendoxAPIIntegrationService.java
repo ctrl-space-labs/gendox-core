@@ -89,11 +89,8 @@ public class GendoxAPIIntegrationService {
         return response.getBody();
     }
 
-    // Method to get Content by ID
-    public ContentDTO getContentById(String baseUrl, Long contentId, String apiKey) {
-        String url = baseUrl + "/content?content_id=" + contentId;
+    public ContentDTO getContentById(String url, String apiKey) {
         HttpEntity<String> entity = new HttpEntity<>(buildHeader(apiKey));
-
         ResponseEntity<ContentDTO> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,
