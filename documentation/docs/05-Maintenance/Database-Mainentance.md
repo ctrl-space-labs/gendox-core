@@ -27,13 +27,18 @@ You can create a new partial index using the following SQL query:
 
 ```sql
 CREATE INDEX hnsw_l2_idx_proj_12345678_9abcd_443c_1234_123456789abc
-    ON gendox_core.embedding_clone
-        USING hnsw (embedding_vector vector_l2_ops)
+    ON gendox_core.embedding
+        USING hnsw ((embedding_vector::vector(1536)) vector_l2_ops)
     WITH (
-    m = 16, -- Max number of connections per node (default: 16)
-    ef_construction = 64 -- Size of the dynamic candidate list for constructing the graph (default: 64)
+    m = 16,               -- Max connections per node (default: 16)
+    ef_construction = 64  -- Candidate list size for construction (default: 64)
     )
-    WHERE project_id = '12345678_9abcd_443c_1234_123456789abc'  -- project id
-              and section_id is not null                        -- semantic search is applied only in sections of documents uploaded
-              and semantic_search_model_id = '[model-id]';      -- the id of model eg OpenAI text-embeddigns-3, etc
+    WHERE project_id = '12345678_9abcd_443c_1234_123456789abc'
+        AND section_id IS NOT NULL
+        AND semantic_search_model_id = '[model-id]';
 ```
+
+> Just replace:
+> - `12345678_9abcd_443c_1234_123456789abc` with the project_id
+> - index name `hnsw_l2_idx_proj_12345678_9abcd_443c_1234_123456789abc` to include project_id (convention)
+> - `[model-id]` with the model_id
