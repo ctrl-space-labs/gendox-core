@@ -79,7 +79,7 @@ public class ApiKeyAuthenticationProvider implements AuthenticationProvider {
         JwtDTO jwtDTO = jwtDTOUserProfileConverter.jwtDTO(userProfile);
         var authorities = jwtUtils.getAuthorities(jwtDTO).stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
 
-        ApiKeyAuthenticationToken gendoxAuthenticationToken = new ApiKeyAuthenticationToken(userProfile, null, authorities);
+        ApiKeyAuthenticationToken gendoxAuthenticationToken = new ApiKeyAuthenticationToken(userProfile, apiKey, authorities);
 
         return gendoxAuthenticationToken;
 

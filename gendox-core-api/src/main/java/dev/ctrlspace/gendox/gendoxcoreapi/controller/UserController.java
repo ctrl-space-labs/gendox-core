@@ -102,13 +102,12 @@ public class UserController {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public UserProfile getUserUserProfile(@PathVariable(required = false) UUID id,
-                                          @RequestParam(required = false) String roleType,
                                           Authentication authentication) throws Exception {
 
 
         if (authentication instanceof ApiKeyAuthenticationToken) {
-           String apiKey = (String) authentication.getPrincipal();
-            return organizationService.getOrganizationProfileByApiKey(roleType, apiKey);
+            String apiKey = ((ApiKeyAuthenticationToken) authentication).getApiKey();
+            return organizationService.getOrganizationProfileByApiKey(apiKey);
 
         }
 
