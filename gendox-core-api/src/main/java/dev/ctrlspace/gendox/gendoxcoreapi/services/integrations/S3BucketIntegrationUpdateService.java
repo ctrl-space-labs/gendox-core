@@ -20,6 +20,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.S3BucketIntegrationCon
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -106,11 +107,10 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
         String originalFilename = URLDecoder.decode(encodedFilename, StandardCharsets.UTF_8.toString());
         // Remove any directory from the filename (keep only the file name)
         String s3Url = "s3://" + bucketName + "/" + originalFilename;
-        String content = downloadService.readDocumentContent(s3Url);
-        byte[] contentBytes = content.getBytes();
+        Resource s3FileResource = downloadService.openResource(s3Url);
 
         return new ResourceMultipartFile(
-                contentBytes,
+                s3FileResource,
                 originalFilename,
                 "application/octet-stream"
         );
