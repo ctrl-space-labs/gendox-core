@@ -71,7 +71,7 @@ import java.time.Instant;
         LEFT JOIN gendox_core.project_agent pa ON p.id = pa.project_id
         LEFT join gendox_core.users u ON u.id = pa.user_id
         INNER JOIN gendox_core.api_keys ak ON ak.organization_id = o.id
-        WHERE o.id = :orgId
+        WHERE o.id = :orgId and p.name != 'DEACTIVATED'
         """,
         resultSetMapping = "OrganizationProfileProjectAgentMapping"
 )
