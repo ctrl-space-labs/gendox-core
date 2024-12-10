@@ -75,7 +75,10 @@ public class OrganizationWebSiteService {
             );
         }
 
+        // TODO create website if not exists
         OrganizationWebSite organizationWebSite = getOrganizationWebSite(organizationId, websiteIntegrationDTO.getDomain());
+        // TODO if not exists, create organizationWebSite
+        // TODO if exists, update organizationWebSite
         Integration integration = handleIntegrationLogic(organizationId, organizationWebSite, websiteIntegrationDTO);
         updateOrganizationWebSite(organizationWebSite, apiKey, integration);
     }
