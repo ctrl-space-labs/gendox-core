@@ -72,7 +72,7 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
             String fileContent = fetchContent(instance);
 
             // Step 2: Skip unchanged documents if applicable
-            if (hasDocumentChanged(instance, fileContent)) {
+            if (!hasDocumentChanged(instance, fileContent)) {
                 logger.trace("No changes detected for document {}. Skipping processing.", instance.getId());
                 return null;
             }
@@ -106,11 +106,11 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         if (Boolean.TRUE.equals(skipUnchangedDocs)) {
             String newHash = cryptographyUtils.calculateSHA256(fileContent);
             if (newHash.equals(instance.getDocumentSha256Hash())) {
-                return true; // No changes detected
+                return false; // No changes detected
             }
             instance.setDocumentSha256Hash(newHash); // Update the hash
         }
-        return false;
+        return true;
     }
 
     private List<String> splitContent(DocumentInstance instance, String fileContent) throws GendoxException {
