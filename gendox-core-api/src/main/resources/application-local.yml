@@ -18,16 +18,16 @@ spring:
   flyway:
     enabled: false
   datasource:
-#    url: jdbc:postgresql://localhost:5433/postgres
-#    username: gendox_user
-#    password: root
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USERNAME}
-    password: ${DATABASE_PASSWORD}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/postgres}
+    username: ${DATABASE_USERNAME:gendox_user}
+    password: ${DATABASE_PASSWORD:root}
 
     hikari:
-      maximum-pool-size: 10
+      maximum-pool-size: 5
       minimum-idle: 3
+      maxLifetime: 300000       # 5 minutes
+      idleTimeout: 120000       # 2 minutes
+      connectionTimeout: 30000  # 30 seconds
   security:
     oauth2:
       resourceserver:
@@ -50,14 +50,14 @@ gendox:
     frontend: http://localhost:3000
   documents:
     upload-dir: file:${user.home}/gendox/documents
-    wordCount: 300
+    wordCount: 500
     allowed:
       extensions: .txt,.md,.rst,.pdf
 
   integrations:
-    poller: 120000 # 90 seconds
+#    poller: 30000 # 30 seconds
 #    poller: 300000
-#    poller: 86400000 # 24 hours in milliseconds
+    poller: 86400000 # 24 hours in milliseconds
     storage:
       temporary: C:\ProgramData\\gendox\\temporary_integration_files
 #      temporary: s3://gendox.organization.documents.local/gendox_wiki

@@ -10,6 +10,7 @@ import java.util.Optional;
 
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -22,8 +23,8 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, UUID>, QuerydslP
     @Query("SELECT a FROM ApiKey a WHERE a.id IN (SELECT o.apiKeyId FROM OrganizationWebSite o WHERE o.integrationId = :integrationId)")
     Optional<ApiKey> findByIntegrationId(@Param("integrationId") UUID integrationId);
 
+//    find organizationid by apikey
 
-
-
-
+    @Query("SELECT a.organizationId FROM ApiKey a WHERE a.apiKey = :apiKey")
+    Optional<UUID> findOrganizationIdByApiKey(@Param("apiKey") String apiKey);
 }
