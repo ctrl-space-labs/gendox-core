@@ -60,7 +60,7 @@ public class ApiKeyAuthenticationProvider implements AuthenticationProvider {
             throw new BadCredentialsException("Invalid API Key", e);
         }
         Instant now = Instant.now();
-        if (!apiKeyObj.isActive()){
+        if (!apiKeyObj.getActive()){
             logger.error("API Key is not active.");
             throw new BadCredentialsException("Invalid API Key");
         }
