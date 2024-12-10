@@ -14,7 +14,7 @@ spring:
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
     hikari:
-      maximum-pool-size: 100
+      maximum-pool-size: 50
       minimum-idle: 10
 
 gendox:
