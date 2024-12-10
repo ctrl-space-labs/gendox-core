@@ -166,8 +166,8 @@ gendox:
         steps:
           document-training-step:
             name: documentTrainingStep
-            throttle-limit: 5    # this should be around 5 to not hit the throttle limit of the OpenAI API
-            chunk-size: 10
+            throttle-limit: 6    # this should be around 5-10 to not hit the throttle limit of the OpenAI API
+            chunk-size: 128
             pageable-size: 1000
     document-splitter:
       job:
