@@ -190,10 +190,10 @@ public class OrganizationController {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public void deactivateOrganization(@PathVariable UUID organizationId, Authentication authentication) throws Exception {
+    public void deactivateOrganization(@PathVariable UUID organizationId) throws Exception {
         organizationService.deactivateOrganization(organizationId);
-        UserProfile userProfile = (UserProfile) authentication.getPrincipal();
-        userService.evictUserProfileByUniqueIdentifier(userProfile.getId());
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        userService.evictUserProfileByUniqueIdentifier(securityUtils.getUserIdentifier());
 
     }
 

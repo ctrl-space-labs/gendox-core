@@ -17,7 +17,6 @@ public class StaticWordCountSplitter implements DocumentSplitter {
     private int wordCount;
 
     /**
-     * TODO test this, the code is untested only for demo purposes
      * split the document in sections of wordCount words
      *
      * @param document
@@ -27,23 +26,40 @@ public class StaticWordCountSplitter implements DocumentSplitter {
     public List<String> split(String document) {
 
         List<String> sections = new ArrayList<>();
-        StringBuilder section = new StringBuilder();
-        int counter = 0;
-        for (String word : document.split(" ")) {
-            section.append(word).append(" ");
-            counter++;
+        if (document == null || document.trim().isEmpty()) {
+            return sections; // return empty list
+        }
+        String[] lines = document.trim().split("\\r?\\n");
+        StringBuilder sectionBuilder = new StringBuilder();
+        int sectionWordCount = 0;
 
-            // split the section in this word
-            if (counter == wordCount) {
-                sections.add(section.toString().trim());
-                section = new StringBuilder();
-                counter = 0;
+        for (String line : lines) {
+            String trimmedLine = line.trim();
+            if (trimmedLine.isEmpty()) {
+                continue; // skip empty paragraphs
             }
+
+            String[] words = trimmedLine.split("\\s+");
+            int lineWordCount = words.length;
+
+            if (sectionWordCount + lineWordCount > wordCount) {
+                if (sectionBuilder.length() > 0) {
+                    sections.add(sectionBuilder.toString().trim());
+                    sectionBuilder.setLength(0);
+                    sectionWordCount = 0;
+                }
+                if (lineWordCount > wordCount) {
+                    sections.add(trimmedLine);
+                    continue;
+                }
+            }
+            sectionBuilder.append(trimmedLine).append("\n\n");
+            sectionWordCount += lineWordCount;
         }
 
         // Add the remaining section if there is any
-        if (section.length() > 0) {
-            sections.add(section.toString().trim());
+        if (sectionBuilder.length() > 0) {
+            sections.add(sectionBuilder.toString().trim());
         }
 
         return sections;

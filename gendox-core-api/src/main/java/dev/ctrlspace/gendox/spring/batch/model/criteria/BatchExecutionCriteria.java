@@ -13,4 +13,5 @@ public class BatchExecutionCriteria {
 
     private String jobName;
     private String status;
+    private String exitCode;
 }

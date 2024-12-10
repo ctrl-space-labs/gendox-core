@@ -8,9 +8,9 @@ import {themes as prismThemes} from 'prism-react-renderer';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'gendox.',
+  title: 'Gendox',
   tagline: 'RAG enabled AI Agent Platform',
-  favicon: 'img/gendox-logo-final-01.png',
+  favicon: 'img/gendoxLogo.svg',
 
   // Set the production url of your site here
   url: 'https://ctrl-space-labs.github.io',
@@ -67,6 +67,7 @@ const config = {
       }),
     ],
   ],
+  themes: ['@docusaurus/theme-mermaid'],
 
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
@@ -110,16 +111,16 @@ const config = {
             title: 'Community',
             items: [
               {
-                label: 'Stack Overflow',
-                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-              },
-              {
                 label: 'Discord',
-                href: 'https://discordapp.com/invite/docusaurus',
+                href: 'https://discord.gg/jWes2urauW',
               },
               {
-                label: 'Twitter',
-                href: 'https://twitter.com/docusaurus',
+                label: 'Instagram',
+                href: 'https://instagram.com/ctrlspace.dev',
+              },
+              {
+                label: 'LinkedIn',
+                href: 'https://www.linkedin.com/company/ctrl-space-labs',
               },
             ],
           },
@@ -137,12 +138,15 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} Ctrl+Space Labs Built with Docusaurus.`,
       },
       prism: {
         theme: prismThemes.github,
         darkTheme: prismThemes.dracula,
       },
+      mermaid: {
+            theme: { light: 'default', dark: 'dark' },
+          },
     }),
 };
 

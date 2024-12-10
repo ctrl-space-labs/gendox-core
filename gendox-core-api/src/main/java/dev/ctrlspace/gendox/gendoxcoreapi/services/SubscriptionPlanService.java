@@ -1,12 +1,15 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationPlan;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.SubscriptionPlan;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ApiRateLimitRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.SubscriptionPlanRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ApiRateLimitTypes;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.SubscriptionTypes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -28,6 +31,11 @@ public class SubscriptionPlanService {
     }
 
 
+
+    public Page<SubscriptionPlan> getAllActiveSubscriptionPlans(Pageable pageable) {
+        return subscriptionPlanRepository.findAll(pageable);
+    }
+
     /**
      * Creates the default free plan. this is cached for performance.
      * Cache is evicted every 5 minutes, no need to explicitly evict it for now.
@@ -44,6 +52,8 @@ public class SubscriptionPlanService {
         plan.setEndDate(now.plus(Duration.ofDays(365)));
         return plan;
     }
+
+
 
 
 

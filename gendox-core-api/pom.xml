@@ -10,12 +10,13 @@
     </parent>
     <groupId>dev.ctrlspace.gendox</groupId>
     <artifactId>gendox-core-api</artifactId>
-    <version>0.4.0</version>
+    <version>0.6.0</version>
     <name>gendox-core-api</name>
     <description>gendox-core-api</description>
     <properties>
-        <java.version>17</java.version>
+        <java.version>21</java.version>
         <querydsl.version>5.0.0</querydsl.version>
+        <spring-ai.version>1.0.0-M3</spring-ai.version>
     </properties>
 
 
@@ -109,6 +110,14 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/group.springframework.ai/spring-ai-pdf-document-reader -->
+
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pdf-document-reader</artifactId>
+        </dependency>
+
         <!-- Explicitly add the newer Bouncy Castle version -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
@@ -358,13 +367,6 @@
         </dependency>
 
 
-        <!--                              String cloud server                           -->
-        <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-config -->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.cloud</groupId>-->
-<!--            <artifactId>spring-cloud-starter-config</artifactId>-->
-<!--            <version>4.0.4</version>-->
-<!--        </dependency>-->
 
         <!--                              JGit                           -->
         <!-- https://mvnrepository.com/artifact/org.eclipse.jgit/org.eclipse.jgit -->
@@ -399,6 +401,13 @@
             <artifactId>kotlin-stdlib-jdk8</artifactId>
             <version>1.8.21</version>
         </dependency>
+
+<!--        Like TikToken tokenizer but for Java-->
+        <dependency>
+            <groupId>com.knuddels</groupId>
+            <artifactId>jtokkit</artifactId>
+            <version>1.1.0</version>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>
@@ -425,6 +434,14 @@
                 <groupId>id.walt</groupId>
                 <artifactId>waltid-sdjwt-jvm</artifactId>
                 <version>0.4.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
 
         </dependencies>

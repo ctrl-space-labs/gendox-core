@@ -1,4 +1,4 @@
-FROM ankane/pgvector:latest
+FROM pgvector/pgvector:pg15
 
 # Install Maven
 RUN apt-get update && apt-get install -y maven

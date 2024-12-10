@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response;
 
+import com.sun.xml.xsom.impl.ListSimpleTypeImpl;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,6 +18,14 @@ public class OpenAiAda2Response {
     private String model;
     private String object;
     private Usage usage;
+
+    private Long totalRateLimitRequests;
+    private Long totalRateLimitTokens;
+    private Long rateLimitRemainingRequests;
+    private Long rateLimitRemainingTokens;
+    private Long rateLimitResetRequestsMilliseconds;
+    private Long rateLimitResetTokensMilliseconds;
+
 }
 
 

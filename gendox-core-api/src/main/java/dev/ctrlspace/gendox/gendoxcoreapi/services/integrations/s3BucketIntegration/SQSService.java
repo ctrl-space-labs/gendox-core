@@ -21,6 +21,9 @@ public class SQSService {
     @Value("${gendox.integrations.s3.sqs.visibility-timeout-seconds}")
     private Integer visibilityTimeout;
 
+    @Value("${gendox.integrations.s3.sqs.batch-size}")
+    private Integer batchSize;
+
     private AmazonSQS amazonSQS;
 
     @Autowired
@@ -40,26 +43,33 @@ public class SQSService {
         String queueUrl = amazonSQS.getQueueUrl(queueName).getQueueUrl();
 
         logger.trace("Queue URL: {}", queueUrl);
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
-                .withQueueUrl(queueUrl)
-                .withVisibilityTimeout(visibilityTimeout);
+
 
         // Receive messages from the queue
-        List<Message> messages = new ArrayList<>();
-        int maxMessages = 100;
+        List<Message> allMessages = new ArrayList<>();
+        int remaining = batchSize;
+        int maxPerRequest = 10;
 
-        while (messages.size() < maxMessages) {
-            List<Message> receivedMessages = amazonSQS.receiveMessage(receiveMessageRequest).getMessages();
+
+        while (remaining > 0) {
+            int receiveCount = Math.min(remaining, maxPerRequest);
+            ReceiveMessageRequest receiveRequest = new ReceiveMessageRequest()
+                    .withQueueUrl(queueUrl)
+                    .withMaxNumberOfMessages(receiveCount)
+                    .withVisibilityTimeout(visibilityTimeout);
+
+            List<Message> receivedMessages = amazonSQS.receiveMessage(receiveRequest).getMessages();
+
 
             if (receivedMessages.isEmpty()){
                 break;
             }
             logger.debug("Received message from the queue {}", receivedMessages);
-            messages.addAll(receivedMessages);
-        }
+            allMessages.addAll(receivedMessages);
+            remaining -= receivedMessages.size();        }
 
-        logger.debug("Received total {} messages from the queue", messages.size());
-        return messages;
+        logger.debug("Received total {} messages from the queue", allMessages.size());
+        return allMessages;
     }
 
     /**

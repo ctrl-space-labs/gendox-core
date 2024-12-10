@@ -1,4 +1,4 @@
-# Setup you first project
+# Setup your first project
 
 A Gendox Project is combining the 2 basic components of Gendox:
 - AI Agents
@@ -41,7 +41,9 @@ For the time being, Gendox supports only text files (.txt, .md etc). You can upl
 
 ## Train the AI Agent
 
-1. In the project's page, in the `General` tab click on the "Training" button
+1. In the project's page, in the `General` tab click on the "Training" button, and wait a few minutes for the training to finish
+![04.1-gendox-start-training.png](./img/04.1-gendox-start-training.png)
+
 
 ## Chat with the agent
 

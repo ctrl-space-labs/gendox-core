@@ -46,6 +46,22 @@ public class Embedding {
     @Column(name = "updated_by")
     @LastModifiedBy
     private UUID updatedBy;
+    @Basic
+    @Column(name = "semantic_search_model_id")
+    private UUID semanticSearchModelId;
+    @Basic
+    @Column(name = "project_id")
+    private UUID projectId;
+    @Basic
+    @Column(name = "organization_id")
+    private UUID organizationId;
+    @Basic
+    @Column(name = "section_id")
+    private UUID sectionId;
+    @Basic
+    @Column(name = "message_id")
+    private UUID messageId;
+
 
     public UUID getId() {
         return id;
@@ -95,15 +111,57 @@ public class Embedding {
         this.embeddingVector = embeddingVector;
     }
 
+    public UUID getSemanticSearchModelId() {
+        return semanticSearchModelId;
+    }
+
+    public void setSemanticSearchModelId(UUID semanticSearchModelId) {
+        this.semanticSearchModelId = semanticSearchModelId;
+    }
+
+    public UUID getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(UUID projectId) {
+        this.projectId = projectId;
+    }
+
+    public UUID getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(UUID organizationId) {
+        this.organizationId = organizationId;
+    }
+
+    public UUID getSectionId() {
+        return sectionId;
+    }
+
+    public void setSectionId(UUID sectionId) {
+        this.sectionId = sectionId;
+    }
+
+    public UUID getMessageId() {
+        return messageId;
+    }
+
+    public void setMessageId(UUID messageId) {
+        this.messageId = messageId;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Embedding embedding)) return false;
-        return Objects.equals(getId(), embedding.getId()) && Objects.equals(getEmbeddingVector(), embedding.getEmbeddingVector()) && Objects.equals(getCreatedAt(), embedding.getCreatedAt()) && Objects.equals(getUpdatedAt(), embedding.getUpdatedAt()) && Objects.equals(getCreatedBy(), embedding.getCreatedBy()) && Objects.equals(getUpdatedBy(), embedding.getUpdatedBy());
+        if (o == null || getClass() != o.getClass()) return false;
+        Embedding embedding = (Embedding) o;
+        return Objects.equals(id, embedding.id) && Objects.equals(embeddingVector, embedding.embeddingVector) && Objects.equals(createdAt, embedding.createdAt) && Objects.equals(updatedAt, embedding.updatedAt) && Objects.equals(createdBy, embedding.createdBy) && Objects.equals(updatedBy, embedding.updatedBy) && Objects.equals(semanticSearchModelId, embedding.semanticSearchModelId) && Objects.equals(projectId, embedding.projectId) && Objects.equals(organizationId, embedding.organizationId) && Objects.equals(sectionId, embedding.sectionId) && Objects.equals(messageId, embedding.messageId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getEmbeddingVector(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy());
+        return Objects.hash(id, embeddingVector, createdAt, updatedAt, createdBy, updatedBy, semanticSearchModelId, projectId, organizationId, sectionId, messageId);
     }
 }

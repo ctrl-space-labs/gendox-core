@@ -1,12 +1,13 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.splitter;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
 import dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps.DocumentSectionDTO;
 import dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps.DocumentSplitterProcessor;
 import dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps.DocumentSplitterReader;
 import dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps.DocumentSplitterWriter;
+import io.micrometer.observation.ObservationRegistry;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.FlowBuilder;
@@ -96,7 +97,7 @@ public class SplitterJobConfig {
     }
 
     @Bean
-    public TaskExecutor asyncBatchSplitterExecutor() {
+    public TaskExecutor asyncBatchSplitterExecutor(ObservationRegistry observationRegistry) {
 
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(threadPoolSize); // This is the number of concurrent tasks you want to run
@@ -104,7 +105,7 @@ public class SplitterJobConfig {
         executor.setQueueCapacity(threadPoolSize); // This is the queue capacity. Once the queue is full, new tasks will wait.
         executor.setThreadNamePrefix("b-splitter-");
 
-        executor.setTaskDecorator(new ObservabilityTaskDecorator());
+        executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
         executor.initialize();
         return executor;
 

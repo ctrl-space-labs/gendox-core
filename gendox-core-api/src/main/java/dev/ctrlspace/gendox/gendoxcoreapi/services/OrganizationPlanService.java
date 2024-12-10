@@ -19,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -50,8 +51,27 @@ public class OrganizationPlanService {
         this.projectService = projectService;
     }
 
+
+    public OrganizationPlan getOrganizationPlanById(UUID organizationPlanId) throws GendoxException {
+        return organizationPlanRepository.findById(organizationPlanId)
+                .orElseThrow(() -> new GendoxException("ORGANIZATION_PLAN_NOT_FOUND", "Organization Plan not found", HttpStatus.NOT_FOUND));
+    }
+
+    public List<OrganizationPlan> getAllOrganizationPlansByOrganizationId(UUID organizationId) {
+        return organizationPlanRepository.findAllByOrganizationId(organizationId);
+    }
+
     public Page<OrganizationPlan> getAllOrganizationPlansByCriteria(OrganizationPlanCriteria criteria, Pageable pageable) {
+
         return organizationPlanRepository.findAll(OrganizationPlanPredicates.build(criteria), pageable);
+    }
+
+    public OrganizationPlan cancelSubscriptionPlan(UUID organizationPlanId) throws GendoxException {
+        OrganizationPlan plan = getOrganizationPlanById(organizationPlanId);
+
+        plan.setEndDate(Instant.now());
+
+        return organizationPlanRepository.save(plan);
     }
 
     /**
