@@ -26,6 +26,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 @StepScope
@@ -61,7 +62,6 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         this.organizationWebSiteService = organizationWebSiteService;
     }
 
-    String tempApiKey = "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJDR0NpMlNTX2lQNkdGYTBKQmVqRjAxYzNpcDBTdm43d2FLMGNYQnJHR19RIn0.eyJleHAiOjE3MzI0MDE1NjgsImlhdCI6MTczMjM1ODM2OCwiYXV0aF90aW1lIjoxNzMyMzU4MzY3LCJqdGkiOiJkNDU4MjliZi03YzQ0LTRlMmQtYTZkNS1hOGMxNzk4ZGQzNTUiLCJpc3MiOiJodHRwczovL2Rldi5nZW5kb3guY3RybHNwYWNlLmRldi9pZHAvcmVhbG1zL2dlbmRveC1pZHAtZGV2IiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjEyYjYwNGQ4LTk1OTktNDk3ZS05ZDA4LTAwYjdkZmQ5ZmVkMiIsInR5cCI6IkJlYXJlciIsImF6cCI6ImdlbmRveC1wa2NlLXB1YmxpYy1jbGllbnQtZGV2Iiwic2lkIjoiZTFhM2Y5NDgtZjkzNy00N2NkLWI2M2QtZDRhZjk4OTZhZGY3IiwiYWNyIjoiMSIsImFsbG93ZWQtb3JpZ2lucyI6WyJodHRwczovL2Rldi5nZW5kb3guY3RybHNwYWNlLmRldiJdLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsiZGVmYXVsdC1yb2xlcy1nZW5kb3gtaWRwLWRldiIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBlbWFpbCBwcm9maWxlIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJBY2NvdW50IG9uZSBUZXN0QWNjb3VudCAiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJzZWxvbW81MDA5QGV4d2VtZS5jb20iLCJnaXZlbl9uYW1lIjoiQWNjb3VudCBvbmUiLCJmYW1pbHlfbmFtZSI6IlRlc3RBY2NvdW50ICIsImVtYWlsIjoic2Vsb21vNTAwOUBleHdlbWUuY29tIn0.g5q4vjxCo7hv-l_NIEKxetNEvny7nlzmmjWHHZDfXbFekcDLaB9qFLM9oZYDvU2FwmT9rM3lNKORp6nnVw2x6DFfecWo1m0of6Ov5md04onu5OdSvDhYHzcwjROXGX5-8zNJxi65ZIpCBXWJmZdKhAs0pIWdYB6USGFzWkfqUpqtw4UnypUgqckDFVOYLLswfY8fpGYiJnimPvwCy-DLPpVS6Ic97UgwrGSTcievQOielLUokyGGzS6igSJLw93y24ZAwEytt8whPLAeuPqPRUoNrNN2leZK2tAzrpHsso5cPb6SQ-mSGFFbHDBcbdC_1RcGbm7qsHQu_jxv37K2_Q";
 
     @Override
     public DocumentSectionDTO process(DocumentInstance instance) throws Exception {
@@ -90,13 +90,21 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
 
     private String fetchContent(DocumentInstance instance) throws GendoxException, Exception {
         if ("API_INTEGRATION_FILE".equals(instance.getFileType().getName())) {
-            OrganizationWebSite organizationWebSite = organizationWebSiteService.getOrganizationWebSite(
-                    instance.getOrganizationId(),
-                    instance.getRemoteUrl()
-            );
+            UUID organizationId = instance.getOrganizationId();
+            String domain = instance.getRemoteUrl();
+            OrganizationWebSite organizationWebSite = organizationWebSiteService.getOrganizationWebSite(organizationId, domain);
+
+            if (organizationWebSite == null) {
+                logger.error("No matching OrganizationWebSite found for Organization ID: {}, Domain: {}", organizationId, domain);
+                throw new GendoxException(
+                        "ORGANIZATION_WEBSITE_NOT_FOUND",
+                        "No matching OrganizationWebSite found with the specified criteria",
+                        HttpStatus.NOT_FOUND
+                );
+            }
 
             ApiKey apiKey = apiKeyService.getById(organizationWebSite.getApiKeyId());
-            return gendoxAPIIntegrationService.getContentById(instance.getRemoteUrl(), tempApiKey).getContent();
+            return gendoxAPIIntegrationService.getContentById(instance.getRemoteUrl(), apiKey.getApiKey()).getContent();
         }
 
         return downloadService.readDocumentContent(instance.getRemoteUrl());
@@ -127,7 +135,6 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
 
         return splitter.split(fileContent);
     }
-
 
 
 }
