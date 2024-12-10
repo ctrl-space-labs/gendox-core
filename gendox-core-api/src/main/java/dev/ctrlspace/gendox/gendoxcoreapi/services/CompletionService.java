@@ -12,14 +12,17 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRe
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAuthor;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
+import io.micrometer.observation.annotation.Observed;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 
@@ -39,8 +42,12 @@ public class CompletionService {
     private TrainingService trainingService;
     private ProjectAgentService projectAgentService;
     private MessageService messageService;
+    private DocumentSectionService documentSectionService;
 
     private OrganizationModelKeyService organizationModelKeyService;
+
+    private AuditLogsService auditLogsService;
+
 
     private AiModelUtils aiModelUtils;
     @Autowired
@@ -56,7 +63,9 @@ public class CompletionService {
                              ProjectAgentService projectAgentService,
                              TrainingService trainingService,
                              OrganizationModelKeyService organizationModelKeyService,
-                             MessageService messageService) {
+                             MessageService messageService,
+                             DocumentSectionService documentSectionService,
+                             AuditLogsService auditLogsService) {
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
         this.embeddingService = embeddingService;
@@ -68,7 +77,8 @@ public class CompletionService {
         this.projectAgentService = projectAgentService;
         this.organizationModelKeyService = organizationModelKeyService;
         this.messageService = messageService;
-    }
+        this.documentSectionService = documentSectionService;
+        this.auditLogsService = auditLogsService;}
 
     private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
                                                  AiModelRequestParams aiModelRequestParams, String apiKey) throws GendoxException {
@@ -80,6 +90,14 @@ public class CompletionService {
     }
 
 
+    @Observed(name = "CompletionService.getCompletion",
+            contextualName = "CompletionService#getCompletion",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public Message getCompletion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
         String question = convertToAiModelTextQuestion(message, nearestSections, projectId);
         // check moderation
@@ -116,12 +134,22 @@ public class CompletionService {
                 aiModelRequestParams,
                 apiKey);
 
+        //        completion request audits
+        Type completionRequestType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
+        AuditLogs requestAuditLogs = auditLogsService.createDefaultAuditLogs(completionRequestType);
+        requestAuditLogs.setTokenCount((long) completionResponse.getUsage().getPromptTokens());
+        requestAuditLogs.setProjectId(projectId);
+        requestAuditLogs.setOrganizationId(project.getOrganizationId());
+        auditLogsService.saveAuditLogs(requestAuditLogs);
 
+        //        completion completion audits
+        Type completionResponseType = typeService.getAuditLogTypeByName("COMPLETION_RESPONSE");
+        AuditLogs completionAuditLogs = auditLogsService.createDefaultAuditLogs( completionResponseType);
+        completionAuditLogs.setTokenCount((long) completionResponse.getUsage().getCompletionTokens());
+        completionAuditLogs.setProjectId(projectId);
+        completionAuditLogs.setOrganizationId(project.getOrganizationId());
+        auditLogsService.saveAuditLogs(completionAuditLogs);
 
-
-        Type completionType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
-        // TODO add AuditLogs (audit log need to be expanded including prompt_tokens and completion_tokens)
-        AuditLogs auditLogs = embeddingService.createAuditLogs(projectId, (long) completionResponse.getUsage().getTotalTokens(), completionType);
         Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
 
         completionResponseMessage.setProjectId(projectId);
@@ -145,10 +173,14 @@ public class CompletionService {
         Template agentSectionTemplate = templateRepository.findByIdIs(agent.getSectionTemplateId());
         Template agentChatTemplate = templateRepository.findByIdIs(agent.getChatTemplateId());
 
+        List<String> documentTitles = nearestSections.stream()
+                .map(section -> documentSectionService.getFileNameFromUrl(section.getDocumentInstance().getRemoteUrl()))
+                .toList();
+
         // run sectionTemplate
         SectionTemplateAuthor sectionTemplateAuthor = new SectionTemplateAuthor();
 
-        String sectionValues = sectionTemplateAuthor.sectionValues(nearestSections, agentSectionTemplate.getText());
+        String sectionValues = sectionTemplateAuthor.sectionValues(nearestSections, agentSectionTemplate.getText(),documentTitles);
 
         // run chatTemplate
         ChatTemplateAuthor chatTemplateAuthor = new ChatTemplateAuthor();

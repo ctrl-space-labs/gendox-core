@@ -111,11 +111,29 @@ export default {
   getAiModels: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/ai-models`,
 
+  getAiModelProviders: (organizationId) =>
+    `${url}organizations/${organizationId}/ai-models/providers`,
+
+  aiModelKeys: (organizationId) =>
+    `${url}organizations/${organizationId}/model-keys`,
+
+  updateAiModelKey: (organizationId, modelProviderKeyId) =>
+    `${url}organizations/${organizationId}/model-keys/${modelProviderKeyId}`,
+
+  deleteAiModelKey: (organizationId, modelProviderKeyId) =>
+    `${url}organizations/${organizationId}/model-keys/${modelProviderKeyId}`,
+
   acceptInvitation: (email, token) =>
     `${url}invitations/acceptance?email=${email}&token=${token}`,
 
   organizationPlans: (organizationId) =>
     `${url}organizations/${organizationId}/organization-plans`,
+
+  cancelSubscriptionPlan: (organizationPlanId, organizationId,) =>
+    `${url}organizations/${organizationId}/organization-plans/${organizationPlanId}/cancel`,
+
+  subscriptionPlans: (organizationId) =>
+    `${url}organizations/${organizationId}/subscription-plans`,
 
   getThreadMessageMetadata: (threadId, messageId) =>
     `${url}threads/${threadId}/message-metadata/${messageId}`,
@@ -128,6 +146,24 @@ export default {
 
   deactivateProjectById: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/deactivate`,
+
+  aiApiKeys: (organizationId) =>
+    `${url}organizations/${organizationId}/api-keys`,
+
+  deleteApiKey: (organizationId, apiKeyId) =>
+    `${url}organizations/${organizationId}/api-keys/${apiKeyId}`,
+
+  updateApiKey: (organizationId, apiKeyId) =>
+    `${url}organizations/${organizationId}/api-keys/${apiKeyId}`,
+
+  organizationWebSite: (organizationId) =>
+    `${url}organizations/${organizationId}/websites`,
+
+  updateOrganizationWebSite: (organizationId, organizationWebSiteId) =>
+    `${url}organizations/${organizationId}/websites/${organizationWebSiteId}`,
+
+  deleteOrganizationWebSite: (organizationId, organizationWebSiteId) =>
+    `${url}organizations/${organizationId}/websites/${organizationWebSiteId}`,
 
 
 };

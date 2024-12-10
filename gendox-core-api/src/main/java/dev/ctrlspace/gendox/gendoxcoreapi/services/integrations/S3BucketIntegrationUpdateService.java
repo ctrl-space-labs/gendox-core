@@ -18,6 +18,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.S3BucketIntegrationCon
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -59,22 +60,54 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
      * @param integration The integration to check for updates.
      * @return A list of multipart files representing the updated documents.
      */
+//    @Override
+//    public List<MultipartFile> checkForUpdates(Integration integration) {
+//
+//        String queueName = integration.getQueueName();
+//        List<MultipartFile> fileList = new ArrayList<>();
+//
+//        List<Message> sqsMessages = sqsService.receiveMessages(queueName);
+//
+//        for (Message sqsMessage : sqsMessages) {
+//            try {
+//                handleSqsMessage(sqsMessage, fileList, integration);
+//                sqsService.deleteMessage(sqsMessage, queueName);
+//            } catch (Exception e) {
+//                logger.error("An error occurred while checking for updates: " + e.getMessage(), e);
+//            }
+//        }
+//
+//        return fileList;
+//    }
     @Override
     public List<MultipartFile> checkForUpdates(Integration integration) {
-
         String queueName = integration.getQueueName();
         List<MultipartFile> fileList = new ArrayList<>();
 
-        List<Message> sqsMessages = sqsService.receiveMessages(queueName);
+        List<Message> sqsMessages;
 
-        for (Message sqsMessage : sqsMessages) {
-            try {
-                handleSqsMessage(sqsMessage, fileList, integration);
-                sqsService.deleteMessage(sqsMessage, queueName);
-            } catch (Exception e) {
-                logger.error("An error occurred while checking for updates: " + e.getMessage(), e);
+        do {
+            sqsMessages = sqsService.receiveMessages(queueName);
+
+            if (sqsMessages.isEmpty()) {
+                logger.debug("There are no more messages in the queue: {}", queueName);
+                break;
             }
-        }
+
+            for (Message sqsMessage : sqsMessages) {
+                try {
+                    handleSqsMessage(sqsMessage, fileList, integration);
+                    sqsService.deleteMessage(sqsMessage, queueName);
+                } catch (Exception e) {
+                    logger.error("An error occurred while checking for updates: " + e.getMessage(), e);
+
+                }
+            }
+
+            // Log the number of processed messages
+            logger.debug("Processed {} messages from the queue: {}", sqsMessages.size(), queueName);
+
+        } while (!sqsMessages.isEmpty());
 
         return fileList;
     }
@@ -118,11 +151,10 @@ public class S3BucketIntegrationUpdateService implements IntegrationUpdateServic
         String encodedFilename = objectKey;
         String originalFilename = URLDecoder.decode(encodedFilename, StandardCharsets.UTF_8.toString());
         String s3Url = "s3://" + bucketName + "/" + originalFilename;
-        String content = downloadService.readDocumentContent(s3Url);
-        byte[] contentBytes = content.getBytes();
+        Resource s3FileResource = downloadService.openResource(s3Url);
 
         return new ResourceMultipartFile(
-                contentBytes,
+                s3FileResource,
                 originalFilename,
                 "application/octet-stream"
         );

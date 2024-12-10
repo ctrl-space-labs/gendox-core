@@ -2,9 +2,6 @@ version: '3'
 
 services:
   gendox-database:
-    # download image from docker.hub
-#    image: giannisy/gendox-database:dev.latest
-#     build image from directory
     build:
       context: ./database
       dockerfile: Dockerfile
@@ -28,11 +25,9 @@ services:
       timeout: 30s
       retries: 30
       start_period: 60s
+    restart: unless-stopped
 
   gendox-core-api:
-    # download image from docker.hub
-#    image: giannisy/gendox-core-api:dev.latest
-    # build image from directory
     build:
       context: ./gendox-core-api
       dockerfile: Dockerfile
@@ -69,7 +64,7 @@ services:
       - gendox_network
     ports:
       - "${APIS_PORT}:8080"
-    restart: on-failure
+    restart: unless-stopped
 
   gendox-keycloak:
     build:
@@ -120,9 +115,7 @@ services:
       - "${KEYCLOAK_PORT}:8443"
     volumes:
       - keycloak-data:/opt/keycloak/conf
-
-
-
+    restart: unless-stopped
 
 networks:
   gendox_network:

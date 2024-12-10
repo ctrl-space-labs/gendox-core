@@ -27,14 +27,17 @@ import java.util.UUID;
 )
 @NamedNativeQuery(
         name = "SectionDistanceDTO.findClosestSectionIdsWithDistance",
-        query = " SELECT eg.section_id as id, emb.embedding_vector <-> cast(:embedding as vector) as distance \n" +
-                "    FROM gendox_core.embedding emb\n" +
-                "    inner join gendox_core.embedding_group eg on emb.id = eg.embedding_id\n" +
-                "    inner join gendox_core.document_instance_sections sec on eg.section_id = sec.id\n" +
-                "    inner join gendox_core.document_instance di on di.id = sec.document_instance_id\n" +
-                "    inner join gendox_core.project_documents pd on di.id = pd.document_id\n" +
-                "    where pd.project_id = :projectId AND eg.section_id is not null\n" +
-                "    ORDER BY emb.embedding_vector <-> cast(:embedding as vector) LIMIT :pageSize",
+//        Be careful, some Project have partial index on these fields, if you change this query, make sure to update the index
+        query = """
+                SELECT emb.section_id as id,
+                       emb.embedding_vector <-> CAST(:embedding AS vector) AS distance
+                FROM gendox_core.embedding emb
+                WHERE emb.project_id = :projectId
+                  AND emb.section_id IS NOT NULL
+                  AND emb.semantic_search_model_id = :semanticSearchModelId
+                ORDER BY CAST(emb.embedding_vector AS vector(1536)) <-> cast(:embedding as vector)
+                LIMIT :pageSize
+              """,
         resultSetMapping = "SectionDistanceDTOMapping"
 )
 public class SectionDistanceDTO {

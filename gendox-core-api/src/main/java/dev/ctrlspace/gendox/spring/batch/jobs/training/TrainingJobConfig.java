@@ -4,6 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
 import dev.ctrlspace.gendox.spring.batch.jobs.training.steps.*;
+import io.micrometer.observation.ObservationRegistry;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.FlowBuilder;
@@ -94,7 +95,7 @@ public class TrainingJobConfig {
     }
 
     @Bean
-    public TaskExecutor asyncBatchTrainingExecutor() {
+    public TaskExecutor asyncBatchTrainingExecutor(ObservationRegistry observationRegistry) {
 
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(threadPoolSize); // This is the number of concurrent tasks you want to run
@@ -102,7 +103,7 @@ public class TrainingJobConfig {
         executor.setQueueCapacity(threadPoolSize); // This is the queue capacity. Once the queue is full, new tasks will wait.
         executor.setThreadNamePrefix("b-training-");
 
-        executor.setTaskDecorator(new ObservabilityTaskDecorator());
+        executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
         executor.initialize();
         return executor;
 

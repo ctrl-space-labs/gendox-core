@@ -38,6 +38,9 @@ public class ProjectService {
 
     private TypeService typeService;
 
+    private AuditLogsService auditLogsService;
+
+
 
     @Autowired
     public ProjectService(ProjectRepository projectRepository,
@@ -46,7 +49,8 @@ public class ProjectService {
                           ProjectMemberService projectMemberService,
                           UserOrganizationService userOrganizationService,
                           ProjectMemberRepository projectMemberRepository,
-                          TypeService typeService) {
+                          TypeService typeService,
+                          AuditLogsService auditLogsService) {
         this.projectRepository = projectRepository;
         this.projectAgentService = projectAgentService;
         this.projectConverter = projectConverter;
@@ -54,7 +58,7 @@ public class ProjectService {
         this.userOrganizationService = userOrganizationService;
         this.projectMemberRepository = projectMemberRepository;
         this.typeService = typeService;
-
+        this.auditLogsService = auditLogsService;
     }
 
     public Project getProjectById(UUID id) throws GendoxException {
@@ -152,6 +156,7 @@ public class ProjectService {
                 continue;
             }
 
+
             // Count the number of projects the user is associated with
             long count = projectMemberRepository.countByUserId(userId);
 
@@ -163,12 +168,19 @@ public class ProjectService {
                         HttpStatus.BAD_REQUEST
                 );
             }
-        }
+//        }
+            }
 
         // Delete other associated data
         projectMemberService.deleteAllProjectMembers(project);
         clearProjectData(project);
         projectRepository.save(project);
+        Type deleteProjectType = typeService.getAuditLogTypeByName("DELETE_PROJECT");
+        AuditLogs deleteProjectAuditLogs = auditLogsService.createDefaultAuditLogs(deleteProjectType);
+        deleteProjectAuditLogs.setOrganizationId(organizationId);
+        deleteProjectAuditLogs.setProjectId(id);
+        auditLogsService.saveAuditLogs(deleteProjectAuditLogs);
+
     }
 
     private void clearProjectData(Project project) {

@@ -5,7 +5,6 @@ import com.querydsl.core.types.Predicate;
 import com.querydsl.core.util.StringUtils;
 import com.querydsl.jpa.JPAExpressions;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
 import dev.ctrlspace.gendox.spring.batch.model.QBatchJobExecution;
 import dev.ctrlspace.gendox.spring.batch.model.QBatchJobInstance;
 import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionCriteria;
@@ -20,7 +19,8 @@ public class BatchExecutionPredicates {
     public static Predicate build(BatchExecutionCriteria criteria) {
         return ExpressionUtils.allOf(
                 jobName(criteria.getJobName()),
-                status(criteria.getStatus())
+                status(criteria.getStatus()),
+                exitCode(criteria.getExitCode())
         );
     }
 
@@ -36,7 +36,6 @@ public class BatchExecutionPredicates {
             return null;
         }
 
-
         return qBatchJobExecution.jobInstanceId.in(
                 JPAExpressions
                         .select(qBatchJobInstance.jobInstanceId)
@@ -45,5 +44,14 @@ public class BatchExecutionPredicates {
                                 .and(qBatchJobInstance.jobName.eq(jobName))));
     }
 
-
+    private static Predicate exitCode(String exitCode) {
+        if (StringUtils.isNullOrEmpty(exitCode)) {
+            return null;
+        }
+        return qBatchJobExecution.exitCode.eq(exitCode);
+    }
 }
+
+
+
+

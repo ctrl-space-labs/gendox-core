@@ -2,8 +2,10 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AuditLogs;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.provenAi.utils.MockUniqueIdentifierServiceAdapter;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
 import dev.ctrlspace.provenai.iscc.IsccCodeResponse;
@@ -14,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.WritableResource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
@@ -41,6 +44,10 @@ public class UploadService {
 
     private IsccCodeService isccCodeService;
 
+    private AuditLogsService auditLogsService;
+
+    private TypeService typeService;
+
 
 
     @Autowired
@@ -50,21 +57,27 @@ public class UploadService {
     public UploadService(DocumentService documentService,
                          ProjectDocumentService projectDocumentService,
                          MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter,
-                         IsccCodeService isccCodeService
-                         ) {
+                         IsccCodeService isccCodeService,
+                         TypeService typeService,
+                         AuditLogsService auditLogsService) {
         this.documentService = documentService;
         this.projectDocumentService = projectDocumentService;
         this.mockUniqueIdentifierServiceAdapter = mockUniqueIdentifierServiceAdapter;
         this.isccCodeService = isccCodeService;
+        this.typeService = typeService;
+        this.auditLogsService = auditLogsService;
     }
 
 
+    @Transactional
     public DocumentInstance uploadFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException, GendoxException {
         String fileName = file.getOriginalFilename();
         DocumentInstance instance =
                 documentService.getDocumentByFileName(projectId, organizationId, fileName);
         String fullFilePath = saveFile(file, organizationId, projectId);
         String documentIsccCode = new String();
+
+
         if (isccEnabled) {
             IsccCodeResponse isccCodeResponse = isccCodeService.getDocumentIsccCode(file, fileName);
             documentIsccCode = isccCodeResponse.getIscc();
@@ -90,6 +103,14 @@ public class UploadService {
             documentInstance = documentService.createDocumentInstance(documentInstance);
             // create project document
             ProjectDocument projectDocument = projectDocumentService.createProjectDocument(projectId, documentInstance.getId());
+
+            //create Document Auditing
+            Type createDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_CREATE");
+            AuditLogs createDocumentAuditLogs = auditLogsService.createDefaultAuditLogs(createDocumentType);
+            createDocumentAuditLogs.setOrganizationId(organizationId);
+            createDocumentAuditLogs.setProjectId(projectId);
+            auditLogsService.saveAuditLogs(createDocumentAuditLogs);
+
             return documentInstance;
 
         } else {
@@ -97,6 +118,15 @@ public class UploadService {
             instance.setDocumentIsccCode(documentIsccCode);
 
             instance = documentService.updateDocument(instance);
+
+            //update Document Auditing
+            Type updateDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_UPDATE");
+            AuditLogs updateDocumentAuditLogs = auditLogsService.createDefaultAuditLogs(updateDocumentType);
+            updateDocumentAuditLogs.setOrganizationId(organizationId);
+            updateDocumentAuditLogs.setProjectId(projectId);
+
+            auditLogsService.saveAuditLogs(updateDocumentAuditLogs);
+
         }
 
 
