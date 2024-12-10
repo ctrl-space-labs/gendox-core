@@ -59,7 +59,7 @@ gendox:
 #    poller: 300000
     poller: 86400000 # 24 hours in milliseconds
     storage:
-      temporary: C:\ProgramData\\gendox\\temporary_integration_files
+      temporary: file:${user.home}\\gendox\\temporary_integration_files
 #      temporary: s3://gendox.organization.documents.local/gendox_wiki
     s3:
       sqs:
