@@ -1,27 +1,26 @@
 import React, { useState, useEffect } from "react";
 import { formatDistanceToNow, parseISO } from "date-fns";
 
-// ** MUI Imports
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Grid from "@mui/material/Grid";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
-import { styled } from "@mui/material/styles";
-import { Button } from "@mui/material";
 import Divider from "@mui/material/Divider";
 
-// ** Next Import
 import Link from "next/link";
-
-// ** Icon Imports
 import Icon from "src/@core/components/icon";
 import CustomAvatar from "src/@core/components/mui/avatar";
+import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
+import documentService from "src/gendox-sdk/documentService.js";
 
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/router";
 import { formatDocumentTitle } from "src/utils/documentUtils";
 import authConfig from "src/configs/auth";
+import toast from "react-hot-toast";
 
 const Documents = ({ documents, showAll, setShowAll }) => {
   const router = useRouter();
@@ -32,6 +31,11 @@ const Documents = ({ documents, showAll, setShowAll }) => {
   const { id: projectId, organizationId } = projectDetails;
   const storedToken = localStorage.getItem(authConfig.storageTokenKeyName);
 
+  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  console.log("SELECTED DOCUMENT", selectedDocument);
 
   useEffect(() => {
     setShowAll(false);
@@ -48,6 +52,43 @@ const Documents = ({ documents, showAll, setShowAll }) => {
       </Box>
     );
   }
+
+  const handleMenuOpen = (event, document) => {
+    setMenuAnchorEl(event.currentTarget);
+    setSelectedDocument(document);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchorEl(null);
+  };
+
+  const handleDeleteConfirmOpen = () => {
+    handleMenuClose();
+    setConfirmDelete(true);
+  };
+
+  const handleDeleteConfirmClose = () => {
+    setConfirmDelete(false);
+  };
+
+  const handleDeleteDocument = async (documentId) => {
+    try {
+      const response = await documentService.deleteDocument(
+        organizationId,
+        projectId,
+        documentId,
+        storedToken
+      );      
+      toast.success("Document deleted successfully!");
+      setConfirmDelete(false);
+      setSelectedDocument(null);
+    } catch (error) {
+      console.error("Failed to delete document:", error);
+      toast.error("Failed to delete document.");
+      setConfirmDelete(false);
+      setSelectedDocument(null);
+    }
+  };
 
   const renderDocuments = () => {
     const visibleDocuments = showAll ? documents : documents.slice(0, 3);
@@ -71,9 +112,39 @@ const Documents = ({ documents, showAll, setShowAll }) => {
               borderRadius: 1,
               flexDirection: "column",
               alignItems: "flex-start",
+              position: "relative",
               backgroundColor: "background.paper",
             }}
           >
+            {/* Menu Icon Button */}
+            <IconButton
+              size="small"
+              sx={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                color: "text.primary",
+              }}
+              onClick={(event) => handleMenuOpen(event, document)}
+            >
+              <Icon icon="mdi:dots-vertical" />
+            </IconButton>
+
+            {/* Menu */}
+            <Menu
+              anchorEl={menuAnchorEl}
+              open={
+                Boolean(menuAnchorEl) && selectedDocument?.id === document.id
+              }
+              onClose={handleMenuClose}
+              anchorOrigin={{ vertical: "top", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+              <MenuItem onClick={handleDeleteConfirmOpen}>
+                Delete Document
+              </MenuItem>
+            </Menu>
+
             <Box sx={{ mb: 5, display: "flex", alignItems: "center" }}>
               <CustomAvatar
                 skin="light"
@@ -145,28 +216,44 @@ const Documents = ({ documents, showAll, setShowAll }) => {
   };
 
   return (
-    <Grid container spacing={6}>
-      {renderDocuments()}
-      {documents.length > 3 && (
-        <Grid item xs={12} style={{ textAlign: "center" }}>
-          <Divider
-            sx={{
-              my: (theme) => {
-                theme.spacing(3);
-              },
-            }}
-          />
-          <Tooltip title={showAll ? "Show Less" : "Show More"}>
-            <IconButton onClick={toggleShowAll} sx={{ color: "primary.main" }} >
-              <Icon
-                icon={showAll ? "mdi:chevron-up" : "mdi:chevron-down"}
-                
-              />
-            </IconButton>
-          </Tooltip>
-        </Grid>
-      )}
-    </Grid>
+    <>
+      <Grid container spacing={6}>
+        {renderDocuments()}
+        {documents.length > 3 && (
+          <Grid item xs={12} style={{ textAlign: "center" }}>
+            <Divider
+              sx={{
+                my: (theme) => {
+                  theme.spacing(3);
+                },
+              }}
+            />
+            <Tooltip title={showAll ? "Show Less" : "Show More"}>
+              <IconButton
+                onClick={toggleShowAll}
+                sx={{ color: "primary.main" }}
+              >
+                <Icon icon={showAll ? "mdi:chevron-up" : "mdi:chevron-down"} />
+              </IconButton>
+            </Tooltip>
+          </Grid>
+        )}
+      </Grid>
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        open={confirmDelete}
+        onClose={handleDeleteConfirmClose}
+        onConfirm={handleDeleteDocument}
+        title="Confirm Deletion"
+        contentText={
+          selectedDocument
+            ? `Are you sure you want to delete "${formatDocumentTitle(selectedDocument.remoteUrl)}"? This action cannot be undone.`
+            : "Are you sure you want to delete this document? This action cannot be undone."
+        }        
+        confirmButtonText="Delete"
+        cancelButtonText="Cancel"
+      />
+    </>
   );
 };
 
