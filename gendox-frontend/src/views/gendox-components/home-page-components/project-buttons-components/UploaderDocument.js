@@ -37,11 +37,13 @@ const LinearProgressWithLabel = (props) => {
   );
 };
 
-const UploaderDocument = ({ closeUploader }) => {
+const UploaderDocument = ({ closeUploader, refreshDocuments }) => {
   const [files, setFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState({});
   const [alertOpen, setAlertOpen] = useState(false);
   const router = useRouter();
+
+  console.log("REFRESH DOCUMENTS uploader", refreshDocuments);
 
   const { organizationId, projectId } = router.query;
   const storedToken = window.localStorage.getItem(
@@ -69,7 +71,8 @@ const UploaderDocument = ({ closeUploader }) => {
           projectId,
           formData,
           storedToken
-        );
+        );    
+        
       } catch (error) {
         console.error("Error uploading files", error);
       }
@@ -114,6 +117,10 @@ const UploaderDocument = ({ closeUploader }) => {
     setAlertOpen(true);
     setFiles([]);
     closeUploader();
+    if (refreshDocuments) {
+      refreshDocuments();
+    }
+    
   };
 
   const renderFilePreview = (file) => {

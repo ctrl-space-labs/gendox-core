@@ -14,7 +14,7 @@ import Tooltip from "@mui/material/Tooltip";
 
 import UploaderDocument from "src/views/gendox-components/home-page-components/project-buttons-components/UploaderDocument";
 
-const ProjectButtons = () => {
+const ProjectButtons = ({ refreshDocuments }) => {
   const project = useSelector((state) => state.activeProject.projectDetails);
   const router = useRouter();
   const { settings } = useSettings();
@@ -23,18 +23,13 @@ const ProjectButtons = () => {
   const handleOpenUploader = () => setShowUploader(true);
   const handleCloseUploader = () => setShowUploader(false);
 
+  console.log("REFRESH DOCUMENTS project buttons", refreshDocuments);
+
   const handleCreateDocument = () => {
     router.push(
       `/gendox/create-document/?organizationId=${project.organizationId}&projectId=${project.id}`
     );
   };
-
-  // const buttons = [
-  //   { text: "NEW DOCUMENT" , action: handleCreateDocument, href: `/gendox/create-document/?organizationId=${project.organizationId}&projectId=${project.id}`},
-  //   { text: "UPLOAD DOCUMENT", action: handleOpenUploader,  href: '#' },
-  //   // { text: "NEW TEMPLATE" },
-  //   // { text: "UPLOAD TEMPLATE" }
-  // ];
 
   const buttons = [
     {
@@ -58,7 +53,7 @@ const ProjectButtons = () => {
       <CardContent>
         <Grid container spacing={2}>
           {buttons.map((button, index) => (
-            <Grid  item key={index}>
+            <Grid item key={index}>
               {isDemo && button.isDemoOff ? (
                 <Tooltip title="Feature not available in demo mode">
                   <span>
@@ -99,7 +94,7 @@ const ProjectButtons = () => {
         sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
       >
         <Box sx={{ outline: "none", p: 2, bgcolor: "background.paper" }}>
-          <UploaderDocument closeUploader={handleCloseUploader} />
+          <UploaderDocument closeUploader={handleCloseUploader} refreshDocuments={refreshDocuments} />
         </Box>
       </Modal>
     </Grid>

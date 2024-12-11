@@ -22,7 +22,7 @@ import { formatDocumentTitle } from "src/utils/documentUtils";
 import authConfig from "src/configs/auth";
 import toast from "react-hot-toast";
 
-const Documents = ({ documents, showAll, setShowAll }) => {
+const Documents = ({ documents, showAll, setShowAll, onDocumentsUpdated }) => {
   const router = useRouter();
   const dispatch = useDispatch();
   const { projectDetails, projectMembers } = useSelector(
@@ -34,12 +34,13 @@ const Documents = ({ documents, showAll, setShowAll }) => {
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isBlurring, setIsBlurring] = useState(false);
 
-  console.log("SELECTED DOCUMENT", selectedDocument);
 
   useEffect(() => {
     setShowAll(false);
   }, [projectDetails]);
+
 
   const toggleShowAll = () => {
     setShowAll((prev) => !prev);
@@ -71,22 +72,28 @@ const Documents = ({ documents, showAll, setShowAll }) => {
     setConfirmDelete(false);
   };
 
-  const handleDeleteDocument = async (documentId) => {
+  const handleDeleteDocument = async () => {
+    setIsBlurring(true);
+    setConfirmDelete(false);
     try {
       const response = await documentService.deleteDocument(
         organizationId,
         projectId,
-        documentId,
+        selectedDocument.id,
         storedToken
-      );      
-      toast.success("Document deleted successfully!");
-      setConfirmDelete(false);
+      );
+      toast.success("Document deleted successfully!");      
       setSelectedDocument(null);
+      setIsBlurring(false);
+      if (onDocumentsUpdated) {
+        onDocumentsUpdated();
+        console.log("Document deleted refresh Documents!");
+      }
     } catch (error) {
       console.error("Failed to delete document:", error);
-      toast.error("Failed to delete document.");
-      setConfirmDelete(false);
+      toast.error("Failed to delete document.");      
       setSelectedDocument(null);
+      setIsBlurring(false);
     }
   };
 
@@ -138,7 +145,7 @@ const Documents = ({ documents, showAll, setShowAll }) => {
               }
               onClose={handleMenuClose}
               anchorOrigin={{ vertical: "top", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "left" }}
             >
               <MenuItem onClick={handleDeleteConfirmOpen}>
                 Delete Document
@@ -217,7 +224,14 @@ const Documents = ({ documents, showAll, setShowAll }) => {
 
   return (
     <>
-      <Grid container spacing={6}>
+      <Grid
+        container
+        spacing={6}
+        sx={{
+          filter: isBlurring ? "blur(6px)" : "none",
+          transition: "filter 0.3s ease",
+        }}
+      >
         {renderDocuments()}
         {documents.length > 3 && (
           <Grid item xs={12} style={{ textAlign: "center" }}>
@@ -247,9 +261,11 @@ const Documents = ({ documents, showAll, setShowAll }) => {
         title="Confirm Deletion"
         contentText={
           selectedDocument
-            ? `Are you sure you want to delete "${formatDocumentTitle(selectedDocument.remoteUrl)}"? This action cannot be undone.`
+            ? `Are you sure you want to delete "${formatDocumentTitle(
+                selectedDocument.remoteUrl
+              )}"? This action cannot be undone.`
             : "Are you sure you want to delete this document? This action cannot be undone."
-        }        
+        }
         confirmButtonText="Delete"
         cancelButtonText="Cancel"
       />

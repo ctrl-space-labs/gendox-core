@@ -74,7 +74,7 @@ const GendoxHome = () => {
           setTotalPages(response.data.totalPages);
           setTimeout(() => {
             setIsBlurring(false); // Remove blur effect after 300ms
-          }, 300);          
+          }, 300);
         })
         .catch((error) => {
           if (
@@ -95,6 +95,11 @@ const GendoxHome = () => {
     if (newPage >= 0 && newPage < totalPages) {
       setCurrentPage(newPage);
     }
+  };
+
+  const refreshDocuments = () => {
+    console.log("REFRESH DOCUMENTS");
+    initDocuments(currentPage); // Reload the documents
   };
 
   return (
@@ -147,7 +152,7 @@ const GendoxHome = () => {
         </Box>
       </StyledCardContent>
       <StyledCardContent sx={{ backgroundColor: "background.paper" }}>
-        <ProjectButtons />
+        <ProjectButtons refreshDocuments={refreshDocuments} />
       </StyledCardContent>
       <Box sx={{ height: 20 }} />
       {documents.length > 0 ? (
@@ -168,6 +173,7 @@ const GendoxHome = () => {
             documents={documents}
             showAll={showAll}
             setShowAll={setShowAll}
+            onDocumentsUpdated={refreshDocuments}
           />
           {showAll && (
             <Box
