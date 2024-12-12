@@ -60,7 +60,7 @@ public class ApiKeyAuthenticationProvider implements AuthenticationProvider {
             throw new BadCredentialsException("Invalid API Key", e);
         }
         Instant now = Instant.now();
-        if (!apiKeyObj.isActive()){
+        if (!apiKeyObj.getActive()){
             logger.error("API Key is not active.");
             throw new BadCredentialsException("Invalid API Key");
         }
@@ -72,7 +72,7 @@ public class ApiKeyAuthenticationProvider implements AuthenticationProvider {
 
         try {
 //            userProfile = userService.getUserProfileByUniqueIdentifier(email);
-            userProfile = organizationService.getOrganizationProfileById(apiKeyObj.getOrganizationId());
+            userProfile = organizationService.getOrganizationProfileById(apiKeyObj.getOrganizationId(), apiKeyObj.getApiKey());
         } catch (GendoxException e) {
             throw new UsernameNotFoundException("API key not found.");
         }

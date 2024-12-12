@@ -12,6 +12,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRe
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAuthor;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
@@ -30,7 +31,6 @@ import org.slf4j.Logger;
 public class CompletionService {
 
 
-
     Logger logger = LoggerFactory.getLogger(CompletionService.class);
     private ProjectService projectService;
     private MessageAiMessageConverter messageAiMessageConverter;
@@ -38,18 +38,15 @@ public class CompletionService {
     private ProjectAgentRepository projectAgentRepository;
     private TemplateRepository templateRepository;
     private TypeService typeService;
-    private List<AiModelApiAdapterService> aiModelApiAdapterServices;
     private TrainingService trainingService;
-    private ProjectAgentService projectAgentService;
     private MessageService messageService;
-    private DocumentSectionService documentSectionService;
-
     private OrganizationModelKeyService organizationModelKeyService;
-
     private AuditLogsService auditLogsService;
+    private DocumentUtils documentUtils;
 
 
     private AiModelUtils aiModelUtils;
+
     @Autowired
     public CompletionService(ProjectService projectService,
                              MessageAiMessageConverter messageAiMessageConverter,
@@ -57,15 +54,13 @@ public class CompletionService {
                              ProjectAgentRepository projectAgentRepository,
                              TemplateRepository templateRepository,
                              TypeService typeService,
-                             List<AiModelApiAdapterService> aiModelApiAdapterServices,
-                             DocumentInstanceSectionRepository documentInstanceSectionRepository,
                              AiModelUtils aiModelUtils,
                              ProjectAgentService projectAgentService,
                              TrainingService trainingService,
                              OrganizationModelKeyService organizationModelKeyService,
                              MessageService messageService,
-                             DocumentSectionService documentSectionService,
-                             AuditLogsService auditLogsService) {
+                             AuditLogsService auditLogsService,
+                             DocumentUtils documentUtils) {
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
         this.embeddingService = embeddingService;
@@ -74,14 +69,14 @@ public class CompletionService {
         this.trainingService = trainingService;
         this.typeService = typeService;
         this.aiModelUtils = aiModelUtils;
-        this.projectAgentService = projectAgentService;
         this.organizationModelKeyService = organizationModelKeyService;
         this.messageService = messageService;
-        this.documentSectionService = documentSectionService;
-        this.auditLogsService = auditLogsService;}
+        this.auditLogsService = auditLogsService;
+        this.documentUtils = documentUtils;
+    }
 
     private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
-                                                 AiModelRequestParams aiModelRequestParams, String apiKey) throws GendoxException {
+                                                        AiModelRequestParams aiModelRequestParams, String apiKey) throws GendoxException {
 
         //choose the correct aiModel adapter
         AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
@@ -120,9 +115,9 @@ public class CompletionService {
 
         previousMessages.add(promptMessage);
 
-         String apiKey = embeddingService.getApiKey(agent, "COMPLETION_MODEL");
+        String apiKey = embeddingService.getApiKey(agent, "COMPLETION_MODEL");
 
-         AiModelRequestParams aiModelRequestParams = AiModelRequestParams.builder()
+        AiModelRequestParams aiModelRequestParams = AiModelRequestParams.builder()
                 .maxTokens(project.getProjectAgent().getMaxToken())
                 .temperature(project.getProjectAgent().getTemperature())
                 .topP(project.getProjectAgent().getTopP())
@@ -144,7 +139,7 @@ public class CompletionService {
 
         //        completion completion audits
         Type completionResponseType = typeService.getAuditLogTypeByName("COMPLETION_RESPONSE");
-        AuditLogs completionAuditLogs = auditLogsService.createDefaultAuditLogs( completionResponseType);
+        AuditLogs completionAuditLogs = auditLogsService.createDefaultAuditLogs(completionResponseType);
         completionAuditLogs.setTokenCount((long) completionResponse.getUsage().getCompletionTokens());
         completionAuditLogs.setProjectId(projectId);
         completionAuditLogs.setOrganizationId(project.getOrganizationId());
@@ -174,13 +169,13 @@ public class CompletionService {
         Template agentChatTemplate = templateRepository.findByIdIs(agent.getChatTemplateId());
 
         List<String> documentTitles = nearestSections.stream()
-                .map(section -> documentSectionService.getFileNameFromUrl(section.getDocumentInstance().getRemoteUrl()))
+                .map(section -> documentUtils.extractDocumentNameFromUrl(section.getDocumentInstance().getRemoteUrl()))
                 .toList();
 
         // run sectionTemplate
         SectionTemplateAuthor sectionTemplateAuthor = new SectionTemplateAuthor();
 
-        String sectionValues = sectionTemplateAuthor.sectionValues(nearestSections, agentSectionTemplate.getText(),documentTitles);
+        String sectionValues = sectionTemplateAuthor.sectionValues(nearestSections, agentSectionTemplate.getText(), documentTitles);
 
         // run chatTemplate
         ChatTemplateAuthor chatTemplateAuthor = new ChatTemplateAuthor();

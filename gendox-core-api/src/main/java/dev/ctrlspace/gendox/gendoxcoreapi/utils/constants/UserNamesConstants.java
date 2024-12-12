@@ -6,6 +6,8 @@ public class UserNamesConstants {
     public static final String GENDOX_AGENT = "GENDOX_AGENT";
     public static final String DISCORD_USER = "DISCORD_USER";
 
+    public static final String GENDOX_API_KEY = "GENDOX_API_KEY";
+
 
 
 

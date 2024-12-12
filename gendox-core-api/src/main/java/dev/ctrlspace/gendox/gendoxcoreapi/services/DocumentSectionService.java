@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSe
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentSectionMetadataRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentInstanceSectionPredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.provenAi.utils.MockUniqueIdentifierServiceAdapter;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
 import dev.ctrlspace.provenai.iscc.IsccCodeResponse;
@@ -21,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -31,14 +33,13 @@ public class DocumentSectionService {
     Logger logger = LoggerFactory.getLogger(DocumentSectionService.class);
 
     private TypeService typeService;
-    private TrainingService trainingService;
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private DocumentSectionMetadataRepository documentSectionMetadataRepository;
     private EmbeddingService embeddingService;
     private MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter;
     private MessageService messageService;
-
     private IsccCodeService isccCodeService;
+    private DocumentUtils documentUtils;
 
     @Value("${proven-ai.sdk.iscc.enabled}")
     private Boolean isccEnabled;
@@ -52,20 +53,20 @@ public class DocumentSectionService {
 
     @Autowired
     public DocumentSectionService(TypeService typeService,
-                                  TrainingService trainingService,
                                   DocumentInstanceSectionRepository documentInstanceSectionRepository,
                                   DocumentSectionMetadataRepository documentSectionMetadataRepository,
                                   MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter,
                                   MessageService messageService,
-                                  IsccCodeService isccCodeService
+                                  IsccCodeService isccCodeService,
+                                  DocumentUtils documentUtils
     ) {
         this.typeService = typeService;
-        this.trainingService = trainingService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.documentSectionMetadataRepository = documentSectionMetadataRepository;
         this.mockUniqueIdentifierServiceAdapter = mockUniqueIdentifierServiceAdapter;
         this.messageService = messageService;
         this.isccCodeService = isccCodeService;
+        this.documentUtils = documentUtils;
     }
 
 
@@ -90,33 +91,6 @@ public class DocumentSectionService {
 
     public Page<DocumentInstanceSection> getAllSections(DocumentInstanceSectionCriteria criteria, Pageable pageable) throws GendoxException {
         return documentInstanceSectionRepository.findAll(DocumentInstanceSectionPredicates.build(criteria), pageable);
-    }
-
-//    public String getFileNameFromUrl(String url) {
-//        String normalizedUrl = url.startsWith("file:") ? url.substring(5) : url;
-//        normalizedUrl = url.startsWith("s3:") ? url.substring(3) : url;
-//        // Replace backslashes with forward slashes
-//        normalizedUrl = normalizedUrl.replace('\\', '/');
-//
-//        Path path = Paths.get(normalizedUrl);
-//        return path.getFileName().toString();
-//    }
-
-    public String getFileNameFromUrl(String url) {
-        String normalizedUrl;
-
-        if (url.startsWith("file:")) {
-            normalizedUrl = url.substring(5); // Remove "file:" prefix
-        } else if (url.startsWith("s3:")) {
-            normalizedUrl = url.substring(3); // Remove "s3:" prefix
-        } else {
-            throw new IllegalArgumentException("Unsupported URL format: " + url);
-        }
-        // Replace backslashes with forward slashes
-        normalizedUrl = normalizedUrl.replace('\\', '/');
-
-        Path path = Paths.get(normalizedUrl);
-        return path.getFileName().toString();
     }
 
     /**
@@ -187,7 +161,7 @@ public class DocumentSectionService {
     }
 
     public DocumentInstanceSection createNewSection(DocumentInstance documentInstance, String fileContent, String sectionTitle) throws GendoxException {
-        Integer sectionOrder =2;
+        Integer sectionOrder = 2;
         DocumentInstanceSection section = new DocumentInstanceSection();
         // create section's metadata
         DocumentSectionMetadata metadata = new DocumentSectionMetadata();
@@ -199,7 +173,7 @@ public class DocumentSectionService {
         section.setSectionValue(fileContent);
         section.setDocumentInstance(documentInstance);
 
-        String fileName = getFileNameFromUrl(section.getDocumentInstance().getRemoteUrl());
+        String fileName = documentUtils.extractDocumentNameFromUrl(section.getDocumentInstance().getRemoteUrl());
 
 
         String documentSectionIsccCode = generateDocumentSectionIsccCode(section);
@@ -237,7 +211,7 @@ public class DocumentSectionService {
 
     public String generateDocumentSectionIsccCode(DocumentInstanceSection newSection) throws GendoxException {
         String documentSectionIsccCode;
-        String fileName = getFileNameFromUrl(newSection.getDocumentInstance().getRemoteUrl());
+        String fileName = documentUtils.extractDocumentNameFromUrl(newSection.getDocumentInstance().getRemoteUrl());
 
 
         if (isccEnabled) {
@@ -252,9 +226,6 @@ public class DocumentSectionService {
 
         return documentSectionIsccCode;
     }
-
-
-
 
 
     public DocumentSectionMetadata createMetadata(DocumentInstanceSection section) throws GendoxException {
@@ -289,7 +260,7 @@ public class DocumentSectionService {
         UUID sectionId = section.getId();
         DocumentInstanceSection existingSection = this.getSectionById(sectionId);
         existingSection.setSectionValue(section.getSectionValue());
-        String fileName = getFileNameFromUrl(existingSection.getDocumentInstance().getRemoteUrl());
+        String fileName = documentUtils.extractDocumentNameFromUrl(existingSection.getDocumentInstance().getRemoteUrl());
 //        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = mockUniqueIdentifierServiceAdapter.getDocumentUniqueIdentifier(
 //                existingSection.getSectionValue().getBytes(), fileName);
         IsccCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeService.getDocumentUniqueIdentifier(
@@ -309,7 +280,7 @@ public class DocumentSectionService {
         DocumentInstanceSection existingSection = this.getSectionById(sectionId);
 
         existingSection.setSectionValue(section.getSectionValue());
-        String fileName = getFileNameFromUrl(existingSection.getDocumentInstance().getRemoteUrl());
+        String fileName = documentUtils.extractDocumentNameFromUrl(existingSection.getDocumentInstance().getRemoteUrl());
 //      ISCC code
 //        UniqueIdentifierCodeResponse sectionUniqueIdentifierCodeResponse = isccCodeServiceAdapter.getDocumentUniqueIdentifier(
 //                                                                existingSection.getSectionValue().getBytes(), fileName);
