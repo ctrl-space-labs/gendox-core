@@ -40,14 +40,14 @@ public class OrganizationWebSiteController {
      */
     @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("/organizations/{organizationId}/websites/integration")
-    public void integrateOrganizationWebSite(@PathVariable UUID organizationId, @RequestBody WebsiteIntegrationDTO websiteIntegrationDTO, Authentication authentication) throws GendoxException {
+    public OrganizationWebSite integrateOrganizationWebSite(@PathVariable UUID organizationId, @RequestBody WebsiteIntegrationDTO websiteIntegrationDTO, Authentication authentication) throws GendoxException {
 
         if (authentication instanceof ApiKeyAuthenticationToken token &&
             !token.getApiKey().equals(websiteIntegrationDTO.getApiKey().getApiKey())) {
             throw new GendoxException("API_KEY_MISMATCH", "The API key in the request body does not match the API key in the request header", HttpStatus.BAD_REQUEST);
         }
 
-        organizationWebSiteService.integrateOrganizationWebSite(organizationId, websiteIntegrationDTO);
+        return organizationWebSiteService.integrateOrganizationWebSite(organizationId, websiteIntegrationDTO);
 
     }
 

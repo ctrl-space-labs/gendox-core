@@ -64,7 +64,7 @@ public class OrganizationWebSiteService {
     }
 
     @Transactional(rollbackOn = Exception.class)
-    public void integrateOrganizationWebSite(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
+    public OrganizationWebSite integrateOrganizationWebSite(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
         logger.info("Integrating OrganizationWebSite for Organization ID: {}, WebsiteIntegrationDTO: {}", organizationId, websiteIntegrationDTO);
         // Validate API Key
         ApiKey apiKey = validateApiKey(organizationId, websiteIntegrationDTO.getApiKey().getApiKey());
@@ -74,7 +74,7 @@ public class OrganizationWebSiteService {
 
         // Handle Integration Logic and Update Organization WebSite
         Integration integration = integrationService.handleIntegrationLogic(organizationId, organizationWebSite, websiteIntegrationDTO);
-        updateOrganizationWebSite(organizationWebSite, apiKey, integration);
+        return updateOrganizationWebSite(organizationWebSite, apiKey, integration);
     }
 
     private ApiKey validateApiKey(UUID organizationId, String apiKeyValue) throws GendoxException {
@@ -136,15 +136,17 @@ public class OrganizationWebSiteService {
         return organizationWebSiteRepository.save(existingOrganizationWebSite);
     }
 
-    public void updateOrganizationWebSite(OrganizationWebSite organizationWebSite, ApiKey apiKey, Integration integration) {
+    public OrganizationWebSite updateOrganizationWebSite(OrganizationWebSite organizationWebSite, ApiKey apiKey, Integration integration) {
         logger.info("Updating OrganizationWebSite ID: {}", organizationWebSite.getId());
         if (!apiKey.getId().equals(organizationWebSite.getApiKeyId()) ||
                 !integration.getId().equals(organizationWebSite.getIntegrationId())) {
 
             organizationWebSite.setApiKeyId(apiKey.getId());
             organizationWebSite.setIntegrationId(integration.getId());
-            organizationWebSiteRepository.save(organizationWebSite);
+            organizationWebSite = organizationWebSiteRepository.save(organizationWebSite);
         }
+
+        return organizationWebSite;
     }
 
     public void deleteOrganizationWebSite(UUID id) {
