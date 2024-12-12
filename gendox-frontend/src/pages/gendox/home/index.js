@@ -98,7 +98,7 @@ const GendoxHome = () => {
   };
 
   const refreshDocuments = () => {
-    console.log("REFRESH DOCUMENTS");
+    
     initDocuments(currentPage); // Reload the documents
   };
 
