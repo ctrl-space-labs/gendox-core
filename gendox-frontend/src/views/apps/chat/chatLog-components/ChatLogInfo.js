@@ -85,7 +85,7 @@ const ChatLogInfo = ({ messageMetadata }) => {
       <Grid container spacing={3}>
         {filteredMessageMetadata.map((sectionData, idx) => {
           const documentName = formatDocumentTitle(sectionData.documentUrl);
-          const documentUrl = `/gendox/document-instance/?organizationId=${sectionData.organizationId}&documentId=${sectionData.documentId}`;
+          const documentUrl = `/gendox/document-instance/?organizationId=${sectionData.organizationId}&documentId=${sectionData.documentId}&sectionId=${sectionData.sectionId}`;
           // const sectionUrl = `/gendox/document-instance/?organizationId=${organizationId}&sectionId=${sectionData.sectionId}`;
 
           let gridSize;
