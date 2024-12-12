@@ -55,9 +55,16 @@ public class IntegrationManager {
         Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map = new HashMap<>();
         List<Integration> activeIntegrations = findActiveIntegrations();
 
+
         for (Integration integration : activeIntegrations) {
-            processIntegration(integration, map);
+            try {
+                processIntegration(integration, map);
+
+            } catch (Exception e) {
+                logger.error("Error processing integration with id: {}. Continuing with the next integration...", integration.getId(), e);
+            }
         }
+
 
         return map;
     }

@@ -236,7 +236,7 @@ public class OrganizationService {
 
         UUID organizationId = apiKeyService.getOrganizationIdByApiKey(apiKey);
 
-        return getOrganizationProfileById(organizationId);
+        return getOrganizationProfileById(organizationId, apiKey);
     }
 
 
@@ -249,11 +249,11 @@ public class OrganizationService {
      */
 //    TODO add evict cash upon key update for
 //    @Cacheable(value = "OrganizationProfileByApiKey", keyGenerator = "gendoxKeyGenerator")
-    public UserProfile getOrganizationProfileById(UUID organizationId) throws GendoxException {
+    public UserProfile getOrganizationProfileById(UUID organizationId, String apiKeyStr) throws GendoxException {
 
         // TODO construct user profile similar to to user with role 'roleType' in the organization
         List<OrganizationProfileProjectAgentDTO> rawOrganizationProfile =
-                organizationRepository.findRawOrganizationProfileById(organizationId);
+                organizationRepository.findRawOrganizationProfileById(organizationId, apiKeyStr);
 
         UserProfile userProfile =  organizationProfileConverter.toDTO(rawOrganizationProfile);
 

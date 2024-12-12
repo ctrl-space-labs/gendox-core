@@ -72,7 +72,7 @@ public class ApiKeyAuthenticationProvider implements AuthenticationProvider {
 
         try {
 //            userProfile = userService.getUserProfileByUniqueIdentifier(email);
-            userProfile = organizationService.getOrganizationProfileById(apiKeyObj.getOrganizationId());
+            userProfile = organizationService.getOrganizationProfileById(apiKeyObj.getOrganizationId(), apiKeyObj.getApiKey());
         } catch (GendoxException e) {
             throw new UsernameNotFoundException("API key not found.");
         }
