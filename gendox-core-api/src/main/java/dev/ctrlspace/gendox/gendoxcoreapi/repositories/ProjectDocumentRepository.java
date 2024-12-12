@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectMember;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.stereotype.Repository;
 
@@ -34,6 +35,11 @@ public interface ProjectDocumentRepository extends JpaRepository<ProjectDocument
     List<ProjectDocument> findByDocumentIdIn(Set<UUID> documentIds);
 
     Optional<ProjectDocument> findByDocumentIdAndProjectId(UUID documentId, UUID projectId);
+
+
+    @Query(value = "SELECT pd.project_id FROM gendox_core.project_documents pd WHERE pd.document_id = :documentId LIMIT 1", nativeQuery = true)
+    Optional<UUID> findProjectIdByDocumentId(@Param("documentId") UUID documentId);
+
 
 
 }

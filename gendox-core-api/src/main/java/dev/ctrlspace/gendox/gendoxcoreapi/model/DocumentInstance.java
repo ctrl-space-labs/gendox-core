@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import org.checkerframework.checker.units.qual.C;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -38,6 +39,7 @@ public class DocumentInstance {
     @Basic
     @Column(name = "document_sha256_hash", nullable = true)
     private String documentSha256Hash;
+
     @Basic
     @Column(name="created_by", nullable = true)
     @CreatedBy
@@ -55,7 +57,21 @@ public class DocumentInstance {
     @LastModifiedDate
     private Instant updatedAt;
 
+    @ManyToOne
+    @JoinColumn(name = "file_type_id", referencedColumnName = "id")
+    private Type fileType;
 
+    @Basic
+    @Column(name = "content_id")
+    private Long contentId;
+
+    @Basic
+    @Column(name = "external_url")
+    private String externalUrl;
+
+    @Basic
+    @Column(name = "title")
+    private String title;
 
     @JsonManagedReference(value = "DocumentInstanceSection")
     @OneToMany(mappedBy = "documentInstance")
@@ -85,6 +101,14 @@ public class DocumentInstance {
         this.documentTemplateId = documentTemplateId;
     }
 
+    public String getRemoteUrl() {
+        return remoteUrl;
+    }
+
+    public void setRemoteUrl(String remoteUrl) {
+        this.remoteUrl = remoteUrl;
+    }
+
     public String getDocumentIsccCode() {
         return documentIsccCode;
     }
@@ -93,40 +117,12 @@ public class DocumentInstance {
         this.documentIsccCode = documentIsccCode;
     }
 
-    public String getDocumentSha256Hash() {return documentSha256Hash;}
-
-    public void setDocumentSha256Hash(String documentSha256Hash) {this.documentSha256Hash = documentSha256Hash;}
-
-    public Instant getCreatedAt() {
-        return createdAt;
+    public String getDocumentSha256Hash() {
+        return documentSha256Hash;
     }
 
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public List<DocumentInstanceSection> getDocumentInstanceSections() {
-        return documentInstanceSections;
-    }
-
-    public void setDocumentInstanceSections(List<DocumentInstanceSection> documentInstanceSections) {
-        this.documentInstanceSections = documentInstanceSections;
-    }
-
-    public String getRemoteUrl() {
-        return remoteUrl;
-    }
-
-    public void setRemoteUrl(String remoteUrl) {
-        this.remoteUrl = remoteUrl;
+    public void setDocumentSha256Hash(String documentSha256Hash) {
+        this.documentSha256Hash = documentSha256Hash;
     }
 
     public UUID getCreatedBy() {
@@ -145,16 +141,73 @@ public class DocumentInstance {
         this.updatedBy = updatedBy;
     }
 
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public Type getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(Type fileType) {
+        this.fileType = fileType;
+    }
+
+    public Long getContentId() {
+        return contentId;
+    }
+
+    public void setContentId(Long contentId) {
+        this.contentId = contentId;
+    }
+
+    public String getExternalUrl() {
+        return externalUrl;
+    }
+
+    public void setExternalUrl(String externalUrl) {
+        this.externalUrl = externalUrl;
+    }
+
+    public List<DocumentInstanceSection> getDocumentInstanceSections() {
+        return documentInstanceSections;
+    }
+
+    public void setDocumentInstanceSections(List<DocumentInstanceSection> documentInstanceSections) {
+        this.documentInstanceSections = documentInstanceSections;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DocumentInstance that = (DocumentInstance) o;
-        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(documentTemplateId, that.documentTemplateId) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(documentIsccCode, that.documentIsccCode) && Objects.equals(documentSha256Hash, that.documentSha256Hash) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(documentInstanceSections, that.documentInstanceSections);
+        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(documentTemplateId, that.documentTemplateId) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(documentIsccCode, that.documentIsccCode) && Objects.equals(documentSha256Hash, that.documentSha256Hash) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(fileType, that.fileType) && Objects.equals(contentId, that.contentId) && Objects.equals(externalUrl, that.externalUrl) && Objects.equals(title, that.title) && Objects.equals(documentInstanceSections, that.documentInstanceSections);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organizationId, documentTemplateId, remoteUrl, documentIsccCode, documentSha256Hash, createdBy, updatedBy, createdAt, updatedAt, documentInstanceSections);
+        return Objects.hash(id, organizationId, documentTemplateId, remoteUrl, documentIsccCode, documentSha256Hash, createdBy, updatedBy, createdAt, updatedAt, fileType, contentId, externalUrl, title, documentInstanceSections);
     }
 }

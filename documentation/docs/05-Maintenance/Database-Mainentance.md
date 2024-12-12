@@ -42,4 +42,3 @@ CREATE INDEX hnsw_l2_idx_proj_12345678_9abcd_443c_1234_123456789abc
 > - `12345678_9abcd_443c_1234_123456789abc` with the project_id
 > - index name `hnsw_l2_idx_proj_12345678_9abcd_443c_1234_123456789abc` to include project_id (convention)
 > - `[model-id]` with the model_id
-

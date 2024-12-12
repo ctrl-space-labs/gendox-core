@@ -15,7 +15,7 @@ import java.util.UUID;
 public class DocumentInstanceSectionDTO {
 
     private UUID id;
-    private DocumentDTO documentDTO;
+    private DocumentInstanceDTO documentInstanceDTO;
     private DocumentSectionMetadataDTO documentSectionMetadata;
     private String documentSectionIsccCode;
     private Double tokenCount;

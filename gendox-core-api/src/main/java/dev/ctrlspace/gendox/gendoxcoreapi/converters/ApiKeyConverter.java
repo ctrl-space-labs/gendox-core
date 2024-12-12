@@ -18,7 +18,8 @@ public class ApiKeyConverter implements GendoxConverter<ApiKey, ApiKeyDTO> {
 
         apiKeyDTO.setOrganizationId(apiKey.getOrganizationId());
         apiKeyDTO.setName(apiKey.getName());
-        apiKeyDTO.setActive(apiKey.isActive());
+        apiKeyDTO.setIsActive(apiKey.getActive());
+
 
         return apiKeyDTO;
     }
@@ -29,7 +30,7 @@ public class ApiKeyConverter implements GendoxConverter<ApiKey, ApiKeyDTO> {
 
         apiKey.setOrganizationId(apiKeyDTO.getOrganizationId());
         apiKey.setName(apiKeyDTO.getName());
-        apiKey.setActive(apiKeyDTO.isActive());
+        apiKey.setActive(apiKeyDTO.getIsActive());
         Instant now = Instant.now();
         apiKey.setStartDate(now);
         Instant endDate = now.plus(Duration.ofDays(apiKeyDTO.getDurationInDays()));
