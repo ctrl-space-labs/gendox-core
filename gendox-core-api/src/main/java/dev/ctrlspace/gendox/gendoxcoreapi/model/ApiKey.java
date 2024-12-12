@@ -16,7 +16,7 @@ import java.util.UUID;
 @Table(name = "api_keys", schema= "gendox_core" )
 public class ApiKey {
 
-    @GeneratedValue(strategy = GenerationType.UUID)
+//    pre-persist, generate id if null
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
@@ -54,6 +54,14 @@ public class ApiKey {
     @Column(name = "updated_by")
     @LastModifiedBy
     private UUID updatedBy;
+
+
+    @PrePersist
+    public void generateIdIfNull() {
+        if (id == null) {
+            id = UUID.randomUUID();
+        }
+    }
 
     public UUID getId() {
         return id;
