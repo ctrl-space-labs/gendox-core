@@ -11,6 +11,7 @@ import TextField from "@mui/material/TextField";
 import GendoxMarkdownRenderer from "../markdown-renderer/GendoxMarkdownRenderer";
 
 const SectionCard = forwardRef((props, ref) => {
+  const { targetIndex, highlightedSectionId } = props;
   const sections = useSelector((state) => state.activeDocument.sections);
 
   if (!sections || sections.length === 0) {
@@ -22,14 +23,22 @@ const SectionCard = forwardRef((props, ref) => {
       {sections.map((section, index) => (
         <React.Fragment key={section.id || index}>
           <CardContent
-            ref={index === props.targetIndex ? ref : null}
-            sx={{ overflow: "auto", backgroundColor: "transparent" }}
+            ref={index === targetIndex ? ref : null}
+            sx={{
+              overflow: "auto",
+              backgroundColor:
+                section.id === highlightedSectionId
+                  ? "action.selected"
+                  : "transparent",
+            }}
           >
             <Typography
               variant="h6"
               sx={{ mb: 2, textAlign: "left", color: "primary.main" }}
             >
-              {section.documentSectionMetadata.title}
+              {section.documentSectionMetadata.title === "Default Title"
+                ? ""
+                : section.documentSectionMetadata.title}
             </Typography>
             {/*<TextField*/}
             {/*  fullWidth*/}
@@ -45,7 +54,15 @@ const SectionCard = forwardRef((props, ref) => {
             <GendoxMarkdownRenderer markdownText={section.sectionValue} />
           </CardContent>
           {index !== sections.length - 1 && (
-            <Divider sx={{ my: 2, mx: 3, width: "calc(100% - 24px)" }} />
+            <Divider
+              sx={{
+                my: 3, 
+                mx: 4, 
+                width: "calc(100% - 32px)", 
+                borderWidth: "2px", 
+                borderColor: "primary.light", 
+              }}
+            />
           )}
         </React.Fragment>
       ))}
