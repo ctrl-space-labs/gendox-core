@@ -126,12 +126,10 @@ public class IntegrationService {
 
         boolean newActiveState = isActiveStatus(statusName);
 
-        if (newActiveState != isActive) {
-            integration.setActive(newActiveState);
-            return updateIntegration(integration);
-        }
-
-        return integration;
+        integration.setUrl(websiteIntegrationDTO.getDomain());
+        integration.setDirectoryPath(websiteIntegrationDTO.getContextPath());
+        integration.setActive(newActiveState);
+        return updateIntegration(integration);
 
     }
 
