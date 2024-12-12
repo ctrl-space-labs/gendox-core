@@ -14,7 +14,7 @@ import { DataGrid } from "@mui/x-data-grid";
 import Icon from "src/@core/components/icon";
 import authConfig from "src/configs/auth";
 import CustomChip from "src/@core/components/mui/chip";
-import QuickSearchToolbar from "src/views/gendox-components/organization-settings/members-components/QuickSearchToolbar";
+import QuickSearchToolbar from "src/utils/searchToolbar";
 import SendInvitation from "src/views/gendox-components/organization-settings/members-components/SendInvitation";
 import organizationService from "src/gendox-sdk/organizationService";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
