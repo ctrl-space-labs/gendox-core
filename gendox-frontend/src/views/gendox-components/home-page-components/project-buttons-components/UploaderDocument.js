@@ -38,17 +38,15 @@ const LinearProgressWithLabel = (props) => {
 };
 
 const UploaderDocument = ({ closeUploader, refreshDocuments }) => {
-  const [files, setFiles] = useState([]);
-  const [uploadProgress, setUploadProgress] = useState({});
-  const [alertOpen, setAlertOpen] = useState(false);
-  const router = useRouter();
-
-  console.log("REFRESH DOCUMENTS uploader", refreshDocuments);
-
+  const router = useRouter(); 
   const { organizationId, projectId } = router.query;
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
+
+  const [files, setFiles] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState({});
+  const [alertOpen, setAlertOpen] = useState(false);
 
   const { getRootProps, getInputProps, open } = useDropzone({
     onDrop: (acceptedFiles) => {

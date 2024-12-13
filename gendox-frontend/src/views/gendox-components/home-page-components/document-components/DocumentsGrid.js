@@ -27,11 +27,12 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, onDocumentsUpdated }) =
   );
   const { id: projectId, organizationId } = projectDetails;
   const storedToken = localStorage.getItem(authConfig.storageTokenKeyName);
-
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isBlurring, setIsBlurring] = useState(false);
+
+  console.log
 
 
   useEffect(() => {

@@ -34,7 +34,7 @@ const DocumentsList = ({ documents, onDocumentsUpdated }) => {
   const [filteredDocuments, setFilteredDocuments] = useState(documents);
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
-    pageSize: 7,
+    pageSize: 20,
   });
 
   useEffect(() => {
@@ -89,7 +89,7 @@ const DocumentsList = ({ documents, onDocumentsUpdated }) => {
           selectedDocument.id,
           storedToken
         );
-        toast.success("Document deleted successfully!");
+        toast.success("The document has been successfully deleted.");
         setSelectedDocument(null);
         setIsBlurring(false);
         if (onDocumentsUpdated) {

@@ -97,8 +97,7 @@ const GendoxHome = () => {
     }
   };
 
-  const refreshDocuments = () => {
-    
+  const refreshDocuments = () => {    
     initDocuments(currentPage); // Reload the documents
   };
 

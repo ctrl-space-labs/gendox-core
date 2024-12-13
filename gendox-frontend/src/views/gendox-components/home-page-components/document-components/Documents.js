@@ -61,9 +61,7 @@ const Documents = ({ documents, showAll, setShowAll, onDocumentsUpdated }) => {
         />
       ) : (
         <DocumentsList
-          documents={documents}
-          showAll={showAll}
-          setShowAll={setShowAll}
+          documents={documents}          
           onDocumentsUpdated={onDocumentsUpdated}
         />
       )}
