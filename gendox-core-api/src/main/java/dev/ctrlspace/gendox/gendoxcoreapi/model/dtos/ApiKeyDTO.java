@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +16,7 @@ public class ApiKeyDTO {
 
     private UUID organizationId;
     private String name;
-    private int durationInDays;
-    private boolean isActive;
+    private Integer durationInDays;
+    private Boolean isActive;
 
 }

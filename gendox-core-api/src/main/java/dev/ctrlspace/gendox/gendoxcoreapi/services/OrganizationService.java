@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.OrganizationProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationProfileProjectAgentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDidDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WalletKeyDTO;
@@ -9,7 +11,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriter
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.WalletKeyRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import org.junit.platform.commons.logging.Logger;
@@ -20,14 +21,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -49,6 +46,10 @@ public class OrganizationService {
 
     private AuditLogsService auditLogsService;
 
+    private OrganizationProfileConverter organizationProfileConverter;
+
+    private ApiKeyService apiKeyService;
+
     @Value("${walt-id.default-key.type}")
     private String keyTypeName;
     @Value("${walt-id.default-key.size}")
@@ -63,7 +64,9 @@ public class OrganizationService {
                                WalletKeyService walletKeyService,
                                TypeService typeService,
                                ProjectService projectService,
-                               AuditLogsService auditLogsService) {
+                               AuditLogsService auditLogsService,
+                               OrganizationProfileConverter organizationProfileConverter,
+                               ApiKeyService apiKeyService) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.organizationRepository = organizationRepository;
         this.userOrganizationService = userOrganizationService;
@@ -72,6 +75,8 @@ public class OrganizationService {
         this.typeService = typeService;
         this.projectService = projectService;
         this.auditLogsService = auditLogsService;
+        this.organizationProfileConverter = organizationProfileConverter;
+        this.apiKeyService = apiKeyService;
 
     }
 
@@ -227,5 +232,34 @@ public class OrganizationService {
         organization.setCreatedAt(null);
     }
 
+    public UserProfile getOrganizationProfileByApiKey(String apiKey) throws GendoxException {
+
+        UUID organizationId = apiKeyService.getOrganizationIdByApiKey(apiKey);
+
+        return getOrganizationProfileById(organizationId, apiKey);
+    }
+
+
+    /**
+     * Get organization profile to be used when API key is used for authentication, instead of JWT
+     *
+     * @param organizationId the organization id
+     * @return
+     * @throws GendoxException
+     */
+//    TODO add evict cash upon key update for
+//    @Cacheable(value = "OrganizationProfileByApiKey", keyGenerator = "gendoxKeyGenerator")
+    public UserProfile getOrganizationProfileById(UUID organizationId, String apiKeyStr) throws GendoxException {
+
+        // TODO construct user profile similar to to user with role 'roleType' in the organization
+        List<OrganizationProfileProjectAgentDTO> rawOrganizationProfile =
+                organizationRepository.findRawOrganizationProfileById(organizationId, apiKeyStr);
+
+        UserProfile userProfile =  organizationProfileConverter.toDTO(rawOrganizationProfile);
+
+
+//        throw new NotImplementedException("Not implemented yet");
+        return userProfile;
+    }
 
 }
