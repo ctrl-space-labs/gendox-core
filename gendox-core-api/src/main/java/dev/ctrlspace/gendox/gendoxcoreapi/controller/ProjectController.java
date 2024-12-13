@@ -187,7 +187,7 @@ public class ProjectController {
             description = "Deactivate a project by its unique ID. To perform this operation, " +
                     "the user must have the necessary permissions to delete the specified project.")
     public void deactivateProjectById(@PathVariable UUID projectId) throws Exception {
-        projectService.deactivateProject(projectId);
+        projectService.deactivateProject(projectId,false);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         userService.evictUserProfileByUniqueIdentifier(securityUtils.getUserIdentifier());
     }

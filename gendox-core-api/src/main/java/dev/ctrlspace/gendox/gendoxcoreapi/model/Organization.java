@@ -44,6 +44,9 @@ public class Organization {
     @Basic
     @Column(name = "developer_email", nullable = true)
     private String developerEmail;
+    @Basic
+    @Column(name = "is_active", nullable = true)
+    private Boolean isActive;
 
 
     @JsonBackReference(value = "organizationUser")
@@ -122,17 +125,20 @@ public class Organization {
         this.developerEmail = developerEmail;
     }
 
+    public Boolean getActive() {return isActive;}
+
+    public void setActive(Boolean active) {isActive = active;}
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Organization that = (Organization) o;
-        return Objects.equals(id, that.id) && Objects.equals(name, that.name) && Objects.equals(displayName, that.displayName) && Objects.equals(address, that.address) && Objects.equals(phone, that.phone) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(developerEmail, that.developerEmail) && Objects.equals(userOrganizations, that.userOrganizations);
+        return Objects.equals(id, that.id) && Objects.equals(name, that.name) && Objects.equals(displayName, that.displayName) && Objects.equals(address, that.address) && Objects.equals(phone, that.phone) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(developerEmail, that.developerEmail) && Objects.equals(isActive, that.isActive) && Objects.equals(userOrganizations, that.userOrganizations);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, displayName, address, phone, createdAt, updatedAt, developerEmail, userOrganizations);
+        return Objects.hash(id, name, displayName, address, phone, createdAt, updatedAt, developerEmail, isActive, userOrganizations);
     }
 }
