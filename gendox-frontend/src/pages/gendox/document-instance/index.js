@@ -26,29 +26,51 @@ import documentService from "src/gendox-sdk/documentService";
 const DocumentSections = () => {
   const dispatch = useDispatch();
   const router = useRouter();
-  const { documentId } = router.query;
+  const { documentId, sectionId } = router.query;
   const storedToken = localStorage.getItem(authConfig.storageTokenKeyName);
   const document = useSelector((state) => state.activeDocument.document);
   const sections = useSelector((state) => state.activeDocument.sections);
 
   const [editMode, setEditMode] = useState(false);
   const [areAllMinimized, setAreAllMinimized] = useState(false);
-
+  const [highlightedSectionId, setHighlightedSectionId] = useState(null);
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false); // state for fake loading when user drag sections
-  const [isBlurring, setIsBlurring] = useState(false); // state for blur when user press back button  
+  const [isBlurring, setIsBlurring] = useState(false); // state for blur when user press back button
 
   const sectionRefs = useRef([]);
   const [targetIndex, setTargetIndex] = useState(null);
   const sectionCardRef = useRef(null);
 
-  
 
-  const scrollToSectionOrder = (order) => {
+  const scrollToSectionOrderByOrderNumber = (order) => {
     const sectionIndex = sections.findIndex(
       (section) => section.documentSectionMetadata.sectionOrder === order
     );
     if (sectionIndex !== -1) {
       setTargetIndex(sectionIndex); // Set the targetIndex to the found section index
+    }
+  };
+
+  const scrollToSectionOrderBySectionid = (sectionId) => {
+    const sectionIndex = sections.findIndex(
+      (section) => section.id === sectionId
+    );
+    if (sectionIndex !== -1) {
+      setTargetIndex(sectionIndex); // Set the targetIndex to the found section index
+    }
+  };
+
+  const scrollToAndHighlightSection = (id) => {
+    const sectionIndex = sections.findIndex((section) => section.id === id);
+    if (sectionIndex !== -1 ) {
+      setHighlightedSectionId(id); // Highlight the section
+      sectionRefs?.current[sectionIndex]?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+
+      // Remove the highlight after 10 seconds
+      setTimeout(() => setHighlightedSectionId(null), 10000);
     }
   };
 
@@ -66,10 +88,22 @@ const DocumentSections = () => {
     if (fragment && !editMode) {
       const sectionOrder = parseInt(fragment, 10);
       if (!isNaN(sectionOrder)) {
-        scrollToSectionOrder(sectionOrder);
+        scrollToSectionOrderByOrderNumber(sectionOrder);
       }
     }
   }, [sections, router.asPath, editMode]);
+
+  useEffect(() => {
+    if (sectionId && sections.length > 0) {
+      scrollToSectionOrderBySectionid(sectionId);
+    }
+  }, [sectionId, sections]);
+
+  useEffect(() => {
+    if (sectionId && sections.length > 0) {
+      scrollToAndHighlightSection(sectionId);
+    }
+  }, [sectionId, sections]);
 
   useEffect(() => {
     fetchSectionsRow(sections);
@@ -248,6 +282,7 @@ const DocumentSections = () => {
     </Box>
   );
 
+
   return (
     <Card sx={{ backgroundColor: "transparent", boxShadow: "none" }}>
       <StyledCardContent sx={{ backgroundColor: "background.paper" }}>
@@ -274,7 +309,12 @@ const DocumentSections = () => {
       {!editMode ? (
         <StyledCardContent
           sx={{
-            backgroundColor: "action.hover",
+            backgroundColor: "action.selected",
+            border: sectionId === highlightedSectionId ? "2px solid" : "none",
+            borderColor:
+              sectionId === highlightedSectionId
+                ? "primary.main"
+                : "transparent",
             pt: 3,
             pb: 3,
             mb: 6,
@@ -282,7 +322,11 @@ const DocumentSections = () => {
             transition: "filter 0.3s ease",
           }}
         >
-          <SectionCard ref={sectionCardRef} targetIndex={targetIndex} />
+          <SectionCard
+            ref={sectionCardRef}
+            targetIndex={targetIndex}
+            highlightedSectionId={highlightedSectionId}
+          />
         </StyledCardContent>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -304,7 +348,18 @@ const DocumentSections = () => {
                         {...provided.draggableProps}
                         // {...provided.dragHandleProps}
                         sx={{
-                          backgroundColor: "background.paper",
+                          backgroundColor:
+                            section.id === highlightedSectionId
+                              ? "action.selected"
+                              : "background.paper", // Highlight if a section is selected
+                          border:
+                            section.id === highlightedSectionId
+                              ? "2px solid"
+                              : "none",
+                          borderColor:
+                            section.id === highlightedSectionId
+                              ? "primary.main"
+                              : "transparent",
                           mb: 6,
                           filter: isUpdatingOrder ? "blur(6px)" : "none", // Apply blur during loading
                           transition: "filter 0.3s ease", // Smooth transition for blur
