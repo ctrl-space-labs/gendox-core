@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithoutDocumentConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentOnlyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
@@ -42,6 +43,7 @@ public class DocumentController {
 
     private DocumentService documentService;
     private DocumentInstanceConverter documentInstanceConverter;
+    private DocumentOnlyConverter documentOnlyConverter;
     private UploadService uploadService;
     private SplitFileService splitFileService;
     private DocumentSectionService documentSectionService;
@@ -60,8 +62,9 @@ public class DocumentController {
                               SecurityUtils securityUtils,
                               DocumentSectionService documentSectionService,
                               DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter,
-                                DocumentInstanceSectionRepository documentInstanceSectionRepository
-                              ) {
+                              DocumentInstanceSectionRepository documentInstanceSectionRepository,
+                              DocumentOnlyConverter documentOnlyConverter
+    ) {
         this.documentService = documentService;
         this.documentInstanceConverter = documentInstanceConverter;
         this.uploadService = uploadService;
@@ -70,6 +73,7 @@ public class DocumentController {
         this.securityUtils = securityUtils;
         this.documentInstanceSectionWithoutDocumentConverter = documentInstanceSectionWithoutDocumentConverter;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
+        this.documentOnlyConverter = documentOnlyConverter;
     }
 
 
@@ -100,7 +104,7 @@ public class DocumentController {
         Page<DocumentInstance> documentInstances = documentService.getAllDocuments(criteria, pageable);
 
         // Convert the Page of DocumentInstance to a Page of DocumentDTO using the converter
-        Page<DocumentInstanceDTO> documentDTOs = documentInstances.map(document -> documentInstanceConverter.toDTO(document));
+        Page<DocumentInstanceDTO> documentDTOs = documentInstances.map(document -> documentOnlyConverter.toDTO(document));
 
 
         return documentDTOs;
