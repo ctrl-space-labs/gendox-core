@@ -15,10 +15,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserOrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectMemberService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
@@ -58,6 +55,7 @@ public class OrganizationController {
     private UserService userService;
     private SecurityUtils securityUtils;
     private ProjectMemberService projectMemberService;
+    private ApiKeyService apiKeyService;
 
 
     @Autowired
@@ -67,7 +65,8 @@ public class OrganizationController {
                                   OrganizationConverter organizationConverter,
                                   UserService userService,
                                   SecurityUtils securityUtils,
-                                  ProjectMemberService projectMemberService) {
+                                  ProjectMemberService projectMemberService,
+                                  ApiKeyService apiKeyService) {
         this.organizationService = organizationService;
         this.organizationConverter = organizationConverter;
         this.userOrganizationService = userOrganizationService;
@@ -75,6 +74,7 @@ public class OrganizationController {
         this.userService = userService;
         this.securityUtils = securityUtils;
         this.projectMemberService = projectMemberService;
+        this.apiKeyService = apiKeyService;
 
     }
 
@@ -262,6 +262,7 @@ public class OrganizationController {
         userOrganizationService.deleteUserOrganization(userId, organizationId);
 
     }
+
 
 
 }

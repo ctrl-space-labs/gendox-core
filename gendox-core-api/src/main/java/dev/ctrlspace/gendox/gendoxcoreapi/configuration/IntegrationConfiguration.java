@@ -2,12 +2,16 @@ package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFileDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TempIntegrationFileCheckService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UploadService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.IntegrationManager;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
@@ -32,13 +36,10 @@ import org.springframework.messaging.MessagingException;
 import org.springframework.integration.core.MessageSource;
 import org.springframework.integration.annotation.Poller;
 import org.springframework.messaging.Message;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.util.List;
 import java.util.Map;
-
-
 
 
 @Configuration
@@ -56,6 +57,8 @@ public class IntegrationConfiguration {
     private SplitterBatchService splitterBatchService;
     private TrainingBatchService trainingBatchService;
     private TypeService typeService;
+    private DocumentUtils documentUtils;
+    private TempIntegrationFileCheckService tempIntegrationFileCheckService;
 
 
     @Autowired
@@ -64,13 +67,17 @@ public class IntegrationConfiguration {
                                     ProjectService projectService,
                                     SplitterBatchService splitterBatchService,
                                     TrainingBatchService trainingBatchService,
-                                    TypeService typeService) {
+                                    TypeService typeService,
+                                    DocumentUtils documentUtils,
+                                    TempIntegrationFileCheckService tempIntegrationFileCheckService) {
         this.integrationManager = integrationManager;
         this.uploadService = uploadService;
         this.projectService = projectService;
         this.splitterBatchService = splitterBatchService;
         this.trainingBatchService = trainingBatchService;
         this.typeService = typeService;
+        this.documentUtils = documentUtils;
+        this.tempIntegrationFileCheckService = tempIntegrationFileCheckService;
     }
 
 
@@ -109,32 +116,67 @@ public class IntegrationConfiguration {
                 // Integration handling logic
                 logger.debug("Received integration message for processing: {}", message);
 
-                Map<Integration, List<MultipartFile>> map = (Map<Integration, List<MultipartFile>>) message.getPayload();
+
+                Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map = (Map<ProjectIntegrationDTO, List<IntegratedFileDTO>>) message.getPayload();
                 Boolean hasNewFiles = false;
 
-                for (Map.Entry<Integration, List<MultipartFile>> entry : map.entrySet()) {
-                    // TODO mode this in a seperate Integration Service, to handle the integration per "Integration" object
-                    // When extracted, that method should be handled as @Transactional
-                    Integration integration = entry.getKey();
-                    List<MultipartFile> files = entry.getValue();
-                    for (MultipartFile file : files) {
-                        hasNewFiles = true;
-                        try {
-                            Project project = projectService.getProjectById(integration.getProjectId());
-                            logger.debug("Uploading document: {} for project: {}", file.getName(), project.getId());
-                            DocumentInstance documentInstance =
-                                    uploadService.uploadFile(file, project.getOrganizationId(), project.getId());
-                            logger.debug("Uploaded document: {} successfully", file.getName());
-                        } catch (Exception e) {
-                            logger.error("Error uploading document: {}", e.getMessage(), e);
-                            e.printStackTrace();
+                for (Map.Entry<ProjectIntegrationDTO, List<IntegratedFileDTO>> entry : map.entrySet()) {
+                    ProjectIntegrationDTO projectIntegrationDTO = entry.getKey();
+                    List<IntegratedFileDTO> integratedFilesDTO = entry.getValue();
+
+                    try {
+                        Project project = projectService.getProjectById(projectIntegrationDTO.getProjectId());
+
+                        for (IntegratedFileDTO file : integratedFilesDTO) {
+                            hasNewFiles = true;
+                            try {
+                                // handle uploaded files
+                                if (file.getMultipartFile() != null) {
+                                    logger.debug("Uploading document: {} for project: {}", file.getMultipartFile().getName(), project.getId());
+                                    uploadService.uploadFile(file.getMultipartFile(), project.getOrganizationId(), project.getId());
+                                    logger.debug("Uploaded document: {} successfully", file.getMultipartFile().getName());
+                                } else {  // handle external files that the content is not downloaded here
+                                    logger.debug("Upserting extrernal document Instance: {} for project: {}", file.getExternalFile().getContentId(), project.getId());
+
+                                    DocumentInstanceDTO documentInstanceDTO = DocumentInstanceDTO
+                                            .builder()
+                                            .organizationId(project.getOrganizationId())
+                                            .remoteUrl(file.getExternalFile().getRemoteUrl())
+                                            .contentId(file.getExternalFile().getContentId())
+                                            .fileType(file.getExternalFile().getFileType())
+                                            .title(documentUtils.getApiIntegrationDocumentTitle(file.getExternalFile().getContentId(), projectIntegrationDTO.getIntegration()))
+                                            .documentIsccCode(documentUtils.getISCCCodeForApiIntegrationFile())
+                                            .build();
+
+                                    uploadService.upsertDocumentInstance(project.getId(), documentInstanceDTO);
+                                    logger.debug("extrernal document uploaded document: {} successfully", file.getExternalFile().getContentId());
+
+                                }
+
+                            } catch (Exception e) {
+                                logger.error("Error uploading document");
+                                e.printStackTrace();
+                            }
                         }
+                    } catch (Exception e) {
+                        logger.error("Error fetching project: {}", e.getMessage(), e);
+                        throw new RuntimeException(e);
                     }
-                    if (integration.getIntegrationType().equals(typeService.getIntegrationTypeByName(IntegrationTypesConstants.GIT_INTEGRATION))) {
+
+
+                    // Delete all the files in the temp directory table
+                    if (projectIntegrationDTO.getIntegration().getIntegrationType().getName().equals(IntegrationTypesConstants.API_INTEGRATION)) {
+                        tempIntegrationFileCheckService.deleteTempIntegrationFileChecksByIntegrationId(projectIntegrationDTO.getIntegration().getId());
+                        logger.debug("Deleted TempIntegrationFileChecks for integration: {}", projectIntegrationDTO.getIntegration().getId());
+                    }
+
+                    if (typeService.getIntegrationTypeByName(IntegrationTypesConstants.GIT_INTEGRATION).equals(projectIntegrationDTO.getIntegration().getIntegrationType())) {
                         // Delete all the directory files except the .git folder
-                        deleteDirectoryFiles(integration.getDirectoryPath());
-                        logger.debug("Deleted files in directory: {}", integration.getDirectoryPath());
+                        deleteDirectoryFiles(projectIntegrationDTO.getIntegration().getDirectoryPath());
+                        logger.debug("Deleted files in directory: {}", projectIntegrationDTO.getIntegration().getDirectoryPath());
                     }
+
+
                 }
 
                 if (hasNewFiles) {

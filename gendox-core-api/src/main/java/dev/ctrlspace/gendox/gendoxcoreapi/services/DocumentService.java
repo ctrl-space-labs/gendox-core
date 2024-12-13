@@ -5,8 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
-import dev.ctrlspace.provenai.iscc.IsccCodeResponse;
-import dev.ctrlspace.provenai.iscc.IsccCodeService;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,9 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -55,11 +53,12 @@ public class DocumentService {
         this.projectDocumentService = projectDocumentService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.typeService = typeService;
-        this.auditLogsService = auditLogsService;}
+        this.auditLogsService = auditLogsService;
+    }
 
 
     public DocumentInstance getDocumentInstanceById(UUID id) throws GendoxException {
-        return documentInstanceRepository.findById(id)
+        return documentInstanceRepository.findDocumentInstanceById(id)
                 .orElseThrow(() -> new GendoxException("DOCUMENT_NOT_FOUND", "Document not found with id: " + id, HttpStatus.NOT_FOUND));
 
     }
@@ -83,7 +82,10 @@ public class DocumentService {
                 .orElse(null);
     }
 
-
+    public DocumentInstance getDocumentByProjectIdAndOrganizationIdAndTitle(UUID projectId, DocumentInstance instance) throws GendoxException {
+        return documentInstanceRepository.findByProjectIdAndOrganizationIdAndTitle(projectId, instance.getOrganizationId(), instance.getTitle())
+                .orElse(null);
+    }
 
 
     public DocumentInstance createDocumentInstance(DocumentInstance documentInstance) throws GendoxException {
@@ -99,19 +101,47 @@ public class DocumentService {
         return documentInstance;
     }
 
+    @Transactional
     public DocumentInstance updateDocument(DocumentInstance updatedDocument) throws GendoxException {
         UUID documentId = updatedDocument.getId();
         DocumentInstance existingDocument = this.getDocumentInstanceById(documentId);
-        String fileName = documentSectionService.getFileNameFromUrl(existingDocument.getRemoteUrl());
 
+        if (updatedDocument.getDocumentTemplateId() != null) {
+            existingDocument.setDocumentTemplateId(updatedDocument.getDocumentTemplateId());
+        }
+        if (updatedDocument.getRemoteUrl() != null) {
+            existingDocument.setRemoteUrl(updatedDocument.getRemoteUrl());
+        }
+        if (updatedDocument.getDocumentIsccCode() != null) {
+            existingDocument.setDocumentIsccCode(updatedDocument.getDocumentIsccCode());
+        }
+        if (updatedDocument.getTitle() != null) {
+            existingDocument.setTitle(updatedDocument.getTitle());
+        }
+        if (updatedDocument.getFileType() != null) {
+            existingDocument.setFileType(updatedDocument.getFileType());
+        }
+        if (updatedDocument.getContentId() != null) {
+            existingDocument.setContentId(updatedDocument.getContentId());
+        }
+        if (updatedDocument.getUpdatedBy() != null) {
+            existingDocument.setUpdatedBy(updatedDocument.getUpdatedBy());
+        }
+        if (updatedDocument.getOrganizationId() != null) {
+            existingDocument.setOrganizationId(updatedDocument.getOrganizationId());
+        }
+        if (updatedDocument.getExternalUrl() != null) {
+            existingDocument.setExternalUrl(updatedDocument.getExternalUrl());
+        }
+        if (updatedDocument.getDocumentSha256Hash() != null) {
+            existingDocument.setDocumentSha256Hash(updatedDocument.getDocumentSha256Hash());
+        }
 
-        // Update the properties of the existingDocument with the values from the updated document
-        existingDocument.setDocumentTemplateId(updatedDocument.getDocumentTemplateId());
-        existingDocument.setRemoteUrl(updatedDocument.getRemoteUrl());
-        existingDocument.setUpdatedBy(updatedDocument.getUpdatedBy());
         existingDocument.setUpdatedAt(Instant.now());
+
         existingDocument = documentInstanceRepository.save(existingDocument);
-        updateExistingSectionsList(updatedDocument, existingDocument);
+        // TODO Giannis: I remove this because it is not necessary to update the sections here
+//        updateExistingSectionsList(updatedDocument, existingDocument);
 
         return existingDocument;
     }
@@ -126,6 +156,7 @@ public class DocumentService {
      * @param updatedDocument
      * @param existingDocument
      */
+    // TODO Giannis: This should be moved to the DocumentSectionService
     private void updateExistingSectionsList(DocumentInstance updatedDocument, DocumentInstance existingDocument) throws GendoxException {
         Set<String> existingSectionIds = existingDocument.getDocumentInstanceSections().stream()
                 .map(DocumentInstanceSection::getId)
@@ -184,8 +215,24 @@ public class DocumentService {
     }
 
 
+    @Transactional
+    public void deleteAllDocumentInstances(List<UUID> documentIds) throws GendoxException {
+        if (documentIds == null || documentIds.isEmpty()) {
+            throw new GendoxException("INVALID_INPUT", "Document IDs list cannot be null or empty", HttpStatus.BAD_REQUEST);
+        }
+        for (UUID documentId : documentIds) {
+            UUID projectId = projectDocumentService.getProjectIdByDocumentId(documentId);
+            try {
+                this.deleteDocument(documentId, projectId);
+                logger.info("Successfully deleted all provided DocumentInstances.");
+            } catch (Exception e) {
+                logger.error("Failed to delete DocumentInstances with IDs: {}", documentIds, e);
+                throw new GendoxException("DELETE_FAILED", "Failed to delete document instances", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        }
 
 
+    }
 
 
 }
