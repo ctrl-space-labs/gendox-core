@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { formatDistanceToNow, parseISO } from "date-fns";
-
+import { useDispatch, useSelector } from "react-redux";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Grid from "@mui/material/Grid";
@@ -15,13 +15,13 @@ import Icon from "src/@core/components/icon";
 import CustomAvatar from "src/@core/components/mui/avatar";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 import documentService from "src/gendox-sdk/documentService.js";
-
-import { useSelector } from "react-redux";
+import { fetchProjectDocuments } from "src/store/apps/activeProject/activeProject";
 import { formatDocumentTitle } from "src/utils/documentUtils";
 import authConfig from "src/configs/auth";
 import toast from "react-hot-toast";
 
-const DocumentsGrid = ({ documents, showAll, setShowAll, onDocumentsUpdated }) => {  
+const DocumentsGrid = ({ documents, showAll, setShowAll, page }) => {  
+  const dispatch = useDispatch();
   const { projectDetails, projectMembers } = useSelector(
     (state) => state.activeProject
   );
@@ -32,7 +32,7 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, onDocumentsUpdated }) =
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isBlurring, setIsBlurring] = useState(false);
 
-  console.log
+  console.log("DocumentsGrid -> documents", documents);
 
 
   useEffect(() => {
@@ -75,10 +75,14 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, onDocumentsUpdated }) =
       toast.success("Document deleted successfully!");      
       setSelectedDocument(null);
       setIsBlurring(false);
-      if (onDocumentsUpdated) {
-        onDocumentsUpdated();
-        console.log("Document deleted refresh Documents!");
-      }
+      dispatch(
+        fetchProjectDocuments({
+          organizationId,
+          projectId,
+          storedToken,
+          page: page,
+        })
+      );
     } catch (error) {
       console.error("Failed to delete document:", error);
       toast.error("Failed to delete document.");      

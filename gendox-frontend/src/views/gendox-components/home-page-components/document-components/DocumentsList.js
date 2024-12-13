@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { isValid, parseISO, format } from "date-fns";
-import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardHeader from "@mui/material/CardHeader";
 import { DataGrid } from "@mui/x-data-grid";
@@ -13,12 +12,14 @@ import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 import documentService from "src/gendox-sdk/documentService.js";
 import QuickSearchToolbar from "src/utils/searchToolbar";
 import { formatDocumentTitle } from "src/utils/documentUtils";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/router";
+import { fetchProjectDocuments } from "src/store/apps/activeProject/activeProject";
 import toast from "react-hot-toast";
 import authConfig from "src/configs/auth";
 
-const DocumentsList = ({ documents, onDocumentsUpdated }) => {
+const DocumentsList = ({ documents, page }) => {
+  const dispatch = useDispatch();
   const { projectDetails, projectMembers } = useSelector(
     (state) => state.activeProject
   );
@@ -92,10 +93,14 @@ const DocumentsList = ({ documents, onDocumentsUpdated }) => {
         toast.success("The document has been successfully deleted.");
         setSelectedDocument(null);
         setIsBlurring(false);
-        if (onDocumentsUpdated) {
-          onDocumentsUpdated();
-          console.log("Document deleted refresh Documents!");
-        }
+        dispatch(
+          fetchProjectDocuments({
+            organizationId,
+            projectId,
+            storedToken,
+            page: page,
+          })
+        );
       } catch (error) {
         console.error("Failed to delete document:", error);
         toast.error("Failed to delete document.");

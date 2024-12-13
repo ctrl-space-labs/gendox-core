@@ -4,7 +4,6 @@ import { useRouter } from "next/router";
 import { useSettings } from "src/@core/hooks/useSettings";
 import Modal from "@mui/material/Modal";
 import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
 import CardContent from "@mui/material/CardContent";
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
@@ -14,7 +13,7 @@ import Tooltip from "@mui/material/Tooltip";
 
 import UploaderDocument from "src/views/gendox-components/home-page-components/project-buttons-components/UploaderDocument";
 
-const ProjectButtons = ({ refreshDocuments }) => {
+const ProjectButtons = () => {
   const project = useSelector((state) => state.activeProject.projectDetails);
   const router = useRouter();
   const { settings } = useSettings();
@@ -23,7 +22,6 @@ const ProjectButtons = ({ refreshDocuments }) => {
   const handleOpenUploader = () => setShowUploader(true);
   const handleCloseUploader = () => setShowUploader(false);
 
-  console.log("REFRESH DOCUMENTS project buttons", refreshDocuments);
 
   const handleCreateDocument = () => {
     router.push(
@@ -94,7 +92,7 @@ const ProjectButtons = ({ refreshDocuments }) => {
         sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
       >
         <Box sx={{ outline: "none", p: 2, bgcolor: "background.paper" }}>
-          <UploaderDocument closeUploader={handleCloseUploader} refreshDocuments={refreshDocuments} />
+          <UploaderDocument closeUploader={handleCloseUploader} />
         </Box>
       </Modal>
     </Grid>
