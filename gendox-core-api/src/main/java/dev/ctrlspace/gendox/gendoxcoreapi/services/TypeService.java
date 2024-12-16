@@ -100,6 +100,13 @@ public class TypeService {
 
     }
 
+    //File Types
+    public Type getFileTypeByName(String fileTypeName){
+        return typeRepository.findByTypeCategoryAndName("FILE_TYPE", fileTypeName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "FILE_TYPE_NOT_FOUND", "File field type not found with name: " + fileTypeName));
+
+    }
+
     // get all types by type category
     public List<Type> getTypeCategories(String typeCategory){
         return typeRepository.findByTypeCategory(typeCategory);

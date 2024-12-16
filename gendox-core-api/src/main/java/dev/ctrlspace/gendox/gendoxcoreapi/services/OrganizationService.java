@@ -175,14 +175,21 @@ public class OrganizationService {
             return;
         }
 
+        Boolean orgIsDeactivating = true;
+
         // Fetch all user organizations for this organization
         List<UserOrganization> userOrganizations = userOrganizationService.getUserOrganizationByOrganizationId(organizationId);
 
+        Type agentType = typeService.getUserTypeByName("GENDOX_AGENT");
         // Iterate through user organizations to handle both deletion and exception
         for (UserOrganization userOrganization : userOrganizations) {
-            UUID userId = userOrganization.getUser().getId();
+           User user = userOrganization.getUser();
+           UUID userId = user.getId();
 
             // Count the number of organizations the user is associated with
+            if (user.getUserType().equals(agentType)) {
+                continue;
+            }
             long count = userOrganizationRepository.countByUserId(userId);
 
             if (count <= 1) {
@@ -190,9 +197,9 @@ public class OrganizationService {
                 throw new GendoxException("ORGANIZATION_DEACTIVATION_FAILED", "Cannot deactivate organization. User is associated with only one organization", HttpStatus.BAD_REQUEST);
             } else {
 
-                clearOrgData(organization);
-                deactivateAllOrgProjects(organizationId);
+                deactivateAllOrgProjects(organizationId, orgIsDeactivating);
                 userOrganizationRepository.delete(userOrganization);
+                clearOrgData(organization);
                 Type deleteOrganizationType = typeService.getAuditLogTypeByName("DELETE_ORGANIZATION");
                 AuditLogs deleteOrganizationAuditLogs = auditLogsService.createDefaultAuditLogs(deleteOrganizationType);
                 deleteOrganizationAuditLogs.setOrganizationId(organizationId);
@@ -210,7 +217,7 @@ public class OrganizationService {
 
 
 
-    private void deactivateAllOrgProjects(UUID organizationId) throws GendoxException {
+    private void deactivateAllOrgProjects(UUID organizationId, Boolean orgIsDeactivating) throws GendoxException {
 
         ProjectCriteria criteria = new ProjectCriteria();
         criteria.setOrganizationId(organizationId.toString());
@@ -218,7 +225,7 @@ public class OrganizationService {
         Page<Project> projects = projectService.getAllProjects(criteria);
 
         for (Project project : projects.getContent()) {
-            projectService.deactivateProject(project.getId());
+            projectService.deactivateProject(project.getId(), orgIsDeactivating);
         }
     }
 
@@ -230,13 +237,15 @@ public class OrganizationService {
         organization.setDeveloperEmail(null);
         organization.setUpdatedAt(null);
         organization.setCreatedAt(null);
+        organization.setActive(false);
+
     }
 
     public UserProfile getOrganizationProfileByApiKey(String apiKey) throws GendoxException {
 
         UUID organizationId = apiKeyService.getOrganizationIdByApiKey(apiKey);
 
-        return getOrganizationProfileById(organizationId);
+        return getOrganizationProfileById(organizationId, apiKey);
     }
 
 
@@ -249,11 +258,11 @@ public class OrganizationService {
      */
 //    TODO add evict cash upon key update for
 //    @Cacheable(value = "OrganizationProfileByApiKey", keyGenerator = "gendoxKeyGenerator")
-    public UserProfile getOrganizationProfileById(UUID organizationId) throws GendoxException {
+    public UserProfile getOrganizationProfileById(UUID organizationId, String apiKeyStr) throws GendoxException {
 
         // TODO construct user profile similar to to user with role 'roleType' in the organization
         List<OrganizationProfileProjectAgentDTO> rawOrganizationProfile =
-                organizationRepository.findRawOrganizationProfileById(organizationId);
+                organizationRepository.findRawOrganizationProfileById(organizationId, apiKeyStr);
 
         UserProfile userProfile =  organizationProfileConverter.toDTO(rawOrganizationProfile);
 

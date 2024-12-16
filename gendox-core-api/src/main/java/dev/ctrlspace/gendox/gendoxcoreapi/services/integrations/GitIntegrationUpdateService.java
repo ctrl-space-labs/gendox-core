@@ -2,7 +2,10 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services.integrations;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.ObjectIdConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.Listener;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFileDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.IntegrationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.gitIntegration.FileSystemMultipartFile;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
@@ -52,7 +55,8 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public List<MultipartFile> checkForUpdates(Integration integration) {
+    public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> checkForUpdates(Integration integration) throws GendoxException {
+        Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> projectMap = new HashMap<>();
         List<MultipartFile> fileList = new ArrayList<>();
 
         String path = temporaryStorage + "/" + integration.getId().toString();
@@ -103,15 +107,16 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
 
                 integration.setRepoHead(objectIdConverter.convertToDatabaseColumnString(git.getRepository().resolve("HEAD^{tree}")));
                 integration = integrationRepository.save(integration);
-                return fileList = createFileList(git);
+                projectMap = createMap(createFileList(git), integration);
+                return projectMap;
             }
 
         } catch (GitAPIException | IOException e) {
             logger.error("Git integration failed : " + e.getMessage());
             e.printStackTrace();
         }
-
-        return fileList;
+        projectMap = createMap(fileList, integration);
+        return projectMap;
     }
 
     private boolean isDirectoryEmpty(File directory) {
@@ -131,6 +136,22 @@ public class GitIntegrationUpdateService implements IntegrationUpdateService {
             }
         }
         return fileList;
+    }
+
+    private Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> createMap(List<MultipartFile> fileList, Integration integration) {
+        Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map = new HashMap<>();
+        ProjectIntegrationDTO projectIntegrationDTO = ProjectIntegrationDTO.builder()
+                .projectId(integration.getProjectId())
+                .integration(integration)
+                .build();
+        var integratedFilesDTO = fileList
+                .stream()
+                .map(file -> IntegratedFileDTO.builder()
+                        .multipartFile(file)
+                        .build())
+                .toList();
+        map.put(projectIntegrationDTO, integratedFilesDTO);
+        return map;
     }
 
 

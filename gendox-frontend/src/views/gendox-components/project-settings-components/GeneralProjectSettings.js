@@ -133,7 +133,7 @@ const GeneralProjectSettings = () => {
       const firstActiveProject = updatedProjects[0]; 
 
 
-      router.push(`/gendox/home/?organizationId=${project.organizationId}&projectId=${firstActiveProject.id}`);
+      window.location.href = `/gendox/home/?organizationId=${project.organizationId}&projectId=${firstActiveProject.id}`;
     
     } catch (error) {
       console.error("Failed to delete project", error);
