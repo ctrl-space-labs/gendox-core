@@ -20,7 +20,7 @@ import Icon from "src/@core/components/icon";
 // ** Custom Components
 import CustomChip from "src/@core/components/mui/chip";
 import CustomAvatar from "src/@core/components/mui/avatar";
-import QuickSearchToolbar from "src/views/gendox-components/project-settings-components/members-components/QuickSearchToolbar";
+import QuickSearchToolbar from "src/utils/searchToolbar";
 import InviteDialog from "src/views/gendox-components/project-settings-components/members-components/InviteDialog";
 import projectService from "src/gendox-sdk/projectService";
 import organizationService from "src/gendox-sdk/organizationService";
@@ -38,9 +38,8 @@ import {
   userTypeStatus,
   memberRoleStatus,
   escapeRegExp,
-  renderClientAvatar
+  renderClientAvatar,
 } from "src/utils/membersUtils";
-
 
 const MembersProjectSettings = () => {
   const router = useRouter();
@@ -60,12 +59,11 @@ const MembersProjectSettings = () => {
   });
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
- 
+
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [organizationMembers, setOrganizationMembers] = useState([]);
-
 
   useEffect(() => {
     if (projectId) {
@@ -168,11 +166,9 @@ const MembersProjectSettings = () => {
           prevData.filter((user) => user.id !== selectedUser.id)
         );
         toast.success("User deleted successfully");
-        
       } catch (error) {
         console.error("Failed to delete user:", error);
         toast.error("Failed to delete user");
-        
       }
       setConfirmDelete(false);
       handleMenuClose();
@@ -356,18 +352,18 @@ const MembersProjectSettings = () => {
           },
         }}
       />
-      
+
       <DeleteConfirmDialog
         open={confirmDelete}
         onClose={handleDeleteConfirmClose}
         onConfirm={handleDeleteUser}
         title="Confirm Deletion User"
-        contentText={`Are you sure you want to delete ${selectedUser?.name || selectedUser?.userName || "this user"}? This action cannot be undone.`}
+        contentText={`Are you sure you want to delete ${
+          selectedUser?.name || selectedUser?.userName || "this user"
+        }? This action cannot be undone.`}
         confirmButtonText="Remove Member"
-        cancelButtonText="Cancel"        
+        cancelButtonText="Cancel"
       />
-
-      
 
       {/* Invite New Members Button */}
       <Box sx={{ padding: 4, display: "flex", justifyContent: "flex-end" }}>

@@ -4,7 +4,6 @@ import { useRouter } from "next/router";
 import { useSettings } from "src/@core/hooks/useSettings";
 import Modal from "@mui/material/Modal";
 import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
 import CardContent from "@mui/material/CardContent";
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
@@ -23,18 +22,12 @@ const ProjectButtons = () => {
   const handleOpenUploader = () => setShowUploader(true);
   const handleCloseUploader = () => setShowUploader(false);
 
+
   const handleCreateDocument = () => {
     router.push(
       `/gendox/create-document/?organizationId=${project.organizationId}&projectId=${project.id}`
     );
   };
-
-  // const buttons = [
-  //   { text: "NEW DOCUMENT" , action: handleCreateDocument, href: `/gendox/create-document/?organizationId=${project.organizationId}&projectId=${project.id}`},
-  //   { text: "UPLOAD DOCUMENT", action: handleOpenUploader,  href: '#' },
-  //   // { text: "NEW TEMPLATE" },
-  //   // { text: "UPLOAD TEMPLATE" }
-  // ];
 
   const buttons = [
     {
@@ -58,7 +51,7 @@ const ProjectButtons = () => {
       <CardContent>
         <Grid container spacing={2}>
           {buttons.map((button, index) => (
-            <Grid  item key={index}>
+            <Grid item key={index}>
               {isDemo && button.isDemoOff ? (
                 <Tooltip title="Feature not available in demo mode">
                   <span>

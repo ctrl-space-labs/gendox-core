@@ -1,172 +1,179 @@
 import React, { useState, useEffect } from "react";
-import { formatDistanceToNow, parseISO } from "date-fns";
-
-// ** MUI Imports
+import { useRouter } from "next/router";
+import { useDispatch, useSelector } from "react-redux";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import Grid from "@mui/material/Grid";
+import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
-import { styled } from "@mui/material/styles";
-import { Button } from "@mui/material";
-import Divider from "@mui/material/Divider";
-
-// ** Next Import
-import Link from "next/link";
-
-// ** Icon Imports
 import Icon from "src/@core/components/icon";
-import CustomAvatar from "src/@core/components/mui/avatar";
-
-import { useSelector, useDispatch } from "react-redux";
-import { useRouter } from "next/router";
-import { formatDocumentTitle } from "src/utils/documentUtils";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme } from "@mui/material/styles";
+import { StyledCardContent } from "src/utils/styledCardsContent";
+import DocumentsGrid from "./DocumentsGrid";
+import DocumentsList from "./DocumentsList";
 import authConfig from "src/configs/auth";
+import { fetchProjectDocuments } from "src/store/apps/activeProject/activeProject";
 
-const Documents = ({ documents, showAll, setShowAll }) => {
+const Documents = () => {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { projectDetails, projectMembers } = useSelector(
+
+  const { organizationId, projectId } = router.query;
+  const storedToken = window.localStorage.getItem(
+    authConfig.storageTokenKeyName
+  );
+  const { projectDocuments, isBlurring } = useSelector(
     (state) => state.activeProject
   );
-  const { id: projectId, organizationId } = projectDetails;
-  const storedToken = localStorage.getItem(authConfig.storageTokenKeyName);
+  const { content: documents, totalPages } = projectDocuments;
 
+  const [viewMode, setViewMode] = useState("grid");
+  const [currentPage, setCurrentPage] = useState(0);
+  const [showAll, setShowAll] = useState(false); 
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   useEffect(() => {
-    setShowAll(false);
-  }, [projectDetails]);
+    setCurrentPage(0);
+  }, [projectId]);
 
-  const toggleShowAll = () => {
-    setShowAll((prev) => !prev);
+  useEffect(() => {
+    if (organizationId && projectId) {
+      dispatch(
+        fetchProjectDocuments({
+          organizationId,
+          projectId,
+          storedToken,
+          page: currentPage,
+        })
+      );
+    }
+  }, [organizationId, projectId, currentPage, dispatch]);
+
+  useEffect(() => {
+    if (!documents.length) {
+      setViewMode("grid");
+    }
+  }, [documents]);
+
+  useEffect(() => {
+    if (viewMode !== "grid") {
+      setShowAll(true);
+    }
+  }, [viewMode]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
+    }
   };
 
-  if (documents.length === 0) {
-    return (
-      <Box sx={{ m: 2, textAlign: "center" }}>
-        <Typography variant="subtitle1">No documents found.</Typography>
-      </Box>
-    );
-  }
-
-  const renderDocuments = () => {
-    const visibleDocuments = showAll ? documents : documents.slice(0, 3);
-
-    return visibleDocuments.map((document) => {
-      const documentAuthor = projectMembers.find(
-        (projMem) => projMem.user.id === document.createdBy
-      );
-      const relativeDate = formatDistanceToNow(parseISO(document.createAt), {
-        addSuffix: true,
-      });
-
-      return (
-        <Grid item xs={12} sm={6} md={4} key={document.id}>
-          <Box
-            sx={{
-              p: 5,
-              boxShadow: 6,
-              height: "100%",
-              display: "flex",
-              borderRadius: 1,
-              flexDirection: "column",
-              alignItems: "flex-start",
-              backgroundColor: "background.paper",
-            }}
-          >
-            <Box sx={{ mb: 5, display: "flex", alignItems: "center" }}>
-              <CustomAvatar
-                skin="light"
-                variant="rounded"
-                sx={{ mr: 3, height: 34, width: 34 }}
-              >
-                <Icon icon="mdi:file" />
-              </CustomAvatar>
-              <Typography
-                variant="h6"
-                component={Link}
-                href={`/gendox/document-instance/?organizationId=${organizationId}&documentId=${document.id}&projectId=${projectId}`}
-                sx={{
-                  fontWeight: 600,
-                  textDecoration: "none",
-                  "&:hover": { color: "primary.main" },
-                  cursor: "pointer",
-                }}
-              >
-                {formatDocumentTitle(document.remoteUrl)}
-              </Typography>
-            </Box>
-            <Box
-              component="ul"
-              sx={{
-                mt: 0,
-                mb: 5,
-                pl: 6.75,
-                "& li": { mb: 2, color: "primary.main" },
-              }}
-            >
-              <li>
-                <Typography
-                  // component={Link}
-                  sx={{ color: "inherit", textDecoration: "none" }}
-                  // href={`/gendox/document-instance/?organizationId=${organizationId}&documentId=${document.id}`}
-                >
-                  {documentAuthor ? documentAuthor.user.name : "Unknown Author"}
-                </Typography>
-              </li>
-              <li>
-                <Typography
-                  sx={{ color: "inherit", textDecoration: "none" }}
-                  // component={Link}
-                  // href={`/gendox/document-instance/?organizationId=${organizationId}&documentId=${document.id}`}
-                >
-                  {documentAuthor
-                    ? documentAuthor.user.email
-                    : "Unknown E-mail"}
-                </Typography>
-              </li>
-            </Box>
-
-            <Typography
-              // component={Link}
-              // href={`/gendox/document-instance/?organizationId=${organizationId}&documentId=${document.id}`}
-              sx={{
-                mt: "auto",
-                textDecoration: "none",
-                // "&:hover": { color: "primary.main" },
-              }}
-            >
-              {`Created ${relativeDate}`}
-            </Typography>
-          </Box>
-        </Grid>
-      );
-    });
+  const toggleViewMode = (mode) => {
+    setViewMode(mode);
   };
 
   return (
-    <Grid container spacing={6}>
-      {renderDocuments()}
-      {documents.length > 3 && (
-        <Grid item xs={12} style={{ textAlign: "center" }}>
-          <Divider
+    <StyledCardContent
+      sx={{
+        backgroundColor: "action.hover",
+        filter: isBlurring ? "blur(6px)" : "none",
+        transition: "filter 0.3s ease",
+      }}
+    >
+      {/* Header Section */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: documents.length ? 4 : 0, // Add margin only if documents exist
+        }}
+      >
+        <Typography variant="h5" sx={{ fontWeight: 600, textAlign: "left" }}>
+          Recent Documents
+        </Typography>
+        {documents.length > 0 && (
+          <Box
             sx={{
-              my: (theme) => {
-                theme.spacing(3);
-              },
+              display: "flex",
+              gap: 2,
             }}
-          />
-          <Tooltip title={showAll ? "Show Less" : "Show More"}>
-            <IconButton onClick={toggleShowAll} sx={{ color: "primary.main" }} >
-              <Icon
-                icon={showAll ? "mdi:chevron-up" : "mdi:chevron-down"}
-                
-              />
-            </IconButton>
-          </Tooltip>
-        </Grid>
+          >
+            <Tooltip title="Grid View">
+              <IconButton
+                onClick={() => toggleViewMode("grid")}
+                color={viewMode === "grid" ? "primary" : "default"}
+                sx={{ fontSize: "3rem" }}
+              >
+                <Icon icon="mdi:view-grid-outline" fontSize="inherit" />
+              </IconButton>
+            </Tooltip>
+            {!isMobile && (
+              <Tooltip title="List View">
+                <IconButton
+                  onClick={() => toggleViewMode("list")}
+                  color={viewMode === "list" ? "primary" : "default"}
+                  sx={{ fontSize: "3rem" }}
+                >
+                  <Icon icon="mdi:view-list-outline" fontSize="inherit" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
+        )}
+      </Box>
+
+      {viewMode === "grid" ? (
+        <DocumentsGrid
+          documents={documents}
+          showAll={showAll}
+          setShowAll={setShowAll}
+          page={currentPage}
+        />
+      ) : (
+        <DocumentsList documents={documents} page={currentPage} />
       )}
-    </Grid>
+
+      {showAll && (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            mt: 4,
+          }}
+        >
+          <Button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 0}
+            sx={{ mr: 2 }}
+          >
+            Previous
+          </Button>
+          <Typography sx={{ mt: 1.5 }}>{`Page ${
+            currentPage + 1
+          } of ${totalPages}`}</Typography>
+          <Button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages - 1}
+            sx={{ ml: 2 }}
+          >
+            Next
+          </Button>
+        </Box>
+      )}
+
+      {/* Empty State */}
+      {!documents.length && (
+        <Typography
+          variant="body2"
+          sx={{ textAlign: "center", mt: 40, color: "text.secondary" }}
+        >
+          No documents available. Please create or upload new documents.
+        </Typography>
+      )}
+    </StyledCardContent>
   );
 };
 

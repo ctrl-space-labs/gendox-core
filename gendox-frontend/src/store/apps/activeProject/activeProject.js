@@ -1,17 +1,27 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import projectService from "src/gendox-sdk/projectService";
+import documentService from "src/gendox-sdk/documentService";
 
 export const fetchProject = createAsyncThunk(
   "activeProject/fetchProject",
   async ({ organizationId, projectId, storedToken }, thunkAPI) => {
     try {
-      const projectPromise = projectService.getProjectById(organizationId, projectId, storedToken);
-      const membersPromise = projectService.getProjectMembers(organizationId, projectId, storedToken);
+      const projectPromise = projectService.getProjectById(
+        organizationId,
+        projectId,
+        storedToken
+      );
+      const membersPromise = projectService.getProjectMembers(
+        organizationId,
+        projectId,
+        storedToken
+      );
 
-  
       // Use Promise.all to wait for both promises to resolve
-      const [projectData, membersData] = await Promise.all([projectPromise, membersPromise]);
-
+      const [projectData, membersData] = await Promise.all([
+        projectPromise,
+        membersPromise,
+      ]);
 
       // console.log("projectData", projectData.data);
       // console.log("membersData", membersData.data);
@@ -24,11 +34,28 @@ export const fetchProject = createAsyncThunk(
   }
 );
 
+export const fetchProjectDocuments = createAsyncThunk(
+  "activeProject/fetchProjectDocuments",
+  async ({ organizationId, projectId, storedToken, page }, thunkAPI) => {
+    try {
+      const response = await documentService.getDocumentByProject(
+        organizationId,
+        projectId,
+        storedToken,
+        page
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response.data);
+    }
+  }
+);
 
 // Define the initial state
 const initialActiveProjectState = {
   projectDetails: {},
-  projectMembers: [], 
+  projectMembers: [],
+  projectDocuments: { content: [], totalPages: 0 },
   error: null,
 };
 
@@ -49,6 +76,19 @@ const activeProjectSlice = createSlice({
         state.projectMembers = action.payload.members;
       })
       .addCase(fetchProject.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+
+      .addCase(fetchProjectDocuments.pending, (state) => {
+        state.isBlurring = true;
+        state.error = null;
+      })
+      .addCase(fetchProjectDocuments.fulfilled, (state, action) => {
+        state.isBlurring = false;
+        state.projectDocuments = action.payload;
+      })
+      .addCase(fetchProjectDocuments.rejected, (state, action) => {
+        state.isBlurring = false;
         state.error = action.payload;
       });
   },
