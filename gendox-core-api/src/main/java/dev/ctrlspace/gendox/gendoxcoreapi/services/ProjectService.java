@@ -41,7 +41,6 @@ public class ProjectService {
     private AuditLogsService auditLogsService;
 
 
-
     @Autowired
     public ProjectService(ProjectRepository projectRepository,
                           ProjectAgentService projectAgentService,
@@ -152,7 +151,7 @@ public class ProjectService {
                 continue;
             }
 
-            if  (projectMember.getUser().getEmail() == null &&
+            if (projectMember.getUser().getEmail() == null &&
                     projectMember.getUser().getName() == null &&
                     projectMember.getUser().getUserType() == null) {
                 continue;
@@ -171,7 +170,7 @@ public class ProjectService {
                 );
             }
 //        }
-            }
+        }
 
         // Delete other associated data
         projectMemberService.deleteAllProjectMembers(project);
@@ -197,7 +196,6 @@ public class ProjectService {
 
 
     }
-
 
 
 }
