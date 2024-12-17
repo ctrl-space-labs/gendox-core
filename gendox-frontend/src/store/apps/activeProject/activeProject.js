@@ -1,6 +1,8 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import projectService from "src/gendox-sdk/projectService";
 import documentService from "src/gendox-sdk/documentService";
+import { getErrorMessage } from "src/utils/errorHandler";
+import toast from "react-hot-toast";
 
 export const fetchProject = createAsyncThunk(
   "activeProject/fetchProject",
@@ -21,14 +23,12 @@ export const fetchProject = createAsyncThunk(
       const [projectData, membersData] = await Promise.all([
         projectPromise,
         membersPromise,
-      ]);
-
-      // console.log("projectData", projectData.data);
-      // console.log("membersData", membersData.data);
+      ]);      
 
       // Return combined data
       return { project: projectData.data, members: membersData.data };
     } catch (error) {
+      toast.error(`Failed to fetch projects. Error: ${getErrorMessage(error)}`);
       return thunkAPI.rejectWithValue(error.response.data);
     }
   }
@@ -45,7 +45,8 @@ export const fetchProjectDocuments = createAsyncThunk(
         page
       );
       return response.data;
-    } catch (error) {
+    } catch (error) {      
+      console.error("Failed to fetch project documents", error);
       return thunkAPI.rejectWithValue(error.response.data);
     }
   }

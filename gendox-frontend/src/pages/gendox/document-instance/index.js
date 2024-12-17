@@ -22,6 +22,8 @@ import authConfig from "src/configs/auth";
 import SectionCard from "src/views/gendox-components/documents-components/SectionCard";
 import SectionEdit from "src/views/gendox-components/documents-components/SectionEdit";
 import documentService from "src/gendox-sdk/documentService";
+import { getErrorMessage } from "src/utils/errorHandler";
+
 
 const DocumentSections = () => {
   const dispatch = useDispatch();
@@ -199,8 +201,8 @@ const DocumentSections = () => {
 
       toast.success("New Document Section created successfully");
     } catch (error) {
+      toast.error(`Document Section did not create. Error: ${getErrorMessage(error)}`);
       console.error("Error creating new section", error);
-      toast.error("Failed to create new Document Section");
     }
   };
 

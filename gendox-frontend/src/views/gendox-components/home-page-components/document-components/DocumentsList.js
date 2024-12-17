@@ -15,6 +15,7 @@ import { formatDocumentTitle } from "src/utils/documentUtils";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/router";
 import { fetchProjectDocuments } from "src/store/apps/activeProject/activeProject";
+import { getErrorMessage } from "src/utils/errorHandler";
 import toast from "react-hot-toast";
 import authConfig from "src/configs/auth";
 
@@ -103,7 +104,7 @@ const DocumentsList = ({ documents, page }) => {
         );
       } catch (error) {
         console.error("Failed to delete document:", error);
-        toast.error("Failed to delete document.");
+        toast.error(`Document deletion failed. Error: ${getErrorMessage(error)}`);
         setSelectedDocument(null);
         setIsBlurring(false);
       }

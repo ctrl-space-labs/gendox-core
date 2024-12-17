@@ -1,5 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import documentService from "src/gendox-sdk/documentService";
+import { getErrorMessage } from "src/utils/errorHandler";
+import toast from "react-hot-toast";
 
 // Define an async thunk for fetching an organization by ID
 export const fetchDocument = createAsyncThunk(
@@ -22,6 +24,7 @@ export const fetchDocument = createAsyncThunk(
       );
       return { document: documentData.data, sections: orderedSections };
     } catch (error) {
+      toast.error(`Failed to fetch Documents. Error: ${getErrorMessage(error)}`);
       return thunkAPI.rejectWithValue(error.response.data);
     }
   }
@@ -39,6 +42,7 @@ export const updateSectionsOrder = createAsyncThunk(
       );
       return updatedSectionPayload; // Return the updated sections order
     } catch (error) {
+      toast.error(`Sections order update failed. Error: ${getErrorMessage(error)}`);
       return thunkAPI.rejectWithValue(error.response.data);
     }
   }

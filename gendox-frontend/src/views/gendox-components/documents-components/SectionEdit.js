@@ -13,6 +13,8 @@ import {
 } from "src/store/apps/activeDocument/activeDocument";
 import EditorConverToMarkdown from "src/views/gendox-components/documents-components/EditorConverToMarkdown";
 import { markdownToDraft } from 'markdown-draft-js';
+import { getErrorMessage } from "src/utils/errorHandler";
+
 
 const SectionEdit = ({ section, isMinimized }) => {
   const router = useRouter();
@@ -34,10 +36,6 @@ const SectionEdit = ({ section, isMinimized }) => {
   // const initialContent = EditorState.createWithContent(
   //   convertFromRaw(contentState)
   // );
-
-  // console.log("initialContent", initialContent);
-  // console.log("contentState", contentState);
-  // console.log("markdownContent", markdownContent);
 
   const initialContent = EditorState.createWithContent(
     ContentState.createFromText(section.sectionValue || "")
@@ -86,8 +84,8 @@ const SectionEdit = ({ section, isMinimized }) => {
         }
       );
     } catch (error) {
+      toast.error(`Document Section deletion failed. Error: ${getErrorMessage(error)}`);
       console.error("Error deleting section", error);
-      toast.error("Failed to delete Document Section");
     }
     setConfirmDelete(false);
   };
@@ -115,7 +113,7 @@ const SectionEdit = ({ section, isMinimized }) => {
     const updatedSectionPayload = {
       ...activeSection,
       sectionValue: sectionValue.getCurrentContent().getPlainText() ,
-      documentDTO: document,
+      documentInstanceDTO: document,
       documentSectionMetadata: {
         ...activeSection.documentSectionMetadata,
         title: sectionTitle,

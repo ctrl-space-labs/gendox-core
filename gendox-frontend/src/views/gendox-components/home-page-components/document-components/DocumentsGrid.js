@@ -19,6 +19,7 @@ import { fetchProjectDocuments } from "src/store/apps/activeProject/activeProjec
 import { formatDocumentTitle } from "src/utils/documentUtils";
 import authConfig from "src/configs/auth";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "src/utils/errorHandler";
 
 const DocumentsGrid = ({ documents, showAll, setShowAll, page }) => {  
   const dispatch = useDispatch();
@@ -31,9 +32,6 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, page }) => {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isBlurring, setIsBlurring] = useState(false);
-
-  console.log("DocumentsGrid -> documents", documents);
-
 
   useEffect(() => {
     setShowAll(false);
@@ -85,7 +83,7 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, page }) => {
       );
     } catch (error) {
       console.error("Failed to delete document:", error);
-      toast.error("Failed to delete document.");      
+      toast.error(`Document deletion failed. Error: ${getErrorMessage(error)}`);
       setSelectedDocument(null);
       setIsBlurring(false);
     }
