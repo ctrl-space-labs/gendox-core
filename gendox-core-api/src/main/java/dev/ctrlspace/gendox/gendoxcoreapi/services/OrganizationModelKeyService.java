@@ -147,7 +147,7 @@ public class OrganizationModelKeyService {
 
 
         // validate that the default key is used only for free and standard model tiers
-        var modelTierNames = List.of("FREE_MODEL", "STANDARD_MODEL");
+        var modelTierNames = List.of("FREE_MODEL");
         if (!modelTierNames.contains(model.getModelTierType().getName())) {
             throw new GendoxException("MISSING_API_KEY_FOR_MODEL_TIER", "You need to provide your " + model.getAiModelProvider().getDescription() + " API key to use model " + model.getModel() , HttpStatus.BAD_REQUEST);
         }
