@@ -175,6 +175,7 @@ public class ProjectController {
         existingProject.setProjectAgent(projectAgentService.updateProjectAgent(project.getProjectAgent()));
         existingProject.setAutoTraining(project.getAutoTraining());
         project = projectService.updateProject(existingProject);
+        userService.evictUserProfileByUniqueIdentifier(securityUtils.getUserIdentifier());
 
         return project;
 

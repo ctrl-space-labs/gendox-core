@@ -96,7 +96,7 @@ const InformationGeneralOrganizationSettings = () => {
       console.log("Organization Update successful", response);
       setOpenSnackbar(true);
       const path = `/gendox/organization-settings/?organizationId=${response.data.id}`;
-      router.push(path);
+      router.reload(path);
     } catch (error) {
       console.error("Failed to update Organization", error);
     }
@@ -163,6 +163,9 @@ const InformationGeneralOrganizationSettings = () => {
                 label="Name"
                 value={name}
                 onChange={handleNameChange}
+                InputLabelProps={{
+                  shrink: true,
+                }}
               />
             </Grid>
 
@@ -173,6 +176,9 @@ const InformationGeneralOrganizationSettings = () => {
                 label="Display Name"
                 value={displayName}
                 onChange={handleDisplayNameChange}
+                InputLabelProps={{
+                  shrink: true,
+                }}
               />
             </Grid>
 
@@ -183,6 +189,9 @@ const InformationGeneralOrganizationSettings = () => {
                 label="Address"
                 value={address}
                 onChange={handleAddressChange}
+                InputLabelProps={{
+                  shrink: true,
+                }}
               />
             </Grid>
 
@@ -193,6 +202,9 @@ const InformationGeneralOrganizationSettings = () => {
                 label="Phone"
                 value={phone}
                 onChange={handlePhoneChange}
+                InputLabelProps={{
+                  shrink: true,
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={6}></Grid>

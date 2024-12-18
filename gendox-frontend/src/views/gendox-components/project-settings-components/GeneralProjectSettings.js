@@ -84,7 +84,7 @@ const GeneralProjectSettings = () => {
       console.log("Update successful", response);
       setOpenSnackbar(true);
       const path = `/gendox/project-settings/?organizationId=${project.organizationId}&projectId=${project.id}`;
-      router.push(path);
+      router.reload(path);
     } catch (error) {
       console.error("Failed to update project", error);
       setError("Failed to update project: " + error.message);
@@ -174,6 +174,9 @@ const GeneralProjectSettings = () => {
                 label="Name"
                 value={name}                
                 onChange={handleNameChange}
+                InputLabelProps={{
+                  shrink: true,
+                }}
               />
             </Grid>
 
@@ -225,6 +228,9 @@ const GeneralProjectSettings = () => {
                 id="project-description"
                 value={description}
                 onChange={handleDescriptionChange}
+                InputLabelProps={{
+                  shrink: true,
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={6}></Grid>
