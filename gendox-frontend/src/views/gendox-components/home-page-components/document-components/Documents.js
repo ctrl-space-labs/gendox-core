@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
+import CardContent from "@mui/material/CardContent";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import Icon from "src/@core/components/icon";
@@ -30,7 +31,7 @@ const Documents = () => {
 
   const [viewMode, setViewMode] = useState("grid");
   const [currentPage, setCurrentPage] = useState(0);
-  const [showAll, setShowAll] = useState(false); 
+  const [showAll, setShowAll] = useState(false);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -74,7 +75,7 @@ const Documents = () => {
     setViewMode(mode);
   };
 
-  return (
+  return projectId && projectId !== "null" ? (
     <StyledCardContent
       sx={{
         backgroundColor: "action.hover",
@@ -174,6 +175,35 @@ const Documents = () => {
         </Typography>
       )}
     </StyledCardContent>
+  ) : (
+    <CardContent
+      sx={{
+        display: "flex",
+        textAlign: "center",
+        alignItems: "center",
+        flexDirection: "column",
+        backgroundSize: "cover",
+        py: (theme) => `${theme.spacing(25)} !important`,
+        backgroundImage: (theme) =>
+          `url(/images/pages/pages-header-bg-${theme.palette.mode}.png)`,
+      }}
+    >
+      <Typography
+        variant="h5"
+        sx={{
+          fontWeight: 600,
+          fontSize: "1.5rem !important",
+          color: "primary.main",
+        }}
+      >
+        Hello, would you like to create a new document?
+      </Typography>
+      <Box mt={10}>
+        <Typography variant="body2">
+          or choose an action from the buttons above
+        </Typography>
+      </Box>
+    </CardContent>
   );
 };
 
