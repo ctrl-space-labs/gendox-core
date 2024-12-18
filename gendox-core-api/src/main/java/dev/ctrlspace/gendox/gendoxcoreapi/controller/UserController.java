@@ -121,6 +121,13 @@ public class UserController {
         return "User logged out successfully.";
     }
 
+    @PostMapping("users/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void userLogout(Authentication authentication) {
+        String userIdentifier = ((UserProfile) authentication.getPrincipal()).getEmail();
+        userService.evictUserProfileByUniqueIdentifier(userIdentifier);
+    }
+
     // TODO this is just for demo purposes, need to be rewrite
 //    @GetMapping("/users/login")
 //    @Operation(summary = "Get users token by email or user name",
