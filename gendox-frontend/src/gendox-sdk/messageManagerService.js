@@ -101,6 +101,43 @@ class MessageManagerService {
     removeTrustedOrigin(origin) {
         this.trustedOrigins.delete(origin);
     }
+
+    /**
+     * Sends a request and listens for responses of a certain type for a given timeout.
+     *
+     * @param {string} requestType - The type of the request message to send.
+     * @param {string} responseType - The type of the response messages to listen for.
+     * @param {object} requestPayload - The payload to include in the request.
+     * @param {number} [timeout=100] - How long to wait (in ms) for response messages.
+     * @returns {Promise<Array>} A promise that resolves to an array of response payloads collected during the timeout period.
+     */
+    async fetchResponses(requestType, responseType, requestPayload, timeout = 100) {
+        const collectedResponses = [];
+
+        // Handler for collecting responses
+        const responseHandler = (event) => {
+            if (event.type === responseType) {
+                collectedResponses.push(event.payload);
+            }
+        };
+
+        // Send the request message
+        this.sendMessage({
+            type: requestType,
+            payload: requestPayload,
+        });
+
+        // Add the temporary handler
+        this.addHandler(responseHandler);
+
+        // Wait for the specified timeout
+        await new Promise((resolve) => setTimeout(resolve, timeout));
+
+        // Remove the handler
+        this.removeHandler(responseHandler);
+
+        return collectedResponses;
+    }
 }
 
 export default MessageManagerService;

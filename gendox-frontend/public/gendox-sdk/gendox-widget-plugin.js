@@ -85,6 +85,21 @@
             }
         };
 
+        const handleLocalContextSelectedText = function(event) {
+            if (event.data && event.data.type === 'gendox.events.chat.message.context.local.request') {
+                gatherSelectedText((selectedText) => {
+                    const message = {
+                        type: "gendox.events.chat.message.context.local.response",
+                        payload: {
+                            context_type: "selected_text",
+                            value: selectedText
+                        }
+                    };
+                    iframeWindow.contentWindow.postMessage(message, gendoxSrc);
+                }, true);
+            }
+        }
+
         function handleChatWindowToggleMessage(event) {
 
             if (event.origin !== gendoxSrc) {
@@ -108,9 +123,12 @@
 
         window.addEventListener('message', handleChatWindowToggleMessage, false);
         window.addEventListener('message', handleInitializationRequestMessage);
+        window.addEventListener('message', handleLocalContextSelectedText);
 
         window.onunload = function() {
             window.removeEventListener('message', handleInitializationRequestMessage);
+            window.removeEventListener('message', handleChatWindowToggleMessage);
+            window.removeEventListener('message', handleLocalContextSelectedText);
         };
     }
 
@@ -137,7 +155,6 @@
             }
 
             initializeChat(config);
-            setupSelectionListeners();
         }
 
         // Check if DOM is already loaded
@@ -165,10 +182,10 @@
 
 
     // Event handlers must be named or saved in variables to allow removal
-    const onMouseUp = () => finalizeSelection();
+    const onMouseUp = () => gatherSelectedText((text) => console.log("Selected Text:", text), false);;
     const onKeyUp = (event) => {
         if (event.key === "Shift" || event.key.startsWith("Arrow")) {
-            finalizeSelection();
+            gatherSelectedText((text) => console.log("Selected Text:", text), false);
         }
     };
 
@@ -190,9 +207,11 @@
 
 
     /**
-     * Finalizes the selection process and processes the selected text.
+     * Gathers the selected text and passes it to the callback function.
+     * @param {Function} handleTextCallback - The callback function to pass the selected text to.
+     * @param {boolean} simpleText - Whether to extract simple text or clean HTML.
      */
-    function finalizeSelection() {
+    function gatherSelectedText(handleTextCallback, simpleText) {
         // Delay by 1 ms. This has been added because if you clear the selection by clicking on the selected text,
         // it keeps the selection until the next event loop.
         // TODO: This is a workaround and may not work in all cases.
@@ -205,14 +224,15 @@
                 return;
             }
 
-            const selectedText = getSelectedText(selection);
             const extendedRange = getExpandedSelectedRange(selection);
-            const extendedText = getTextFromRange(extendedRange);
-            const cleanHTML = getCleanHTMLFromRange(extendedRange);
+            let selectedText;
+            if (simpleText) {
+                selectedText = getTextFromRange(extendedRange);
+            } else {
+                selectedText = getCleanHTMLFromRange(extendedRange);
+            }
 
-            console.log("Selected Text:", selectedText);
-            console.log("Extended Selection (Whole Words):", extendedText);
-            console.log("Cleaned Selection HTML:", cleanHTML);
+            handleTextCallback(selectedText);
         }, 1);
 
     }

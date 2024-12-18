@@ -146,7 +146,7 @@ export const sendMsg = createAsyncThunk(
       }
 
       const { projectId, threadId, userId } = obj.contact;
-      const { message } = obj;
+      const { message, iFrameMessageManager } = obj;
 
       // Chat append string
       dispatch(
@@ -157,11 +157,28 @@ export const sendMsg = createAsyncThunk(
         })
       );
 
+      // sending PostMessage notification
+      iFrameMessageManager.messageManager.sendMessage({
+        type: 'gendox.events.chat.message.new.sending',
+        payload: { message },
+      });
+
+      let chatLocalContextResponses = await iFrameMessageManager.messageManager.fetchResponses(
+          "gendox.events.chat.message.context.local.request",
+      "gendox.events.chat.message.context.local.response",
+          {},
+          100);
+
+      //TODO improve this
+      let appendedMessage = "Browser Context:\n" + chatLocalContextResponses.map((res) => res.value).join('\n\n') + message;
+
+
+
       // Send the message to the server
       const response = await completionService.postCompletionMessage(
         projectId,
         threadId,
-        message,
+          appendedMessage,
         storedToken
       );
 
