@@ -114,6 +114,8 @@ const UploaderDocument = ({ closeUploader }) => {
     setAlertOpen(true);
     setFiles([]);
     closeUploader();
+
+    router.reload(); 
   };
 
   const renderFilePreview = (file) => {
