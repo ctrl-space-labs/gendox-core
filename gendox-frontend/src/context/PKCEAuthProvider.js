@@ -9,8 +9,7 @@ import { userDataActions } from "src/store/apps/userData/userData";
 import { fetchOrganization } from "src/store/apps/activeOrganization/activeOrganization";
 import { fetchProject } from "src/store/apps/activeProject/activeProject";
 import userManager from "src/services/authService";
-import {AuthContext} from "./AuthContext";
-
+import { AuthContext } from "./AuthContext";
 
 const PKCEAuthProvider = ({ children, defaultProvider }) => {
   const [user, setUser] = useState(defaultProvider.user);
@@ -30,7 +29,11 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
   const handleLogin = (returnUrl) => {
     let args = {};
     if (returnUrl) {
-      args = { redirect_uri: `${authConfig.oidcConfig.redirect_uri}?returnUrl=${encodeURIComponent(returnUrl)}` };
+      args = {
+        redirect_uri: `${
+          authConfig.oidcConfig.redirect_uri
+        }?returnUrl=${encodeURIComponent(returnUrl)}`,
+      };
     }
     userManager.signinRedirect(args);
   };
@@ -51,15 +54,15 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
     window.localStorage.removeItem(authConfig.oidcConfig);
   };
 
-  const loadUser = (user) => {    
+  const loadUser = (user) => {
     setAuthState({ user, isLoading: false });
   };
 
-  const unloadUser = () => {    
+  const unloadUser = () => {
     setAuthState({ user: null, isLoading: false });
   };
 
-  const removeUser = () => {    
+  const removeUser = () => {
     // Here you can clear your application's session and redirect the user to the login page
     userManager.removeUser();
   };
@@ -68,11 +71,12 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
     userManager.getUser().then((user) => {
       if (user && !user.expired) {
         setAuthState({ user, isLoading: false });
-      } else  {   // no user data found or user expired, loadUserProfileFromAuthState will handle cleanup
+      } else {
+        // no user data found or user expired, loadUserProfileFromAuthState will handle cleanup
         console.log("initAuthOIDC - user is null or expired: ", user);
         setAuthState({ user: null, isLoading: false });
       }
-    });    
+    });
 
     // Adding an event listener for when new user data is loaded
     userManager.events.addUserLoaded(loadUser);
@@ -88,12 +92,12 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
 
   const loadUserProfileFromAuthState = async (authState) => {
     if (authState.isLoading) {
-        return;
+      return;
     }
     setLoading(true);
     if (!authState.user || authState.user === null) {
       setLoading(false);
-      clearAuthState();      
+      clearAuthState();
       return;
     }
     let user = authState.user;
@@ -106,63 +110,65 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
     window.localStorage.setItem(
       authConfig.onTokenExpiration,
       user.refresh_token
-    );
-
-    // Fetch user data from getProfile
+    );    
     setLoading(true);
-    await axios
-      .get(apiRequests.getProfile, {
+    try {
+      const userDataResponse = await axios.get(apiRequests.getProfile, {
         headers: {
           "Content-Type": "application/json",
           Authorization: "Bearer " + user.access_token,
         },
-      })
-      .then(async (userDataResponse) => {
-        // Add 'role': 'admin' to the userDataResponse.data object
-        userDataResponse.data.role = "admin";
-        setUser(userDataResponse.data);
-        window.localStorage.setItem(
-          authConfig.user,
-          JSON.stringify(userDataResponse.data)
-        );
-
-        // Store userData, actives project and organization
-        dispatch(userDataActions.getUserData(userDataResponse.data));
-        dispatch(
-          fetchOrganization({
-            organizationId: userDataResponse.data.organizations[0].id,
-            storedToken: user.access_token,
-          })
-        );
-        dispatch(
-          fetchProject({
-            organizationId: userDataResponse.data.organizations[0].id,
-            projectId: userDataResponse.data.organizations[0].projects[0].id,
-            storedToken: user.access_token,
-          })
-        );
-
-        window.localStorage.setItem(
-          authConfig.selectedOrganizationId,
-          userDataResponse.data.organizations[0].id
-        );
-        window.localStorage.setItem(
-          authConfig.selectedProjectId,
-          userDataResponse.data.organizations[0].projects[0].id
-        );
-
-        setLoading(false);
-      })
-
-      .catch((userDataError) => {
-        setLoading(false);
-        console.error(
-          "Error occurred while fetching user data:",
-          userDataError
-        );        
       });
 
-    setLoading(false);
+      // Add 'role': 'admin' to the userDataResponse.data object
+      userDataResponse.data.role = "admin";
+      setUser(userDataResponse.data);
+      window.localStorage.setItem(
+        authConfig.user,
+        JSON.stringify(userDataResponse.data)
+      );
+
+      // Safely handle organization and project data
+      const organizationId =
+        userDataResponse.data.organizations?.[0]?.id || null;
+      const projectId =
+        userDataResponse.data.organizations?.[0]?.projects?.[0]?.id || null;
+
+      if (organizationId) {
+        window.localStorage.setItem(
+          authConfig.selectedOrganizationId,
+          organizationId
+        );
+        dispatch(
+          fetchOrganization({
+            organizationId,
+            storedToken: user.access_token,
+          })
+        );
+      } else {
+        console.warn("Organization ID is missing.");
+      }
+
+      if (projectId) {
+        window.localStorage.setItem(authConfig.selectedProjectId, projectId);
+        dispatch(
+          fetchProject({
+            organizationId,
+            projectId,
+            storedToken: user.access_token,
+          })
+        );
+      } else {
+        console.warn("Project ID is missing.");
+      }
+
+      // Store userData in Redux
+      dispatch(userDataActions.getUserData(userDataResponse.data));
+    } catch (userDataError) {
+      console.error("Error occurred while fetching user data:", userDataError);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -176,7 +182,6 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
 
   useEffect(() => {
     if (user && router.pathname.includes("oidc-callback")) {
-
       let homeUrl = "/gendox/home";
 
       //oidc-callback might contain a returnUrl query param to redirect to after login,
@@ -195,7 +200,6 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
     const storedToken = window.localStorage.getItem(
       authConfig.storageTokenKeyName
     );
-    
 
     if (user && user.organizations) {
       const updatedActiveOrganization = user.organizations.find(
@@ -230,7 +234,6 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
         }
       }
     }
-    
   }, [user, router]);
 
   const values = {

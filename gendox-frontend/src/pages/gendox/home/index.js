@@ -17,6 +17,8 @@ import { StyledCardContent } from "src/utils/styledCardsContent";
 const GendoxHome = () => {
   const router = useRouter();
   const { organizationId, projectId } = router.query;
+  console.log("organizationId", organizationId);
+  console.log("projectId", projectId);
 
   const project = useSelector((state) => state.activeProject.projectDetails);
   useRedirectOr404ForHome(organizationId, projectId);
