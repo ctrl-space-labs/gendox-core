@@ -77,21 +77,21 @@
 
         console.log("gendoxContainerId: ", gendoxContainerId);
 
-        const messageListener = function(event) {
+        const handleInitializationRequestMessage = function(event) {
             if (event.data && event.data.type === 'gendox.events.initialization.request') {
                 const message = { type: "gendox.events.initialization.response", page: "..." };
-                iframeWindow.contentWindow.postMessage(message, "*");
+                iframeWindow.contentWindow.postMessage(message, gendoxSrc);
                 console.log('Received message from iframe', event.data);
             }
         };
 
-        function handleIframeMessage(event) {
+        function handleChatWindowToggleMessage(event) {
 
             if (event.origin !== gendoxSrc) {
                 return;
             }
 
-            if (event.data && event.data.type === 'GENDOX_EVENTS_EMBEDDED_CHAT_TOGGLE_ACTION') {
+            if (event.data && event.data.type === 'gendox.events.embedded.chat.toggle.action') {
                 const isOpen = event.data.data.isOpen;
                 if (isOpen) {
                     console.log("Opening chat window");
@@ -106,11 +106,11 @@
             }
         }
 
-        window.addEventListener('message', handleIframeMessage, false);
-        window.addEventListener('message', messageListener);
+        window.addEventListener('message', handleChatWindowToggleMessage, false);
+        window.addEventListener('message', handleInitializationRequestMessage);
 
         window.onunload = function() {
-            window.removeEventListener('message', messageListener);
+            window.removeEventListener('message', handleInitializationRequestMessage);
         };
     }
 

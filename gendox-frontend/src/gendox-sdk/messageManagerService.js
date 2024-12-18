@@ -1,3 +1,30 @@
+/**
+ * The `MessageManagerService` class is used to manage message communication between iframes and their parent windows.
+ *
+ * In General upon initialization you provide:
+ * - A target origin to send messages to.
+ * - A list of trusted origins to accept messages from. (usually just 1, the parent window that embeds the Gendox iframe)
+ *
+ * Other components send messages by using the `MessageManagerService#sendMessage`
+ * by providing the message and optionally the target origin.
+ *
+ * Other components can add message handlers using `MessageManagerService#addHandler`.
+ * All messages receive from the trusted origins are passed to the handlers.
+ * A handler needs to check if the message is intended for it by checking the message type. eg.
+ * ```
+ * const handler = (message) => {
+ *    if (message.type !== 'gendox.events.example.message.type') {
+ *      // else ignore the message
+ *      return;
+ *    }
+ *    // handle the message
+ * }
+ * ```
+ *
+ * !!! Note: upon destruction of the component that uses the `MessageManagerService`, method `cleanup` should be called to remove the event listeners.
+ *
+ */
+
 class MessageManagerService {
     constructor() {
         this.handlers = [];
