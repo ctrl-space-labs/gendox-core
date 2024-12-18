@@ -152,7 +152,6 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
 
       if (projectId) {
         window.localStorage.setItem(authConfig.selectedProjectId, projectId);
-        console.log("projectId>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", projectId);
         dispatch(
           fetchProject({
             organizationId,
@@ -180,12 +179,11 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
 
   useEffect(() => {
     loadUserProfileFromAuthState(authState);
-  }, [authState, router]);
+  }, [authState]);
 
   useEffect(() => {
     if (user && router.pathname.includes("oidc-callback")) {
       let homeUrl = "/gendox/home";
-
       //oidc-callback might contain a returnUrl query param to redirect to after login,
       // like ../oidc-callback?returnUrl=%2Fgendox%2Fhome....
       const { returnUrl } = router.query;
@@ -222,7 +220,6 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
           (proj) => proj.id === projectId
         );
         if (updatedActiveProject) {
-          console.log("projectId>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>222222222", projectId);
           dispatch(
             fetchProject({
               organizationId: updatedActiveOrganization.id,
@@ -247,6 +244,7 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
     login: handleLogin,
     logout: handleLogout,
     oidcAuthState: authState,
+    loadUserProfileFromAuthState,
   };
 
   return <AuthContext.Provider value={values}>{children}</AuthContext.Provider>;

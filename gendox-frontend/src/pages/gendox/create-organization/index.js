@@ -55,6 +55,7 @@ const CreateOrganization = () => {
         storedToken
       );
       toast.success("Organization created successfully!");
+      await auth.loadUserProfileFromAuthState(auth.oidcAuthState);
       router.push(
         `/gendox/create-project/?organizationId=${response.data.id}`,
       );

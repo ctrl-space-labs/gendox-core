@@ -7,7 +7,6 @@ import toast from "react-hot-toast";
 export const fetchProject = createAsyncThunk(
   "activeProject/fetchProject",
   async ({ organizationId, projectId, storedToken }, thunkAPI) => {
-    console.log("fetchProject-------------------------------------------------------------------> ", projectId);
     try {
       const projectPromise = projectService.getProjectById(
         organizationId,

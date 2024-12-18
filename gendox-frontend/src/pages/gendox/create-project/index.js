@@ -58,6 +58,7 @@ const ProjectCreate = () => {
         storedToken
       );
       toast.success("Project created successfully");
+      await auth.loadUserProfileFromAuthState(auth.oidcAuthState);
       router.push(
         `/gendox/home/?organizationId=${organizationId}&projectId=${response.data.id}`
       );

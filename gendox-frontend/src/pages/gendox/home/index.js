@@ -21,8 +21,6 @@ const GendoxHome = () => {
   const project = useSelector((state) => state.activeProject.projectDetails);
   const isBlurring = useSelector((state) => state.activeProject.isBlurring);
 
-  console.log("GendoxHome -> project", project);
-
   useRedirectOr404ForHome(organizationId, projectId);
 
   const handleSettingsClick = () => {

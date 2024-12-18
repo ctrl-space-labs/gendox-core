@@ -95,12 +95,12 @@ const InformationGeneralOrganizationSettings = () => {
 
   // Handler for deleting organization
   const handleDeleteOrganization = async () => {
+    handleDeleteClose(false);
     try {
       await organizationService.deactivateOrganizationById(
         organization.id,
         storedToken
-      );
-      handleDeleteClose(false);
+      );      
       toast.success("Organization deleted successfully!");
       window.location.href = "/gendox/home";
     } catch (error) {
