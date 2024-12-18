@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 export const fetchProject = createAsyncThunk(
   "activeProject/fetchProject",
   async ({ organizationId, projectId, storedToken }, thunkAPI) => {
+    console.log("fetchProject-------------------------------------------------------------------> ", projectId);
     try {
       const projectPromise = projectService.getProjectById(
         organizationId,
@@ -23,12 +24,12 @@ export const fetchProject = createAsyncThunk(
       const [projectData, membersData] = await Promise.all([
         projectPromise,
         membersPromise,
-      ]);      
+      ]);
 
       // Return combined data
       return { project: projectData.data, members: membersData.data };
     } catch (error) {
-      toast.error(`Failed to fetch projects. Error: ${getErrorMessage(error)}`);
+      console.error("Failed to fetch project", error);
       return thunkAPI.rejectWithValue(error.response.data);
     }
   }
@@ -45,7 +46,7 @@ export const fetchProjectDocuments = createAsyncThunk(
         page
       );
       return response.data;
-    } catch (error) {      
+    } catch (error) {
       console.error("Failed to fetch project documents", error);
       return thunkAPI.rejectWithValue(error.response.data);
     }
@@ -70,13 +71,16 @@ const activeProjectSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchProject.pending, (state) => {
+        state.isBlurring = true;
         state.error = null;
       })
       .addCase(fetchProject.fulfilled, (state, action) => {
+        state.isBlurring = false;
         state.projectDetails = action.payload.project;
         state.projectMembers = action.payload.members;
       })
       .addCase(fetchProject.rejected, (state, action) => {
+        state.isBlurring = false;
         state.error = action.payload;
       })
 

@@ -58,8 +58,8 @@ const ProjectCreate = () => {
         storedToken
       );
       toast.success("Project created successfully");
-      router.reload(
-        `/gendox/project-settings/?organizationId=${organizationId}&projectId=${response.data.id}`
+      router.push(
+        `/gendox/home/?organizationId=${organizationId}&projectId=${response.data.id}`
       );
     } catch (error) {
       toast.error(`Project did not create. Error: ${getErrorMessage(error)}`);

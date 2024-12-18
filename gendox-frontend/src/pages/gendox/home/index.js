@@ -17,10 +17,12 @@ import { StyledCardContent } from "src/utils/styledCardsContent";
 const GendoxHome = () => {
   const router = useRouter();
   const { organizationId, projectId } = router.query;
-  console.log("organizationId", organizationId);
-  console.log("projectId", projectId);
 
   const project = useSelector((state) => state.activeProject.projectDetails);
+  const isBlurring = useSelector((state) => state.activeProject.isBlurring);
+
+  console.log("GendoxHome -> project", project);
+
   useRedirectOr404ForHome(organizationId, projectId);
 
   const handleSettingsClick = () => {
@@ -49,7 +51,9 @@ const GendoxHome = () => {
                 flexGrow: 1,
                 display: "flex",
                 flexDirection: "column",
-              }}
+                filter: isBlurring ? "blur(6px)" : "none",
+                transition: "filter 0.3s ease",
+              }}              
             >
               <Typography
                 variant="h4"

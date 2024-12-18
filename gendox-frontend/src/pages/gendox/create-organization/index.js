@@ -56,7 +56,7 @@ const CreateOrganization = () => {
       );
       toast.success("Organization created successfully!");
       router.push(
-        `/gendox/home/?organizationId=${response.data.id}&projectId=null`
+        `/gendox/create-project/?organizationId=${response.data.id}`,
       );
       console.log("Organization created successfully!", response);
     } catch (error) {

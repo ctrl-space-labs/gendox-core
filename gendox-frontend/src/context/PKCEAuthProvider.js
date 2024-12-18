@@ -110,7 +110,8 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
     window.localStorage.setItem(
       authConfig.onTokenExpiration,
       user.refresh_token
-    );    
+    );
+     
     setLoading(true);
     try {
       const userDataResponse = await axios.get(apiRequests.getProfile, {
@@ -151,6 +152,7 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
 
       if (projectId) {
         window.localStorage.setItem(authConfig.selectedProjectId, projectId);
+        console.log("projectId>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", projectId);
         dispatch(
           fetchProject({
             organizationId,
@@ -178,7 +180,7 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
 
   useEffect(() => {
     loadUserProfileFromAuthState(authState);
-  }, [authState]);
+  }, [authState, router]);
 
   useEffect(() => {
     if (user && router.pathname.includes("oidc-callback")) {
@@ -220,6 +222,7 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
           (proj) => proj.id === projectId
         );
         if (updatedActiveProject) {
+          console.log("projectId>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>222222222", projectId);
           dispatch(
             fetchProject({
               organizationId: updatedActiveOrganization.id,
