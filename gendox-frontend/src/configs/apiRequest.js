@@ -165,5 +165,7 @@ export default {
   deleteOrganizationWebSite: (organizationId, organizationWebSiteId) =>
     `${url}organizations/${organizationId}/websites/${organizationWebSiteId}`,
 
+  userLogout: () => `${url}users/logout`
+
 
 };
