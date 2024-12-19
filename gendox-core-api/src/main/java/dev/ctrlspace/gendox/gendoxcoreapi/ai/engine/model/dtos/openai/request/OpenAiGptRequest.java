@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
 import lombok.AllArgsConstructor;
@@ -12,6 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class OpenAiGptRequest {
     private String model;
     private List<AiModelMessage> messages;
@@ -21,6 +23,8 @@ public class OpenAiGptRequest {
     private double topP;
     @JsonProperty("max_tokens")
     private Long maxTokens;
+    @JsonProperty("max_completion_tokens")
+    private Long maxCompletionTokens;
 
 
 }

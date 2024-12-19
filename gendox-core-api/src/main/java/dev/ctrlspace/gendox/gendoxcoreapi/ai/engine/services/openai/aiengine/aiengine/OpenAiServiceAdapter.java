@@ -221,12 +221,26 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
             messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
 
         }
-        OpenAiGptResponse openAiGptResponse = this.getCompletionResponse((OpenAiGptRequest.builder()
-                        .model(aiModel.getModel())
-                        .temperature(aiModelRequestParams.getTemperature())
-                        .topP(aiModelRequestParams.getTopP())
-                        .maxTokens(aiModelRequestParams.getMaxTokens())
-                        .messages(messages).build()),
+
+        var openAiGptRequest = OpenAiGptRequest.builder()
+                .model(aiModel.getModel())
+                .temperature(aiModelRequestParams.getTemperature())
+                .topP(aiModelRequestParams.getTopP())
+                .maxTokens(aiModelRequestParams.getMaxTokens())
+                .messages(messages)
+                .build();
+
+        // handle o1 params
+        if (aiModel.getModel().contains("o1")) {
+            openAiGptRequest.setTopP(1);
+            openAiGptRequest.setTemperature(1);
+            openAiGptRequest.setMaxCompletionTokens(2*openAiGptRequest.getMaxTokens());
+            openAiGptRequest.setMaxTokens(null);
+            messages.getFirst().setRole("user");
+
+        }
+
+        OpenAiGptResponse openAiGptResponse = this.getCompletionResponse(openAiGptRequest,
                 aiModel,
                 apiKey);
 
