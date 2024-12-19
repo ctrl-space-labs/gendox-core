@@ -9,7 +9,12 @@ import apiRequests from "src/configs/apiRequest.js";
  * @param page
  * @returns {Promise<axios.AxiosResponse<DocumentInstances[]>>}
  */
-const getDocumentByProject = async (organizationId, projectId, storedToken, page) => {
+const getDocumentByProject = async (
+  organizationId,
+  projectId,
+  storedToken,
+  page
+) => {
   return axios.get(
     apiRequests.getDocumentsByProject(organizationId, projectId, page),
     {
@@ -25,47 +30,34 @@ const getDocumentByProject = async (organizationId, projectId, storedToken, page
 };
 
 /**
- * Get Document by id 
+ * Get Document by id
  * @param documentId
  * @param storedToken
  * @returns {Promise<axios.AxiosResponse<Document>>}
  */
-const getDocumentById = async (  
-  documentId,
-  storedToken
-) => {
-  return axios.get(
-    apiRequests.getDocumentById(documentId),
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + storedToken,
-      },      
-    }
-  );
+const getDocumentById = async (documentId, storedToken) => {
+  return axios.get(apiRequests.getDocumentById(documentId), {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + storedToken,
+    },
+  });
 };
 
 /**
- * Get project sections 
+ * Get project sections
  * @param documentId
  * @param storedToken
  * @returns {Promise<axios.AxiosResponse<DocumentInstanceSections[]>>}
  */
-const getSectionsByDocumentId = async (  
-  documentId,
-  storedToken
-) => {
-  return axios.get(
-    apiRequests.documentSections(documentId),
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + storedToken,
-      },      
-    }
-  );
+const getSectionsByDocumentId = async (documentId, storedToken) => {
+  return axios.get(apiRequests.documentSections(documentId), {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + storedToken,
+    },
+  });
 };
-
 
 /**
  * create empty document section
@@ -73,10 +65,7 @@ const getSectionsByDocumentId = async (
  * @param storedToken
  * @returns {Promise<axios.AxiosResponse<DocumentInstanceSection>}
  */
-const createDocumentSection = async (
-  documentId,
-  storedToken
-) => {
+const createDocumentSection = async (documentId, storedToken) => {
   return axios.post(
     apiRequests.documentSections(documentId),
     {},
@@ -87,39 +76,33 @@ const createDocumentSection = async (
       },
     }
   );
-}
-
+};
 
 /**
- * update document section 
+ * update document section
  * @param documentId
  * @param sectionId
  * @param updatedSectionPayload
- * @param storedToken 
+ * @param storedToken
  * @returns {Promise<axios.AxiosResponse<DocumentInstanceSection>}
  */
-const updateDocumentSection = async (  
+const updateDocumentSection = async (
   documentId,
   sectionId,
   updatedSectionPayload,
   storedToken
 ) => {
   return axios.put(
-   
     apiRequests.documentSection(documentId, sectionId),
     updatedSectionPayload,
     {
       headers: {
         "Content-Type": "application/json",
         Authorization: "Bearer " + storedToken,
-      },      
+      },
     }
   );
-}
-
-
-
-
+};
 
 /**
  * Upload document
@@ -149,13 +132,13 @@ const uploadDocument = async (
 
 /**
  * Update Document Sections Order
- * @param documentId 
+ * @param documentId
  * @param storedToken
  * @param updatedSectionPayload
  * @returns {Promise<axios.AxiosResponse<String>>}
  */
 const updateSectionsOrder = async (
-  documentId,  
+  documentId,
   updatedSectionPayload,
   storedToken
 ) => {
@@ -169,7 +152,24 @@ const updateSectionsOrder = async (
       },
     }
   );
-}
+};
+
+/**
+ * Detele Document Instance
+ * @param organizationId
+ * @param projectId
+ * @param documentId
+ * @param storedToken
+ * @returns {Promise<axios.AxiosResponse<String>>}
+ */
+const deleteDocument = async (organizationId, projectId, documentId, storedToken) => {
+  return axios.delete(apiRequests.documentInstance(organizationId, projectId, documentId), {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + storedToken,
+    },
+  });
+};
 
 /**
  * delete Document Section
@@ -178,22 +178,14 @@ const updateSectionsOrder = async (
  * @param storedToken
  * @returns {Promise<axios.AxiosResponse<String>>}
  */
-const deleteDocumentSection = async (
-  documentId,
-  sectionId,
-  storedToken
-) => {
-  return axios.delete(
-    apiRequests.documentSection(documentId, sectionId),
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + storedToken,
-      },
-    }
-  );
-}
-
+const deleteDocumentSection = async (documentId, sectionId, storedToken) => {
+  return axios.delete(apiRequests.documentSection(documentId, sectionId), {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + storedToken,
+    },
+  });
+};
 
 /**
  * Trigger Spring Jobs for split and training document
@@ -222,6 +214,7 @@ export default {
   updateDocumentSection,
   uploadDocument,
   updateSectionsOrder,
+  deleteDocument,
   deleteDocumentSection,
   triggerJobs,
 };

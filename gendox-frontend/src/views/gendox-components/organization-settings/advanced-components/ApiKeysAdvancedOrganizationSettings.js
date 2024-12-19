@@ -6,11 +6,9 @@ import authConfig from "src/configs/auth";
 import Grid from "@mui/material/Grid";
 import TextField from "@mui/material/TextField";
 import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
 import CardHeader from "@mui/material/CardHeader";
 import CardContent from "@mui/material/CardContent";
 import Icon from "src/@core/components/icon";
-import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
 import IconButton from "@mui/material/IconButton";
 import toast from "react-hot-toast";
@@ -20,6 +18,8 @@ import NameChangeDialog from "src/views/gendox-components/organization-settings/
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 import { fetchApiKeys } from "src/store/apps/activeOrganization/activeOrganization";
 import { copyToClipboard } from "src/utils/copyToClipboard";
+import { getErrorMessage } from "src/utils/errorHandler";
+
 
 const ApiKeysAdvancedOrganizationSettings = () => {
   const theme = useTheme();
@@ -71,7 +71,7 @@ const ApiKeysAdvancedOrganizationSettings = () => {
       toast.success("API Key Created Successfully");
     } catch (error) {
       console.error("Failed to create API Key", error);
-      toast.error("Failed to create API Key");
+      toast.error(`Failed to create API Key. Error: ${getErrorMessage(error)}`);
       setOpenCreateDialog(false);
     }
   };
@@ -101,7 +101,7 @@ const ApiKeysAdvancedOrganizationSettings = () => {
       toast.success("Api Key Updated Successfully");
     } catch (error) {
       console.error("Failed to update Api Key", error);
-      toast.error("Failed to update Api Key");
+      toast.error(`Failed to update API Key. Error: ${getErrorMessage(error)}`);
       setOpenNameChangeDialog(false);
     }
   };
@@ -123,7 +123,7 @@ const ApiKeysAdvancedOrganizationSettings = () => {
       toast.success("Api Key Deleted Successfully");
     } catch (error) {
       console.error("Failed to delete Api Key", error);
-      toast.error("Failed to delete Api Key");
+      toast.error(`Failed to delete Api Key. Error: ${getErrorMessage(error)}`);
       handleDeleteClose();
     }
   };

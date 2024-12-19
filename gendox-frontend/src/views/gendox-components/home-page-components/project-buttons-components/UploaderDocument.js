@@ -1,5 +1,7 @@
 import React, { Fragment, useState } from "react";
 import { useRouter } from "next/router";
+import { useDispatch, useSelector } from "react-redux";
+
 import Box from "@mui/material/Box";
 import List from "@mui/material/List";
 import Button from "@mui/material/Button";
@@ -14,6 +16,8 @@ import Icon from "src/@core/components/icon";
 import { useDropzone } from "react-dropzone";
 import authConfig from "src/configs/auth";
 import documentService from "src/gendox-sdk/documentService";
+import { fetchProjectDocuments } from "src/store/apps/activeProject/activeProject";
+
 
 const HeadingTypography = styled(Typography)(({ theme }) => ({
   marginBottom: theme.spacing(5),
@@ -38,15 +42,16 @@ const LinearProgressWithLabel = (props) => {
 };
 
 const UploaderDocument = ({ closeUploader }) => {
-  const [files, setFiles] = useState([]);
-  const [uploadProgress, setUploadProgress] = useState({});
-  const [alertOpen, setAlertOpen] = useState(false);
+  const dispatch = useDispatch();
   const router = useRouter();
-
   const { organizationId, projectId } = router.query;
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
+
+  const [files, setFiles] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState({});
+  const [alertOpen, setAlertOpen] = useState(false);
 
   const { getRootProps, getInputProps, open } = useDropzone({
     onDrop: (acceptedFiles) => {
@@ -70,6 +75,7 @@ const UploaderDocument = ({ closeUploader }) => {
           formData,
           storedToken
         );
+
       } catch (error) {
         console.error("Error uploading files", error);
       }
@@ -114,8 +120,15 @@ const UploaderDocument = ({ closeUploader }) => {
     setAlertOpen(true);
     setFiles([]);
     closeUploader();
+    dispatch(
+      fetchProjectDocuments({
+        organizationId,
+        projectId,
+        storedToken,
+        page: 0,
+      })
+    );
 
-    router.reload(); 
   };
 
   const renderFilePreview = (file) => {

@@ -13,8 +13,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
-import org.junit.platform.commons.logging.Logger;
-import org.junit.platform.commons.logging.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -117,7 +117,7 @@ public class OrganizationService {
         organization = organizationRepository.save(organization);
 
         final String organizationId = organization.getId().toString();
-        logger.debug(() -> "Organization created with id: "+ organizationId);
+        logger.debug("Organization created with id: "+ organizationId);
 
         userOrganizationService.createUserOrganization(ownerUserId, organization.getId(), OrganizationRolesConstants.ADMIN);
 
@@ -137,10 +137,10 @@ public class OrganizationService {
                         .keyId(walletKey.getId())
                 .build(), "key");
 
-        logger.debug(() -> "OrganizationDid created with id: "+ organizationDid.getId());
-        logger.debug(() -> "WalletKey created with id: "+ walletKey.getId());
-        logger.debug(() -> "OrganizationDid created with kid: "+ organizationDid.getKeyId());
-        logger.debug(() -> "OrganizationDid created with did: "+ organizationDid.getDid());
+        logger.debug("OrganizationDid created with id: "+ organizationDid.getId());
+        logger.debug("WalletKey created with id: "+ walletKey.getId());
+        logger.debug("OrganizationDid created with kid: "+ organizationDid.getKeyId());
+        logger.debug("OrganizationDid created with did: "+ organizationDid.getDid());
 
 
         return organization;

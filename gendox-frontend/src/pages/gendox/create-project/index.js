@@ -16,9 +16,9 @@ import Divider from "@mui/material/Divider";
 import CardHeader from "@mui/material/CardHeader";
 import CardContent from "@mui/material/CardContent";
 import CardActions from "@mui/material/CardActions";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
+import toast from "react-hot-toast";
 import CircularProgress from "@mui/material/CircularProgress";
+import { getErrorMessage } from "src/utils/errorHandler";
 
 const ProjectCreate = () => {
   const auth = useAuth();
@@ -29,23 +29,16 @@ const ProjectCreate = () => {
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
-  console.log("AUTH", auth);
 
   const [autoTraining, setAutoTraining] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "info",
-  });
 
   const handleNameChange = (event) => setName(event.target.value);
   const handleDescriptionChange = (event) => setDescription(event.target.value);
   const handleAutoTrainingChange = (event) =>
     setAutoTraining(event.target.checked);
-  const handleCloseSnackbar = () => setSnackbar({ ...snackbar, open: false });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -63,17 +56,15 @@ const ProjectCreate = () => {
         organizationId,
         newProjectPayload,
         storedToken
-      );    
-
-      
-      
-
-      setSnackbar({ open: true, message: 'Project created successfully!', severity: 'success' });
-      router.reload(`/gendox/project-settings/?organizationId=${organizationId}&projectId=${response.data.id}`);
-      
+      );
+      toast.success("Project created successfully");
+      await auth.loadUserProfileFromAuthState(auth.oidcAuthState);
+      router.push(
+        `/gendox/home/?organizationId=${organizationId}&projectId=${response.data.id}`
+      );
     } catch (error) {
+      toast.error(`Project did not create. Error: ${getErrorMessage(error)}`);
       console.error("Failed to update project", error);
-      setSnackbar({ open: true, message: 'Failed to create project', severity: 'error' });
     } finally {
       setLoading(false);
     }
@@ -99,7 +90,13 @@ const ProjectCreate = () => {
             <Grid item xs={12} sm={6}>
               <FormControlLabel
                 label="Auto-Training"
-                control={<Checkbox checked={autoTraining} onChange={handleAutoTrainingChange} name="autoTraining" />}
+                control={
+                  <Checkbox
+                    checked={autoTraining}
+                    onChange={handleAutoTrainingChange}
+                    name="autoTraining"
+                  />
+                }
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -120,24 +117,28 @@ const ProjectCreate = () => {
             <CircularProgress size={24} />
           ) : (
             <>
-              <Button size="large" type="submit" sx={{ mr: 2 }} variant="contained">
+              <Button
+                size="large"
+                type="submit"
+                sx={{ mr: 2 }}
+                variant="contained"
+              >
                 Submit
               </Button>
-              <Button size="large" type="reset" color="secondary" variant="outlined">
+              <Button
+                size="large"
+                type="reset"
+                color="secondary"
+                variant="outlined"
+              >
                 Reset
               </Button>
             </>
           )}
         </CardActions>
       </form>
-      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Card>
   );
-}
-
+};
 
 export default ProjectCreate;

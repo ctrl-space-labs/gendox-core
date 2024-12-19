@@ -22,6 +22,7 @@ import authConfig from "src/configs/auth";
 import SectionCard from "src/views/gendox-components/documents-components/SectionCard";
 import SectionEdit from "src/views/gendox-components/documents-components/SectionEdit";
 import documentService from "src/gendox-sdk/documentService";
+import { getErrorMessage } from "src/utils/errorHandler";
 
 const DocumentSections = () => {
   const dispatch = useDispatch();
@@ -30,17 +31,16 @@ const DocumentSections = () => {
   const storedToken = localStorage.getItem(authConfig.storageTokenKeyName);
   const document = useSelector((state) => state.activeDocument.document);
   const sections = useSelector((state) => state.activeDocument.sections);
+  const isBlurring = useSelector((state) => state.activeDocument.isBlurring);
 
   const [editMode, setEditMode] = useState(false);
   const [areAllMinimized, setAreAllMinimized] = useState(false);
   const [highlightedSectionId, setHighlightedSectionId] = useState(null);
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false); // state for fake loading when user drag sections
-  const [isBlurring, setIsBlurring] = useState(false); // state for blur when user press back button
 
   const sectionRefs = useRef([]);
   const [targetIndex, setTargetIndex] = useState(null);
   const sectionCardRef = useRef(null);
-
 
   const scrollToSectionOrderByOrderNumber = (order) => {
     const sectionIndex = sections.findIndex(
@@ -62,7 +62,7 @@ const DocumentSections = () => {
 
   const scrollToAndHighlightSection = (id) => {
     const sectionIndex = sections.findIndex((section) => section.id === id);
-    if (sectionIndex !== -1 ) {
+    if (sectionIndex !== -1) {
       setHighlightedSectionId(id); // Highlight the section
       sectionRefs?.current[sectionIndex]?.scrollIntoView({
         behavior: "smooth",
@@ -136,7 +136,6 @@ const DocumentSections = () => {
   };
 
   useEffect(() => {
-    setIsBlurring(true);
     const loadData = () => {
       if (!document || document.id !== documentId) {
         dispatch(
@@ -146,20 +145,13 @@ const DocumentSections = () => {
           })
         );
       }
-      setTimeout(() => {
-        setIsBlurring(false);
-      }, 300);
     };
     loadData();
   }, [documentId, document, dispatch, storedToken, sections]);
 
   const handleToggleEdit = () => {
     if (!editMode) {
-      setIsBlurring(true);
       dispatch(fetchDocument({ documentId, storedToken }));
-      setTimeout(() => {
-        setIsBlurring(false);
-      }, 300);
     }
     setEditMode(!editMode);
   };
@@ -199,8 +191,10 @@ const DocumentSections = () => {
 
       toast.success("New Document Section created successfully");
     } catch (error) {
+      toast.error(
+        `Document Section did not create. Error: ${getErrorMessage(error)}`
+      );
       console.error("Error creating new section", error);
-      toast.error("Failed to create new Document Section");
     }
   };
 
@@ -282,7 +276,6 @@ const DocumentSections = () => {
     </Box>
   );
 
-
   return (
     <Card sx={{ backgroundColor: "transparent", boxShadow: "none" }}>
       <StyledCardContent sx={{ backgroundColor: "background.paper" }}>
@@ -291,6 +284,8 @@ const DocumentSections = () => {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            filter: isBlurring ? "blur(6px)" : "none", // Apply blur to SectionCard
+            transition: "filter 0.3s ease",
           }}
         >
           <Typography
