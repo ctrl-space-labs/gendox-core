@@ -62,15 +62,10 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
             }
 
             //update Document Sections Auditing
-//            Type updateDocumentType = typeService.getAuditLogTypeByName("CREATE_DOCUMENT_SECTIONS");
              auditLogsService.createAuditLog(documentSectionDTO.documentInstance().getOrganizationId(),
                     null,"CREATE_DOCUMENT_SECTIONS",documentSectionCount);
-//            updateDocumentAuditLogs.setOrganizationId(documentSectionDTO.documentInstance().getOrganizationId());
 //            // TODO this is for auditing reasons, it doesn't worth it to do an extra query to get the project id
-//            //  if it become necessary, we can add a project id to the DocumentSectionDTO
-//            updateDocumentAuditLogs.setProjectId(null);
-//
-//            auditLogsService.saveAuditLogs(updateDocumentAuditLogs);
+
 
         }
 
