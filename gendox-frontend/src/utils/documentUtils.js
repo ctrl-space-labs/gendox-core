@@ -10,4 +10,3 @@ export const formatDocumentTitle = (remoteUrl) => {
   return cleanName;
 };
 
-// export default formatDocumentTitle;

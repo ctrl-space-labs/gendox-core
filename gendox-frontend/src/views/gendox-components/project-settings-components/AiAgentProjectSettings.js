@@ -20,8 +20,8 @@ import Select from "@mui/material/Select";
 import InputAdornment from "@mui/material/InputAdornment";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Checkbox from "@mui/material/Checkbox";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
+import toast from "react-hot-toast";
+
 
 // ** Demo Components Imports
 import CustomRadioIcons from "src/@core/components/custom-radio/icons";
@@ -32,6 +32,8 @@ import { useSelector, useDispatch } from "react-redux";
 // ** Config and Services
 import authConfig from "src/configs/auth";
 import projectService from "src/gendox-sdk/projectService";
+import { getErrorMessage } from "src/utils/errorHandler";
+
 
 const AiAgentProjectSettings = () => {
   const router = useRouter();
@@ -79,10 +81,7 @@ const AiAgentProjectSettings = () => {
 
   const [selected, setSelected] = useState(
     project.projectAgent.privateAgent ? "private" : "public"
-  );
-  const [openSnackbar, setOpenSnackbar] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarSeverity, setSnackbarSeverity] = useState("info");
+  );  
 
   const AgentPrivate = [
     {
@@ -148,10 +147,8 @@ const AiAgentProjectSettings = () => {
           setModerationModel(moderation[0].name);
         }
       } catch (error) {
-        console.error("Failed to fetch AI models", error);
-        setOpenSnackbar(true);
-        setSnackbarMessage("Failed to fetch AI models");
-        setSnackbarSeverity("error");
+        toast.error(`Failed to fetch AI models. Error: ${getErrorMessage(error)}`);
+        console.error("Failed to fetch AI models", error);        
       }
     };
 
@@ -224,21 +221,14 @@ const AiAgentProjectSettings = () => {
         updatedProjectPayload,
         storedToken
       );
-
-      setOpenSnackbar(true);
-      setSnackbarMessage("Project updated successfully!");
-      setSnackbarSeverity("success");
+      toast.success("Project updated successfully!");     
       const path = `/gendox/project-settings/?organizationId=${organizationId}&projectId=${projectId}`;
       router.push(path);
     } catch (error) {
-      console.error("Failed to update project", error);
-      setOpenSnackbar(true);
-      setSnackbarMessage("Failed to update project");
-      setSnackbarSeverity("error");
+      toast.error(`Failed to update project. Error: ${getErrorMessage(error)}`);
+      console.error("Failed to update project", error);      
     }
   };
-
-  const handleCloseSnackbar = () => setOpenSnackbar(false);
 
   return (
     <Card>
@@ -499,20 +489,7 @@ const AiAgentProjectSettings = () => {
             Save Changes
           </Button>
         </CardActions>
-      </form>
-      <Snackbar
-        open={openSnackbar}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity="success"
-          sx={{ width: "100%" }}
-        >
-          Project updated successfully!
-        </Alert>
-      </Snackbar>
+      </form>      
     </Card>
   );
 };

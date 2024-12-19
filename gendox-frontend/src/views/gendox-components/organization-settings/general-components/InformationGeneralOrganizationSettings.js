@@ -16,19 +16,16 @@ import Grid from "@mui/material/Grid";
 import TextField from "@mui/material/TextField";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Divider from "@mui/material/Divider";
-import Card from "@mui/material/Card";
 import CardHeader from "@mui/material/CardHeader";
 import CardContent from "@mui/material/CardContent";
 import CardActions from "@mui/material/CardActions";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
+import toast from "react-hot-toast";
 import Icon from "src/@core/components/icon";
-import Typography from "@mui/material/Typography";
 
 // ** Service Import
 import organizationService from "src/gendox-sdk/organizationService";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
+import { getErrorMessage } from "src/utils/errorHandler";
 
 const InformationGeneralOrganizationSettings = () => {
   const theme = useTheme();
@@ -49,10 +46,7 @@ const InformationGeneralOrganizationSettings = () => {
   );
   const [address, setAddress] = useState(organization.address || "");
   const [phone, setPhone] = useState(organization.phone || "");
-  const [openSnackbar, setOpenSnackbar] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [alertOpen, setAlertOpen] = useState(false);
-  const [alertMessage, setAlertMessage] = useState("");
 
   useEffect(() => {
     setName(organization.name || "");
@@ -63,12 +57,9 @@ const InformationGeneralOrganizationSettings = () => {
 
   // Handlers for form inputs
   const handleNameChange = (event) => setName(event.target.value);
-  const handleDisplayNameChange = (event) =>
-    setDisplayName(event.target.value);
+  const handleDisplayNameChange = (event) => setDisplayName(event.target.value);
   const handleAddressChange = (event) => setAddress(event.target.value);
   const handlePhoneChange = (event) => setPhone(event.target.value);
-  const handleCloseSnackbar = () => setOpenSnackbar(false);
-  const handleAlertClose = () => setAlertOpen(false);
 
   // Handle Delete dialog
   const handleDeleteClickOpen = () => setOpenDeleteDialog(true);
@@ -93,35 +84,27 @@ const InformationGeneralOrganizationSettings = () => {
         updatedOrganizationPayload,
         storedToken
       );
-      console.log("Organization Update successful", response);
-      setOpenSnackbar(true);
+      toast.success("Organization updated successfully!");
       const path = `/gendox/organization-settings/?organizationId=${response.data.id}`;
       router.push(path);
     } catch (error) {
-      console.error("Failed to update Organization", error);
+      console.error("Failed to update organization", error);
+      toast.error(`Organization update failed. Error: ${getErrorMessage(error)}`);
     }
   };
 
   // Handler for deleting organization
   const handleDeleteOrganization = async () => {
+    handleDeleteClose(false);
     try {
       await organizationService.deactivateOrganizationById(
         organization.id,
         storedToken
-      );
-      console.log("Organization Deactivation successful");
-      setAlertMessage("Organization deleted successfully!");
-      setAlertOpen(true);
-      handleDeleteClose(false);
-  
-      
-      window.location.href  = "/gendox/home";
-      
+      );      
+      toast.success("Organization deleted successfully!");
+      window.location.href = "/gendox/home";
     } catch (error) {
-      console.error("Failed to delete organization", error);
-      setAlertMessage("Failed to delete the organization!");
-      setAlertOpen(true);
-  
+      toast.error(`Organization deletion failed. Error: ${getErrorMessage(error)}`);
       // Redirect to the home page in case of an error
       router.push("/gendox/home");
     }
@@ -137,25 +120,11 @@ const InformationGeneralOrganizationSettings = () => {
           p: 2,
         }}
       >
-      <CardHeader title="Information"/>
-      <Snackbar
-        open={openSnackbar}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity="success"
-          sx={{ width: "100%" }}
-        >
-          Organization updated successfully!
-        </Alert>
-      </Snackbar>
+        <CardHeader title="Information" />
       </Box>
       <form onSubmit={handleSubmit}>
         <CardContent>
-          <Grid container spacing={5}>           
-            
+          <Grid container spacing={5}>
             <Grid item xs={12} sm={12} md={6}>
               <TextField
                 fullWidth
@@ -246,19 +215,6 @@ const InformationGeneralOrganizationSettings = () => {
         </CardActions>
       </form>
 
-      <Snackbar
-        open={alertOpen}
-        autoHideDuration={6000}
-        onClose={handleAlertClose}
-      >
-        <Alert
-          onClose={handleAlertClose}
-          severity="success"
-          sx={{ width: "100%" }}
-        >
-          {alertMessage}
-        </Alert>
-      </Snackbar>
       <DeleteConfirmDialog
         open={openDeleteDialog}
         onClose={handleDeleteClose}

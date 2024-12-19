@@ -122,7 +122,7 @@ const UserViewOverviewOrganizations = ({ userData }) => {
       <Grid item xs={12}>
         <Card>
           <CardHeader title="User's Organizations List" />
-          <CardContent>
+          {/* <CardContent>
             <Box
               sx={{
                 display: "flex",
@@ -140,7 +140,7 @@ const UserViewOverviewOrganizations = ({ userData }) => {
                 onChange={(e) => setValue(e.target.value)}
               />
             </Box>
-          </CardContent>
+          </CardContent> */}
           <DataGrid
             autoHeight
             rows={data}

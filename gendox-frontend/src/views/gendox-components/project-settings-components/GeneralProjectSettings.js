@@ -21,6 +21,8 @@ import projectService from "src/gendox-sdk/projectService";
 import documentService from "src/gendox-sdk/documentService";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 import { useAuth } from "src/hooks/useAuth";
+import { getErrorMessage } from "src/utils/errorHandler";
+import toast from "react-hot-toast";
 
 
 const GeneralProjectSettings = () => {
@@ -81,13 +83,13 @@ const GeneralProjectSettings = () => {
         updatedProjectPayload,
         storedToken
       );
-      console.log("Update successful", response);
-      setOpenSnackbar(true);
+      toast.success("Project updated successfully!");
+      console.log("Update successful", response);      
       const path = `/gendox/project-settings/?organizationId=${project.organizationId}&projectId=${project.id}`;
       router.push(path);
     } catch (error) {
+      toast.error(`Failed to update project. Error: ${getErrorMessage(error)}`);
       console.error("Failed to update project", error);
-      setError("Failed to update project: " + error.message);
     }
   };
 
@@ -95,14 +97,12 @@ const GeneralProjectSettings = () => {
     documentService
       .triggerJobs(project.organizationId, project.id, storedToken)
       .then((response) => {
-        console.log(response);
-        setAlertMessage("Training triggered successfully!");
-        setAlertOpen(true);
+        toast.success("Training triggered successfully!");
+        console.log(response);       
       })
       .catch((error) => {
-        console.log(error);
-        setAlertMessage("Error triggering training: " + error.message);
-        setAlertOpen(true);
+        toast.error(`Failed to trigger trainint. Error: ${getErrorMessage(error)}`);
+        console.log(error);        
       });
   };
 
@@ -117,9 +117,8 @@ const GeneralProjectSettings = () => {
         project.id,
         storedToken
       );
-      console.log("Project Deactivation successful");
-      setAlertMessage("Project deleted successfully!");
-      setAlertOpen(true);
+      toast.success("Project deleted successfully!");
+      console.log("Project Deactivation successful");      
       handleDeleteClose(false);
 
       const updatedOrganization = auth.user.organizations.find(
@@ -131,20 +130,13 @@ const GeneralProjectSettings = () => {
       );
 
       const firstActiveProject = updatedProjects[0]; 
-
-
       window.location.href = `/gendox/home/?organizationId=${project.organizationId}&projectId=${firstActiveProject.id}`;
     
     } catch (error) {
-      console.error("Failed to delete project", error);
-      setAlertMessage("Failed to delete the project!");
-      setAlertOpen(true);
-
+      toast.error(`Project deletion failed. Error: ${getErrorMessage(error)}`);
+      console.error("Failed to delete project", error);   
       router.push("/gendox/home");
-
-      // setTimeout(() => {
-      //   router.push("/gendox/home");
-      // }, 2000); 
+ 
     }
   };
 
