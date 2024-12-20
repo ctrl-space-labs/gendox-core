@@ -144,9 +144,9 @@ gendox:
     sections: https://domain.com/context-path/documents/sections/
     messages:
       completion:
-        post-completion-message: /messages/semantic-completion
+        post-completion-message: /messages/completions
       search:
-        post-search-message: /messages/semantic-search
+        post-search-message: /messages/search
   pages:
     default: "&page=0&size=5"
   agents:
