@@ -36,7 +36,7 @@ const navigation = () => {
         ]);
       }
     }
-  }, [auth, organizationId, router]);
+  }, [auth, organizationId, router, projectId]);
 
   return navigationItems;
 };

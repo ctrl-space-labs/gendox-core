@@ -25,13 +25,9 @@ import InviteDialog from "src/views/gendox-components/project-settings-component
 import projectService from "src/gendox-sdk/projectService";
 import organizationService from "src/gendox-sdk/organizationService";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
+import { getErrorMessage } from "src/utils/errorHandler";
 
 import authConfig from "src/configs/auth";
-import { styled, useTheme } from "@mui/material/styles";
-
-// ** Utils Import
-import { getInitials } from "src/@core/utils/get-initials";
-import { set } from "nprogress";
 import toast from "react-hot-toast";
 
 import {
@@ -87,6 +83,7 @@ const MembersProjectSettings = () => {
       setProjectMembers(fetchedProjectMembers);
       setFilteredProjectMembers(fetchedProjectMembers);
     } catch (error) {
+      toast.error(`Failed to fetch project members. Error: ${getErrorMessage(error)}`);
       console.error("Failed to fetch project members:", error);
     }
   };
@@ -120,6 +117,7 @@ const MembersProjectSettings = () => {
         return updatedProjectMembers;
       });
     } catch (error) {
+      toast.error(`Failed to fetch project members role. Error: ${getErrorMessage(error)}`);
       console.error("Failed to fetch project members role:", error);
     } finally {
       setLoading(false); // Stop loading once fetch is done
@@ -167,8 +165,8 @@ const MembersProjectSettings = () => {
         );
         toast.success("User deleted successfully");
       } catch (error) {
+        toast.error(`Failed to delete user. Error: ${getErrorMessage(error)}`);
         console.error("Failed to delete user:", error);
-        toast.error("Failed to delete user");
       }
       setConfirmDelete(false);
       handleMenuClose();

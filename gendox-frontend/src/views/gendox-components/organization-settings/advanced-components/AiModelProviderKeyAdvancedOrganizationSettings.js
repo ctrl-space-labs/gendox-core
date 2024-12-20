@@ -18,6 +18,7 @@ import aiModelService from "src/gendox-sdk/aiModelService";
 import KeyChangeDialog from "src/views/gendox-components/organization-settings/advanced-components/ai-model-provider-key/KeyChangeDialog";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 import { fetchOrganizationAiModelKeys } from "src/store/apps/activeOrganization/activeOrganization";
+import { getErrorMessage } from "src/utils/errorHandler";
 
 const AiModelProviderKey = () => {
   const theme = useTheme();
@@ -104,7 +105,7 @@ const AiModelProviderKey = () => {
       setOpenKeyChangeDialog(false);
     } catch (error) {
       console.error("Failed to create AI Model Keys", error);
-      toast.error("Failed to save AI Model Key");
+      toast.error(`Failed to create AI Model Keys. Error: ${getErrorMessage(error)}`);
       setOpenKeyChangeDialog(false);
     }
   };
@@ -126,7 +127,7 @@ const AiModelProviderKey = () => {
       toast.success("AI Model Key Deleted Successfully");
     } catch (error) {
       console.error("Failed to delete AI Model Key", error);
-      toast.error("Failed to delete AI Model Key");
+      toast.error(`Failed to delete AI Model Key. Error: ${getErrorMessage(error)}`);
       handleDeleteClose();
     }
   };

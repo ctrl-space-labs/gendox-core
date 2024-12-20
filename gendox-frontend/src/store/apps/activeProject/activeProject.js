@@ -1,6 +1,8 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import projectService from "src/gendox-sdk/projectService";
 import documentService from "src/gendox-sdk/documentService";
+import { getErrorMessage } from "src/utils/errorHandler";
+import toast from "react-hot-toast";
 
 export const fetchProject = createAsyncThunk(
   "activeProject/fetchProject",
@@ -23,12 +25,10 @@ export const fetchProject = createAsyncThunk(
         membersPromise,
       ]);
 
-      // console.log("projectData", projectData.data);
-      // console.log("membersData", membersData.data);
-
       // Return combined data
       return { project: projectData.data, members: membersData.data };
     } catch (error) {
+      console.error("Failed to fetch project", error);
       return thunkAPI.rejectWithValue(error.response.data);
     }
   }
@@ -46,6 +46,7 @@ export const fetchProjectDocuments = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
+      console.error("Failed to fetch project documents", error);
       return thunkAPI.rejectWithValue(error.response.data);
     }
   }
@@ -69,13 +70,16 @@ const activeProjectSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchProject.pending, (state) => {
+        state.isBlurring = true;
         state.error = null;
       })
       .addCase(fetchProject.fulfilled, (state, action) => {
+        state.isBlurring = false;
         state.projectDetails = action.payload.project;
         state.projectMembers = action.payload.members;
       })
       .addCase(fetchProject.rejected, (state, action) => {
+        state.isBlurring = false;
         state.error = action.payload;
       })
 
