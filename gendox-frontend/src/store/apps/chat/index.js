@@ -159,7 +159,7 @@ export const sendMsg = createAsyncThunk(
 
       // sending PostMessage notification
       iFrameMessageManager.messageManager.sendMessage({
-        type: 'gendox.events.chat.message.new.sending',
+        type: 'gendox.events.chat.message.new.sent',
         payload: { message },
       });
 
@@ -167,7 +167,8 @@ export const sendMsg = createAsyncThunk(
           "gendox.events.chat.message.context.local.request",
       "gendox.events.chat.message.context.local.response",
           {},
-          100);
+          1,
+          200);
 
       //TODO improve this
       let appendedMessage = "Browser Context:\n" + chatLocalContextResponses.map((res) => res.value).join('\n\n') + message;
@@ -178,9 +179,15 @@ export const sendMsg = createAsyncThunk(
       const response = await completionService.postCompletionMessage(
         projectId,
         threadId,
-          appendedMessage,
+        appendedMessage,
         storedToken
       );
+
+      // sending PostMessage notification
+      iFrameMessageManager.messageManager.sendMessage({
+        type: 'gendox.events.chat.message.new.response.received',
+        payload: response.data.message.value,
+      });
 
       console.log("response", response);
       const { value, messageSections, threadId: responseThreadId } = response.data.message;

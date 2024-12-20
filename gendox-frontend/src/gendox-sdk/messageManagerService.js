@@ -103,21 +103,42 @@ class MessageManagerService {
     }
 
     /**
-     * Sends a request and listens for responses of a certain type for a given timeout.
+     * Fetches responses of a specific type, waiting until the maximum number of responses
+     * are collected or the maximum wait timeout is reached, whichever comes first.
      *
-     * @param {string} requestType - The type of the request message to send.
-     * @param {string} responseType - The type of the response messages to listen for.
-     * @param {object} requestPayload - The payload to include in the request.
-     * @param {number} [timeout=100] - How long to wait (in ms) for response messages.
-     * @returns {Promise<Array>} A promise that resolves to an array of response payloads collected during the timeout period.
+     * @param {string} requestType - The type of the request to send.
+     * @param {string} responseType - The type of the responses to collect.
+     * @param {Object} requestPayload - The payload to include in the request message.
+     * @param {number} [maxResponses=2] - The maximum number of responses to collect.
+     * @param {number} [maxWaitTimeoutMs=100] - The maximum time to wait (in milliseconds) for responses.
+     * @returns {Promise<Object[]>} A promise that resolves to an array of collected response payloads.
+     *
+     * @example
+     * const responses = await fetchResponses('getData', 'responseType', { key: 'value' }, 5, 2000);
+     * console.log(responses); // Array of response payloads, up to 5 or until timeout
      */
-    async fetchResponses(requestType, responseType, requestPayload, timeout = 100) {
+    async fetchResponses(
+        requestType,
+        responseType,
+        requestPayload,
+        maxResponses = 2,
+        maxWaitTimeoutMs = 100
+    ) {
         const collectedResponses = [];
+        let resolveCondition;
+
+        // Create a promise that resolves when `maxResponses` messages are collected or timeout occurs
+        const responsesPromise = new Promise((resolve) => {
+            resolveCondition = resolve;
+        });
 
         // Handler for collecting responses
         const responseHandler = (event) => {
             if (event.type === responseType) {
                 collectedResponses.push(event.payload);
+                if (collectedResponses.length >= maxResponses) {
+                    resolveCondition(); // Resolve the promise when enough responses are collected
+                }
             }
         };
 
@@ -130,8 +151,9 @@ class MessageManagerService {
         // Add the temporary handler
         this.addHandler(responseHandler);
 
-        // Wait for the specified timeout
-        await new Promise((resolve) => setTimeout(resolve, timeout));
+        // Wait for either the messages or timeout
+        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, maxWaitTimeoutMs));
+        await Promise.race([responsesPromise, timeoutPromise]);
 
         // Remove the handler
         this.removeHandler(responseHandler);
