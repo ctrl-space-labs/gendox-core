@@ -110,7 +110,7 @@ public class EmbeddingsController {
 
 
     @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
-    @PostMapping("/messages/semantic-search")
+    @PostMapping("/messages/search")
     @Operation(summary = "Semantic search for closer sections",
             description = "Search for sections within a project that are semantically closer to a given message. " +
                     "This endpoint calculates the embedding for the input message and retrieves sections from the specified project " +
@@ -160,7 +160,7 @@ public class EmbeddingsController {
 
     @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams') || " +
             "@securityUtils.isPublicProject(#projectId)")
-    @PostMapping("/messages/semantic-completion")
+    @PostMapping("/messages/completions")
     @Operation(summary = "Semantic completion of message",
             description = "Find a message within a project that semantically completes the given input message. " +
                     "This endpoint calculates the embedding for the input message and searches for a complementary message " +
