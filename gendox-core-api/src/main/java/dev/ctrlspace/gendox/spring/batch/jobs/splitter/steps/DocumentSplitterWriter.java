@@ -16,10 +16,7 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Component
 @StepScope
@@ -58,21 +55,17 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
             List<DocumentInstanceSection> documentSections =
                     documentSectionService.createSections(documentSectionDTO.documentInstance(), documentSectionDTO.contentSections());
 
+            long documentSectionCount = documentSections.size();
+
             if (documentSectionDTO.documentUpdated()) {
                 updatedDocuments.add(documentSectionDTO.documentInstance());
             }
 
-
-
             //update Document Sections Auditing
-            Type updateDocumentType = typeService.getAuditLogTypeByName("CREATE_DOCUMENT_SECTIONS");
-            AuditLogs updateDocumentAuditLogs = auditLogsService.createDefaultAuditLogs(updateDocumentType);
-            updateDocumentAuditLogs.setOrganizationId(documentSectionDTO.documentInstance().getOrganizationId());
-            // TODO this is for auditing reasons, it doesn't worth it to do an extra query to get the project id
-            //  if it become necessary, we can add a project id to the DocumentSectionDTO
-            updateDocumentAuditLogs.setProjectId(null);
+             auditLogsService.createAuditLog(documentSectionDTO.documentInstance().getOrganizationId(),
+                    null,"CREATE_DOCUMENT_SECTIONS",documentSectionCount);
+//            // TODO this is for auditing reasons, it doesn't worth it to do an extra query to get the project id
 
-            auditLogsService.saveAuditLogs(updateDocumentAuditLogs);
 
         }
 
