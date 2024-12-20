@@ -9,7 +9,8 @@ import { userDataActions } from "src/store/apps/userData/userData";
 import { fetchOrganization } from "src/store/apps/activeOrganization/activeOrganization";
 import { fetchProject } from "src/store/apps/activeProject/activeProject";
 import userManager from "src/services/authService";
-import { AuthContext } from "./AuthContext";
+import {AuthContext} from "./AuthContext";
+
 
 const PKCEAuthProvider = ({ children, defaultProvider }) => {
   const [user, setUser] = useState(defaultProvider.user);
@@ -38,10 +39,21 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
     userManager.signinRedirect(args);
   };
 
-  const handleLogout = () => {
-    // TODO call DELETE /profile/caches
-    clearAuthState();
-    userManager.signoutRedirect();
+  const handleLogout = async () => {
+    try {
+
+      await userService.logoutUser(storedToken);
+
+      console.log("User logged out successfully.");
+    } catch (error) {
+      // Log any errors during the API call
+      console.error("Error during logout:", error);
+    } finally {
+      // Clear the authentication state and log
+      clearAuthState();
+      console.log("User authentication state cleared. Redirecting to logout page...");
+      userManager.signoutRedirect();
+    }
   };
 
   const clearAuthState = () => {
@@ -111,7 +123,7 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
       authConfig.onTokenExpiration,
       user.refresh_token
     );
-     
+
     setLoading(true);
     try {
       const userDataResponse = await axios.get(apiRequests.getProfile, {

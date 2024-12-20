@@ -118,8 +118,10 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
      */
     private void sleepIfLowRateLimit(OpenAiAda2Response openAiAda2Response) {
         // Check if remaining requests or tokens are less than 10% of the total
-        boolean isLowOnRequests = openAiAda2Response.getRateLimitRemainingRequests() < 0.1 * openAiAda2Response.getTotalRateLimitRequests();
-        boolean isLowOnTokens = openAiAda2Response.getRateLimitRemainingTokens() < 0.1 * openAiAda2Response.getTotalRateLimitTokens();
+        boolean isLowOnRequests = openAiAda2Response.getRateLimitRemainingRequests() != null &&
+                openAiAda2Response.getRateLimitRemainingRequests() < 0.1 * openAiAda2Response.getTotalRateLimitRequests();
+        boolean isLowOnTokens = openAiAda2Response.getRateLimitRemainingTokens() != null &&
+                openAiAda2Response.getRateLimitRemainingTokens() < 0.1 * openAiAda2Response.getTotalRateLimitTokens();
 
         if (isLowOnRequests || isLowOnTokens) {
             // Get the reset times in milliseconds

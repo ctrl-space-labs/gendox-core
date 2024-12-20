@@ -43,7 +43,7 @@ const LinearProgressWithLabel = (props) => {
 
 const UploaderDocument = ({ closeUploader }) => {
   const dispatch = useDispatch();
-  const router = useRouter(); 
+  const router = useRouter();
   const { organizationId, projectId } = router.query;
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
@@ -74,8 +74,8 @@ const UploaderDocument = ({ closeUploader }) => {
           projectId,
           formData,
           storedToken
-        );    
-        
+        );
+
       } catch (error) {
         console.error("Error uploading files", error);
       }
@@ -128,7 +128,7 @@ const UploaderDocument = ({ closeUploader }) => {
         page: 0,
       })
     );
-    
+
   };
 
   const renderFilePreview = (file) => {
