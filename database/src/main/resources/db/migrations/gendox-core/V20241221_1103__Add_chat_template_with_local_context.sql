@@ -4,15 +4,15 @@ INSERT INTO gendox_core.templates
 (name, text, type, is_default)
 SELECT
     'CHAT_CONTEXT_WITH_SESSION_AND_RETRIVAL_CONTEXT',
-'Context:
- - Session Context:
+'[Context]:
+ 1. [Session Context]:
     $' || '{localContexts}
-
- - Retrieval Context:
+"""
+ - [Retrieval Context]:
     $' || '{context}
 
 """
-Question: $' || '{question}',
+[Question]: $' || '{question}',
     (SELECT id FROM gendox_core.types
      WHERE type_category = 'TEMPLATE_TYPE' AND name = 'CHAT_TEMPLATE'),
     true
