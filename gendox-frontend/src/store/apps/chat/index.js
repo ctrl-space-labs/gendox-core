@@ -170,8 +170,6 @@ export const sendMsg = createAsyncThunk(
           1,
           200);
 
-      //TODO improve this
-      let appendedMessage = "Browser Context:\n" + chatLocalContextResponses.map((res) => res.value).join('\n\n') + message;
 
 
 
@@ -179,7 +177,8 @@ export const sendMsg = createAsyncThunk(
       const response = await completionService.postCompletionMessage(
         projectId,
         threadId,
-        appendedMessage,
+        message,
+        chatLocalContextResponses,
         storedToken
       );
 
