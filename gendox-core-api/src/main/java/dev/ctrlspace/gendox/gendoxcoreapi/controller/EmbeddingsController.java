@@ -182,15 +182,11 @@ public class EmbeddingsController {
         organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
 
         message.setProjectId(UUID.fromString(projectId));
-        message = messageService.createMessage(message);
+        Message savedMessage = messageService.createMessage(message);
 
-//        sections.stream()
-//                .map(DocumentInstanceSectionDTO::getDocumentUrl)
-//                .collect(Collectors.toList());
-//
-//        List<Integer> tokens = sections.stream()
-//                .map(DocumentInstanceSectionDTO::getTokens)
-//                .collect(Collectors.toList())
+        //TODO: this is a hack. save local context ot DB
+        savedMessage.setLocalContexts(message.getLocalContexts());
+        message = savedMessage;
 
         List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
 
