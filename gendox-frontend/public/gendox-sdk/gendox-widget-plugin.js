@@ -91,7 +91,9 @@
                     const message = {
                         type: "gendox.events.chat.message.context.local.response",
                         payload: {
-                            context_type: "selected_text",
+                            contextType: {
+                                name: "SELECTED_TEXT"
+                            },
                             value: selectedText
                         }
                     };

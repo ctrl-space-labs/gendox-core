@@ -22,7 +22,7 @@ public class ChatTemplateAuthor {
         Map<String, String> questionTemplateValues = new HashMap<>();
         questionTemplateValues.put("context", escapePlaceholders(sectionValues));
         questionTemplateValues.put("localContexts", message.getLocalContexts().stream()
-                .map(c -> c.getValue())
+                .map(c -> "    - Session Type: " + c.getContextType().getName() + ", Session Value: " + c.getValue())
                 .collect(Collectors.joining("\n\"\"\"\n")));
         questionTemplateValues.put("question", (message.getValue()));
         return questionTemplateValues;
