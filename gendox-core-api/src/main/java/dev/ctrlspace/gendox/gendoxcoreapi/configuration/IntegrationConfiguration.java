@@ -144,7 +144,7 @@ public class IntegrationConfiguration {
                                             .remoteUrl(file.getExternalFile().getRemoteUrl())
                                             .contentId(file.getExternalFile().getContentId())
                                             .fileType(file.getExternalFile().getFileType())
-                                            .title(documentUtils.getApiIntegrationDocumentTitle(file.getExternalFile().getContentId(), projectIntegrationDTO.getIntegration()))
+                                            .title(file.getExternalFile().getTitle())
                                             .documentIsccCode(documentUtils.getISCCCodeForApiIntegrationFile())
                                             .build();
 
