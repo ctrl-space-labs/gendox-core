@@ -38,8 +38,9 @@ public class TempIntegrationFileCheck {
     @Basic
     @Column(name = "integration_id", nullable = true)
     private UUID integrationId;
-
-
+    @Basic
+    @Column(name = "title", nullable = true)
+    private String title;
     @Basic
     @Column(name = "created_at", nullable = true)
     @CreatedDate
@@ -101,6 +102,14 @@ public class TempIntegrationFileCheck {
         this.integrationId = integrationId;
     }
 
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -117,8 +126,6 @@ public class TempIntegrationFileCheck {
         this.updatedAt = updatedAt;
     }
 
-
-
     public Type getFileType() {
         return fileType;
     }
@@ -132,11 +139,11 @@ public class TempIntegrationFileCheck {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TempIntegrationFileCheck that = (TempIntegrationFileCheck) o;
-        return Objects.equals(id, that.id) && Objects.equals(contentId, that.contentId) && Objects.equals(externalUrl, that.externalUrl) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(projectID, that.projectID) && Objects.equals(integrationId, that.integrationId) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(fileType, that.fileType);
+        return Objects.equals(id, that.id) && Objects.equals(contentId, that.contentId) && Objects.equals(externalUrl, that.externalUrl) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(projectID, that.projectID) && Objects.equals(integrationId, that.integrationId) && Objects.equals(title, that.title) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(fileType, that.fileType);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, contentId, externalUrl, remoteUrl, projectID, integrationId, createdAt, updatedAt, fileType);
+        return Objects.hash(id, contentId, externalUrl, remoteUrl, projectID, integrationId, title, createdAt, updatedAt, fileType);
     }
 }

@@ -9,8 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ApiKeyService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TempIntegrationFileCheckService;
-import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.ContentDTO;
-import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.ContentIdDTO;
+import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.AssignedContentDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.OrganizationAssignedContentDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
 import jakarta.transaction.Transactional;
@@ -97,14 +96,14 @@ public class ApiIntegrationUpdateService implements IntegrationUpdateService {
 
 
 
-    private Boolean isContentUpdated(ContentIdDTO contentIdDTO , ContentDTO contentDTO, UUID projectId, UUID organizationId) throws GendoxException {
-        DocumentInstance documentInstance = documentService.getDocumentByFileName(projectId, organizationId, contentDTO.getTitle());
+    private Boolean isContentUpdated(AssignedContentDTO assignedContentDTO, UUID projectId, UUID organizationId) throws GendoxException {
+        DocumentInstance documentInstance = documentService.getDocumentByFileName(projectId, organizationId, assignedContentDTO.getTitle());
 
         if (documentInstance == null) {
             return false;
         }
 
-        return documentInstance.getUpdatedAt().isBefore(contentIdDTO.getUpdatedAt());
+        return documentInstance.getUpdatedAt().isBefore(assignedContentDTO.getUpdatedAt());
 
     }
 
