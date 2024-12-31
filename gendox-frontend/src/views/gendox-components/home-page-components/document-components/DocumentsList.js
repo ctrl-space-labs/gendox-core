@@ -11,7 +11,6 @@ import Icon from "src/@core/components/icon";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 import documentService from "src/gendox-sdk/documentService.js";
 import QuickSearchToolbar from "src/utils/searchToolbar";
-import { formatDocumentTitle } from "src/utils/documentUtils";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/router";
 import { fetchProjectDocuments } from "src/store/apps/activeProject/activeProject";
@@ -127,7 +126,7 @@ const DocumentsList = ({ documents, page }) => {
       sortable: true,
       renderCell: (params) => (
         <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          {formatDocumentTitle(params.row.remoteUrl)}
+          {params.row.title}
         </Typography>
       ),
     },
@@ -256,9 +255,7 @@ const DocumentsList = ({ documents, page }) => {
         title="Confirm Deletion"
         contentText={
           selectedDocument
-            ? `Are you sure you want to delete "${formatDocumentTitle(
-                selectedDocument.remoteUrl
-              )}"? This action cannot be undone.`
+            ? `Are you sure you want to delete "${selectedDocument.title}"? This action cannot be undone.`
             : "Are you sure you want to delete this document? This action cannot be undone."
         }
         confirmButtonText="Delete"

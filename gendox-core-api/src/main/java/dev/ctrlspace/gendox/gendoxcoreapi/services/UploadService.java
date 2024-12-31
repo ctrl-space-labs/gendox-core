@@ -66,9 +66,10 @@ public class UploadService {
     @Transactional
     public DocumentInstance uploadFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException, GendoxException {
         String fileName = file.getOriginalFilename();
+        String cleanFileName = documentUtils.cleanFileName(fileName);
         String fullFilePath = documentUtils.saveFile(file, organizationId, projectId);
 
-        DocumentInstanceDTO instanceDTO = createDocumentInstanceDTO(file, organizationId, fileName, fullFilePath);
+        DocumentInstanceDTO instanceDTO = createDocumentInstanceDTO(file, organizationId, cleanFileName, fullFilePath);
 
         return upsertDocumentInstance(projectId, instanceDTO);
     }
