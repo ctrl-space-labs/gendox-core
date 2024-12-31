@@ -106,6 +106,19 @@ public class DocumentUtils {
 
     }
 
+    public String cleanFileName(String fileName) {
+        if (fileName == null || fileName.isEmpty()) {
+            return fileName; // Return as-is if the input is null or empty
+        }
+
+        // Remove the file extension if present
+        int dotIndex = fileName.lastIndexOf(".");
+        String baseName = (dotIndex > 0) ? fileName.substring(0, dotIndex) : fileName;
+
+        // Replace underscores with spaces
+        return baseName.replace("_", " ");
+    }
+
 
     @NotNull
     public static String calculateFilePathPrefix(UUID organizationId) {

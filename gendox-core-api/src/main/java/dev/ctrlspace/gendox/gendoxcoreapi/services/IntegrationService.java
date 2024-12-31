@@ -109,8 +109,7 @@ public class IntegrationService {
                 .builder()
                 .organizationId(organizationId)
                 .active(activeState)
-                .url(websiteIntegrationDTO.getDomain())
-                .directoryPath(websiteIntegrationDTO.getContextPath())
+                .url(websiteIntegrationDTO.getContextPath())
                 .integrationType(typeService.getIntegrationTypeByName(IntegrationTypesConstants.API_INTEGRATION))
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
@@ -126,8 +125,7 @@ public class IntegrationService {
 
         boolean newActiveState = isActiveStatus(statusName);
 
-        integration.setUrl(websiteIntegrationDTO.getDomain());
-        integration.setDirectoryPath(websiteIntegrationDTO.getContextPath());
+        integration.setUrl(websiteIntegrationDTO.getContextPath());
         integration.setActive(newActiveState);
         return updateIntegration(integration);
 
