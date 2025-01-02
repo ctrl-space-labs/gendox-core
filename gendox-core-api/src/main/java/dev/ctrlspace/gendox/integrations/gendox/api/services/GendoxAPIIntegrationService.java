@@ -1,7 +1,7 @@
 package dev.ctrlspace.gendox.integrations.gendox.api.services;
 
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.OrganizationAssignedContentDTO;
-import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.AssignedContentIdsDTO;
+import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.AssignedProjectDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.ContentDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,18 +54,21 @@ public class GendoxAPIIntegrationService {
             logger.debug("Raw API response: {}", rawResponse.getBody());
 
 
-            ResponseEntity<List<AssignedContentIdsDTO>> response = restTemplate.exchange(
+            ResponseEntity<List<AssignedProjectDTO>> response = restTemplate.exchange(
                     url,
                     HttpMethod.GET,
                     entity,
-                    new ParameterizedTypeReference<List<AssignedContentIdsDTO>>() {}
+                    new ParameterizedTypeReference<List<AssignedProjectDTO>>() {}
             );
 
+            List<AssignedProjectDTO> projects = response.getBody();
 
-            logger.info("Deserialized Response: {}", response.getBody());
+
+
+            logger.info("Deserialized Response: {}", projects);
 //            return response.getBody();
             return OrganizationAssignedContentDTO.builder()
-                    .projects(response.getBody())
+                    .projects(projects)
                     .build();
 
         } catch (Exception e) {
@@ -75,15 +78,15 @@ public class GendoxAPIIntegrationService {
     }
 
     // Method to get Assigned Content IDs
-    public AssignedContentIdsDTO getAssignedContentIds(String baseUrl, String projectId, String apiKey) {
+    public AssignedProjectDTO getAssignedContentIds(String baseUrl, String projectId, String apiKey) {
         String url = baseUrl + "/assigned-ids?project_id=" + projectId;
         HttpEntity<String> entity = new HttpEntity<>(buildHeader(apiKey));
 
-        ResponseEntity<AssignedContentIdsDTO> response = restTemplate.exchange(
+        ResponseEntity<AssignedProjectDTO> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,
                 entity,
-                AssignedContentIdsDTO.class
+                AssignedProjectDTO.class
         );
 
         return response.getBody();

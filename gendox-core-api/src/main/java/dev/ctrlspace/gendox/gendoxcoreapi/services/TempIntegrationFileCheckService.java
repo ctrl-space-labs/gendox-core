@@ -3,8 +3,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TempIntegrationFileCheck;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TempIntegrationFileCheckRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ApiIntegrationStatusConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.FileTypeConstants;
-import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.AssignedContentIdsDTO;
+import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.AssignedProjectDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.OrganizationAssignedContentDTO;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -13,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Stream;
 
 @Service
 public class TempIntegrationFileCheckService {
@@ -21,14 +21,17 @@ public class TempIntegrationFileCheckService {
     Logger logger = LoggerFactory.getLogger(TempIntegrationFileCheckService.class);
     private TempIntegrationFileCheckRepository tempIntegrationFileCheckRepository;
     private TypeService typeService;
+    private OrganizationWebSiteService organizationWebSiteService;
+
 
     @Autowired
     public TempIntegrationFileCheckService(TempIntegrationFileCheckRepository tempIntegrationFileCheckRepository,
-                                           TypeService typeService) {
+                                           TypeService typeService,
+                                           OrganizationWebSiteService organizationWebSiteService) {
         this.tempIntegrationFileCheckRepository = tempIntegrationFileCheckRepository;
         this.typeService = typeService;
+        this.organizationWebSiteService = organizationWebSiteService;
     }
-
 
 
     public TempIntegrationFileCheck getById(UUID id) {
@@ -38,38 +41,35 @@ public class TempIntegrationFileCheckService {
 
     public void createTempIntegrationFileChecksByOrganization(OrganizationAssignedContentDTO organizationAssignedContentDTO, Integration integration) {
         List<TempIntegrationFileCheck> tempIntegrationFileChecks = new ArrayList<>();
+        String domain = organizationWebSiteService.getByIntegrationId(integration.getId()).getUrl();
         Set<Long> processedContentIds = new HashSet<>();
-        for (AssignedContentIdsDTO assignedContentIdsDTO : organizationAssignedContentDTO.getProjects()) {
-            Stream.of(
-                            Optional.ofNullable(assignedContentIdsDTO.getAssignedContent().getPosts())
-                                    .orElse(Collections.emptyList())
-                                    .stream(),
-                            Optional.ofNullable(assignedContentIdsDTO.getAssignedContent().getProducts())
-                                    .orElse(Collections.emptyList())
-                                    .stream(),
-                            Optional.ofNullable(assignedContentIdsDTO.getAssignedContent().getPages())
-                                    .orElse(Collections.emptyList())
-                                    .stream()
-                    )
-                    .flatMap(i -> i)
-                    .forEach(contentIdDTO -> {
-                        if (processedContentIds.contains(contentIdDTO.getContentId())) {
+
+        for (AssignedProjectDTO assignedProjectDTO : organizationAssignedContentDTO.getProjects()) {
+            Optional.ofNullable(assignedProjectDTO.getAssignedContent())
+                    .orElse(Collections.emptyList())
+                    .forEach(assignedContentDTO -> {
+                        // Check if the status is "publish"
+                        if (!ApiIntegrationStatusConstants.PUBLISH.equals(assignedContentDTO.getStatus())) {
+                            return;
+                        }
+                        if (processedContentIds.contains(assignedContentDTO.getContentId())) {
                             // Skip adding if content ID is already processed in this iteration
-                            logger.info("Skipping duplicate contentId: {}", contentIdDTO.getContentId());
+                            logger.info("Skipping duplicate contentId: {}", assignedContentDTO.getContentId());
                             return;
                         }
 
                         TempIntegrationFileCheck tempIntegrationFileCheck = new TempIntegrationFileCheck();
-                        tempIntegrationFileCheck.setContentId(contentIdDTO.getContentId());
-                        tempIntegrationFileCheck.setProjectID(assignedContentIdsDTO.getProjectId());
+                        tempIntegrationFileCheck.setContentId(assignedContentDTO.getContentId());
+                        tempIntegrationFileCheck.setProjectID(assignedProjectDTO.getProjectId());
                         tempIntegrationFileCheck.setIntegrationId(integration.getId());
                         tempIntegrationFileCheck.setFileType(typeService.getFileTypeByName(FileTypeConstants.API_INTEGRATION_FILE));
-                        tempIntegrationFileCheck.setCreatedAt(contentIdDTO.getCreatedAt());
-                        tempIntegrationFileCheck.setUpdatedAt(contentIdDTO.getUpdatedAt());
-                        tempIntegrationFileCheck.setRemoteUrl(integration.getUrl() + integration.getDirectoryPath() + "/content?content_id=" + contentIdDTO.getContentId());
-                        tempIntegrationFileCheck.setExternalUrl(contentIdDTO.getExternalUrl()); // null as of 2024-11-18
+                        tempIntegrationFileCheck.setCreatedAt(assignedContentDTO.getCreatedAt());
+                        tempIntegrationFileCheck.setUpdatedAt(assignedContentDTO.getUpdatedAt());
+                        tempIntegrationFileCheck.setTitle(assignedContentDTO.getTitle());
+                        tempIntegrationFileCheck.setRemoteUrl(domain + integration.getUrl() + "/content?content_id=" + assignedContentDTO.getContentId());
+                        tempIntegrationFileCheck.setExternalUrl(assignedContentDTO.getExternalUrl()); // null as of 2024-11-18
                         tempIntegrationFileChecks.add(tempIntegrationFileCheck);
-                        processedContentIds.add(contentIdDTO.getContentId());
+                        processedContentIds.add(assignedContentDTO.getContentId());
                     });
         }
 

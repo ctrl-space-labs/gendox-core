@@ -9,14 +9,12 @@ import MenuItem from "@mui/material/MenuItem";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import Divider from "@mui/material/Divider";
-
 import Link from "next/link";
 import Icon from "src/@core/components/icon";
 import CustomAvatar from "src/@core/components/mui/avatar";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 import documentService from "src/gendox-sdk/documentService.js";
 import { fetchProjectDocuments } from "src/store/apps/activeProject/activeProject";
-import { formatDocumentTitle } from "src/utils/documentUtils";
 import authConfig from "src/configs/auth";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "src/utils/errorHandler";
@@ -32,6 +30,8 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, page }) => {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isBlurring, setIsBlurring] = useState(false);
+
+  console.log("DOCUMENTS", documents);
 
   useEffect(() => {
     setShowAll(false);
@@ -163,7 +163,7 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, page }) => {
                   cursor: "pointer",
                 }}
               >
-                {formatDocumentTitle(document.remoteUrl)}
+                {document.title}
               </Typography>
             </Box>
             <Box
@@ -253,9 +253,7 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, page }) => {
         title="Confirm Deletion"
         contentText={
           selectedDocument
-            ? `Are you sure you want to delete "${formatDocumentTitle(
-                selectedDocument.remoteUrl
-              )}"? This action cannot be undone.`
+            ? `Are you sure you want to delete "${selectedDocument.title}"? This action cannot be undone.`
             : "Are you sure you want to delete this document? This action cannot be undone."
         }
         confirmButtonText="Delete"

@@ -41,33 +41,20 @@ public class DocumentUtils {
     @Value("${gendox.documents.upload-dir}")
     private String uploadDir;
 
-    private GendoxAPIIntegrationService gendoxAPIIntegrationService;
     private IsccCodeService isccCodeService;
     private MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter;
-    private ApiKeyService apiKeyService;
 
     @Autowired
     private ResourceLoader resourceLoader;
 
     @Autowired
-    public DocumentUtils(GendoxAPIIntegrationService gendoxAPIIntegrationService,
-                         IsccCodeService isccCodeService,
-                         MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter,
-                         ApiKeyService apiKeyService) {
-        this.gendoxAPIIntegrationService = gendoxAPIIntegrationService;
+    public DocumentUtils(IsccCodeService isccCodeService,
+                         MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter
+    ) {
         this.isccCodeService = isccCodeService;
         this.mockUniqueIdentifierServiceAdapter = mockUniqueIdentifierServiceAdapter;
-        this.apiKeyService = apiKeyService;
     }
 
-
-
-    public String getApiIntegrationDocumentTitle(Long contentId, Integration integration) throws GendoxException {
-        String url = integration.getUrl() + integration.getDirectoryPath() + "/content?content_id=" + contentId;
-        String apiKey = apiKeyService.getByIntegrationId(integration.getId()).getApiKey();
-        ContentDTO contentDTO = gendoxAPIIntegrationService.getContentById(url, apiKey);
-        return contentDTO.getTitle();
-    }
 
     //TODO GIANNIS implement this method
     public String getISCCCodeForApiIntegrationFile() {
@@ -117,6 +104,19 @@ public class DocumentUtils {
             }
         }
 
+    }
+
+    public String cleanFileName(String fileName) {
+        if (fileName == null || fileName.isEmpty()) {
+            return fileName; // Return as-is if the input is null or empty
+        }
+
+        // Remove the file extension if present
+        int dotIndex = fileName.lastIndexOf(".");
+        String baseName = (dotIndex > 0) ? fileName.substring(0, dotIndex) : fileName;
+
+        // Replace underscores with spaces
+        return baseName.replace("_", " ");
     }
 
 

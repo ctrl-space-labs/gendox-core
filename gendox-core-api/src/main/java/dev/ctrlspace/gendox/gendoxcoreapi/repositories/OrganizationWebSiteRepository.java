@@ -51,4 +51,13 @@ public interface OrganizationWebSiteRepository extends JpaRepository<Organizatio
             @Param("domain") String domain
     );
 
+    @Query(nativeQuery = true, value = """
+                SELECT ows.*
+                FROM gendox_core.organization_web_sites ows
+                WHERE ows.integration_id = :integrationId
+                LIMIT 1
+            """)
+    Optional<OrganizationWebSite> findByIntegrationId(UUID integrationId);
+
+
 }
