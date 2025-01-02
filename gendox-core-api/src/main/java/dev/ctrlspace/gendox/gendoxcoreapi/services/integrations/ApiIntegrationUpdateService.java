@@ -6,11 +6,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TempIntegrationFileCheck;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFileDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectIntegrationDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationWebSiteRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ApiKeyService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationWebSiteService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TempIntegrationFileCheckService;
-import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.ContentDTO;
-import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.ContentIdDTO;
+import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.AssignedContentDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.OrganizationAssignedContentDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
 import jakarta.transaction.Transactional;
@@ -31,23 +32,27 @@ public class ApiIntegrationUpdateService implements IntegrationUpdateService {
     private GendoxAPIIntegrationService gendoxAPIIntegrationService;
     private TempIntegrationFileCheckService tempIntegrationFileCheckService;
     private ApiKeyService apiKeyService;
+    private OrganizationWebSiteService organizationWebSiteService;
 
     @Autowired
     public ApiIntegrationUpdateService(DocumentService documentService,
                                        GendoxAPIIntegrationService gendoxAPIIntegrationService,
                                        TempIntegrationFileCheckService tempIntegrationFileCheckService,
-                                       ApiKeyService apiKeyService) {
+                                       ApiKeyService apiKeyService,
+                                       OrganizationWebSiteService organizationWebSiteService) {
         this.documentService = documentService;
         this.gendoxAPIIntegrationService = gendoxAPIIntegrationService;
         this.tempIntegrationFileCheckService = tempIntegrationFileCheckService;
         this.apiKeyService = apiKeyService;
+        this.organizationWebSiteService = organizationWebSiteService;
     }
 
     @Override
     @Transactional(value = Transactional.TxType.REQUIRES_NEW)
     public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> checkForUpdates(Integration integration) throws GendoxException {
         String apiKey = apiKeyService.getByIntegrationId(integration.getId()).getApiKey();
-        String baseUrl = integration.getUrl() + integration.getDirectoryPath();
+        String domain = organizationWebSiteService.getByIntegrationId(integration.getId()).getUrl();
+        String baseUrl = domain + integration.getUrl();
         UUID organizationId = integration.getOrganizationId();
         Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> organizationMap = new HashMap<>();
         OrganizationAssignedContentDTO organizationAssignedContentDTO = gendoxAPIIntegrationService.getProjectAssignedContentsByOrganizationId(baseUrl, organizationId.toString(), apiKey);
@@ -94,21 +99,16 @@ public class ApiIntegrationUpdateService implements IntegrationUpdateService {
     }
 
 
-
-
-
-    private Boolean isContentUpdated(ContentIdDTO contentIdDTO , ContentDTO contentDTO, UUID projectId, UUID organizationId) throws GendoxException {
-        DocumentInstance documentInstance = documentService.getDocumentByFileName(projectId, organizationId, contentDTO.getTitle());
+    private Boolean isContentUpdated(AssignedContentDTO assignedContentDTO, UUID projectId, UUID organizationId) throws GendoxException {
+        DocumentInstance documentInstance = documentService.getDocumentByFileName(projectId, organizationId, assignedContentDTO.getTitle());
 
         if (documentInstance == null) {
             return false;
         }
 
-        return documentInstance.getUpdatedAt().isBefore(contentIdDTO.getUpdatedAt());
+        return documentInstance.getUpdatedAt().isBefore(assignedContentDTO.getUpdatedAt());
 
     }
-
-
 
 
     private Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> createMap(Map<UUID, List<TempIntegrationFileCheck>> projectContentMap, Integration integration) {

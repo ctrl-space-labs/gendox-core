@@ -4,6 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.OrganizationWebSiteConverte
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ApiKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationPlan;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationWebSiteDTO;
@@ -56,6 +57,10 @@ public class OrganizationWebSiteService {
 
     public List<OrganizationWebSite> getAllByOrganizationId(UUID organizationId) {
         return organizationWebSiteRepository.findAllByOrganizationId(organizationId);
+    }
+
+    public OrganizationWebSite getByIntegrationId(UUID integrationId) {
+        return organizationWebSiteRepository.findByIntegrationId(integrationId).orElse(null);
     }
 
     public OrganizationWebSite getOrganizationWebSite(UUID organizationId, String domain) throws GendoxException {
@@ -121,9 +126,8 @@ public class OrganizationWebSiteService {
     }
 
     private int calculateMaxWebSites(UUID organizationId) {
-        return organizationPlanService.getAllOrganizationPlansByOrganizationId(organizationId).stream()
-                .mapToInt(plan -> plan.getSubscriptionPlan().getOrganizationWebSites() * plan.getNumberOfSeats())
-                .sum();
+        OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
+        return activePlan.getSubscriptionPlan().getOrganizationWebSites() * activePlan.getNumberOfSeats();
     }
 
     public OrganizationWebSite updateOrganizationWebSite(UUID id, OrganizationWebSiteDTO organizationWebSiteDTO) {

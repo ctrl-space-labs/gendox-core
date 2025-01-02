@@ -12,5 +12,5 @@ import java.util.List;
 @NoArgsConstructor
 @Builder(toBuilder = true)
 public class OrganizationAssignedContentDTO {
-    private List<AssignedContentIdsDTO> projects;
+    private List<AssignedProjectDTO> projects;
 }
