@@ -1,7 +1,7 @@
 import Box from "@mui/material/Box";
 import CustomAvatar from "src/@core/components/mui/avatar";
 import { getInitials } from "src/@core/utils/get-initials";
-import ChatLogMessage from "src/views/apps/chat/chatLog-components/ChatLogMessage";
+import ChatLogMessage from "src/views/apps/chat/components/chat-content/chatLog-components/chatLog-message-group/ChatLogMessage";
 
 
 const ChatLogMessageGroup = ({ messageData, data }) => {

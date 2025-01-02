@@ -10,7 +10,6 @@ import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import Icon from "src/@core/components/icon";
 import toast from "react-hot-toast";
-import { formatDocumentTitle } from "src/utils/documentUtils";
 import {
   fetchDocument,
   updateSectionsOrder,
@@ -293,7 +292,7 @@ const DocumentSections = () => {
             sx={{ mb: 6, fontWeight: 600, textAlign: "left" }}
           >
             {document
-              ? formatDocumentTitle(document.remoteUrl)
+              ? document.title
               : "No Selected Document"}{" "}
             Document
           </Typography>

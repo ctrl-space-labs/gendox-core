@@ -27,7 +27,7 @@ import { getInitials } from "src/@core/utils/get-initials";
 import { formatDateToMonthShort } from "src/@core/utils/format";
 
 // ** Chat App Components Imports
-import SidebarLeft from "src/views/apps/chat/SidebarLeft";
+import Sidebar from "src/views/apps/chat/Sidebar";
 import ChatContent from "src/views/apps/chat/ChatContent";
 
 const AppChat = (props) => {
@@ -38,6 +38,7 @@ const AppChat = (props) => {
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
+
 
   // ** States
   const [userStatus, setUserStatus] = useState("online");
@@ -127,7 +128,7 @@ const AppChat = (props) => {
         }),
       }}
     >
-      <SidebarLeft
+      <Sidebar
         store={store}
         hidden={hidden}
         mdAbove={mdAbove}

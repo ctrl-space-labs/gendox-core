@@ -14,11 +14,11 @@ import Box from "@mui/material/Box";
 import Icon from "src/@core/components/icon";
 
 // ** Custom Components Import
-import ChatLog from "./ChatLog";
-import SendMsgForm from "src/views/apps/chat/SendMsgForm";
+import ChatLog from "src/views/apps/chat/components/chat-content/ChatLog";
+import SendMsgForm from "src/views/apps/chat/components/chat-content/SendMsgForm";
 import CustomAvatar from "src/@core/components/mui/avatar";
 import OptionsMenu from "src/@core/components/option-menu";
-import UserProfileRight from "src/views/apps/chat/UserProfileRight";
+import UserProfileRight from "src/views/apps/chat/components/chat-content/UserProfileRight";
 
 // ** Styled Components
 const ChatWrapperStartChat = styled(Box)(({ theme }) => ({

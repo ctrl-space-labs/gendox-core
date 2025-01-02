@@ -2,8 +2,8 @@
 import { useRef, useEffect, useState } from "react";
 
 import Box from "@mui/material/Box";
-import ChatLogScrollWrapper from "./chatLog-components/ChatLogScrollWrapper";
-import ChatLogMessageGroup from "./chatLog-components/ChatLogMessageGroup";
+import ChatLogScrollWrapper from "src/views/apps/chat/components/chat-content/chatLog-components/ChatLogScrollWrapper";
+import ChatLogMessageGroup from "src/views/apps/chat/components/chat-content/chatLog-components/ChatLogMessageGroup";
 import {
   formattedChatData,
   scrollToBottom,
