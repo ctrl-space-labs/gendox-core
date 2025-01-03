@@ -5,7 +5,7 @@ INSERT INTO gendox_core.templates
 SELECT
     'CHAT_CONTEXT_WITH_SESSION_AND_RETRIVAL_CONTEXT',
 '[Context]:
- 1. [Session Context]:
+ - [Session Context]:
     $' || '{localContexts}
 """
  - [Retrieval Context]:
