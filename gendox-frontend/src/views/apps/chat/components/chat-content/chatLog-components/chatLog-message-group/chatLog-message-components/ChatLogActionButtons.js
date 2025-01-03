@@ -79,7 +79,7 @@ const ChatLogActionButtons = ({
         <Icon icon="mdi:replay" />
       </IconButton>
     </Tooltip> */}
-      <Tooltip title="Like">
+      {/* <Tooltip title="Like">
         <IconButton
           onClick={handleLike}
           size="small"
@@ -100,7 +100,7 @@ const ChatLogActionButtons = ({
         >
           <Icon icon="mdi:thumb-down" />
         </IconButton>
-      </Tooltip>
+      </Tooltip> */}
       <Tooltip title="Info">
         <IconButton onClick={handleInfoToggle} size="small">
           <Icon icon="mdi:information-outline" />

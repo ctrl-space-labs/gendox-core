@@ -18,6 +18,7 @@ const Contacts = ({
   statusObj,
   getInitials,
 }) => {
+
   const hasActiveId = (id) => {
     if (store.chats !== null) {
       const arr = store.chats.filter((i) => i.id === id);

@@ -6,9 +6,7 @@ import chatConverters from "../../../converters/chat.converter";
 import { useRouter } from "next/router";
 
 // ** Axios Imports
-import axios from "axios";
-import { uid } from "chart.js/helpers";
-import apiRequests from "../../../configs/apiRequest";
+
 import authConfig from "src/configs/auth";
 import projectService from "src/gendox-sdk/projectService";
 import { generalConstants } from "src/utils/generalConstants";

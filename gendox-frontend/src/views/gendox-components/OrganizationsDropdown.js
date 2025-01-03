@@ -1,6 +1,6 @@
 // General and MUI Imports
-import React, { useState, useEffect, useCallback, Fragment } from "react";
-import { useDispatch } from "react-redux";
+import React, { useState, useEffect, useCallback, Fragment, use } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/router";
 import Box from "@mui/material/Box";
 import AvatarGroup from "@mui/material/AvatarGroup";
@@ -52,8 +52,10 @@ const OrganizationsDropdown = ({ settings }) => {
 
   const handleOrganizations = useCallback(
     (organization) => {
-      const { projects } = organization;
+      const { projects, projectAgents } = organization;
       const newProjectId = projects?.[0]?.id ?? null;
+      const newProjectAgent =
+        projectAgents.find((agent) => agent.projectId === newProjectId) ?? null;
       handleDropdownClose();
 
       dispatch(
@@ -74,18 +76,36 @@ const OrganizationsDropdown = ({ settings }) => {
       localStorage.setItem(authConfig.selectedOrganizationId, organization.id);
       localStorage.setItem(authConfig.selectedProjectId, newProjectId);
       setActiveOrganizationId(organization.id);
-      const newPath =
-        router.pathname === "/gendox/chat"
-          ? `/gendox/chat/?organizationId=${organization.id}`
-          : router.pathname === "/gendox/organization-settings"
-          ? `/gendox/organization-settings/?organizationId=${organization.id}`
-          : `/gendox/home/?organizationId=${organization.id}&projectId=${newProjectId}`;
+
+      let newPath = `/gendox/home/?organizationId=${organization.id}`;
+      if (
+        router.pathname === "/gendox/chat" &&
+        newProjectId &&
+        newProjectAgent
+      ) {
+        newPath = `/gendox/chat/?organizationId=${organization.id}&threadId=${newProjectAgent.userId}&projectId=${newProjectId}`;
+      } else if (router.pathname === "/gendox/chat") {
+        newPath = `/gendox/chat/?organizationId=${organization.id}`;
+      } else if (
+        router.pathname === "/gendox/organization-settings" &&
+        newProjectId
+      ) {
+        newPath = `/gendox/organization-settings/?organizationId=${organization.id}&projectId=${newProjectId}`;
+      } else if (
+        router.pathname === "/gendox/organization-settings"
+      ){
+        newPath = `/gendox/organization-settings/?organizationId=${organization.id}`;
+      }
       router.push(newPath);
     },
     [dispatch, handleDropdownClose, router]
-  ); 
+  );
 
-  const sortedOrganizations = sortByField([...auth.user.organizations], "name", activeOrganizationId);
+  const sortedOrganizations = sortByField(
+    [...auth.user.organizations],
+    "name",
+    activeOrganizationId
+  );
 
   const visibleOrganizations = sortedOrganizations.slice(0, visibleCount);
   const overflowCount = sortedOrganizations.length - visibleCount;
@@ -165,56 +185,81 @@ const OrganizationsDropdown = ({ settings }) => {
           horizontal: settings.direction === "ltr" ? "right" : "left",
         }}
       >
-        {sortByField([...auth.user.organizations], "name", activeOrganizationId)
-          .map((organization) => {
-            const href =
-              router.pathname === "/gendox/chat"
-                ? `/gendox/chat/?organizationId=${organization.id}`
-                : `/gendox/home/?organizationId=${organization.id}&projectId=${
-                    organization.projects?.[0]?.id ?? ""
-                  }`;
-            return (
-              <Link
-                href={href}
-                passHref
-                key={organization.id}
-                style={{ textDecoration: "none" }}
-              >
-                <MenuItem
-                  sx={{ p: 0 }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleOrganizations(organization);
-                  }}
-                  selected={organization.id === activeOrganizationId}
-                >
-                  <Box
-                    sx={{
-                      py: 2,
-                      px: 4,
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      textDecoration: "none",
-                      backgroundColor:
-                        organization.id === activeOrganizationId
-                          ? "primary.light"
-                          : "inherit",
-                      "& svg": {
-                        mr: 2,
-                        fontSize: "1.375rem",
-                      },
-                    }}
-                  >
-                    <ListItemIcon sx={{ color: "primary.main" }}>
-                      <Icon icon="mdi:domain" fontSize={20} />
-                    </ListItemIcon>
-                    <ListItemText primary={organization.name} />
-                  </Box>
-                </MenuItem>
-              </Link>
+        {sortByField(
+          [...auth.user.organizations],
+          "name",
+          activeOrganizationId
+        ).map((organization) => {
+          
+          let href = `/gendox/home/?organizationId=${organization.id}`;
+
+          // Determine the href based on the current route
+          if (router.pathname === "/gendox/chat") {
+            // Set href for chat if there's a projectId, add threadId if there's a newProjectAgent
+            const newProjectId = organization.projects?.[0]?.id ?? "";
+            const newProjectAgent = organization.projectAgents?.find(
+              (agent) => agent.projectId === newProjectId
             );
-          })}
+
+            href = newProjectAgent
+              ? `/gendox/chat/?organizationId=${organization.id}&threadId=${newProjectAgent.userId}&projectId=${newProjectId}`
+              : `/gendox/chat/?organizationId=${organization.id}`;
+          } else {
+            // Use the first project's ID if available for other routes
+            href = `/gendox/home/?organizationId=${organization.id}&projectId=${
+              organization.projects?.[0]?.id ?? ""
+            }`;
+          }
+
+          // const href =
+          //   router.pathname === "/gendox/chat"
+          //     ? `/gendox/chat/?organizationId=${organization.id}`
+          //     : `/gendox/home/?organizationId=${organization.id}&projectId=${
+          //         organization.projects?.[0]?.id ?? ""
+          //       }`;
+
+          return (
+            <Link
+              href={href}
+              passHref
+              key={organization.id}
+              style={{ textDecoration: "none" }}
+            >
+              <MenuItem
+                sx={{ p: 0 }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleOrganizations(organization);
+                }}
+                selected={organization.id === activeOrganizationId}
+              >
+                <Box
+                  sx={{
+                    py: 2,
+                    px: 4,
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    textDecoration: "none",
+                    backgroundColor:
+                      organization.id === activeOrganizationId
+                        ? "primary.light"
+                        : "inherit",
+                    "& svg": {
+                      mr: 2,
+                      fontSize: "1.375rem",
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ color: "primary.main" }}>
+                    <Icon icon="mdi:domain" fontSize={20} />
+                  </ListItemIcon>
+                  <ListItemText primary={organization.name} />
+                </Box>
+              </MenuItem>
+            </Link>
+          );
+        })}
       </Menu>
     </Fragment>
   );

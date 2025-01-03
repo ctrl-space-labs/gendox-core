@@ -150,7 +150,6 @@ const AppChat = (props) => {
         chatUrlPath={chatUrlPath}
       />
       <ChatContent
-        store={store}
         hidden={hidden}
         sendMsg={sendMsg}
         mdAbove={mdAbove}
@@ -164,7 +163,6 @@ const AppChat = (props) => {
           handleUserProfileRightSidebarToggle
         }
         organizationId={organizationId}
-        storedToken={storedToken}
         chatUrlPath={chatUrlPath}
       />
     </Box>

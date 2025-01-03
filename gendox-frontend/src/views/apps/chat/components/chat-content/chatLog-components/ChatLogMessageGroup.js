@@ -5,9 +5,7 @@ import ChatLogMessage from "src/views/apps/chat/components/chat-content/chatLog-
 
 
 const ChatLogMessageGroup = ({ messageData, data }) => {
-  const isSender = messageData.senderId === data.userContact.id;
-
-  
+  const isSender = messageData.senderId === data.userContact.id;  
   
 
   return (
