@@ -257,14 +257,14 @@ const AiAgentProjectSettings = () => {
 
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel id="semantic-search-model">
+                <InputLabel id="search-model">
                   Semantic Search Model
                 </InputLabel>
                 <Select
-                  label="semantic-search-model"
+                  label="search-model"
                   value={semanticSearchModel}
-                  id="semantic-search-model"
-                  labelId="semantic-search-model"
+                  id="search-model"
+                  labelId="search-model"
                   onChange={handleSemanticSearchModelChange}
                 >
                   {semanticModels.map((model) => (

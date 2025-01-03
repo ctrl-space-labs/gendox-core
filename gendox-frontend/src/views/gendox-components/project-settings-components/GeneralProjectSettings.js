@@ -86,7 +86,7 @@ const GeneralProjectSettings = () => {
       toast.success("Project updated successfully!");
       console.log("Update successful", response);      
       const path = `/gendox/project-settings/?organizationId=${project.organizationId}&projectId=${project.id}`;
-      router.push(path);
+      router.reload(path);
     } catch (error) {
       toast.error(`Failed to update project. Error: ${getErrorMessage(error)}`);
       console.error("Failed to update project", error);
@@ -166,6 +166,9 @@ const GeneralProjectSettings = () => {
                 label="Name"
                 value={name}                
                 onChange={handleNameChange}
+                InputLabelProps={{
+                  shrink: true,
+                }}
               />
             </Grid>
 
@@ -217,6 +220,9 @@ const GeneralProjectSettings = () => {
                 id="project-description"
                 value={description}
                 onChange={handleDescriptionChange}
+                InputLabelProps={{
+                  shrink: true,
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={6}></Grid>

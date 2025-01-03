@@ -11,6 +11,7 @@ import Box from "@mui/material/Box";
 
 // ** Icon Imports
 import Icon from "src/@core/components/icon";
+import {useIFrameMessageManager} from "../../../context/IFrameMessageManagerContext";
 
 // // ** Styled Form
 const Form = styled("form")(({ theme }) => ({
@@ -20,6 +21,7 @@ const Form = styled("form")(({ theme }) => ({
 const SendMsgForm = (props) => {
   // ** Props
   const { store, dispatch, sendMsg, organizationId } = props;
+  const iFrameMessageManager = useIFrameMessageManager();
 
   // ** State
   const [msg, setMsg] = useState("");
@@ -35,7 +37,7 @@ const SendMsgForm = (props) => {
     e.preventDefault();
     if (store && store.selectedChat && msg.trim().length) {
       dispatch(
-        sendMsg({ ...store.selectedChat, message: msg, organizationId })
+        sendMsg({ ...store.selectedChat, message: msg, organizationId, iFrameMessageManager })
       );
     }
     setMsg("");

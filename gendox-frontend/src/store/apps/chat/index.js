@@ -146,7 +146,7 @@ export const sendMsg = createAsyncThunk(
       }
 
       const { projectId, threadId, userId } = obj.contact;
-      const { message } = obj;
+      const { message, iFrameMessageManager } = obj;
 
       // Chat append string
       dispatch(
@@ -157,13 +157,36 @@ export const sendMsg = createAsyncThunk(
         })
       );
 
+      // sending PostMessage notification
+      iFrameMessageManager.messageManager.sendMessage({
+        type: 'gendox.events.chat.message.new.sent',
+        payload: { message },
+      });
+
+      let chatLocalContextResponses = await iFrameMessageManager.messageManager.fetchResponses(
+          "gendox.events.chat.message.context.local.request",
+      "gendox.events.chat.message.context.local.response",
+          {},
+          1,
+          200);
+
+
+
+
       // Send the message to the server
       const response = await completionService.postCompletionMessage(
         projectId,
         threadId,
         message,
+        chatLocalContextResponses,
         storedToken
       );
+
+      // sending PostMessage notification
+      iFrameMessageManager.messageManager.sendMessage({
+        type: 'gendox.events.chat.message.new.response.received',
+        payload: response.data.message.value,
+      });
 
       console.log("response", response);
       const { value, messageSections, threadId: responseThreadId } = response.data.message;

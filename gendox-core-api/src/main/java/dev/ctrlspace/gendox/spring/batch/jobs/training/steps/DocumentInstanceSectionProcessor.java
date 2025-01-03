@@ -100,7 +100,7 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
             );
 
         } catch (Exception e) {
-            logger.warn("Error {} getting Embedding for section {}. Skipping...", e.getMessage(), item.getId());
+            logger.error("Error {} getting Embedding for section {}. Skipping...", e.getMessage(), item.getId());
             return null;
         }
         logger.debug("Section processed with cost: {} tokens", embeddingResponse.getUsage().getTotalTokens());
