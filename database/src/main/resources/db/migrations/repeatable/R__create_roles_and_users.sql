@@ -38,11 +38,13 @@ $$;
 DO
 $$
     BEGIN
-        IF NOT EXISTS(SELECT FROM pg_catalog.pg_roles WHERE rolname = 'readonly_role') THEN
+        IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'readonly_role') THEN
             CREATE ROLE readonly_role;
         END IF;
-    END
+    END;
 $$;
+
+ALTER ROLE readonly_role SET search_path TO gendox_core, gendox_jobs;
 
 -- Grant SELECT privileges to all existing schemas and tables to the readonly_role role
 DO
@@ -51,6 +53,18 @@ $$
         schema_name_var TEXT;
         table_name_var  TEXT;
     BEGIN
+        -- Grant USAGE on schemas
+        FOR schema_name_var IN
+            SELECT DISTINCT table_schema
+            FROM information_schema.tables
+            WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+            LOOP
+                IF schema_name_var IS NOT NULL THEN
+                    EXECUTE format('GRANT USAGE ON SCHEMA %I TO readonly_role', schema_name_var);
+                END IF;
+            END LOOP;
+
+        -- Grant SELECT on all tables
         FOR schema_name_var, table_name_var IN
             SELECT table_schema, table_name
             FROM information_schema.tables
