@@ -10,7 +10,6 @@ import Tooltip from "@mui/material/Tooltip";
 import Grid from "@mui/material/Grid";
 import { ListItemButton } from "@mui/material";
 import { useRouter } from "next/router";
-import { formatDocumentTitle } from "src/utils/documentUtils";
 
 const EmptyStateMessage = ({ message }) => (
   <Box
@@ -35,7 +34,6 @@ const ChatLogInfo = ({ messageMetadata }) => {
   const router = useRouter();
   const { organizationId } = router.query;
 
-
   if (!Array.isArray(messageMetadata) || messageMetadata.length === 0) {
     return <EmptyStateMessage message="No additional information available." />;
   }
@@ -43,18 +41,15 @@ const ChatLogInfo = ({ messageMetadata }) => {
   const hasOriginalDocument = messageMetadata.some((sectionData) =>
     sectionData.policyValue.includes("ORIGINAL_DOCUMENT")
   );
-  
 
   const hasOwnerProfile = messageMetadata.some((sectionData) =>
     sectionData.policyValue.includes("OWNER_PROFILE")
   );
 
-
-
   const seenUniqueEntries = new Set();
   const filteredMessageMetadata = messageMetadata.filter((sectionData) => {
     sectionData.policyValue.includes("ORIGINAL_DOCUMENT")
-      ? formatDocumentTitle(sectionData.documentUrl)
+      ? sectionData.documentTitle
       : "Secret Document";
     const uniqueKey = `${sectionData.userName}-${sectionData.documentId}`;
     if (!seenUniqueEntries.has(uniqueKey)) {
@@ -64,7 +59,6 @@ const ChatLogInfo = ({ messageMetadata }) => {
 
     return false;
   });
-
 
   if (!hasOriginalDocument && !hasOwnerProfile) {
     return (
@@ -84,11 +78,11 @@ const ChatLogInfo = ({ messageMetadata }) => {
     >
       <Grid container spacing={3}>
         {filteredMessageMetadata.map((sectionData, idx) => {
-          const documentName = formatDocumentTitle(sectionData.documentUrl);
+          const documentName = sectionData.documentTitle;
           let documentUrl = `/gendox/document-instance/?organizationId=${sectionData.organizationId}&documentId=${sectionData.documentId}&sectionId=${sectionData.sectionId}`;
 
           if (sectionData?.externalUrl) {
-              documentUrl = sectionData.externalUrl;
+            documentUrl = sectionData.externalUrl;
           }
           // const sectionUrl = `/gendox/document-instance/?organizationId=${organizationId}&sectionId=${sectionData.sectionId}`;
 
@@ -154,9 +148,8 @@ const ChatLogInfo = ({ messageMetadata }) => {
                         />
                       </>
                     )}
-                    
                   </Box>
-                  
+
                   {/* </ListItemButton> */}
                 </ListItem>
 
@@ -186,7 +179,15 @@ const ChatLogInfo = ({ messageMetadata }) => {
                     </Tooltip>
                   ) : (
                     <Tooltip title=" This document is secret.">
-                      <ListItem>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          width: "100%",
+                          paddingY: "12px",
+                          paddingX: "16px",
+                        }}
+                      >
                         <ListItemIcon sx={{ color: "primary.main" }}>
                           <Icon
                             icon="mdi:file-document-outline"
@@ -200,7 +201,7 @@ const ChatLogInfo = ({ messageMetadata }) => {
                             </Typography>
                           }
                         />
-                      </ListItem>
+                      </Box>
                     </Tooltip>
                   )}
                 </ListItem>

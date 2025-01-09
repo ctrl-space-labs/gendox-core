@@ -82,6 +82,7 @@ const Documents = () => {
         filter: isBlurring ? "blur(6px)" : "none",
         transition: "filter 0.3s ease",
       }}
+      aria-busy={isBlurring}
     >
       {/* Header Section */}
       <Box

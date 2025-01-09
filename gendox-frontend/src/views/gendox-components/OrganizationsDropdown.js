@@ -48,7 +48,11 @@ const OrganizationsDropdown = ({ settings }) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleDropdownClose = useCallback(() => setAnchorEl(null), []);
+  const handleDropdownClose = useCallback(() => {
+    setAnchorEl(null);
+    const triggerElement = document.querySelector('[aria-controls="menu-id"]');
+    if (triggerElement) triggerElement.focus();
+  }, []);
 
   const handleOrganizations = useCallback(
     (organization) => {
@@ -158,7 +162,9 @@ const OrganizationsDropdown = ({ settings }) => {
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
-        onClose={() => handleDropdownClose()}
+        onClose={handleDropdownClose}
+        disableAutoFocus
+        disableEnforceFocus
         sx={{ "& .MuiMenu-paper": { width: 230, mt: 4 } }}
         anchorOrigin={{
           vertical: "bottom",
@@ -196,7 +202,6 @@ const OrganizationsDropdown = ({ settings }) => {
                   e.preventDefault();
                   handleOrganizations(organization);
                 }}
-                l
                 selected={organization.id === activeOrganizationId}
               >
                 <Box

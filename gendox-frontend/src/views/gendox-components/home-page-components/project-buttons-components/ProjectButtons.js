@@ -22,7 +22,6 @@ const ProjectButtons = () => {
   const handleOpenUploader = () => setShowUploader(true);
   const handleCloseUploader = () => setShowUploader(false);
 
-
   const handleCreateDocument = () => {
     router.push(
       `/gendox/create-document/?organizationId=${project.organizationId}&projectId=${project.id}`
@@ -89,6 +88,8 @@ const ProjectButtons = () => {
         onClose={handleCloseUploader}
         aria-labelledby="simple-modal-title"
         aria-describedby="simple-modal-description"
+        disableEnforceFocus
+        disableAutoFocus
         sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
       >
         <Box sx={{ outline: "none", p: 2, bgcolor: "background.paper" }}>
