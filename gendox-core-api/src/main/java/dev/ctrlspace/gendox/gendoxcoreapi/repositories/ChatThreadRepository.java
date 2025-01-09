@@ -22,4 +22,6 @@ public interface ChatThreadRepository extends JpaRepository<ChatThread, UUID>, Q
 
     @EntityGraph(attributePaths = {"chatThreadMembers"})
     Page<ChatThread> findAll(Predicate predicate, Pageable pageable);
+
+    void deleteById(UUID id);
 }

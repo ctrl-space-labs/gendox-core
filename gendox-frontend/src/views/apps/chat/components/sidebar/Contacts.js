@@ -14,7 +14,7 @@ const Contacts = ({
   store,
   activeProjectId,
   hidden,
-  handleChatClick,
+  handleContactClick,
   statusObj,
   getInitials,
 }) => {
@@ -51,7 +51,7 @@ const Contacts = ({
                 <ListItemButton
                   disableRipple
                   onClick={() =>
-                    handleChatClick(
+                    handleContactClick(
                       hasActiveId(contact.id) ? "chat" : "contact",
                       contact.id,
                       contact.projectId

@@ -13,19 +13,20 @@ import { generalConstants } from "src/utils/generalConstants";
 import completionService from "../../../gendox-sdk/completionService";
 import chatThreadService from "../../../gendox-sdk/chatThreadService";
 
-
-
 // ** Fetch Chats & Contacts
 export const fetchChatsContacts = createAsyncThunk(
   "appChat/fetchChatsContacts",
   async ({ organizationId, storedToken }, { rejectWithValue }) => {
     try {
-      const projectsByOrgResponse = await projectService.getProjectsByOrganization(
-        organizationId,
-        storedToken
-      );
+      const projectsByOrgResponse =
+        await projectService.getProjectsByOrganization(
+          organizationId,
+          storedToken
+        );
 
-      const projectIds = projectsByOrgResponse.data.content.map((project) => project.id);
+      const projectIds = projectsByOrgResponse.data.content.map(
+        (project) => project.id
+      );
       if (projectIds.length === 0) {
         return {
           chatsContacts: [],
@@ -37,12 +38,18 @@ export const fetchChatsContacts = createAsyncThunk(
 
       // unauthenticated user
       if (!storedToken || storedToken === generalConstants.NO_AUTH_TOKEN) {
-        const localThreads = JSON.parse(localStorage.getItem(generalConstants.LOCAL_STORAGE_THREAD_IDS_NAME)) || [];
+        const localThreads =
+          JSON.parse(
+            localStorage.getItem(generalConstants.LOCAL_STORAGE_THREAD_IDS_NAME)
+          ) || [];
         localThreadIds = localThreads.map((thread) => thread.threadId);
       }
 
-      const threadsResponse = await chatThreadService.getThreadsByCriteria(projectIds, localThreadIds, storedToken);
-
+      const threadsResponse = await chatThreadService.getThreadsByCriteria(
+        projectIds,
+        localThreadIds,
+        storedToken
+      );
 
       const threads = threadsResponse.data.content;
 
@@ -60,15 +67,15 @@ export const fetchChatsContacts = createAsyncThunk(
         if (!project.projectAgent) {
           console.warn("Project has no projectAgent:", project);
           return {
-            id: '',
-            userId: '',
-            agentId: '',
-            projectId: project.id || '',
-            fullName: 'Unknown Agent',
+            id: "",
+            userId: "",
+            agentId: "",
+            projectId: project.id || "",
+            fullName: "Unknown Agent",
             role: "Agent",
-            about: project.description || 'No description available',
+            about: project.description || "No description available",
             avatar: null,
-            status: 'offline'
+            status: "offline",
           };
         }
         return chatConverters.projectToContact(project);
@@ -76,7 +83,7 @@ export const fetchChatsContacts = createAsyncThunk(
 
       const chatEntries = threads.map((thread) =>
         chatConverters.gendoxThreadToChatEntry(thread, contacts)
-      );
+      );      
 
       chatEntries.sort(
         (a, b) =>
@@ -94,26 +101,24 @@ export const fetchChatsContacts = createAsyncThunk(
   }
 );
 
-
 // ** Select Chat
 export const selectChat = createAsyncThunk(
   "appChat/selectChat",
   async (
-    { id, keepChatContent = false, organizationId, storedToken },
+    { threadId, keepChatContent = false, organizationId, storedToken },
     { dispatch, getState, rejectWithValue }
   ) => {
     try {
       const state = getState();
-      let thread = state.chat.chats.find((thread) => thread.id === id);
+      let thread = state.chat.chats.find((thread) => thread.id === threadId);
       let newThread = !thread;
 
-
       if (newThread) {
-        return _createNewThreadChat(state, id);
+        return _createNewThreadChat(state, threadId);
       }
 
       let selectedChat = await _fetchExistingChatWithMessages(
-        id,
+        threadId,
         dispatch,
         thread
       );
@@ -128,15 +133,15 @@ export const selectChat = createAsyncThunk(
   }
 );
 
-
 // ** Send Msg
 export const sendMsg = createAsyncThunk(
   "appChat/sendMsg",
   async (obj, { dispatch, getState, rejectWithValue }) => {
-
-    try {      
-      const state = getState();      
-      let storedToken = window.localStorage.getItem(authConfig.storageTokenKeyName);
+    try {
+      const state = getState();
+      let storedToken = window.localStorage.getItem(
+        authConfig.storageTokenKeyName
+      );
 
       const userProfile = state.chat.userProfile;
       if (!userProfile?.id) {
@@ -163,8 +168,11 @@ export const sendMsg = createAsyncThunk(
         storedToken
       );
 
-      console.log("response", response);
-      const { value, messageSections, threadId: responseThreadId } = response.data.message;
+      const {
+        value,
+        messageSections,
+        threadId: responseThreadId,
+      } = response.data.message;
 
       dispatch(
         addMessage({
@@ -183,15 +191,17 @@ export const sendMsg = createAsyncThunk(
       }
 
       // Fetch chats and select the chat thread
-      await dispatch(fetchChatsContacts({ organizationId: obj.organizationId, storedToken }));
+      await dispatch(
+        fetchChatsContacts({ organizationId: obj.organizationId, storedToken })
+      );
       dispatch(
         selectChat({
-          id: finalThreadId,
+          threadId: finalThreadId,
           keepChatContent: true,
           organizationId: obj.organizationId,
           storedToken,
         })
-      );      
+      );
 
       return response.data;
     } catch (error) {
@@ -218,6 +228,33 @@ export const addMessage = createAsyncThunk(
   }
 );
 
+// ** Fetch ThreadId
+export const fetchThreadId = createAsyncThunk(
+  "appChat/fetchThreadId",
+  async ({ projectId }, { getState, rejectWithValue }) => {
+    try {
+      const contacts = getState().chat.contacts || [];
+      if (contacts.length === 0) {
+        throw new Error("No contacts available to find threadId.");
+      }
+
+      // Find the project agent for the given projectId
+      const projectAgent =
+        contacts.find((agent) => agent.projectId === projectId) ?? null;
+
+      if (!projectAgent) {
+        console.warn(`No agent found for projectId: ${projectId}`);
+        return null; // No threadId found
+      }
+
+      return projectAgent.userId; // Return the userId as the threadId
+    } catch (error) {
+      console.error("Failed to fetch threadId:", error);
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 export const appChatSlice = createSlice({
   name: "appChat",
   initialState: {
@@ -225,6 +262,8 @@ export const appChatSlice = createSlice({
     contacts: null,
     userProfile: null,
     selectedChat: null,
+    isSending: false,
+    threadId: null,
   },
   reducers: {
     removeSelectedChat: (state) => {
@@ -240,24 +279,43 @@ export const appChatSlice = createSlice({
       state.chats = action.payload.chatsContacts;
     });
     builder.addCase(fetchChatsContacts.pending, (state, action) => {
+      state.isSending = false;
     });
     builder.addCase(fetchChatsContacts.rejected, (state, action) => {
+      state.isSending = false;
     });
     builder.addCase(selectChat.pending, (state, action) => {
       if (!action.meta.arg.keepChatContent) {
+        state.isSending = false;
         state.selectedChat = null;
       }
     });
     builder.addCase(selectChat.fulfilled, (state, action) => {
       state.selectedChat = action.payload;
     });
+    builder.addCase(sendMsg.pending, (state) => {
+      state.isSending = true; // Set isSending to true when sendMsg starts
+    });
+    builder.addCase(sendMsg.fulfilled, (state, action) => {
+      state.isSending = false; // Set isSending to false on success
+    });
+    builder.addCase(sendMsg.rejected, (state) => {
+      state.isSending = false; // Ensure isSending is false on failure
+    });
     builder.addCase(addMessage.fulfilled, (state, action) => {
-      if (state.selectedChat && state.selectedChat.chat && state.selectedChat.chat.chat) {
-      state.selectedChat.chat.chat = [
-        ...state.selectedChat.chat.chat,
-        action.payload,
-      ];
-    }
+      if (
+        state.selectedChat &&
+        state.selectedChat.chat &&
+        state.selectedChat.chat.chat
+      ) {
+        state.selectedChat.chat.chat = [
+          ...state.selectedChat.chat.chat,
+          action.payload,
+        ];
+      }
+    });
+    builder.addCase(fetchThreadId.fulfilled, (state, action) => {
+      state.threadId = action.payload; // Store the fetched threadId in the Redux state
     });
   },
 });
@@ -268,7 +326,10 @@ export default appChatSlice.reducer;
 
 function _createNewThreadChat(state, id) {
   // const contact = state.chat.contacts.find((contact) => contact.id === id);
-  const contact = state.chat.contacts.find((contact) => contact.threadId === id || contact.id === id || contact.userId === id);
+  const contact = state.chat.contacts.find(
+    (contact) =>
+      contact.threadId === id || contact.id === id || contact.userId === id
+  );
 
   let newThreadChat = {
     contact: { ...contact, id: null, threadId: null },
@@ -287,12 +348,17 @@ function _createNewThreadChat(state, id) {
  */
 function _updateThreadsToLocalStorage(newThreadId) {
   // Retrieve the existing array from localStorage
-  let threads = JSON.parse(localStorage.getItem(generalConstants.LOCAL_STORAGE_THREAD_IDS_NAME)) || [];
+  let threads =
+    JSON.parse(
+      localStorage.getItem(generalConstants.LOCAL_STORAGE_THREAD_IDS_NAME)
+    ) || [];
 
   // remove threads older than 2 weeks old
   const twoWeeksAgo = new Date();
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-  threads = threads.filter((thread) => new Date(thread.createdAt) > twoWeeksAgo);
+  threads = threads.filter(
+    (thread) => new Date(thread.createdAt) > twoWeeksAgo
+  );
 
   // Push the newThreadId to the array
   threads.push({
@@ -301,15 +367,20 @@ function _updateThreadsToLocalStorage(newThreadId) {
   });
 
   // Save the updated array back to localStorage
-  localStorage.setItem(generalConstants.LOCAL_STORAGE_THREAD_IDS_NAME, JSON.stringify(threads));
+  localStorage.setItem(
+    generalConstants.LOCAL_STORAGE_THREAD_IDS_NAME,
+    JSON.stringify(threads)
+  );
 }
-
 
 async function _fetchExistingChatWithMessages(id, dispatch, thread) {
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
-  const messagesResponse = await chatThreadService.getThreadMessagesByCriteria(id, storedToken);
+  const messagesResponse = await chatThreadService.getThreadMessagesByCriteria(
+    id,
+    storedToken
+  );
 
   const chatMessages = messagesResponse.data.content.map((message) =>
     chatConverters.gendoxMessageToChatMessage(message)
@@ -329,5 +400,7 @@ async function _fetchExistingChatWithMessages(id, dispatch, thread) {
       chat: chatMessages,
     },
   };
+
+  
   return selectedChat;
 }

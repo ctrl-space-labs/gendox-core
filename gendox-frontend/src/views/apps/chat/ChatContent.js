@@ -45,17 +45,18 @@ const ChatContent = (props) => {
     handleLeftSidebarToggle,
     handleUserProfileRightSidebarToggle,
     organizationId,
+    projectId,
   } = props;
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
-  const [isSending, setIsSending] = useState(false);
-
   const store = useSelector((state) => state.chat);
+  const isSending = store.isSending;
 
   const renderContent = () => {
     if (store) {
       const selectedChat = store.selectedChat;
+
       useEffect(() => {
         if (!selectedChat) {
           setIsLoading(true);
@@ -64,7 +65,7 @@ const ChatContent = (props) => {
         }
       }, [selectedChat]);
 
-      if (!selectedChat && !isLoading) {
+      if ((!selectedChat && !isLoading) || projectId === "null") {
         return (
           <ChatWrapperStartChat
             sx={{
@@ -208,34 +209,39 @@ const ChatContent = (props) => {
                 hidden={hidden}
                 data={{ ...selectedChat, userContact: store.userProfile }}
               />
-            ) : null}
+            ) : null}          
 
             {isSending && (
               <Box
                 sx={{
-                  width: "100%",
+                  width: "90%", // Reduce the width to leave space on the sides
+                  maxWidth: "800px", // Optional: Add a maximum width for better control
                   mt: 3,
                   mb: 3,
                   p: 3,
                   borderRadius: 2,
                   bgcolor: "background.paper",
-                  boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-                  textAlign: "center", // Center-aligns the content
+                  boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.15)", // Slightly more prominent shadow
+                  textAlign: "center",
+                  mx: "auto", // Center the box horizontally
                 }}
               >
                 <LinearProgress
                   color="primary"
                   sx={{
-                    height: 8, // Slightly thinner for a sleek look
-                    borderRadius: 1, // Adds rounded corners for a smoother appearance
-                    mb: 2, // Adds space below the progress bar
+                    height: 6, // Slightly thinner for a sleeker look
+                    borderRadius: 1, // Adds rounded corners
+                    mb: 2,
+                    backgroundColor: "rgba(0, 0, 0, 0.1)", // Subtle background for contrast
                   }}
                 />
                 <Typography
-                  variant="body2" // Slightly larger text for better readability
+                  variant="body1" // Slightly larger text for better readability
                   color="text.primary"
                   sx={{
-                    mt: 1, // Add margin above for spacing
+                    mt: 1,
+                    fontWeight: "bold", // Bold text for emphasis
+                    color: "primary.main", // Use theme's primary color for text
                   }}
                 >
                   {statusMessage}
@@ -249,7 +255,6 @@ const ChatContent = (props) => {
               sendMsg={sendMsg}
               organizationId={organizationId}
               isSending={isSending}
-              setIsSending={setIsSending}
               setStatusMessage={setStatusMessage}
             />
 

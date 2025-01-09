@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { formatDistanceToNow, parseISO } from "date-fns";
+import { useDispatch } from "react-redux";
+import { useRouter } from "next/router";
 import Box from "@mui/material/Box";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -8,15 +10,37 @@ import ListItemText from "@mui/material/ListItemText";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import Icon from "src/@core/components/icon";
+import toast from "react-hot-toast";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import { ScrollWrapper } from "src/utils/chatSidebarUtils";
 import { sortByField } from "src/utils/orderUtils";
 import { groupChatsByDate } from "src/utils/chatSidebarUtils";
+import chatThreadService from "src/gendox-sdk/chatThreadService";
+import { fetchChatsContacts } from "src/store/apps/chat";
+import authConfig from "src/configs/auth";
+import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
+import { getErrorMessage } from "src/utils/errorHandler";
+import ChatRenameDialog from "src/views/apps/chat/components/sidebar/ChatRenameDialog";
 
-const Chats = ({ store, activeChat, setActiveChat, hidden, handleChatClick }) => {
+const Chats = ({
+  store,
+  activeChat,
+  setActiveChat,
+  hidden,
+  handleChatClick,
+}) => {
+  const router = useRouter();
+  const { organizationId } = router.query;
+  const storedToken = window.localStorage.getItem(
+    authConfig.storageTokenKeyName
+  );
+  const dispatch = useDispatch();
   const [hoveredChat, setHoveredChat] = useState(null);
-  const [anchorEl, setAnchorEl] = useState(null);  
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const handleChatMouseLeave = () => {
     setHoveredChat(null);
@@ -33,13 +57,71 @@ const Chats = ({ store, activeChat, setActiveChat, hidden, handleChatClick }) =>
     setAnchorEl(null);
   };
 
-  const handleRename = () => {
-    // Implement rename functionality here
+  const openRenameDialog = () => {
+    setNewName(""); // Reset input field
+    setRenameDialogOpen(true);
     handleMenuClose();
   };
 
-  const handleDelete = () => {
-    // Implement delete functionality here
+  const closeRenameDialog = () => {
+    setRenameDialogOpen(false);
+  };
+
+  const handleRename = async () => {
+    if (!newName.trim()) {
+      toast.error("Name cannot be empty");
+      closeRenameDialog();
+      return;
+    }
+
+    const updatedChatThreadPayload = {
+      name: newName,
+    };
+
+    try {
+      await chatThreadService.updateChatThread(
+        organizationId,
+        activeChat.id,
+        updatedChatThreadPayload,
+        storedToken
+      );
+      dispatch(fetchChatsContacts({ organizationId, storedToken }));
+      console.log("Chat thread renamed to", newName);
+    } catch (error) {
+      toast.error(
+        `Failed to rename Chat Thread. Error: ${getErrorMessage(error)}`
+      );
+      console.error("Error renaming chat thread", error);
+    }
+
+    closeRenameDialog();
+  };
+
+  const handleDeleteConfirmOpen = () => {
+    handleMenuClose();
+    setConfirmDelete(true);
+  };
+
+  const handleDeleteConfirmClose = () => {
+    setConfirmDelete(false);
+  };
+
+  const handleDelete = async () => {
+    try {
+      await chatThreadService.deleteChatThread(
+        organizationId,
+        activeChat.id,
+        storedToken
+      );
+      dispatch(fetchChatsContacts({ organizationId, storedToken }));
+      console.log("Chat thread deleted");
+    } catch (error) {
+      toast.error(
+        `Failed to Delete Chat Thread. Error: ${getErrorMessage(error)}`
+      );
+      console.error("Error deleting chat thread", error);
+    }
+    setConfirmDelete(false);
     handleMenuClose();
   };
 
@@ -62,9 +144,9 @@ const Chats = ({ store, activeChat, setActiveChat, hidden, handleChatClick }) =>
           {chats.map((chat, index) => {
             const { lastMessage } = chat.chat;
             const activeCondition =
-            activeChat !== null &&
-            activeChat.id === chat.id &&
-            activeChat.type === "chat";
+              activeChat !== null &&
+              activeChat.id === chat.id &&
+              activeChat.type === "chat";
             const formattedTime = lastMessage
               ? formatDistanceToNow(parseISO(lastMessage.time), {
                   addSuffix: true,
@@ -126,30 +208,35 @@ const Chats = ({ store, activeChat, setActiveChat, hidden, handleChatClick }) =>
                           ...(!activeCondition && { color: "text.disabled" }),
                         }}
                       >
-                        {lastMessage ? lastMessage.message : null}
+                        {/* {lastMessage ? lastMessage.message : null} */}
+                        {chat.threadName === "Chat Thread"
+                          ? "Unnamed Chat"
+                          : chat.threadName}
                       </Typography>
                     }
                   />
-
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "flex-end",
-                      flexDirection: "column",
-                      justifyContent: "flex-start",
-                    }}
-                  >
-                    <IconButton
-                      className="chat-actions"
-                      onClick={(e) => handleMenuClick(e, chat.id)}
+                  {storedToken && (
+                    <Box
                       sx={{
-                        visibility:
-                          hoveredChat === chat.id ? "visible" : "hidden",
+                        display: "flex",
+                        alignItems: "flex-end",
+                        flexDirection: "column",
+                        justifyContent: "flex-start",
                       }}
                     >
-                      <Icon icon="mdi:dots-horizontal" />
-                    </IconButton>
-                  </Box>
+                      <IconButton
+                        className="chat-actions"
+                        onClick={(e) => handleMenuClick(e, chat.id)}
+                        sx={{
+                          visibility:
+                            hoveredChat === chat.id ? "visible" : "hidden",
+                        }}
+                      >
+                        <Icon icon="mdi:dots-horizontal" />
+                      </IconButton>
+                    </Box>
+                  )}
+                  
                 </ListItemButton>
               </ListItem>
             );
@@ -194,9 +281,27 @@ const Chats = ({ store, activeChat, setActiveChat, hidden, handleChatClick }) =>
           horizontal: "right",
         }}
       >
-        <MenuItem onClick={handleRename}>Rename</MenuItem>
-        <MenuItem onClick={handleDelete}>Delete</MenuItem>
+        <MenuItem onClick={openRenameDialog}>Rename</MenuItem>
+        <MenuItem onClick={handleDeleteConfirmOpen}>Delete</MenuItem>
       </Menu>
+
+      <ChatRenameDialog
+        open={renameDialogOpen}
+        onClose={closeRenameDialog}
+        onRename={handleRename}
+        newName={newName}
+        setNewName={setNewName}
+      />
+
+      <DeleteConfirmDialog
+        open={confirmDelete}
+        onClose={handleDeleteConfirmClose}
+        onConfirm={handleDelete}
+        title="Confirm Deletion Chat"
+        contentText={`Are you sure you want to delete the chat thread? This action cannot be undone.`}
+        confirmButtonText="Remove Chat"
+        cancelButtonText="Cancel"
+      />
     </>
   );
 };

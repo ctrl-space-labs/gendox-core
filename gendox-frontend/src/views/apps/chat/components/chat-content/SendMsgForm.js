@@ -1,18 +1,9 @@
-// ** React Imports
 import { useState, useEffect, useRef, useCallback } from "react";
-
-// ** MUI Imports
 import Button from "@mui/material/Button";
 import { styled } from "@mui/material/styles";
 import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
-import IconButton from "@mui/material/IconButton";
-import Typography from "@mui/material/Typography";
-
 import Box from "@mui/material/Box";
-
-// ** Icon Imports
-import Icon from "src/@core/components/icon";
 
 // // ** Styled Form
 const Form = styled("form")(({ theme }) => ({
@@ -27,13 +18,12 @@ const SendMsgForm = (props) => {
     sendMsg,
     organizationId,
     isSending,
-    setIsSending,
     setStatusMessage,
   } = props;
 
   // ** State
   const [msg, setMsg] = useState("");
-  const textFieldRef = useRef(null);
+  const textFieldRef = useRef(null); 
 
   useEffect(() => {
     if (textFieldRef.current) {
@@ -54,15 +44,15 @@ const SendMsgForm = (props) => {
   const handleSendMsg = async (e) => {
     e.preventDefault();
     if (store && store.selectedChat && msg.trim().length) {
-      setIsSending(true);
       simulateStatusUpdates();
-      setMsg("");      
+      const currentMsg = msg;
+      setMsg("");
 
       try {
         await dispatch(
           sendMsg({
             ...store.selectedChat,
-            message: msg,
+            message: currentMsg,
             organizationId,
           })
         );
@@ -70,20 +60,17 @@ const SendMsgForm = (props) => {
       } catch (error) {
         setStatusMessage("Failed to send message.");
       } finally {
-        setIsSending(false);
       }
     }
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      if (!e.shiftKey) {
-        // If Enter is pressed without Shift, send the message
-        e.preventDefault();
-        handleSendMsg(e);
-      }
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      setMsg((prevMsg) => prevMsg + "\n");
+      handleSendMsg(e);
+    } else if (e.key === "Enter" && e.shiftKey) {
+      e.preventDefault();
+      setMsg((prevMsg) => prevMsg + "\n\n");
     }
   };
 

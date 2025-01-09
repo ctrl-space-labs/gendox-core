@@ -16,6 +16,7 @@ export const groupChatsByDate = (chats) => {
   const older = [];
 
   chats.forEach((chat) => {
+    // const chatDate = parseISO(chat.threadCreatedAt);
     const chatDate = parseISO(chat.chat.lastMessage.time);
 
     if (isToday(chatDate)) {

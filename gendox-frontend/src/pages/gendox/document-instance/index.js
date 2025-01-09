@@ -304,7 +304,6 @@ const DocumentSections = () => {
         <StyledCardContent
           sx={{
             backgroundColor: "action.selected",
-            border: sectionId === highlightedSectionId ? "2px solid" : "none",
             borderColor:
               sectionId === highlightedSectionId
                 ? "primary.main"

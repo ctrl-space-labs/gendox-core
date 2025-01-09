@@ -54,8 +54,6 @@ const OrganizationsDropdown = ({ settings }) => {
     (organization) => {
       const { projects, projectAgents } = organization;
       const newProjectId = projects?.[0]?.id ?? null;
-      const newProjectAgent =
-        projectAgents.find((agent) => agent.projectId === newProjectId) ?? null;
       handleDropdownClose();
 
       dispatch(
@@ -76,26 +74,12 @@ const OrganizationsDropdown = ({ settings }) => {
       localStorage.setItem(authConfig.selectedOrganizationId, organization.id);
       localStorage.setItem(authConfig.selectedProjectId, newProjectId);
       setActiveOrganizationId(organization.id);
-
-      let newPath = `/gendox/home/?organizationId=${organization.id}`;
-      if (
-        router.pathname === "/gendox/chat" &&
-        newProjectId &&
-        newProjectAgent
-      ) {
-        newPath = `/gendox/chat/?organizationId=${organization.id}&threadId=${newProjectAgent.userId}&projectId=${newProjectId}`;
-      } else if (router.pathname === "/gendox/chat") {
-        newPath = `/gendox/chat/?organizationId=${organization.id}`;
-      } else if (
-        router.pathname === "/gendox/organization-settings" &&
-        newProjectId
-      ) {
-        newPath = `/gendox/organization-settings/?organizationId=${organization.id}&projectId=${newProjectId}`;
-      } else if (
-        router.pathname === "/gendox/organization-settings"
-      ){
-        newPath = `/gendox/organization-settings/?organizationId=${organization.id}`;
-      }
+      const newPath =
+        router.pathname === "/gendox/chat"
+          ? `/gendox/chat/?organizationId=${organization.id}&projectId=${newProjectId}`
+          : router.pathname === "/gendox/organization-settings"
+          ? `/gendox/organization-settings/?organizationId=${organization.id}`
+          : `/gendox/home/?organizationId=${organization.id}&projectId=${newProjectId}`;
       router.push(newPath);
     },
     [dispatch, handleDropdownClose, router]
@@ -190,33 +174,14 @@ const OrganizationsDropdown = ({ settings }) => {
           "name",
           activeOrganizationId
         ).map((organization) => {
-          
-          let href = `/gendox/home/?organizationId=${organization.id}`;
-
-          // Determine the href based on the current route
-          if (router.pathname === "/gendox/chat") {
-            // Set href for chat if there's a projectId, add threadId if there's a newProjectAgent
-            const newProjectId = organization.projects?.[0]?.id ?? "";
-            const newProjectAgent = organization.projectAgents?.find(
-              (agent) => agent.projectId === newProjectId
-            );
-
-            href = newProjectAgent
-              ? `/gendox/chat/?organizationId=${organization.id}&threadId=${newProjectAgent.userId}&projectId=${newProjectId}`
-              : `/gendox/chat/?organizationId=${organization.id}`;
-          } else {
-            // Use the first project's ID if available for other routes
-            href = `/gendox/home/?organizationId=${organization.id}&projectId=${
-              organization.projects?.[0]?.id ?? ""
-            }`;
-          }
-
-          // const href =
-          //   router.pathname === "/gendox/chat"
-          //     ? `/gendox/chat/?organizationId=${organization.id}`
-          //     : `/gendox/home/?organizationId=${organization.id}&projectId=${
-          //         organization.projects?.[0]?.id ?? ""
-          //       }`;
+          const href =
+            router.pathname === "/gendox/chat"
+              ? `/gendox/chat/?organizationId=${organization.id}&projectId=${
+                  organization.projects?.[0]?.id ?? ""
+                }`
+              : `/gendox/home/?organizationId=${organization.id}&projectId=${
+                  organization.projects?.[0]?.id ?? ""
+                }`;
 
           return (
             <Link
@@ -231,6 +196,7 @@ const OrganizationsDropdown = ({ settings }) => {
                   e.preventDefault();
                   handleOrganizations(organization);
                 }}
+                l
                 selected={organization.id === activeOrganizationId}
               >
                 <Box

@@ -9,6 +9,7 @@ import {
   scrollToBottom,
 } from "/src/utils/chatLogUtils";
 
+
 const ChatLog = (props) => {
   const chatArea = useRef(null);
   const { data, hidden } = props;
@@ -20,8 +21,6 @@ const ChatLog = (props) => {
       scrollToBottom(chatArea, hidden);
     }
   }, [data]);
-
-  
 
   const renderChats = () => {
     return formattedChatData(data).map((messageData, index) => (

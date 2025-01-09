@@ -50,7 +50,6 @@ const UserProfileRight = (props) => {
     authConfig.storageTokenKeyName
   );
   if (!storedToken) {
-    console.error("No token found");
     return;
   }
 

@@ -35,13 +35,10 @@ const Sidebar = (props) => {
   } = props;
 
   const router = useRouter();
-
-  // ** States
-
   const [activeChat, setActiveChat] = useState(null);
   const [activeProjectId, setActiveProjectId] = useState(null);
 
-  const handleChatClick = (type, id, projectId) => {
+  const handleChatOrContactClick = (type, id, projectId) => {
     const newPath = `${chatUrlPath}/?organizationId=${organizationId}&threadId=${id}&projectId=${projectId}`;
     router.push(newPath);
     if (!mdAbove) {
@@ -118,7 +115,7 @@ const Sidebar = (props) => {
             store={store}
             hidden={hidden}
             activeProjectId={activeProjectId}
-            handleChatClick={handleChatClick}
+            handleContactClick={handleChatOrContactClick}
             statusObj={statusObj}
             getInitials={getInitials}
           />
@@ -128,7 +125,7 @@ const Sidebar = (props) => {
             hidden={hidden}
             activeChat={activeChat}
             setActiveChat={setActiveChat}
-            handleChatClick={handleChatClick}
+            handleChatClick={handleChatOrContactClick}
           />
         </Box>
       </Drawer>
