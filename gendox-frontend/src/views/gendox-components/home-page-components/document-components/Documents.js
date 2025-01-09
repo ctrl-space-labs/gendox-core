@@ -95,7 +95,7 @@ const Documents = () => {
         <Typography variant="h5" sx={{ fontWeight: 600, textAlign: "left" }}>
           Recent Documents
         </Typography>
-        {documents.length > 0 && (
+        {/* {documents.length > 0 && (
           <Box
             sx={{
               display: "flex",
@@ -123,7 +123,7 @@ const Documents = () => {
               </Tooltip>
             )}
           </Box>
-        )}
+        )} */}
       </Box>
 
       {viewMode === "grid" ? (

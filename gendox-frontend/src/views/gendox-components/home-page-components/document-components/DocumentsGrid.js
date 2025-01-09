@@ -31,8 +31,6 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, page }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isBlurring, setIsBlurring] = useState(false);
 
-  console.log("DOCUMENTS", documents);
-
   useEffect(() => {
     setShowAll(false);
   }, [projectDetails]);

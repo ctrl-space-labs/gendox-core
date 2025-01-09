@@ -4,9 +4,9 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Link from "@mui/material/Link";
 import GendoxMarkdownRenderer from "/src/views/gendox-components/markdown-renderer/GendoxMarkdownRenderer";
-import ChatLogMessageFeedback from "/src/views/apps/chat/chatLog-components/ChatLogMessageFeedback";
-import ChatLogActionButtons from "/src/views/apps/chat/chatLog-components/ChatLogActionButtons";
-import ChatLogInfo from "/src/views/apps/chat/chatLog-components/ChatLogInfo";
+import ChatLogMessageFeedback from "src/views/apps/chat/components/chat-content/chatLog-components/chatLog-message-group/chatLog-message-components/ChatLogMessageFeedback";
+import ChatLogActionButtons from "src/views/apps/chat/components/chat-content/chatLog-components/chatLog-message-group/chatLog-message-components/ChatLogActionButtons";
+import ChatLogInfo from "src/views/apps/chat/components/chat-content/chatLog-components/chatLog-message-group/chatLog-message-components/ChatLogInfo";
 import chatThreadService from "src/gendox-sdk/chatThreadService";
 import authConfig from "src/configs/auth";
 

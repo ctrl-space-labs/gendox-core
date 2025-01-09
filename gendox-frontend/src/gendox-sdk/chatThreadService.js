@@ -44,6 +44,39 @@ const getThreadsByCriteria = async (projectIdIn, threadIdIn, storedToken) => {
         });
     }
 
+    /**
+     * Update Chat Thread
+     * @param organizationId
+     * @param threadId
+     * @param updatedChatThreadPayload
+     * @param storedToken
+     * @returns {Promise<axios.AxiosResponse<ChatThread>>}
+     */
+    const updateChatThread = async (organizationId, threadId, updatedChatThreadPayload, storedToken) => {
+        return axios.put(apiRequests.chatThread(organizationId, threadId), updatedChatThreadPayload, {
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + storedToken
+            }
+        });
+    }
+
+    /**
+     * Delete Chat Thread
+     * @param organizationId
+     * @param threadId
+     * @param storedToken
+     * @returns {Promise<axios.AxiosResponse<ChatThread>>}
+     */
+    const deleteChatThread = async (organizationId, threadId, storedToken) => {
+        return axios.delete(apiRequests.chatThread(organizationId, threadId), {
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + storedToken
+            }
+        });
+    }
+
 
 
 
@@ -52,5 +85,7 @@ const getThreadsByCriteria = async (projectIdIn, threadIdIn, storedToken) => {
 export default {
     getThreadMessagesByCriteria,
     getThreadsByCriteria,
-    getThreadMessageMetadataByMessageId
+    getThreadMessageMetadataByMessageId,
+    updateChatThread,
+    deleteChatThread
 }

@@ -8,7 +8,7 @@ import BlankLayout from "../../../../@core/layouts/BlankLayout";
 import PoweredByGendox from "../../../../layouts/components/shared-components/PoweredByGendox";
 import IconButton from "@mui/material/IconButton";
 import {CloseIcon} from "next/dist/client/components/react-dev-overlay/internal/icons/CloseIcon";
-import {useIFrameMessageManager} from "../../../../context/IFrameMessageManagerContext";
+import {useIFrameMessageManager} from "src/context/IFrameMessageManagerContext";
 
 
 // Add any extra configurations here

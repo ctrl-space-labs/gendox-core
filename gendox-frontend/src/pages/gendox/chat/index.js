@@ -14,6 +14,7 @@ import {
   fetchChatsContacts,
   removeSelectedChat,
   setUserProfile,
+  fetchThreadId,
 } from "src/store/apps/chat";
 
 // ** Hooks
@@ -27,25 +28,22 @@ import { getInitials } from "src/@core/utils/get-initials";
 import { formatDateToMonthShort } from "src/@core/utils/format";
 
 // ** Chat App Components Imports
-import SidebarLeft from "src/views/apps/chat/SidebarLeft";
+import Sidebar from "src/views/apps/chat/Sidebar";
 import ChatContent from "src/views/apps/chat/ChatContent";
 
 const AppChat = (props) => {
   const router = useRouter();
-  const { organizationId, threadId } = router.query;
-  const chatUrlPath = props.chatUrlPath || '/gendox/chat';
+  const { organizationId, threadId, projectId } = router.query;
+  const chatUrlPath = props.chatUrlPath || "/gendox/chat";
 
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
-
-  // ** States
   const [userStatus, setUserStatus] = useState("online");
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
   const [userProfileLeftOpen, setUserProfileLeftOpen] = useState(false);
   const [userProfileRightOpen, setUserProfileRightOpen] = useState(false);
 
-  // ** Hooks
   const theme = useTheme();
   const { settings } = useSettings();
   const dispatch = useDispatch();
@@ -68,39 +66,45 @@ const AppChat = (props) => {
 
   useEffect(() => {
     // Hide navigation on mount
-    settings.navHidden = true
+    settings.navHidden = true;
     // no need to handle embedded view, no the embedded chat has a separate Layout
     // if (props.embedView) {
     //   // show the 'Powered By' in the iframe
     //   settings.footerContent = 'poweredBy'
     //   settings.showOrganizationDropdown = false
     // } else {
-      //hide the footer in chat
-      settings.footer = 'hidden'
+    //hide the footer in chat
+    settings.footer = "hidden";
     // }
-    
+
     // Show navigation on unmount
     return () => {
-      settings.navHidden = false
-      settings.footer = 'static'
-      settings.footerContent = undefined
-      settings.showOrganizationDropdown = true
+      settings.navHidden = false;
+      settings.footer = "static";
+      settings.footerContent = undefined;
+      settings.showOrganizationDropdown = true;
     };
   }, [dispatch]);
 
   useEffect(() => {
-   
     dispatch(setUserProfile(auth.user));
-    
+
     dispatch(fetchChatsContacts({ organizationId, storedToken })).then(() => {
       if (threadId) {
-        dispatch(selectChat({ id: threadId, organizationId, storedToken }));        
+        dispatch(selectChat({ threadId, organizationId, storedToken }));
+      } else {
+        dispatch(fetchThreadId({ projectId })).then((result) => {
+          const fetchedThreadId = result.payload;
+
+          if (fetchedThreadId) {
+            dispatch(
+              selectChat({ fetchedThreadId, organizationId, storedToken })
+            );
+          }
+        });
       }
     });
-   
-  }, [dispatch, organizationId, storedToken, threadId]);
-
-  
+  }, [dispatch, organizationId, storedToken, threadId, router.query]);
 
   const handleLeftSidebarToggle = () => setLeftSidebarOpen(!leftSidebarOpen);
   const handleUserProfileLeftSidebarToggle = () =>
@@ -127,7 +131,7 @@ const AppChat = (props) => {
         }),
       }}
     >
-      <SidebarLeft
+      <Sidebar
         store={store}
         hidden={hidden}
         mdAbove={mdAbove}
@@ -149,7 +153,6 @@ const AppChat = (props) => {
         chatUrlPath={chatUrlPath}
       />
       <ChatContent
-        store={store}
         hidden={hidden}
         sendMsg={sendMsg}
         mdAbove={mdAbove}
@@ -163,8 +166,8 @@ const AppChat = (props) => {
           handleUserProfileRightSidebarToggle
         }
         organizationId={organizationId}
-        storedToken={storedToken}
         chatUrlPath={chatUrlPath}
+        projectId={projectId}
       />
     </Box>
   );

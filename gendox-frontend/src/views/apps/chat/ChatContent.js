@@ -1,24 +1,23 @@
 // ** React Imports
 import { Fragment } from "react";
 import { useRouter } from "next/router";
-
-// ** MUI Imports
+import { useDispatch, useSelector } from "react-redux";
+import { useState, useEffect } from "react";
+import { useTheme } from "@mui/material/styles";
+import CircularProgress from "@mui/material/CircularProgress";
 import Badge from "@mui/material/Badge";
 import MuiAvatar from "@mui/material/Avatar";
 import { styled } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import Box from "@mui/material/Box";
-
-// ** Icon Imports
 import Icon from "src/@core/components/icon";
-
-// ** Custom Components Import
-import ChatLog from "./ChatLog";
-import SendMsgForm from "src/views/apps/chat/SendMsgForm";
+import ChatLog from "src/views/apps/chat/components/chat-content/ChatLog";
+import SendMsgForm from "src/views/apps/chat/components/chat-content/SendMsgForm";
 import CustomAvatar from "src/@core/components/mui/avatar";
 import OptionsMenu from "src/@core/components/option-menu";
-import UserProfileRight from "src/views/apps/chat/UserProfileRight";
+import LinearProgress from "@mui/material/LinearProgress";
+import UserProfileRight from "src/views/apps/chat/components/chat-content/UserProfileRight";
 
 // ** Styled Components
 const ChatWrapperStartChat = styled(Box)(({ theme }) => ({
@@ -35,7 +34,6 @@ const ChatWrapperStartChat = styled(Box)(({ theme }) => ({
 const ChatContent = (props) => {
   // ** Props
   const {
-    store,
     hidden,
     sendMsg,
     mdAbove,
@@ -47,54 +45,27 @@ const ChatContent = (props) => {
     handleLeftSidebarToggle,
     handleUserProfileRightSidebarToggle,
     organizationId,
-    storedToken,
-    chatUrlPath,
+    projectId,
   } = props;
 
-  const router = useRouter();
-  const { projectId } = router.query;
-  const selectedContact = store.contacts?.find(
-    (contact) => contact.projectId === projectId
-  );
-
-  const fallbackContact = store.contacts?.[0] || null;
-  const threadId = selectedContact
-    ? selectedContact.id
-    : fallbackContact
-    ? fallbackContact.id
-    : null;
-  const resolvedProjectId = selectedContact
-    ? selectedContact.projectId
-    : fallbackContact
-    ? fallbackContact.projectId
-    : null;
-
-  
-
-  const handleStartConversation = () => {
-    if (
-      projectId === "undefined" ||
-      projectId === undefined ||
-      projectId === null
-    ) { 
-      // Use fallback contact's threadId and projectId
-      const newPath = `${chatUrlPath}/?organizationId=${organizationId}&threadId=${fallbackContact?.id}&projectId=${fallbackContact?.projectId}`;
-      router.push(newPath);
-    } else {
-      // Use the selectedContact's threadId and projectId from URL
-      const newPath = `${chatUrlPath}/?organizationId=${organizationId}&threadId=${threadId}&projectId=${resolvedProjectId}`;
-      router.push(newPath);
-    }
-    
-    if (!mdAbove) {
-      handleLeftSidebarToggle();
-    }
-  };
+  const [isLoading, setIsLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const store = useSelector((state) => state.chat);
+  const isSending = store.isSending;
 
   const renderContent = () => {
     if (store) {
       const selectedChat = store.selectedChat;
-      if (!selectedChat) {
+
+      useEffect(() => {
+        if (!selectedChat) {
+          setIsLoading(true);
+          // You might want to set a timeout or handle this based on a Redux action
+          setTimeout(() => setIsLoading(false), 3000); // simulates a delay
+        }
+      }, [selectedChat]);
+
+      if ((!selectedChat && !isLoading) || projectId === "null") {
         return (
           <ChatWrapperStartChat
             sx={{
@@ -103,36 +74,22 @@ const ChatContent = (props) => {
                 : {}),
             }}
           >
-            <MuiAvatar
-              sx={{
-                mb: 5,
-                pt: 8,
-                pb: 7,
-                px: 7.5,
-                width: 110,
-                height: 110,
-                boxShadow: 3,
-                "& svg": { color: "action.active" },
-                backgroundColor: "background.paper",
-              }}
-            >
-              <Icon icon="mdi:message-outline" fontSize="3.125rem" />
-            </MuiAvatar>
-            <Box
-              onClick={handleStartConversation}
-              sx={{
-                px: 6,
-                py: 2.25,
-                boxShadow: 3,
-                borderRadius: 5,
-                backgroundColor: "background.paper",
-                cursor: mdAbove ? "default" : "pointer",
-              }}
-            >
-              <Typography sx={{ fontWeight: 600 }}>
-                Start Conversation
-              </Typography>
-            </Box>
+            <Typography>
+              No Agent selected. Please select an agent to start.
+            </Typography>
+          </ChatWrapperStartChat>
+        );
+      } else if (isLoading) {
+        return (
+          <ChatWrapperStartChat
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+            }}
+          >
+            <CircularProgress disableShrink />
           </ChatWrapperStartChat>
         );
       } else {
@@ -252,13 +209,53 @@ const ChatContent = (props) => {
                 hidden={hidden}
                 data={{ ...selectedChat, userContact: store.userProfile }}
               />
-            ) : null}
+            ) : null}          
+
+            {isSending && (
+              <Box
+                sx={{
+                  width: "90%", // Reduce the width to leave space on the sides
+                  maxWidth: "800px", // Optional: Add a maximum width for better control
+                  mt: 3,
+                  mb: 3,
+                  p: 3,
+                  borderRadius: 2,
+                  bgcolor: "background.paper",
+                  boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.15)", // Slightly more prominent shadow
+                  textAlign: "center",
+                  mx: "auto", // Center the box horizontally
+                }}
+              >
+                <LinearProgress
+                  color="primary"
+                  sx={{
+                    height: 6, // Slightly thinner for a sleeker look
+                    borderRadius: 1, // Adds rounded corners
+                    mb: 2,
+                    backgroundColor: "rgba(0, 0, 0, 0.1)", // Subtle background for contrast
+                  }}
+                />
+                <Typography
+                  variant="body1" // Slightly larger text for better readability
+                  color="text.primary"
+                  sx={{
+                    mt: 1,
+                    fontWeight: "bold", // Bold text for emphasis
+                    color: "primary.main", // Use theme's primary color for text
+                  }}
+                >
+                  {statusMessage}
+                </Typography>
+              </Box>
+            )}
 
             <SendMsgForm
               store={store}
               dispatch={dispatch}
               sendMsg={sendMsg}
               organizationId={organizationId}
+              isSending={isSending}
+              setStatusMessage={setStatusMessage}
             />
 
             <UserProfileRight

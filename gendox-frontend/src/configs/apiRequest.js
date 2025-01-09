@@ -168,6 +168,9 @@ export default {
   deleteOrganizationWebSite: (organizationId, organizationWebSiteId) =>
     `${url}organizations/${organizationId}/websites/${organizationWebSiteId}`,
 
+  chatThread: (organizationId, threadId) =>
+    `${url}organizations/${organizationId}/threads/${threadId}`,
+
   userLogout: () => `${url}users/logout`
 
 

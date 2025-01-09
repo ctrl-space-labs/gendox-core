@@ -1,4 +1,5 @@
 
+
 /**
  * Converts a Gendox user profile to a chat user profile.
  *
@@ -10,6 +11,7 @@ const toChatUserProfile = (gendoxUserProfile) => {
     return {
         id: gendoxUserProfile.id,
         fullName: gendoxUserProfile.name,
+        email: gendoxUserProfile.email,
         avatar: null,
         role: "Role",
         about: "About Section",
@@ -57,10 +59,12 @@ const gendoxThreadToChatEntry = (thread, contacts) => {
             ...contact,
             id: thread.id,
             threadId: thread.id,
+            threadName: thread.name,
+            threadCreatedAt: thread.createdAt,
             chat: {
                 lastMessage: {
                     message: thread.name,
-                    time: thread.updatedAt,
+                    time: thread.updatedAt,                    
                 },
                 "unseenMsgs": 0,
             }
