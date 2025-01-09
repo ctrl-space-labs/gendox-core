@@ -36,14 +36,12 @@ const SendMsgForm = (props) => {
     }
   }, [msg]);
 
-  const simulateStatusUpdates = useCallback(() => {
-    setStatusMessage("Gathering local contacts...");
-    setTimeout(() => {
+  const simulateStatusUpdates = useCallback(async () => {
+      setStatusMessage("Gathering local contacts...");
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       setStatusMessage("Searching for related documents...");
-      setTimeout(() => {
-        setStatusMessage("Generating answer...");
-      }, 2000);
-    }, 2000);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      setStatusMessage("Generating answer...");
   }, []);
 
   const handleSendMsg = async (e) => {

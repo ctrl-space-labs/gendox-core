@@ -27,6 +27,7 @@ import java.util.UUID;
                                 @ColumnResult(name = "sectionid", type = UUID.class),
                                 @ColumnResult(name = "messageid", type = UUID.class),
                                 @ColumnResult(name = "sectionurl", type = String.class),
+                                @ColumnResult(name = "externalUrl", type = String.class),
                                 @ColumnResult(name = "username", type = String.class),
                                 @ColumnResult(name = "organizationname", type = String.class),
                                 @ColumnResult(name = "organizationid", type = UUID.class),
@@ -49,6 +50,7 @@ import java.util.UUID;
                     ms.section_id AS sectionid,
                     m.id AS messageid,
                     ms.section_url AS sectionurl,
+                    d.external_url AS externalUrl,
                     u.name AS username,
                     o.name AS organizationname,
                     o.id AS organizationid,
@@ -102,6 +104,7 @@ public class MessageMetadataDTO {
     private UUID sectionId;
     private UUID messageId;
     private String sectionUrl;
+    private String externalUrl;
     private String userName;
     private String organizationName;
     private UUID organizationId;
@@ -114,12 +117,13 @@ public class MessageMetadataDTO {
     private String policyTypeName;
     private List<String> policyValue;
 
-    public MessageMetadataDTO(UUID sectionId, UUID messageId, String sectionUrl, String userName, String organizationName,
+    public MessageMetadataDTO(UUID sectionId, UUID messageId, String sectionUrl, String externalUrl, String userName, String organizationName,
                               UUID organizationId, String isccCode, Instant createdAt, UUID threadId, UUID documentId,
                               String documentUrl, String sectionTitle, String policyTypeName, String[] policyValueArray) {
         this.sectionId = sectionId;
         this.messageId = messageId;
         this.sectionUrl = sectionUrl;
+        this.externalUrl = externalUrl;
         this.userName = userName;
         this.organizationName = organizationName;
         this.organizationId = organizationId;
