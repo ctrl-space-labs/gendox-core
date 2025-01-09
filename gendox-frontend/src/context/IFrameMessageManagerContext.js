@@ -19,7 +19,7 @@ export const IFrameMessageManagerProvider = ({ children }) => {
             return;
         }
         // Handle the incoming message
-        // console.log('Received message:', data);
+        console.log('Received message:', data);
     };
 
     useEffect(() => {

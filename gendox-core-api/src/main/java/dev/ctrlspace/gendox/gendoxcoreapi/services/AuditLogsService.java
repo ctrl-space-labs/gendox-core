@@ -67,11 +67,12 @@ public class AuditLogsService {
         return auditLog;
     }
 
-    public void createAuditLog(UUID organizationId, UUID projectId, String logType) throws GendoxException {
+    public void createAuditLog(UUID organizationId, UUID projectId, String logType, Long auditValue) throws GendoxException {
         Type auditLogType = typeService.getAuditLogTypeByName(logType);
         AuditLogs auditLogs = this.createDefaultAuditLogs(auditLogType);
         auditLogs.setOrganizationId(organizationId);
         auditLogs.setProjectId(projectId);
+        auditLogs.setAuditValue(auditValue);
         this.saveAuditLogs(auditLogs);
     }
 

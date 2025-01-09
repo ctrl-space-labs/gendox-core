@@ -37,7 +37,7 @@ export default {
   createOrganization: () => `${url}organizations`,
 
   postCompletionModel: (projectId) =>
-    `${url}messages/semantic-completion?projectId=${projectId}`,
+    `${url}messages/completions?projectId=${projectId}`,
 
   // getThreadsByCriteria: (projectIdIn) => {
   //   const projectIds = projectIdIn.join(",");
@@ -170,6 +170,8 @@ export default {
 
   chatThread: (organizationId, threadId) =>
     `${url}organizations/${organizationId}/threads/${threadId}`,
+
+  userLogout: () => `${url}users/logout`
 
 
 };

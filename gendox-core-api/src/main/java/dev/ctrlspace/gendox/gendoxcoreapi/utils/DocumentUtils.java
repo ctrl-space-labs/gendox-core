@@ -100,7 +100,7 @@ public class DocumentUtils {
                 Files.createDirectories(directoryPath);
                 logger.debug("Created directories at: {}", directoryPath);
             } else {
-                logger.debug("Directories already exist at: {}", directoryPath);
+                logger.trace("Directories already exist at: {}", directoryPath);
             }
         }
 

@@ -172,6 +172,7 @@ public class OrganizationController {
         }
 
         organization = organizationService.updateOrganization(organization);
+        userService.evictUserProfileByUniqueIdentifier(securityUtils.getUserIdentifier());
 
         return organization;
 

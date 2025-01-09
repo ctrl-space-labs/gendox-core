@@ -5,6 +5,10 @@ import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import Box from "@mui/material/Box";
 
+// ** Icon Imports
+import Icon from "src/@core/components/icon";
+import {useIFrameMessageManager} from "../../../context/IFrameMessageManagerContext";
+
 // // ** Styled Form
 const Form = styled("form")(({ theme }) => ({
   padding: theme.spacing(2),
@@ -20,10 +24,11 @@ const SendMsgForm = (props) => {
     isSending,
     setStatusMessage,
   } = props;
+  const iFrameMessageManager = useIFrameMessageManager();
 
   // ** State
   const [msg, setMsg] = useState("");
-  const textFieldRef = useRef(null); 
+  const textFieldRef = useRef(null);
 
   useEffect(() => {
     if (textFieldRef.current) {
@@ -54,6 +59,7 @@ const SendMsgForm = (props) => {
             ...store.selectedChat,
             message: currentMsg,
             organizationId,
+            iFrameMessageManager
           })
         );
         setStatusMessage("");
