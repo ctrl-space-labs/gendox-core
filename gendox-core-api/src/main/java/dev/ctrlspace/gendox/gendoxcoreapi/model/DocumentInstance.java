@@ -30,7 +30,7 @@ public class DocumentInstance {
     private UUID documentTemplateId;
 
     @Basic
-    @Column(name = "remote_url", nullable = true, length = -1)
+    @Column(name = "remote_url", nullable = true)
     private String remoteUrl;
 
     @Basic

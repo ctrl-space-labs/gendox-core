@@ -26,7 +26,7 @@ public class OrganizationWebSite {
     @Column(name = "name", nullable = false, length = 1024)
     private String name;
     @Basic
-    @Column(name = "url", nullable = false, length = 1024)
+    @Column(name = "url", nullable = false)
     private String url;
     @Basic
     @Column(name = "integration_id", nullable = true)
