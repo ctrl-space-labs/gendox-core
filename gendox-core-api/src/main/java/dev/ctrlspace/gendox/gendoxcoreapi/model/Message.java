@@ -2,6 +2,8 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContext;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -59,6 +61,11 @@ public class Message {
     @JsonManagedReference(value = "message")
     @OneToMany(mappedBy = "message")
     private List<MessageSection> messageSections;
+
+    // TODO save this to database, find better name
+    @Transient
+    @JsonProperty("localContexts")
+    private List<MessageLocalContext> localContexts;
 
 
     public UUID getId() {
@@ -133,15 +140,25 @@ public class Message {
         this.messageSections = messageSections;
     }
 
+    public List<MessageLocalContext> getLocalContexts() {
+        return localContexts;
+    }
+
+    public void setLocalContexts(List<MessageLocalContext> localContexts) {
+        this.localContexts = localContexts;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Message message)) return false;
-        return Objects.equals(getId(), message.getId()) && Objects.equals(getValue(), message.getValue()) && Objects.equals(getProjectId(), message.getProjectId()) && Objects.equals(getThreadId(), message.getThreadId()) && Objects.equals(getCreatedAt(), message.getCreatedAt()) && Objects.equals(getUpdatedAt(), message.getUpdatedAt()) && Objects.equals(getCreatedBy(), message.getCreatedBy()) && Objects.equals(getUpdatedBy(), message.getUpdatedBy());
+        if (o == null || getClass() != o.getClass()) return false;
+        Message message = (Message) o;
+        return Objects.equals(id, message.id) && Objects.equals(value, message.value) && Objects.equals(projectId, message.projectId) && Objects.equals(threadId, message.threadId) && Objects.equals(createdAt, message.createdAt) && Objects.equals(updatedAt, message.updatedAt) && Objects.equals(createdBy, message.createdBy) && Objects.equals(updatedBy, message.updatedBy) && Objects.equals(messageSections, message.messageSections) && Objects.equals(localContexts, message.localContexts);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getValue(), getProjectId(), getThreadId(), getCreatedAt(), getUpdatedAt(), getCreatedBy(), getUpdatedBy());
+        return Objects.hash(id, value, projectId, threadId, createdAt, updatedAt, createdBy, updatedBy, messageSections, localContexts);
     }
 }

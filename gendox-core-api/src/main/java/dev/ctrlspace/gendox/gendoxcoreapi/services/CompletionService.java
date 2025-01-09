@@ -180,10 +180,10 @@ public class CompletionService {
         // run chatTemplate
         ChatTemplateAuthor chatTemplateAuthor = new ChatTemplateAuthor();
 
-        String answer = chatTemplateAuthor.chatTemplate(message, sectionValues, agentChatTemplate.getText());
+        String question = chatTemplateAuthor.chatTemplate(message, sectionValues, agentChatTemplate.getText());
 
 
-        return answer;
+        return question;
 
 
     }

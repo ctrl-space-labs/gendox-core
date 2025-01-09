@@ -110,7 +110,7 @@ public class EmbeddingsController {
 
 
     @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
-    @PostMapping("/messages/semantic-search")
+    @PostMapping("/messages/search")
     @Operation(summary = "Semantic search for closer sections",
             description = "Search for sections within a project that are semantically closer to a given message. " +
                     "This endpoint calculates the embedding for the input message and retrieves sections from the specified project " +
@@ -160,7 +160,7 @@ public class EmbeddingsController {
 
     @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams') || " +
             "@securityUtils.isPublicProject(#projectId)")
-    @PostMapping("/messages/semantic-completion")
+    @PostMapping("/messages/completions")
     @Operation(summary = "Semantic completion of message",
             description = "Find a message within a project that semantically completes the given input message. " +
                     "This endpoint calculates the embedding for the input message and searches for a complementary message " +
@@ -182,15 +182,11 @@ public class EmbeddingsController {
         organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
 
         message.setProjectId(UUID.fromString(projectId));
-        message = messageService.createMessage(message);
+        Message savedMessage = messageService.createMessage(message);
 
-//        sections.stream()
-//                .map(DocumentInstanceSectionDTO::getDocumentUrl)
-//                .collect(Collectors.toList());
-//
-//        List<Integer> tokens = sections.stream()
-//                .map(DocumentInstanceSectionDTO::getTokens)
-//                .collect(Collectors.toList())
+        //TODO: this is a hack. save local context ot DB
+        savedMessage.setLocalContexts(message.getLocalContexts());
+        message = savedMessage;
 
         List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
 

@@ -107,7 +107,7 @@ public class UploadService {
         DocumentInstance newInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
         newInstance = documentService.createDocumentInstance(newInstance);
         projectDocumentService.createProjectDocument(projectId, newInstance.getId());
-        auditLogsService.createAuditLog(newInstance.getOrganizationId(), projectId, "DOCUMENT_CREATE");
+        auditLogsService.createAuditLog(newInstance.getOrganizationId(), projectId, "DOCUMENT_CREATE",null);
         return newInstance;
     }
 
@@ -115,7 +115,7 @@ public class UploadService {
         documentInstanceDTO.setId(existingInstance.getId());
         DocumentInstance updatedInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
         updatedInstance = documentService.updateDocument(updatedInstance);
-        auditLogsService.createAuditLog(existingInstance.getOrganizationId(), projectId, "DOCUMENT_UPDATE");
+        auditLogsService.createAuditLog(existingInstance.getOrganizationId(), projectId, "DOCUMENT_UPDATE",null);
         return updatedInstance;
     }
 
