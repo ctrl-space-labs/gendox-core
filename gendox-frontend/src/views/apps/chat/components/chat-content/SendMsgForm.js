@@ -7,7 +7,7 @@ import Box from "@mui/material/Box";
 
 // ** Icon Imports
 import Icon from "src/@core/components/icon";
-import {useIFrameMessageManager} from "../../../context/IFrameMessageManagerContext";
+import {useIFrameMessageManager} from "src/context/IFrameMessageManagerContext";
 
 // // ** Styled Form
 const Form = styled("form")(({ theme }) => ({
