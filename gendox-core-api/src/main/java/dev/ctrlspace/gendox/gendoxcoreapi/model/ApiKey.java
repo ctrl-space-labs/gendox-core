@@ -27,7 +27,7 @@ public class ApiKey {
     @Column(name = "name", nullable = false, length = 1024)
     private String name;
     @Basic
-    @Column(name = "api_key", nullable = false, length = 1024)
+    @Column(name = "api_key", nullable = false)
     private String apiKey;
     @Basic
     @Column(name="start_date", nullable = false)
