@@ -8,7 +8,7 @@ import BlankLayout from "../../../../@core/layouts/BlankLayout";
 import PoweredByGendox from "../../../../layouts/components/shared-components/PoweredByGendox";
 import IconButton from "@mui/material/IconButton";
 import {CloseIcon} from "next/dist/client/components/react-dev-overlay/internal/icons/CloseIcon";
-import {useIFrameMessageManager} from "../../../../context/IFrameMessageManagerContext";
+import {useIFrameMessageManager} from "src/context/IFrameMessageManagerContext";
 
 
 // Add any extra configurations here
@@ -42,7 +42,7 @@ const EmbeddedChatApp = (props) => {
         const nextState = !isOpen;
         const sendMessage = () => {
             iFrameMessageManager.messageManager.sendMessage({
-                type: 'GENDOX_EVENTS_EMBEDDED_CHAT_TOGGLE_ACTION',
+                type: 'gendox.events.embedded.chat.toggle.action',
                 data: { isOpen: nextState }
             });
         };
@@ -53,7 +53,7 @@ const EmbeddedChatApp = (props) => {
             setTimeout(() => setIsOpen(nextState), 10); // Delay state update
         } else {
             setIsOpen(nextState); // Closing: update state immediately
-            setTimeout(sendMessage, 320); // Delay message
+            setTimeout(sendMessage, 320); // Delay message, to show the closing animation
         }
     };
 

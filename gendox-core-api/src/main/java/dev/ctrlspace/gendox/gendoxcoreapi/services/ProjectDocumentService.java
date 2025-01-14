@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -36,6 +35,12 @@ public class ProjectDocumentService {
     }
 
 
+    public UUID getProjectIdByDocumentId(UUID documentId) throws GendoxException {
+        return projectDocumentRepository.findProjectIdByDocumentId(documentId)
+                .orElseThrow(() -> new GendoxException("PROJECT_NOT_FOUND", "Project not found with documentId: " + documentId, HttpStatus.NOT_FOUND));
+    }
+
+
 
     public ProjectDocument createProjectDocument(Project project, DocumentInstance documentInstance) {
 
@@ -56,7 +61,7 @@ public class ProjectDocumentService {
                 .orElseThrow(() -> new GendoxException("PROJECT_NOT_FOUND", "Project not found with id: " + projectID, HttpStatus.NOT_FOUND));
 
         DocumentInstance documentInstance = new DocumentInstance();
-        documentInstance = documentInstanceRepository.findById(documentId)
+        documentInstance = documentInstanceRepository.findDocumentInstanceById(documentId)
                 .orElseThrow(() -> new GendoxException("DOCUMENT_NOT_FOUND", "Document not found with id: " + documentId, HttpStatus.NOT_FOUND));
 
 

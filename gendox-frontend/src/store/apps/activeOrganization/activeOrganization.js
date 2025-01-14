@@ -4,6 +4,8 @@ import aiModelService from "src/gendox-sdk/aiModelService";
 import subscriptionPlanService from "src/gendox-sdk/subscriptionPlanService";
 import apiKeyService from "src/gendox-sdk/apiKeyService";
 import organizationWebSiteService from "src/gendox-sdk/organizationWebSiteService";
+import { getErrorMessage } from "src/utils/errorHandler";
+import toast from "react-hot-toast";
 
 // Define an async thunk for fetching an organization by ID
 export const fetchOrganization = createAsyncThunk(
@@ -17,6 +19,7 @@ export const fetchOrganization = createAsyncThunk(
 
       return response.data;
     } catch (error) {
+      toast.error(`Failed to fetch organization by ID status. Error: ${getErrorMessage(error)}`);
       return thunkAPI.rejectWithValue(error.response.data);
     }
   }
@@ -32,6 +35,7 @@ export const fetchAiModelProviders = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
+      toast.error(`Failed to fetch Ai model Providers. Error: ${getErrorMessage(error)}`);
       return thunkAPI.rejectWithValue(error.response.data);
     }
   }
@@ -47,6 +51,7 @@ export const fetchOrganizationAiModelKeys = createAsyncThunk(
       );
       return response.data.content;
     } catch (error) {
+      toast.error(`Failed to fetch organization Ai model keys. Error: ${getErrorMessage(error)}`);
       return thunkAPI.rejectWithValue(error.response.data);
     }
   }
@@ -62,6 +67,7 @@ export const fetchOrganizationPlans = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
+      toast.error(`Failed to fetch organization plans. Error: ${getErrorMessage(error)}`);
       return thunkAPI.rejectWithValue(error.response.data);
     }
   }
@@ -77,6 +83,7 @@ export const fetchApiKeys = createAsyncThunk(
       );      
       return response.data;
     } catch (error) {
+      toast.error(`Failed to fetch API Keys. Error: ${getErrorMessage(error)}`);
       return thunkAPI.rejectWithValue(error.response.data);
     }
   }
@@ -92,6 +99,7 @@ export const fetchOrganizationWebSites = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
+      toast.error(`Failed to fetch organization websites. Error: ${getErrorMessage(error)}`);
       return thunkAPI.rejectWithValue(error.response.data);
     }
   }

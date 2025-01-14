@@ -27,7 +27,9 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, Queryds
     @EntityGraph(attributePaths = {"projectAgent"})
     Page<Project> findAll(Predicate predicate, Pageable pageable);
 
-    long countByOrganizationId(UUID organizationId);
+    @Query(value = "SELECT COUNT(*) FROM gendox_core.projects WHERE organization_id = :organizationId AND is_active = TRUE", nativeQuery = true)
+    long countActiveProjectsByOrganizationId(@Param("organizationId") UUID organizationId);
+
 
 
 

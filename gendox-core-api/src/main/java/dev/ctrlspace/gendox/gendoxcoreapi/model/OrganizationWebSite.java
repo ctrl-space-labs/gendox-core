@@ -26,8 +26,14 @@ public class OrganizationWebSite {
     @Column(name = "name", nullable = false, length = 1024)
     private String name;
     @Basic
-    @Column(name = "url", nullable = false, length = 1024)
+    @Column(name = "url", nullable = false)
     private String url;
+    @Basic
+    @Column(name = "integration_id", nullable = true)
+    private UUID integrationId;
+    @Basic
+    @Column(name = "api_key_id", nullable = true)
+    private UUID apiKeyId;
     @Basic
     @Column(name = "created_at", nullable = true)
     @CreatedDate
@@ -78,6 +84,22 @@ public class OrganizationWebSite {
         this.url = url;
     }
 
+    public UUID getIntegrationId() {
+        return integrationId;
+    }
+
+    public void setIntegrationId(UUID integrationId) {
+        this.integrationId = integrationId;
+    }
+
+    public UUID getApiKeyId() {
+        return apiKeyId;
+    }
+
+    public void setApiKeyId(UUID apiKeyId) {
+        this.apiKeyId = apiKeyId;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -115,11 +137,11 @@ public class OrganizationWebSite {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         OrganizationWebSite that = (OrganizationWebSite) o;
-        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(name, that.name) && Objects.equals(url, that.url) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy);
+        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(name, that.name) && Objects.equals(url, that.url) && Objects.equals(integrationId, that.integrationId) && Objects.equals(apiKeyId, that.apiKeyId) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organizationId, name, url, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, organizationId, name, url, integrationId, apiKeyId, createdAt, updatedAt, createdBy, updatedBy);
     }
 }

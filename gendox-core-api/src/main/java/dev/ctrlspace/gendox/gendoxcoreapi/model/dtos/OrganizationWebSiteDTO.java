@@ -13,6 +13,8 @@ import java.util.UUID;
 @Builder(toBuilder = true)
 public class OrganizationWebSiteDTO {
     private UUID organizationId;
+    private UUID integrationId;
+    private UUID apiKeyId;
     private String name;
     private String url;
 }

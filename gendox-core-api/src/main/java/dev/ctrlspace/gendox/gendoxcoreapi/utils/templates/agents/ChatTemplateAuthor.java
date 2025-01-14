@@ -6,6 +6,7 @@ import org.apache.commons.text.StringSubstitutor;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 public class ChatTemplateAuthor {
@@ -20,6 +21,9 @@ public class ChatTemplateAuthor {
     public Map<String, String> toChatValues(Message message, String sectionValues){
         Map<String, String> questionTemplateValues = new HashMap<>();
         questionTemplateValues.put("context", escapePlaceholders(sectionValues));
+        questionTemplateValues.put("localContexts", message.getLocalContexts().stream()
+                .map(c -> "    - Session Type: " + c.getContextType().getName() + ", Session Value: " + c.getValue())
+                .collect(Collectors.joining("\n\"\"\"\n")));
         questionTemplateValues.put("question", (message.getValue()));
         return questionTemplateValues;
     }

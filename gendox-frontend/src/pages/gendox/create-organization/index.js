@@ -8,72 +8,64 @@ import organizationService from "src/gendox-sdk/organizationService";
 // ** MUI Imports
 import Grid from "@mui/material/Grid";
 import TextField from "@mui/material/TextField";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Checkbox from "@mui/material/Checkbox";
 import Card from "@mui/material/Card";
 import Button from "@mui/material/Button";
 import Divider from "@mui/material/Divider";
 import CardHeader from "@mui/material/CardHeader";
 import CardContent from "@mui/material/CardContent";
 import CardActions from "@mui/material/CardActions";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
+import toast from "react-hot-toast";
 import CircularProgress from "@mui/material/CircularProgress";
+import { getErrorMessage } from "src/utils/errorHandler";
 
 const CreateOrganization = () => {
   const auth = useAuth();
   const dispatch = useDispatch();
   const router = useRouter();
-  
+
   const storedToken = window.localStorage.getItem(
     authConfig.storageTokenKeyName
   );
-  if (!storedToken) {
-    console.error("No token found");
-    return;
-  }
 
-  
   const [name, setName] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "info",
-  });
 
   const handleNameChange = (event) => setName(event.target.value);
   const handleDisplayNameChange = (event) => setDisplayName(event.target.value);
   const handleAddressChange = (event) => setAddress(event.target.value);
-  const handlePhoneChange = (event) => setPhone(event.target.value);  
-  const handleCloseSnackbar = () => setSnackbar({ ...snackbar, open: false });
+  const handlePhoneChange = (event) => setPhone(event.target.value);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     setLoading(true);
-    const newOrganizationPayload = {      
+    const newOrganizationPayload = {
       name,
       displayName,
       address,
-      phone
+      phone,
     };
 
     try {
-      const response = await organizationService.createOrganization(        
+      const response = await organizationService.createOrganization(
         newOrganizationPayload,
         storedToken
-      );      
-
-      setSnackbar({ open: true, message: 'Organization created successfully!', severity: 'success' });
-      router.push(`/gendox/home/?organizationId=${response.data.id}&projectId=null`);
-      
+      );
+      toast.success("Organization created successfully!");
+      await auth.loadUserProfileFromAuthState(auth.oidcAuthState);
+      router.push(
+        `/gendox/create-project/?organizationId=${response.data.id}`,
+      );
+      console.log("Organization created successfully!", response);
     } catch (error) {
+      console.log("Failed to create organization", response);
       console.error("Failed to update organization", error);
-      setSnackbar({ open: true, message: 'Failed to create organization', severity: 'error' });
+      toast.error(
+        `Organization did not create. Error: ${getErrorMessage(error)}`
+      );
     } finally {
       setLoading(false);
     }
@@ -95,7 +87,7 @@ const CreateOrganization = () => {
                 fullWidth
               />
             </Grid>
-            
+
             <Grid item xs={12} sm={6}>
               <TextField
                 rows={4}
@@ -107,7 +99,7 @@ const CreateOrganization = () => {
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField                
+              <TextField
                 rows={4}
                 label="address"
                 id="organization-address"
@@ -133,24 +125,28 @@ const CreateOrganization = () => {
             <CircularProgress size={24} />
           ) : (
             <>
-              <Button size="large" type="submit" sx={{ mr: 2 }} variant="contained">
+              <Button
+                size="large"
+                type="submit"
+                sx={{ mr: 2 }}
+                variant="contained"
+              >
                 Submit
               </Button>
-              <Button size="large" type="reset" color="secondary" variant="outlined">
+              <Button
+                size="large"
+                type="reset"
+                color="secondary"
+                variant="outlined"
+              >
                 Reset
               </Button>
             </>
           )}
         </CardActions>
       </form>
-      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar}>
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Card>
   );
-}
-
+};
 
 export default CreateOrganization;

@@ -16,7 +16,7 @@ import java.util.UUID;
 @Table(name = "api_keys", schema= "gendox_core" )
 public class ApiKey {
 
-    @GeneratedValue(strategy = GenerationType.UUID)
+//    pre-persist, generate id if null
     @Id
     @Column(name = "id", nullable = false)
     private UUID id;
@@ -27,7 +27,7 @@ public class ApiKey {
     @Column(name = "name", nullable = false, length = 1024)
     private String name;
     @Basic
-    @Column(name = "api_key", nullable = false, length = 1024)
+    @Column(name = "api_key", nullable = false)
     private String apiKey;
     @Basic
     @Column(name="start_date", nullable = false)
@@ -37,7 +37,7 @@ public class ApiKey {
     private Instant endDate;
     @Basic
     @Column(name="is_active", nullable = false)
-    private boolean isActive;
+    private Boolean isActive;
     @Basic
     @Column(name = "created_at", nullable = true)
     @CreatedDate
@@ -54,6 +54,14 @@ public class ApiKey {
     @Column(name = "updated_by")
     @LastModifiedBy
     private UUID updatedBy;
+
+
+    @PrePersist
+    public void generateIdIfNull() {
+        if (id == null) {
+            id = UUID.randomUUID();
+        }
+    }
 
     public UUID getId() {
         return id;
@@ -103,11 +111,11 @@ public class ApiKey {
         this.endDate = endDate;
     }
 
-    public boolean isActive() {
+    public Boolean getActive() {
         return isActive;
     }
 
-    public void setActive(boolean active) {
+    public void setActive(Boolean active) {
         isActive = active;
     }
 
@@ -148,7 +156,7 @@ public class ApiKey {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ApiKey apiKey1 = (ApiKey) o;
-        return isActive == apiKey1.isActive && Objects.equals(id, apiKey1.id) && Objects.equals(organizationId, apiKey1.organizationId) && Objects.equals(name, apiKey1.name) && Objects.equals(apiKey, apiKey1.apiKey) && Objects.equals(startDate, apiKey1.startDate) && Objects.equals(endDate, apiKey1.endDate) && Objects.equals(createdAt, apiKey1.createdAt) && Objects.equals(updatedAt, apiKey1.updatedAt) && Objects.equals(createdBy, apiKey1.createdBy) && Objects.equals(updatedBy, apiKey1.updatedBy);
+        return Objects.equals(id, apiKey1.id) && Objects.equals(organizationId, apiKey1.organizationId) && Objects.equals(name, apiKey1.name) && Objects.equals(apiKey, apiKey1.apiKey) && Objects.equals(startDate, apiKey1.startDate) && Objects.equals(endDate, apiKey1.endDate) && Objects.equals(isActive, apiKey1.isActive) && Objects.equals(createdAt, apiKey1.createdAt) && Objects.equals(updatedAt, apiKey1.updatedAt) && Objects.equals(createdBy, apiKey1.createdBy) && Objects.equals(updatedBy, apiKey1.updatedBy);
     }
 
     @Override

@@ -15,16 +15,17 @@ import authConfig from "src/configs/auth";
 import Grid from "@mui/material/Grid";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
 import Divider from "@mui/material/Divider";
 import CardHeader from "@mui/material/CardHeader";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import toast from "react-hot-toast";
+import Tooltip from "@mui/material/Tooltip";
 
 import subscriptionPlanService from "src/gendox-sdk/subscriptionPlanService";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
+import { getErrorMessage } from "src/utils/errorHandler";
 
 const PlansOrganizationSettings = () => {
   const theme = useTheme();
@@ -42,12 +43,10 @@ const PlansOrganizationSettings = () => {
     (state) => state.activeOrganization.organizationPlans
   );
 
-
   const { id: organizationId } = organization;
 
   const [isBlurring, setIsBlurring] = useState(false);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);  
-  
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
   const handleCancelSubscription = () => setOpenDeleteDialog(true);
 
@@ -57,11 +56,11 @@ const PlansOrganizationSettings = () => {
         organizationPlan.id,
         organizationId,
         storedToken
-      );      
+      );
       toast.success("Subscription canceled successfully");
     } catch (error) {
       console.error("Failed to cancel subscription:", error);
-      toast.error("Failed to cancel subscription");
+      toast.error(`Failed to cancel subscription. Error: ${getErrorMessage(error)}`);
     }
     setOpenDeleteDialog(false);
   };
@@ -83,17 +82,22 @@ const PlansOrganizationSettings = () => {
         <CardHeader title="Subscription Plan Details" />
 
         {organizationPlan && (
-          <Button
-            variant="outlined"
-            color="primary"
-            onClick={handleUpgrade}
-            sx={{
-              padding: "12px 24px",
-              fontSize: "1.1rem",
-            }}
-          >
-            Upgrade Plan
-          </Button>
+          <Tooltip title="Currently unavailable.">
+            <span>
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={handleUpgrade}
+                disabled={true} // Example condition
+                sx={{
+                  padding: "12px 24px",
+                  fontSize: "1.1rem",
+                }}
+              >
+                Upgrade Plan
+              </Button>
+            </span>
+          </Tooltip>
         )}
       </Box>
       <CardContent
@@ -153,7 +157,6 @@ const PlansOrganizationSettings = () => {
 
             {/* Date Section */}
             <Grid item xs={12}>
-             
               <Typography
                 variant="h6"
                 sx={{ mb: 2, color: theme.palette.primary.main }}

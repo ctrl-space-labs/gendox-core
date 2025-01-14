@@ -55,6 +55,7 @@ public class DownloadService {
                 throw new GendoxException("ERROR_UNKNOWN_FILE_TYPE", "Unknown file type: " + fileExtension, HttpStatus.BAD_REQUEST);
             }
 
+            // TODO @Giannis check if the API Integrations remote url, breaks the logic of file extentions
             if (isTextFile(fileExtension)) {
                 // Handle text files
                 return readTxtFileContent(inputStream);

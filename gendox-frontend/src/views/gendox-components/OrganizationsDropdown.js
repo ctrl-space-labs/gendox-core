@@ -1,6 +1,6 @@
 // General and MUI Imports
-import React, { useState, useEffect, useCallback, Fragment } from "react";
-import { useDispatch } from "react-redux";
+import React, { useState, useEffect, useCallback, Fragment, use } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/router";
 import Box from "@mui/material/Box";
 import AvatarGroup from "@mui/material/AvatarGroup";
@@ -48,11 +48,15 @@ const OrganizationsDropdown = ({ settings }) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleDropdownClose = useCallback(() => setAnchorEl(null), []);
+  const handleDropdownClose = useCallback(() => {
+    setAnchorEl(null);
+    const triggerElement = document.querySelector('[aria-controls="menu-id"]');
+    if (triggerElement) triggerElement.focus();
+  }, []);
 
   const handleOrganizations = useCallback(
     (organization) => {
-      const { projects } = organization;
+      const { projects, projectAgents } = organization;
       const newProjectId = projects?.[0]?.id ?? null;
       handleDropdownClose();
 
@@ -76,16 +80,20 @@ const OrganizationsDropdown = ({ settings }) => {
       setActiveOrganizationId(organization.id);
       const newPath =
         router.pathname === "/gendox/chat"
-          ? `/gendox/chat/?organizationId=${organization.id}`
+          ? `/gendox/chat/?organizationId=${organization.id}&projectId=${newProjectId}`
           : router.pathname === "/gendox/organization-settings"
           ? `/gendox/organization-settings/?organizationId=${organization.id}`
           : `/gendox/home/?organizationId=${organization.id}&projectId=${newProjectId}`;
       router.push(newPath);
     },
     [dispatch, handleDropdownClose, router]
-  ); 
+  );
 
-  const sortedOrganizations = sortByField([...auth.user.organizations], "name", activeOrganizationId);
+  const sortedOrganizations = sortByField(
+    [...auth.user.organizations],
+    "name",
+    activeOrganizationId
+  );
 
   const visibleOrganizations = sortedOrganizations.slice(0, visibleCount);
   const overflowCount = sortedOrganizations.length - visibleCount;
@@ -154,7 +162,9 @@ const OrganizationsDropdown = ({ settings }) => {
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
-        onClose={() => handleDropdownClose()}
+        onClose={handleDropdownClose}
+        disableAutoFocus
+        disableEnforceFocus
         sx={{ "& .MuiMenu-paper": { width: 230, mt: 4 } }}
         anchorOrigin={{
           vertical: "bottom",
@@ -165,56 +175,62 @@ const OrganizationsDropdown = ({ settings }) => {
           horizontal: settings.direction === "ltr" ? "right" : "left",
         }}
       >
-        {sortByField([...auth.user.organizations], "name", activeOrganizationId)
-          .map((organization) => {
-            const href =
-              router.pathname === "/gendox/chat"
-                ? `/gendox/chat/?organizationId=${organization.id}`
-                : `/gendox/home/?organizationId=${organization.id}&projectId=${
-                    organization.projects?.[0]?.id ?? ""
-                  }`;
-            return (
-              <Link
-                href={href}
-                passHref
-                key={organization.id}
-                style={{ textDecoration: "none" }}
+        {sortByField(
+          [...auth.user.organizations],
+          "name",
+          activeOrganizationId
+        ).map((organization) => {
+          const href =
+            router.pathname === "/gendox/chat"
+              ? `/gendox/chat/?organizationId=${organization.id}&projectId=${
+                  organization.projects?.[0]?.id ?? ""
+                }`
+              : `/gendox/home/?organizationId=${organization.id}&projectId=${
+                  organization.projects?.[0]?.id ?? ""
+                }`;
+
+          return (
+            <Link
+              href={href}
+              passHref
+              key={organization.id}
+              style={{ textDecoration: "none" }}
+            >
+              <MenuItem
+                sx={{ p: 0 }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleOrganizations(organization);
+                }}
+                selected={organization.id === activeOrganizationId}
               >
-                <MenuItem
-                  sx={{ p: 0 }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleOrganizations(organization);
+                <Box
+                  sx={{
+                    py: 2,
+                    px: 4,
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    textDecoration: "none",
+                    backgroundColor:
+                      organization.id === activeOrganizationId
+                        ? "primary.light"
+                        : "inherit",
+                    "& svg": {
+                      mr: 2,
+                      fontSize: "1.375rem",
+                    },
                   }}
-                  selected={organization.id === activeOrganizationId}
                 >
-                  <Box
-                    sx={{
-                      py: 2,
-                      px: 4,
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      textDecoration: "none",
-                      backgroundColor:
-                        organization.id === activeOrganizationId
-                          ? "primary.light"
-                          : "inherit",
-                      "& svg": {
-                        mr: 2,
-                        fontSize: "1.375rem",
-                      },
-                    }}
-                  >
-                    <ListItemIcon sx={{ color: "primary.main" }}>
-                      <Icon icon="mdi:domain" fontSize={20} />
-                    </ListItemIcon>
-                    <ListItemText primary={organization.name} />
-                  </Box>
-                </MenuItem>
-              </Link>
-            );
-          })}
+                  <ListItemIcon sx={{ color: "primary.main" }}>
+                    <Icon icon="mdi:domain" fontSize={20} />
+                  </ListItemIcon>
+                  <ListItemText primary={organization.name} />
+                </Box>
+              </MenuItem>
+            </Link>
+          );
+        })}
       </Menu>
     </Fragment>
   );

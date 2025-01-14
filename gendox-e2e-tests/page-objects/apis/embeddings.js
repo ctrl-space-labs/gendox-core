@@ -21,7 +21,7 @@ const semanticSearch = async (request, token, message, criteria) => {
 
     let params = new URLSearchParams(criteria).toString();
 
-    const response = await request.post(`${config.gendox.contextPath}/messages/semantic-search?${params}`, {
+    const response = await request.post(`${config.gendox.contextPath}/messages/search?${params}`, {
         headers: {
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
@@ -35,7 +35,7 @@ const semanticCompletion = async (request, token, message, criteria) => {
 
     let params = new URLSearchParams(criteria).toString();
 
-    const response = await request.post(`${config.gendox.contextPath}/messages/semantic-search?${params}`, {
+    const response = await request.post(`${config.gendox.contextPath}/messages/search?${params}`, {
         headers: {
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'

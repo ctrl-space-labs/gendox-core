@@ -8,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.EmbeddingTemplateAuthor;
 import lombok.NonNull;
 import org.slf4j.LoggerFactory;
@@ -30,21 +31,16 @@ public class TrainingService {
 
     private DocumentInstanceSectionRepository sectionRepository;
     private DocumentSectionService documentSectionService;
-    private EmbeddingGroupRepository embeddingGroupRepository;
     private EmbeddingService embeddingService;
     private ProjectDocumentRepository projectDocumentRepository;
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private AiModelUtils aiModelUtils;
-
     private ProjectService projectService;
-
     private OrganizationModelKeyService organizationModelKeyService;
-
     private ProjectAgentRepository projectAgentRepository;
-
     private TemplateRepository templateRepository;
-
     private CryptographyUtils cryptographyUtils;
+    private DocumentUtils documentUtils;
 
 
     @Lazy
@@ -62,7 +58,6 @@ public class TrainingService {
 
     @Autowired
     public TrainingService(DocumentInstanceSectionRepository sectionRepository,
-                           EmbeddingGroupRepository embeddingGroupRepository,
                            ProjectDocumentRepository projectDocumentRepository,
                            DocumentInstanceSectionRepository documentInstanceSectionRepository,
                            AiModelUtils aiModelUtils,
@@ -70,9 +65,9 @@ public class TrainingService {
                            OrganizationModelKeyService organizationModelKeyService,
                            ProjectAgentRepository projectAgentRepository,
                            TemplateRepository templateRepository,
-                           CryptographyUtils cryptographyUtils) {
+                           CryptographyUtils cryptographyUtils,
+                           DocumentUtils documentUtils) {
         this.sectionRepository = sectionRepository;
-        this.embeddingGroupRepository = embeddingGroupRepository;
         this.projectDocumentRepository = projectDocumentRepository;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.projectService = projectService;
@@ -81,7 +76,7 @@ public class TrainingService {
         this.projectAgentRepository = projectAgentRepository;
         this.templateRepository = templateRepository;
         this.cryptographyUtils = cryptographyUtils;
-
+        this.documentUtils = documentUtils;
     }
 
 
@@ -102,7 +97,7 @@ public class TrainingService {
 
         String sectionValue = embeddingTemplateAuthor.sectionValueForEmbedding(
                 section,
-                documentSectionService.getFileNameFromUrl(section.getDocumentInstance().getRemoteUrl()),
+                documentUtils.extractDocumentNameFromUrl(section.getDocumentInstance().getRemoteUrl()),
                 agentSectionTemplate.getText() // Pass the template text here
         );
 

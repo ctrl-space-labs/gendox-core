@@ -39,7 +39,6 @@ const getActiveSubscriptionPlans = async (organizationId, storedToken) => {
  * @returns {Promise<axios.AxiosResponse<SubscriptionPlan>>} * 
  */
 const cancelSubscriptionPlan = async (organizationPlanId, organizationId, storedToken) => {
-    console.log("TOKEN", storedToken);
   return axios.put(apiRequests.cancelSubscriptionPlan(organizationPlanId, organizationId,), {},
   {
     headers: {
@@ -48,11 +47,6 @@ const cancelSubscriptionPlan = async (organizationPlanId, organizationId, stored
       }
   });
 }
-
-
-
-
-
 
 export default {  
   getOrganizationPlans,

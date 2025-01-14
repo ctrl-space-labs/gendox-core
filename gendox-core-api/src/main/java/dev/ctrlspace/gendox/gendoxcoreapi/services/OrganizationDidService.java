@@ -12,8 +12,8 @@ import dev.ctrlspace.provenai.ssi.issuer.KeyCreation;
 import dev.ctrlspace.provenai.ssi.issuer.VerifiableCredentialBuilder;
 import id.walt.crypto.keys.jwk.JWKKey;
 import id.walt.did.dids.registrar.DidResult;
-import org.junit.platform.commons.logging.Logger;
-import org.junit.platform.commons.logging.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -88,24 +88,24 @@ public class OrganizationDidService {
         OrganizationDid organizationDid = organizationDidConverter.toEntity(organizationDidDTO);
 
         final String organizationId = organizationDidDTO.getOrganizationId().toString();
-        logger.debug(() -> "Starting createOrganizationDid method for organizationId: " + organizationId);
+        logger.debug("Starting createOrganizationDid method for organizationId: " + organizationId);
 
         if (didType.equals("web")) {
             organizationDid = createOrganizationWebDid(organizationDid);
 
-            logger.debug(() -> "OrganizationDid created using Web DID type");
+            logger.debug("OrganizationDid created using Web DID type");
 
         } else if (didType.equals("key")) {
             organizationDid = createOrganizationKeyDid(organizationDid);
 
-            logger.debug(() -> "OrganizationDid created using Key DID type");
+            logger.debug("OrganizationDid created using Key DID type");
 
         } else {
             throw new GendoxException("INVALID_DID_TYPE", "Invalid DID type specified", HttpStatus.BAD_REQUEST);
         }
 
         final String organizationDidString = organizationDid.getDid();
-        logger.debug(() -> "OrganizationDid created with DID: " + organizationDidString);
+        logger.debug("OrganizationDid created with DID: " + organizationDidString);
 
         return organizationDid;
     }

@@ -13,9 +13,9 @@ const useRedirectOr404ForHome = (organizationId, projectId) => {
       projectId || window.localStorage.getItem(authConfig.selectedProjectId);
 
     const effectiveOrgId = organizationId || storedOrgId;
-    const effectiveProjId = projectId || storedProjId;
+    const effectiveProjId = projectId || storedProjId;    
 
-    if (!effectiveOrgId || !effectiveProjId) {
+    if (!effectiveOrgId && !effectiveProjId) {
       router.push("/404");
     } else if (!organizationId || !projectId) {
       router.push(

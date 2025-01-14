@@ -4,6 +4,7 @@ import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ChatThreadDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ChatThreadCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.MessageCriteria;
@@ -19,14 +20,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.ArrayList;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @RestController
 public class ChatThreadController {
@@ -45,7 +43,7 @@ public class ChatThreadController {
         this.messageService = messageService;
     }
 
-//    TODO add authorization checks
+    //    TODO add authorization checks
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable')")
     @GetMapping("threads/{threadId}")
     @Operation(summary = "Get Chat Thread by ID",
@@ -107,6 +105,19 @@ public class ChatThreadController {
     public List<MessageMetadataDTO> getThreadMessageMetadataByMessageId(@PathVariable UUID messageId) throws GendoxException {
 
         return messageService.getAllMessagesMetadataByMessageId(messageId);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable')")
+    @PutMapping("/organizations/{organizationId}/threads/{threadId}")
+    public ChatThread updateChatThread(@PathVariable UUID organizationId, @PathVariable UUID threadId, @RequestBody ChatThreadDTO chatThreadDTO) throws GendoxException {
+
+        return chatThreadService.updateChatThread(threadId, chatThreadDTO);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable')")
+    @DeleteMapping("/organizations/{organizationId}/threads/{threadId}")
+    public void deActiveChatThread(@PathVariable UUID organizationId, @PathVariable UUID threadId) throws GendoxException {
+        chatThreadService.deActiveChatThread(threadId);
     }
 
     private void handleCriteriaForAuthenticatedUser(ChatThreadCriteria criteria, Authentication authentication) {

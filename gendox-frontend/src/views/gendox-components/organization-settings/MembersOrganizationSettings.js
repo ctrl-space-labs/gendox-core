@@ -14,10 +14,11 @@ import { DataGrid } from "@mui/x-data-grid";
 import Icon from "src/@core/components/icon";
 import authConfig from "src/configs/auth";
 import CustomChip from "src/@core/components/mui/chip";
-import QuickSearchToolbar from "src/views/gendox-components/organization-settings/members-components/QuickSearchToolbar";
+import QuickSearchToolbar from "src/utils/searchToolbar";
 import SendInvitation from "src/views/gendox-components/organization-settings/members-components/SendInvitation";
 import organizationService from "src/gendox-sdk/organizationService";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
+import { getErrorMessage } from "src/utils/errorHandler";
 import toast from "react-hot-toast";
 
 import {
@@ -75,6 +76,7 @@ const MembersOrganizationSettings = () => {
       setFilteredOrganizationMembers(fetchedOrganizationMembers);
       setIsBlurring(false);
     } catch (error) {
+      toast.error(`Failed to fetch organization members. Error: ${getErrorMessage(error)}`);
       console.error("Failed to fetch organization members:", error);
       setIsBlurring(false);
     }
@@ -161,11 +163,10 @@ const MembersOrganizationSettings = () => {
         );
         setOrganizationMembers(updatedMembers);
         setFilteredOrganizationMembers(updatedMembers);
-
-        toast.success(`Role updated to ${newRole} successfully`);
+        toast.success(`Role updated successfully`);
       } catch (error) {
         console.error("Failed to update user role:", error);
-        toast.error("Failed to update user role");
+        toast.error(`Role update failed. Error: ${getErrorMessage(error)}`);
       }
       handleMenuClose();
     }
@@ -187,8 +188,8 @@ const MembersOrganizationSettings = () => {
         );
         toast.success("User deleted successfully");
       } catch (error) {
+        toast.error(`User deletion failed. Error: ${getErrorMessage(error)}`);
         console.error("Failed to delete user:", error);
-        toast.error("Failed to delete user");
       }
       setConfirmDelete(false);
       handleMenuClose();

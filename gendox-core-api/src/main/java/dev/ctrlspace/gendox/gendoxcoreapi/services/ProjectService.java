@@ -41,7 +41,6 @@ public class ProjectService {
     private AuditLogsService auditLogsService;
 
 
-
     @Autowired
     public ProjectService(ProjectRepository projectRepository,
                           ProjectAgentService projectAgentService,
@@ -113,7 +112,7 @@ public class ProjectService {
     }
 
 
-    public void deactivateProject(UUID id) throws GendoxException {
+    public void deactivateProject(UUID id, boolean orgIsDeactivating) throws GendoxException {
         Project project = this.getProjectById(id);
 
         if ("DEACTIVATED".equals(project.getName())) {
@@ -129,15 +128,17 @@ public class ProjectService {
         // Fetch the type for GENDOX_AGENT to compare against user types
         Type agentType = typeService.getUserTypeByName("GENDOX_AGENT");
 
-        // Check if this is the last project of its organization
-        long projectCountInOrganization = projectRepository.countByOrganizationId(organizationId);
+        if (!orgIsDeactivating) {
+            // Check if this is the last project of its organization
+            long projectCountInOrganization = projectRepository.countActiveProjectsByOrganizationId(organizationId);
 
-        if (projectCountInOrganization <= 1) {
-            throw new GendoxException(
-                    "PROJECT_DEACTIVATION_FAILED",
-                    "Cannot deactivate project. Organization must have at least one project.",
-                    HttpStatus.BAD_REQUEST
-            );
+            if (projectCountInOrganization <= 1) {
+                throw new GendoxException(
+                        "PROJECT_DEACTIVATION_FAILED",
+                        "Cannot deactivate project. Organization must have at least one project.",
+                        HttpStatus.BAD_REQUEST
+                );
+            }
         }
 
         // Iterate through project members to handle both deletion and exception
@@ -150,7 +151,7 @@ public class ProjectService {
                 continue;
             }
 
-            if  (projectMember.getUser().getEmail() == null &&
+            if (projectMember.getUser().getEmail() == null &&
                     projectMember.getUser().getName() == null &&
                     projectMember.getUser().getUserType() == null) {
                 continue;
@@ -169,7 +170,7 @@ public class ProjectService {
                 );
             }
 //        }
-            }
+        }
 
         // Delete other associated data
         projectMemberService.deleteAllProjectMembers(project);
@@ -191,10 +192,10 @@ public class ProjectService {
         project.setCreatedAt(null);
         project.setCreatedBy(null);
         project.setUpdatedBy(null);
+        project.setActive(false);
 
 
     }
-
 
 
 }

@@ -145,7 +145,8 @@ const IFrameAuthProvider = ({ children, defaultProvider }) => {
       setAccessToken(storedToken);
     }
     return () => {
-      window.parent.postMessage({ type: 'GENDOX_EVENTS_LISTENER_REMOVED' }, "*");
+      // window.parent.postMessage({ type: 'gendox.events.listener.removed' }, "*");
+      iFrameMessageManager.messageManager.sendMessage({ type: 'gendox.events.listener.removed' })
       iFrameMessageManager.messageManager.removeHandler(receiveAccessTokenMessage);
     };
   }, []);

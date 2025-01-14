@@ -64,76 +64,73 @@ public class SecurityUtils {
 
 
     public boolean isSuperAdmin() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return isSuperAdmin(authentication);
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!(principal instanceof UserProfile)) {
+            return false;
+        }
+        return isSuperAdmin((UserProfile) principal);
 
     }
 
-    public boolean isSuperAdmin(Authentication authentication) {
-        if (!(SecurityContextHolder.getContext().getAuthentication() instanceof GendoxAuthenticationToken)) {
-            return false;
-        }
-        GendoxAuthenticationToken principal = (GendoxAuthenticationToken)SecurityContextHolder.getContext()
-                .getAuthentication();
-        return principal != null &&
+    public boolean isSuperAdmin(UserProfile userProfile) {
+
+        return userProfile != null &&
                 UserNamesConstants.GENDOX_SUPER_ADMIN.equals(
-                        principal.getPrincipal().getGlobalUserRoleType().getName()
+                        userProfile.getGlobalUserRoleType().getName()
                 );
     }
 
     public boolean isUser() {
-        if (!(SecurityContextHolder.getContext().getAuthentication() instanceof GendoxAuthenticationToken)) {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!(principal instanceof UserProfile userProfile)) {
             return false;
         }
-        GendoxAuthenticationToken principal = (GendoxAuthenticationToken)SecurityContextHolder.getContext()
-                .getAuthentication();
-        return principal != null &&
+        return userProfile != null &&
                 UserNamesConstants.GENDOX_USER.equals(
-                        principal.getPrincipal().getGlobalUserRoleType().getName()
+                        userProfile.getGlobalUserRoleType().getName()
                 );
     }
 
     public boolean isAgent(Authentication authentication) {
-        if (!(SecurityContextHolder.getContext().getAuthentication() instanceof GendoxAuthenticationToken)) {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!(principal instanceof UserProfile userProfile)) {
             return false;
         }
-        GendoxAuthenticationToken principal = (GendoxAuthenticationToken)SecurityContextHolder.getContext()
-                .getAuthentication();
+
         return principal != null &&
                 UserNamesConstants.GENDOX_AGENT.equals(
-                        principal.getPrincipal().getGlobalUserRoleType().getName()
+                        userProfile.getGlobalUserRoleType().getName()
                 );
     }
 
 
-    public boolean can(String authority, GendoxAuthenticationToken authentication, AccessCriteria accessCriteria) {
+    public boolean can(String authority, UserProfile userProfile, AccessCriteria accessCriteria) {
 
         // Check if projectIds is not null and not empty, then check project access
         if (accessCriteria.getProjectIds() != null && !accessCriteria.getProjectIds().isEmpty()) {
-            return canAccessProjects(authority, authentication, accessCriteria.getProjectIds());
+            return canAccessProjects(authority, userProfile, accessCriteria.getProjectIds());
         }
 
         // Check if orgIds is not null and not empty, then check organization access
         if (accessCriteria.getOrgIds() != null && !accessCriteria.getOrgIds().isEmpty()) {
-            return canAccessOrganizations(authority, authentication, accessCriteria.getOrgIds());
+            return canAccessOrganizations(authority, userProfile, accessCriteria.getOrgIds());
         }
 
 
         if (accessCriteria.getThreadId() != null && !accessCriteria.getThreadId().isEmpty()) {
-            return canAccessThread(authority, authentication, UUID.fromString(accessCriteria.getThreadId()));
+            return canAccessThread(authority, userProfile, UUID.fromString(accessCriteria.getThreadId()));
         }
 
         if (accessCriteria.getDocumentId() != null && !accessCriteria.getDocumentId().isEmpty()) {
-            return canAccessDocument(authority, authentication, UUID.fromString(accessCriteria.getDocumentId()));
+            return canAccessDocument(authority, userProfile, UUID.fromString(accessCriteria.getDocumentId()));
         }
 
 
         return false;
     }
 
-    private static boolean canAccessProjects(String authority, GendoxAuthenticationToken authentication, Set<String> requestedProjectIds) {
-        Set<String> authorizedProjectIds = authentication
-                .getPrincipal()
+    private static boolean canAccessProjects(String authority, UserProfile userProfile, Set<String> requestedProjectIds) {
+        Set<String> authorizedProjectIds = userProfile
                 .getOrganizations()
                 .stream()
                 .filter(org -> org.getAuthorities().contains(authority))
@@ -149,9 +146,8 @@ public class SecurityUtils {
         return true;
     }
 
-    private static boolean canAccessOrganizations(String authority, GendoxAuthenticationToken authentication, Set<String> requestedOrgIds) {
-        Set<String> authorizedOrgIds = authentication
-                .getPrincipal()
+    private static boolean canAccessOrganizations(String authority, UserProfile userProfile, Set<String> requestedOrgIds) {
+        Set<String> authorizedOrgIds = userProfile
                 .getOrganizations()
                 .stream()
                 .filter(org -> requestedOrgIds.contains(org.getId()))
@@ -166,10 +162,9 @@ public class SecurityUtils {
         return true;
     }
 
-    private boolean canAccessThread(String authority, GendoxAuthenticationToken authentication, UUID threadId) {
+    private boolean canAccessThread(String authority, UserProfile userProfile, UUID threadId) {
 
-        List<UUID> authorizedProjectIds = authentication
-                .getPrincipal()
+        List<UUID> authorizedProjectIds = userProfile
                 .getOrganizations()
                 .stream()
                 .filter(org -> org.getAuthorities().contains(authority))
@@ -180,10 +175,9 @@ public class SecurityUtils {
         return chatThreadRepository.existsByIdAndProjectIdIn(threadId, authorizedProjectIds);
     }
 
-    private boolean canAccessDocument(String authority, GendoxAuthenticationToken authentication, UUID documentId) {
+    private boolean canAccessDocument(String authority, UserProfile userProfile, UUID documentId) {
 
-        List<UUID> authorizedProjectIds = authentication
-                .getPrincipal()
+        List<UUID> authorizedProjectIds = userProfile
                 .getOrganizations()
                 .stream()
                 .filter(org -> org.getAuthorities().contains(authority))
@@ -381,12 +375,12 @@ public class SecurityUtils {
      * @return
      */
     public boolean hasAuthority(String authority, String getterFunction) throws IOException {
-        if (!(SecurityContextHolder.getContext().getAuthentication() instanceof GendoxAuthenticationToken)) {
+        if (!(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserProfile)) {
             return false;
         }
-        GendoxAuthenticationToken authentication = (GendoxAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        UserProfile userProfile = (UserProfile) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        if (isSuperAdmin(authentication)) {
+        if (isSuperAdmin(userProfile)) {
             return true; // Skip validation if user is an admin
         }
 
@@ -419,7 +413,7 @@ public class SecurityUtils {
         if (accessCriteria == null) {
             return false;
         }
-        return can(authority, authentication, accessCriteria);
+        return can(authority, userProfile, accessCriteria);
     }
 
 

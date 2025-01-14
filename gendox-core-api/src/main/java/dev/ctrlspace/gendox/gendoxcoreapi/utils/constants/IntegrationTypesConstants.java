@@ -5,4 +5,5 @@ public class IntegrationTypesConstants {
     public static final String DROPBOX_INTEGRATIONS = "DROPBOX_INTEGRATIONS";
     public static final String GOOGLE_DRIVE_INTEGRATION = "GOOGLE_DRIVE_INTEGRATION";
     public static final String AWS_S3_INTEGRATION = "AWS_S3_INTEGRATION";
+    public static final String API_INTEGRATION = "API_INTEGRATION";
 }

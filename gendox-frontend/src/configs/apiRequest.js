@@ -37,7 +37,7 @@ export default {
   createOrganization: () => `${url}organizations`,
 
   postCompletionModel: (projectId) =>
-    `${url}messages/semantic-completion?projectId=${projectId}`,
+    `${url}messages/completions?projectId=${projectId}`,
 
   // getThreadsByCriteria: (projectIdIn) => {
   //   const projectIds = projectIdIn.join(",");
@@ -69,6 +69,9 @@ export default {
     `${url}threads/${threadId}/messages?page=${page}&size=${size}&sort=${sort}`,
 
   documentSections: (documentId) => `${url}documents/${documentId}/sections`,
+
+  documentInstance: (organizationId, projectId, documentId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}`,
 
   documentSection: (documentId, sectionId) =>
     `${url}documents/${documentId}/sections/${sectionId}`,
@@ -164,6 +167,11 @@ export default {
 
   deleteOrganizationWebSite: (organizationId, organizationWebSiteId) =>
     `${url}organizations/${organizationId}/websites/${organizationWebSiteId}`,
+
+  chatThread: (organizationId, threadId) =>
+    `${url}organizations/${organizationId}/threads/${threadId}`,
+
+  userLogout: () => `${url}users/logout`
 
 
 };

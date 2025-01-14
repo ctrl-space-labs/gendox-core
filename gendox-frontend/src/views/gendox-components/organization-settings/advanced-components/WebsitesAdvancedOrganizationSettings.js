@@ -6,7 +6,6 @@ import authConfig from "src/configs/auth";
 import Grid from "@mui/material/Grid";
 import TextField from "@mui/material/TextField";
 import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
 import CardHeader from "@mui/material/CardHeader";
 import CardContent from "@mui/material/CardContent";
 import Icon from "src/@core/components/icon";
@@ -17,6 +16,8 @@ import OrganizationWebSiteDialog from "./organization-websites/OrganizationWebSi
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 import { fetchOrganizationWebSites } from "src/store/apps/activeOrganization/activeOrganization";
 import organizationWebSiteService from "src/gendox-sdk/organizationWebSiteService";
+import { getErrorMessage } from "src/utils/errorHandler";
+
 
 const WebsitesAdvancedOrganizationSettings = () => {
   const theme = useTheme();
@@ -82,7 +83,7 @@ const WebsitesAdvancedOrganizationSettings = () => {
       toast.success("Organization Website Created Successfully");
     } catch (error) {
       console.error("Failed to create Organization Website", error);
-      toast.error("Failed to create Organization Website");
+      toast.error(`Failed to create Organization Website. Error: ${getErrorMessage(error)}`);
       setOpenWebSiteDialog(false);
     }
   };
@@ -111,7 +112,7 @@ const WebsitesAdvancedOrganizationSettings = () => {
       toast.success("Organization Website Updated Successfully");
     } catch (error) {
       console.error("Failed to update Organization Website", error);
-      toast.error("Failed to update Organization Website");
+      toast.error(`Failed to update Organization Website. Error: ${getErrorMessage(error)}`);
       setOpenWebSiteDialog(false);
     }
   };
@@ -133,7 +134,7 @@ const WebsitesAdvancedOrganizationSettings = () => {
       toast.success("Organization Website Deleted Successfully");
     } catch (error) {
       console.error("Failed to delete Organization Website", error);
-      toast.error("Failed to delete Organization Website");
+      toast.error(`Failed to delete Organization Website. Error: ${getErrorMessage(error)}`);
       handleDeleteClose();
     }
   };

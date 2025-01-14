@@ -20,27 +20,22 @@ import Icon from "src/@core/components/icon";
 // ** Custom Components
 import CustomChip from "src/@core/components/mui/chip";
 import CustomAvatar from "src/@core/components/mui/avatar";
-import QuickSearchToolbar from "src/views/gendox-components/project-settings-components/members-components/QuickSearchToolbar";
+import QuickSearchToolbar from "src/utils/searchToolbar";
 import InviteDialog from "src/views/gendox-components/project-settings-components/members-components/InviteDialog";
 import projectService from "src/gendox-sdk/projectService";
 import organizationService from "src/gendox-sdk/organizationService";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
+import { getErrorMessage } from "src/utils/errorHandler";
 
 import authConfig from "src/configs/auth";
-import { styled, useTheme } from "@mui/material/styles";
-
-// ** Utils Import
-import { getInitials } from "src/@core/utils/get-initials";
-import { set } from "nprogress";
 import toast from "react-hot-toast";
 
 import {
   userTypeStatus,
   memberRoleStatus,
   escapeRegExp,
-  renderClientAvatar
+  renderClientAvatar,
 } from "src/utils/membersUtils";
-
 
 const MembersProjectSettings = () => {
   const router = useRouter();
@@ -60,12 +55,11 @@ const MembersProjectSettings = () => {
   });
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
- 
+
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [organizationMembers, setOrganizationMembers] = useState([]);
-
 
   useEffect(() => {
     if (projectId) {
@@ -89,6 +83,7 @@ const MembersProjectSettings = () => {
       setProjectMembers(fetchedProjectMembers);
       setFilteredProjectMembers(fetchedProjectMembers);
     } catch (error) {
+      toast.error(`Failed to fetch project members. Error: ${getErrorMessage(error)}`);
       console.error("Failed to fetch project members:", error);
     }
   };
@@ -122,6 +117,7 @@ const MembersProjectSettings = () => {
         return updatedProjectMembers;
       });
     } catch (error) {
+      toast.error(`Failed to fetch project members role. Error: ${getErrorMessage(error)}`);
       console.error("Failed to fetch project members role:", error);
     } finally {
       setLoading(false); // Stop loading once fetch is done
@@ -168,11 +164,9 @@ const MembersProjectSettings = () => {
           prevData.filter((user) => user.id !== selectedUser.id)
         );
         toast.success("User deleted successfully");
-        
       } catch (error) {
+        toast.error(`Failed to delete user. Error: ${getErrorMessage(error)}`);
         console.error("Failed to delete user:", error);
-        toast.error("Failed to delete user");
-        
       }
       setConfirmDelete(false);
       handleMenuClose();
@@ -356,18 +350,18 @@ const MembersProjectSettings = () => {
           },
         }}
       />
-      
+
       <DeleteConfirmDialog
         open={confirmDelete}
         onClose={handleDeleteConfirmClose}
         onConfirm={handleDeleteUser}
         title="Confirm Deletion User"
-        contentText={`Are you sure you want to delete ${selectedUser?.name || selectedUser?.userName || "this user"}? This action cannot be undone.`}
+        contentText={`Are you sure you want to delete ${
+          selectedUser?.name || selectedUser?.userName || "this user"
+        }? This action cannot be undone.`}
         confirmButtonText="Remove Member"
-        cancelButtonText="Cancel"        
+        cancelButtonText="Cancel"
       />
-
-      
 
       {/* Invite New Members Button */}
       <Box sx={{ padding: 4, display: "flex", justifyContent: "flex-end" }}>

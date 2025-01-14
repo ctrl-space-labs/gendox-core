@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ChatThreadDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ChatThreadCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
@@ -20,7 +21,6 @@ public class ChatThreadService {
 
     private ChatThreadRepository chatThreadRepository;
     private ChatThreadMemberRepository chatThreadMemberRepository;
-
 
 
     @Autowired
@@ -52,11 +52,33 @@ public class ChatThreadService {
 
     }
 
-    public ChatThread create(ChatThread chatThread) {
+    public ChatThread createChatThread(ChatThread chatThread) {
 
         chatThread = chatThreadRepository.save(chatThread);
         chatThreadMemberRepository.saveAll(chatThread.getChatThreadMembers());
         return chatThread;
+    }
+
+    public ChatThread updateChatThread(UUID threadId, ChatThreadDTO chatThreadDTO) throws GendoxException {
+        ChatThread existingChatThread = this.getById(threadId);
+        existingChatThread.setName(chatThreadDTO.getName());
+
+        return chatThreadRepository.save(existingChatThread);
+    }
+
+    public void deActiveChatThread(UUID threadId) throws GendoxException {
+        ChatThread existingChatThread = this.getById(threadId);
+        existingChatThread.setActive(false);
+        chatThreadRepository.save(existingChatThread);
+    }
+
+    public void deleteChatThread(UUID threadId) throws GendoxException {
+        this.deleteChatThreadMembersByThreadId(threadId);
+        chatThreadRepository.deleteById(threadId);
+    }
+
+    public void deleteChatThreadMembersByThreadId(UUID threadId) {
+        chatThreadMemberRepository.deleteByChatThread_Id(threadId);
     }
 
 }

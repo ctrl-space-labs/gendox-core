@@ -12,6 +12,8 @@ import IconButton from "@mui/material/IconButton";
 import DocumentEdit from "src/views/gendox-components/create-document/DocumentEdit";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "src/utils/errorHandler";
+
 
 
 const CreateDocument = () => {
@@ -48,7 +50,6 @@ const CreateDocument = () => {
       // Convert documentValue (EditorState) to plain text
       const plainText = documentValue.getCurrentContent().getPlainText();
 
-      console.log("plainText", plainText);
 
       // Create a Blob from the plain text
       const blob = new Blob([plainText], { type: "text/plain" });
@@ -58,7 +59,6 @@ const CreateDocument = () => {
       const formData = new FormData();
       formData.append("file", file);
 
-      console.log("formData", formData.get("file"));
 
       // Upload the document
       await documentService.uploadDocument(organizationId, projectId, formData, storedToken);
@@ -67,7 +67,7 @@ const CreateDocument = () => {
       router.push(`/gendox/home/?organizationId=${organizationId}&projectId=${projectId}`);
 
     } catch (error) {
-      toast.error("Failed to create document");
+      toast.error(`Document did not save. Error: ${getErrorMessage(error)}`);
       console.error("Error saving document:", error);
     } finally {
       setIsCreatingDocument(false);

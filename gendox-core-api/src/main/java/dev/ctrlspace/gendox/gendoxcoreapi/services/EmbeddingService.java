@@ -199,12 +199,13 @@ public class EmbeddingService {
 
     public String getApiKey(ProjectAgent agent, String aiModelType) throws GendoxException {
         OrganizationModelProviderKey organizationModelProviderKey = organizationModelKeyService.getKeyForAgent(agent, aiModelType);
-        if (organizationModelProviderKey == null) {
-            return organizationModelKeyService.getDefaultKeyForAgent(agent, aiModelType);
+        if (organizationModelProviderKey != null) {
+            logger.debug("Using OrganizationModelProviderKey ID: {}", organizationModelProviderKey.getId());
+            return organizationModelProviderKey.getKey();
         }
 
-        logger.info("Using OrganizationModelProviderKey ID: {}", organizationModelProviderKey.getId());
-        return organizationModelProviderKey.getKey();
+        logger.debug("Using default API key for agent id: {} and model type: {}", agent.getId(), aiModelType);
+        return organizationModelKeyService.getDefaultKeyForAgent(agent, aiModelType);
     }
 
 

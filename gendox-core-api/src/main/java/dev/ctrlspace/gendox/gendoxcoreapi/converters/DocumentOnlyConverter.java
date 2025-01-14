@@ -1,41 +1,113 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Component
-public class DocumentOnlyConverter implements GendoxConverter<DocumentInstance, DocumentDTO> {
+public class DocumentOnlyConverter implements GendoxConverter<DocumentInstance, DocumentInstanceDTO> {
     @Override
-    public DocumentDTO toDTO(DocumentInstance documentInstance) {
-        DocumentDTO documentDTO = new DocumentDTO();
+    public DocumentInstanceDTO toDTO(DocumentInstance documentInstance) {
+        DocumentInstanceDTO documentInstanceDTO = new DocumentInstanceDTO();
 
-        documentDTO.setId(documentInstance.getId());
-        documentDTO.setOrganizationId(documentInstance.getOrganizationId());
-        documentDTO.setDocumentTemplateId(documentInstance.getDocumentTemplateId());
-        documentDTO.setDocumentIsccCode(documentInstance.getDocumentIsccCode());
-        documentDTO.setRemoteUrl(documentInstance.getRemoteUrl());
-        documentDTO.setCreatedBy(documentInstance.getCreatedBy());
-        documentDTO.setUpdatedBy(documentInstance.getUpdatedBy());
-        documentDTO.setCreateAt(documentInstance.getCreatedAt());
-        documentDTO.setUpdateAt(documentInstance.getUpdatedAt());
+        if (documentInstance.getId() != null) {
+            documentInstanceDTO.setId(documentInstance.getId());
+        }
+        if (documentInstance.getOrganizationId() != null) {
+            documentInstanceDTO.setOrganizationId(documentInstance.getOrganizationId());
+        }
+        if (documentInstance.getDocumentTemplateId() != null) {
+            documentInstanceDTO.setDocumentTemplateId(documentInstance.getDocumentTemplateId());
+        }
+        if (documentInstance.getRemoteUrl() != null) {
+            documentInstanceDTO.setRemoteUrl(documentInstance.getRemoteUrl());
+        }
+        if (documentInstance.getCreatedBy() != null) {
+            documentInstanceDTO.setCreatedBy(documentInstance.getCreatedBy());
+        }
+        if (documentInstance.getUpdatedBy() != null) {
+            documentInstanceDTO.setUpdatedBy(documentInstance.getUpdatedBy());
+        }
+        if (documentInstance.getCreatedAt() != null) {
+            documentInstanceDTO.setCreateAt(documentInstance.getCreatedAt());
+        }
+        if (documentInstance.getUpdatedAt() != null) {
+            documentInstanceDTO.setUpdateAt(documentInstance.getUpdatedAt());
+        }
+        if (documentInstance.getDocumentSha256Hash() != null) {
+            documentInstanceDTO.setDocumentSha256Hash(documentInstance.getDocumentSha256Hash());
+        }
+        if (documentInstance.getDocumentIsccCode() != null) {
+            documentInstanceDTO.setDocumentIsccCode(documentInstance.getDocumentIsccCode());
+        }
+        if (documentInstance.getFileType() != null) {
+            documentInstanceDTO.setFileType(documentInstance.getFileType());
+        }
+        if (documentInstance.getContentId() != null) {
+            documentInstanceDTO.setContentId(documentInstance.getContentId());
+        }
+        if (documentInstance.getExternalUrl() != null) {
+            documentInstanceDTO.setExternalUrl(documentInstance.getExternalUrl());
+        }
+        if (documentInstance.getTitle() != null) {
+            documentInstanceDTO.setTitle(documentInstance.getTitle());
+        }
 
-        return documentDTO;
+        return documentInstanceDTO;
     }
 
     @Override
-    public DocumentInstance toEntity(DocumentDTO documentDTO) {
+    public DocumentInstance toEntity(DocumentInstanceDTO documentInstanceDTO) {
         DocumentInstance documentInstance = new DocumentInstance();
 
-        documentInstance.setId(documentDTO.getId());
-        documentInstance.setOrganizationId(documentDTO.getOrganizationId());
-        documentInstance.setDocumentTemplateId(documentDTO.getDocumentTemplateId());
-        documentInstance.setDocumentIsccCode(documentDTO.getDocumentIsccCode());
-        documentInstance.setRemoteUrl(documentDTO.getRemoteUrl());
-        documentInstance.setCreatedBy(documentDTO.getCreatedBy());
-        documentInstance.setUpdatedBy(documentDTO.getUpdatedBy());
-        documentInstance.setCreatedAt(documentDTO.getCreateAt());
-        documentInstance.setUpdatedAt(documentDTO.getUpdateAt());
+        if (documentInstanceDTO.getId() != null) {
+            documentInstance.setId(documentInstanceDTO.getId());
+        }
+        if (documentInstanceDTO.getOrganizationId() != null) {
+            documentInstance.setOrganizationId(documentInstanceDTO.getOrganizationId());
+        }
+        if (documentInstanceDTO.getDocumentTemplateId() != null) {
+            documentInstance.setDocumentTemplateId(documentInstanceDTO.getDocumentTemplateId());
+        }
+        if (documentInstanceDTO.getRemoteUrl() != null) {
+            documentInstance.setRemoteUrl(documentInstanceDTO.getRemoteUrl());
+        }
+        if (documentInstanceDTO.getCreatedBy() != null) {
+            documentInstance.setCreatedBy(documentInstanceDTO.getCreatedBy());
+        }
+        if (documentInstanceDTO.getUpdatedBy() != null) {
+            documentInstance.setUpdatedBy(documentInstanceDTO.getUpdatedBy());
+        }
+        if (documentInstanceDTO.getCreateAt() != null) {
+            documentInstance.setCreatedAt(documentInstanceDTO.getCreateAt());
+        }
+        if (documentInstanceDTO.getUpdateAt() != null) {
+            documentInstance.setUpdatedAt(documentInstanceDTO.getUpdateAt());
+        }
+
+        if (documentInstanceDTO.getDocumentSha256Hash() != null) {
+            documentInstance.setDocumentSha256Hash(documentInstanceDTO.getDocumentSha256Hash());
+        }
+        if (documentInstanceDTO.getDocumentIsccCode() != null) {
+            documentInstance.setDocumentIsccCode(documentInstanceDTO.getDocumentIsccCode());
+        }
+        if (documentInstanceDTO.getFileType() != null) {
+            documentInstance.setFileType(documentInstanceDTO.getFileType());
+        }
+        if (documentInstanceDTO.getContentId() != null) {
+            documentInstance.setContentId(documentInstanceDTO.getContentId());
+        }
+        if (documentInstanceDTO.getExternalUrl() != null) {
+            documentInstance.setExternalUrl(documentInstanceDTO.getExternalUrl());
+        }
+        if (documentInstanceDTO.getTitle() != null) {
+            documentInstance.setTitle(documentInstanceDTO.getTitle());
+        }
 
 
         return documentInstance;

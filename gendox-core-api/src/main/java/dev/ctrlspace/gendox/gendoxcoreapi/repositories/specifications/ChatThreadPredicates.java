@@ -17,8 +17,17 @@ public class ChatThreadPredicates {
                 projectIdIn(criteria.getProjectIdIn()),
                 memberIdIn(criteria.getMemberIdIn()),
                 threadIdIn(criteria.getThreadIdIn()),
-                isPublicThread(criteria.getIsPublicThread())
+                isPublicThread(criteria.getIsPublicThread()),
+                isActive(true) // Always filter for active chat threads
+
         );
+    }
+
+    private static Predicate isActive(Boolean isActive) {
+        if (isActive == null) {
+            return null;
+        }
+        return qChatThread.isActive.eq(isActive);
     }
 
     private static Predicate threadIdIn(List<UUID> threadIdIn) {

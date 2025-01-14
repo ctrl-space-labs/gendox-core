@@ -40,6 +40,8 @@ import Icon from "src/@core/components/icon";
 import CustomChip from "src/@core/components/mui/chip";
 import CustomAvatar from "src/@core/components/mui/avatar";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
+import { getErrorMessage } from "src/utils/errorHandler";
+
 
 // import UserSuspendDialog from 'src/views/apps/user/view/UserSuspendDialog'
 // import UserSubscriptionDialog from 'src/views/apps/user/view/UserSubscriptionDialog'
@@ -114,8 +116,7 @@ const UserViewLeft = ({ userData }) => {
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false); 
-  const [alertOpen, setAlertOpen] = useState(false);
-  const [alertMessage, setAlertMessage] = useState("");
+  
 
   
 
@@ -131,7 +132,6 @@ const UserViewLeft = ({ userData }) => {
   const handleDeleteClickOpen = () => setOpenDeleteDialog(true);
   const handleDeleteClose = () => setOpenDeleteDialog(false);
 
-  const handleAlertClose = () => setAlertOpen(false);
 
 
   const handleLogout = () => {
@@ -150,16 +150,14 @@ const UserViewLeft = ({ userData }) => {
     try {
       // Call the API function and pass the user ID and stored token
       await userService.deactivateUserById(userData.id, storedToken);
-      setAlertMessage("Account deleted successfully!");
-      setAlertOpen(true);
+      toast.success("User deleted successfully.");
       setOpenDeleteDialog(false);
       
       handleLogout();
       
     } catch (error) {
-      console.error("Error deactivating user:", error); // Log the error for debugging
-      setAlertMessage("Failed to delete the user account!");
-      setAlertOpen(true);
+      toast.error(`Failed to deactive user. Error: ${getErrorMessage(error)}`);
+      console.error("Error deactivating user:", error); // Log the error for debugging      
     } finally {
       handleDeleteClose(); // Close the delete confirmation dialog
     }

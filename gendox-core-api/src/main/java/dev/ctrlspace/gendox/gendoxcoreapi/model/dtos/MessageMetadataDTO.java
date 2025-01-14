@@ -27,6 +27,7 @@ import java.util.UUID;
                                 @ColumnResult(name = "sectionid", type = UUID.class),
                                 @ColumnResult(name = "messageid", type = UUID.class),
                                 @ColumnResult(name = "sectionurl", type = String.class),
+                                @ColumnResult(name = "externalUrl", type = String.class),
                                 @ColumnResult(name = "username", type = String.class),
                                 @ColumnResult(name = "organizationname", type = String.class),
                                 @ColumnResult(name = "organizationid", type = UUID.class),
@@ -35,6 +36,7 @@ import java.util.UUID;
                                 @ColumnResult(name = "threadid", type = UUID.class),
                                 @ColumnResult(name = "documentid", type = UUID.class),
                                 @ColumnResult(name = "documenturl", type = String.class),
+                                @ColumnResult(name = "documenttitle", type = String.class),
                                 @ColumnResult(name = "sectiontitle", type = String.class),
                                 @ColumnResult(name = "policytypename", type = String.class),
                                 @ColumnResult(name = "policyvalue", type = String[].class)
@@ -49,6 +51,7 @@ import java.util.UUID;
                     ms.section_id AS sectionid,
                     m.id AS messageid,
                     ms.section_url AS sectionurl,
+                    d.external_url AS externalUrl,
                     u.name AS username,
                     o.name AS organizationname,
                     o.id AS organizationid,
@@ -57,6 +60,7 @@ import java.util.UUID;
                     m.thread_id AS threadid,
                     d.id AS documentid,
                     d.remote_url AS documenturl,
+                    d.title AS documenttitle,
                     dsm.title AS sectiontitle,
                     pt.name AS policytypename,
                      COALESCE(ARRAY_AGG(acp.value) FILTER (WHERE acp.value IS NOT NULL),
@@ -91,7 +95,7 @@ import java.util.UUID;
                     m.id = :messageId
                     AND (pt.name = 'ATTRIBUTION_POLICY' OR pt.name IS NULL)
                 GROUP BY
-                    ms.section_id, m.id, ms.section_url, u.name, o.name, o.id, dis.section_iscc_code, m.created_at, m.thread_id, d.id, d.remote_url, dsm.title, pt.name, pd.project_id, ct.project_id
+                    ms.section_id, m.id, ms.section_url, u.name, o.name, o.id, dis.section_iscc_code, m.created_at, m.thread_id, d.id, d.remote_url, d.title, dsm.title, pt.name, pd.project_id, ct.project_id
             """,
         resultSetMapping = "MessageMetadataDTOMapping"
 )
@@ -102,6 +106,7 @@ public class MessageMetadataDTO {
     private UUID sectionId;
     private UUID messageId;
     private String sectionUrl;
+    private String externalUrl;
     private String userName;
     private String organizationName;
     private UUID organizationId;
@@ -110,16 +115,18 @@ public class MessageMetadataDTO {
     private UUID threadId;
     private UUID documentId;
     private String documentUrl;
+    private String documentTitle;
     private String sectionTitle;
     private String policyTypeName;
     private List<String> policyValue;
 
-    public MessageMetadataDTO(UUID sectionId, UUID messageId, String sectionUrl, String userName, String organizationName,
+    public MessageMetadataDTO(UUID sectionId, UUID messageId, String sectionUrl, String externalUrl, String userName, String organizationName,
                               UUID organizationId, String isccCode, Instant createdAt, UUID threadId, UUID documentId,
-                              String documentUrl, String sectionTitle, String policyTypeName, String[] policyValueArray) {
+                              String documentUrl,String documentTitle ,String sectionTitle, String policyTypeName, String[] policyValueArray) {
         this.sectionId = sectionId;
         this.messageId = messageId;
         this.sectionUrl = sectionUrl;
+        this.externalUrl = externalUrl;
         this.userName = userName;
         this.organizationName = organizationName;
         this.organizationId = organizationId;
@@ -128,6 +135,7 @@ public class MessageMetadataDTO {
         this.threadId = threadId;
         this.documentId = documentId;
         this.documentUrl = documentUrl;
+        this.documentTitle = documentTitle;
         this.sectionTitle = sectionTitle;
         this.policyTypeName = policyTypeName;
         this.policyValue = Arrays.asList(policyValueArray);

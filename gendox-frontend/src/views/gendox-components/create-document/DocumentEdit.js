@@ -7,17 +7,7 @@ import {
   ContentState,
   EditorState,
 } from "draft-js";
-import documentService from "src/gendox-sdk/documentService";
-import authConfig from "src/configs/auth";
 import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
-import { StyledCardContent } from "src/utils/styledCardsContent";
-import { styled } from "@mui/material/styles";
-import { createTheme } from "@mui/material/styles";
-import { ThemeProvider } from "@mui/material/styles";
-import Icon from "src/@core/components/icon";
-import IconButton from "@mui/material/IconButton";
-import Typography from "@mui/material/Typography";
 import { InputLabel } from "@mui/material";
 import Input from "@mui/material/Input";
 import { markdownToDraft } from "markdown-draft-js";

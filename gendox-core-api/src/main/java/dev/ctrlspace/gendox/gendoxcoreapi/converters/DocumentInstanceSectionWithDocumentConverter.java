@@ -4,7 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentSectionMetadata;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.EmbeddingGroup;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentSectionMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
@@ -57,8 +57,8 @@ public class DocumentInstanceSectionWithDocumentConverter implements GendoxConve
 
         if (documentInstanceSection.getDocumentInstance() != null) {
 
-            DocumentDTO documentDTO = documentOnlyConverter.toDTO(documentInstanceSection.getDocumentInstance());
-            documentInstanceSectionDTO.setDocumentDTO(documentDTO);
+            DocumentInstanceDTO documentInstanceDTO = documentOnlyConverter.toDTO(documentInstanceSection.getDocumentInstance());
+            documentInstanceSectionDTO.setDocumentInstanceDTO(documentInstanceDTO);
         }
 
         return documentInstanceSectionDTO;
@@ -87,7 +87,7 @@ public class DocumentInstanceSectionWithDocumentConverter implements GendoxConve
         documentInstanceSection.setDocumentSectionMetadata(metadata);
 
         // Convert DocumentDTO to DocumentInstance using DocumentOnlyConverter
-            DocumentInstance documentInstance = documentOnlyConverter.toEntity(documentInstanceSectionDTO.getDocumentDTO());
+            DocumentInstance documentInstance = documentOnlyConverter.toEntity(documentInstanceSectionDTO.getDocumentInstanceDTO());
             documentInstanceSection.setDocumentInstance(documentInstance);
 
 

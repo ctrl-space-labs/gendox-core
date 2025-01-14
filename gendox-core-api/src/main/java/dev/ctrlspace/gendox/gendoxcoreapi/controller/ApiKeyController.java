@@ -33,7 +33,7 @@ public class ApiKeyController {
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_API_KEYS', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("/organizations/{organizationId}/api-keys")
-    public ApiKey createApiKey(@PathVariable UUID organizationId, @RequestBody ApiKeyDTO apiKeyDTO) {
+    public ApiKey createApiKey(@PathVariable UUID organizationId, @RequestBody ApiKeyDTO apiKeyDTO) throws GendoxException {
         return apiKeyService.createApiKey(apiKeyDTO);
     }
 

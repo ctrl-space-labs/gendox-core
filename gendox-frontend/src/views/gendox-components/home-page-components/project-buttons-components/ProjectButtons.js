@@ -4,7 +4,6 @@ import { useRouter } from "next/router";
 import { useSettings } from "src/@core/hooks/useSettings";
 import Modal from "@mui/material/Modal";
 import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
 import CardContent from "@mui/material/CardContent";
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
@@ -29,13 +28,6 @@ const ProjectButtons = () => {
     );
   };
 
-  // const buttons = [
-  //   { text: "NEW DOCUMENT" , action: handleCreateDocument, href: `/gendox/create-document/?organizationId=${project.organizationId}&projectId=${project.id}`},
-  //   { text: "UPLOAD DOCUMENT", action: handleOpenUploader,  href: '#' },
-  //   // { text: "NEW TEMPLATE" },
-  //   // { text: "UPLOAD TEMPLATE" }
-  // ];
-
   const buttons = [
     {
       text: "NEW DOCUMENT",
@@ -58,7 +50,7 @@ const ProjectButtons = () => {
       <CardContent>
         <Grid container spacing={2}>
           {buttons.map((button, index) => (
-            <Grid  item key={index}>
+            <Grid item key={index}>
               {isDemo && button.isDemoOff ? (
                 <Tooltip title="Feature not available in demo mode">
                   <span>
@@ -96,6 +88,8 @@ const ProjectButtons = () => {
         onClose={handleCloseUploader}
         aria-labelledby="simple-modal-title"
         aria-describedby="simple-modal-description"
+        disableEnforceFocus
+        disableAutoFocus
         sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
       >
         <Box sx={{ outline: "none", p: 2, bgcolor: "background.paper" }}>

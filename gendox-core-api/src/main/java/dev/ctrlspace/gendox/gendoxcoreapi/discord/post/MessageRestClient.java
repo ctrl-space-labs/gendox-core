@@ -14,10 +14,10 @@ import java.util.UUID;
 
 public interface MessageRestClient {
 
-    @PostExchange("/messages/semantic-search")
+    @PostExchange("/messages/search")
     List<LinkedHashMap> searchMessage(@RequestHeader Map<String, String> headers, @RequestBody Message message, @RequestParam UUID projectId, @RequestParam Integer size);
 
-    @PostExchange("/messages/semantic-completion")
+    @PostExchange("/messages/completions")
     CompletionMessageDTO completionMessageDTO(@RequestHeader Map<String, String> headers, @RequestBody Message message, @RequestParam UUID projectId, @RequestParam Integer size);
 
 }
