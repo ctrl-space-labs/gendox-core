@@ -13,8 +13,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WalletKeyConstants;
 import dev.ctrlspace.provenai.ssi.issuer.JWKKeyWrapper;
 import id.walt.crypto.keys.KeyType;
 import id.walt.crypto.keys.jwk.JWKKey;
-import org.junit.platform.commons.logging.Logger;
-import org.junit.platform.commons.logging.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -117,7 +117,7 @@ public class WalletKeyService {
     public WalletKey createWalletKey(WalletKeyDTO walletKeyDTO) throws GendoxException {
 
 
-        logger.debug(() -> "Starting createWalletKey method for organizationId: {}"+  walletKeyDTO.getOrganizationId().toString());
+        logger.debug("Starting createWalletKey method for organizationId: {}"+  walletKeyDTO.getOrganizationId().toString());
 
         WalletKey walletKey = walletKeyConverter.toEntity(walletKeyDTO);
 
@@ -132,7 +132,7 @@ public class WalletKeyService {
         // Generate the local key
         KeyType keyType = getKeyTypeFromMap(walletKey.getKeyType().getName());
 
-        logger.debug(() -> "KeyType fetched: " + keyType.toString());
+        logger.debug("KeyType fetched: " + keyType.toString());
 
         Integer characterLength = walletKey.getCharacterLength();
         if (characterLength == null) {
@@ -147,23 +147,23 @@ public class WalletKeyService {
         JWKKey publicKey = jwkKeyWrapper.getPublicKey(jwkKey);
         walletKey.setPublicKey(publicKey.getJwk());
 
-        logger.debug(() -> "Public key set for walletKey: " + publicKey.getJwk().toString());
+        logger.debug("Public key set for walletKey: " + publicKey.getJwk().toString());
         // Set the private key from the local key
         walletKey.setJwkKeyFormat(jwkKey.getJwk());
 
-        logger.debug(() -> "JWK key format set for walletKey" + jwkKey.getJwk().toString());
+        logger.debug("JWK key format set for walletKey" + jwkKey.getJwk().toString());
         // Set the key type
         String keyTypeName = getKeyTypeName(jwkKeyType);
         Type walletKeyType = typeService.getKeyTypeByName(keyTypeName);
         walletKey.setKeyType(walletKeyType);
 
-        logger.debug(() -> "WalletKeyType set: " + walletKeyType.toString());
+        logger.debug("WalletKeyType set: " + walletKeyType.toString());
 
         // Save the WalletKey entity
         walletKey = walletKeyRepository.save(walletKey);
 
         final String walletKeyId = walletKey.getId().toString();
-        logger.debug(() -> "WalletKey saved with ID: " + walletKeyId);
+        logger.debug("WalletKey saved with ID: " + walletKeyId);
 
         return walletKey;
     }

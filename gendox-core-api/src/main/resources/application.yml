@@ -106,8 +106,8 @@ gendox:
   emails:
     contact-email: contact@ctrlspace.dev
   documents:
-    upload-dir: s3://gendox.organization.documents.dev
-#    upload-dir: file:${user.home}/gendox/documents
+#    upload-dir: s3://gendox.organization.documents.dev
+    upload-dir: file:${user.home}/gendox/documents
 #    Word count per document section, used in static word count Splitter
     wordCount: 500
 #    Token count per document section, used in Page or Markdown Splitters
@@ -144,9 +144,9 @@ gendox:
     sections: https://domain.com/context-path/documents/sections/
     messages:
       completion:
-        post-completion-message: /messages/semantic-completion
+        post-completion-message: /messages/completions
       search:
-        post-search-message: /messages/semantic-search
+        post-search-message: /messages/search
   pages:
     default: "&page=0&size=5"
   agents:

@@ -17,22 +17,27 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Service
 public class AuditLogsService {
 
     private AuditLogsRepository auditLogsRepository;
     private SecurityUtils securityUtils;
     private Tracer tracer;
+    private TypeService typeService;
 
     private static final Logger logger = LoggerFactory.getLogger(AuditLogsService.class);
 
     @Autowired
     public AuditLogsService(AuditLogsRepository auditLogsRepository,
                             SecurityUtils securityUtils,
-                            Tracer tracer) {
+                            Tracer tracer,
+                            TypeService typeService) {
         this.auditLogsRepository = auditLogsRepository;
         this.securityUtils = securityUtils;
         this.tracer = tracer;
+        this.typeService = typeService;
     }
 
 
@@ -60,6 +65,15 @@ public class AuditLogsService {
             logger.trace("Set trace ID: {}", tracer.currentSpan().context().traceId());
         }
         return auditLog;
+    }
+
+    public void createAuditLog(UUID organizationId, UUID projectId, String logType, Long auditValue) throws GendoxException {
+        Type auditLogType = typeService.getAuditLogTypeByName(logType);
+        AuditLogs auditLogs = this.createDefaultAuditLogs(auditLogType);
+        auditLogs.setOrganizationId(organizationId);
+        auditLogs.setProjectId(projectId);
+        auditLogs.setAuditValue(auditValue);
+        this.saveAuditLogs(auditLogs);
     }
 
     public AuditLogs saveAuditLogs(AuditLogs auditLogs) {

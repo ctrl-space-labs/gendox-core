@@ -45,6 +45,10 @@ public class ChatThread {
     @LastModifiedBy
     private UUID updatedBy;
 
+    @Basic
+    @Column(name="is_active", columnDefinition = "boolean default true", nullable = false)
+    private Boolean isActive = true;
+
     @JsonManagedReference(value = "chatThread")
     @OneToMany(mappedBy = "chatThread")
     private List<ChatThreadMember> chatThreadMembers = new ArrayList<>();
@@ -109,6 +113,13 @@ public class ChatThread {
         this.updatedBy = updatedBy;
     }
 
+    public Boolean getActive() {
+        return isActive;
+    }
+
+    public void setActive(Boolean active) {
+        isActive = active;
+    }
 
     public List<ChatThreadMember> getChatThreadMembers() {
         return chatThreadMembers;
@@ -122,21 +133,20 @@ public class ChatThread {
         return publicThread;
     }
 
-    public void setPublicThread(Boolean isPublicThread) {
-        this.publicThread = isPublicThread;
+    public void setPublicThread(Boolean publicThread) {
+        this.publicThread = publicThread;
     }
-
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ChatThread that = (ChatThread) o;
-        return Objects.equals(id, that.id) && Objects.equals(name, that.name) && Objects.equals(projectId, that.projectId) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(chatThreadMembers, that.chatThreadMembers) && Objects.equals(publicThread, that.publicThread);
+        return Objects.equals(id, that.id) && Objects.equals(name, that.name) && Objects.equals(projectId, that.projectId) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(isActive, that.isActive) && Objects.equals(chatThreadMembers, that.chatThreadMembers) && Objects.equals(publicThread, that.publicThread);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, projectId, createdAt, updatedAt, createdBy, updatedBy, chatThreadMembers, publicThread);
+        return Objects.hash(id, name, projectId, createdAt, updatedAt, createdBy, updatedBy, isActive, chatThreadMembers, publicThread);
     }
 }

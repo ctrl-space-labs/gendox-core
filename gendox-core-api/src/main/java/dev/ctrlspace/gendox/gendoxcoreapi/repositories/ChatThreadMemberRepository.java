@@ -9,4 +9,6 @@ import java.util.UUID;
 @Repository
 public interface ChatThreadMemberRepository extends JpaRepository<ChatThreadMember, UUID> {
 
+    void deleteByChatThread_Id(UUID threadId);
+
 }

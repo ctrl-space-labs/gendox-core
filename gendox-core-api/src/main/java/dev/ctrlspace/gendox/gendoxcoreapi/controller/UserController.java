@@ -1,5 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
+import dev.ctrlspace.gendox.authentication.ApiKeyAuthenticationToken;
+import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -8,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserPublicDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
@@ -37,16 +40,19 @@ public class UserController {
     private JWTUtils jwtUtils;
     private UserProfileConverter userProfileConverter;
     private UserConverter userConverter;
+    private OrganizationService organizationService;
 
     @Autowired
     public UserController(UserService userService,
                           JWTUtils jwtUtils,
                           UserProfileConverter userProfileConverter,
-                          UserConverter userConverter) {
+                          UserConverter userConverter,
+                          OrganizationService organizationService) {
         this.userService = userService;
         this.jwtUtils = jwtUtils;
         this.userProfileConverter = userProfileConverter;
         this.userConverter = userConverter;
+        this.organizationService = organizationService;
     }
 
 
@@ -96,18 +102,16 @@ public class UserController {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public UserProfile getUserUserProfile(@PathVariable(required = false) UUID id, Authentication authentication) throws Exception {
+    public UserProfile getUserUserProfile(Authentication authentication) throws Exception {
 
-        UserProfile loginUserProfile = (UserProfile) authentication.getPrincipal();
-        if (id == null) {
-            return loginUserProfile;
+
+        if (authentication instanceof ApiKeyAuthenticationToken || authentication instanceof GendoxAuthenticationToken) {
+            UserProfile loginPrincipalProfile = (UserProfile) authentication.getPrincipal();
+            return loginPrincipalProfile;
+
         }
 
-        // run code to get the user from the database
-        // TODO change this to return user's public profile
-        UserProfile userProfile = userService.getUserProfileByUserId(id);
-
-        return userProfile;
+        throw new GendoxException("USER_PROFILE_NOT_FOUND", "User profile not found", HttpStatus.NOT_FOUND);
     }
 
     @DeleteMapping("/profile/caches")
@@ -115,6 +119,13 @@ public class UserController {
         String userIdentifier = ((UserProfile) authentication.getPrincipal()).getEmail();
         userService.evictUserProfileByUniqueIdentifier(userIdentifier);
         return "User logged out successfully.";
+    }
+
+    @PostMapping("users/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void userLogout(Authentication authentication) {
+        String userIdentifier = ((UserProfile) authentication.getPrincipal()).getEmail();
+        userService.evictUserProfileByUniqueIdentifier(userIdentifier);
     }
 
     // TODO this is just for demo purposes, need to be rewrite

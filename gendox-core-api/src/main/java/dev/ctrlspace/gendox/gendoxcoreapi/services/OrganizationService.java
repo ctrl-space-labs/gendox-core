@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.OrganizationProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationProfileProjectAgentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDidDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WalletKeyDTO;
@@ -9,25 +11,20 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationCriter
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.WalletKeyRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
-import org.junit.platform.commons.logging.Logger;
-import org.junit.platform.commons.logging.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -49,6 +46,10 @@ public class OrganizationService {
 
     private AuditLogsService auditLogsService;
 
+    private OrganizationProfileConverter organizationProfileConverter;
+
+    private ApiKeyService apiKeyService;
+
     @Value("${walt-id.default-key.type}")
     private String keyTypeName;
     @Value("${walt-id.default-key.size}")
@@ -63,7 +64,9 @@ public class OrganizationService {
                                WalletKeyService walletKeyService,
                                TypeService typeService,
                                ProjectService projectService,
-                               AuditLogsService auditLogsService) {
+                               AuditLogsService auditLogsService,
+                               OrganizationProfileConverter organizationProfileConverter,
+                               ApiKeyService apiKeyService) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.organizationRepository = organizationRepository;
         this.userOrganizationService = userOrganizationService;
@@ -72,6 +75,8 @@ public class OrganizationService {
         this.typeService = typeService;
         this.projectService = projectService;
         this.auditLogsService = auditLogsService;
+        this.organizationProfileConverter = organizationProfileConverter;
+        this.apiKeyService = apiKeyService;
 
     }
 
@@ -112,7 +117,7 @@ public class OrganizationService {
         organization = organizationRepository.save(organization);
 
         final String organizationId = organization.getId().toString();
-        logger.debug(() -> "Organization created with id: "+ organizationId);
+        logger.debug("Organization created with id: "+ organizationId);
 
         userOrganizationService.createUserOrganization(ownerUserId, organization.getId(), OrganizationRolesConstants.ADMIN);
 
@@ -132,10 +137,10 @@ public class OrganizationService {
                         .keyId(walletKey.getId())
                 .build(), "key");
 
-        logger.debug(() -> "OrganizationDid created with id: "+ organizationDid.getId());
-        logger.debug(() -> "WalletKey created with id: "+ walletKey.getId());
-        logger.debug(() -> "OrganizationDid created with kid: "+ organizationDid.getKeyId());
-        logger.debug(() -> "OrganizationDid created with did: "+ organizationDid.getDid());
+        logger.debug("OrganizationDid created with id: "+ organizationDid.getId());
+        logger.debug("WalletKey created with id: "+ walletKey.getId());
+        logger.debug("OrganizationDid created with kid: "+ organizationDid.getKeyId());
+        logger.debug("OrganizationDid created with did: "+ organizationDid.getDid());
 
 
         return organization;
@@ -170,14 +175,21 @@ public class OrganizationService {
             return;
         }
 
+        Boolean orgIsDeactivating = true;
+
         // Fetch all user organizations for this organization
         List<UserOrganization> userOrganizations = userOrganizationService.getUserOrganizationByOrganizationId(organizationId);
 
+        Type agentType = typeService.getUserTypeByName("GENDOX_AGENT");
         // Iterate through user organizations to handle both deletion and exception
         for (UserOrganization userOrganization : userOrganizations) {
-            UUID userId = userOrganization.getUser().getId();
+           User user = userOrganization.getUser();
+           UUID userId = user.getId();
 
             // Count the number of organizations the user is associated with
+            if (user.getUserType().equals(agentType)) {
+                continue;
+            }
             long count = userOrganizationRepository.countByUserId(userId);
 
             if (count <= 1) {
@@ -185,9 +197,9 @@ public class OrganizationService {
                 throw new GendoxException("ORGANIZATION_DEACTIVATION_FAILED", "Cannot deactivate organization. User is associated with only one organization", HttpStatus.BAD_REQUEST);
             } else {
 
-                clearOrgData(organization);
-                deactivateAllOrgProjects(organizationId);
+                deactivateAllOrgProjects(organizationId, orgIsDeactivating);
                 userOrganizationRepository.delete(userOrganization);
+                clearOrgData(organization);
                 Type deleteOrganizationType = typeService.getAuditLogTypeByName("DELETE_ORGANIZATION");
                 AuditLogs deleteOrganizationAuditLogs = auditLogsService.createDefaultAuditLogs(deleteOrganizationType);
                 deleteOrganizationAuditLogs.setOrganizationId(organizationId);
@@ -205,7 +217,7 @@ public class OrganizationService {
 
 
 
-    private void deactivateAllOrgProjects(UUID organizationId) throws GendoxException {
+    private void deactivateAllOrgProjects(UUID organizationId, Boolean orgIsDeactivating) throws GendoxException {
 
         ProjectCriteria criteria = new ProjectCriteria();
         criteria.setOrganizationId(organizationId.toString());
@@ -213,7 +225,7 @@ public class OrganizationService {
         Page<Project> projects = projectService.getAllProjects(criteria);
 
         for (Project project : projects.getContent()) {
-            projectService.deactivateProject(project.getId());
+            projectService.deactivateProject(project.getId(), orgIsDeactivating);
         }
     }
 
@@ -225,7 +237,38 @@ public class OrganizationService {
         organization.setDeveloperEmail(null);
         organization.setUpdatedAt(null);
         organization.setCreatedAt(null);
+        organization.setActive(false);
+
     }
 
+    public UserProfile getOrganizationProfileByApiKey(String apiKey) throws GendoxException {
+
+        UUID organizationId = apiKeyService.getOrganizationIdByApiKey(apiKey);
+
+        return getOrganizationProfileById(organizationId, apiKey);
+    }
+
+
+    /**
+     * Get organization profile to be used when API key is used for authentication, instead of JWT
+     *
+     * @param organizationId the organization id
+     * @return
+     * @throws GendoxException
+     */
+//    TODO add evict cash upon key update for
+//    @Cacheable(value = "OrganizationProfileByApiKey", keyGenerator = "gendoxKeyGenerator")
+    public UserProfile getOrganizationProfileById(UUID organizationId, String apiKeyStr) throws GendoxException {
+
+        // TODO construct user profile similar to to user with role 'roleType' in the organization
+        List<OrganizationProfileProjectAgentDTO> rawOrganizationProfile =
+                organizationRepository.findRawOrganizationProfileById(organizationId, apiKeyStr);
+
+        UserProfile userProfile =  organizationProfileConverter.toDTO(rawOrganizationProfile);
+
+
+//        throw new NotImplementedException("Not implemented yet");
+        return userProfile;
+    }
 
 }
