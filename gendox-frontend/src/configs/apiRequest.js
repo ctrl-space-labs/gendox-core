@@ -39,6 +39,10 @@ export default {
   postCompletionModel: (projectId) =>
     `${url}messages/completions?projectId=${projectId}`,
 
+  postSearchModel: (projectId, size) =>
+    `${url}messages/search?size=${size}&projectId=${projectId}`,
+  
+
   // getThreadsByCriteria: (projectIdIn) => {
   //   const projectIds = projectIdIn.join(",");
   //   return `${url}threads?projectIdIn=${projectIds}`;

@@ -5,7 +5,6 @@ import { useAuth } from "src/hooks/useAuth";
 import chatConverters from "../../../converters/chat.converter";
 import { useRouter } from "next/router";
 
-
 import authConfig from "src/configs/auth";
 import projectService from "src/gendox-sdk/projectService";
 import { generalConstants } from "src/utils/generalConstants";
@@ -161,19 +160,18 @@ export const sendMsg = createAsyncThunk(
 
       // sending PostMessage notification
       iFrameMessageManager.messageManager.sendMessage({
-        type: 'gendox.events.chat.message.new.sent',
+        type: "gendox.events.chat.message.new.sent",
         payload: { message },
       });
 
-      let chatLocalContextResponses = await iFrameMessageManager.messageManager.fetchResponses(
+      let chatLocalContextResponses =
+        await iFrameMessageManager.messageManager.fetchResponses(
           "gendox.events.chat.message.context.local.request",
-      "gendox.events.chat.message.context.local.response",
+          "gendox.events.chat.message.context.local.response",
           {},
           1,
-          200);
-
-
-
+          200
+        );
 
       // Send the message to the server
       const response = await completionService.postCompletionMessage(
@@ -186,7 +184,7 @@ export const sendMsg = createAsyncThunk(
 
       // sending PostMessage notification
       iFrameMessageManager.messageManager.sendMessage({
-        type: 'gendox.events.chat.message.new.response.received',
+        type: "gendox.events.chat.message.new.response.received",
         payload: response.data.message.value,
       });
 
@@ -422,7 +420,6 @@ async function _fetchExistingChatWithMessages(id, dispatch, thread) {
       chat: chatMessages,
     },
   };
-
 
   return selectedChat;
 }

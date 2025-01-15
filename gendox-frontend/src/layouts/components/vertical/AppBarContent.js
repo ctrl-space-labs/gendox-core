@@ -11,7 +11,7 @@ import Icon from "src/@core/components/icon";
 import { useRouter } from "next/router";
 
 // ** Components
-import GlobalSearch from "src/layouts/components/GlobalSearch";
+import GlobalSearch from "src/views/gendox-components/global-search/GlobalSearch";
 import ModeToggler from "src/@core/layouts/components/shared-components/ModeToggler";
 import UserDropdown from "src/@core/layouts/components/shared-components/UserDropdown";
 import LanguageDropdown from "src/@core/layouts/components/shared-components/LanguageDropdown";
@@ -22,10 +22,6 @@ import OrganizationsDropdown from "src/views/gendox-components/OrganizationsDrop
 // ** Hook Import
 import { useAuth } from "src/hooks/useAuth";
 import GendoxAppBrand from "../shared-components/GendoxAppBrand";
-
-
-
-
 
 const AppBarContent = (props) => {
   // ** Props
