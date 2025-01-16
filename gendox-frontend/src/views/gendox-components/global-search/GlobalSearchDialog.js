@@ -23,8 +23,7 @@ import authConfig from "src/configs/auth";
 import { styled, useTheme } from "@mui/material/styles";
 import themeConfig from "src/configs/themeConfig";
 import CircularProgress from "@mui/material/CircularProgress";
-import { fetchCloserSectionsFromProject } from "src/store/apps/globalSearch/globalSearch";
-
+import { fetchCloserSectionsFromProject, resetCloserDocuments } from "src/store/apps/globalSearch/globalSearch";
 
 // Custom Styled Components
 const StyledDialog = styled(MuiDialog)({
@@ -54,44 +53,36 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
   const [activeTab, setActiveTab] = useState("agents");
   const [projectDocumentOptions, setProjectDocumentOptions] = useState([]);
   const [agentOptions, setAgentOptions] = useState([]);
-  const projectId = router.query.projectId;  
+  const [documentsPage, setDocumentsPage] = useState(1);
+  const projectId = router.query.projectId;
   const { closerDocumentsFromProject, loading } = useSelector(
     (state) => state.globalSearch
   );
 
-  console.log("closerDocumentsFromProject", closerDocumentsFromProject);
+  console.log("PROJECTDOC", projectDocumentOptions);
+ 
 
-  console.log("USER", user);
-
-  console.log("OPEN DIALOG", openDialog);
-
-  useEffect(() => {
-    if (!openDialog) {
-      console.log("Dialog closed, resetting documents", openDialog);
-      setSearchValue("");
-      setProjectDocumentOptions([]);
-      setAgentOptions([]);    }
-  }, [openDialog]);
-
-  
-
+  const resetDialogState = () => {
+    console.log("Dialog closed, resetting documents");
+    setSearchValue("");
+    setProjectDocumentOptions([]);
+    setAgentOptions([]);
+    setDocumentsPage(1);
+    dispatch(resetCloserDocuments());
+    };
 
   const handleSearchChange = (event) => {
     setSearchValue(event.target.value);
     if (activeTab !== "documents") return;
     if (debounceTimeout) {
-      clearTimeout(debounceTimeout); // Clear the previous timeout if there's one
-    }
-
-    // Set a new timeout to trigger after 1 seconds of inactivity
+      clearTimeout(debounceTimeout); 
+    }    
     const timeoutId = setTimeout(() => {
-      if (searchValue.length > 2) {
-        // Only fetch closer sections if the search value is longer than 2 characters
+      if (searchValue.length > 2) {        
         fetchCloserSections();
       }
-    }, 1000); // 1 second delay
-
-    setDebounceTimeout(timeoutId); // Store the timeout ID
+    }, 1000); 
+    setDebounceTimeout(timeoutId); 
   };
 
   const fetchCloserSections = () => {
@@ -99,20 +90,13 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
       fetchCloserSectionsFromProject({
         message: searchValue,
         projectId: projectId, // replace with the actual project ID
-        size: 5,
+        size: 5 * documentsPage,
         storedToken: storedToken,
       })
     );
   };
 
-  const handleOptionClick = (selectedOption) => {
-    setSearchValue("");
-    setOpenDialog(false);
-    if (selectedOption.link) {
-      router.push(selectedOption.link);
-    }
-  };
-
+  
   useEffect(() => {
     if (user?.organizations) {
       const agents = user.organizations.flatMap((org) =>
@@ -152,16 +136,36 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
           link: `/gendox/document-instance/?organizationId=${documentSection.documentInstanceDTO.organizationId}&documentId=${documentSection.documentInstanceDTO.id}&sectionId=${documentSection.id}&projectId=${projectId}`,
         };
       });
-      setProjectDocumentOptions(documents);
+      setProjectDocumentOptions((prevDocuments) => [
+        ...prevDocuments,
+        ...documents,
+      ]);
     }
   }, [closerDocumentsFromProject, projectId, dispatch]);
+
+  const handleOptionClick = (selectedOption) => {
+    setSearchValue("");
+    setOpenDialog(false);
+    if (selectedOption.link) {
+      router.push(selectedOption.link);
+    }
+  };
+
+
+  const handleLoadMore = () => {
+    setDocumentsPage((prevPage) => prevPage + 1); // Increase the page number when "More" is clicked
+    fetchCloserSections(); // Fetch the next set of documents
+  };
 
   return (
     <StyledDialog
       fullWidth
       open={openDialog}
-      fullScreen={fullScreenDialog}      
-      onClose={() => setOpenDialog(false)}
+      fullScreen={fullScreenDialog}
+      onClose={() => {
+        setOpenDialog(false);
+        resetDialogState();
+      }}
     >
       <DialogContent sx={{ padding: 2 }}>
         <TextField
@@ -176,7 +180,7 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
             "& .MuiInputBase-root": {
               border: "none",
               boxShadow: "none",
-              height: "100%", // Ensure the input field itself follows the height rule
+              height: "100%", 
             },
           }}
           // blair the input field
@@ -242,12 +246,7 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
         </Box>
 
         <Box sx={{ marginTop: 2 }}>
-          {searchValue.length > 2 && activeTab === "documents" && loading ? (
-            // Show loader when loading is true
-            <Box sx={{ display: "flex", justifyContent: "center", my: 30 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
+          {searchValue.length > 2 ? (
             <List>
               {activeTab === "agents" &&
                 agentOptions.map((option) => (
@@ -276,17 +275,17 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
                         }}
                       />
                       <Tooltip title="Chat with Agent">
-                      <CustomAvatar
+                        <CustomAvatar
                           skin="light"
                           variant="rounded"
                           sx={{ mr: 3, height: 20, width: 20 }}
                         >
-                        <Icon
-                          icon="mdi:subdirectory-arrow-left"
-                          fontSize={20}
-                          sx={{ p: 2 }}
-                        />
-                      </CustomAvatar>
+                          <Icon
+                            icon="mdi:subdirectory-arrow-left"
+                            fontSize={20}
+                            sx={{ p: 2 }}
+                          />
+                        </CustomAvatar>
                       </Tooltip>
                     </ListItemButton>
                   </ListItem>
@@ -336,7 +335,37 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
                   </ListItem>
                 ))}
             </List>
+          ) : null}
+
+
+
+          {/* Show loader only if more documents are loading */}
+          {searchValue.length > 2 && activeTab === "documents"  && loading && (
+            <Box sx={{ display: "flex", justifyContent: "center", marginTop: 2 }}>
+              <CircularProgress />
+            </Box>
           )}
+
+          {/* Load more button */}
+          {searchValue.length > 2 && activeTab === "documents" && !loading && (
+            <Box sx={{ display: "flex", justifyContent: "center", marginTop: 2 }}>
+              <Button
+                onClick={handleLoadMore}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: 14,
+                  textTransform: "none",
+                }}
+                variant="outlined"
+              >
+                <Typography sx={{ marginRight: 1 }}>Load More</Typography>
+                <Icon icon="mdi:arrow-down" />
+              </Button>
+            </Box>
+          )}
+         
+
         </Box>
       </DialogContent>
     </StyledDialog>

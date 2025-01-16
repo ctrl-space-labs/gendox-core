@@ -37,10 +37,10 @@ const globalSearchSlice = createSlice({
     error: null,
   },
   reducers: {
-    // resetCloserDocuments: (state) => {
-    //   console.log("Resetting closerDocumentsFromProject---------------------------------");
-    //   state.closerDocumentsFromProject = [];
-    // },
+    resetCloserDocuments: (state) => {
+      console.log("Resetting closerDocumentsFromProject---------------------------------");
+      state.closerDocumentsFromProject = [];
+    },
   },
   extraReducers: (builder) => {
     builder
