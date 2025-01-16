@@ -143,7 +143,7 @@ public class EmbeddingsController {
         message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
 
-        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
+        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId), pageable);
 
 //        List<DocumentInstanceSectionDTO> sections = instanceSections
 //                .stream()
@@ -188,7 +188,7 @@ public class EmbeddingsController {
         savedMessage.setLocalContexts(message.getLocalContexts());
         message = savedMessage;
 
-        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
+        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId), PageRequest.of(0, 5));
 
 
         if (provenAiEnabled) {
