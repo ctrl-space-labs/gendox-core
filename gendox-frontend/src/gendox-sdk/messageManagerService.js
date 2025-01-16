@@ -124,6 +124,9 @@ class MessageManagerService {
         maxResponses = 2,
         maxWaitTimeoutMs = 100
     ) {
+
+        // TODO add check to run this method only if the Target origin has been set
+
         const collectedResponses = [];
         let resolveCondition;
 
@@ -142,14 +145,16 @@ class MessageManagerService {
             }
         };
 
+
+        // Add the temporary handler
+        this.addHandler(responseHandler);
+
         // Send the request message
         this.sendMessage({
             type: requestType,
             payload: requestPayload,
         });
 
-        // Add the temporary handler
-        this.addHandler(responseHandler);
 
         // Wait for either the messages or timeout
         const timeoutPromise = new Promise((resolve) => setTimeout(resolve, maxWaitTimeoutMs));
