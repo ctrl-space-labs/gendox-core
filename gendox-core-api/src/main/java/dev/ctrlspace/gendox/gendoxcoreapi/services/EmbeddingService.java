@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -265,7 +266,7 @@ public class EmbeddingService {
      * @return
      * @throws GendoxException
      */
-    public List<SectionDistanceDTO> findNearestEmbeddings(Embedding embedding, UUID projectId, PageRequest pageRequest) throws GendoxException, IOException {
+    public List<SectionDistanceDTO> findNearestEmbeddings(Embedding embedding, UUID projectId, Pageable pageRequest) throws GendoxException, IOException {
         List<SectionDistanceDTO> nearestEmbeddings = new ArrayList<>();
 
         StringBuilder sb = new StringBuilder("[");
@@ -274,7 +275,11 @@ public class EmbeddingService {
                 .collect(Collectors.joining(",")));
         sb.append("]");
 
-        nearestEmbeddings = embeddingRepository.findClosestSectionIdsWithDistance(projectId, sb.toString(), pageRequest.getPageSize(), embedding.getSemanticSearchModelId());
+        nearestEmbeddings = embeddingRepository.findClosestSectionIdsWithDistance(projectId,
+                sb.toString(),
+                pageRequest.getPageSize(),
+                pageRequest.getPageSize() * pageRequest.getPageNumber(),
+                embedding.getSemanticSearchModelId());
 
         return nearestEmbeddings;
     }
@@ -288,7 +293,7 @@ public class EmbeddingService {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public List<DocumentInstanceSectionDTO> findClosestSections(Message message, UUID projectId) throws GendoxException, IOException, NoSuchAlgorithmException {
+    public List<DocumentInstanceSectionDTO> findClosestSections(Message message, UUID projectId, Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
 
         Project project = projectService.getProjectById(projectId);
 
@@ -300,19 +305,20 @@ public class EmbeddingService {
 
         Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse, projectId, message.getId(), null, project.getProjectAgent().getSemanticSearchModel().getId(), project.getOrganizationId(),sectionSha256Hash);
 
-        List<SectionDistanceDTO> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, PageRequest.of(0, 5));
+        List<SectionDistanceDTO> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, pageable);
 
         Map<UUID, Double> nearestSectionIds = nearestEmbeddings.stream()
                 .collect(Collectors.toMap(SectionDistanceDTO::getSectionsId, SectionDistanceDTO::getDistance));
 
         List<DocumentInstanceSection> sections = documentSectionService.getSectionsBySectionsIn(projectId, nearestSectionIds.keySet());
 
-        List<DocumentInstanceSectionDTO> instanceSections = new ArrayList<>(sections
+        List<DocumentInstanceSectionDTO> instanceSections = sections
                 .stream()
                 .map(section -> documentInstanceSectionWithDocumentConverter.toDTO(section))
                 .peek(sectionDTO -> sectionDTO.setDistanceFromQuestion(nearestSectionIds.get(sectionDTO.getId()))) // Set the distance from the question
                 .peek(sectionDTO -> sectionDTO.setDistanceModelName(project.getProjectAgent().getSemanticSearchModel().getName()))
-                .toList());
+                .sorted(Comparator.comparing(DocumentInstanceSectionDTO::getDistanceFromQuestion))
+                .collect(Collectors.toList());
 
         return instanceSections;
     }
