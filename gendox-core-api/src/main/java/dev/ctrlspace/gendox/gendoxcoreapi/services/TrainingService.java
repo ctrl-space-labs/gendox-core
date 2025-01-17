@@ -97,7 +97,7 @@ public class TrainingService {
 
         String sectionValue = embeddingTemplateAuthor.sectionValueForEmbedding(
                 section,
-                documentUtils.extractDocumentNameFromUrl(section.getDocumentInstance().getRemoteUrl()),
+                documentUtils.extractDocumentNameFromUrl(section.getDocumentInstance().getTitle()),
                 agentSectionTemplate.getText() // Pass the template text here
         );
 

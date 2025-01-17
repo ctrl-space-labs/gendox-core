@@ -63,8 +63,8 @@ const gendoxThreadToChatEntry = (thread, contacts) => {
             threadCreatedAt: thread.createdAt,
             chat: {
                 lastMessage: {
-                    message: thread.name,
-                    time: thread.updatedAt,                    
+                    message: thread.latestMessageValue,
+                    time: thread.latestMessageCreatedAt,
                 },
                 "unseenMsgs": 0,
             }

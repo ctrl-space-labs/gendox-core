@@ -49,7 +49,7 @@ export default {
   // },
 
   getThreadsByCriteria: (projectIdIn, threadIdIn) => {
-    let urlWithParams = `${url}threads?size=100&sort=createdAt,desc`;
+    let urlWithParams = `${url}threads?size=100&sort=latestMessage,desc&minMessages=2`;
 
     if (projectIdIn?.length > 0) {
       const projectIds = projectIdIn.join(",");

@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ChatThreadDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ChatThreadLastMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ChatThreadCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
@@ -44,11 +45,11 @@ public class ChatThreadService {
                 .orElseThrow(() -> new GendoxException("CHAT_THREAD_NOT_FOUND", "Chat Thread not found with id: " + id, HttpStatus.NOT_FOUND));
     }
 
-    public Page<ChatThread> getAllChatThreads(ChatThreadCriteria criteria, Pageable pageable) throws GendoxException {
+    public Page<ChatThreadLastMessageDTO> getAllChatThreads(ChatThreadCriteria criteria, Pageable pageable) throws GendoxException {
         if (pageable == null) {
             throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
         }
-        return chatThreadRepository.findAll(ChatThreadPredicates.build(criteria), pageable);
+        return chatThreadRepository.findAllThreads(ChatThreadPredicates.build(criteria), pageable);
 
     }
 

@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ChatThreadDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ChatThreadLastMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ChatThreadCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.MessageCriteria;
@@ -63,7 +64,7 @@ public class ChatThreadController {
                     "- the members participated in the Chat Thread <br>" +
                     "<br>" +
                     "The user must have the appropriate permissions to access this.")
-    public Page<ChatThread> getAllChatThreads(@Valid ChatThreadCriteria criteria, Pageable pageable, Authentication authentication) throws GendoxException {
+    public Page<ChatThreadLastMessageDTO> getAllChatThreads(@Valid ChatThreadCriteria criteria, Pageable pageable, Authentication authentication) throws GendoxException {
 
         handleCriteriaForAuthenticatedUser(criteria, authentication);
 

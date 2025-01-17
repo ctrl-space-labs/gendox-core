@@ -209,9 +209,7 @@ const Chats = ({
                         }}
                       >
                         {/* {lastMessage ? lastMessage.message : null} */}
-                        {chat.threadName === "Chat Thread"
-                          ? "Unnamed Chat"
-                          : chat.threadName}
+                        {chat.chat.lastMessage.message}
                       </Typography>
                     }
                   />
