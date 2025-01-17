@@ -1,7 +1,7 @@
 import axios from "axios";
 import apiRequests from "src/configs/apiRequest";
 
-const postSearchMessage = async (message, projectId, size, storedToken) => {
+const postSearchMessage = async (message, projectId, size, page, storedToken) => {
   let headers = {
     "Content-Type": "application/json",
   };
@@ -10,8 +10,10 @@ const postSearchMessage = async (message, projectId, size, storedToken) => {
     headers.Authorization = "Bearer " + storedToken;
   }
 
+  console.log("postSearchMessage", message, size, page);
+
   return axios.post(
-    apiRequests.postSearchModel(projectId, size),
+    apiRequests.postSearchModel(projectId, size, page),
     {
       value: message,
     },

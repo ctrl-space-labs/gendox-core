@@ -39,8 +39,8 @@ export default {
   postCompletionModel: (projectId) =>
     `${url}messages/completions?projectId=${projectId}`,
 
-  postSearchModel: (projectId, size) =>
-    `${url}messages/search?size=${size}&projectId=${projectId}`,
+  postSearchModel: (projectId, size, page) =>
+    `${url}messages/search?projectId=${projectId}&page=${page}&size=${size}`,
   
 
   // getThreadsByCriteria: (projectIdIn) => {

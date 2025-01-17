@@ -6,12 +6,13 @@ import toast from "react-hot-toast";
 // 1. Fetch closer sections from the backend
 export const fetchCloserSectionsFromProject = createAsyncThunk(
   "globalSearch/fetchCloserSectionsFromProject",
-  async ({ message, projectId, size, storedToken }) => {
+  async ({ message, projectId, size, page, storedToken }) => {
     try {
       const response = await searchService.postSearchMessage(
         message,
         projectId,
         size,
+        page,
         storedToken
       );
     console.log("RESPONCE",response)
@@ -38,7 +39,6 @@ const globalSearchSlice = createSlice({
   },
   reducers: {
     resetCloserDocuments: (state) => {
-      console.log("Resetting closerDocumentsFromProject---------------------------------");
       state.closerDocumentsFromProject = [];
     },
   },

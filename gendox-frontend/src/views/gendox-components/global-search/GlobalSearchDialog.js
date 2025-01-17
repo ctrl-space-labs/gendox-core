@@ -3,7 +3,6 @@ import { useEffect, useCallback, useRef, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/router";
 import CustomAvatar from "src/@core/components/mui/avatar";
-import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import Box from "@mui/material/Box";
 import MuiDialog from "@mui/material/Dialog";
@@ -21,9 +20,11 @@ import Button from "@mui/material/Button";
 import Tooltip from "@mui/material/Tooltip";
 import authConfig from "src/configs/auth";
 import { styled, useTheme } from "@mui/material/styles";
-import themeConfig from "src/configs/themeConfig";
 import CircularProgress from "@mui/material/CircularProgress";
-import { fetchCloserSectionsFromProject, resetCloserDocuments } from "src/store/apps/globalSearch/globalSearch";
+import {
+  fetchCloserSectionsFromProject,
+  resetCloserDocuments,
+} from "src/store/apps/globalSearch/globalSearch";
 
 // Custom Styled Components
 const StyledDialog = styled(MuiDialog)({
@@ -39,6 +40,49 @@ const StyledDialog = styled(MuiDialog)({
   },
 });
 
+const NoResult = () => {
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        flexDirection: "column",
+        justifyContent: "center",
+        mt: 5,
+      }}
+    >
+      <Typography
+        variant="body2"
+        sx={{ mb: 2.5, color: "text.disabled", textAlign: "center" }}
+      >
+        No results found for your search query. <br />
+        Please try a different keyword or check your spelling.
+      </Typography>
+    </Box>
+  );
+};
+
+const NoMoreDocuments = () => {
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        flexDirection: "column",
+        justifyContent: "center",
+        mt: 5,
+      }}
+    >
+      <Typography
+        variant="body2"
+        sx={{ mb: 2.5, color: "text.disabled", textAlign: "center" }}
+      >
+        No more documents available.
+      </Typography>
+    </Box>
+  );
+};
+
 const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
   const dispatch = useDispatch();
   const theme = useTheme();
@@ -53,50 +97,64 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
   const [activeTab, setActiveTab] = useState("agents");
   const [projectDocumentOptions, setProjectDocumentOptions] = useState([]);
   const [agentOptions, setAgentOptions] = useState([]);
-  const [documentsPage, setDocumentsPage] = useState(1);
+  const [documentsPage, setDocumentsPage] = useState(0);
+  const [noMoreDocuments, setNoMoreDocuments] = useState(false);
   const projectId = router.query.projectId;
   const { closerDocumentsFromProject, loading } = useSelector(
     (state) => state.globalSearch
   );
 
   console.log("PROJECTDOC", projectDocumentOptions);
- 
+  console.log("NOMORE", noMoreDocuments);
 
-  const resetDialogState = () => {
-    console.log("Dialog closed, resetting documents");
-    setSearchValue("");
+  const resetDocumentState = () => {
     setProjectDocumentOptions([]);
-    setAgentOptions([]);
-    setDocumentsPage(1);
+    setDocumentsPage(0);
+    setNoMoreDocuments(false);
     dispatch(resetCloserDocuments());
-    };
-
-  const handleSearchChange = (event) => {
-    setSearchValue(event.target.value);
-    if (activeTab !== "documents") return;
-    if (debounceTimeout) {
-      clearTimeout(debounceTimeout); 
-    }    
-    const timeoutId = setTimeout(() => {
-      if (searchValue.length > 2) {        
-        fetchCloserSections();
-      }
-    }, 1000); 
-    setDebounceTimeout(timeoutId); 
   };
 
-  const fetchCloserSections = () => {
+  const resetDialogState = () => {
+    setSearchValue("");
+    setAgentOptions([]);
+    resetDocumentState();
+  };
+
+  const handleSearchChange = (event) => {
+    const newSearchValue = event.target.value;
+    setSearchValue(event.target.value);
+    resetDocumentState();
+
+    if (activeTab !== "documents") return;
+    if (debounceTimeout) {
+      clearTimeout(debounceTimeout);
+    }
+    const timeoutId = setTimeout(() => {
+      if (newSearchValue.length > 2) {
+        fetchCloserSections(0);
+      }
+    }, 1000);
+    setDebounceTimeout(timeoutId);
+  };
+
+  const fetchCloserSections = (page) => {
     dispatch(
       fetchCloserSectionsFromProject({
         message: searchValue,
-        projectId: projectId, // replace with the actual project ID
-        size: 5 * documentsPage,
+        projectId: projectId,
+        size: 5,
+        page: page,
         storedToken: storedToken,
       })
     );
   };
 
-  
+  useEffect(() => {
+    if (activeTab === "agents") {
+      resetDocumentState();
+    }
+  }, [activeTab, dispatch]);
+
   useEffect(() => {
     if (user?.organizations) {
       const agents = user.organizations.flatMap((org) =>
@@ -120,16 +178,15 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
   useEffect(() => {
     if (closerDocumentsFromProject?.length > 0) {
       const documents = closerDocumentsFromProject.map((documentSection) => {
-        // Split the sectionValue into words and take the first 10 words
         const sectionValue = documentSection.sectionValue
-          .split(" ") // Split by spaces
-          .slice(0, 20) // Take the first 10 words
-          .join(" "); // Join them back into a string
+          .split(" ")
+          .slice(0, 20)
+          .join(" ");
 
         return {
           title: documentSection.documentInstanceDTO.title,
           sectionOrder: documentSection.documentSectionMetadata.sectionOrder,
-          sectionValue: sectionValue, // Limited to the first 10 words
+          sectionValue: sectionValue,
           icon: "mdi:file-document",
           category: "Documents",
           optionId: documentSection.id,
@@ -140,6 +197,9 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
         ...prevDocuments,
         ...documents,
       ]);
+      
+    } else {
+      setNoMoreDocuments(true); // No more documents to load
     }
   }, [closerDocumentsFromProject, projectId, dispatch]);
 
@@ -151,10 +211,10 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
     }
   };
 
-
   const handleLoadMore = () => {
-    setDocumentsPage((prevPage) => prevPage + 1); // Increase the page number when "More" is clicked
-    fetchCloserSections(); // Fetch the next set of documents
+    const nextPage = documentsPage + 1;
+    setDocumentsPage(nextPage);
+    fetchCloserSections(nextPage);
   };
 
   return (
@@ -180,7 +240,7 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
             "& .MuiInputBase-root": {
               border: "none",
               boxShadow: "none",
-              height: "100%", 
+              height: "100%",
             },
           }}
           // blair the input field
@@ -236,7 +296,7 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
             variant={activeTab === "documents" ? "contained" : "outlined"}
             onClick={() => {
               setActiveTab("documents"); // Change active tab
-              fetchCloserSections(); // Fetch closer sections
+              fetchCloserSections(documentsPage); // Fetch closer sections
             }}
             sx={{ fontSize: 12, padding: "4px 12px" }}
             size="small" // Make button small
@@ -248,124 +308,135 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
         <Box sx={{ marginTop: 2 }}>
           {searchValue.length > 2 ? (
             <List>
-              {activeTab === "agents" &&
-                agentOptions.map((option) => (
-                  <ListItem
-                    key={option.optionId}
-                    onClick={() => handleOptionClick(option)}
-                    sx={{ padding: "0px" }}
-                  >
-                    <ListItemButton>
-                      <CustomAvatar
-                        skin="light"
-                        variant="rounded"
-                        sx={{ mr: 3, height: 20, width: 20 }}
-                      >
-                        <Icon icon="mdi:account" />
-                      </CustomAvatar>
-
-                      <ListItemText
-                        primary={option.title}
-                        secondary={option.orgTitle + " - Organization"}
-                        sx={{
-                          ml: 3,
-                          "& .MuiTypography-body1": {
-                            color: theme.palette.primary.main,
-                          },
-                        }}
-                      />
-                      <Tooltip title="Chat with Agent">
-                        <CustomAvatar
-                          skin="light"
-                          variant="rounded"
-                          sx={{ mr: 3, height: 20, width: 20 }}
-                        >
-                          <Icon
-                            icon="mdi:subdirectory-arrow-left"
-                            fontSize={20}
-                            sx={{ p: 2 }}
-                          />
-                        </CustomAvatar>
-                      </Tooltip>
-                    </ListItemButton>
-                  </ListItem>
-                ))}
-
-              {activeTab === "documents" &&
-                projectDocumentOptions.map((option) => (
-                  <ListItem
-                    key={`${option.optionId}-${option.title}`}
-                    onClick={() => handleOptionClick(option)}
-                    sx={{ padding: "0px" }}
-                  >
-                    <ListItemButton
-                      sx={{ display: "flex", alignItems: "center" }}
+              {activeTab === "agents" ? (
+                agentOptions.length > 0 ? (
+                  agentOptions.map((option) => (
+                    <ListItem
+                      key={option.optionId}
+                      onClick={() => handleOptionClick(option)}
+                      sx={{ padding: "0px" }}
                     >
-                      <CustomAvatar
-                        skin="light"
-                        variant="rounded"
-                        sx={{ mr: 3, height: 20, width: 20 }}
-                      >
-                        <Icon icon="mdi:file-document" />
-                      </CustomAvatar>
-                      <ListItemText
-                        primary={option.title}
-                        secondary={option.sectionValue + "..."}
-                        sx={{
-                          ml: 3,
-                          mr: 3,
-                          "& .MuiTypography-body1": {
-                            color: theme.palette.primary.main,
-                          },
-                        }}
-                      />
-                      <Tooltip title="Access Document">
+                      <ListItemButton>
                         <CustomAvatar
                           skin="light"
                           variant="rounded"
                           sx={{ mr: 3, height: 20, width: 20 }}
                         >
-                          <Icon
-                            icon="mdi:subdirectory-arrow-left"
-                            fontSize={20}
-                          />
+                          <Icon icon="mdi:account" />
                         </CustomAvatar>
-                      </Tooltip>
-                    </ListItemButton>
-                  </ListItem>
-                ))}
+
+                        <ListItemText
+                          primary={option.title}
+                          secondary={option.orgTitle + " - Organization"}
+                          sx={{
+                            ml: 3,
+                            "& .MuiTypography-body1": {
+                              color: theme.palette.primary.main,
+                            },
+                          }}
+                        />
+                        <Tooltip title="Chat with Agent">
+                          <CustomAvatar
+                            skin="light"
+                            variant="rounded"
+                            sx={{ mr: 3, height: 20, width: 20 }}
+                          >
+                            <Icon
+                              icon="mdi:subdirectory-arrow-left"
+                              fontSize={20}
+                              sx={{ p: 2 }}
+                            />
+                          </CustomAvatar>
+                        </Tooltip>
+                      </ListItemButton>
+                    </ListItem>
+                  ))
+                ) : (
+                  <NoResult />
+                )
+              ) : null}
+
+              {activeTab === "documents"
+                ? projectDocumentOptions.map((option) => (
+                    <ListItem
+                      key={`${option.optionId}-${option.title}`}
+                      onClick={() => handleOptionClick(option)}
+                      sx={{ padding: "0px" }}
+                    >
+                      <ListItemButton
+                        sx={{ display: "flex", alignItems: "center" }}
+                      >
+                        <CustomAvatar
+                          skin="light"
+                          variant="rounded"
+                          sx={{ mr: 3, height: 20, width: 20 }}
+                        >
+                          <Icon icon="mdi:file-document" />
+                        </CustomAvatar>
+                        <ListItemText
+                          primary={option.title}
+                          secondary={option.sectionValue + "..."}
+                          sx={{
+                            ml: 3,
+                            mr: 3,
+                            "& .MuiTypography-body1": {
+                              color: theme.palette.primary.main,
+                            },
+                          }}
+                        />
+                        <Tooltip title="Access Document">
+                          <CustomAvatar
+                            skin="light"
+                            variant="rounded"
+                            sx={{ mr: 3, height: 20, width: 20 }}
+                          >
+                            <Icon
+                              icon="mdi:subdirectory-arrow-left"
+                              fontSize={20}
+                            />
+                          </CustomAvatar>
+                        </Tooltip>
+                      </ListItemButton>
+                    </ListItem>
+                  ))
+                : null}
             </List>
           ) : null}
 
-
+          {searchValue.length > 2 && activeTab === "documents" && !loading && (
+            <Box sx={{ marginTop: 2 }}>
+              {noMoreDocuments ? (
+                <NoMoreDocuments />
+              ) : projectDocumentOptions.length > 0 ? (              
+                <Box sx={{ display: "flex", justifyContent: "center" }}>
+                  <Button
+                    onClick={handleLoadMore}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      fontSize: 14,
+                      textTransform: "none",
+                    }}
+                    variant="outlined"
+                  >
+                    <Typography sx={{ marginRight: 1 }}>Load More</Typography>
+                    <Icon icon="mdi:arrow-down" />
+                  </Button>
+                </Box>
+              ) : (
+                <NoResult />
+              )}
+            </Box>
+          )}
 
           {/* Show loader only if more documents are loading */}
-          {searchValue.length > 2 && activeTab === "documents"  && loading && (
-            <Box sx={{ display: "flex", justifyContent: "center", marginTop: 2 }}>
+          {searchValue.length > 2 && activeTab === "documents" && loading && (
+            <Box
+              sx={{ display: "flex", justifyContent: "center", marginTop: 2 }}
+            >
               <CircularProgress />
             </Box>
           )}
-
-          {/* Load more button */}
-          {searchValue.length > 2 && activeTab === "documents" && !loading && (
-            <Box sx={{ display: "flex", justifyContent: "center", marginTop: 2 }}>
-              <Button
-                onClick={handleLoadMore}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  fontSize: 14,
-                  textTransform: "none",
-                }}
-                variant="outlined"
-              >
-                <Typography sx={{ marginRight: 1 }}>Load More</Typography>
-                <Icon icon="mdi:arrow-down" />
-              </Button>
-            </Box>
-          )}
-         
-
         </Box>
       </DialogContent>
     </StyledDialog>
