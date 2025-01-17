@@ -27,4 +27,33 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
     @Query(name = "MessageMetadataDTO.getMessageMetadataByMessageId", nativeQuery = true)
     List<MessageMetadataDTO> getMessageMetadataByMessageId(@Param("messageId") UUID messageId);
 
+    @Query(value = """
+    WITH ranked_messages AS (
+        SELECT 
+            id,
+            value,
+            project_id,
+            thread_id,
+            created_at,
+            updated_at,
+            created_by,
+            updated_by,
+            ROW_NUMBER() OVER (PARTITION BY thread_id ORDER BY created_at DESC) AS row_number
+        FROM gendox_core.message
+        WHERE thread_id IN :threadIds
+    )
+    SELECT id,
+            value,
+            project_id,
+            thread_id,
+            created_at,
+            updated_at,
+            created_by,
+            updated_by
+    FROM ranked_messages
+    WHERE row_number = 1
+""", nativeQuery = true)
+    List<Message> findLatestMessagesForThreads(@Param("threadIds") List<UUID> threadIds);
+
+
 }
