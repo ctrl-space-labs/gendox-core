@@ -15,7 +15,6 @@ export const fetchCloserSectionsFromProject = createAsyncThunk(
         page,
         storedToken
       );
-    console.log("RESPONCE",response)
       return response.data;
     } catch (error) {
       toast.error(

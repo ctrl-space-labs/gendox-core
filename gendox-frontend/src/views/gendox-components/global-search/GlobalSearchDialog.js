@@ -100,12 +100,10 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
   const [documentsPage, setDocumentsPage] = useState(0);
   const [noMoreDocuments, setNoMoreDocuments] = useState(false);
   const projectId = router.query.projectId;
+  const [errorMessage, setErrorMessage] = useState("");
   const { closerDocumentsFromProject, loading } = useSelector(
     (state) => state.globalSearch
   );
-
-  console.log("PROJECTDOC", projectDocumentOptions);
-  console.log("NOMORE", noMoreDocuments);
 
   const resetDocumentState = () => {
     setProjectDocumentOptions([]);
@@ -138,6 +136,10 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
   };
 
   const fetchCloserSections = (page) => {
+    if (!projectId) {
+      setErrorMessage("Please select a project.");
+      return; // Do not fetch if projectId is missing
+    }
     dispatch(
       fetchCloserSectionsFromProject({
         message: searchValue,
@@ -168,7 +170,7 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
             icon: "mdi:account",
             category: "Project Agents",
             optionId: agent.id,
-            link: `/gendox/chat/?organizationId=${org.id}&threadId=${agent.userId}&projectId=${agent.projectId}`,
+            link: `/gendox/chat/?organizationId=${org.id}&threadId=${agent.userId}`,
           }))
       );
       setAgentOptions(agents);
@@ -177,6 +179,7 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
 
   useEffect(() => {
     if (closerDocumentsFromProject?.length > 0) {
+      setNoMoreDocuments(false);
       const documents = closerDocumentsFromProject.map((documentSection) => {
         const sectionValue = documentSection.sectionValue
           .split(" ")
@@ -197,9 +200,8 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
         ...prevDocuments,
         ...documents,
       ]);
-      
-    } else {
-      setNoMoreDocuments(true); // No more documents to load
+    } else if (closerDocumentsFromProject?.length < 1) {
+      setNoMoreDocuments(true); 
     }
   }, [closerDocumentsFromProject, projectId, dispatch]);
 
@@ -405,9 +407,13 @@ const GlobalSearchDialog = ({ openDialog, setOpenDialog, user }) => {
 
           {searchValue.length > 2 && activeTab === "documents" && !loading && (
             <Box sx={{ marginTop: 2 }}>
-              {noMoreDocuments ? (
+              {errorMessage ? (
+                <Box sx={{ textAlign: "center", color: "error.main" }}>
+                  <Typography variant="body2">{errorMessage}</Typography>
+                </Box>
+              ) : noMoreDocuments ? (
                 <NoMoreDocuments />
-              ) : projectDocumentOptions.length > 0 ? (              
+              ) : projectDocumentOptions.length > 0 ? (
                 <Box sx={{ display: "flex", justifyContent: "center" }}>
                   <Button
                     onClick={handleLoadMore}

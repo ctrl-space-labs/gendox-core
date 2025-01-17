@@ -10,7 +10,6 @@ const postSearchMessage = async (message, projectId, size, page, storedToken) =>
     headers.Authorization = "Bearer " + storedToken;
   }
 
-  console.log("postSearchMessage", message, size, page);
 
   return axios.post(
     apiRequests.postSearchModel(projectId, size, page),

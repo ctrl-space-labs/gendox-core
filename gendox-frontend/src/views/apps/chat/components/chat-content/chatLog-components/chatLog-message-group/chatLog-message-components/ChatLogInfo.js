@@ -12,7 +12,7 @@ import { ListItemButton } from "@mui/material";
 import { useRouter } from "next/router";
 
 const EmptyStateMessage = ({ message }) => (
-  <Box
+    <Box
     sx={{
       display: "flex",
       justifyContent: "center",
@@ -33,6 +33,9 @@ const EmptyStateMessage = ({ message }) => (
 const ChatLogInfo = ({ messageMetadata }) => {
   const router = useRouter();
   const { organizationId } = router.query;
+
+
+
 
   if (!Array.isArray(messageMetadata) || messageMetadata.length === 0) {
     return <EmptyStateMessage message="No additional information available." />;
