@@ -106,6 +106,24 @@ const AppChat = (props) => {
     });
   }, [dispatch, organizationId, storedToken, threadId, router.query]);
 
+  // useEffect(() => {
+  //   if (!storedToken) return;
+  //   dispatch(setUserProfile(auth.user));
+    
+  //   const loadChats = async () => {
+  //     try {
+  //       await Promise.all([
+  //         dispatch(fetchChatsContacts({ organizationId, storedToken })), 
+  //         threadId ? dispatch(selectChat({ threadId, organizationId, storedToken })) : dispatch(fetchThreadId({ projectId })),
+  //       ]);
+  //     } catch (error) {
+  //       console.error("Failed to load chats or select chat:", error);
+  //     }
+  //   };
+
+  //   loadChats();
+  // }, [dispatch, organizationId, storedToken, threadId, projectId]);
+
   const handleLeftSidebarToggle = () => setLeftSidebarOpen(!leftSidebarOpen);
   const handleUserProfileLeftSidebarToggle = () =>
     setUserProfileLeftOpen(!userProfileLeftOpen);

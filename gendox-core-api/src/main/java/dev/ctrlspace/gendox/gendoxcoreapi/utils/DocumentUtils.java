@@ -110,13 +110,12 @@ public class DocumentUtils {
         if (fileName == null || fileName.isEmpty()) {
             return fileName; // Return as-is if the input is null or empty
         }
+        // Remove ".md" or ".pdf" at the end (case-insensitive)
+        fileName = fileName.replaceAll("(?i)\\.(md|pdf|txt|idx)$", "");
+        // Replace "_!_" with " > "
+        fileName = fileName.replace("_!_", " > ");
 
-        // Remove the file extension if present
-        int dotIndex = fileName.lastIndexOf(".");
-        String baseName = (dotIndex > 0) ? fileName.substring(0, dotIndex) : fileName;
-
-        // Replace underscores with spaces
-        return baseName.replace("_", " ");
+        return fileName;
     }
 
 
