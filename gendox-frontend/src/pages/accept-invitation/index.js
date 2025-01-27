@@ -4,6 +4,8 @@ import BlankLayout from "../../@core/layouts/BlankLayout";
 import {useAuth} from "src/hooks/useAuth";
 import {useRouter} from "next/router";
 import invitationService from "../../gendox-sdk/invitationService"; // Ensure you have the correct path to your OIDC UserManager setup
+import toast from "react-hot-toast";
+import { getErrorMessage } from "src/utils/errorHandler";
 
 const AcceptInvitationPage = () => {
     const auth = useAuth();
@@ -30,6 +32,7 @@ const AcceptInvitationPage = () => {
                 console.error('Error handling OIDC redirect callback:', error);
                 setLoading(false);
                 setError(true);
+                toast.error(`${getErrorMessage(error)}`);
             })
             .finally(() => {
                 // Countdown timer for redirection

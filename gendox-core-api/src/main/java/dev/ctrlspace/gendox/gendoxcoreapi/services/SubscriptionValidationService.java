@@ -6,10 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationPlan;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
@@ -35,6 +32,8 @@ public class SubscriptionValidationService {
     private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private ProjectRepository projectRepository;
     private MessageRepository messageRepository;
+    private InvitationRepository invitationRepository;
+    private TypeService typeService;
 
 
     @Autowired
@@ -42,12 +41,16 @@ public class SubscriptionValidationService {
                                          DocumentInstanceRepository documentInstanceRepository,
                                          DocumentInstanceSectionRepository documentInstanceSectionRepository,
                                          ProjectRepository projectRepository,
-                                         MessageRepository messageRepository) {
+                                         MessageRepository messageRepository,
+                                         InvitationRepository invitationRepository,
+                                         TypeService typeService) {
         this.organizationPlanService = organizationPlanService;
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.projectRepository = projectRepository;
         this.messageRepository = messageRepository;
+        this.invitationRepository = invitationRepository;
+        this.typeService = typeService;
     }
 
 
@@ -74,6 +77,14 @@ public class SubscriptionValidationService {
         int maxDocuments = activePlan.getSubscriptionPlan().getUserMessageMonthlyLimitCount() * activePlan.getNumberOfSeats();
         int numberOfDocuments = (int) this.getDocumentsByOrganizationIdAndTimePeriod(organizationId, activePlan.getStartDate(), activePlan.getEndDate()).getTotalElements();
         return numberOfDocuments < maxDocuments;
+    }
+
+    //check for the invitations allowed for the organization
+    public boolean canInviteUsers(UUID organizationId) throws GendoxException {
+        OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
+        int maxInvitations = activePlan.getNumberOfSeats();
+        int numberOfAcceptedInvitations = this.countAcceptedInvitations(organizationId);
+        return numberOfAcceptedInvitations < maxInvitations;
     }
 
     // check for the messages allowed for the organization
@@ -114,6 +125,10 @@ public class SubscriptionValidationService {
                 .collect(Collectors.toSet());
 
         return (int) messageRepository.countMessagesByProjectIdsAndDateRange(projectIds, startDate, endDate);
+    }
+
+    public Integer countAcceptedInvitations(UUID organizationId) {
+        return (int) invitationRepository.countByOrganizationIdAndStatusTypeId(organizationId, typeService.getEmailInvitationStatusByName("ACCEPTED").getId());
     }
 
 

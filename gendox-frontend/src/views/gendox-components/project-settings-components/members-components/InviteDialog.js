@@ -2,15 +2,11 @@
 import { useState, useEffect, forwardRef } from "react";
 import { useSelector } from "react-redux";
 import { useRouter } from "next/router";
-
-// ** MUI Imports
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
-import Card from "@mui/material/Card";
 import Dialog from "@mui/material/Dialog";
 import Button from "@mui/material/Button";
 import Divider from "@mui/material/Divider";
-import { styled } from "@mui/material/styles";
 import TextField from "@mui/material/TextField";
 import InputLabel from "@mui/material/InputLabel";
 import Typography from "@mui/material/Typography";
@@ -20,22 +16,15 @@ import IconButton from "@mui/material/IconButton";
 import Autocomplete from "@mui/material/Autocomplete";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
-import Tooltip from "@mui/material/Tooltip"; // Import Tooltip
-
-// ** Icon Imports
+import Tooltip from "@mui/material/Tooltip"; 
 import Icon from "src/@core/components/icon";
-
-// ** Config Import
-import themeConfig from "src/configs/themeConfig";
 import authConfig from "src/configs/auth";
-
-// ** Custom Components Imports
 import CustomAvatar from "src/@core/components/mui/avatar";
 import invitationService from "src/gendox-sdk/invitationService";
-import userService from "src/gendox-sdk/userService";
-import { set } from "nprogress";
 import toast from "react-hot-toast";
 import { useAuth } from "src/hooks/useAuth";
+import { getErrorMessage } from "src/utils/errorHandler";
+
 
 const Transition = forwardRef(function Transition(props, ref) {
   return <Fade ref={ref} {...props} />;
@@ -53,11 +42,9 @@ const InviteDialog = ({ open, handleClose, organizationMembers }) => {
   const [error, setError] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
 
-
   const members = organizationMembers.filter(
     (member) => member.user.email !== null
   );
-
 
   const validateEmail = (email) => {
     // Simple email validation regex
@@ -89,7 +76,7 @@ const InviteDialog = ({ open, handleClose, organizationMembers }) => {
       userRoleType: existingMember
         ? { name: existingMember.role.name }
         : { name: selectedRole },
-      userId: auth.user.id,
+      inviterUserId: auth.user.id,
     };
 
     try {
@@ -102,8 +89,8 @@ const InviteDialog = ({ open, handleClose, organizationMembers }) => {
       toast.success("Invitation sent successfully!");
       handleClose(); // Close the dialog on success
     } catch (error) {
-      console.error("Failed to send invitation", error);
-      setError("Failed to send invitation. Please try again.");
+      handleClose();
+      toast.error(`Error sending invitation Error: ${getErrorMessage(error)}`);      
     }
   };
 

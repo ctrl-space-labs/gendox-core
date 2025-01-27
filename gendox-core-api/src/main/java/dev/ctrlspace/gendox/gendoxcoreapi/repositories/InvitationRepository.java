@@ -16,4 +16,7 @@ public interface InvitationRepository extends JpaRepository<Invitation, UUID>, Q
     public Boolean existsByIdAndExpiresAtAfter(UUID id, Instant time);
 
     public Optional<Invitation> findByInviteeEmailAndToken(String inviteeEmail, String token);
+
+    long countByOrganizationIdAndStatusTypeId(UUID organizationId, Long statusTypeId);
+
 }

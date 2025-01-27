@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Invitation;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.InvitationCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserInvitationService;
 import jakarta.mail.MessagingException;
 import org.slf4j.Logger;
@@ -26,10 +27,13 @@ public class InvitationController {
     Logger logger = LoggerFactory.getLogger(InvitationController.class);
 
     private UserInvitationService userInvitationService;
+    private SubscriptionValidationService subscriptionValidationService;
 
     @Autowired
-    public InvitationController(UserInvitationService userInvitationService) {
+    public InvitationController(UserInvitationService userInvitationService,
+                                SubscriptionValidationService subscriptionValidationService) {
         this.userInvitationService = userInvitationService;
+        this.subscriptionValidationService = subscriptionValidationService;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_ADD_USERS', 'getRequestedOrgIdFromPathVariable')")
@@ -61,6 +65,11 @@ public class InvitationController {
         }
         if (!organizationId.equals(invitation.getOrganizationId().toString())) {
             throw new GendoxException("ORGANIZATION_ID_MISMATCH", "Organization id in path variable and in criteria do not match", HttpStatus.BAD_REQUEST);
+        }
+
+        //check if the user is allowed to invite users
+        if (!subscriptionValidationService.canInviteUsers(invitation.getOrganizationId())) {
+            throw new GendoxException("USER_INVITATION_LIMIT_REACHED", "User has reached the limit of users that can be invited", HttpStatus.BAD_REQUEST);
         }
 
         UUID inviterUserId = UUID.fromString(((UserProfile) authentication.getPrincipal()).getId());
