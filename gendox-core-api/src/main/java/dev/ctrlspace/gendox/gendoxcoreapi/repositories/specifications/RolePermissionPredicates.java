@@ -53,28 +53,28 @@ public class RolePermissionPredicates {
     }
 
     private static Predicate roleIdIn(List<Long> roleIdIn) {
-        if (roleIdIn == null) {
+        if (roleIdIn == null || roleIdIn.isEmpty() || roleIdIn.stream().allMatch(java.util.Objects::isNull)) {
             return null;
         }
         return qRolePermission.role.id.in(roleIdIn);
     }
 
     private static Predicate roleNameIn(List<String> roleNameIn) {
-        if (roleNameIn == null) {
+        if (roleNameIn == null || roleNameIn.isEmpty()) {
             return null;
         }
         return qRolePermission.role.name.in(roleNameIn);
     }
 
     private static Predicate permissionIdIn(List<Long> permissionIdIn) {
-        if (permissionIdIn == null) {
+        if (permissionIdIn == null || permissionIdIn.isEmpty()) {
             return null;
         }
         return qRolePermission.permission.id.in(permissionIdIn);
     }
 
     private static Predicate permissionNameIn(List<String> permissionNameIn) {
-        if (permissionNameIn == null) {
+        if (permissionNameIn == null || permissionNameIn.isEmpty()) {
             return null;
         }
         return qRolePermission.permission.name.in(permissionNameIn);

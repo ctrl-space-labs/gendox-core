@@ -1,17 +1,8 @@
-// ** React Imports
 import React, { useState, useEffect } from "react";
-
-// ** Next Import
 import { useRouter } from "next/router";
-
-// ** Redux Imports
 import { useSelector } from "react-redux";
 import { useTheme } from "@mui/material/styles";
-
-// ** Config
 import authConfig from "src/configs/auth";
-
-// ** MUI Imports
 import Grid from "@mui/material/Grid";
 import TextField from "@mui/material/TextField";
 import Box from "@mui/material/Box";
@@ -21,13 +12,13 @@ import CardContent from "@mui/material/CardContent";
 import CardActions from "@mui/material/CardActions";
 import toast from "react-hot-toast";
 import Icon from "src/@core/components/icon";
-
-// ** Service Import
 import organizationService from "src/gendox-sdk/organizationService";
 import DeleteConfirmDialog from "src/utils/dialogs/DeleteConfirmDialog";
 import { getErrorMessage } from "src/utils/errorHandler";
+import { useAuth } from "src/hooks/useAuth";
 
 const InformationGeneralOrganizationSettings = () => {
+  const auth = useAuth();
   const theme = useTheme();
   const router = useRouter();
   const storedToken = window.localStorage.getItem(
@@ -89,7 +80,9 @@ const InformationGeneralOrganizationSettings = () => {
       router.reload(path);
     } catch (error) {
       console.error("Failed to update organization", error);
-      toast.error(`Organization update failed. Error: ${getErrorMessage(error)}`);
+      toast.error(
+        `Organization update failed. Error: ${getErrorMessage(error)}`
+      );
     }
   };
 
@@ -100,11 +93,22 @@ const InformationGeneralOrganizationSettings = () => {
       await organizationService.deactivateOrganizationById(
         organization.id,
         storedToken
-      );      
+      );
       toast.success("Organization deleted successfully!");
-      window.location.href = "/gendox/home";
+
+      const updatedOrganization = auth.user.organizations;
+      const firstActiveOrganization = updatedOrganization[0];
+
+      if (firstActiveOrganization) {
+        window.location.href = "/gendox/home";
+      } else {
+        window.location.href = "/gendox/create-organization";
+      } 
+      
     } catch (error) {
-      toast.error(`Organization deletion failed. Error: ${getErrorMessage(error)}`);
+      toast.error(
+        `Organization deletion failed. Error: ${getErrorMessage(error)}`
+      );
       // Redirect to the home page in case of an error
       router.push("/gendox/home");
     }

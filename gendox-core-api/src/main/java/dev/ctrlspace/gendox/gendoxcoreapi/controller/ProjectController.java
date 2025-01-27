@@ -24,6 +24,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import kotlinx.serialization.json.JsonElement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -38,6 +40,8 @@ import java.util.*;
 
 @RestController
 public class ProjectController {
+
+    Logger logger = LoggerFactory.getLogger(ProjectController.class);
 
     private ProjectService projectService;
     private ProjectConverter projectConverter;
@@ -188,9 +192,14 @@ public class ProjectController {
             description = "Deactivate a project by its unique ID. To perform this operation, " +
                     "the user must have the necessary permissions to delete the specified project.")
     public void deactivateProjectById(@PathVariable UUID projectId) throws Exception {
-        projectService.deactivateProject(projectId,false);
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        userService.evictUserProfileByUniqueIdentifier(securityUtils.getUserIdentifier());
+
+        try {
+            projectService.deactivateProject(projectId);
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            userService.evictUserProfileByUniqueIdentifier(securityUtils.getUserIdentifier());
+        } catch (Exception ex) {
+            logger.error("Error occurred while evicting user profile cache: {}", ex.getMessage(), ex);
+        }
     }
 
 

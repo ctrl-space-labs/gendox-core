@@ -66,7 +66,7 @@ public class OrganizationPlanService {
         return organizationPlanRepository.findAll(OrganizationPlanPredicates.build(criteria), pageable);
     }
 
-    public OrganizationPlan cancelSubscriptionPlan(UUID organizationPlanId) throws GendoxException {
+    public OrganizationPlan cancelOrganizationPlan(UUID organizationPlanId) throws GendoxException {
         OrganizationPlan plan = getOrganizationPlanById(organizationPlanId);
 
         plan.setEndDate(Instant.now());

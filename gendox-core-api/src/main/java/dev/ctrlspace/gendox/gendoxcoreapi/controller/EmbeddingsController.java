@@ -1,7 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.BotRequest;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -12,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProvenAiMetadata;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService;
 import io.micrometer.observation.annotation.Observed;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -44,13 +43,11 @@ public class EmbeddingsController {
     private TrainingService trainingService;
     private CompletionService completionService;
     private MessageService messageService;
-
     private OrganizationPlanService organizationPlanService;
-
     private DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter;
-
     private OrganizationModelKeyService organizationModelKeyService;
-
+    private SubscriptionValidationService subscriptionValidationService;
+    private ProjectService projectService;
 
 
     @Value("${proven-ai.enabled}")
@@ -64,7 +61,9 @@ public class EmbeddingsController {
                                 DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter,
                                 MessageService messageService,
                                 OrganizationPlanService organizationPlanService,
-                                OrganizationModelKeyService organizationModelKeyService
+                                OrganizationModelKeyService organizationModelKeyService,
+                                SubscriptionValidationService subscriptionValidationService,
+                                ProjectService projectService
     ) {
         this.embeddingRepository = embeddingRepository;
         this.embeddingService = embeddingService;
@@ -74,9 +73,9 @@ public class EmbeddingsController {
         this.documentInstanceSectionWithDocumentConverter = documentInstanceSectionWithDocumentConverter;
         this.organizationPlanService = organizationPlanService;
         this.organizationModelKeyService = organizationModelKeyService;
+        this.subscriptionValidationService = subscriptionValidationService;
+        this.projectService = projectService;
     }
-
-
 
 
     @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
@@ -124,10 +123,10 @@ public class EmbeddingsController {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public List<DocumentInstanceSectionDTO> findCloserSections(@RequestBody Message message,
-                                                            @RequestParam String projectId,
-                                                            Authentication authentication,
-                                                            HttpServletRequest request,
-                                                            Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
+                                                               @RequestParam String projectId,
+                                                               Authentication authentication,
+                                                               HttpServletRequest request,
+                                                               Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
 
         String requestIP = request.getRemoteAddr();
         organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
@@ -153,11 +152,6 @@ public class EmbeddingsController {
     }
 
 
-
-
-
-
-
     @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams') || " +
             "@securityUtils.isPublicProject(#projectId)")
     @PostMapping("/messages/completions")
@@ -177,6 +171,13 @@ public class EmbeddingsController {
                                                     @RequestParam String projectId,
                                                     Authentication authentication,
                                                     HttpServletRequest request) throws GendoxException, IOException, NoSuchAlgorithmException {
+
+        Project project = projectService.getProjectById(UUID.fromString(projectId));
+        // check if the message is within the subscription limits
+        if (!subscriptionValidationService.canSendMessage(project.getOrganizationId())) {
+            throw new GendoxException("MAX_MESSAGES_EXCEED", "Maximum messages limit exceeded", HttpStatus.BAD_REQUEST);
+        }
+
 
         String requestIP = request.getRemoteAddr();
         organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
@@ -245,8 +246,6 @@ public class EmbeddingsController {
     }
 
 
-
-
     @PostMapping("/messages/moderation")
     public OpenAiGpt35ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
         String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
@@ -258,8 +257,6 @@ public class EmbeddingsController {
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
         return trainingService.getModerationForDocumentSections(documentId);
     }
-
-
 
 
 }

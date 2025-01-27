@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -22,6 +23,7 @@ public class UserProfile {
     private String phone;
     private Type globalUserRoleType;
     private String name;
-    private List<OrganizationUserDTO> organizations;
+    //    private List<OrganizationUserDTO> organizations;
+    private List<OrganizationUserDTO> organizations = new ArrayList<>();
 
 }

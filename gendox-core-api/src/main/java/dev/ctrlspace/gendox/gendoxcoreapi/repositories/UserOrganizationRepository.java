@@ -24,4 +24,6 @@ public interface UserOrganizationRepository extends JpaRepository<UserOrganizati
 
     @Query("SELECT uo FROM UserOrganization uo WHERE uo.user.id = :userId AND uo.organization.id = :organizationId")
     UserOrganization findByUserIdAndOrganizationId(UUID userId, UUID organizationId);
+
+    void deleteByOrganizationId(UUID organizationId);
 }

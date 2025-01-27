@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Repository
@@ -54,6 +55,14 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
     WHERE row_number = 1
 """, nativeQuery = true)
     List<Message> findLatestMessagesForThreads(@Param("threadIds") List<UUID> threadIds);
+
+
+    @Query("SELECT COUNT(m) FROM Message m WHERE m.projectId IN :projectIds AND m.createdAt BETWEEN :startDate AND :endDate")
+    long countMessagesByProjectIdsAndDateRange(
+            @Param("projectIds") Set<UUID> projectIds,
+            @Param("startDate") Instant startDate,
+            @Param("endDate") Instant endDate
+    );
 
 
 }

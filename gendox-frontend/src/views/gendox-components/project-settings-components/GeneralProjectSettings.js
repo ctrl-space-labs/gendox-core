@@ -129,8 +129,12 @@ const GeneralProjectSettings = () => {
         (proj) => proj.id !== project.id
       );
 
-      const firstActiveProject = updatedProjects[0]; 
-      window.location.href = `/gendox/home/?organizationId=${project.organizationId}&projectId=${firstActiveProject.id}`;
+      const firstActiveProject = updatedProjects[0];
+      if (firstActiveProject) {        
+        window.location.href = `/gendox/home/?organizationId=${project.organizationId}&projectId=${firstActiveProject.id}`;
+      } else {        
+        window.location.href = `/gendox/create-project/?organizationId=${project.organizationId}`;
+      }
     
     } catch (error) {
       toast.error(`Project deletion failed. Error: ${getErrorMessage(error)}`);

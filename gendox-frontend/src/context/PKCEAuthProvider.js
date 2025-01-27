@@ -9,8 +9,7 @@ import { userDataActions } from "src/store/apps/userData/userData";
 import { fetchOrganization } from "src/store/apps/activeOrganization/activeOrganization";
 import { fetchProject } from "src/store/apps/activeProject/activeProject";
 import userManager from "src/services/authService";
-import {AuthContext} from "./AuthContext";
-
+import { AuthContext } from "./AuthContext";
 
 const PKCEAuthProvider = ({ children, defaultProvider }) => {
   const [user, setUser] = useState(defaultProvider.user);
@@ -41,7 +40,6 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
 
   const handleLogout = async () => {
     try {
-
       await userService.logoutUser(storedToken);
 
       console.log("User logged out successfully.");
@@ -51,7 +49,9 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
     } finally {
       // Clear the authentication state and log
       clearAuthState();
-      console.log("User authentication state cleared. Redirecting to logout page...");
+      console.log(
+        "User authentication state cleared. Redirecting to logout page..."
+      );
       userManager.signoutRedirect();
     }
   };
@@ -195,6 +195,19 @@ const PKCEAuthProvider = ({ children, defaultProvider }) => {
 
   useEffect(() => {
     if (user && router.pathname.includes("oidc-callback")) {
+      // Redirect to create organization if user has no organizations
+      if (!Array.isArray(user.organizations) || user.organizations.length === 0) {
+        router.push("/gendox/create-organization");
+        return;
+      }
+      // Redirect to create project if user has no projects
+      if (user.organizations[0].projects.length === 0) {
+        router.push(
+          `/gendox/create-project?organizationId=${user.organizations[0].id}`
+        );
+        return;
+      }
+      // Redirect to home page if user has organizations and projects
       let homeUrl = "/gendox/home";
       //oidc-callback might contain a returnUrl query param to redirect to after login,
       // like ../oidc-callback?returnUrl=%2Fgendox%2Fhome....

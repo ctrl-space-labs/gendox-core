@@ -89,8 +89,12 @@ const OrganizationsDropdown = ({ settings }) => {
     [dispatch, handleDropdownClose, router]
   );
 
+  const organizations = Array.isArray(auth.user?.organizations)
+    ? auth.user.organizations
+    : [];
+
   const sortedOrganizations = sortByField(
-    [...auth.user.organizations],
+    [...organizations],
     "name",
     activeOrganizationId
   );
@@ -176,7 +180,7 @@ const OrganizationsDropdown = ({ settings }) => {
         }}
       >
         {sortByField(
-          [...auth.user.organizations],
+          [...organizations],
           "name",
           activeOrganizationId
         ).map((organization) => {

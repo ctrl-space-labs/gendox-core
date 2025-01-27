@@ -2,8 +2,6 @@
  *  Set Home URL based on User Roles
  */
 
-import { useState, useEffect } from 'react'
-
 // ** Config
 import authConfig from 'src/configs/auth'
 
@@ -20,17 +18,25 @@ const getHomeRoute = role => {
     selectedProjectId = window.localStorage.getItem(authConfig.selectedProjectId)
   }
 
-
-
   if (role === 'client') return '/acl'
   else {
-    // Check if selectedOrganizationId and selectedProjectId are not null before constructing the URL
+    // If selectedOrganizationId is not found, return create organization URL
+    if (selectedOrganizationId === null) {
+      return '/gendox/create-organization'
+    }
+    
+    // If selectedOrganizationId exists but selectedProjectId does not, return create project URL
+    if (selectedOrganizationId !== null && selectedProjectId === null) {
+      return `/gendox/create-project/?organizationId=${selectedOrganizationId}`
+    }
+
+    // If both selectedOrganizationId and selectedProjectId exist, return home URL with both query parameters
     if (selectedOrganizationId !== null && selectedProjectId !== null) {
       return `/gendox/home/?organizationId=${selectedOrganizationId}&projectId=${selectedProjectId}`
-    } else {
-      // Return a default URL if selectedOrganizationId or selectedProjectId is null
-      return '/gendox/home'
     }
+    
+    // Fallback URL (shouldn't be hit based on the above checks)
+    return '/gendox/home'
   }
 }
 
