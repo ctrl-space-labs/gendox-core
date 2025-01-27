@@ -35,13 +35,13 @@ public class UserInvitationService {
 
     private InvitationRepository invitationRepository;
     private TypeService typeService;
-
     private UserOrganizationService userOrganizationService;
     private OrganizationService organizationService;
     private UserService userService;
     private ProjectMemberService projectMemberService;
     private EmailService emailService;
     private TemplateEngine templateEngine;
+    private SubscriptionValidationService subscriptionValidationService;
 
     @Value("${gendox.domains.frontend}")
     private String frontendDomain;
@@ -64,7 +64,8 @@ public class UserInvitationService {
                                  UserService userService,
                                  ProjectMemberService projectMemberService,
                                  EmailService emailService,
-                                 TemplateEngine templateEngine) {
+                                 TemplateEngine templateEngine,
+                                 SubscriptionValidationService subscriptionValidationService) {
         this.invitationRepository = invitationRepository;
         this.typeService = typeService;
         this.userOrganizationService = userOrganizationService;
@@ -73,6 +74,7 @@ public class UserInvitationService {
         this.projectMemberService = projectMemberService;
         this.emailService = emailService;
         this.templateEngine = templateEngine;
+        this.subscriptionValidationService = subscriptionValidationService;
     }
 
     public Optional<Invitation> getOptionalInvitationById(UUID id) {
@@ -144,6 +146,11 @@ public class UserInvitationService {
     public Invitation acceptInvitation(String inviteeEmail, String token) throws GendoxException {
 
         Invitation invitation = getByInviteeEmailAndToken(inviteeEmail, token);
+
+        //check if the user is allowed to accept the invitation
+        if (!subscriptionValidationService.canInviteUsers(invitation.getOrganizationId())) {
+            throw new GendoxException("USER_INVITATION_LIMIT_REACHED", "Please contact organization's administrator.", HttpStatus.BAD_REQUEST);
+        }
 
         invitation.setStatusType(typeService.getEmailInvitationStatusByName("ACCEPTED"));
 
