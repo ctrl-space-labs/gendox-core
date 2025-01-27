@@ -32,22 +32,14 @@ public class OrganizationService {
 
     private static final Logger logger = LoggerFactory.getLogger(OrganizationService.class);
 
-    private UserOrganizationRepository userOrganizationRepository;
     private OrganizationRepository organizationRepository;
     private UserOrganizationService userOrganizationService;
-
     private OrganizationDidService organizationDidService;
-
     private WalletKeyService walletKeyService;
-
     private TypeService typeService;
-
     private ProjectService projectService;
-
     private AuditLogsService auditLogsService;
-
     private OrganizationProfileConverter organizationProfileConverter;
-
     private ApiKeyService apiKeyService;
 
     @Value("${walt-id.default-key.type}")
@@ -57,8 +49,7 @@ public class OrganizationService {
 
 
     @Autowired
-    public OrganizationService(UserOrganizationRepository userOrganizationRepository,
-                               OrganizationRepository organizationRepository,
+    public OrganizationService(OrganizationRepository organizationRepository,
                                UserOrganizationService userOrganizationService,
                                OrganizationDidService organizationDidService,
                                WalletKeyService walletKeyService,
@@ -67,7 +58,6 @@ public class OrganizationService {
                                AuditLogsService auditLogsService,
                                OrganizationProfileConverter organizationProfileConverter,
                                ApiKeyService apiKeyService) {
-        this.userOrganizationRepository = userOrganizationRepository;
         this.organizationRepository = organizationRepository;
         this.userOrganizationService = userOrganizationService;
         this.organizationDidService = organizationDidService;
@@ -104,9 +94,7 @@ public class OrganizationService {
                 .orElseThrow(() -> new GendoxException("ORGANIZATION_NOT_FOUND", "Organization not found with id: " + id, HttpStatus.NOT_FOUND));
     }
 
-    public List<UserOrganization> getUserOrganizations(String userId) {
-        return userOrganizationRepository.findByUserId(UUID.fromString(userId));
-    }
+
 
     public Organization createOrganization(Organization organization, UUID ownerUserId) throws GendoxException {
 
@@ -117,7 +105,7 @@ public class OrganizationService {
         organization = organizationRepository.save(organization);
 
         final String organizationId = organization.getId().toString();
-        logger.debug("Organization created with id: "+ organizationId);
+        logger.debug("Organization created with id: " + organizationId);
 
         userOrganizationService.createUserOrganization(ownerUserId, organization.getId(), OrganizationRolesConstants.ADMIN);
 
@@ -131,16 +119,16 @@ public class OrganizationService {
         WalletKey walletKey = walletKeyService.createWalletKey(walletKeyDTO);
 
         OrganizationDid organizationDid = organizationDidService.createOrganizationDid(OrganizationDidDTO.builder()
-                        .createdAt(Instant.now())
-                        .updatedAt(Instant.now())
-                        .organizationId(organization.getId())
-                        .keyId(walletKey.getId())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .organizationId(organization.getId())
+                .keyId(walletKey.getId())
                 .build(), "key");
 
-        logger.debug("OrganizationDid created with id: "+ organizationDid.getId());
-        logger.debug("WalletKey created with id: "+ walletKey.getId());
-        logger.debug("OrganizationDid created with kid: "+ organizationDid.getKeyId());
-        logger.debug("OrganizationDid created with did: "+ organizationDid.getDid());
+        logger.debug("OrganizationDid created with id: " + organizationDid.getId());
+        logger.debug("WalletKey created with id: " + walletKey.getId());
+        logger.debug("OrganizationDid created with kid: " + organizationDid.getKeyId());
+        logger.debug("OrganizationDid created with did: " + organizationDid.getDid());
 
 
         return organization;
@@ -158,7 +146,6 @@ public class OrganizationService {
         existingOrganization.setDisplayName(organization.getDisplayName());
 
 
-
         //save the update organization
         existingOrganization = organizationRepository.save(existingOrganization);
 
@@ -170,42 +157,13 @@ public class OrganizationService {
 
         Organization organization = getById(organizationId);
 
-
-        if (("DEACTIVATED").equals(organization.getName())) {
-            return;
-        }
-
-        Boolean orgIsDeactivating = true;
-
-        // Fetch all user organizations for this organization
-        List<UserOrganization> userOrganizations = userOrganizationService.getUserOrganizationByOrganizationId(organizationId);
-
-        Type agentType = typeService.getUserTypeByName("GENDOX_AGENT");
-        // Iterate through user organizations to handle both deletion and exception
-        for (UserOrganization userOrganization : userOrganizations) {
-           User user = userOrganization.getUser();
-           UUID userId = user.getId();
-
-            // Count the number of organizations the user is associated with
-            if (user.getUserType().equals(agentType)) {
-                continue;
-            }
-            long count = userOrganizationRepository.countByUserId(userId);
-
-            if (count <= 1) {
-                // If the user has exactly one organization, throw an exception
-                throw new GendoxException("ORGANIZATION_DEACTIVATION_FAILED", "Cannot deactivate organization. User is associated with only one organization", HttpStatus.BAD_REQUEST);
-            } else {
-
-                deactivateAllOrgProjects(organizationId, orgIsDeactivating);
-                userOrganizationRepository.delete(userOrganization);
-                clearOrgData(organization);
-                Type deleteOrganizationType = typeService.getAuditLogTypeByName("DELETE_ORGANIZATION");
-                AuditLogs deleteOrganizationAuditLogs = auditLogsService.createDefaultAuditLogs(deleteOrganizationType);
-                deleteOrganizationAuditLogs.setOrganizationId(organizationId);
-                auditLogsService.saveAuditLogs(deleteOrganizationAuditLogs);
-            }
-        }
+        deactivateAllOrgProjects(organizationId);
+        userOrganizationService.deleteAllUserOrganizationsByOrganizationId(organizationId);
+        clearOrgData(organization);
+        Type deleteOrganizationType = typeService.getAuditLogTypeByName("DELETE_ORGANIZATION");
+        AuditLogs deleteOrganizationAuditLogs = auditLogsService.createDefaultAuditLogs(deleteOrganizationType);
+        deleteOrganizationAuditLogs.setOrganizationId(organizationId);
+        auditLogsService.saveAuditLogs(deleteOrganizationAuditLogs);
 
         // Delete other associated data
         organizationDidService.deleteOrganizationDidByOrganizationId(organizationId);
@@ -216,8 +174,7 @@ public class OrganizationService {
     }
 
 
-
-    private void deactivateAllOrgProjects(UUID organizationId, Boolean orgIsDeactivating) throws GendoxException {
+    private void deactivateAllOrgProjects(UUID organizationId) throws GendoxException {
 
         ProjectCriteria criteria = new ProjectCriteria();
         criteria.setOrganizationId(organizationId.toString());
@@ -225,7 +182,7 @@ public class OrganizationService {
         Page<Project> projects = projectService.getAllProjects(criteria);
 
         for (Project project : projects.getContent()) {
-            projectService.deactivateProject(project.getId(), orgIsDeactivating);
+            projectService.deactivateProject(project.getId());
         }
     }
 
@@ -264,7 +221,7 @@ public class OrganizationService {
         List<OrganizationProfileProjectAgentDTO> rawOrganizationProfile =
                 organizationRepository.findRawOrganizationProfileById(organizationId, apiKeyStr);
 
-        UserProfile userProfile =  organizationProfileConverter.toDTO(rawOrganizationProfile);
+        UserProfile userProfile = organizationProfileConverter.toDTO(rawOrganizationProfile);
 
 
 //        throw new NotImplementedException("Not implemented yet");

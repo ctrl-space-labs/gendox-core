@@ -28,32 +28,28 @@ public class DocumentService {
     private static final Logger logger = LoggerFactory.getLogger(DocumentService.class);
 
     private DocumentInstanceRepository documentInstanceRepository;
-    private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private DocumentSectionService documentSectionService;
-
     private ProjectDocumentService projectDocumentService;
-
     private TypeService typeService;
-
     private AuditLogsService auditLogsService;
+    private SubscriptionValidationService subscriptionValidationService;
 
-//    private IsccCodeService isccCodeService;
+
 
 
     @Autowired
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
                            DocumentSectionService documentSectionService,
-                           DocumentInstanceSectionRepository documentInstanceSectionRepository,
                            ProjectDocumentService projectDocumentService,
                            TypeService typeService,
-                           AuditLogsService auditLogsService) {
-
+                           AuditLogsService auditLogsService,
+                           SubscriptionValidationService subscriptionValidationService) {
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentSectionService = documentSectionService;
         this.projectDocumentService = projectDocumentService;
-        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.typeService = typeService;
         this.auditLogsService = auditLogsService;
+        this.subscriptionValidationService = subscriptionValidationService;
     }
 
 
@@ -70,9 +66,7 @@ public class DocumentService {
 
 
     public Page<DocumentInstance> getAllDocuments(DocumentCriteria criteria, Pageable pageable) throws GendoxException {
-//        if (pageable == null) {
-//            throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
-//        }
+
         return documentInstanceRepository.findAll(DocumentPredicates.build(criteria), pageable);
 
     }
@@ -87,12 +81,21 @@ public class DocumentService {
                 .orElse(null);
     }
 
-
     public DocumentInstance createDocumentInstance(DocumentInstance documentInstance) throws GendoxException {
 
 
         if (documentInstance.getId() == null) {
             documentInstance.setId(UUID.randomUUID());
+        }
+
+        // Check if the organization has reached the maximum number of documents allowed
+//        if (!subscriptionValidator.isMaxDocumentsAllowed(documentInstance.getOrganizationId())) {
+//            throw new GendoxException("MAX_DOCUMENTS_REACHED", "Maximum number of documents reached for this organization", HttpStatus.BAD_REQUEST);
+//        }
+
+        // Check if the organization has reached the maximum number of document sections allowed
+        if (!subscriptionValidationService.canCreateDocumentSections(documentInstance.getOrganizationId())) {
+            throw new GendoxException("MAX_DOCUMENT_SECTIONS_REACHED", "Maximum number of document sections reached for this organization", HttpStatus.BAD_REQUEST);
         }
 
         // Save the DocumentInstance first to save its ID

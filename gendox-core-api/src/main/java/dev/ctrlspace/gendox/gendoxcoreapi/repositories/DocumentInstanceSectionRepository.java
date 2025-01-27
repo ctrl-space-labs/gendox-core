@@ -38,4 +38,10 @@ public interface DocumentInstanceSectionRepository extends JpaRepository<Documen
             "INNER JOIN ProjectDocument pd ON dis.documentInstance.id = pd.documentId " +
             "WHERE pd.project.id = :projectId AND dis.id IN :sectionIds")
     public List<DocumentInstanceSection> findByProjectAndSectionIds(UUID projectId, Set<UUID> sectionIds);
+
+    // Method to count the DocumentInstanceSections associated with the DocumentInstance IDs from the Page<DocumentInstance>
+    @Query("SELECT COUNT(dis) FROM DocumentInstanceSection dis WHERE dis.documentInstance.id IN :documentInstanceIds")
+    long countByDocumentInstanceIds(@Param("documentInstanceIds") Set<UUID> documentInstanceIds);
+
+
 }

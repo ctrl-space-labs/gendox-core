@@ -79,10 +79,10 @@ import java.time.Instant;
                o.updated_at as org_updated_at
         FROM gendox_core.users u
             inner join gendox_core.types ut on ut.id = u.users_type_id
-            inner join gendox_core.user_organization uo on u.id = uo.user_id
-            inner join gendox_core.types rt on rt.id = uo.organization_role_id
-            inner join gendox_core.organizations o ON uo.organization_id = o.id
-            inner join gendox_core.project_members pm on u.id = pm.user_id
+            left join gendox_core.user_organization uo on u.id = uo.user_id
+            left join gendox_core.types rt on rt.id = uo.organization_role_id
+            left join gendox_core.organizations o ON uo.organization_id = o.id
+            left join gendox_core.project_members pm on u.id = pm.user_id
             left join gendox_core.projects p ON pm.project_id = p.id and p.organization_id = o.id
             left join gendox_core.project_agent pa ON p.id = pa.project_id
             left join gendox_core.users au ON au.id = pa.user_id

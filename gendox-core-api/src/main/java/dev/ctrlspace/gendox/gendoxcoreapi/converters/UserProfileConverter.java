@@ -60,6 +60,7 @@ public class UserProfileConverter {
 
         // Group by organization
         Map<String, List<UserOrganizationProjectAgentDTO>> orgGrouped = dtos.stream()
+                .filter(dto -> dto.getOrgId() != null) // Exclude entries with null orgId
                 .collect(Collectors.groupingBy(UserOrganizationProjectAgentDTO::getOrgId));
 
         List<OrganizationUserDTO> organizations = orgGrouped.entrySet().stream()
@@ -120,6 +121,7 @@ public class UserProfileConverter {
                             .build();
                 }).collect(Collectors.toList());
 
-        return userProfileBuilder.organizations(organizations.isEmpty() ? null : organizations).build();
+        return userProfileBuilder.organizations(new ArrayList<>(organizations)).build();
+
     }
 }
