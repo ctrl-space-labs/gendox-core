@@ -32,6 +32,6 @@ public class DocumentInstanceDTO {
     private Instant createAt;
     private Instant updateAt;
     private List<DocumentInstanceSectionDTO> documentInstanceSections = new ArrayList<>();
-
+    private Long fileSizeBytes;
 
 }

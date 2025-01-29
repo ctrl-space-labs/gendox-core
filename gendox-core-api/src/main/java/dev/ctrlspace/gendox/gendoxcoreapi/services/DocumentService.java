@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+
 @Service
 public class DocumentService {
 
@@ -33,8 +34,6 @@ public class DocumentService {
     private TypeService typeService;
     private AuditLogsService auditLogsService;
     private SubscriptionValidationService subscriptionValidationService;
-
-
 
 
     @Autowired
@@ -88,15 +87,20 @@ public class DocumentService {
             documentInstance.setId(UUID.randomUUID());
         }
 
-        // Check if the organization has reached the maximum number of documents allowed
-//        if (!subscriptionValidator.isMaxDocumentsAllowed(documentInstance.getOrganizationId())) {
-//            throw new GendoxException("MAX_DOCUMENTS_REACHED", "Maximum number of documents reached for this organization", HttpStatus.BAD_REQUEST);
-//        }
-
-        // Check if the organization has reached the maximum number of document sections allowed
-        if (!subscriptionValidationService.canCreateDocumentSections(documentInstance.getOrganizationId())) {
-            throw new GendoxException("MAX_DOCUMENT_SECTIONS_REACHED", "Maximum number of document sections reached for this organization", HttpStatus.BAD_REQUEST);
+//         Check if the organization has reached the maximum number of documents allowed
+        if (!subscriptionValidationService.canCreateDocuments(documentInstance.getOrganizationId())) {
+            throw new GendoxException("MAX_DOCUMENTS_REACHED", "Maximum number of documents reached for this organization", HttpStatus.BAD_REQUEST);
         }
+
+        // Check if the organization has reached the maximum document size allowed
+        if (!subscriptionValidationService.canCreateDocumentsSize(documentInstance.getOrganizationId(), documentInstance.getFileSizeBytes().intValue())) {
+            throw new GendoxException("MAX_DOCUMENT_SIZE_REACHED", "Maximum document size reached for this organization", HttpStatus.BAD_REQUEST);
+        }
+
+//         Check if the organization has reached the maximum number of document sections allowed
+//        if (!subscriptionValidationService.canCreateDocumentSections(documentInstance.getOrganizationId())) {
+//            throw new GendoxException("MAX_DOCUMENT_SECTIONS_REACHED", "Maximum number of document sections reached for this organization", HttpStatus.BAD_REQUEST);
+//        }
 
         // Save the DocumentInstance first to save its ID
         documentInstance = documentInstanceRepository.save(documentInstance);
@@ -208,6 +212,7 @@ public class DocumentService {
         AuditLogs deleteDocumentAuditLogs = auditLogsService.createDefaultAuditLogs(deleteDocumentType);
         deleteDocumentAuditLogs.setProjectId(projectId);
         deleteDocumentAuditLogs.setOrganizationId(documentInstance.getOrganizationId());
+        deleteDocumentAuditLogs.setAuditValue(documentInstance.getFileSizeBytes());
 
         auditLogsService.saveAuditLogs(deleteDocumentAuditLogs);
 
