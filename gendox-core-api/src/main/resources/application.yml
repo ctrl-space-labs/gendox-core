@@ -182,7 +182,8 @@ gendox:
   user-invitation:
     accept-url-template: /accept-invitation/?email=%s&token=%s
     ttl: 86400  # in seconds
-
+  features:
+    subscription-validation: true
 
 # AWS
 

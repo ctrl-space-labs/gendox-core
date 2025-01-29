@@ -46,6 +46,7 @@ export const fetchProjectDocuments = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
+      toast.error(`${getErrorMessage(error)}`);
       console.error("Failed to fetch project documents", error);
       return thunkAPI.rejectWithValue(error.response.data);
     }

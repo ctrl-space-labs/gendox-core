@@ -17,6 +17,8 @@ import { useDropzone } from "react-dropzone";
 import authConfig from "src/configs/auth";
 import documentService from "src/gendox-sdk/documentService";
 import { fetchProjectDocuments } from "src/store/apps/activeProject/activeProject";
+import { getErrorMessage } from "src/utils/errorHandler";
+import toast from "react-hot-toast";
 
 
 const HeadingTypography = styled(Typography)(({ theme }) => ({
@@ -77,6 +79,7 @@ const UploaderDocument = ({ closeUploader }) => {
         );
 
       } catch (error) {
+        toast.error(`${getErrorMessage(error)}`);
         console.error("Error uploading files", error);
       }
     });

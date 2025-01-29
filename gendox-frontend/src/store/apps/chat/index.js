@@ -4,12 +4,14 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { useAuth } from "src/hooks/useAuth";
 import chatConverters from "../../../converters/chat.converter";
 import { useRouter } from "next/router";
-
+import toast from "react-hot-toast";
 import authConfig from "src/configs/auth";
 import projectService from "src/gendox-sdk/projectService";
 import { generalConstants } from "src/utils/generalConstants";
 import completionService from "../../../gendox-sdk/completionService";
 import chatThreadService from "../../../gendox-sdk/chatThreadService";
+import { getErrorMessage } from "src/utils/errorHandler";
+
 
 // ** Fetch Chats & Contacts
 export const fetchChatsContacts = createAsyncThunk(
@@ -225,6 +227,7 @@ export const sendMsg = createAsyncThunk(
 
       return response.data;
     } catch (error) {
+      toast.error(`${getErrorMessage(error)}`);
       console.error("Failed to send message:", error);
       return rejectWithValue(error.message);
     }

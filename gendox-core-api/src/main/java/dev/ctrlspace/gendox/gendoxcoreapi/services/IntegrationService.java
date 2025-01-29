@@ -31,16 +31,18 @@ public class IntegrationService {
     private IntegrationRepository integrationRepository;
     private IntegrationConverter integrationConverter;
     private TypeService typeService;
+    private SubscriptionValidationService subscriptionValidationService;
 
 
     @Autowired
     public IntegrationService(IntegrationRepository integrationRepository,
                               IntegrationConverter integrationConverter,
-                              TypeService typeService) {
+                              TypeService typeService,
+                              SubscriptionValidationService subscriptionValidationService) {
         this.integrationRepository = integrationRepository;
         this.integrationConverter = integrationConverter;
         this.typeService = typeService;
-
+        this.subscriptionValidationService = subscriptionValidationService;
     }
 
 
@@ -72,10 +74,7 @@ public class IntegrationService {
 
     public Integration updateIntegration(Integration integration) throws GendoxException {
 
-        integration = integrationRepository.save(integration);
-
-        return integration;
-
+        return integrationRepository.save(integration);
     }
 
     public void deleteIntegration(UUID id) throws Exception {
@@ -91,6 +90,11 @@ public class IntegrationService {
 
     public Integration handleIntegrationLogic(UUID organizationId, OrganizationWebSite organizationWebSite, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
         UUID integrationId = organizationWebSite.getIntegrationId();
+
+        // check if organization has reached max integrations
+        if (!subscriptionValidationService.canCreateIntegrations(organizationId)) {
+            throw new GendoxException("MAX_INTEGRATIONS_REACHED", "Max integrations reached for organization", HttpStatus.BAD_REQUEST);
+        }
 
         if (integrationId == null) {
             logger.debug("No existing integration found, creating a new one.");
@@ -121,8 +125,6 @@ public class IntegrationService {
     public Integration updateExistingIntegration(Integration integration, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
         logger.info("Updating existing integration ID: {}", integration.getId());
         String statusName = websiteIntegrationDTO.getIntegrationStatus().getName();
-        boolean isActive = integration.getActive();
-
         boolean newActiveState = isActiveStatus(statusName);
 
         integration.setUrl(websiteIntegrationDTO.getContextPath());
@@ -134,7 +136,6 @@ public class IntegrationService {
     private boolean isActiveStatus(String statusName) {
         return "ACTIVE".equals(statusName);
     }
-
 
 
 }

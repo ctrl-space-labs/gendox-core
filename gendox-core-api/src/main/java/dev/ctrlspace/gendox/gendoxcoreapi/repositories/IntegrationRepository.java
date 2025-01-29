@@ -18,4 +18,9 @@ public interface IntegrationRepository extends JpaRepository<Integration, UUID>,
 
     @Query("SELECT i FROM Integration i WHERE i.isActive = true")
     Optional<List<Integration>> findActiveIntegrations();
+
+    @Query("SELECT COUNT(i) FROM Integration i WHERE i.isActive = true AND i.organizationId = :organizationId")
+    long countActiveIntegrationsByOrganizationId(UUID organizationId);
+
+
 }
