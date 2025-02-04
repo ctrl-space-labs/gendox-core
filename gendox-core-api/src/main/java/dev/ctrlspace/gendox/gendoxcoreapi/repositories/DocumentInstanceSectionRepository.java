@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
@@ -42,6 +43,11 @@ public interface DocumentInstanceSectionRepository extends JpaRepository<Documen
     // Method to count the DocumentInstanceSections associated with the DocumentInstance IDs from the Page<DocumentInstance>
     @Query("SELECT COUNT(dis) FROM DocumentInstanceSection dis WHERE dis.documentInstance.id IN :documentInstanceIds")
     long countByDocumentInstanceIds(@Param("documentInstanceIds") Set<UUID> documentInstanceIds);
+
+
+    @Modifying
+    @Query("DELETE FROM DocumentInstanceSection d WHERE d.id IN :ids")
+    void deleteAllByIdsInBulk(@Param("ids") List<UUID> ids);
 
 
 }

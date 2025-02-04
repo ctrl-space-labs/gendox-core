@@ -198,16 +198,17 @@ public class DocumentService {
     public void deleteDocument(UUID documentIid, UUID projectId) throws GendoxException {
         DocumentInstance documentInstance = getDocumentInstanceById(documentIid);
         deleteDocument(documentInstance, projectId);
-
     }
 
+    @Transactional
     public void deleteDocument(DocumentInstance documentInstance, UUID projectId) throws GendoxException {
+        // Use the new bulk deletion method
         documentSectionService.deleteSections(documentInstance.getDocumentInstanceSections());
-        projectDocumentService.deleteProjectDocument(documentInstance.getId(), projectId);
-        documentInstance.getDocumentInstanceSections().clear();
-        documentInstanceRepository.delete(documentInstance);
 
-        //delete Document Auditing
+        // Delete any project-specific associations (make sure these are done in bulk too)
+        projectDocumentService.deleteProjectDocument(documentInstance.getId(), projectId);
+
+        // Continue with audit log deletion (unchanged)
         Type deleteDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_DELETE");
         AuditLogs deleteDocumentAuditLogs = auditLogsService.createDefaultAuditLogs(deleteDocumentType);
         deleteDocumentAuditLogs.setProjectId(projectId);
@@ -215,8 +216,9 @@ public class DocumentService {
         deleteDocumentAuditLogs.setAuditValue(documentInstance.getFileSizeBytes());
 
         auditLogsService.saveAuditLogs(deleteDocumentAuditLogs);
-
+        documentInstanceRepository.delete(documentInstance);
     }
+
 
     public DocumentInstance saveDocumentInstance(DocumentInstance documentInstance) {
         return documentInstanceRepository.save(documentInstance);

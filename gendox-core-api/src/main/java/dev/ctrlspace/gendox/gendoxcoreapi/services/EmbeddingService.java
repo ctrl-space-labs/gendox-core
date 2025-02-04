@@ -18,10 +18,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.provenAi.utils.ProvenAiService;
 import io.micrometer.observation.annotation.Observed;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -210,8 +210,6 @@ public class EmbeddingService {
     }
 
 
-
-
     public EmbeddingGroup createEmbeddingGroup(UUID embeddingId, Double tokenCount, UUID message_id, UUID sectionId, UUID projectId, String sectionSha256Hash) throws GendoxException {
         EmbeddingGroup embeddingGroup = new EmbeddingGroup();
 
@@ -255,6 +253,26 @@ public class EmbeddingService {
 
         embeddingGroupRepository.deleteAllById(embeddingGroupIds);
         embeddingRepository.deleteAllById(embeddingIds);
+    }
+
+    @Transactional
+    public void deleteEmbeddingGroupsBySectionIds(List<UUID> sectionIds) throws GendoxException {
+        if (sectionIds == null || sectionIds.isEmpty()) {
+            return;
+        }
+        // Retrieve all embedding groups associated with these section IDs
+        List<EmbeddingGroup> embeddingGroups = embeddingGroupRepository.findAllBySectionIdIn(sectionIds);
+        if (!embeddingGroups.isEmpty()) {
+            List<UUID> embeddingIds = embeddingGroups.stream()
+                    .map(EmbeddingGroup::getEmbeddingId)
+                    .collect(Collectors.toList());
+
+            // delete embedding groups
+            embeddingGroupRepository.bulkDeleteBySectionIds(sectionIds);
+
+            // delete embeddings
+            embeddingRepository.deleteAllByIdInBatch(embeddingIds);
+        }
     }
 
     /**
@@ -303,7 +321,7 @@ public class EmbeddingService {
 
         String sectionSha256Hash = cryptographyUtils.calculateSHA256(message.getValue());
 
-        Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse, projectId, message.getId(), null, project.getProjectAgent().getSemanticSearchModel().getId(), project.getOrganizationId(),sectionSha256Hash);
+        Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse, projectId, message.getId(), null, project.getProjectAgent().getSemanticSearchModel().getId(), project.getOrganizationId(), sectionSha256Hash);
 
         List<SectionDistanceDTO> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, pageable);
 
