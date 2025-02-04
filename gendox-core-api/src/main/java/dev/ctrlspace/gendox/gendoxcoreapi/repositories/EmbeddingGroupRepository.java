@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.EmbeddingGroup;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
@@ -37,6 +38,13 @@ public interface EmbeddingGroupRepository extends JpaRepository<EmbeddingGroup, 
             @Param("sectionId") UUID sectionId,
             @Param("messageId") UUID messageId,
             @Param("semanticSearchModelId") UUID semanticSearchModelId);
+
+    @Query("SELECT eg FROM EmbeddingGroup eg WHERE eg.sectionId IN :sectionIds")
+    List<EmbeddingGroup> findAllBySectionIdIn(@Param("sectionIds") List<UUID> sectionIds);
+
+    @Modifying
+    @Query("DELETE FROM EmbeddingGroup eg WHERE eg.sectionId IN :sectionIds")
+    void bulkDeleteBySectionIds(@Param("sectionIds") List<UUID> sectionIds);
 
 
 }

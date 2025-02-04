@@ -12,6 +12,7 @@ import dev.ctrlspace.gendox.provenAi.utils.MockUniqueIdentifierServiceAdapter;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
 import dev.ctrlspace.provenai.iscc.IsccCodeResponse;
 import dev.ctrlspace.provenai.iscc.IsccCodeService;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,10 +23,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class DocumentSectionService {
@@ -331,12 +330,6 @@ public class DocumentSectionService {
 
     }
 
-    public void deleteSections(List<DocumentInstanceSection> sections) throws GendoxException {
-        for (DocumentInstanceSection section : sections) {
-            deleteSection(section);
-        }
-    }
-
     public void deleteSection(DocumentInstanceSection section) throws GendoxException {
         messageService.deleteMessageSection(section.getId());
         DocumentSectionMetadata metadata = section.getDocumentSectionMetadata();
@@ -344,6 +337,35 @@ public class DocumentSectionService {
         documentInstanceSectionRepository.delete(section);
         deleteMetadata(metadata);
     }
+
+    @Transactional
+    public void deleteSections(List<DocumentInstanceSection> sections) throws GendoxException {
+        if (sections == null || sections.isEmpty()) {
+            return;
+        }
+
+        // Collect IDs from the sections to delete
+        List<UUID> sectionIds = sections.stream()
+                .map(DocumentInstanceSection::getId)
+                .collect(Collectors.toList());
+
+        // delete MessageSections associated with these sections
+        messageService.deleteMessageSections(sectionIds);
+
+        // delete EmbeddingGroups and embeddings associated with these sections
+        embeddingService.deleteEmbeddingGroupsBySectionIds(sectionIds);
+
+        // delete the sections
+        documentInstanceSectionRepository.deleteAllByIdsInBulk(sectionIds);
+
+        // delete the metadata
+        List<UUID> metadataIds = sections.stream()
+                .map(section -> section.getDocumentSectionMetadata().getId())
+                .distinct()
+                .collect(Collectors.toList());
+        documentSectionMetadataRepository.bulkDeleteByIds(metadataIds);
+    }
+
 
     public void deleteDocumentSections(UUID documentInstanceId) throws GendoxException {
         List<DocumentInstanceSection> sections =

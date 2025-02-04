@@ -9,6 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.MessagePredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -179,4 +180,12 @@ public class MessageService {
         }
         return role;
     }
+
+    @Transactional
+    public void deleteMessageSections(List<UUID> sectionIds) {
+        if (sectionIds != null && !sectionIds.isEmpty()) {
+            messageSectionRepository.bulkDeleteBySectionIds(sectionIds);
+        }
+    }
+
 }
