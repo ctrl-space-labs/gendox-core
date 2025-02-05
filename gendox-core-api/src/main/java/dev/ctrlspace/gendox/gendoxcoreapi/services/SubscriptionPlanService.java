@@ -36,6 +36,10 @@ public class SubscriptionPlanService {
         return subscriptionPlanRepository.findAll(pageable);
     }
 
+    public SubscriptionPlan getSubscriptionPlanBySku(String sku) {
+        return subscriptionPlanRepository.findBySkuAndActiveIsTrue(sku);
+    }
+
     /**
      * Creates the default free plan. this is cached for performance.
      * Cache is evicted every 5 minutes, no need to explicitly evict it for now.

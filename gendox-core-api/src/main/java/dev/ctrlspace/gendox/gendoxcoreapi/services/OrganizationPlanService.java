@@ -1,9 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.SubscriptionNotificationConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationPlan;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SubscriptionNotificationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationPlanCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationPlanRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationPlanPredicates;
@@ -20,11 +23,11 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
  * Service method to handle subscription related operations and API Rate Limits for an Organization
- *
  */
 @Service
 public class OrganizationPlanService {
@@ -33,22 +36,22 @@ public class OrganizationPlanService {
 
     private OrganizationPlanRepository organizationPlanRepository;
     private SubscriptionPlanService subscriptionPlanService;
-
     private ProjectService projectService;
-
     private ApiRateLimitService apiRateLimitService;
+    private SubscriptionNotificationConverter subscriptionNotificationConverter;
 
 
     @Autowired
     public OrganizationPlanService(OrganizationPlanRepository organizationPlanRepository,
                                    ApiRateLimitService apiRateLimitService,
                                    @Lazy ProjectService projectService,
-
-                                   SubscriptionPlanService subscriptionPlanService) {
+                                   SubscriptionPlanService subscriptionPlanService,
+                                   SubscriptionNotificationConverter subscriptionNotificationConverter) {
         this.organizationPlanRepository = organizationPlanRepository;
         this.apiRateLimitService = apiRateLimitService;
         this.subscriptionPlanService = subscriptionPlanService;
         this.projectService = projectService;
+        this.subscriptionNotificationConverter = subscriptionNotificationConverter;
     }
 
 
@@ -62,15 +65,12 @@ public class OrganizationPlanService {
     }
 
     public Page<OrganizationPlan> getAllOrganizationPlansByCriteria(OrganizationPlanCriteria criteria, Pageable pageable) {
-
         return organizationPlanRepository.findAll(OrganizationPlanPredicates.build(criteria), pageable);
     }
 
     public OrganizationPlan cancelOrganizationPlan(UUID organizationPlanId) throws GendoxException {
         OrganizationPlan plan = getOrganizationPlanById(organizationPlanId);
-
         plan.setEndDate(Instant.now());
-
         return organizationPlanRepository.save(plan);
     }
 
@@ -96,19 +96,17 @@ public class OrganizationPlanService {
     }
 
 
-
     /**
      * Check if the API Key is within the subscription limits.
      * This included the rate limits and the subscription plan limits.
-     *
+     * <p>
      * This method implements all the business logic required to check if the API Key is within the subscription limits.
      *
-     * @param projectId The project ID that the request is made for.
+     * @param projectId      The project ID that the request is made for.
      * @param authentication The authentication object that contains the user details.
-     * @param requestIP The IP address of the request.
+     * @param requestIP      The IP address of the request.
      * @return the successful consumption probe object that contains the rate limit details.
      * @throws GendoxException if the request is not within the subscription limits.
-     *
      */
     public ConsumptionProbe validateRequestIsInSubscriptionLimits(UUID projectId, Authentication authentication, String requestIP) throws GendoxException {
 
@@ -134,7 +132,7 @@ public class OrganizationPlanService {
      * - Number of messages
      * - Total Number of uploaded documents
      * - Total MegaBytes of uploaded documents
-     *
+     * <p>
      * If AI model Provider key is missing for the Organization,
      * it runs the message limits check for the free plan.
      *
@@ -156,7 +154,7 @@ public class OrganizationPlanService {
      * validates the Rate Limits for the API Key.
      * If it is a public request, it uses the public rate limits.
      * If it is a private request, it uses the private rate limits.
-     *
+     * <p>
      * If the request is within the rate limits, it returns the consumption probe object.
      *
      * @param authentication
@@ -181,6 +179,39 @@ public class OrganizationPlanService {
             throw new GendoxException("RATE_LIMIT_EXCEEDED", "Rate Limit Exceeded", HttpStatus.TOO_MANY_REQUESTS, probe);
         }
         return probe;
+    }
+
+
+    public OrganizationPlan upsertOrganizationPlan(SubscriptionNotificationDTO subscriptionNotificationDTO, Organization organization) throws GendoxException {
+        List<OrganizationPlan> organizationPlans = this.getAllOrganizationPlansByOrganizationId(organization.getId());
+        OrganizationPlan organizationPlan;
+        if (!organizationPlans.isEmpty()) {
+            organizationPlan = organizationPlans.getFirst();
+            if ("cancel".equalsIgnoreCase(subscriptionNotificationDTO.getStatus())) {
+                return cancelOrganizationPlan(organizationPlan.getId());
+            }
+            updateOrganizationPlanFromDto(organizationPlan, subscriptionNotificationDTO);
+        } else {
+            organizationPlan = subscriptionNotificationConverter.convertToOrganizationPlan(subscriptionNotificationDTO);
+            organizationPlan.setOrganization(organization);
+        }
+        return organizationPlanRepository.save(organizationPlan);
+    }
+
+    private void updateOrganizationPlanFromDto(OrganizationPlan organizationPlan, SubscriptionNotificationDTO dto) throws GendoxException {
+        if (dto.getProductSKU() != null) {
+            organizationPlan.setSubscriptionPlan(subscriptionPlanService.getSubscriptionPlanBySku(dto.getProductSKU()));
+        }
+        if (dto.getEndDate() != null) {
+            organizationPlan.setEndDate(dto.getEndDate());
+        }
+        if (dto.getNumberOfSeats() != null) {
+            organizationPlan.setNumberOfSeats(dto.getNumberOfSeats());
+        }
+        if (dto.getApiRateLimitType() != null) {
+            organizationPlan.setApiRateLimit(apiRateLimitService.getApiRateLimitByTierType(dto.getApiRateLimitType()));
+        }
+        organizationPlan.setUpdatedAt(Instant.now());
     }
 
 
