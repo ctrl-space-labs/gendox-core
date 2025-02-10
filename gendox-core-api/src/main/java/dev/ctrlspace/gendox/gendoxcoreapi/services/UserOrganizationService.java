@@ -13,6 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserOrganizationPredicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -70,6 +71,11 @@ public class UserOrganizationService {
 
     public List<UserOrganization> getUserOrganizationsByUserId(String userId) {
         return userOrganizationRepository.findByUserId(UUID.fromString(userId));
+    }
+
+    public UserOrganization getUserOrganizationByOwnerId(UUID userId) {
+        return userOrganizationRepository.findFirstByUserIdAndRoleNative(userId, OrganizationRolesConstants.OWNER)
+                .orElse(null);
     }
 
     public boolean isUserOrganizationMember(UUID userId, UUID organizationID) {

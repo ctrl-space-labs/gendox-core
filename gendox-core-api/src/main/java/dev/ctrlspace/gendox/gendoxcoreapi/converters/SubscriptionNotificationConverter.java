@@ -12,13 +12,11 @@ import org.springframework.stereotype.Component;
 public class SubscriptionNotificationConverter {
 
     private SubscriptionPlanService subscriptionPlanService;
-    private ApiRateLimitService apiRateLimitService;
+
 
     @Autowired
-    public SubscriptionNotificationConverter(SubscriptionPlanService subscriptionPlanService,
-                                             ApiRateLimitService apiRateLimitService) {
+    public SubscriptionNotificationConverter(SubscriptionPlanService subscriptionPlanService) {
         this.subscriptionPlanService = subscriptionPlanService;
-        this.apiRateLimitService = apiRateLimitService;
     }
 
     public OrganizationPlan convertToOrganizationPlan(SubscriptionNotificationDTO subscriptionNotificationDTO) throws GendoxException {
@@ -27,6 +25,7 @@ public class SubscriptionNotificationConverter {
         if (subscriptionNotificationDTO.getProductSKU() != null) {
             organizationPlan.setSubscriptionPlan(
                     subscriptionPlanService.getSubscriptionPlanBySku(subscriptionNotificationDTO.getProductSKU()));
+            organizationPlan.setApiRateLimit(organizationPlan.getSubscriptionPlan().getApiRateLimit());
         }
 
         if (subscriptionNotificationDTO.getStartDate() != null) {
@@ -39,11 +38,6 @@ public class SubscriptionNotificationConverter {
 
         if (subscriptionNotificationDTO.getNumberOfSeats() != null) {
             organizationPlan.setNumberOfSeats(subscriptionNotificationDTO.getNumberOfSeats());
-        }
-
-        if (subscriptionNotificationDTO.getApiRateLimitType() != null) {
-            organizationPlan.setApiRateLimit(
-                    apiRateLimitService.getApiRateLimitByTierType(subscriptionNotificationDTO.getApiRateLimitType()));
         }
 
 

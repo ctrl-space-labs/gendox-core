@@ -5,12 +5,16 @@ import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,29 +42,22 @@ public class SecurityUtils {
 
     Logger logger = org.slf4j.LoggerFactory.getLogger(SecurityUtils.class);
 
-    private ObjectMapper objectMapper;
-
-    private JWTUtils jwtUtils;
-
     private ChatThreadRepository chatThreadRepository;
-
     private ProjectAgentService projectAgentService;
-
     private DocumentInstanceRepository documentInstanceRepository;
+    private UserOrganizationService userOrganizationService;
 
     @Autowired
-    public SecurityUtils(ObjectMapper objectMapper,
-                         JWTUtils jwtUtils,
-                         ChatThreadRepository chatThreadRepository,
-                            ProjectAgentService projectAgentService,
-                         DocumentInstanceRepository documentInstanceRepository) {
-        this.objectMapper = objectMapper;
-        this.jwtUtils = jwtUtils;
+    public SecurityUtils(ChatThreadRepository chatThreadRepository,
+                         ProjectAgentService projectAgentService,
+                         DocumentInstanceRepository documentInstanceRepository,
+                         UserOrganizationService userOrganizationService
+    ) {
         this.chatThreadRepository = chatThreadRepository;
         this.projectAgentService = projectAgentService;
         this.documentInstanceRepository = documentInstanceRepository;
+        this.userOrganizationService = userOrganizationService;
     }
-
 
 
     public boolean isSuperAdmin() {
@@ -73,7 +70,6 @@ public class SecurityUtils {
     }
 
     public boolean isSuperAdmin(UserProfile userProfile) {
-
         return userProfile != null &&
                 UserNamesConstants.GENDOX_SUPER_ADMIN.equals(
                         userProfile.getGlobalUserRoleType().getName()
@@ -101,6 +97,21 @@ public class SecurityUtils {
                 UserNamesConstants.GENDOX_AGENT.equals(
                         userProfile.getGlobalUserRoleType().getName()
                 );
+    }
+
+    public boolean isOrganizationOwner() throws GendoxException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!(authentication.getPrincipal() instanceof UserProfile userProfile)) {
+            return false;
+        }
+
+        if (isSuperAdmin(userProfile)) {
+            return true; // Skip validation if user is a super admin
+        }
+
+        UUID userId = this.getUserId();
+        UserOrganization userOrganization = userOrganizationService.getUserOrganizationByOwnerId(userId);
+        return userOrganization != null;
     }
 
 
@@ -436,7 +447,7 @@ public class SecurityUtils {
                 return email;
             }
             return ((UserProfile) authentication.getPrincipal()).getUserName();
-        } catch (Exception e){
+        } catch (Exception e) {
             logger.trace("An exception occurred while trying to get the user ID: " + e.getMessage());
             return null;
         }

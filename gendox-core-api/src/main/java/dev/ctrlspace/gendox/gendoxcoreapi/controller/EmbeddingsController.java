@@ -7,7 +7,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProvenAiMetadata;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService;
@@ -37,13 +36,10 @@ public class EmbeddingsController {
 
     Logger logger = LoggerFactory.getLogger(EmbeddingsController.class);
 
-
-    private EmbeddingRepository embeddingRepository;
     private EmbeddingService embeddingService;
     private TrainingService trainingService;
     private CompletionService completionService;
     private MessageService messageService;
-    private OrganizationPlanService organizationPlanService;
     private DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter;
     private OrganizationModelKeyService organizationModelKeyService;
     private SubscriptionValidationService subscriptionValidationService;
@@ -54,24 +50,20 @@ public class EmbeddingsController {
     private Boolean provenAiEnabled;
 
     @Autowired
-    public EmbeddingsController(EmbeddingRepository embeddingRepository,
-                                EmbeddingService embeddingService,
+    public EmbeddingsController(EmbeddingService embeddingService,
                                 TrainingService trainingService,
                                 CompletionService completionService,
                                 DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter,
                                 MessageService messageService,
-                                OrganizationPlanService organizationPlanService,
                                 OrganizationModelKeyService organizationModelKeyService,
                                 SubscriptionValidationService subscriptionValidationService,
                                 ProjectService projectService
     ) {
-        this.embeddingRepository = embeddingRepository;
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
         this.completionService = completionService;
         this.messageService = messageService;
         this.documentInstanceSectionWithDocumentConverter = documentInstanceSectionWithDocumentConverter;
-        this.organizationPlanService = organizationPlanService;
         this.organizationModelKeyService = organizationModelKeyService;
         this.subscriptionValidationService = subscriptionValidationService;
         this.projectService = projectService;
@@ -129,7 +121,7 @@ public class EmbeddingsController {
                                                                Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
 
         String requestIP = request.getRemoteAddr();
-        organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
+        subscriptionValidationService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
 
 
         if (pageable == null) {
@@ -180,7 +172,7 @@ public class EmbeddingsController {
 
 
         String requestIP = request.getRemoteAddr();
-        organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
+        subscriptionValidationService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
 
         message.setProjectId(UUID.fromString(projectId));
         Message savedMessage = messageService.createMessage(message);
