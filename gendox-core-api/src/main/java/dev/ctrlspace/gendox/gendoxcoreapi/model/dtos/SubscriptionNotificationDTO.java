@@ -18,6 +18,5 @@ public class SubscriptionNotificationDTO {
     private Instant startDate;
     private Instant endDate;
     private String status;
-    private String apiRateLimitType;
 
 }

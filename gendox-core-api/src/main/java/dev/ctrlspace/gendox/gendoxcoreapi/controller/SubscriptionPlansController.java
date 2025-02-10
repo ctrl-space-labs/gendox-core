@@ -60,7 +60,7 @@ public class SubscriptionPlansController {
     }
 
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_ORGANIZATION_PLAN', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_MANAGE_SUBSCRIPTIONS', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("/organizations/{organizationId}/subscription-notifications")
     public OrganizationPlan createOrganizationPlanBySubscriptionNotification(@RequestBody SubscriptionNotificationDTO subscriptionNotificationDTO, @PathVariable UUID organizationId) throws GendoxException {
         Organization organization = organizationService.getById(organizationId);
@@ -68,16 +68,18 @@ public class SubscriptionPlansController {
     }
 
 
+    @PreAuthorize("@securityUtils.isOrganizationOwner()")
     @PostMapping("/subscription-notifications")
     public OrganizationPlan createOrganizationPlanBySubscriptionNotification(@RequestBody SubscriptionNotificationDTO subscriptionNotificationDTO) throws GendoxException {
 
         User user = userService.getByEmail(subscriptionNotificationDTO.getEmail());
-        List<UserOrganization> userOrganizations = userOrganizationService.getUserOrganizationsByUserId(user.getId().toString());
-        // Ensure the user belongs to at least one organization
-        if (userOrganizations == null || userOrganizations.isEmpty()) {
-            throw new GendoxException("NO_ORGANIZATION_FOUND", "User does not belong to any organization", HttpStatus.BAD_REQUEST);
+        UserOrganization userOrganization = userOrganizationService.getUserOrganizationByOwnerId(user.getId());
+
+        if (userOrganization == null) {
+            throw new GendoxException("NO_ORGANIZATION_FOUND", "User does not own any organization", HttpStatus.BAD_REQUEST);
         }
-        Organization organization = userOrganizations.getFirst().getOrganization();
+
+        Organization organization = userOrganization.getOrganization();
         return organizationPlanService.upsertOrganizationPlan(subscriptionNotificationDTO, organization);
     }
 

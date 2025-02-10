@@ -1,18 +1,24 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationPlan;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
+import io.github.bucket4j.Bucket;
+import io.github.bucket4j.ConsumptionProbe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -35,6 +41,8 @@ public class SubscriptionValidationService {
     private TypeService typeService;
     private OrganizationDailyUsageRepository organizationDailyUsageRepository;
     private IntegrationRepository integrationRepository;
+    private ProjectService projectService;
+    private ApiRateLimitService apiRateLimitService;
 
 
     @Autowired
@@ -45,7 +53,9 @@ public class SubscriptionValidationService {
                                          InvitationRepository invitationRepository,
                                          TypeService typeService,
                                          OrganizationDailyUsageRepository organizationDailyUsageRepository,
-                                         IntegrationRepository integrationRepository) {
+                                         IntegrationRepository integrationRepository,
+                                         ProjectService projectService,
+                                         ApiRateLimitService apiRateLimitService) {
         this.isSubscriptionValidationEnabled = isSubscriptionValidationEnabled;
         this.organizationPlanService = organizationPlanService;
         this.documentInstanceRepository = documentInstanceRepository;
@@ -54,6 +64,8 @@ public class SubscriptionValidationService {
         this.typeService = typeService;
         this.organizationDailyUsageRepository = organizationDailyUsageRepository;
         this.integrationRepository = integrationRepository;
+        this.projectService = projectService;
+        this.apiRateLimitService = apiRateLimitService;
     }
 
 
@@ -136,6 +148,24 @@ public class SubscriptionValidationService {
         return numberOfWebsites < maxWebsites;
     }
 
+    /**
+     * Check if the API Key is within the subscription limits.
+     * This included the rate limits and the subscription plan limits.
+     * <p>
+     * This method implements all the business logic required to check if the API Key is within the subscription limits.
+     *
+     * @param projectId      The project ID that the request is made for.
+     * @param authentication The authentication object that contains the user details.
+     * @param requestIP      The IP address of the request.
+     * @return the successful consumption probe object that contains the rate limit details.
+     * @throws GendoxException if the request is not within the subscription limits.
+     */
+    public ConsumptionProbe validateRequestIsInSubscriptionLimits(UUID projectId, Authentication authentication, String requestIP) throws GendoxException {
+        Project project = projectService.getProjectById(projectId);
+        OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(project.getOrganizationId());
+        return validateRateLimits(authentication, requestIP, activePlan);
+    }
+
 
     public Page<DocumentInstance> getDocumentsByOrganizationIdAndTimePeriod(UUID organizationId, Instant startDate, Instant endDate) throws GendoxException {
         return documentInstanceRepository.findAll(DocumentPredicates
@@ -186,6 +216,37 @@ public class SubscriptionValidationService {
     public Integer countActiveIntegrations(UUID organizationId) {
         return (int) integrationRepository.countActiveIntegrationsByOrganizationId(organizationId);
     }
+
+    /**
+     * validates the Rate Limits for the API Key.
+     * If it is a public request, it uses the public rate limits.
+     * If it is a private request, it uses the private rate limits.
+     * <p>
+     * If the request is within the rate limits, it returns the consumption probe object.
+     *
+     * @param authentication
+     * @param requestIP
+     * @param plan
+     * @return
+     * @throws GendoxException if the rate limits are exceeded.
+     */
+    private ConsumptionProbe validateRateLimits(Authentication authentication, String requestIP, OrganizationPlan plan) throws GendoxException {
+        String bucketKey = requestIP;
+        int requests = plan.getApiRateLimit().getPublicCompletionsPerMinute();
+        if (authentication != null) {
+            bucketKey = ((GendoxAuthenticationToken) authentication).getPrincipal().getId();
+            requests = plan.getApiRateLimit().getCompletionsPerMinute();
+        }
+
+        Bucket bucket = apiRateLimitService.getRateLimitBucketForUser(bucketKey, requests, 1);
+        ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+        logger.debug("Rate Limit Probe: " + probe);
+        if (!probe.isConsumed()) {
+            throw new GendoxException("RATE_LIMIT_EXCEEDED", "Rate Limit Exceeded", HttpStatus.TOO_MANY_REQUESTS, probe);
+        }
+        return probe;
+    }
+
 
 
 }

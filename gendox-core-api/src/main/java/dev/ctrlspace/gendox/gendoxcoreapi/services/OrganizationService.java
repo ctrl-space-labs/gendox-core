@@ -107,7 +107,7 @@ public class OrganizationService {
         final String organizationId = organization.getId().toString();
         logger.debug("Organization created with id: " + organizationId);
 
-        userOrganizationService.createUserOrganization(ownerUserId, organization.getId(), OrganizationRolesConstants.ADMIN);
+        userOrganizationService.createUserOrganization(ownerUserId, organization.getId(), OrganizationRolesConstants.OWNER);
 
         Type walletKeyType = typeService.getKeyTypeByName(keyTypeName);
 
