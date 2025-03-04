@@ -43,19 +43,19 @@ public class ProjectAgentService {
     private Double temperatureValue;
     @Value("${gendox.agents.top_p}")
     private Double topPValue;
+    @Value("${gendox.agents.max_search_limit}")
+    private Long maxSearchLimit;
+    @Value("${gendox.agents.max_completion_limit}")
+    private Long maxCompletionLimit;
 
     private ProjectAgentRepository projectAgentRepository;
     private TypeService typeService;
     private TemplateRepository templateRepository;
     private UserService userService;
-    private AiModelRepository aiModelRepository;
     private SubscriptionAiModelTierService subscriptionAiModelTierService;
     private CryptographyUtils cryptographyUtils;
-
     private AiModelService aiModelService;
-
     private AuthenticationService authenticationService;
-
     private OrganizationPlanService organizationPlanService;
 
 
@@ -65,19 +65,17 @@ public class ProjectAgentService {
                                TypeService typeService,
                                TemplateRepository templateRepository,
                                @Lazy UserService userService,
-                               AiModelRepository aiModelRepository,
                                AiModelService aiModelService,
                                CryptographyUtils cryptographyUtils,
                                SubscriptionAiModelTierService subscriptionAiModelTierService,
                                OrganizationPlanService organizationPlanService
 
-                               ) {
+    ) {
         this.authenticationService = authenticationService;
         this.projectAgentRepository = projectAgentRepository;
         this.typeService = typeService;
         this.templateRepository = templateRepository;
         this.userService = userService;
-        this.aiModelRepository = aiModelRepository;
         this.aiModelService = aiModelService;
         this.cryptographyUtils = cryptographyUtils;
         this.subscriptionAiModelTierService = subscriptionAiModelTierService;
@@ -191,6 +189,12 @@ public class ProjectAgentService {
         if (projectAgent.getTopP() == null) {
             projectAgent.setTopP(topPValue);
         }
+        if (projectAgent.getMaxSearchLimit() == null) {
+            projectAgent.setMaxSearchLimit(maxSearchLimit);
+        }
+        if (projectAgent.getMaxCompletionLimit() == null) {
+            projectAgent.setMaxCompletionLimit(maxCompletionLimit);
+        }
     }
 
 
@@ -234,6 +238,9 @@ public class ProjectAgentService {
         existingProjectAgent.setMaxToken(projectAgent.getMaxToken());
         existingProjectAgent.setTemperature(projectAgent.getTemperature());
         existingProjectAgent.setTopP(projectAgent.getTopP());
+        existingProjectAgent.setDocumentSplitterType(projectAgent.getDocumentSplitterType());
+        existingProjectAgent.setMaxSearchLimit(projectAgent.getMaxSearchLimit());
+        existingProjectAgent.setMaxCompletionLimit(projectAgent.getMaxCompletionLimit());
         existingProjectAgent.setModerationCheck(projectAgent.getModerationCheck());
         if (projectAgent.getModerationModel() != null && projectAgent.getModerationCheck()) {
             existingProjectAgent.setModerationModel(aiModelService.getByName(projectAgent.getModerationModel().getName()));
@@ -258,26 +265,27 @@ public class ProjectAgentService {
         return verifiablePresentationBuilder.buildAndSign(jwkKey);
 
     }
-        public Object createVerifiablePresentationOrg (String vcJwt, String subjectKeyJwk, String subjectDid) throws
-        GendoxException, IOException {
 
-            JsonPrimitive agentVcJwtPrimitive = Json.Default.decodeFromString(JsonPrimitive.Companion.serializer(), vcJwt);
-            VerifiablePresentationBuilder verifiablePresentationBuilder = new VerifiablePresentationBuilder();
-            verifiablePresentationBuilder.addCredential(agentVcJwtPrimitive);
-            verifiablePresentationBuilder.setPresentationId();
-            verifiablePresentationBuilder.setDid(subjectDid);
-            verifiablePresentationBuilder.setNonce(cryptographyUtils.generateNonce());
+    public Object createVerifiablePresentationOrg(String vcJwt, String subjectKeyJwk, String subjectDid) throws
+            GendoxException, IOException {
 
-            JWKKey jwkKey = new JWKKey(subjectKeyJwk);
+        JsonPrimitive agentVcJwtPrimitive = Json.Default.decodeFromString(JsonPrimitive.Companion.serializer(), vcJwt);
+        VerifiablePresentationBuilder verifiablePresentationBuilder = new VerifiablePresentationBuilder();
+        verifiablePresentationBuilder.addCredential(agentVcJwtPrimitive);
+        verifiablePresentationBuilder.setPresentationId();
+        verifiablePresentationBuilder.setDid(subjectDid);
+        verifiablePresentationBuilder.setNonce(cryptographyUtils.generateNonce());
 
-
-            return verifiablePresentationBuilder.buildAndSign(jwkKey);
+        JWKKey jwkKey = new JWKKey(subjectKeyJwk);
 
 
-        }
+        return verifiablePresentationBuilder.buildAndSign(jwkKey);
 
 
     }
+
+
+}
 
 
 

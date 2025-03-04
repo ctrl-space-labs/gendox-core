@@ -122,12 +122,13 @@ public class EmbeddingsController {
 
         String requestIP = request.getRemoteAddr();
         subscriptionValidationService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
+        Project project = projectService.getProjectById(UUID.fromString(projectId));
 
 
         if (pageable == null) {
-            pageable = PageRequest.of(0, 5);
+            pageable = PageRequest.of(0, project.getProjectAgent().getMaxSearchLimit().intValue());
         }
-        if (pageable.getPageSize() > 20) {
+        if (pageable.getPageSize() > 100) {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
         }
 
@@ -181,7 +182,10 @@ public class EmbeddingsController {
         savedMessage.setLocalContexts(message.getLocalContexts());
         message = savedMessage;
 
-        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId), PageRequest.of(0, 5));
+        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(
+                message, UUID.fromString(projectId),
+                PageRequest.of(0, project.getProjectAgent().getMaxSearchLimit().intValue())
+        );
 
 
         if (provenAiEnabled) {
@@ -204,12 +208,24 @@ public class EmbeddingsController {
                 .map(dto -> documentInstanceSectionWithDocumentConverter.toEntity(dto))
                 .toList();
 
+        int maxCompletionLimit = project.getProjectAgent().getMaxCompletionLimit().intValue();
 
-        Message completion = completionService.getCompletion(message, instanceSections, UUID.fromString(projectId));
+        List<DocumentInstanceSection> participantInstanceSections = instanceSections.stream()
+                .limit(maxCompletionLimit)
+                .collect(Collectors.toList());
 
-        List<MessageSection> messageSections = messageService.createMessageSections(instanceSections, completion);
+        List<DocumentInstanceSection> unParticipantInstanceSections = instanceSections.stream()
+                .skip(maxCompletionLimit)
+                .collect(Collectors.toList());
 
-        completion = messageService.updateMessageWithSections(completion, messageSections);
+
+        Message completion = completionService.getCompletion(message, participantInstanceSections, UUID.fromString(projectId));
+
+        List<MessageSection> participantMessageSections = messageService.createMessageSections(participantInstanceSections, completion, true);
+        List<MessageSection> unParticipantMessageSections = messageService.createMessageSections(unParticipantInstanceSections, completion, false);
+
+
+        completion = messageService.updateMessageWithSections(completion, participantMessageSections);
 
 
         List<UUID> sectionIds = sections.stream()

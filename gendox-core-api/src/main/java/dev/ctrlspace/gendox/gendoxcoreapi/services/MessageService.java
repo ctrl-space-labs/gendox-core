@@ -111,13 +111,14 @@ public class MessageService {
     }
 
 
-    public List<MessageSection> createMessageSections(List<DocumentInstanceSection> sections, Message message) throws GendoxException {
+    public List<MessageSection> createMessageSections(List<DocumentInstanceSection> sections, Message message, Boolean completionParticipant) throws GendoxException {
         List<MessageSection> messageSections = new ArrayList<>();
 
         for (DocumentInstanceSection documentInstanceSection : sections) {
             MessageSection messageSection = new MessageSection();
             messageSection.setSectionId(documentInstanceSection.getId());
             messageSection.setMessage(message);
+            messageSection.setCompletionParticipant(completionParticipant);
             messageSection.setDocumentId(documentInstanceSection.getDocumentInstance().getId());
             messageSections.add(messageSection);
         }

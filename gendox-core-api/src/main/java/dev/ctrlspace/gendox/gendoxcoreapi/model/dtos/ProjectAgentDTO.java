@@ -38,6 +38,8 @@ public class ProjectAgentDTO {
     private AiModel moderationModel;
     private String agentVcJwt;
     private String organizationDid;
+    private Long maxSearchLimit;
+    private Long maxCompletionLimit;
 
 
 

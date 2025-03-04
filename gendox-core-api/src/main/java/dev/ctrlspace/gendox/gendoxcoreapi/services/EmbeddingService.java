@@ -293,7 +293,8 @@ public class EmbeddingService {
                 .collect(Collectors.joining(",")));
         sb.append("]");
 
-        nearestEmbeddings = embeddingRepository.findClosestSectionIdsWithDistance(projectId,
+        nearestEmbeddings = embeddingRepository.findClosestSectionIdsWithDistance(
+                projectId,
                 sb.toString(),
                 pageRequest.getPageSize(),
                 pageRequest.getPageSize() * pageRequest.getPageNumber(),

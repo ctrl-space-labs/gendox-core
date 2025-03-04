@@ -34,14 +34,12 @@ public interface EmbeddingRepository extends JpaRepository<Embedding, UUID>, Que
 //    List<Embedding> findClosestSections(@Param("projectId") UUID projectId, @Param("embedding") String embedding, @Param("pageSize") int pageSize);
 
 
-
     @Query(name = "SectionDistanceDTO.findClosestSectionIdsWithDistance", nativeQuery = true)
-    List<SectionDistanceDTO> findClosestSectionIdsWithDistance(@Param("projectId") UUID projectId, @Param("embedding") String embedding, @Param("pageSize") int pageSize, @Param("offset") int offset, @Param("semanticSearchModelId") UUID semanticSearchModelId);
-
-
-
-
-
+    List<SectionDistanceDTO> findClosestSectionIdsWithDistance(@Param("projectId") UUID projectId,
+                                                               @Param("embedding") String embedding,
+                                                               @Param("pageSize") int pageSize,
+                                                               @Param("offset") int offset,
+                                                               @Param("semanticSearchModelId") UUID semanticSearchModelId);
 
 
     // Find nearest neighbors by a record in the same table
