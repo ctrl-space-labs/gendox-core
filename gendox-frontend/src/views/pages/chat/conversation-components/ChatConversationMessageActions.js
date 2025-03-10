@@ -94,12 +94,11 @@ const MessageActions = ({ message, isMyMessage, openMetadata }) => {
         <Tooltip title='Copy'>
           <IconButton
             onClick={handleCopy}
-            size='small'
             sx={{
-              color: copyActive ? 'green' : 'inherit'
+              color: copyActive ? 'primary.main' : 'inherit'
             }}
           >
-            <Icon icon='mdi:content-copy' />
+            <Icon icon='mdi:content-copy' style={{ fontSize: '1rem' }} />
           </IconButton>
         </Tooltip>
       </Box>
