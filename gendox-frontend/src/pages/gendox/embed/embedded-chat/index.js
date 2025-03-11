@@ -6,10 +6,10 @@ import {useSettings} from "src/@core/hooks/useSettings";
 import BlankLayout from "src/@core/layouts/BlankLayout";
 import PoweredByGendox from "src/layouts/components/shared-components/PoweredByGendox";
 import IconButton from "@mui/material/IconButton";
-import {CloseIcon} from "next/dist/client/components/react-dev-overlay/internal/icons/CloseIcon";
 import {useIFrameMessageManager} from "src/authentication/context/IFrameMessageManagerContext";
 import GendoxChat from "src/views/pages/chat/GendoxChat";
-import {routeTypes} from "../../../../authentication/components/RouteHandler";
+import {routeTypes} from "src/authentication/components/RouteHandler";
+import Icon from "src/views/custom-components/mui/icon/icon";
 
 
 // Add any extra configurations here
@@ -134,7 +134,7 @@ const EmbeddedChatPage = (props) => {
                             // color: '#fff', // Customize color if needed
                         }}
                     >
-                        <CloseIcon />
+                        <Icon icon='mdi:close' />
                     </IconButton>
                 )}
 
