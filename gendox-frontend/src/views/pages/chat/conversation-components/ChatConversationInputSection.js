@@ -14,6 +14,7 @@ const ChatInputSection = ({ auth, dispatch, token, currentThread, organizationId
 
   // Send message logic
   const handleSend = () => {
+    if (isSending) return
     if (!message.trim()) return
     setMessage('')
 
@@ -51,7 +52,7 @@ const ChatInputSection = ({ auth, dispatch, token, currentThread, organizationId
         sx={{
           display: 'flex',
           alignItems: 'center',
-          filter: isLoadingMessages || isSending ? 'blur(6px)' : 'none'
+          filter: isLoadingMessages ? 'blur(6px)' : 'none'
         }}
       >
         <InputBase
@@ -71,7 +72,12 @@ const ChatInputSection = ({ auth, dispatch, token, currentThread, organizationId
         />
 
         {/* Send button (icon) */}
-        <IconButton onClick={handleSend}>
+        <IconButton
+          onClick={handleSend}
+          sx={{
+            filter: isSending ? 'blur(6px)' : 'none'
+          }}
+        >
           <Icon icon='mdi:send' />
         </IconButton>
       </Box>
@@ -111,10 +117,10 @@ const InputMessageOptions = () => {
       }}
     >
       {/* Search Chip */}
-      <Tooltip title="Coming soon">
+      <Tooltip title='Coming soon'>
         <Chip
           onClick={() => console.log('Search clicked')}
-          icon={<Icon icon='mdi:magnify'/>}
+          icon={<Icon icon='mdi:magnify' />}
           label='Search'
           color='secondary'
           variant='outlined'
