@@ -90,11 +90,7 @@ public class IntegrationService {
 
     public Integration handleIntegrationLogic(UUID organizationId, OrganizationWebSite organizationWebSite, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
         UUID integrationId = organizationWebSite.getIntegrationId();
-
-        // check if organization has reached max integrations
-        if (!subscriptionValidationService.canCreateIntegrations(organizationId)) {
-            throw new GendoxException("MAX_INTEGRATIONS_REACHED", "Max integrations reached for organization", HttpStatus.BAD_REQUEST);
-        }
+        boolean isActiveStatus = "ACTIVE".equals(websiteIntegrationDTO.getIntegrationStatus().getName());
 
         if (integrationId == null) {
             logger.debug("No existing integration found, creating a new one.");
@@ -102,11 +98,22 @@ public class IntegrationService {
         }
 
         Integration integration = getIntegrationById(integrationId);
+        // check if organization has reached max integrations and if the integration is not active and the new status is active
+        if (!integration.getActive() && isActiveStatus && !subscriptionValidationService.canCreateIntegrations(organizationId)) {
+            throw new GendoxException("MAX_INTEGRATIONS_REACHED", "Max integrations reached for organization", HttpStatus.BAD_REQUEST);
+        }
         return updateExistingIntegration(integration, websiteIntegrationDTO);
 
     }
 
     public Integration createNewIntegration(UUID organizationId, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
+        boolean isActiveStatus = "ACTIVE".equals(websiteIntegrationDTO.getIntegrationStatus().getName());
+
+        // check if organization has reached max integrations and if the integration is active
+        if (isActiveStatus && !subscriptionValidationService.canCreateIntegrations(organizationId)) {
+            throw new GendoxException("MAX_INTEGRATIONS_REACHED", "Max integrations reached for organization", HttpStatus.BAD_REQUEST);
+        }
+
         logger.info("Creating new integration for Organization ID: {}, Domain: {}", organizationId, websiteIntegrationDTO.getDomain());
         boolean activeState = isActiveStatus(websiteIntegrationDTO.getIntegrationStatus().getName());
         IntegrationDTO newIntegrationDTO = IntegrationDTO
