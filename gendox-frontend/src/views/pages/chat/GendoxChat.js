@@ -40,7 +40,7 @@ const GendoxChat = props => {
       dispatch(fetchThreads({ organizationId, token }))
     }
 
-    if (organizationId && token) {
+    if (organizationId) {
       fetchData()
     }
   }, [dispatch, organizationId])
