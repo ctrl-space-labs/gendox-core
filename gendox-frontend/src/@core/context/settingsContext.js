@@ -13,6 +13,7 @@ const initialSettings = {
   showOrganizationDropdown: themeConfig.showOrganizationDropdown,
   navBarContent: themeConfig.navBarContent,
   footerContent: themeConfig.footerContent,
+  globalSearch: themeConfig.globalSearch,
 }
 
 // ** Create Context

@@ -1,6 +1,7 @@
 // ** Next Imports
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { useSettings } from 'src/@core/hooks/useSettings'
 
 // ** MUI Imports
 import Chip from '@mui/material/Chip'
@@ -69,6 +70,7 @@ const MenuItemTextMetaWrapper = styled(Box)({
 const VerticalNavLink = ({ item, navVisible, toggleNavVisibility, onOpenMenu, isSelected }) => {
   const router = useRouter()
   const IconTag = item.icon
+  const { settings } = useSettings()
 
   const isNavLinkActive = isSelected => {
     // if isSelected has value true or false
@@ -98,7 +100,15 @@ const VerticalNavLink = ({ item, navVisible, toggleNavVisibility, onOpenMenu, is
       <MenuNavLink
         component={Link}
         href={item.path === undefined ? '/' : `${item.path}`}
-        className={isGendoxNavLinkActive() ? 'active' : ''}
+        className={
+          settings.navBarContent === 'hidden'
+            ? isNavLinkActive()
+              ? 'active'
+              : ''
+            : isGendoxNavLinkActive()
+            ? 'active'
+            : ''
+        }
         {...(item.openInNewTab ? { target: '_blank' } : null)}
         onClick={e => {
           if (item.path === undefined) {
