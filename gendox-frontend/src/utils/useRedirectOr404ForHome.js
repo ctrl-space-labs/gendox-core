@@ -1,50 +1,56 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from 'src/authentication/useAuth'
+import { localStorageConstants } from 'src/utils/generalConstants'
 
-const useRedirectOr404ForHome = (organizationId, projectId) => {
-  const router = useRouter()
-  const auth = useAuth()
+const useRedirectOr404ForHome = (urlOrgId, urlProjId) => {
+  const router = useRouter();
+  const { user } = useAuth();
 
   useEffect(() => {
-    if (!auth.user) return // Ensure user is available before proceeding
+    if (!user) return;
 
-    // If user has no organizations, redirect to create-organization
-    if (!Array.isArray(auth.user.organizations) || auth.user.organizations.length === 0) {
-      router.push('/gendox/create-organization')
-      return
-    }
-    
-    let effectiveOrgId = null
-    // Determine effective organization ID
-    if (organizationId) {
-      effectiveOrgId =
-        organizationId && auth.user.organizations.some(o => o.id === organizationId) ? organizationId : null
-    } else {
-      effectiveOrgId = auth.user.organizations[0]?.id || null
-    }    
-
-    const organization = auth.user.organizations.find(o => o.id === effectiveOrgId)
-
-    // Determine effective project ID
-    let effectiveProjId = null
-    if (projectId) {
-      effectiveProjId = projectId && organization.projects.some(p => p.id === projectId) ? projectId : organization?.projects[0]?.id || null
-    } else {
-      effectiveProjId = organization?.projects[0]?.id || null
+    //////    Organizations Validation   //////
+    const organizations = user.organizations;
+    if (!organizations || organizations.length === 0) {
+      router.push('/gendox/create-organization');
+      return;
     }
 
-    if (!effectiveOrgId && !effectiveProjId) {
-      router.push('/404')
-    } else if (!effectiveProjId || effectiveProjId === 'null') {
-      router.push(`/gendox/create-project/?organizationId=${effectiveOrgId}`)
-    } else if (projectId && !organization.projects.some(p => p.id === projectId)) {      
-      const fallbackProjId = organization?.projects[0]?.id
-      router.push(`/gendox/home/?organizationId=${effectiveOrgId}&projectId=${fallbackProjId}`)    
-    } else if (!organizationId || !projectId) {
-      router.push(`/gendox/home/?organizationId=${effectiveOrgId}&projectId=${effectiveProjId}`)
+    // Validate URL organization ID before computing effective organization.
+    if (urlOrgId && !organizations.find(o => o.id === urlOrgId)) {
+      router.push('/404');
+      return;
     }
-  }, [organizationId, projectId, router])
-}
+
+    const localOrgId = window.localStorage.getItem(localStorageConstants.selectedOrganizationId);
+    const candidateOrgId = urlOrgId || localOrgId;
+    const effectiveOrg = organizations.find(o => o.id === candidateOrgId) || organizations[0];
+    window.localStorage.setItem(localStorageConstants.selectedOrganizationId, effectiveOrg.id);
+
+    //////    Projects Validation   //////
+    const projects = effectiveOrg.projects;
+    if (!projects || projects.length === 0) {
+      router.push(`/gendox/create-project/?organizationId=${effectiveOrg.id}`);
+      return;
+    }
+
+    // Validate URL project ID before computing effective project.
+    if (urlProjId && !projects.find(p => p.id === urlProjId)) {
+      router.push('/404');
+      return;
+    }
+
+    const localProjId = window.localStorage.getItem(localStorageConstants.selectedProjectId);
+    const candidateProjId = urlProjId || localProjId;
+    const effectiveProj = projects.find(p => p.id === candidateProjId) || projects[0];
+    window.localStorage.setItem(localStorageConstants.selectedProjectId, effectiveProj.id);
+
+    // update the url only if the effective organization or project is different from the original URL.
+    if (urlOrgId !== effectiveOrg.id || urlProjId !== effectiveProj.id) {
+      router.push(`/gendox/home/?organizationId=${effectiveOrg.id}&projectId=${effectiveProj.id}`);
+    }
+  }, [urlOrgId, urlProjId, router, user]);
+};
 
 export default useRedirectOr404ForHome

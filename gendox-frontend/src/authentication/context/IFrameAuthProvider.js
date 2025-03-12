@@ -82,27 +82,27 @@ const IFrameAuthProvider = ({ children, initialAuth }) => {
 
         // Store userData, actives project and organization
         dispatch(userDataActions.getUserData(userDataResponse.data))
-        dispatch(
-          fetchOrganization({
-            organizationId: userDataResponse.data.organizations[0].id,
-            token: accessToken
-          })
-        )
-        dispatch(
-          fetchProject({
-            organizationId: userDataResponse.data.organizations[0].id,
-            projectId: userDataResponse.data.organizations[0].projects[0].id,
-            token: accessToken
-          })
-        )
-        window.localStorage.setItem(
-          localStorageConstants.selectedOrganizationId,
-          userDataResponse.data.organizations[0].id
-        )
-        window.localStorage.setItem(
-          localStorageConstants.selectedProjectId,
-          userDataResponse.data.organizations[0].projects[0].id
-        )
+        // dispatch(
+        //   fetchOrganization({
+        //     organizationId: userDataResponse.data.organizations[0].id,
+        //     token: accessToken
+        //   })
+        // )
+        // dispatch(
+        //   fetchProject({
+        //     organizationId: userDataResponse.data.organizations[0].id,
+        //     projectId: userDataResponse.data.organizations[0].projects[0].id,
+        //     token: accessToken
+        //   })
+        // )
+        // window.localStorage.setItem(
+        //   localStorageConstants.selectedOrganizationId,
+        //   userDataResponse.data.organizations[0].id
+        // )
+        // window.localStorage.setItem(
+        //   localStorageConstants.selectedProjectId,
+        //   userDataResponse.data.organizations[0].projects[0].id
+        // )
 
         setLoading(false)
       })
@@ -146,33 +146,25 @@ const IFrameAuthProvider = ({ children, initialAuth }) => {
   }, [accessToken])
 
   useEffect(() => {
-    const { organizationId, projectId } = router.query
-    const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-
-    if (user && user.organizations) {
-      const updatedActiveOrganization = user.organizations.find(org => org.id === organizationId)
-      if (updatedActiveOrganization) {
-        dispatch(
-          fetchOrganization({
-            organizationId: updatedActiveOrganization.id,
-            token
-          })
-        )
-        window.localStorage.setItem(localStorageConstants.selectedOrganizationId, updatedActiveOrganization.id)
-        const updatedActiveProject = updatedActiveOrganization.projects.find(proj => proj.id === projectId)
-        if (updatedActiveProject) {
-          dispatch(
-            fetchProject({
-              organizationId: updatedActiveOrganization.id,
-              projectId: updatedActiveProject.id,
-              token
-            })
-          )
-          window.localStorage.setItem(localStorageConstants.selectedProjectId, updatedActiveProject.id)
-        }
-      }
+    const { organizationId, projectId } = router.query;
+    const token = window.localStorage.getItem(localStorageConstants.accessTokenKey);
+    console.log('user', user)
+    if (user && user.organizations.length > 0 && organizationId && projectId) {
+      dispatch(
+        fetchOrganization({
+          organizationId,
+          token,
+        })
+      );
+      dispatch(
+        fetchProject({
+          organizationId,
+          projectId,
+          token,
+        })
+      );
     }
-  }, [user, router])
+  }, [user, router.query, dispatch]);
 
   const values = {
     user,

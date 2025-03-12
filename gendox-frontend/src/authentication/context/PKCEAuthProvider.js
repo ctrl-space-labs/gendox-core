@@ -122,35 +122,6 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
       setUser(userDataResponse.data)
       window.localStorage.setItem(localStorageConstants.userDataKey, JSON.stringify(userDataResponse.data))
 
-      // Safely handle organization and project data
-      const organizationId = userDataResponse.data.organizations?.[0]?.id || null
-      let projectId = userDataResponse.data.organizations?.[0]?.projects?.[0]?.id || null
-
-      if (organizationId && userDataResponse.data.organizations.find (org => org.id === organizationId)) {
-        window.localStorage.setItem(localStorageConstants.selectedOrganizationId, organizationId)
-        dispatch(
-          fetchOrganization({
-            organizationId,
-            token: user.access_token
-          })
-        )
-      } else {
-        console.warn('Organization ID is missing.')
-      }
-
-      if (projectId && userDataResponse.data.organizations.find(org => org.projects.find(proj => proj.id === projectId))) {
-        window.localStorage.setItem(localStorageConstants.selectedProjectId, projectId)
-        dispatch(
-          fetchProject({
-            organizationId,
-            projectId,
-            token: user.access_token
-          })
-        )
-      } else {
-        console.warn('Project ID is missing.')
-      }
-
       // Store userData in Redux
       dispatch(userDataActions.getUserData(userDataResponse.data))
     } catch (userDataError) {
@@ -171,57 +142,32 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
 
   useEffect(() => {
     if (user && router.pathname.includes('oidc-callback')) {
-      // Redirect to create organization if user has no organizations
-      if (!Array.isArray(user.organizations) || user.organizations.length === 0) {
-        router.push('/gendox/create-organization')
-        return
-      }
-      // Redirect to create project if user has no projects
-      if (user.organizations[0].projects.length === 0) {
-        router.push(`/gendox/create-project?organizationId=${user.organizations[0].id}`)
-        return
-      }
-      // Redirect to home page if user has organizations and projects
-      let homeUrl = '/gendox/home'
-      //oidc-callback might contain a returnUrl query param to redirect to after login,
-      // like ../oidc-callback?returnUrl=%2Fgendox%2Fhome....
-      const { returnUrl } = router.query
-      if (returnUrl) {
-        homeUrl = decodeURIComponent(returnUrl)
-      }
-
-      window.location.href = homeUrl
+      const { returnUrl } = router.query;
+      const homeUrl = returnUrl ? decodeURIComponent(returnUrl) : '/gendox/home';
+      window.location.href = homeUrl;
     }
   }, [user])
 
   useEffect(() => {
-    const { organizationId, projectId } = router.query
-    const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-
-    if (user && user.organizations) {
-      const updatedActiveOrganization = user.organizations.find(org => org.id === organizationId)
-      if (updatedActiveOrganization) {
-        dispatch(
-          fetchOrganization({
-            organizationId: updatedActiveOrganization.id,
-            token
-          })
-        )
-        window.localStorage.setItem(localStorageConstants.selectedOrganizationId, updatedActiveOrganization.id)
-        const updatedActiveProject = updatedActiveOrganization.projects.find(proj => proj.id === projectId)
-        if (updatedActiveProject) {
-          dispatch(
-            fetchProject({
-              organizationId: updatedActiveOrganization.id,
-              projectId: updatedActiveProject.id,
-              token
-            })
-          )
-          window.localStorage.setItem(localStorageConstants.selectedProjectId, updatedActiveProject.id)
-        }
-      }
+    //the auth provides, thrusts the url params, useRedirectOr404 will handle the url params
+    const { organizationId, projectId } = router.query;
+    const token = window.localStorage.getItem(localStorageConstants.accessTokenKey);
+    if (user && organizationId && projectId) {
+      dispatch(
+        fetchOrganization({
+          organizationId,
+          token,
+        })
+      );
+      dispatch(
+        fetchProject({
+          organizationId,
+          projectId,
+          token,
+        })
+      );
     }
-  }, [user, router])
+  }, [user, router.query, dispatch]);
 
   const values = {
     user,
