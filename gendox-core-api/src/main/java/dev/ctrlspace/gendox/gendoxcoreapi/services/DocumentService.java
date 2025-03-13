@@ -87,6 +87,11 @@ public class DocumentService {
             documentInstance.setId(UUID.randomUUID());
         }
 
+        // if file size bytes is null do it 0
+        if (documentInstance.getFileSizeBytes() == null) {
+            documentInstance.setFileSizeBytes(0L);
+        }
+
 //         Check if the organization has reached the maximum number of documents allowed
         if (!subscriptionValidationService.canCreateDocuments(documentInstance.getOrganizationId())) {
             throw new GendoxException("MAX_DOCUMENTS_REACHED", "Maximum number of documents reached for this organization", HttpStatus.BAD_REQUEST);
