@@ -107,6 +107,14 @@ public class TypeService {
 
     }
 
+    //Api Rate Limit Types
+    public Type getApiRateLimitTypeByName(String apiRateLimitTypeName){
+        return typeRepository.findByTypeCategoryAndName("API_RATE_LIMIT_TYPE", apiRateLimitTypeName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "API_RATE_LIMIT_TYPE_NOT_FOUND", "Api rate limit field type not found with name: " + apiRateLimitTypeName));
+
+    }
+
+
     // get all types by type category
     public List<Type> getTypeCategories(String typeCategory){
         return typeRepository.findByTypeCategory(typeCategory);

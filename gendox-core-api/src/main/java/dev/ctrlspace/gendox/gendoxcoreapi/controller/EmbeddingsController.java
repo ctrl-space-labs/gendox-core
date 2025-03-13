@@ -1,7 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.BotRequest;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -9,9 +7,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProvenAiMetadata;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.EmbeddingRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService;
 import io.micrometer.observation.annotation.Observed;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -38,45 +36,38 @@ public class EmbeddingsController {
 
     Logger logger = LoggerFactory.getLogger(EmbeddingsController.class);
 
-
-    private EmbeddingRepository embeddingRepository;
     private EmbeddingService embeddingService;
     private TrainingService trainingService;
     private CompletionService completionService;
     private MessageService messageService;
-
-    private OrganizationPlanService organizationPlanService;
-
     private DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter;
-
     private OrganizationModelKeyService organizationModelKeyService;
-
+    private SubscriptionValidationService subscriptionValidationService;
+    private ProjectService projectService;
 
 
     @Value("${proven-ai.enabled}")
     private Boolean provenAiEnabled;
 
     @Autowired
-    public EmbeddingsController(EmbeddingRepository embeddingRepository,
-                                EmbeddingService embeddingService,
+    public EmbeddingsController(EmbeddingService embeddingService,
                                 TrainingService trainingService,
                                 CompletionService completionService,
                                 DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter,
                                 MessageService messageService,
-                                OrganizationPlanService organizationPlanService,
-                                OrganizationModelKeyService organizationModelKeyService
+                                OrganizationModelKeyService organizationModelKeyService,
+                                SubscriptionValidationService subscriptionValidationService,
+                                ProjectService projectService
     ) {
-        this.embeddingRepository = embeddingRepository;
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
         this.completionService = completionService;
         this.messageService = messageService;
         this.documentInstanceSectionWithDocumentConverter = documentInstanceSectionWithDocumentConverter;
-        this.organizationPlanService = organizationPlanService;
         this.organizationModelKeyService = organizationModelKeyService;
+        this.subscriptionValidationService = subscriptionValidationService;
+        this.projectService = projectService;
     }
-
-
 
 
     @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams')")
@@ -124,26 +115,27 @@ public class EmbeddingsController {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public List<DocumentInstanceSectionDTO> findCloserSections(@RequestBody Message message,
-                                                            @RequestParam String projectId,
-                                                            Authentication authentication,
-                                                            HttpServletRequest request,
-                                                            Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
+                                                               @RequestParam String projectId,
+                                                               Authentication authentication,
+                                                               HttpServletRequest request,
+                                                               Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
 
         String requestIP = request.getRemoteAddr();
-        organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
+        subscriptionValidationService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
+        Project project = projectService.getProjectById(UUID.fromString(projectId));
 
 
         if (pageable == null) {
-            pageable = PageRequest.of(0, 5);
+            pageable = PageRequest.of(0, project.getProjectAgent().getMaxSearchLimit().intValue());
         }
-        if (pageable.getPageSize() > 20) {
+        if (pageable.getPageSize() > 100) {
             throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 5", HttpStatus.BAD_REQUEST);
         }
 
         message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
 
-        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
+        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId), pageable);
 
 //        List<DocumentInstanceSectionDTO> sections = instanceSections
 //                .stream()
@@ -151,11 +143,6 @@ public class EmbeddingsController {
 //                .toList();
         return sections;
     }
-
-
-
-
-
 
 
     @PreAuthorize(" @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams') || " +
@@ -178,8 +165,15 @@ public class EmbeddingsController {
                                                     Authentication authentication,
                                                     HttpServletRequest request) throws GendoxException, IOException, NoSuchAlgorithmException {
 
+        Project project = projectService.getProjectById(UUID.fromString(projectId));
+        // check if the message is within the subscription limits
+        if (!subscriptionValidationService.canSendMessage(project.getOrganizationId())) {
+            throw new GendoxException("MAX_MESSAGES_EXCEED", "Maximum messages limit exceeded", HttpStatus.BAD_REQUEST);
+        }
+
+
         String requestIP = request.getRemoteAddr();
-        organizationPlanService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
+        subscriptionValidationService.validateRequestIsInSubscriptionLimits(UUID.fromString(projectId), authentication, requestIP);
 
         message.setProjectId(UUID.fromString(projectId));
         Message savedMessage = messageService.createMessage(message);
@@ -188,7 +182,10 @@ public class EmbeddingsController {
         savedMessage.setLocalContexts(message.getLocalContexts());
         message = savedMessage;
 
-        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId));
+        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(
+                message, UUID.fromString(projectId),
+                PageRequest.of(0, project.getProjectAgent().getMaxSearchLimit().intValue())
+        );
 
 
         if (provenAiEnabled) {
@@ -211,12 +208,24 @@ public class EmbeddingsController {
                 .map(dto -> documentInstanceSectionWithDocumentConverter.toEntity(dto))
                 .toList();
 
+        int maxCompletionLimit = project.getProjectAgent().getMaxCompletionLimit().intValue();
 
-        Message completion = completionService.getCompletion(message, instanceSections, UUID.fromString(projectId));
+        List<DocumentInstanceSection> participantInstanceSections = instanceSections.stream()
+                .limit(maxCompletionLimit)
+                .collect(Collectors.toList());
 
-        List<MessageSection> messageSections = messageService.createMessageSections(instanceSections, completion);
+        List<DocumentInstanceSection> unParticipantInstanceSections = instanceSections.stream()
+                .skip(maxCompletionLimit)
+                .collect(Collectors.toList());
 
-        completion = messageService.updateMessageWithSections(completion, messageSections);
+
+        Message completion = completionService.getCompletion(message, participantInstanceSections, UUID.fromString(projectId));
+
+        List<MessageSection> participantMessageSections = messageService.createMessageSections(participantInstanceSections, completion, true);
+        List<MessageSection> unParticipantMessageSections = messageService.createMessageSections(unParticipantInstanceSections, completion, false);
+
+
+        completion = messageService.updateMessageWithSections(completion, participantMessageSections);
 
 
         List<UUID> sectionIds = sections.stream()
@@ -245,8 +254,6 @@ public class EmbeddingsController {
     }
 
 
-
-
     @PostMapping("/messages/moderation")
     public OpenAiGpt35ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
         String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
@@ -258,8 +265,6 @@ public class EmbeddingsController {
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
         return trainingService.getModerationForDocumentSections(documentId);
     }
-
-
 
 
 }

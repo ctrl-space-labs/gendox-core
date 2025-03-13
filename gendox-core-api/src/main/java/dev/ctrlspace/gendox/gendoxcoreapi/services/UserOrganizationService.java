@@ -5,29 +5,25 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserOrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserOrganizationPredicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,28 +35,21 @@ public class UserOrganizationService {
     private UserService userService;
     private OrganizationService organizationService;
     private TypeService typeService;
-    private UserRepository userRepository;
 
 
 
-    @Autowired
-    private JWTUtils jwtUtils;
-    private final OrganizationRepository organizationRepository;
+
 
     @Autowired
     public UserOrganizationService(UserOrganizationRepository userOrganizationRepository,
                                    TypeService typeRepository,
                                    @Lazy UserService userService,
-                                   @Lazy OrganizationService organizationService,
-                                   UserRepository userRepository,
-                                   OrganizationRepository organizationRepository
+                                   @Lazy OrganizationService organizationService
     ) {
         this.userOrganizationRepository = userOrganizationRepository;
         this.typeService = typeRepository;
-        this.userRepository = userRepository;
         this.userService = userService;
         this.organizationService = organizationService;
-        this.organizationRepository = organizationRepository;
     }
 
     public List<UserOrganization> getUserOrganizationByOrganizationId(UUID organizationId) throws GendoxException {
@@ -78,6 +67,15 @@ public class UserOrganizationService {
         }
         return userOrganizationRepository.findAll(UserOrganizationPredicate.build(criteria), pageable).toList();
 
+    }
+
+    public List<UserOrganization> getUserOrganizationsByUserId(String userId) {
+        return userOrganizationRepository.findByUserId(UUID.fromString(userId));
+    }
+
+    public UserOrganization getUserOrganizationByOwnerId(UUID userId) {
+        return userOrganizationRepository.findFirstByUserIdAndRoleNative(userId, OrganizationRolesConstants.OWNER)
+                .orElse(null);
     }
 
     public boolean isUserOrganizationMember(UUID userId, UUID organizationID) {
@@ -147,6 +145,11 @@ public class UserOrganizationService {
             throw new GendoxException("USER_ORGANIZATION_NOT_FOUND", "User-organization combination not found", HttpStatus.BAD_REQUEST);
         }
         userOrganizationRepository.delete(userOrganization);
+    }
+
+    @Transactional
+    public void deleteAllUserOrganizationsByOrganizationId(UUID organizationId) {
+        userOrganizationRepository.deleteByOrganizationId(organizationId);
     }
 
 

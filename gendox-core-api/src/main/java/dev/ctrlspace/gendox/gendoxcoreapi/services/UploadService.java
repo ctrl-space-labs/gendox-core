@@ -83,6 +83,7 @@ public class UploadService {
                 .title(fileName)
                 .fileType(typeService.getFileTypeByName("PLAIN_TEXT_FILE"))
                 .documentIsccCode(documentUtils.getIsccCode(file))
+                .fileSizeBytes(file.getSize())
                 .build();
     }
 
@@ -107,7 +108,7 @@ public class UploadService {
         DocumentInstance newInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
         newInstance = documentService.createDocumentInstance(newInstance);
         projectDocumentService.createProjectDocument(projectId, newInstance.getId());
-        auditLogsService.createAuditLog(newInstance.getOrganizationId(), projectId, "DOCUMENT_CREATE",null);
+        auditLogsService.createAuditLog(newInstance.getOrganizationId(), projectId, "DOCUMENT_CREATE",documentInstanceDTO.getFileSizeBytes());
         return newInstance;
     }
 
@@ -115,7 +116,7 @@ public class UploadService {
         documentInstanceDTO.setId(existingInstance.getId());
         DocumentInstance updatedInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
         updatedInstance = documentService.updateDocument(updatedInstance);
-        auditLogsService.createAuditLog(existingInstance.getOrganizationId(), projectId, "DOCUMENT_UPDATE",null);
+        auditLogsService.createAuditLog(existingInstance.getOrganizationId(), projectId, "DOCUMENT_UPDATE",documentInstanceDTO.getFileSizeBytes());
         return updatedInstance;
     }
 

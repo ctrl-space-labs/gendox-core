@@ -9,6 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.MessagePredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -110,13 +111,14 @@ public class MessageService {
     }
 
 
-    public List<MessageSection> createMessageSections(List<DocumentInstanceSection> sections, Message message) throws GendoxException {
+    public List<MessageSection> createMessageSections(List<DocumentInstanceSection> sections, Message message, Boolean completionParticipant) throws GendoxException {
         List<MessageSection> messageSections = new ArrayList<>();
 
         for (DocumentInstanceSection documentInstanceSection : sections) {
             MessageSection messageSection = new MessageSection();
             messageSection.setSectionId(documentInstanceSection.getId());
             messageSection.setMessage(message);
+            messageSection.setCompletionParticipant(completionParticipant);
             messageSection.setDocumentId(documentInstanceSection.getDocumentInstance().getId());
             messageSections.add(messageSection);
         }
@@ -179,4 +181,12 @@ public class MessageService {
         }
         return role;
     }
+
+    @Transactional
+    public void deleteMessageSections(List<UUID> sectionIds) {
+        if (sectionIds != null && !sectionIds.isEmpty()) {
+            messageSectionRepository.bulkDeleteBySectionIds(sectionIds);
+        }
+    }
+
 }

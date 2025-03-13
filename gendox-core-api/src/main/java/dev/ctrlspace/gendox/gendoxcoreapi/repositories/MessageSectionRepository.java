@@ -2,6 +2,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageSection;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 
@@ -14,5 +17,9 @@ public interface MessageSectionRepository extends JpaRepository<MessageSection, 
     void deleteAllBySectionId(UUID sectionId);
 
     List<MessageSection> findAllBySectionId(UUID sectionId);
+
+    @Modifying
+    @Query("DELETE FROM MessageSection ms WHERE ms.sectionId IN :sectionIds")
+    void bulkDeleteBySectionIds(@Param("sectionIds") List<UUID> sectionIds);
 
 }

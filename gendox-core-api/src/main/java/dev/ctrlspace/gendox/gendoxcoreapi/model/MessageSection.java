@@ -58,6 +58,10 @@ public class MessageSection {
     @LastModifiedBy
     private UUID updatedBy;
 
+    @Basic
+    @Column(name = "is_completion_participant")
+    private Boolean isCompletionParticipant;
+
     public UUID getId() {
         return id;
     }
@@ -130,33 +134,24 @@ public class MessageSection {
         this.updatedBy = updatedBy;
     }
 
+    public Boolean getCompletionParticipant() {
+        return isCompletionParticipant;
+    }
+
+    public void setCompletionParticipant(Boolean completionParticipant) {
+        isCompletionParticipant = completionParticipant;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof MessageSection that)) return false;
-
-        if (!Objects.equals(id, that.id)) return false;
-        if (!Objects.equals(message, that.message)) return false;
-        if (!Objects.equals(sectionId, that.sectionId)) return false;
-        if (!Objects.equals(documentId, that.documentId)) return false;
-        if (!Objects.equals(sectionUrl, that.sectionUrl)) return false;
-        if (!Objects.equals(createdAt, that.createdAt)) return false;
-        if (!Objects.equals(updatedAt, that.updatedAt)) return false;
-        if (!Objects.equals(createdBy, that.createdBy)) return false;
-        return Objects.equals(updatedBy, that.updatedBy);
+        if (o == null || getClass() != o.getClass()) return false;
+        MessageSection that = (MessageSection) o;
+        return Objects.equals(id, that.id) && Objects.equals(message, that.message) && Objects.equals(sectionId, that.sectionId) && Objects.equals(documentId, that.documentId) && Objects.equals(sectionUrl, that.sectionUrl) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(isCompletionParticipant, that.isCompletionParticipant);
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (message != null ? message.hashCode() : 0);
-        result = 31 * result + (sectionId != null ? sectionId.hashCode() : 0);
-        result = 31 * result + (documentId != null ? documentId.hashCode() : 0);
-        result = 31 * result + (sectionUrl != null ? sectionUrl.hashCode() : 0);
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        result = 31 * result + (createdBy != null ? createdBy.hashCode() : 0);
-        result = 31 * result + (updatedBy != null ? updatedBy.hashCode() : 0);
-        return result;
+        return Objects.hash(id, message, sectionId, documentId, sectionUrl, createdAt, updatedAt, createdBy, updatedBy, isCompletionParticipant);
     }
 }

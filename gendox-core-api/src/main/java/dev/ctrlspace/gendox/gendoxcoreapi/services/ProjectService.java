@@ -83,7 +83,7 @@ public class ProjectService {
 
         ProjectAgent projectAgent = projectAgentService.createProjectAgent(project.getProjectAgent());
 
-        project.setAutoTraining(true);
+        project.setActive(true);
 
         project.setProjectAgent(projectAgent);
 
@@ -112,65 +112,8 @@ public class ProjectService {
     }
 
 
-    public void deactivateProject(UUID id, boolean orgIsDeactivating) throws GendoxException {
+    public void deactivateProject(UUID id) throws GendoxException {
         Project project = this.getProjectById(id);
-
-        if ("DEACTIVATED".equals(project.getName())) {
-            return;
-        }
-
-        // Fetch the organization ID for this project
-        UUID organizationId = project.getOrganizationId();
-
-        // Fetch all project members for this project
-        List<ProjectMember> projectMembers = projectMemberService.getProjectMembersByProjectId(id);
-
-        // Fetch the type for GENDOX_AGENT to compare against user types
-        Type agentType = typeService.getUserTypeByName("GENDOX_AGENT");
-
-        if (!orgIsDeactivating) {
-            // Check if this is the last project of its organization
-            long projectCountInOrganization = projectRepository.countActiveProjectsByOrganizationId(organizationId);
-
-            if (projectCountInOrganization <= 1) {
-                throw new GendoxException(
-                        "PROJECT_DEACTIVATION_FAILED",
-                        "Cannot deactivate project. Organization must have at least one project.",
-                        HttpStatus.BAD_REQUEST
-                );
-            }
-        }
-
-        // Iterate through project members to handle both deletion and exception
-        for (ProjectMember projectMember : projectMembers) {
-            UUID userId = projectMember.getUser().getId();
-
-            // Check if the user is an agent and skip the count check if they are
-            if (projectMember.getUser().getUserType().equals(agentType)) {
-                // Skip checking for GENDOX_AGENT users
-                continue;
-            }
-
-            if (projectMember.getUser().getEmail() == null &&
-                    projectMember.getUser().getName() == null &&
-                    projectMember.getUser().getUserType() == null) {
-                continue;
-            }
-
-
-            // Count the number of projects the user is associated with
-            long count = projectMemberRepository.countByUserId(userId);
-
-            if (count <= 1) {
-                // If the user has exactly one project, throw an exception
-                throw new GendoxException(
-                        "PROJECT_DEACTIVATION_FAILED",
-                        "Cannot deactivate project. User is associated with only one project",
-                        HttpStatus.BAD_REQUEST
-                );
-            }
-//        }
-        }
 
         // Delete other associated data
         projectMemberService.deleteAllProjectMembers(project);
@@ -178,7 +121,7 @@ public class ProjectService {
         projectRepository.save(project);
         Type deleteProjectType = typeService.getAuditLogTypeByName("DELETE_PROJECT");
         AuditLogs deleteProjectAuditLogs = auditLogsService.createDefaultAuditLogs(deleteProjectType);
-        deleteProjectAuditLogs.setOrganizationId(organizationId);
+        deleteProjectAuditLogs.setOrganizationId(project.getOrganizationId());
         deleteProjectAuditLogs.setProjectId(id);
         auditLogsService.saveAuditLogs(deleteProjectAuditLogs);
 

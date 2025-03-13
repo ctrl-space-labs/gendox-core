@@ -22,38 +22,33 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+
 @Service
 public class DocumentService {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentService.class);
 
     private DocumentInstanceRepository documentInstanceRepository;
-    private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private DocumentSectionService documentSectionService;
-
     private ProjectDocumentService projectDocumentService;
-
     private TypeService typeService;
-
     private AuditLogsService auditLogsService;
-
-//    private IsccCodeService isccCodeService;
+    private SubscriptionValidationService subscriptionValidationService;
 
 
     @Autowired
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
                            DocumentSectionService documentSectionService,
-                           DocumentInstanceSectionRepository documentInstanceSectionRepository,
                            ProjectDocumentService projectDocumentService,
                            TypeService typeService,
-                           AuditLogsService auditLogsService) {
-
+                           AuditLogsService auditLogsService,
+                           SubscriptionValidationService subscriptionValidationService) {
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentSectionService = documentSectionService;
         this.projectDocumentService = projectDocumentService;
-        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.typeService = typeService;
         this.auditLogsService = auditLogsService;
+        this.subscriptionValidationService = subscriptionValidationService;
     }
 
 
@@ -70,9 +65,7 @@ public class DocumentService {
 
 
     public Page<DocumentInstance> getAllDocuments(DocumentCriteria criteria, Pageable pageable) throws GendoxException {
-//        if (pageable == null) {
-//            throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
-//        }
+
         return documentInstanceRepository.findAll(DocumentPredicates.build(criteria), pageable);
 
     }
@@ -87,13 +80,32 @@ public class DocumentService {
                 .orElse(null);
     }
 
-
     public DocumentInstance createDocumentInstance(DocumentInstance documentInstance) throws GendoxException {
 
 
         if (documentInstance.getId() == null) {
             documentInstance.setId(UUID.randomUUID());
         }
+
+        // if file size bytes is null do it 0
+        if (documentInstance.getFileSizeBytes() == null) {
+            documentInstance.setFileSizeBytes(0L);
+        }
+
+//         Check if the organization has reached the maximum number of documents allowed
+        if (!subscriptionValidationService.canCreateDocuments(documentInstance.getOrganizationId())) {
+            throw new GendoxException("MAX_DOCUMENTS_REACHED", "Maximum number of documents reached for this organization", HttpStatus.BAD_REQUEST);
+        }
+
+        // Check if the organization has reached the maximum document size allowed
+        if (!subscriptionValidationService.canCreateDocumentsSize(documentInstance.getOrganizationId(), documentInstance.getFileSizeBytes().intValue())) {
+            throw new GendoxException("MAX_DOCUMENT_SIZE_REACHED", "Maximum document size reached for this organization", HttpStatus.BAD_REQUEST);
+        }
+
+//         Check if the organization has reached the maximum number of document sections allowed
+//        if (!subscriptionValidationService.canCreateDocumentSections(documentInstance.getOrganizationId())) {
+//            throw new GendoxException("MAX_DOCUMENT_SECTIONS_REACHED", "Maximum number of document sections reached for this organization", HttpStatus.BAD_REQUEST);
+//        }
 
         // Save the DocumentInstance first to save its ID
         documentInstance = documentInstanceRepository.save(documentInstance);
@@ -191,24 +203,27 @@ public class DocumentService {
     public void deleteDocument(UUID documentIid, UUID projectId) throws GendoxException {
         DocumentInstance documentInstance = getDocumentInstanceById(documentIid);
         deleteDocument(documentInstance, projectId);
-
     }
 
+    @Transactional
     public void deleteDocument(DocumentInstance documentInstance, UUID projectId) throws GendoxException {
+        // Use the new bulk deletion method
         documentSectionService.deleteSections(documentInstance.getDocumentInstanceSections());
-        projectDocumentService.deleteProjectDocument(documentInstance.getId(), projectId);
-        documentInstance.getDocumentInstanceSections().clear();
-        documentInstanceRepository.delete(documentInstance);
 
-        //delete Document Auditing
+        // Delete any project-specific associations (make sure these are done in bulk too)
+        projectDocumentService.deleteProjectDocument(documentInstance.getId(), projectId);
+
+        // Continue with audit log deletion (unchanged)
         Type deleteDocumentType = typeService.getAuditLogTypeByName("DOCUMENT_DELETE");
         AuditLogs deleteDocumentAuditLogs = auditLogsService.createDefaultAuditLogs(deleteDocumentType);
         deleteDocumentAuditLogs.setProjectId(projectId);
         deleteDocumentAuditLogs.setOrganizationId(documentInstance.getOrganizationId());
+        deleteDocumentAuditLogs.setAuditValue(documentInstance.getFileSizeBytes());
 
         auditLogsService.saveAuditLogs(deleteDocumentAuditLogs);
-
+        documentInstanceRepository.delete(documentInstance);
     }
+
 
     public DocumentInstance saveDocumentInstance(DocumentInstance documentInstance) {
         return documentInstanceRepository.save(documentInstance);

@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.RolePermission;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.RolePermissionCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.RolePermissionRepository;
@@ -25,8 +26,19 @@ public class RolePermissionService {
         return getAll(criteria, Pageable.unpaged());
     }
 
+//    public List<RolePermission> getAll(RolePermissionCriteria criteria, Pageable pageable) {
+//        return rolePermissionRepository.findAll(RolePermissionPredicates.build(criteria), pageable).toList();
+//    }
+
     public List<RolePermission> getAll(RolePermissionCriteria criteria, Pageable pageable) {
-        return rolePermissionRepository.findAll(RolePermissionPredicates.build(criteria), pageable).toList();
+        Predicate predicate = RolePermissionPredicates.build(criteria);
+
+        // Handle the case where the predicate is null
+        if (predicate == null) {
+            return rolePermissionRepository.findAll(pageable).toList(); // Fetch all without filtering
+        }
+
+        return rolePermissionRepository.findAll(predicate, pageable).toList();
     }
 
     /**

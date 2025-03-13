@@ -20,5 +20,6 @@ public class ChatThreadCriteria {
     private List<UUID> memberIdIn;
     private List<UUID> threadIdIn;
     private Boolean isPublicThread;
+    private Integer minMessages;
 
 }

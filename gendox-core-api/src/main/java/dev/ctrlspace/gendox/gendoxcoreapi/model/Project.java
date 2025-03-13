@@ -71,7 +71,6 @@ public class Project {
     private Boolean autoTraining;
 
 
-
     public UUID getId() {
         return id;
     }
@@ -104,9 +103,13 @@ public class Project {
         this.description = description;
     }
 
-    public Boolean getActive() {return isActive;}
+    public Boolean getActive() {
+        return isActive;
+    }
 
-    public void setActive(Boolean active) {isActive = active;}
+    public void setActive(Boolean active) {
+        isActive = active;
+    }
 
     public Instant getCreatedAt() {
         return createdAt;
@@ -122,22 +125,6 @@ public class Project {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
-    }
-
-    public List<ProjectMember> getProjectMembers() {
-        return projectMembers;
-    }
-
-    public void setProjectMembers(List<ProjectMember> projectMembers) {
-        this.projectMembers = projectMembers;
-    }
-
-    public ProjectAgent getProjectAgent() {
-        return projectAgent;
-    }
-
-    public void setProjectAgent(ProjectAgent projectAgents) {
-        this.projectAgent = projectAgents;
     }
 
     public UUID getCreatedBy() {
@@ -156,6 +143,22 @@ public class Project {
         this.updatedBy = updatedBy;
     }
 
+    public List<ProjectMember> getProjectMembers() {
+        return projectMembers;
+    }
+
+    public void setProjectMembers(List<ProjectMember> projectMembers) {
+        this.projectMembers = projectMembers;
+    }
+
+    public ProjectAgent getProjectAgent() {
+        return projectAgent;
+    }
+
+    public void setProjectAgent(ProjectAgent projectAgent) {
+        this.projectAgent = projectAgent;
+    }
+
     public List<ProjectDocument> getProjectDocuments() {
         return projectDocuments;
     }
@@ -171,7 +174,6 @@ public class Project {
     public void setAutoTraining(Boolean autoTraining) {
         this.autoTraining = autoTraining;
     }
-
 
     @Override
     public boolean equals(Object o) {

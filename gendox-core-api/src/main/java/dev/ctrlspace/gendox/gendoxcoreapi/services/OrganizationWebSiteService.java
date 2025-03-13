@@ -4,14 +4,11 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.OrganizationWebSiteConverte
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ApiKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationPlan;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationWebSiteDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebsiteIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationWebSiteRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,10 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import javax.print.Doc;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,24 +24,24 @@ public class OrganizationWebSiteService {
     Logger logger = LoggerFactory.getLogger(OrganizationWebSiteService.class);
     private OrganizationWebSiteRepository organizationWebSiteRepository;
     private OrganizationWebSiteConverter organizationWebSiteConverter;
-    private OrganizationPlanService organizationPlanService;
     private ApiKeyService apiKeyService;
     private IntegrationService integrationService;
     private DocumentUtils documentUtils;
+    private SubscriptionValidationService subscriptionValidationService;
 
     @Autowired
     public OrganizationWebSiteService(OrganizationWebSiteRepository organizationWebSiteRepository,
                                       OrganizationWebSiteConverter organizationWebSiteConverter,
-                                      OrganizationPlanService organizationPlanService,
                                       ApiKeyService apiKeyService,
                                       IntegrationService integrationService,
-                                      DocumentUtils documentUtils) {
+                                      DocumentUtils documentUtils,
+                                      SubscriptionValidationService subscriptionValidationService) {
         this.organizationWebSiteRepository = organizationWebSiteRepository;
         this.organizationWebSiteConverter = organizationWebSiteConverter;
-        this.organizationPlanService = organizationPlanService;
         this.apiKeyService = apiKeyService;
         this.integrationService = integrationService;
         this.documentUtils = documentUtils;
+        this.subscriptionValidationService = subscriptionValidationService;
     }
 
     public OrganizationWebSite getById(UUID id) {
@@ -115,20 +108,17 @@ public class OrganizationWebSiteService {
 
 
     public OrganizationWebSite createOrganizationWebSite(OrganizationWebSiteDTO organizationWebSiteDTO, UUID organizationId) {
-        logger.info("Creating OrganizationWebSite for Organization ID: {}", organizationId);
+        logger.info("Creating OrganizationWebSite for Organization ID: {}", organizationId);//
 
-        if (getAllByOrganizationId(organizationId).size() >= calculateMaxWebSites(organizationId)) {
-            throw new IllegalStateException("Maximum number of websites reached for this organization");
-        }
+//        if (!subscriptionValidationService.canCreateWebsite(organizationId, getAllByOrganizationId(organizationId).size())) {
+//            throw new IllegalStateException("Maximum number of websites reached for this organization");
+//        }
 
         OrganizationWebSite organizationWebSite = organizationWebSiteConverter.toEntity(organizationWebSiteDTO);
         return organizationWebSiteRepository.save(organizationWebSite);
     }
 
-    private int calculateMaxWebSites(UUID organizationId) {
-        OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
-        return activePlan.getSubscriptionPlan().getOrganizationWebSites() * activePlan.getNumberOfSeats();
-    }
+
 
     public OrganizationWebSite updateOrganizationWebSite(UUID id, OrganizationWebSiteDTO organizationWebSiteDTO) {
         OrganizationWebSite existingOrganizationWebSite = organizationWebSiteRepository.findById(id).orElse(null);
@@ -156,10 +146,6 @@ public class OrganizationWebSiteService {
     public void deleteOrganizationWebSite(UUID id) {
         organizationWebSiteRepository.deleteById(id);
     }
-
-
-
-
 
 
 }

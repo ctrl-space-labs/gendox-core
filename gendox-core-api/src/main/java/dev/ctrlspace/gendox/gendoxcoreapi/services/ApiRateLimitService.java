@@ -1,9 +1,13 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ApiRateLimit;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ApiRateLimitRepository;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import org.slf4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -12,11 +16,20 @@ import java.time.Duration;
 @Service
 public class ApiRateLimitService {
 
+
+    private ApiRateLimitRepository apiRateLimitRepository;
+
+    @Autowired
+    public ApiRateLimitService(ApiRateLimitRepository apiRateLimitRepository) {
+        this.apiRateLimitRepository = apiRateLimitRepository;
+    }
+
     Logger logger = org.slf4j.LoggerFactory.getLogger(getClass());
+
     /**
      * Gets a new bucket for the user, OR returns the existing bucket from the cache.
      *
-     * @param userId it can be the user ID or the IP address.
+     * @param userId          it can be the user ID or the IP address.
      * @param requests
      * @param durationMinutes
      * @return
@@ -46,11 +59,15 @@ public class ApiRateLimitService {
         Bandwidth limit = Bandwidth
                 .builder()
                 .capacity(tokensPerMinute)
-                .refillGreedy(tokensPerMinute/60, Duration.ofSeconds(1)) // refill per second
+                .refillGreedy(tokensPerMinute / 60, Duration.ofSeconds(1)) // refill per second
                 .id(apiKey)
                 .build();
         return Bucket.builder().addLimit(limit).build();
 
+    }
+
+    public ApiRateLimit getApiRateLimitByTierType(String tierType) {
+        return apiRateLimitRepository.findByTierTypeName(tierType);
     }
 
 

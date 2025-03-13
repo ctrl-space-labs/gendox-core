@@ -1,21 +1,19 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.SubscriptionNotificationConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationPlan;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.SubscriptionPlan;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SubscriptionNotificationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationPlanCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationPlanRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationPlanPredicates;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.ConsumptionProbe;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -24,7 +22,6 @@ import java.util.UUID;
 
 /**
  * Service method to handle subscription related operations and API Rate Limits for an Organization
- *
  */
 @Service
 public class OrganizationPlanService {
@@ -33,22 +30,16 @@ public class OrganizationPlanService {
 
     private OrganizationPlanRepository organizationPlanRepository;
     private SubscriptionPlanService subscriptionPlanService;
-
-    private ProjectService projectService;
-
-    private ApiRateLimitService apiRateLimitService;
+    private SubscriptionNotificationConverter subscriptionNotificationConverter;
 
 
     @Autowired
     public OrganizationPlanService(OrganizationPlanRepository organizationPlanRepository,
-                                   ApiRateLimitService apiRateLimitService,
-                                   @Lazy ProjectService projectService,
-
-                                   SubscriptionPlanService subscriptionPlanService) {
+                                   SubscriptionPlanService subscriptionPlanService,
+                                   SubscriptionNotificationConverter subscriptionNotificationConverter) {
         this.organizationPlanRepository = organizationPlanRepository;
-        this.apiRateLimitService = apiRateLimitService;
         this.subscriptionPlanService = subscriptionPlanService;
-        this.projectService = projectService;
+        this.subscriptionNotificationConverter = subscriptionNotificationConverter;
     }
 
 
@@ -62,15 +53,12 @@ public class OrganizationPlanService {
     }
 
     public Page<OrganizationPlan> getAllOrganizationPlansByCriteria(OrganizationPlanCriteria criteria, Pageable pageable) {
-
         return organizationPlanRepository.findAll(OrganizationPlanPredicates.build(criteria), pageable);
     }
 
-    public OrganizationPlan cancelSubscriptionPlan(UUID organizationPlanId) throws GendoxException {
+    public OrganizationPlan cancelOrganizationPlan(UUID organizationPlanId) throws GendoxException {
         OrganizationPlan plan = getOrganizationPlanById(organizationPlanId);
-
         plan.setEndDate(Instant.now());
-
         return organizationPlanRepository.save(plan);
     }
 
@@ -95,92 +83,74 @@ public class OrganizationPlanService {
         return plan;
     }
 
+    // Create or update organization plan based on subscription notification
+    public OrganizationPlan upsertOrganizationPlan(SubscriptionNotificationDTO subscriptionNotificationDTO, Organization organization) throws GendoxException {
+        validateSubscriptionData(subscriptionNotificationDTO); // 🚨 Validate input data
 
+        List<OrganizationPlan> organizationPlans = this.getAllOrganizationPlansByOrganizationId(organization.getId());
 
-    /**
-     * Check if the API Key is within the subscription limits.
-     * This included the rate limits and the subscription plan limits.
-     *
-     * This method implements all the business logic required to check if the API Key is within the subscription limits.
-     *
-     * @param projectId The project ID that the request is made for.
-     * @param authentication The authentication object that contains the user details.
-     * @param requestIP The IP address of the request.
-     * @return the successful consumption probe object that contains the rate limit details.
-     * @throws GendoxException if the request is not within the subscription limits.
-     *
-     */
-    public ConsumptionProbe validateRequestIsInSubscriptionLimits(UUID projectId, Authentication authentication, String requestIP) throws GendoxException {
+        OrganizationPlan matchingPlan = findOverlappingPlan(organizationPlans, subscriptionNotificationDTO.getStartDate(), subscriptionNotificationDTO.getEndDate());
 
-
-        Project project = projectService.getProjectById(projectId);
-
-        return this.validateRequestIsInSubscriptionLimits(project, authentication, requestIP);
-    }
-
-    public ConsumptionProbe validateRequestIsInSubscriptionLimits(Project project, Authentication authentication, String requestIP) throws GendoxException {
-
-
-        OrganizationPlan plan = getActiveOrganizationPlan(project.getOrganizationId());
-
-        ConsumptionProbe probe = validateRateLimits(authentication, requestIP, plan);
-
-        validateSubscriptionLimits(project, plan);
-        return probe;
-    }
-
-    /**
-     * Validate if the subscription limit has been exceeded for any of the subscription limits, like:
-     * - Number of messages
-     * - Total Number of uploaded documents
-     * - Total MegaBytes of uploaded documents
-     *
-     * If AI model Provider key is missing for the Organization,
-     * it runs the message limits check for the free plan.
-     *
-     * @param project
-     * @param plan
-     */
-    public void validateSubscriptionLimits(Project project, OrganizationPlan plan) throws GendoxException {
-        validateMessageSubscriptionLimits(project, plan);
-        //TODO implement this
-    }
-
-    public void validateMessageSubscriptionLimits(Project project, OrganizationPlan plan) throws GendoxException {
-
-        //TODO implement this
-    }
-
-
-    /**
-     * validates the Rate Limits for the API Key.
-     * If it is a public request, it uses the public rate limits.
-     * If it is a private request, it uses the private rate limits.
-     *
-     * If the request is within the rate limits, it returns the consumption probe object.
-     *
-     * @param authentication
-     * @param requestIP
-     * @param plan
-     * @return
-     * @throws GendoxException if the rate limits are exceeded.
-     */
-    private ConsumptionProbe validateRateLimits(Authentication authentication, String requestIP, OrganizationPlan plan) throws GendoxException {
-        String bucketKey = requestIP;
-        int requests = plan.getApiRateLimit().getPublicCompletionsPerMinute();
-        if (authentication != null) {
-            bucketKey = ((GendoxAuthenticationToken) authentication).getPrincipal().getId();
-            requests = plan.getApiRateLimit().getCompletionsPerMinute();
+        if (matchingPlan != null) {
+            return processOverlappingPlan(matchingPlan, subscriptionNotificationDTO); // 🔄 Handle existing plan
         }
 
-        Bucket bucket = apiRateLimitService.getRateLimitBucketForUser(bucketKey, requests, 1);
+        return createNewOrganizationPlan(subscriptionNotificationDTO, organization); // ✅ Create a new plan if no overlap
+    }
 
-        ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
-        logger.debug("Rate Limit Probe: " + probe);
-        if (!probe.isConsumed()) {
-            throw new GendoxException("RATE_LIMIT_EXCEEDED", "Rate Limit Exceeded", HttpStatus.TOO_MANY_REQUESTS, probe);
+    // Validate input data
+    private void validateSubscriptionData(SubscriptionNotificationDTO dto) throws GendoxException {
+        if (dto.getEndDate().isBefore(dto.getStartDate())) {
+            throw new GendoxException("INVALID_DATE_RANGE", "End date cannot be before start date.", HttpStatus.BAD_REQUEST);
         }
-        return probe;
+        if (dto.getNumberOfSeats() != null && dto.getNumberOfSeats() < 0) {
+            throw new GendoxException("INVALID_SEATS", "Number of seats cannot be negative.", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    // Find overlapping plan
+    private OrganizationPlan findOverlappingPlan(List<OrganizationPlan> organizationPlans, Instant newStartDate, Instant newEndDate) {
+        for (OrganizationPlan plan : organizationPlans) {
+            Instant existingStartDate = plan.getStartDate();
+            Instant existingEndDate = plan.getEndDate();
+
+            if (!newEndDate.isBefore(existingStartDate) && !newStartDate.isAfter(existingEndDate)) {
+                return plan; // Found an overlapping plan
+            }
+        }
+        return null; // No overlap found
+    }
+
+    // Process overlapping plan
+    private OrganizationPlan processOverlappingPlan(OrganizationPlan matchingPlan, SubscriptionNotificationDTO dto) throws GendoxException {
+        // Refund case: If status is "refund", set end date to now
+        if ("refund".equalsIgnoreCase(dto.getStatus())) {
+            matchingPlan.setEndDate(Instant.now());
+            return organizationPlanRepository.save(matchingPlan);
+        }
+
+        SubscriptionPlan newPlan = subscriptionPlanService.getSubscriptionPlanBySku(dto.getProductSKU());
+
+        // Upgrade case: If exact match in start & end dates, update the plan
+        if (matchingPlan.getStartDate().equals(dto.getStartDate()) && matchingPlan.getEndDate().equals(dto.getEndDate())) {
+            matchingPlan.setSubscriptionPlan(newPlan);
+            matchingPlan.setApiRateLimit(newPlan.getApiRateLimit());
+            matchingPlan.setNumberOfSeats(dto.getNumberOfSeats());
+            matchingPlan.setUpdatedAt(Instant.now());
+            return organizationPlanRepository.save(matchingPlan);
+        }
+
+        // Overlap but not an exact match -> Throw error
+        throw new GendoxException("DATE_OVERLAP_ERROR", "The new subscription dates overlap with an existing plan but are not an exact match.", HttpStatus.CONFLICT);
+    }
+
+    // Create new plan entry
+    private OrganizationPlan createNewOrganizationPlan(SubscriptionNotificationDTO dto, Organization organization) throws GendoxException {
+        OrganizationPlan newPlanEntry = subscriptionNotificationConverter.convertToOrganizationPlan(dto);
+        newPlanEntry.setCreatedAt(Instant.now());
+        newPlanEntry.setUpdatedAt(Instant.now());
+        newPlanEntry.setOrganization(organization);
+        return organizationPlanRepository.save(newPlanEntry);
     }
 
 

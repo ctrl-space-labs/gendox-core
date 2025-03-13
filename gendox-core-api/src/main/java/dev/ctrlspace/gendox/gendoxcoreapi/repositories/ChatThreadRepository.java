@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface ChatThreadRepository extends JpaRepository<ChatThread, UUID>, QuerydslPredicateExecutor<ChatThread> {
+public interface ChatThreadRepository extends JpaRepository<ChatThread, UUID>, QuerydslPredicateExecutor<ChatThread>, ChatThreadRepositoryCustom {
 
     public boolean existsByIdAndProjectIdIn(UUID id, List<UUID> projectId);
 
@@ -22,6 +22,9 @@ public interface ChatThreadRepository extends JpaRepository<ChatThread, UUID>, Q
 
     @EntityGraph(attributePaths = {"chatThreadMembers"})
     Page<ChatThread> findAll(Predicate predicate, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"chatThreadMembers"})
+    List<ChatThread> findByIdIn(List<UUID> threadIds);
 
     void deleteById(UUID id);
 }
