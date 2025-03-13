@@ -83,7 +83,7 @@ public class ProjectService {
 
         ProjectAgent projectAgent = projectAgentService.createProjectAgent(project.getProjectAgent());
 
-        project.setAutoTraining(true);
+        project.setActive(true);
 
         project.setProjectAgent(projectAgent);
 

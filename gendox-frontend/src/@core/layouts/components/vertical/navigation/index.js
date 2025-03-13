@@ -40,6 +40,7 @@ const Navigation = props => {
     verticalNavMenuContent: userVerticalNavMenuContent
   } = props
 
+
   // ** States
   const [groupActive, setGroupActive] = useState([])
   const [currentActiveGroup, setCurrentActiveGroup] = useState([])
@@ -92,8 +93,8 @@ const Navigation = props => {
           )} 95%,${hexToRGBA(theme.palette.background.default, 0.05)})`
         }}
       />
-      <Box sx={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
-      {beforeVerticalNavMenuContent ? beforeVerticalNavMenuContent(props) : null}
+      <Box sx={{ ml:2,height: '100%', position: 'relative', overflow: 'hidden' }}>
+     
         <ScrollWrapper
           {...(hidden
             ? {
@@ -106,6 +107,7 @@ const Navigation = props => {
                 containerRef: ref => handleInfiniteScroll(ref)
               })}
         >          
+         {beforeVerticalNavMenuContent ? beforeVerticalNavMenuContent(props) : null}
           <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             {userVerticalNavMenuContent ? (
               userVerticalNavMenuContent(props)
@@ -122,8 +124,8 @@ const Navigation = props => {
             )}
           </Box>
         </ScrollWrapper>
-      </Box>
-      {afterVerticalNavMenuContent ? afterVerticalNavMenuContent(props) : null}
+      </Box>      
+      {afterVerticalNavMenuContent ? afterVerticalNavMenuContent(props) : null}      
     </Drawer>
   )
 }
