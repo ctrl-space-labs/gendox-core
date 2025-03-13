@@ -30,6 +30,8 @@ const MenuNavLink = styled(ListItemButton)(({ theme }) => ({
   width: '100%',
   borderTopRightRadius: 5,
   borderBottomRightRadius: 5,
+  borderTopLeftRadius: 5,
+  borderBottomLeftRadius: 5,
   color: theme.palette.text.primary,
   padding: theme.spacing(2.25, 3.5),
   transition: 'opacity .25s ease-in-out',
