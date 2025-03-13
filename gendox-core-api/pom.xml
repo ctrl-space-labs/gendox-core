@@ -10,7 +10,7 @@
     </parent>
     <groupId>dev.ctrlspace.gendox</groupId>
     <artifactId>gendox-core-api</artifactId>
-    <version>0.9.0</version>
+    <version>0.6.0</version>
     <name>gendox-core-api</name>
     <description>gendox-core-api</description>
     <properties>
