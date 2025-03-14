@@ -1,0 +1,129 @@
+version: '3'
+
+services:
+  gendox-database:
+    build:
+      context: ../../database
+      dockerfile: Dockerfile
+    image: gendox-database:latest
+    container_name: gendox-database
+#    command: -c config_file=/etc/postgresql.conf
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+#      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf  # Doen't work, update them using queries
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    networks:
+      - gendox_network
+      - coolify
+    expose:
+      - "5432"
+    ports:
+      - "${DATABASE_PORT}:5432"
+    healthcheck:
+      test: psql -h localhost -p 5432 -U $DATABASE_USERNAME -d $DATABASE_NAME -t -c "SELECT * from gendox_core.flyway_schema_history" | grep . || exit 1
+      interval: 40s
+      timeout: 30s
+      retries: 30
+      start_period: 60s
+
+  gendox-core-api:
+    build:
+      context: ../../gendox-core-api
+      dockerfile: Dockerfile
+      args:
+        - PROVEN_AI_GIT_REPOSITORY=${PROVEN_AI_GIT_REPOSITORY}
+        - PROVEN_AI_GIT_BRANCH=${PROVEN_AI_GIT_BRANCH}
+    image: gendox-core-api:latest
+    container_name: gendox-core-api
+    volumes:
+      - ~/.aws/:/root/.aws:ro
+    depends_on:
+      gendox-database:
+        condition: service_healthy
+    environment: # Gendox environment variables
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - OPENAI_KEY=${OPENAI_KEY}
+      - COHERE_KEY=${COHERE_KEY}
+      - RSA_KEY_PATH=${RSA_KEY_PATH}
+      - GROQ_KEY=${GROQ_KEY}
+      - GENDOX_SPRING_EMAIL_HOST=${GENDOX_SPRING_EMAIL_HOST}
+      - GENDOX_SPRING_EMAIL_PORT=${GENDOX_SPRING_EMAIL_PORT}
+      - GENDOX_SPRING_EMAIL_USERNAME=${GENDOX_SPRING_EMAIL_USERNAME}
+      - GENDOX_SPRING_EMAIL_PASSWORD=${GENDOX_SPRING_EMAIL_PASSWORD}
+      - PROVEN_AI_ENABLED=${PROVEN_AI_ENABLED}
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    networks:
+      - gendox_network
+      - coolify
+    ports:
+      - "${APIS_PORT}:8080"
+    restart: on-failure
+
+  gendox-keycloak:
+    build:
+      context: ../../gendox-keycloak
+      dockerfile: Dockerfile
+    image: gendox-keycloak:latest
+    container_name: gendox-keycloak
+    environment:
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KC_DB=postgres
+      - KC_DB_URL=${KC_DB_URL}
+      - KC_DB_USERNAME=${KC_DB_USERNAME}
+      - KC_DB_PASSWORD=${KC_DB_PASSWORD}
+      - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
+    entrypoint: [ ]
+    command:
+      - /bin/bash
+      - -c
+      - |
+        if keytool -list -keystore /opt/keycloak/conf/server.keystore -storepass "${KEYSTORE_PASSWORD}" -alias server > /dev/null 2>&1; then
+          echo "Alias 'server' exists, deleting it.";
+          keytool -delete -alias server -keystore /opt/keycloak/conf/server.keystore -storepass "${KEYSTORE_PASSWORD}";
+        fi && \
+        echo "Generating new keystore and key pair." && \
+        keytool -genkeypair \
+          -storepass "${KEYSTORE_PASSWORD}" \
+          -storetype PKCS12 \
+          -keyalg RSA \
+          -keysize 2048 \
+          -dname "CN=localhost" \
+          -alias server \
+          -validity 365 \
+          -ext SAN:c=DNS:localhost,IP:127.0.0.1 \
+          -keystore /opt/keycloak/conf/server.keystore && \
+        exec /opt/keycloak/bin/kc.sh start \
+          --http-relative-path="${KEYCLOAK_HTTP_RELATIVE_PATH}" \
+          --features=token-exchange \
+          --hostname-strict=false \
+          --https-key-store-file=/opt/keycloak/conf/server.keystore \
+          --https-key-store-password "${KEYSTORE_PASSWORD}" \
+          --spi-theme-static-max-age=600 \
+          --spi-theme-cache-themes=true \
+          --spi-theme-cache-templates=true
+    networks:
+      - gendox_network
+      - coolify
+    ports:
+      - "${KEYCLOAK_PORT}:8443"
+    volumes:
+      - keycloak-data:/opt/keycloak/conf
+
+networks:
+  gendox_network:
+  coolify:
+
+volumes:
+  postgres-data:
+  keycloak-data:
