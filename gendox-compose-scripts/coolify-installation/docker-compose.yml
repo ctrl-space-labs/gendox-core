@@ -83,6 +83,8 @@ services:
       - KC_DB_USERNAME=${KC_DB_USERNAME}
       - KC_DB_PASSWORD=${KC_DB_PASSWORD}
       - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
+      - KEYCLOAK_HTTP_RELATIVE_PATH=${KEYCLOAK_HTTP_RELATIVE_PATH}
+      - KEYCLOAK_PORT=${KEYCLOAK_PORT}
     entrypoint: null
     command:
       - /bin/bash
