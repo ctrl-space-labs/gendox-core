@@ -22,7 +22,7 @@ services:
       - gendox_network
       - coolify
     ports:
-      - "${KEYCLOAK_PORT}:8443"
+      - "8443:8443"
     volumes:
       - keycloak-data:/opt/keycloak/conf
 
