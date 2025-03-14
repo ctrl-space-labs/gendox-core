@@ -3,9 +3,9 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy dependency files and install dependencies
+# Copy dependency files and install dependencies with increased timeout for slow connections (github actions)
 COPY package.json yarn.lock ./
-RUN yarn install
+RUN yarn config set network-timeout 600000 && yarn install
 
 # Copy the rest of the application code
 COPY . .
