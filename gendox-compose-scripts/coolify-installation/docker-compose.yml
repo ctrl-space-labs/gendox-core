@@ -83,8 +83,8 @@ services:
       - KC_DB_USERNAME=${KC_DB_USERNAME}
       - KC_DB_PASSWORD=${KC_DB_PASSWORD}
       - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
-    entrypoint: null
-    command:
+    entrypoint: [ "/bin/bash", "-c" ]
+    command: >
       - /bin/bash
       - -c
       - |
