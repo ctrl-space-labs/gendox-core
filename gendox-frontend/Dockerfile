@@ -1,25 +1,30 @@
-# Use an official Node.js runtime as the base image
-FROM node:18-alpine
+# Stage 1: Build the Next.js static site
+FROM node:18-alpine AS builder
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy package.json and yarn.lock first to leverage Docker cache
+# Copy dependency files and install dependencies
 COPY package.json yarn.lock ./
-
-# Install dependencies
 RUN yarn install
 
 # Copy the rest of the application code
 COPY . .
 
-# Expose the port your development server runs on (commonly 3000)
-EXPOSE 3000
+# Build and export the static site
+RUN yarn build
 
-# Set environment variables (optional)
-# ENV NODE_ENV=development
+# Stage 2: Serve the static files using Nginx
+FROM nginx:alpine
 
-# Start the development server
-CMD ["yarn", "dev"]
+# Remove default Nginx static assets
+RUN rm -rf /usr/share/nginx/html/*
 
+# Copy static site output from the builder stage (default output directory is "out")
+COPY --from=builder /app/out /usr/share/nginx/html
+
+# Expose port 80
+EXPOSE 80
+
+# Start Nginx in the foreground
+CMD ["nginx", "-g", "daemon off;"]
 
