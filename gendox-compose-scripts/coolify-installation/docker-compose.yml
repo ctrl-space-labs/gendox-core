@@ -85,7 +85,7 @@ services:
       - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
       - KEYCLOAK_HTTP_RELATIVE_PATH=${KEYCLOAK_HTTP_RELATIVE_PATH}
       - KEYCLOAK_PORT=${KEYCLOAK_PORT}
-    entrypoint: []
+    entrypoint: null
     command:
       - /bin/bash
       - -c
