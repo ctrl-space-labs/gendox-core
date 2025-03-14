@@ -85,11 +85,8 @@ services:
       - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
       - KEYCLOAK_HTTP_RELATIVE_PATH=${KEYCLOAK_HTTP_RELATIVE_PATH}
       - KEYCLOAK_PORT=${KEYCLOAK_PORT}
-    entrypoint: null
-    command:
-      - /bin/bash
-      - -c
-      - |
+    entrypoint: [ "/bin/bash", "-c" ]
+    command: |
         if keytool -list -keystore /opt/keycloak/conf/server.keystore -storepass "${KEYSTORE_PASSWORD}" -alias server > /dev/null 2>&1; then
           echo "Alias 'server' exists, deleting it.";
           keytool -delete -alias server -keystore /opt/keycloak/conf/server.keystore -storepass "${KEYSTORE_PASSWORD}";
