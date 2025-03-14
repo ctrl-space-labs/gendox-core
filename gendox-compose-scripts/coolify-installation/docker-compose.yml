@@ -29,45 +29,45 @@ services:
       retries: 30
       start_period: 60s
 
-  gendox-core-api:
-    build:
-      context: ../../gendox-core-api
-      dockerfile: Dockerfile
-      args:
-        - PROVEN_AI_GIT_REPOSITORY=${PROVEN_AI_GIT_REPOSITORY}
-        - PROVEN_AI_GIT_BRANCH=${PROVEN_AI_GIT_BRANCH}
-    image: gendox-core-api:latest
-    container_name: gendox-core-api
-    volumes:
-      - ~/.aws/:/root/.aws:ro
-    depends_on:
-      gendox-database:
-        condition: service_healthy
-    environment: # Gendox environment variables
-      - DATABASE_URL=${DATABASE_URL}
-      - DATABASE_USERNAME=${DATABASE_USERNAME}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
-      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
-      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
-      - DISCORD_TOKEN=${DISCORD_TOKEN}
-      - OPENAI_KEY=${OPENAI_KEY}
-      - COHERE_KEY=${COHERE_KEY}
-      - RSA_KEY_PATH=${RSA_KEY_PATH}
-      - GROQ_KEY=${GROQ_KEY}
-      - GENDOX_SPRING_EMAIL_HOST=${GENDOX_SPRING_EMAIL_HOST}
-      - GENDOX_SPRING_EMAIL_PORT=${GENDOX_SPRING_EMAIL_PORT}
-      - GENDOX_SPRING_EMAIL_USERNAME=${GENDOX_SPRING_EMAIL_USERNAME}
-      - GENDOX_SPRING_EMAIL_PASSWORD=${GENDOX_SPRING_EMAIL_PASSWORD}
-      - PROVEN_AI_ENABLED=${PROVEN_AI_ENABLED}
-      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-    networks:
-      - gendox_network
-      - coolify
-    ports:
-      - "${APIS_PORT}:8080"
-    restart: on-failure
+#  gendox-core-api:
+#    build:
+#      context: ../../gendox-core-api
+#      dockerfile: Dockerfile
+#      args:
+#        - PROVEN_AI_GIT_REPOSITORY=${PROVEN_AI_GIT_REPOSITORY}
+#        - PROVEN_AI_GIT_BRANCH=${PROVEN_AI_GIT_BRANCH}
+#    image: gendox-core-api:latest
+#    container_name: gendox-core-api
+#    volumes:
+#      - ~/.aws/:/root/.aws:ro
+#    depends_on:
+#      gendox-database:
+#        condition: service_healthy
+#    environment: # Gendox environment variables
+#      - DATABASE_URL=${DATABASE_URL}
+#      - DATABASE_USERNAME=${DATABASE_USERNAME}
+#      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+#      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+#      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+#      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+#      - DISCORD_TOKEN=${DISCORD_TOKEN}
+#      - OPENAI_KEY=${OPENAI_KEY}
+#      - COHERE_KEY=${COHERE_KEY}
+#      - RSA_KEY_PATH=${RSA_KEY_PATH}
+#      - GROQ_KEY=${GROQ_KEY}
+#      - GENDOX_SPRING_EMAIL_HOST=${GENDOX_SPRING_EMAIL_HOST}
+#      - GENDOX_SPRING_EMAIL_PORT=${GENDOX_SPRING_EMAIL_PORT}
+#      - GENDOX_SPRING_EMAIL_USERNAME=${GENDOX_SPRING_EMAIL_USERNAME}
+#      - GENDOX_SPRING_EMAIL_PASSWORD=${GENDOX_SPRING_EMAIL_PASSWORD}
+#      - PROVEN_AI_ENABLED=${PROVEN_AI_ENABLED}
+#      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+#      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+#    networks:
+#      - gendox_network
+#      - coolify
+#    ports:
+#      - "${APIS_PORT}:8080"
+#    restart: on-failure
 
   gendox-keycloak:
     build:
