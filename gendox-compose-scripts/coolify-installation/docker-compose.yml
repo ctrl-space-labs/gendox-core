@@ -20,12 +20,10 @@ services:
       - KEYCLOAK_HTTP_RELATIVE_PATH=${KEYCLOAK_HTTP_RELATIVE_PATH}
       - KEYCLOAK_PORT=${KEYCLOAK_PORT}
     entrypoint: ["/bin/bash", "/opt/keycloak/entrypoint.sh"]
-
+    ports:
+      - "8443:8443"
     volumes:
       - keycloak-data:/opt/keycloak/conf
-    labels:
-      - 'caddy_0.insecure_skip_verify=true'
-
 
 volumes:
   postgres-data:
