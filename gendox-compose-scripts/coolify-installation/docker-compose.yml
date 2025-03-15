@@ -8,8 +8,6 @@ services:
     image: gendox-keycloak:latest
     container_name: gendox-keycloak
     environment:
-      - COOLIFY_URL=https://auth.gendox.dev
-      - COOLIFY_FQDN=auth.gendox.dev
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - KC_DB=postgres
@@ -27,8 +25,6 @@ services:
       - "8443:8443"
     volumes:
       - keycloak-data:/opt/keycloak/conf
-    labels:
-      - 'caddy_0.insecure_skip_verify=true'
 
 networks:
   gendox_network:
