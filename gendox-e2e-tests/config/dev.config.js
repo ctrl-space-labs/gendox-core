@@ -19,7 +19,7 @@ const devConfig = {
         }
     },
     idp: {
-        baseURL: process.env.IDP_BASE_URL || 'https://dev.gendox.ctrlspace.dev/idp',
+        baseURL: process.env.IDP_BASE_URL || 'https://auth.gendox.dev/idp',
         keycloak: {
             realm: process.env.KEYCLOAK_REALM || 'gendox-idp-prod',
             clientId: process.env.KEYCLOAK_CLIENT_ID || 'gendox-public-client'
