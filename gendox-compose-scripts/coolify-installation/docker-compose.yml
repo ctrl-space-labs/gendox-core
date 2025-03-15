@@ -18,17 +18,10 @@ services:
       - KEYCLOAK_HTTP_RELATIVE_PATH=${KEYCLOAK_HTTP_RELATIVE_PATH}
       - KEYCLOAK_PORT=${KEYCLOAK_PORT}
     entrypoint: ["/bin/bash", "/opt/keycloak/entrypoint.sh"]
-    networks:
-      - gendox_network
-      - coolify
-    ports:
-      - "8443:8443"
+
     volumes:
       - keycloak-data:/opt/keycloak/conf
 
-networks:
-  gendox_network:
-  coolify:
 
 volumes:
   postgres-data:
