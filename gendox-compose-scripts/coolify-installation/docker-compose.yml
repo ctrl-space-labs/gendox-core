@@ -1,4 +1,4 @@
-version: '3'
+version: '3.7'
 
 services:
   gendox-keycloak:
@@ -8,8 +8,6 @@ services:
     image: gendox-keycloak:latest
     container_name: gendox-keycloak
     environment:
-      - COOLIFY_URL=https://auth.cloud.gendox.dev
-      - COOLIFY_FQDN=auth.cloud.gendox.dev
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - KC_DB=postgres
@@ -24,7 +22,7 @@ services:
       - "8443:8443"
     volumes:
       - keycloak-data:/opt/keycloak/conf
+    restart: unless-stopped
 
 volumes:
-  postgres-data:
   keycloak-data:
