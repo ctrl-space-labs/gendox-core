@@ -23,11 +23,13 @@ RUN mkdir -p /opt/keycloak/custom-conf
 
 # Copy initialization script
 COPY ./conf/gendox-local-init.sh /opt/keycloak/custom-conf/gendox-local-init.sh
+COPY ./entrypoint.sh /opt/keycloak/entrypoint.sh
 
 # Switch to root to set executable permissions, then switch back
 # Set executable permissions on custom scripts
 RUN chmod +x /opt/keycloak/bin/kcadm.sh
 RUN chmod +x /opt/keycloak/custom-conf/gendox-local-init.sh
+RUN chmod +x /opt/keycloak/entrypoint.sh
 USER keycloak
 
 # Build Keycloak (optimized for faster start-up in production)
