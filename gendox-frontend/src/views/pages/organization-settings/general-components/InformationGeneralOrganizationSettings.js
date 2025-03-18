@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSelector } from 'react-redux'
-import { useTheme } from '@mui/material/styles'
+import { useSettings } from 'src/@core/hooks/useSettings'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import Grid from '@mui/material/Grid'
 import TextField from '@mui/material/TextField'
@@ -19,11 +19,11 @@ import { useAuth } from 'src/authentication/useAuth'
 import commonConfig from 'src/configs/common.config.js'
 
 const InformationGeneralOrganizationSettings = () => {
-  const theme = useTheme()
+  const { settings } = useSettings()
   const auth = useAuth()
   const router = useRouter()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-
+  const provenAiEnabled = settings.provenAiEnabled
   const { activeOrganization: organization } = useSelector(state => state.activeOrganization)
 
   const [name, setName] = useState(organization.name || '')
@@ -161,6 +161,9 @@ const InformationGeneralOrganizationSettings = () => {
               />
             </Grid>
             <Grid item xs={12} sm={6} md={6}></Grid>
+
+            
+            {provenAiEnabled && (
             <Grid
               item
               xs={12}
@@ -185,6 +188,7 @@ const InformationGeneralOrganizationSettings = () => {
                 <Icon icon='mdi:arrow-right-thin' />{' '}
               </Button>
             </Grid>
+            )}
           </Grid>
         </CardContent>
 

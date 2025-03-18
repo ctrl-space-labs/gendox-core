@@ -14,6 +14,7 @@ const initialSettings = {
   navBarContent: themeConfig.navBarContent,
   footerContent: themeConfig.footerContent,
   globalSearch: themeConfig.globalSearch,
+  provenAiEnabled: themeConfig.provenAiEnabled,
 }
 
 // ** Create Context

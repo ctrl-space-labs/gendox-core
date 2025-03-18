@@ -18,6 +18,7 @@ const themeConfig = {
   navBarContent: 'default' /* default | hidden */,
   footerContent: 'default' /* default | poweredBy | hidden */,
   globalSearch: true /* true | false */,
+  provenAiEnabled: process.env.NEXT_PUBLIC_PROVEN_AI_ENABLED? process.env.NEXT_PUBLIC_PROVEN_AI_ENABLED === 'true' : false /* true | false */,
 }
 
 export default themeConfig
