@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSelector, useDispatch } from 'react-redux'
-import { useSettings } from 'src/@core/hooks/useSettings'
 import Grid from '@mui/material/Grid'
 import TextField from '@mui/material/TextField'
 import FormControlLabel from '@mui/material/FormControlLabel'
@@ -25,11 +24,10 @@ import commonConfig from 'src/configs/common.config.js'
 import { fetchProject, updateProject, deleteProject } from 'src/store/activeProject/activeProject'
 
 const GeneralProjectSettings = () => {
-  const { settings } = useSettings()
   const router = useRouter()
   const dispatch = useDispatch()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-  const provenAiEnabled = settings.provenAiEnabled
+  const {provenAiEnabled, provenAiUrl } = commonConfig
 
   const project = useSelector(state => state.activeProject.projectDetails)
   const isUpdatingProject = useSelector(state => state.activeProject.isUpdating)
@@ -206,7 +204,7 @@ const GeneralProjectSettings = () => {
                       <Button
                         size='large'
                         variant='outlined'
-                        href={`${commonConfig.provenAiUrl}/provenAI/data-pods-control/?organizationId=${project.organizationId}&dataPodId=${project.id}`}
+                        href={`${provenAiUrl}/provenAI/data-pods-control/?organizationId=${project.organizationId}&dataPodId=${project.id}`}
                         target='_blank'
                         rel='noopener noreferrer'
                       >

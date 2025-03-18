@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
-import { useSettings } from 'src/@core/hooks/useSettings'
 import Card from '@mui/material/Card'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
@@ -32,10 +31,9 @@ import { fetchProject } from 'src/store/activeProject/activeProject'
 import commonConfig from 'src/configs/common.config.js'
 
 const AiAgentProjectSettings = () => {
-  const { settings } = useSettings()
   const dispatch = useDispatch()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-  const provenAiEnabled = settings.provenAiEnabled
+  const {provenAiEnabled, provenAiUrl } = commonConfig
 
   const { projectDetails: project, isBlurring: isUpdatingProject } = useSelector(state => state.activeProject)
 
@@ -395,7 +393,7 @@ const AiAgentProjectSettings = () => {
                   <Button
                     size='large'
                     variant='outlined'
-                    href={`${commonConfig.provenAiUrl}/provenAI/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`}
+                    href={`${provenAiUrl}/provenAI/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`}
                     target='_blank'
                     rel='noopener noreferrer'
                   >
