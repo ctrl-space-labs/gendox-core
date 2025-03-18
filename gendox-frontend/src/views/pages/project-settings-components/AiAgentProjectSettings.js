@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
+import { useSettings } from 'src/@core/hooks/useSettings'
 import Card from '@mui/material/Card'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
@@ -31,8 +32,10 @@ import { fetchProject } from 'src/store/activeProject/activeProject'
 import commonConfig from 'src/configs/common.config.js'
 
 const AiAgentProjectSettings = () => {
+  const { settings } = useSettings()
   const dispatch = useDispatch()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
+  const provenAiEnabled = settings.provenAiEnabled
 
   const { projectDetails: project, isBlurring: isUpdatingProject } = useSelector(state => state.activeProject)
 
@@ -386,6 +389,8 @@ const AiAgentProjectSettings = () => {
                     </ButtonBase>
                   ))}
                 </Grid>
+
+                {provenAiEnabled && (
                 <Grid item xs={12} sm={6} sx={{ display: 'flex', alignItems: 'flex-end' }}>
                   <Button
                     size='large'
@@ -400,6 +405,7 @@ const AiAgentProjectSettings = () => {
                     <Icon icon='mdi:arrow-right-thin' />
                   </Button>
                 </Grid>
+                )}
               </Grid>
             </CardContent>
             <Divider sx={{ mt: 5, mb: '0 !important' }} />

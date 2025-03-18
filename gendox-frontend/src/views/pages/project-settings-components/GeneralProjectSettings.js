@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSelector, useDispatch } from 'react-redux'
+import { useSettings } from 'src/@core/hooks/useSettings'
 import Grid from '@mui/material/Grid'
 import TextField from '@mui/material/TextField'
 import FormControlLabel from '@mui/material/FormControlLabel'
@@ -24,9 +25,11 @@ import commonConfig from 'src/configs/common.config.js'
 import { fetchProject, updateProject, deleteProject } from 'src/store/activeProject/activeProject'
 
 const GeneralProjectSettings = () => {
+  const { settings } = useSettings()
   const router = useRouter()
   const dispatch = useDispatch()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
+  const provenAiEnabled = settings.provenAiEnabled
 
   const project = useSelector(state => state.activeProject.projectDetails)
   const isUpdatingProject = useSelector(state => state.activeProject.isUpdating)
@@ -198,23 +201,24 @@ const GeneralProjectSettings = () => {
                       </Button>
                     </Tooltip>
                   </Grid>
-
-                  <Grid item>
-                    <Button
-                      size='large'
-                      variant='outlined'
-                      href={`${commonConfig.provenAiUrl}/provenAI/data-pods-control/?organizationId=${project.organizationId}&dataPodId=${project.id}`}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Box component='span' sx={{ mr: 1 }}>
-                          Go to Proven-Ai
+                  {provenAiEnabled && (
+                    <Grid item>
+                      <Button
+                        size='large'
+                        variant='outlined'
+                        href={`${commonConfig.provenAiUrl}/provenAI/data-pods-control/?organizationId=${project.organizationId}&dataPodId=${project.id}`}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box component='span' sx={{ mr: 1 }}>
+                            Go to Proven-Ai
+                          </Box>
+                          <Icon icon='mdi:arrow-right-thin' />
                         </Box>
-                        <Icon icon='mdi:arrow-right-thin' />
-                      </Box>
-                    </Button>
-                  </Grid>
+                      </Button>
+                    </Grid>
+                  )}
                 </Grid>
               </Grid>
             </CardContent>
