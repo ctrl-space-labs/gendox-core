@@ -1,4 +1,6 @@
-const url = process.env.NEXT_PUBLIC_GENDOX_URL;
+import commonConfig from 'src/configs/common.config.js'
+
+const url = commonConfig.gendoxUrl;
 
 
 
