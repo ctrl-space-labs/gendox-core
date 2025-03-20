@@ -7,8 +7,7 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 
 import apiRequests from 'src/configs/apiRequest.js'
 import { userDataActions } from 'src/store/userData/userData'
-import { fetchOrganization } from 'src/store/activeOrganization/activeOrganization'
-import { fetchProject } from 'src/store/activeProject/activeProject'
+
 import userManager from 'src/services/authService'
 import { AuthContext } from './AuthContext'
 
@@ -146,28 +145,7 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
       const homeUrl = returnUrl ? decodeURIComponent(returnUrl) : '/gendox/home';
       window.location.href = homeUrl;
     }
-  }, [user])
-
-  useEffect(() => {
-    //the auth provides, thrusts the url params, useRedirectOr404 will handle the url params
-    const { organizationId, projectId } = router.query;
-    const token = window.localStorage.getItem(localStorageConstants.accessTokenKey);
-    if (user && organizationId && projectId) {
-      dispatch(
-        fetchOrganization({
-          organizationId,
-          token,
-        })
-      );
-      dispatch(
-        fetchProject({
-          organizationId,
-          projectId,
-          token,
-        })
-      );
-    }
-  }, [user, router.query, dispatch]);
+  }, [user])  
 
   const values = {
     user,

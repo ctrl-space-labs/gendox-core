@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { Box, useTheme, useMediaQuery } from '@mui/material'
 import { useDispatch, useSelector } from 'react-redux'
+import { useAuth } from 'src/authentication/useAuth'
 import { fetchThreads, loadThread, chatActions } from 'src/store/chat/gendoxChat'
 import { localStorageConstants } from '../../../utils/generalConstants'
 import { useRouter } from 'next/router'
 import ChatNavigation from 'src/views/pages/chat/ChatNavigation'
 import ChatConversation from 'src/views/pages/chat/ChatConversation'
 import ChatInsight from 'src/views/pages/chat/ChatInsight'
+import { isValidOrganization } from 'src/utils/validators'
 
 
 const GendoxChat = props => {
@@ -20,7 +22,7 @@ const GendoxChat = props => {
    *  ! Do not change this value unless you know what you are doing. It can break the template.
    */
 
-
+  const { user } = useAuth()
   const dispatch = useDispatch()
   const router = useRouter()
   const { organizationId, threadId, projectId } = router.query
@@ -40,7 +42,7 @@ const GendoxChat = props => {
       dispatch(fetchThreads({ organizationId, token }))
     }
 
-    if (organizationId) {
+    if (isValidOrganization(organizationId, user)) {
       fetchData()
     }
   }, [dispatch, organizationId])
