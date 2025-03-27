@@ -99,7 +99,8 @@ public class ChatThreadController {
         return messageService.getAllMessagesByCriteria(criteria, pageable);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable')" +
+            "|| isAnonymous()" )
     @GetMapping("threads/{threadId}/message-metadata/{messageId}")
     @Operation(summary = "Get the messages metadata in a Thread",
             description = "Retrieve the messages metadata from a thread. Pagination is supported. The user should have the rights to access this chat.")

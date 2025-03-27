@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { Box, useTheme, useMediaQuery } from '@mui/material'
 import { useDispatch, useSelector } from 'react-redux'
+import { useAuth } from 'src/authentication/useAuth'
 import { fetchThreads, loadThread, chatActions } from 'src/store/chat/gendoxChat'
 import { localStorageConstants } from '../../../utils/generalConstants'
 import { useRouter } from 'next/router'
 import ChatNavigation from 'src/views/pages/chat/ChatNavigation'
 import ChatConversation from 'src/views/pages/chat/ChatConversation'
 import ChatInsight from 'src/views/pages/chat/ChatInsight'
-
+import { isValidOrganization } from 'src/utils/validators'
 
 const GendoxChat = props => {
   const theme = useTheme()
@@ -20,16 +21,18 @@ const GendoxChat = props => {
    *  ! Do not change this value unless you know what you are doing. It can break the template.
    */
 
-
+  const { user } = useAuth()
   const dispatch = useDispatch()
   const router = useRouter()
   const { organizationId, threadId, projectId } = router.query
   const chatUrlPath = props.chatUrlPath || '/gendox/chat'
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-
+  const embedMode = props.embedView || false
   // Redux state from chat store
   const { currentThread, agents, threads } = useSelector(state => state.gendoxChat)
-
+  // console.log('currentThread', currentThread)
+  // console.log('agents', agents)
+  // console.log('threads', threads)
   // For responsive layout: hide sidebar if below large breakpoint
   const hidden = useMediaQuery(theme.breakpoints.down('lg'))
 
@@ -40,7 +43,7 @@ const GendoxChat = props => {
       dispatch(fetchThreads({ organizationId, token }))
     }
 
-    if (organizationId) {
+    if (isValidOrganization(organizationId, user) || props.authProviderOption === 'IFrameAuthProvider') {
       fetchData()
     }
   }, [dispatch, organizationId])
@@ -100,15 +103,19 @@ const GendoxChat = props => {
 
   return (
     <Box
-    sx={{
-        display: "flex",
-        width: "100%",
-        height: "100%",
-
+      sx={{
+        display: 'flex',
+        width: '100%',
+        height: '100%'
       }}
     >
       {/* Left sidebar for navigation */}
-      <ChatNavigation mobileOpen={mobileOpen} onClose={handleNavigationToggle} chatUrlPath={chatUrlPath} />
+      <ChatNavigation
+        mobileOpen={mobileOpen}
+        onClose={handleNavigationToggle}
+        chatUrlPath={chatUrlPath}
+        embedMode={embedMode}
+      />
 
       {/* Main chat conversation area */}
       <ChatConversation
@@ -117,6 +124,7 @@ const GendoxChat = props => {
         handleDrawerToggle={handleNavigationToggle}
         openInsightsToggle={openInsightsToggle}
         handleInsightsToggle={handleInsightsToggle}
+        embedMode={embedMode}
       />
 
       {/* Right sidebar for additional chat insights */}
@@ -132,6 +140,5 @@ const GendoxChat = props => {
     </Box>
   )
 }
-
 
 export default GendoxChat

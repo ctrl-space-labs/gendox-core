@@ -1,14 +1,14 @@
-
+import commonConfig from 'src/configs/common.config.js'
 
 
 const oidcConfig = {
-  authority: process.env.NEXT_PUBLIC_OIDC_AUTHORITY,
-  client_id: process.env.NEXT_PUBLIC_OIDC_CLIENT_ID,
-  redirect_uri: process.env.NEXT_PUBLIC_OIDC_REDIRECT_URI,
+  authority: commonConfig.oidcAuthority,
+  client_id: commonConfig.oidcClientId,
+  redirect_uri: commonConfig.oidcRedirectUri,
   response_type: "code",
   scope: "openid profile email",
-  post_logout_redirect_uri: process.env.NEXT_PUBLIC_OIDC_POST_LOGOUT_REDIRECT_URI,
-  silent_redirect_uri: process.env.NEXT_PUBLIC_OIDC_SILENT_REDIRECT_URI,
+  post_logout_redirect_uri: commonConfig.oidcPostLogoutRedirectUri,
+  silent_redirect_uri: commonConfig.oidcSilentRedirectUri,
   automaticSilentRenew: true,
   pkceMethod: 'S256'
 };

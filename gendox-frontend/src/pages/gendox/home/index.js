@@ -9,7 +9,6 @@ import Tooltip from '@mui/material/Tooltip'
 import Link from 'next/link'
 import ProjectButtons from 'src/views/custom-components/home-page-components/project-buttons-components/ProjectButtons'
 import Documents from 'src/views/custom-components/home-page-components/document-components/Documents'
-import useRedirectOr404ForHome from 'src/utils/useRedirectOr404ForHome'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 
 const GendoxHome = () => {
@@ -18,8 +17,6 @@ const GendoxHome = () => {
 
   const project = useSelector(state => state.activeProject.projectDetails)
   const isBlurring = useSelector(state => state.activeProject.isBlurring)
-
-  useRedirectOr404ForHome(organizationId, projectId)
 
   const handleSettingsClick = () => {
     const path = `/gendox/project-settings?organizationId=${organizationId}&projectId=${projectId}`

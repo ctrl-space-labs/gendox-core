@@ -84,10 +84,15 @@ const UserDropdown = (props) => {
     }
   }
 
-  const handleLogout = () => {
-    logout();
-    handleDropdownClose();
+  const handleLogout = async () => {
+    try {
+      await logout(); // This now properly calls the async function
+      handleDropdownClose();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
+  
 
   return (
     <Fragment>

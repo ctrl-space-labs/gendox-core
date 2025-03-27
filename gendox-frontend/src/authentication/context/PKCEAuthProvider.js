@@ -4,11 +4,10 @@ import { useRouter } from 'next/router'
 import axios from 'axios'
 import authConfig from 'src/configs/auth'
 import { localStorageConstants } from 'src/utils/generalConstants'
-
+import userService from 'src/gendox-sdk/userService'
 import apiRequests from 'src/configs/apiRequest.js'
 import { userDataActions } from 'src/store/userData/userData'
-import { fetchOrganization } from 'src/store/activeOrganization/activeOrganization'
-import { fetchProject } from 'src/store/activeProject/activeProject'
+
 import userManager from 'src/services/authService'
 import { AuthContext } from './AuthContext'
 
@@ -21,6 +20,7 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
     user: null,
     isLoading: true
   })
+
 
   /**
    * Handles login redirect
@@ -39,8 +39,14 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
 
   const handleLogout = async () => {
     try {
+      let token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
+      if (!token) {
+        console.warn('No access token found for logout')
+        throw new Error('Missing access token')
+      }
       await userService.logoutUser(token)
     } catch (error) {
+      console.error('Error occurred while logging out:', error)
     } finally {
       // Clear the authentication state and log
       clearAuthState()
@@ -142,32 +148,11 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
 
   useEffect(() => {
     if (user && router.pathname.includes('oidc-callback')) {
-      const { returnUrl } = router.query;
-      const homeUrl = returnUrl ? decodeURIComponent(returnUrl) : '/gendox/home';
-      window.location.href = homeUrl;
+      const { returnUrl } = router.query
+      const homeUrl = returnUrl ? decodeURIComponent(returnUrl) : '/gendox/home'
+      window.location.href = homeUrl
     }
   }, [user])
-
-  useEffect(() => {
-    //the auth provides, thrusts the url params, useRedirectOr404 will handle the url params
-    const { organizationId, projectId } = router.query;
-    const token = window.localStorage.getItem(localStorageConstants.accessTokenKey);
-    if (user && organizationId && projectId) {
-      dispatch(
-        fetchOrganization({
-          organizationId,
-          token,
-        })
-      );
-      dispatch(
-        fetchProject({
-          organizationId,
-          projectId,
-          token,
-        })
-      );
-    }
-  }, [user, router.query, dispatch]);
 
   const values = {
     user,

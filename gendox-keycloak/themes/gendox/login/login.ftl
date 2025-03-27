@@ -15,9 +15,8 @@
                                 <label for="username"
                                        class="${properties.kcLabelClass!}"><#if !realm.loginWithEmailAllowed>${msg("username")}<#elseif !realm.registrationEmailAsUsername>${msg("usernameOrEmail")}<#else>${msg("email")}</#if></label>
 
-                                <input tabindex="2" id="username" class="${properties.kcInputClass!}" name="username"
+                                <input tabindex="2" id="username" class="${properties.kcInputClass!} <#if messagesPerField.existsError('username')>pf-m-error</#if>" name="username"
                                        value="${(login.username!'')}" type="text" autofocus autocomplete="username"
-                                       aria-invalid="<#if messagesPerField.existsError('username','password')>true</#if>"
                                 />
                                 <!-- Error Handling -->
                                 <#if messagesPerField.existsError('username','password')>
@@ -36,9 +35,8 @@
                             <label for="password" class="${properties.kcLabelClass!}">${msg("password")}</label>
 
                             <div class="${properties.kcInputGroup!}">
-                                <input tabindex="3" id="password" class="${properties.kcInputClass!}" name="password"
+                                <input tabindex="3" id="password" class="${properties.kcInputClass!} <#if messagesPerField.existsError('username','password')>pf-m-error</#if>" name="password"
                                        type="password" autocomplete="current-password"
-                                       aria-invalid="<#if messagesPerField.existsError('username','password')>true</#if>"
                                 />
                                 <button class="${properties.kcFormPasswordVisibilityButtonClass!}" type="button"
                                         aria-label="${msg("showPassword")}"

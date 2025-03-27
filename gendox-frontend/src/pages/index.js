@@ -1,5 +1,7 @@
+import GendoxPageLoader from "src/authentication/components/GendoxPageLoader"
+
 const LoadingPage = () => {
-  return <>Loading...</>
+  return <GendoxPageLoader />
 }
 
 export default LoadingPage

@@ -15,7 +15,8 @@ const ThreadMessagesArea = ({
   dispatch,
   token,
   openInfoToggle,
-  isLoadingMessages
+  isLoadingMessages,
+  embedMode
 }) => {
   const containerRef = useRef(null)
 
@@ -75,7 +76,21 @@ const ThreadMessagesArea = ({
                       {/* TODO The font size is not applied */}
                       <GendoxMarkdownRenderer
                         markdownText={message.message}
-                        sxOverrides={{ container: { fontSize: '0.9rem' }, p: { mb: '0' } }}
+                        sxOverrides={{
+                          container: {
+                            fontSize: '0.9rem',
+                            color: isMyMessage
+                              ? theme.palette.primary.contrastText
+                              : theme.palette.text.primary
+                          },
+                          p: {
+                            fontSize: '0.9rem',
+                            color: isMyMessage
+                              ? theme.palette.primary.contrastText
+                              : theme.palette.text.primary,
+                            marginBottom: 0
+                          }
+                        }}
                       />
                     </Box>
                   </Box>
@@ -86,6 +101,7 @@ const ThreadMessagesArea = ({
                       dispatch(fetchMessageMetadata({ thread: currentThread, message, token }))
                       openInfoToggle()
                     }}
+                    embedMode={embedMode}
                   />
                 </React.Fragment>
               )

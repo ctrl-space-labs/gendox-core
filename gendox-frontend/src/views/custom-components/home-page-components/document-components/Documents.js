@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
+import { useAuth } from 'src/authentication/useAuth'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -15,8 +16,11 @@ import DocumentsGrid from './DocumentsGrid'
 import DocumentsList from './DocumentsList'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import { fetchProjectDocuments } from 'src/store/activeProject/activeProject'
+import { isValidOrganizationAndProject } from 'src/utils/validators'
 
 const Documents = () => {
+  const { user } = useAuth()
+
   const router = useRouter()
   const dispatch = useDispatch()
 
@@ -37,7 +41,7 @@ const Documents = () => {
   }, [projectId])
 
   useEffect(() => {
-    if (organizationId && projectId) {
+    if (isValidOrganizationAndProject(organizationId, projectId, user)) {
       dispatch(
         fetchProjectDocuments({
           organizationId,
