@@ -50,7 +50,7 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
     } finally {
       // Clear the authentication state and log
       clearAuthState()
-      userManager.signoutRedirect()
+      await userManager.signoutRedirect()
     }
   }
 
