@@ -60,7 +60,7 @@ const deactivateUserById = async (userId, token) => {
   })
 }
 
-const logoutUser = async token => {
+const logoutUser = async (token) => {
   return axios.post(apiRequests.userLogout(), null, {
     headers: {
       'Content-Type': 'application/json',

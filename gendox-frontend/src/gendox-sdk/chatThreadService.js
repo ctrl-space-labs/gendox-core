@@ -29,12 +29,14 @@ const getThreadsByCriteria = async (projectIdIn, threadIdIn, token) => {
  * @returns {Promise<axios.AxiosResponse<ThreadMessageMetadata>>}
  */
 const getThreadMessageMetadataByMessageId = async (threadId, messageId, token) => {
-  return axios.get(apiRequests.getThreadMessageMetadata(threadId, messageId), {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + token
-    }
-  })
+  let headers = {
+    'Content-Type': 'application/json'
+  }
+  if (token) {
+    headers.Authorization = 'Bearer ' + token
+  }
+  return axios.get(apiRequests.getThreadMessageMetadata(threadId, messageId), { headers })   
+  
 }
 
 /**

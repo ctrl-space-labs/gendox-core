@@ -7,6 +7,8 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 
 import apiRequests from 'src/configs/apiRequest.js'
 import { userDataActions } from 'src/store/userData/userData'
+import { fetchOrganization } from 'src/store/activeOrganization/activeOrganization'
+import { fetchProject } from 'src/store/activeProject/activeProject'
 import { AuthContext } from './AuthContext'
 import { generalConstants } from 'src/utils/generalConstants'
 import { useIFrameMessageManager } from './IFrameMessageManagerContext'
@@ -142,6 +144,27 @@ const IFrameAuthProvider = ({ children, initialAuth }) => {
   useEffect(() => {
     loadUserProfileFromAccessToken(accessToken)
   }, [accessToken])
+
+  useEffect(() => {
+    const { organizationId, projectId } = router.query;
+    const token = window.localStorage.getItem(localStorageConstants.accessTokenKey);
+    console.log('user', user)
+    if (user && user.organizations.length > 0 && organizationId && projectId) {
+      dispatch(
+        fetchOrganization({
+          organizationId,
+          token,
+        })
+      );
+      dispatch(
+        fetchProject({
+          organizationId,
+          projectId,
+          token,
+        })
+      );
+    }
+  }, [user, router.query, dispatch]);
 
   
   const values = {

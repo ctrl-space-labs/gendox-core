@@ -5,7 +5,7 @@ import ScrollWrapper from 'src/views//custom-components/perfect-scroll/ScrollWra
 import { groupThreadsByDate } from 'src/views/pages/chat/utils/chatFormatter'
 import ChatThreadMenu from 'src/views/pages/chat//navigation-components/ChatThreadMenu'
 
-const ChatThreads = ({ threads, chatUrlPath, onClose, organizationId, hidden, searchQuery }) => {
+const ChatThreads = ({ threads, chatUrlPath, onClose, organizationId, hidden, searchQuery, embedMode }) => {
   const filteredThreads = searchQuery
     ? threads.filter(thread => thread.agent.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
     : threads
@@ -57,8 +57,8 @@ const ChatThreads = ({ threads, chatUrlPath, onClose, organizationId, hidden, se
                         }}
                         navVisible
                         toggleNavVisibility={onClose}
-                        onOpenMenu={handleOpenMenu}
-                      />
+                        onOpenMenu={!embedMode ? handleOpenMenu : undefined}
+                        />
                     ))}
                   </Box>
                 )

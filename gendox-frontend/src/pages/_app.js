@@ -81,9 +81,9 @@ const App = props => {
                 {({ settings }) => {
                   return (
                     <ThemeComponent settings={settings}>
-                      <RouteHandler routeType={routeType}>{getLayout(<Component {...pageProps} />)}</RouteHandler>
-                      <OrganizationProjectGuard>
-                        {/*{getLayout(<Component {...pageProps} />)}*/}
+                      <OrganizationProjectGuard authProviderOption={authProviderOption}>
+                        <RouteHandler routeType={routeType}>{getLayout(<Component {...pageProps} />)}</RouteHandler>
+                        
                       </OrganizationProjectGuard>
                       <CustomToast />
                     </ThemeComponent>
