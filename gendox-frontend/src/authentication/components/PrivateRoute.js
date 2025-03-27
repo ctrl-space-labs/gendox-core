@@ -3,6 +3,16 @@ import { useRouter } from 'next/router'
 import { useAuth } from 'src/authentication/useAuth'
 import {localStorageConstants} from "src/utils/generalConstants";
 
+
+const _inIframe = () => {
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    return true;
+  }
+};
+
+
 /**
  * A protective component that ensures only authenticated users
  * can view its children.
@@ -15,13 +25,23 @@ function PrivateRoute({ children, pageLoader }) {
   const router = useRouter()
   const { user, loading, login } = useAuth()
 
+
+
   useEffect(() => {
     if (!router.isReady) return
 
     // If no user is found and not currently loading, attempt to log in
     const hasLocalUserData = Boolean(window.localStorage.getItem(localStorageConstants.userDataKey))
     if (!user && !hasLocalUserData && !loading) {
-      login(router.asPath)
+      // this is to cover the Gendox WP Plugin ONLY
+      // When the app is in an iframe the path is / , show the login page
+      if (_inIframe() && router.asPath === '/') {
+        router.push('/login-prompt')
+      } else {
+        // This directly redirect the user to the login page
+        // and keep the previous url for after the login
+        login(router.asPath)
+      }
     }
   }, [router.isReady, user, loading, login, router.asPath])
 
