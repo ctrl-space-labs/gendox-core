@@ -13,15 +13,13 @@ const useOrganizationProjectGuard = () => {
   const { organizationId: urlOrgId, projectId: urlProjId } = router.query
 
   const redirectPath = router.pathname
-  console.log("Redirect Path------------------------------------->", redirectPath)
 // console.log("USer------------------------------------->", user)
-  useEffect(() => {    
+  useEffect(() => {
     if (!user) return
     if(!user) console.log("User------------------------------------->", user)
     if (redirectPath === '/oidc-callback') return
     if (redirectPath === '/oidc-callback') console.log("Redirect Path------------------------------------->", redirectPath)
     if (typeof window === 'undefined') return
-    console.log("Redirect Path useEffect Start------------------------------------->", redirectPath)
     const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
 
     //////    Organizations Validation   //////
@@ -73,7 +71,9 @@ const useOrganizationProjectGuard = () => {
 
     // update the url only if the effective organization or project is different from the original URL.
     if (urlOrgId !== effectiveOrg.id || urlProjId !== effectiveProj.id && redirectPath !== '/oidc-callback') {
-      router.push(`${redirectPath}/?organizationId=${effectiveOrg.id}&projectId=${effectiveProj.id}`)
+      const slash = redirectPath.endsWith('/') ? '' : '/'
+      const newUrl = `${redirectPath}${slash}?organizationId=${effectiveOrg.id}&projectId=${effectiveProj.id}`
+      router.push(newUrl)
     }
   }, [urlOrgId, urlProjId, user, dispatch, redirectPath])
 }
