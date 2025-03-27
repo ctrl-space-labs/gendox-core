@@ -10,6 +10,7 @@ import Icon from 'src/views/custom-components/mui/icon/icon'
 import Card from '@mui/material/Card'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+import GendoxHome from "../home";
 
 const ProjectSettings = () => {
   const auth = useAuth()
@@ -22,7 +23,7 @@ const ProjectSettings = () => {
   const project = useSelector(state => state.activeProject.projectDetails)
 
 
- 
+
 
   useEffect(() => {
     const loadProjectDetails = async () => {
@@ -102,6 +103,10 @@ const ProjectSettings = () => {
       </Box>
     </Card>
   )
+}
+
+ProjectSettings.pageConfig = {
+  applyEffectiveOrgAndProjectIds: true,
 }
 
 export default ProjectSettings

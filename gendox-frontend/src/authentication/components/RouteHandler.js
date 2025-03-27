@@ -55,15 +55,6 @@ const getHomeRoute = () => {
     selectedOrganizationId = window.localStorage.getItem(localStorageConstants.selectedOrganizationId)
     selectedProjectId = window.localStorage.getItem(localStorageConstants.selectedProjectId)
   }
-  // If selectedOrganizationId is not found, return create organization URL
-  if (selectedOrganizationId === null) {
-    return '/gendox/create-organization'
-  }
-
-  // If selectedOrganizationId exists but selectedProjectId does not, return create project URL
-  if (selectedOrganizationId !== null && selectedProjectId === null) {
-    return `/gendox/create-project/?organizationId=${selectedOrganizationId}`
-  }
 
   // If both selectedOrganizationId and selectedProjectId exist, return home URL with both query parameters
   if (selectedOrganizationId !== null && selectedProjectId !== null) {

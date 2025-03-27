@@ -166,7 +166,7 @@ public class UserService implements UserDetailsService {
      * @return
      * @throws GendoxException
      */
-//    @Cacheable(value = "UserProfileByIdentifier", keyGenerator = "gendoxKeyGenerator")
+    @Cacheable(value = "UserProfileByIdentifier", keyGenerator = "gendoxKeyGenerator")
     public UserProfile getUserProfileByUniqueIdentifier(String userIdentifier) throws GendoxException {
 
         User user = this.getUserByUniqueIdentifier(userIdentifier);

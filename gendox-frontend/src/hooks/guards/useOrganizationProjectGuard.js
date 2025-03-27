@@ -6,7 +6,7 @@ import { useDispatch } from 'react-redux'
 import { fetchOrganization } from 'src/store/activeOrganization/activeOrganization'
 import { fetchProject } from 'src/store/activeProject/activeProject'
 
-const useOrganizationProjectGuard = () => {
+const useOrganizationProjectGuard = (authProviderOption, pageConfig) => {
   const dispatch = useDispatch()
   const router = useRouter()
   const { user } = useAuth()
@@ -15,10 +15,15 @@ const useOrganizationProjectGuard = () => {
   const redirectPath = router.pathname
 // console.log("USer------------------------------------->", user)
   useEffect(() => {
+    // Only run if the auth provider is the one for which guard is applicable.
+    if (authProviderOption === 'IFrameAuthProvider') return
+
+    // Only run if a user is present.
     if (!user) return
-    if(!user) console.log("User------------------------------------->", user)
+
+    // Only run the guard if pageConfig.runGuard is explicitly set to true.
+    if (!pageConfig?.applyEffectiveOrgAndProjectIds) return
     if (redirectPath === '/oidc-callback') return
-    if (redirectPath === '/oidc-callback') console.log("Redirect Path------------------------------------->", redirectPath)
     if (typeof window === 'undefined') return
     const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
 

@@ -10,6 +10,7 @@ import Link from 'next/link'
 import ProjectButtons from 'src/views/custom-components/home-page-components/project-buttons-components/ProjectButtons'
 import Documents from 'src/views/custom-components/home-page-components/document-components/Documents'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
+import ChatPage from "../chat";
 
 const GendoxHome = () => {
   const router = useRouter()
@@ -99,6 +100,10 @@ const GendoxHome = () => {
       </Box>
     </Card>
   )
+}
+
+GendoxHome.pageConfig = {
+  applyEffectiveOrgAndProjectIds: true,
 }
 
 export default GendoxHome
