@@ -8,6 +8,7 @@ import {localStorageConstants} from "../../utils/generalConstants";
 import {useRouter} from "next/router";
 import userManager from "../../services/authService";
 import CircularProgress from "@mui/material/CircularProgress";
+import {useAuth} from "../../authentication/useAuth";
 
 /**
  * LoginPromptPage is used only in the Gendox WP Plugin admin page.
@@ -26,39 +27,45 @@ const LoginPromptPage = ({ sx }) => {
 
   const router = useRouter()
   const [loading, setLoading] = useState(true)
+  const auth = useAuth();
 
   const handleLoginClick = () => {
     window.open('/', '_blank', 'noopener,noreferrer')
   }
 
   // Handle storage events from other tabs
-  useEffect(() => {
+  useEffect(async () => {
+    if (!router.isReady) return
 
     setTimeout(async () => {
       try {
         const user = await userManager.signinSilent()
+        console.log('Silent login attempt completed, user:', user)
+        console.log('Silent login attempt completed, auth:', auth)
         if (user) {
           router.push('/')
         }
       } catch (silentError) {
-        setLoading(false)
         console.log('Silent login attempt failed:', silentError)
+      } finally {
+        setLoading(false)
       }
     }, 100)
 
-    const handleStorage = (event) => {
-      // Check if the access token key was updated and has a value
-      if (
-        event.key === localStorageConstants.accessTokenKey &&
-        event.newValue
-      ) {
-        router.push('/')
-      }
-    }
-    window.addEventListener('storage', handleStorage)
-    return () => {
-      window.removeEventListener('storage', handleStorage)
-    }
+
+    // const handleStorage = (event) => {
+    //   // Check if the access token key was updated and has a value
+    //   if (
+    //     event.key === localStorageConstants.accessTokenKey &&
+    //     event.newValue
+    //   ) {
+    //     router.push('/')
+    //   }
+    // }
+    // window.addEventListener('storage', handleStorage)
+    // return () => {
+    //   window.removeEventListener('storage', handleStorage)
+    // }
   }, [router])
 
   return (

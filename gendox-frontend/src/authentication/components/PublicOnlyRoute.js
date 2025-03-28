@@ -17,9 +17,11 @@ function PublicOnly({ children, pageLoader }) {
   useEffect(() => {
     if (!router.isReady) return
 
+    console.log("PublicOnly .isReady: ", router.asPath)
     // If user data exists in localStorage, assume user is logged in
     const storedUser = window.localStorage.getItem(localStorageConstants.userDataKey)
     if (storedUser) {
+      console.log("PublicOnly user logged in")
       // Redirect authenticated users to the homepage
       router.replace('/')
     }
@@ -28,8 +30,11 @@ function PublicOnly({ children, pageLoader }) {
 
   // If still loading or user is authenticated, show the fallback
   if (loading || user !== null) {
+    console.log("PublicOnly page Loader")
     return pageLoader
   }
+
+  console.log("PublicOnly returning children")
 
   // Otherwise, render the content for unauthenticated users
   return <>{children}</>
