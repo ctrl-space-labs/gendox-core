@@ -41,13 +41,13 @@ const LoginPromptPage = ({ sx }) => {
       try {
         const user = await userManager.signinSilent()
         console.log('Silent login attempt completed, user:', user)
-        console.log('Silent login attempt completed, auth:', auth)
         if (user) {
           router.push('/')
         }
       } catch (silentError) {
         console.log('Silent login attempt failed:', silentError)
       } finally {
+        console.log('Silent login attempt completed, auth:', auth)
         setLoading(false)
       }
     }, 100)
