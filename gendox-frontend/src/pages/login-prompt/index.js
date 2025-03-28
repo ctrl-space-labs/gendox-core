@@ -33,10 +33,7 @@ const LoginPromptPage = ({ sx }) => {
 
   // Handle storage events from other tabs
   useEffect(() => {
-    if (window.localStorage.getItem(localStorageConstants.accessTokenKey)) {
-      router.push('/')
-      return
-    }
+
     setTimeout(async () => {
       try {
         const user = await userManager.signinSilent()
