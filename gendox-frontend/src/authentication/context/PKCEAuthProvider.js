@@ -130,6 +130,16 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
 
       // Store userData in Redux
       dispatch(userDataActions.getUserData(userDataResponse.data))
+      // if it is opened by the WP Plugin Admin page
+      if (window.opener) {
+        console.log('Sending message to parent window')
+        const trustedDomain = window.location.origin; // gets the current domain
+        window.opener.postMessage(
+          { type: 'LOGIN_SUCCESS', payload: { /* any token or user info */ } },
+          trustedDomain
+        );
+        window.close();
+      }
     } catch (userDataError) {
       console.error('Error occurred while fetching user data:', userDataError)
     } finally {
@@ -148,15 +158,6 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
 
   useEffect(() => {
     if (user && router.pathname.includes('oidc-callback')) {
-      if (window.opener) {
-        console.log('Sending message to parent window')
-        const trustedDomain = window.location.origin; // gets the current domain
-        window.opener.postMessage(
-          { type: 'LOGIN_SUCCESS', payload: { /* any token or user info */ } },
-          trustedDomain
-        );
-        window.close();
-      }
       const { returnUrl } = router.query
       const homeUrl = returnUrl ? decodeURIComponent(returnUrl) : '/gendox/home'
       window.location.href = homeUrl
