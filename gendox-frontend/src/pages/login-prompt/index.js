@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react'
+import React, {useEffect, useState} from 'react'
 import { Box, Button } from '@mui/material'
 import LockIcon from '@mui/icons-material/Lock'
 import {routeTypes} from "../../authentication/components/RouteHandler";
@@ -6,6 +6,8 @@ import LoginPage from "../login";
 import BlankLayout from "../../@core/layouts/BlankLayout";
 import {localStorageConstants} from "../../utils/generalConstants";
 import {useRouter} from "next/router";
+import userManager from "../../services/authService";
+import CircularProgress from "@mui/material/CircularProgress";
 
 /**
  * LoginPromptPage is used only in the Gendox WP Plugin admin page.
@@ -23,7 +25,7 @@ import {useRouter} from "next/router";
 const LoginPromptPage = ({ sx }) => {
 
   const router = useRouter()
-
+  const [loading, setLoading] = useState(true)
 
   const handleLoginClick = () => {
     window.open('/', '_blank', 'noopener,noreferrer')
@@ -35,6 +37,17 @@ const LoginPromptPage = ({ sx }) => {
       router.push('/')
       return
     }
+    setTimeout(async () => {
+      try {
+        const user = await userManager.signinSilent()
+        if (user) {
+          router.push('/')
+        }
+      } catch (silentError) {
+        setLoading(false)
+        console.log('Silent login attempt failed:', silentError)
+      }
+    }, 100)
 
     const handleStorage = (event) => {
       // Check if the access token key was updated and has a value
@@ -68,9 +81,12 @@ const LoginPromptPage = ({ sx }) => {
         variant="contained"
         startIcon={<LockIcon />}
         onClick={handleLoginClick}
+        disabled={loading} // disable the button while processing
+        sx={{ mt: 4 }}
       >
         Login
       </Button>
+      {loading && <CircularProgress sx={{ mt: 4 }} />}
     </Box>
   )
 }
