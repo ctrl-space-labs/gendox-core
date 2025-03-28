@@ -84,7 +84,6 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
         // no user data found or user expired, loadUserProfileFromAuthState will handle cleanup
         setAuthState({ user: null, isLoading: false })
       }
-      console.log('Auth State User loaded:', user)
     })
 
     // Adding an event listener for when new user data is loaded
@@ -149,21 +148,20 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
 
   useEffect(() => {
     if (user && router.pathname.includes('oidc-callback')) {
+      if (window.opener) {
+        console.log('Sending message to parent window')
+        const trustedDomain = window.location.origin; // gets the current domain
+        window.opener.postMessage(
+          { type: 'LOGIN_SUCCESS', payload: { /* any token or user info */ } },
+          trustedDomain
+        );
+        window.close();
+      }
       const { returnUrl } = router.query
       const homeUrl = returnUrl ? decodeURIComponent(returnUrl) : '/gendox/home'
       window.location.href = homeUrl
     }
-    if (user && router.pathname.includes('silent-renew')) {
-      console.log("[user] Inside silent renew, authState ", authState)
-      setTimeout(() => {window.location.href = homeUrl}, 500)
-    }
   }, [user])
-
-  useEffect(() => {
-    if (user && router.pathname.includes('silent-renew')) {
-      console.log("[authState] Inside silent renew, authState ", authState)
-    }
-  }, [authState])
 
   const values = {
     user,
