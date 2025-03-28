@@ -154,9 +154,16 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
       window.location.href = homeUrl
     }
     if (user && router.pathname.includes('silent-renew')) {
+      console.log("[user] Inside silent renew, authState ", authState)
       setTimeout(() => {window.location.href = homeUrl}, 500)
     }
   }, [user])
+
+  useEffect(() => {
+    if (user && router.pathname.includes('silent-renew')) {
+      console.log("[authState] Inside silent renew, authState ", authState)
+    }
+  }, [authState])
 
   const values = {
     user,
