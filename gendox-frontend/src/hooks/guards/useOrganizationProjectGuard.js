@@ -13,7 +13,6 @@ const useOrganizationProjectGuard = (authProviderOption, pageConfig) => {
   const { organizationId: urlOrgId, projectId: urlProjId } = router.query
 
   const redirectPath = router.pathname
-// console.log("USer------------------------------------->", user)
   useEffect(() => {
     // Only run if the auth provider is the one for which guard is applicable.
     if (authProviderOption === 'IFrameAuthProvider') return
