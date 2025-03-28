@@ -84,6 +84,7 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
         // no user data found or user expired, loadUserProfileFromAuthState will handle cleanup
         setAuthState({ user: null, isLoading: false })
       }
+      console.log('Auth State User loaded:', user)
     })
 
     // Adding an event listener for when new user data is loaded
@@ -151,6 +152,9 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
       const { returnUrl } = router.query
       const homeUrl = returnUrl ? decodeURIComponent(returnUrl) : '/gendox/home'
       window.location.href = homeUrl
+    }
+    if (user && router.pathname.includes('silent-renew')) {
+      setTimeout(() => {window.location.href = homeUrl}, 500)
     }
   }, [user])
 
