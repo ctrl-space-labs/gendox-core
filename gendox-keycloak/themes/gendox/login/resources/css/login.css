@@ -10,6 +10,8 @@
     font-size: 15px;
     background: url("../img/gendox-back-dark.webp") no-repeat center center fixed;
     background-size: cover;
+    min-height: 100vh; /* ensure full viewport height but allow expansion */
+    overflow-y: auto;  /* allow vertical scrolling */
     height: 100%;
     display: flex;
     align-items: center;
@@ -17,7 +19,6 @@
     color: #EAEAFF;
     margin: 0;
     padding: 0 15px;
-    border: 1px solid #ccc
 }
 
 
@@ -61,14 +62,16 @@ h1#kc-page-title {
     height: auto;
 }
 
-/* Form Card */
+/* Card Styling */
 .card-pf {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 450px;
     background-color: #3A3E5B;
     border: 2px solid #0CD4A5;
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     padding: 30px;
-    max-width: 450px;    
     margin: 0 auto;
 }
 
@@ -322,6 +325,22 @@ h1#kc-page-title {
 
     .logo-container img {
         max-width: 120px;
+    }
+
+    .login-pf body {
+        display: block;
+        padding-top: 20px; /* add extra spacing at the top */
+    }
+}
+
+@media (max-height: 500px) {
+    .login-pf body{
+        /* align-items: flex-start; Start the card at the top instead of centering */
+        padding-top: 20px; /* Ensure there's some top padding */
+        display: block;
+    }
+    .card-pf {
+        margin-top: 20px; /* Optional: add extra space so the card isn't flush against the top */
     }
 }
 

@@ -69,7 +69,13 @@
                                  id="form-help-text-before-${attribute.name}"
                                  aria-live="polite">${kcSanitize(advancedMsg(attribute.annotations.inputHelperTextBefore))?no_esc}</div>
                         </#if>
-                        <@inputFieldByType attribute=attribute/>                        
+                        <@inputFieldByType attribute=attribute/>
+                        <#if messagesPerField.existsError('${attribute.name}')>
+                            <span id="input-error-${attribute.name}" class="${properties.kcInputErrorMessageClass!}"
+                                  aria-live="polite">
+					            	${kcSanitize(messagesPerField.get('${attribute.name}'))?no_esc}
+					        </span>
+                        </#if>                  
                         <#if attribute.annotations.inputHelperTextAfter??>
                             <div class="${properties.kcInputHelperTextAfterClass!}"
                                  id="form-help-text-after-${attribute.name}"
@@ -88,12 +94,18 @@
                 </div>
                 <div class="${properties.kcInputWrapperClass!}">
                     <!-- Email Input (no longer required) -->
-                    <input type="text" id="username" name="username" class="${properties.kcInputClass!} <#if messagesPerField.existsError('email')>pf-m-error</#if>"
-                           value="${username!''}" oninput="document.getElementById('email').value = this.value;"/>
+                    <input type="email" id="username" name="username" class="${properties.kcInputClass!} <#if messagesPerField.existsError('email')>pf-m-error</#if>"
+                           value="${username!''}" oninput="document.getElementById('email').value = this.value;"                           
+                           pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                           oninvalid="this.setCustomValidity('${msg("invalidEmailMessage")}'); document.getElementById('input-error-email').textContent = this.validationMessage; this.classList.add('pf-m-error');"
+                           onblur="this.setCustomValidity('')" />
                     <#if messagesPerField.existsError('email')>
                        <span id="input-error-email" class="${properties.kcInputErrorMessageClass!}" aria-live="polite">
                            ${kcSanitize(messagesPerField.get('email'))?no_esc}
                        </span>
+                    <#else>
+                        <span id="input-error-email" class="${properties.kcInputErrorMessageClass!}" aria-live="polite"></span>
+    
                     </#if>
                     
 
