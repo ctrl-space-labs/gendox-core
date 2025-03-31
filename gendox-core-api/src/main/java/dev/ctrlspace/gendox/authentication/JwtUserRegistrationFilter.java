@@ -34,7 +34,6 @@ import java.util.UUID;
  * 1. user has been logged  in the Identity Provider
  * 2. user's JWT has been verified by Spring Security
  * 3. it is the first time the user access Gendox with a valid JWT
- *
  */
 @Component
 public class JwtUserRegistrationFilter extends OncePerRequestFilter {
@@ -90,22 +89,7 @@ public class JwtUserRegistrationFilter extends OncePerRequestFilter {
                     for (Invitation invitation : invitations.getContent()) {
                         userInvitationService.acceptInvitation(email, invitation.getToken());
                     }
-                } else {
-                    // create default Organization and Project
-                    // TODO this should be removed from here User should decide the org name
-                    Organization organization = new Organization();
-                    organization.setName("Organization - " + user.getEmail());
-
-                    organization = organizationService.createOrganization(organization, user.getId());
-
-                    ProjectDTO projectDTO = new ProjectDTO();
-                    projectDTO.setName("Project - " + user.getEmail());
-                    projectDTO.setOrganizationId(organization.getId());
-
-                    projectService.createProject(projectDTO, user.getId().toString());
                 }
-
-
             }
         }
 
