@@ -38,6 +38,10 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
   }
 
   const handleLogout = async () => {
+    // setting true, because after the clearAuthState(),
+    // the PrivateRoute, will redirect for login before clear Keycloak Session
+    // and it will stack in infinite re-login loop
+    setLoading(true)
     try {
       let token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
       if (!token) {
