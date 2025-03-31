@@ -14,6 +14,7 @@ import { AuthContext } from './AuthContext'
 const PKCEAuthProvider = ({ children, initialAuth }) => {
   const [user, setUser] = useState(initialAuth.user)
   const [loading, setLoading] = useState(initialAuth.loading)
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter()
   const dispatch = useDispatch()
   const [authState, setAuthState] = React.useState({
@@ -41,7 +42,7 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
     // setting true, because after the clearAuthState(),
     // the PrivateRoute, will redirect for login before clear Keycloak Session
     // and it will stack in infinite re-login loop
-    setLoading(true)
+    setIsLoggingOut(true);
     try {
       let token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
       if (!token) {
@@ -175,6 +176,7 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
     setLoading,
     login: handleLogin,
     logout: handleLogout,
+    isLoggingOut,
     oidcAuthState: authState,
     loadUserProfileFromAuthState
   }
