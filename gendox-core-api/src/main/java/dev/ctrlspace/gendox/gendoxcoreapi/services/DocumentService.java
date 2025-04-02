@@ -239,7 +239,7 @@ public class DocumentService {
             UUID projectId = projectDocumentService.getProjectIdByDocumentId(documentId);
             try {
                 this.deleteDocument(documentId, projectId);
-                logger.info("Successfully deleted all provided DocumentInstances.");
+                logger.info("Successfully deleted document Instance with ID: {}", documentId);
             } catch (Exception e) {
                 logger.error("Failed to delete DocumentInstances with IDs: {}", documentIds, e);
                 throw new GendoxException("DELETE_FAILED", "Failed to delete document instances", HttpStatus.INTERNAL_SERVER_ERROR);
