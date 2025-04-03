@@ -1,5 +1,5 @@
 // ** React Imports
-import {useState, Fragment, useMemo} from 'react'
+import { useState, Fragment, useMemo } from 'react'
 
 // ** Next Import
 import { useRouter } from 'next/router'
@@ -14,12 +14,12 @@ import MenuItem from '@mui/material/MenuItem'
 import { styled } from '@mui/material/styles'
 import Typography from '@mui/material/Typography'
 
-import {generateIdenticon} from "src/utils/identiconUtil";
-import {useAuth} from "src/authentication/useAuth";
+import { generateIdenticon } from 'src/utils/identiconUtil'
+import { useAuth } from 'src/authentication/useAuth'
 
-import {localStorageConstants} from "src/utils/generalConstants";
-import Icon from "src/views/custom-components/mui/icon/icon";
-import {Link} from "@mui/material";
+import { localStorageConstants } from 'src/utils/generalConstants'
+import Icon from 'src/views/custom-components/mui/icon/icon'
+import { Link } from '@mui/material'
 
 // ** Styled Components
 const BadgeContentSpan = styled('span')(({ theme }) => ({
@@ -30,29 +30,24 @@ const BadgeContentSpan = styled('span')(({ theme }) => ({
   boxShadow: `0 0 0 2px ${theme.palette.background.paper}`
 }))
 
-const UserDropdown = (props) => {
+const UserDropdown = props => {
   // ** States
   const [anchorEl, setAnchorEl] = useState(null)
 
-  const { settings } = props;
+  const { settings } = props
 
-  const auth = useAuth();
-  const { logout } = auth;
+  const auth = useAuth()
+  const { logout } = auth
 
   // ** Hooks
   const router = useRouter()
-  let { organizationId } = router.query;
+  let { organizationId } = router.query
 
   if (!organizationId && typeof window !== 'undefined') {
-    organizationId = window.localStorage.getItem(
-      localStorageConstants.selectedOrganizationId
-    );
+    organizationId = window.localStorage.getItem(localStorageConstants.selectedOrganizationId)
   }
 
-
-
-  const identiconSrc = useMemo(() => generateIdenticon(auth?.user?.id), [auth?.user?.id]);
-
+  const identiconSrc = useMemo(() => generateIdenticon(auth?.user?.id), [auth?.user?.id])
 
   const handleDropdownOpen = event => {
     setAnchorEl(event.currentTarget)
@@ -65,10 +60,10 @@ const UserDropdown = (props) => {
     setAnchorEl(null)
   }
 
-  const handleOpenInNewTab = (url) => {
-    window.open(url, '_blank');
-    setAnchorEl(null);
-  };
+  const handleOpenInNewTab = url => {
+    window.open(url, '_blank')
+    setAnchorEl(null)
+  }
 
   const styles = {
     py: 2,
@@ -86,13 +81,12 @@ const UserDropdown = (props) => {
 
   const handleLogout = async () => {
     try {
-      await logout(); // This now properly calls the async function
-      handleDropdownClose();
+      await logout() // This now properly calls the async function
+      handleDropdownClose()
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error('Logout failed:', error)
     }
-  };
-  
+  }
 
   return (
     <Fragment>
@@ -103,12 +97,7 @@ const UserDropdown = (props) => {
         badgeContent={<BadgeContentSpan />}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Avatar
-          alt='John Doe'
-          onClick={handleDropdownOpen}
-          sx={{ width: 40, height: 40 }}
-          src={identiconSrc}
-        />
+        <Avatar alt='John Doe' onClick={handleDropdownOpen} sx={{ width: 40, height: 40 }} src={identiconSrc} />
       </Badge>
       <Menu
         anchorEl={anchorEl}
@@ -125,11 +114,7 @@ const UserDropdown = (props) => {
               badgeContent={<BadgeContentSpan />}
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             >
-              <Avatar
-                alt={auth.user.name}
-                src={identiconSrc}
-                sx={{ width: "2.5rem", height: "2.5rem" }}
-              />
+              <Avatar alt={auth.user.name} src={identiconSrc} sx={{ width: '2.5rem', height: '2.5rem' }} />
             </Badge>
             <Box sx={{ display: 'flex', marginLeft: 3, alignItems: 'flex-start', flexDirection: 'column' }}>
               <Typography sx={{ fontWeight: 600 }}>{auth.user.name}</Typography>
@@ -143,67 +128,40 @@ const UserDropdown = (props) => {
         <MenuItem
           sx={{ p: 0 }}
           onClick={() =>
-            handleDropdownClose(
-              `/gendox/user-profile/?organizationId=${organizationId}&userId=${auth.user.id}`
-            )
+            handleDropdownClose(`/gendox/user-profile/?organizationId=${organizationId}&userId=${auth.user.id}`)
           }
         >
-          <Link
-            href={`/gendox/user-profile/?organizationId=${organizationId}&userId=${auth.user.id}`}
-            passHref
-            style={{ textDecoration: "none" }}
-          >
-            <Box sx={styles}>
-              <Icon icon="mdi:account-outline" />
-              Profile
-            </Box>
-          </Link>
+          <Box sx={styles}>
+            <Icon icon='mdi:account-outline' />
+            Profile
+          </Box>
         </MenuItem>
 
         <Divider />
-        <MenuItem
-          sx={{ p: 0 }}
-          onClick={() => handleDropdownClose("/gendox/create-organization")}
-        >
-          <Link
-            href="/gendox/create-organization"
-            passHref
-            style={{ textDecoration: "none" }}
-          >
-            <Box sx={{ ...styles, textDecoration: "none" }}>
-              <Icon icon="mdi:plus" />
-              Add Organization
-            </Box>
-          </Link>
+        <MenuItem sx={{ p: 0 }} onClick={() => handleDropdownClose('/gendox/create-organization')}>
+          <Box sx={{ ...styles, textDecoration: 'none' }}>
+            <Icon icon='mdi:plus' />
+            Add Organization
+          </Box>
         </MenuItem>
         <MenuItem
           sx={{ p: 0 }}
-          onClick={() =>
-            handleDropdownClose(
-              `/gendox/organization-settings/?organizationId=${organizationId}`
-            )
-          }
+          onClick={() => handleDropdownClose(`/gendox/organization-settings/?organizationId=${organizationId}`)}
         >
-          <Link
-            href={`/gendox/organization-settings/?organizationId=${organizationId}`}
-            passHref
-            style={{ textDecoration: "none" }}
-          >
-            <Box sx={{ ...styles, textDecoration: "none" }}>
-              <Icon icon="mdi:cog-outline" />
-              Organization Settings
-            </Box>
-          </Link>
+          <Box sx={{ ...styles, textDecoration: 'none' }}>
+            <Icon icon='mdi:cog-outline' />
+            Organization Settings
+          </Box>
         </MenuItem>
         <Divider />
         <MenuItem
           onClick={handleLogout}
           sx={{
             py: 2,
-            "& svg": { mr: 2, fontSize: "1.375rem", color: "text.primary" },
+            '& svg': { mr: 2, fontSize: '1.375rem', color: 'text.primary' }
           }}
         >
-          <Icon icon="mdi:logout-variant" />
+          <Icon icon='mdi:logout-variant' />
           Logout
         </MenuItem>
       </Menu>

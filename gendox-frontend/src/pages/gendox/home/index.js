@@ -10,7 +10,7 @@ import Link from 'next/link'
 import ProjectButtons from 'src/views/custom-components/home-page-components/project-buttons-components/ProjectButtons'
 import Documents from 'src/views/custom-components/home-page-components/document-components/Documents'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
-import ChatPage from "../chat";
+import ChatPage from '../chat'
 
 const GendoxHome = () => {
   const router = useRouter()
@@ -62,14 +62,9 @@ const GendoxHome = () => {
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             {organizationId && projectId && projectId !== 'null' ? (
               <Tooltip title='Project Settings'>
-                <Link
-                  href={`/gendox/project-settings?organizationId=${organizationId}&projectId=${projectId}`}
-                  passHref
-                >
-                  <IconButton onClick={handleSettingsClick} sx={{ ml: 2, fontSize: '2rem' }}>
-                    <Icon icon='mdi:cog-outline' fontSize='inherit' />
-                  </IconButton>
-                </Link>
+                <IconButton onClick={handleSettingsClick} sx={{ ml: 2, fontSize: '2rem' }}>
+                  <Icon icon='mdi:cog-outline' fontSize='inherit' />
+                </IconButton>
               </Tooltip>
             ) : (
               <Tooltip title='No Project Selected'>
@@ -103,7 +98,7 @@ const GendoxHome = () => {
 }
 
 GendoxHome.pageConfig = {
-  applyEffectiveOrgAndProjectIds: true,
+  applyEffectiveOrgAndProjectIds: true
 }
 
 export default GendoxHome
