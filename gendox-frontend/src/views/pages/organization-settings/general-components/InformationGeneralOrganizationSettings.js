@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSelector } from 'react-redux'
-import { useTheme } from '@mui/material/styles'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import Grid from '@mui/material/Grid'
 import TextField from '@mui/material/TextField'
@@ -19,13 +18,12 @@ import { useAuth } from 'src/authentication/useAuth'
 import commonConfig from 'src/configs/common.config.js'
 
 const InformationGeneralOrganizationSettings = () => {
-  const theme = useTheme()
   const auth = useAuth()
   const router = useRouter()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-
-  const { activeOrganization: organization } = useSelector(state => state.activeOrganization)
-
+  const { provenAiEnabled, provenAiUrl } = commonConfig
+  const organization = useSelector(state => state.activeOrganization.activeOrganization)
+  const isBlurring = useSelector(state => state.activeOrganization.isBlurring)
   const [name, setName] = useState(organization.name || '')
   const [displayName, setDisplayName] = useState(organization.displayName || '')
   const [address, setAddress] = useState(organization.address || '')
@@ -107,7 +105,12 @@ const InformationGeneralOrganizationSettings = () => {
         <CardHeader title='Information' />
       </Box>
       <form onSubmit={handleSubmit}>
-        <CardContent>
+        <CardContent
+          sx={{
+            filter: isBlurring ? 'blur(6px)' : 'none',
+            transition: 'filter 0.3s ease'
+          }}
+        >
           <Grid container spacing={5}>
             <Grid item xs={12} sm={12} md={6}>
               <TextField
@@ -161,35 +164,45 @@ const InformationGeneralOrganizationSettings = () => {
               />
             </Grid>
             <Grid item xs={12} sm={6} md={6}></Grid>
-            <Grid
-              item
-              xs={12}
-              sm={6}
-              md={6}
-              sx={{
-                display: 'flex',
-                alignItems: 'flex-end',
-                justifyContent: 'flex-end'
-              }}
-            >
-              <Button
-                size='large'
-                variant='outlined'
-                href={`${commonConfig.provenAiUrl}/provenAI/home/?organizationId=${organization.id}`}
-                target='_blank'
-                rel='noopener noreferrer'
+
+            {provenAiEnabled && (
+              <Grid
+                item
+                xs={12}
+                sm={6}
+                md={6}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  justifyContent: 'flex-end'
+                }}
               >
-                <Box component='span' sx={{ mr: 5 }}>
-                  Go to Proven-Ai
-                </Box>
-                <Icon icon='mdi:arrow-right-thin' />{' '}
-              </Button>
-            </Grid>
+                <Button
+                  size='large'
+                  variant='outlined'
+                  href={`${provenAiUrl}/provenAI/home/?organizationId=${organization.id}`}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                >
+                  <Box component='span' sx={{ mr: 5 }}>
+                    Go to Proven-Ai
+                  </Box>
+                  <Icon icon='mdi:arrow-right-thin' />{' '}
+                </Button>
+              </Grid>
+            )}
           </Grid>
         </CardContent>
 
         {/* <Divider sx={{ m: "0 !important" }} /> */}
-        <CardActions sx={{ justifyContent: 'flex-end', p: 2 }}>
+        <CardActions
+          sx={{
+            justifyContent: 'flex-end',
+            p: 2,
+            filter: isBlurring ? 'blur(6px)' : 'none',
+            transition: 'filter 0.3s ease'
+          }}
+        >
           <Button size='large' variant='outlined' color='error' onClick={handleDeleteClickOpen} sx={{ px: 5, py: 1 }}>
             Delete
           </Button>

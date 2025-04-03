@@ -71,21 +71,21 @@ const OrganizationsDropdown = ({ settings }) => {
       const { projects, projectAgents } = organization
       const newProjectId = projects?.[0]?.id ?? null
       handleDropdownClose()
-
       dispatch(
         fetchOrganization({
           organizationId: organization.id,
           token
         })
       )
-
-      dispatch(
-        fetchProject({
-          organizationId: organization.id,
-          projectId: newProjectId,
-          token
-        })
-      )
+      if (newProjectId !== null) {        
+        dispatch(
+          fetchProject({
+            organizationId: organization.id,
+            projectId: newProjectId,
+            token
+          })
+        )
+      }
 
       localStorage.setItem(localStorageConstants.selectedOrganizationId, organization.id)
       localStorage.setItem(localStorageConstants.selectedProjectId, newProjectId)

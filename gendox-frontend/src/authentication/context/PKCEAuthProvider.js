@@ -4,23 +4,24 @@ import { useRouter } from 'next/router'
 import axios from 'axios'
 import authConfig from 'src/configs/auth'
 import { localStorageConstants } from 'src/utils/generalConstants'
-
+import userService from 'src/gendox-sdk/userService'
 import apiRequests from 'src/configs/apiRequest.js'
 import { userDataActions } from 'src/store/userData/userData'
-import { fetchOrganization } from 'src/store/activeOrganization/activeOrganization'
-import { fetchProject } from 'src/store/activeProject/activeProject'
+
 import userManager from 'src/services/authService'
 import { AuthContext } from './AuthContext'
 
 const PKCEAuthProvider = ({ children, initialAuth }) => {
   const [user, setUser] = useState(initialAuth.user)
   const [loading, setLoading] = useState(initialAuth.loading)
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter()
   const dispatch = useDispatch()
   const [authState, setAuthState] = React.useState({
     user: null,
     isLoading: true
   })
+
 
   /**
    * Handles login redirect
@@ -38,13 +39,23 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
   }
 
   const handleLogout = async () => {
+    // setting true, because after the clearAuthState(),
+    // the PrivateRoute, will redirect for login before clear Keycloak Session
+    // and it will stack in infinite re-login loop
+    setIsLoggingOut(true);
     try {
+      let token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
+      if (!token) {
+        console.warn('No access token found for logout')
+        throw new Error('Missing access token')
+      }
       await userService.logoutUser(token)
     } catch (error) {
+      console.error('Error occurred while logging out:', error)
     } finally {
       // Clear the authentication state and log
       clearAuthState()
-      userManager.signoutRedirect()
+      await userManager.signoutRedirect()
     }
   }
 
@@ -124,6 +135,16 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
 
       // Store userData in Redux
       dispatch(userDataActions.getUserData(userDataResponse.data))
+      // if it is opened by the WP Plugin Admin page
+      if (window.opener) {
+        console.log('Sending message to parent window')
+        const trustedDomain = window.location.origin; // gets the current domain
+        window.opener.postMessage(
+          { type: 'LOGIN_SUCCESS', payload: { /* any token or user info */ } },
+          trustedDomain
+        );
+        window.close();
+      }
     } catch (userDataError) {
       console.error('Error occurred while fetching user data:', userDataError)
     } finally {
@@ -142,32 +163,11 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
 
   useEffect(() => {
     if (user && router.pathname.includes('oidc-callback')) {
-      const { returnUrl } = router.query;
-      const homeUrl = returnUrl ? decodeURIComponent(returnUrl) : '/gendox/home';
-      window.location.href = homeUrl;
+      const { returnUrl } = router.query
+      const homeUrl = returnUrl ? decodeURIComponent(returnUrl) : '/gendox/home'
+      window.location.href = homeUrl
     }
   }, [user])
-
-  useEffect(() => {
-    //the auth provides, thrusts the url params, useRedirectOr404 will handle the url params
-    const { organizationId, projectId } = router.query;
-    const token = window.localStorage.getItem(localStorageConstants.accessTokenKey);
-    if (user && organizationId && projectId) {
-      dispatch(
-        fetchOrganization({
-          organizationId,
-          token,
-        })
-      );
-      dispatch(
-        fetchProject({
-          organizationId,
-          projectId,
-          token,
-        })
-      );
-    }
-  }, [user, router.query, dispatch]);
 
   const values = {
     user,
@@ -176,6 +176,7 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
     setLoading,
     login: handleLogin,
     logout: handleLogout,
+    isLoggingOut,
     oidcAuthState: authState,
     loadUserProfileFromAuthState
   }

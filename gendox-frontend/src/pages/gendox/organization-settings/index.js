@@ -16,9 +16,10 @@ import {
   fetchOrganizationWebSites
 } from 'src/store/activeOrganization/activeOrganization'
 import OrganizationSettingsCard from 'src/views/pages/organization-settings/OrganizationSettingsCard'
+import { isValidOrganization } from 'src/utils/validators'
 
 const OrganizationSettings = () => {
-  const auth = useAuth()
+  const { user } = useAuth()
   const dispatch = useDispatch()
   const router = useRouter()
   const { organizationId } = router.query
@@ -29,9 +30,9 @@ const OrganizationSettings = () => {
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
 
   useEffect(() => {
-    if (organizationId) {
-      dispatch(fetchAiModelProviders({ organizationId, token }))
+    if (isValidOrganization(organizationId, user)) {
       dispatch(fetchOrganization({ organizationId, token }))
+      dispatch(fetchAiModelProviders({ organizationId, token }))      
       dispatch(fetchOrganizationAiModelKeys({ organizationId, token }))
       dispatch(fetchOrganizationPlans({ organizationId, token }))
       dispatch(fetchApiKeys({ organizationId, token }))

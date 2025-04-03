@@ -1,6 +1,8 @@
 
 import React, { useEffect } from 'react';
 import userManager from "src/services/authService";
+import BlankLayout from "../../@core/layouts/BlankLayout";
+import {routeTypes} from "../../authentication/components/RouteHandler";
 
 const SilentRenewPage = () => {
     // This is handled by AuthProvider
@@ -17,5 +19,10 @@ const SilentRenewPage = () => {
         </div>
     );
 };
+
+SilentRenewPage.getLayout = page => <BlankLayout>{page}</BlankLayout>
+SilentRenewPage.pageConfig = {
+  routeType: routeTypes.publicOnly,
+}
 
 export default SilentRenewPage;

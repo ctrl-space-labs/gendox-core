@@ -26,10 +26,9 @@
                             </div>
                             <div class="${properties.kcInputWrapperClass!}">
                                 <div class="${properties.kcInputGroup!}">
-                                    <input type="password" id="password" class="${properties.kcInputClass!}"
+                                    <input type="password" id="password" class="${properties.kcInputClass!} <#if messagesPerField.existsError('password')>pf-m-error</#if>"
                                            name="password"
                                            autocomplete="new-password"
-                                           aria-invalid="<#if messagesPerField.existsError('password','password-confirm')>true</#if>"
                                     />
                                     <button class="${properties.kcFormPasswordVisibilityButtonClass!}" type="button"
                                             aria-label="${msg('showPassword')}"
@@ -59,7 +58,7 @@
                             </div>
                             <div class="${properties.kcInputWrapperClass!}">
                                 <div class="${properties.kcInputGroup!}">
-                                    <input type="password" id="password-confirm" class="${properties.kcInputClass!}"
+                                    <input type="password" id="password-confirm" class="${properties.kcInputClass!} <#if messagesPerField.existsError('password-confirm')>pf-m-error</#if>"
                                            name="password-confirm"
                                            aria-invalid="<#if messagesPerField.existsError('password-confirm')>true</#if>"
                                     />

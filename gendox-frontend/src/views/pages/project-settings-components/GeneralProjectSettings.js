@@ -27,8 +27,10 @@ const GeneralProjectSettings = () => {
   const router = useRouter()
   const dispatch = useDispatch()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
+  const {provenAiEnabled, provenAiUrl } = commonConfig
 
   const project = useSelector(state => state.activeProject.projectDetails)
+  const isBlurring = useSelector(state => state.activeProject.isBlurring)
   const isUpdatingProject = useSelector(state => state.activeProject.isUpdating)
   const isDeletingProject = useSelector(state => state.activeProject.isDeleting)
   const [autoTraining, setAutoTraining] = useState(!!project.autoTraining)
@@ -128,7 +130,7 @@ const GeneralProjectSettings = () => {
       <Box sx={{ position: 'relative' }}>
         <Box
           sx={{
-            filter: isDeletingProject || isUpdatingProject ? 'blur(3px)' : 'none',
+            filter: isDeletingProject || isUpdatingProject || isBlurring ? 'blur(3px)' : 'none',
             transition: 'filter 0.3s ease'
           }}
         >
@@ -198,23 +200,24 @@ const GeneralProjectSettings = () => {
                       </Button>
                     </Tooltip>
                   </Grid>
-
-                  <Grid item>
-                    <Button
-                      size='large'
-                      variant='outlined'
-                      href={`${commonConfig.provenAiUrl}/provenAI/data-pods-control/?organizationId=${project.organizationId}&dataPodId=${project.id}`}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Box component='span' sx={{ mr: 1 }}>
-                          Go to Proven-Ai
+                  {provenAiEnabled && (
+                    <Grid item>
+                      <Button
+                        size='large'
+                        variant='outlined'
+                        href={`${provenAiUrl}/provenAI/data-pods-control/?organizationId=${project.organizationId}&dataPodId=${project.id}`}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box component='span' sx={{ mr: 1 }}>
+                            Go to Proven-Ai
+                          </Box>
+                          <Icon icon='mdi:arrow-right-thin' />
                         </Box>
-                        <Icon icon='mdi:arrow-right-thin' />
-                      </Box>
-                    </Button>
-                  </Grid>
+                      </Button>
+                    </Grid>
+                  )}
                 </Grid>
               </Grid>
             </CardContent>

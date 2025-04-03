@@ -15,7 +15,7 @@
                     <div class="${properties.kcInputWrapperClass!}">
                         <input type="email" id="email" class="${properties.kcInputClass!}" name="email"
                                value="${email!''}" autocomplete="email"/>
-                    </div>
+                    </div>                    
                 </div>
 
             <#else>
@@ -73,9 +73,9 @@
                         <#if messagesPerField.existsError('${attribute.name}')>
                             <span id="input-error-${attribute.name}" class="${properties.kcInputErrorMessageClass!}"
                                   aria-live="polite">
-						${kcSanitize(messagesPerField.get('${attribute.name}'))?no_esc}
-					</span>
-                        </#if>
+					            	${kcSanitize(messagesPerField.get('${attribute.name}'))?no_esc}
+					        </span>
+                        </#if>                  
                         <#if attribute.annotations.inputHelperTextAfter??>
                             <div class="${properties.kcInputHelperTextAfterClass!}"
                                  id="form-help-text-after-${attribute.name}"
@@ -94,8 +94,22 @@
                 </div>
                 <div class="${properties.kcInputWrapperClass!}">
                     <!-- Email Input (no longer required) -->
-                    <input type="username" id="username" name="username" class="${properties.kcInputClass!}"
-                           value="${username!''}" oninput="document.getElementById('email').value = this.value;"/>
+                    <input type="email" id="username" name="username" class="${properties.kcInputClass!} <#if messagesPerField.existsError('email')>pf-m-error</#if>"
+                           value="${username!''}" oninput="document.getElementById('email').value = this.value;"                           
+                           pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                           oninvalid="this.setCustomValidity('${msg("invalidEmailMessage")}'); document.getElementById('input-error-email').textContent = this.validationMessage; this.classList.add('pf-m-error');"
+                           onblur="this.setCustomValidity('')" />
+                    <#if messagesPerField.existsError('email')>
+                       <span id="input-error-email" class="${properties.kcInputErrorMessageClass!}" aria-live="polite">
+                           ${kcSanitize(messagesPerField.get('email'))?no_esc}
+                       </span>
+                    <#else>
+                        <span id="input-error-email" class="${properties.kcInputErrorMessageClass!}" aria-live="polite"></span>
+    
+                    </#if>
+                    
+
+                                    
                 </div>
             </div>
 
@@ -138,8 +152,7 @@
 
 <#macro inputTag attribute value>
     <input type="<@inputTagType attribute=attribute/>" id="${attribute.name}" name="${attribute.name}"
-           value="${(value!'')}" class="${properties.kcInputClass!}"
-           aria-invalid="<#if messagesPerField.existsError('${attribute.name}')>true</#if>"
+           value="${(value!'')}" class="${properties.kcInputClass!} "
            <#if attribute.readOnly>disabled</#if>
             <#if attribute.autocomplete??>autocomplete="${attribute.autocomplete}"</#if>
             <#if attribute.annotations.inputTypePlaceholder??>placeholder="${advancedMsg(attribute.annotations.inputTypePlaceholder)}"</#if>
@@ -173,7 +186,6 @@
 
 <#macro textareaTag attribute>
     <textarea id="${attribute.name}" name="${attribute.name}" class="${properties.kcInputClass!}"
-              aria-invalid="<#if messagesPerField.existsError('${attribute.name}')>true</#if>"
               <#if attribute.readOnly>disabled</#if>
             <#if attribute.annotations.inputTypeCols??>cols="${attribute.annotations.inputTypeCols}"</#if>
             <#if attribute.annotations.inputTypeRows??>rows="${attribute.annotations.inputTypeRows}"</#if>
@@ -183,7 +195,6 @@
 
 <#macro selectTag attribute>
     <select id="${attribute.name}" name="${attribute.name}" class="${properties.kcInputClass!}"
-            aria-invalid="<#if messagesPerField.existsError('${attribute.name}')>true</#if>"
             <#if attribute.readOnly>disabled</#if>
             <#if attribute.annotations.inputType=='multiselect'>multiple</#if>
             <#if attribute.annotations.inputTypeSize??>size="${attribute.annotations.inputTypeSize}"</#if>
@@ -232,8 +243,7 @@
     <#list options as option>
         <div class="${classDiv}">
             <input type="${inputType}" id="${attribute.name}-${option}" name="${attribute.name}" value="${option}"
-                   class="${classInput}"
-                   aria-invalid="<#if messagesPerField.existsError('${attribute.name}')>true</#if>"
+                   class="${classInput} <#if messagesPerField.existsError('${attribute.name}')>pf-m-error</#if>"
                    <#if attribute.readOnly>disabled</#if>
                     <#if attribute.values?seq_contains(option)>checked</#if>
             />

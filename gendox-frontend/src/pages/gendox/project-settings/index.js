@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { useSelector, useDispatch } from 'react-redux'
+import { useSelector } from 'react-redux'
 import ProjectSettingsCard from 'src/views/pages/project-settings-components/ProjectSettingsCard'
 import { useAuth } from 'src/authentication/useAuth'
-import { fetchOrganization } from 'src/store/activeOrganization/activeOrganization'
-import { fetchProject } from 'src/store/activeProject/activeProject'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import Tooltip from '@mui/material/Tooltip'
 import IconButton from '@mui/material/IconButton'
@@ -12,11 +10,10 @@ import Icon from 'src/views/custom-components/mui/icon/icon'
 import Card from '@mui/material/Card'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
-import { localStorageConstants } from 'src/utils/generalConstants'
+import GendoxHome from "../home";
 
 const ProjectSettings = () => {
   const auth = useAuth()
-  const dispatch = useDispatch()
   const router = useRouter()
   const { organizationId, projectId } = router.query
   const [isBlurring, setIsBlurring] = useState(false)
@@ -25,14 +22,8 @@ const ProjectSettings = () => {
   }
   const project = useSelector(state => state.activeProject.projectDetails)
 
-  const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
 
-  useEffect(() => {
-    if (organizationId && projectId && token) {
-      dispatch(fetchOrganization({ organizationId, token }))
-      dispatch(fetchProject({ organizationId, projectId, token }))
-    }
-  }, [organizationId, projectId, token, dispatch])
+
 
   useEffect(() => {
     const loadProjectDetails = async () => {
@@ -112,6 +103,10 @@ const ProjectSettings = () => {
       </Box>
     </Card>
   )
+}
+
+ProjectSettings.pageConfig = {
+  applyEffectiveOrgAndProjectIds: true,
 }
 
 export default ProjectSettings

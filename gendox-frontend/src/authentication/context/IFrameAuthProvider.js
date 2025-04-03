@@ -166,6 +166,7 @@ const IFrameAuthProvider = ({ children, initialAuth }) => {
     }
   }, [user, router.query, dispatch]);
 
+  
   const values = {
     user,
     loading,

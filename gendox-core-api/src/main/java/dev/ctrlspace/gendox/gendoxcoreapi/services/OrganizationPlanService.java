@@ -9,6 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SubscriptionNotificationDTO
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationPlanCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationPlanRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationPlanPredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.SubscriptionStatusConstants;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -123,26 +124,36 @@ public class OrganizationPlanService {
 
     // Process overlapping plan
     private OrganizationPlan processOverlappingPlan(OrganizationPlan matchingPlan, SubscriptionNotificationDTO dto) throws GendoxException {
-        // Refund case: If status is "refund", set end date to now
-        if ("refund".equalsIgnoreCase(dto.getStatus())) {
+        // Handle refund: set the end date to now
+        if ((SubscriptionStatusConstants.REFUND).equalsIgnoreCase(dto.getStatus())) {
             matchingPlan.setEndDate(Instant.now());
+            matchingPlan.setStatus(SubscriptionStatusConstants.REFUND);
             return organizationPlanRepository.save(matchingPlan);
         }
 
-        SubscriptionPlan newPlan = subscriptionPlanService.getSubscriptionPlanBySku(dto.getProductSKU());
+        // Handle cancellation: mark the plan as cancelled
+        if ((SubscriptionStatusConstants.CANCELLED).equalsIgnoreCase(dto.getStatus())) {
+            matchingPlan.setStatus(SubscriptionStatusConstants.CANCELLED);
+            return organizationPlanRepository.save(matchingPlan);
+        }
 
-        // Upgrade case: If exact match in start & end dates, update the plan
-        if (matchingPlan.getStartDate().equals(dto.getStartDate()) && matchingPlan.getEndDate().equals(dto.getEndDate())) {
+        // Handle active status
+        if ((SubscriptionStatusConstants.ACTIVE).equalsIgnoreCase(dto.getStatus())) {
+            SubscriptionPlan newPlan = subscriptionPlanService.getSubscriptionPlanBySku(dto.getProductSKU());
             matchingPlan.setSubscriptionPlan(newPlan);
             matchingPlan.setApiRateLimit(newPlan.getApiRateLimit());
             matchingPlan.setNumberOfSeats(dto.getNumberOfSeats());
             matchingPlan.setUpdatedAt(Instant.now());
+            matchingPlan.setStatus(SubscriptionStatusConstants.ACTIVE);
+            matchingPlan.setStartDate(dto.getStartDate());
+            matchingPlan.setEndDate(dto.getEndDate());
             return organizationPlanRepository.save(matchingPlan);
         }
 
-        // Overlap but not an exact match -> Throw error
-        throw new GendoxException("DATE_OVERLAP_ERROR", "The new subscription dates overlap with an existing plan but are not an exact match.", HttpStatus.CONFLICT);
+        // If none of the conditions are met, throw a conflict exception
+        throw new GendoxException("INVALID_STATUS", "Invalid status provided in subscription notification.", HttpStatus.CONFLICT);
     }
+
 
     // Create new plan entry
     private OrganizationPlan createNewOrganizationPlan(SubscriptionNotificationDTO dto, Organization organization) throws GendoxException {
@@ -150,6 +161,7 @@ public class OrganizationPlanService {
         newPlanEntry.setCreatedAt(Instant.now());
         newPlanEntry.setUpdatedAt(Instant.now());
         newPlanEntry.setOrganization(organization);
+        newPlanEntry.setStatus(SubscriptionStatusConstants.ACTIVE);
         return organizationPlanRepository.save(newPlanEntry);
     }
 

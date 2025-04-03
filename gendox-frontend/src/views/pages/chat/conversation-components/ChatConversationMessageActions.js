@@ -8,12 +8,11 @@ import { fetchMessageMetadata } from '../../../../store/chat/gendoxChat'
 import Tooltip from '@mui/material/Tooltip'
 import { copyToClipboard } from 'src/utils/copyToClipboard'
 
-const MessageActions = ({ message, isMyMessage, openMetadata }) => {
+const MessageActions = ({ message, isMyMessage, openMetadata, embedMode }) => {
   if (!message) {
     return null
   }
   const [copyActive, setCopyActive] = useState(false)
-
   const handleCopy = () => {
     copyToClipboard(message.message)
     setCopyActive(true)
@@ -21,7 +20,7 @@ const MessageActions = ({ message, isMyMessage, openMetadata }) => {
       setCopyActive(false) // Reset after a short delay
     }, 8000) // 2 seconds delay
   }
-
+console.log("embedMode", embedMode)
   const timeString = message.createdAt ? new Date(message.createdAt).toLocaleString() : ''
 
   // If it's my message, show only the time, aligned right.
@@ -90,17 +89,18 @@ const MessageActions = ({ message, isMyMessage, openMetadata }) => {
             bgcolor: 'divider'
           }}
         />
-
-        <Tooltip title='Copy'>
-          <IconButton
-            onClick={handleCopy}
-            sx={{
-              color: copyActive ? 'primary.main' : 'inherit'
-            }}
-          >
-            <Icon icon='mdi:content-copy' style={{ fontSize: '1rem' }} />
-          </IconButton>
-        </Tooltip>
+        {!embedMode && (
+          <Tooltip title='Copy'>
+            <IconButton
+              onClick={handleCopy}
+              sx={{
+                color: copyActive ? 'primary.main' : 'inherit'
+              }}
+            >
+              <Icon icon='mdi:content-copy' style={{ fontSize: '1rem' }} />
+            </IconButton>
+          </Tooltip>
+        )}
       </Box>
     </Box>
   )

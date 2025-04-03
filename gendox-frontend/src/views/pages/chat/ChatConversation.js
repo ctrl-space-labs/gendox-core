@@ -35,8 +35,6 @@ const ChatConversation = props => {
     state => state.gendoxChat
   )
 
-
-
   return (
     <ResponsiveCardContent
       sx={{
@@ -76,6 +74,7 @@ const ChatConversation = props => {
             token={token}
             openInfoToggle={props.openInsightsToggle}
             isLoadingMessages={isLoadingMessages}
+            embedMode={props.embedMode}
           />
         </Box>
 

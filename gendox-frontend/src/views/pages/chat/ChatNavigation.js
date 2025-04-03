@@ -22,7 +22,7 @@ const drawerWidth = 350 // Adjust as you like
  * @return {Element}
  * @constructor
  */
-const ChatNavigation = ({ mobileOpen, onClose, chatUrlPath }) => {
+const ChatNavigation = ({ mobileOpen, onClose, chatUrlPath, embedMode }) => {
   const theme = useTheme()
   const router = useRouter()
   const hidden = useMediaQuery(theme.breakpoints.down('lg'))
@@ -34,28 +34,24 @@ const ChatNavigation = ({ mobileOpen, onClose, chatUrlPath }) => {
   // -------------- Redux State --------------
   const { agents, threads } = useSelector(state => state.gendoxChat)
 
- 
   // NEW: Local state for search query
   const [searchQuery, setSearchQuery] = useState('')
-
-
 
   return (
     <>
       <Drawer {...drawerProps}>
-        <Box sx={{ height: "100%", display: "flex", flexDirection: "column", p: "1rem" }}>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: '1rem' }}>
           {/* Search Field */}
-          <ChatNavigationSearch searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+          {!embedMode && <ChatNavigationSearch searchQuery={searchQuery} setSearchQuery={setSearchQuery} />}
 
           {/* Container for the scrollable sections */}
-          <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-            
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             {/* Agents Section */}
             <ChatAgents
               agents={agents}
               chatUrlPath={chatUrlPath}
               onClose={onClose}
-              organizationId={organizationId}              
+              organizationId={organizationId}
               projectId={projectId}
               hidden={hidden}
               searchQuery={searchQuery}
@@ -66,16 +62,16 @@ const ChatNavigation = ({ mobileOpen, onClose, chatUrlPath }) => {
             {/* Threads Section */}
             <ChatThreads
               threads={threads}
-              chatUrlPath={chatUrlPath}              
+              chatUrlPath={chatUrlPath}
               onClose={onClose}
               organizationId={organizationId}
               hidden={hidden}
               searchQuery={searchQuery}
+              embedMode={embedMode}
             />
           </Box>
         </Box>
       </Drawer>
-
     </>
   )
 }

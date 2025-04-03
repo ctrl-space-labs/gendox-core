@@ -33,6 +33,7 @@ import commonConfig from 'src/configs/common.config.js'
 const AiAgentProjectSettings = () => {
   const dispatch = useDispatch()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
+  const {provenAiEnabled, provenAiUrl } = commonConfig
 
   const { projectDetails: project, isBlurring: isUpdatingProject } = useSelector(state => state.activeProject)
 
@@ -386,11 +387,13 @@ const AiAgentProjectSettings = () => {
                     </ButtonBase>
                   ))}
                 </Grid>
+
+                {provenAiEnabled && (
                 <Grid item xs={12} sm={6} sx={{ display: 'flex', alignItems: 'flex-end' }}>
                   <Button
                     size='large'
                     variant='outlined'
-                    href={`${commonConfig.provenAiUrl}/provenAI/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`}
+                    href={`${provenAiUrl}/provenAI/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`}
                     target='_blank'
                     rel='noopener noreferrer'
                   >
@@ -400,6 +403,7 @@ const AiAgentProjectSettings = () => {
                     <Icon icon='mdi:arrow-right-thin' />
                   </Button>
                 </Grid>
+                )}
               </Grid>
             </CardContent>
             <Divider sx={{ mt: 5, mb: '0 !important' }} />

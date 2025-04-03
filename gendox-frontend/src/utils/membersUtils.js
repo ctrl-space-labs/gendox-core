@@ -1,7 +1,6 @@
 import { useTheme } from "@mui/material/styles";
 import CustomAvatar from "src/views/custom-components/mui/avatar";
-import {useMemo} from "react";
-import {generateIdenticon} from "./identiconUtil";
+
 
 // Constants for user types and roles
 export const userTypeStatus = {
