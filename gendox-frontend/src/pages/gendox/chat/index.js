@@ -6,7 +6,7 @@ import {useSettings} from "../../../@core/hooks/useSettings";
 import {routeTypes} from "../../../authentication/components/RouteHandler";
 import EmbeddedChatPage from "../embed/embedded-chat";
 
-const ChatPage = (props) => {
+const ChatPage = () => {  
 
   const theme = useTheme();
 
@@ -14,6 +14,7 @@ const ChatPage = (props) => {
 
   console.log("Mixin Min Height: ", theme.mixins.toolbar.minHeight);
 
+  console.log("Settings: ", settings);
 
   return (
     <Box
