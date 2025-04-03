@@ -152,12 +152,15 @@ const activeOrganizationSlice = createSlice({
   extraReducers: builder => {
     builder
       .addCase(fetchOrganization.pending, state => {
+        state.isBlurring = true
         state.error = null
       })
       .addCase(fetchOrganization.fulfilled, (state, action) => {
+        state.isBlurring = false
         state.activeOrganization = action.payload
       })
       .addCase(fetchOrganization.rejected, (state, action) => {
+        state.isBlurring = false
         state.error = action.payload
       })
 

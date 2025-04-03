@@ -8,6 +8,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import {
+  fetchOrganization,
   fetchAiModelProviders,
   fetchOrganizationAiModelKeys,
   fetchOrganizationPlans,
@@ -30,6 +31,7 @@ const OrganizationSettings = () => {
 
   useEffect(() => {
     if (isValidOrganization(organizationId, user)) {
+      dispatch(fetchOrganization({ organizationId, token }))
       dispatch(fetchAiModelProviders({ organizationId, token }))      
       dispatch(fetchOrganizationAiModelKeys({ organizationId, token }))
       dispatch(fetchOrganizationPlans({ organizationId, token }))

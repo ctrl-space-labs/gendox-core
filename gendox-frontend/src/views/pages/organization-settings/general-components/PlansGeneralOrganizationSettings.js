@@ -1,61 +1,23 @@
 // ** React Imports
-import { useState, useEffect } from 'react'
-
-// ** Next Import
-import { useRouter } from 'next/router'
-
-// ** Redux
-import { useSelector, useDispatch } from 'react-redux'
+import { useState } from 'react'
+import { useSelector } from 'react-redux'
 import { useTheme } from '@mui/material/styles'
-
-import { localStorageConstants } from 'src/utils/generalConstants'
-
 import Grid from '@mui/material/Grid'
 import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
-import Divider from '@mui/material/Divider'
 import CardHeader from '@mui/material/CardHeader'
 import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
-import toast from 'react-hot-toast'
 import Tooltip from '@mui/material/Tooltip'
-
-import subscriptionPlanService from 'src/gendox-sdk/subscriptionPlanService'
-import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
-import { getErrorMessage } from 'src/utils/errorHandler'
 
 const PlansOrganizationSettings = () => {
   const theme = useTheme()
 
-  const router = useRouter()
-  const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-
-  const organization = useSelector(state => state.activeOrganization.activeOrganization)
-
   const organizationPlan = useSelector(state => state.activeOrganization.organizationPlans)
+  const isBlurring = useSelector(state => state.activeOrganization.isBlurring)
 
-  const { id: organizationId } = organization
-
-  const [isBlurring, setIsBlurring] = useState(false)
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
-
-  const handleCancelSubscription = () => setOpenDeleteDialog(true)
-
-  const confirmCancel = async () => {
-    try {
-      await subscriptionPlanService.cancelSubscriptionPlan(organizationPlan.id, organizationId, token)
-      toast.success('Subscription canceled successfully')
-    } catch (error) {
-      console.error('Failed to cancel subscription:', error)
-      toast.error(`Failed to cancel subscription. Error: ${getErrorMessage(error)}`)
-    }
-    setOpenDeleteDialog(false)
-  }
-
-  const handleUpgrade = () => router.push(`/gendox/sub-plans/?organizationId=${organizationId}`)
-  const handleDeleteClose = () => setOpenDeleteDialog(false)
-
+  const manageSubscription = () => window.open('https://gendox.obstechnologies.com/', '_blank')
   return (
     <>
       <Box
@@ -63,30 +25,39 @@ const PlansOrganizationSettings = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          p: 2
+          p: 2,
+          pr: 5
         }}
       >
         <CardHeader title='Subscription Plan Details' />
 
         {organizationPlan && (
-          <Tooltip title='Currently unavailable.'>
-            <span>
+          <Tooltip title='Access your subscription settings' arrow>
+            <Grid
+              item
+              xs={12}
+              sx={{
+                filter: isBlurring ? 'blur(6px)' : 'none',
+                transition: 'filter 0.3s ease'
+              }}
+            >
               <Button
                 variant='outlined'
                 color='primary'
-                onClick={handleUpgrade}
-                disabled={true} // Example condition
+                onClick={manageSubscription}
+                disabled={false} // Example condition
                 sx={{
                   padding: '12px 24px',
                   fontSize: '1.1rem'
                 }}
               >
-                Upgrade Plan
+                Manage Subscription
               </Button>
-            </span>
+            </Grid>
           </Tooltip>
         )}
       </Box>
+
       <CardContent
         sx={{
           filter: isBlurring ? 'blur(6px)' : 'none',
@@ -95,6 +66,23 @@ const PlansOrganizationSettings = () => {
       >
         {organizationPlan ? (
           <Grid container spacing={5}>
+            {organizationPlan?.status === 'CANCELLED' && (
+              <Grid
+                item
+                xs={12}
+                sx={{
+                  p: 2,
+                  color: theme.palette.warning.main,
+                  borderRadius: 1,
+                  mb: 2
+                }}
+              >
+                <Typography variant='body1' color='warning.main'>
+                  Your subscription has been cancelled. Please renew your subscription to continue using the service
+                  without interruption.
+                </Typography>
+              </Grid>
+            )}
             {/* Plan Info Section */}
             <Grid item xs={12}>
               <Typography variant='h6' sx={{ mb: 2, color: theme.palette.primary.main }}>
@@ -254,41 +242,17 @@ const PlansOrganizationSettings = () => {
             <Button
               variant='outlined'
               color='primary'
-              onClick={handleUpgrade}
+              onClick={manageSubscription}
               sx={{
                 padding: '12px 24px',
                 fontSize: '1.1rem'
               }}
             >
-              Upgrade Plan
+              Manage Subscription
             </Button>
           </Box>
         )}
       </CardContent>
-
-      {organizationPlan && (
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            p: 2
-          }}
-        >
-          <Button variant='contained' color='error' onClick={handleCancelSubscription}>
-            Subscription Cancel
-          </Button>
-        </Box>
-      )}
-
-      <DeleteConfirmDialog
-        open={openDeleteDialog}
-        onClose={handleDeleteClose}
-        onConfirm={confirmCancel}
-        title='Cancel Subscription'
-        contentText={`Are you sure you want to cancel the subscription?`}
-        confirmButtonText='Yes, Cancel'
-        cancelButtonText='No, Keep'
-      />
     </>
   )
 }

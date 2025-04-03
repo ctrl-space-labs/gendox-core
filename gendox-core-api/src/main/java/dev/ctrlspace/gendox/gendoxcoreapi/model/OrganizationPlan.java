@@ -27,6 +27,10 @@ public class OrganizationPlan {
     private ApiRateLimit apiRateLimit;
 
     @Basic
+    @Column(name="status")
+    private String status;
+
+    @Basic
     @Column(name = "start_date", nullable = false)
     private Instant startDate;
     @Basic
@@ -114,17 +118,24 @@ public class OrganizationPlan {
         this.updatedAt = updatedAt;
     }
 
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         OrganizationPlan that = (OrganizationPlan) o;
-        return Objects.equals(id, that.id) && Objects.equals(organization, that.organization) && Objects.equals(subscriptionPlan, that.subscriptionPlan) && Objects.equals(apiRateLimit, that.apiRateLimit) && Objects.equals(startDate, that.startDate) && Objects.equals(endDate, that.endDate) && Objects.equals(numberOfSeats, that.numberOfSeats) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt);
+        return Objects.equals(id, that.id) && Objects.equals(organization, that.organization) && Objects.equals(subscriptionPlan, that.subscriptionPlan) && Objects.equals(apiRateLimit, that.apiRateLimit) && Objects.equals(status, that.status) && Objects.equals(startDate, that.startDate) && Objects.equals(endDate, that.endDate) && Objects.equals(numberOfSeats, that.numberOfSeats) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organization, subscriptionPlan, apiRateLimit, startDate, endDate, numberOfSeats, createdAt, updatedAt);
+        return Objects.hash(id, organization, subscriptionPlan, apiRateLimit, status, startDate, endDate, numberOfSeats, createdAt, updatedAt);
     }
 }

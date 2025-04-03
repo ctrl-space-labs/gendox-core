@@ -30,6 +30,7 @@ const GeneralProjectSettings = () => {
   const {provenAiEnabled, provenAiUrl } = commonConfig
 
   const project = useSelector(state => state.activeProject.projectDetails)
+  const isBlurring = useSelector(state => state.activeProject.isBlurring)
   const isUpdatingProject = useSelector(state => state.activeProject.isUpdating)
   const isDeletingProject = useSelector(state => state.activeProject.isDeleting)
   const [autoTraining, setAutoTraining] = useState(!!project.autoTraining)
@@ -129,7 +130,7 @@ const GeneralProjectSettings = () => {
       <Box sx={{ position: 'relative' }}>
         <Box
           sx={{
-            filter: isDeletingProject || isUpdatingProject ? 'blur(3px)' : 'none',
+            filter: isDeletingProject || isUpdatingProject || isBlurring ? 'blur(3px)' : 'none',
             transition: 'filter 0.3s ease'
           }}
         >
