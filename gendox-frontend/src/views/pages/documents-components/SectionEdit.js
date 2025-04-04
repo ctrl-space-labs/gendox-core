@@ -40,7 +40,7 @@ const SectionEdit = ({ section, isMinimized }) => {
         lastSavedMarkdown.current = markdownValue
         lastSavedTitle.current = sectionTitle
       }
-    }, 1000) // check every 3 seconds
+    }, 1000) // check every 1 seconds
 
     return () => clearInterval(intervalId) // Cleanup interval on component unmount
   }, [markdownValue, sectionTitle])
