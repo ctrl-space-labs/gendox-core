@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -71,6 +72,14 @@ public class GendoxAPIIntegrationService {
                     .projects(projects)
                     .build();
 
+        } catch (HttpClientErrorException e) {
+
+            // Empty response handling
+            if (e.getMessage().contains("No assigned projects with content or chat settings found.")) {
+                return new OrganizationAssignedContentDTO();
+            }
+            logger.error("Client error while fetching project assigned contents: {}", e.getMessage());
+            throw new RuntimeException("Client error: Failed to fetch project assigned contents", e);
         } catch (Exception e) {
             logger.error("Error fetching project assigned contents: {}", e.getMessage());
             throw new RuntimeException("Failed to fetch project assigned contents", e);
