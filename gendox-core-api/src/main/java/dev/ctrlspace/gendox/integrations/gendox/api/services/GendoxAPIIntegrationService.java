@@ -45,13 +45,13 @@ public class GendoxAPIIntegrationService {
             logger.info("Fetching assigned projects with URL: {}", url);
 
             // Log raw response
-            ResponseEntity<String> rawResponse = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    entity,
-                    String.class
-            );
-            logger.debug("Raw API response: {}", rawResponse.getBody());
+//            ResponseEntity<String> rawResponse = restTemplate.exchange(
+//                    url,
+//                    HttpMethod.GET,
+//                    entity,
+//                    String.class
+//            );
+//            logger.debug("Raw API response: {}", rawResponse.getBody());
 
 
             ResponseEntity<List<AssignedProjectDTO>> response = restTemplate.exchange(
@@ -65,7 +65,7 @@ public class GendoxAPIIntegrationService {
 
 
 
-            logger.info("Deserialized Response: {}", projects);
+            logger.debug("Deserialized Response: {}", projects);
 //            return response.getBody();
             return OrganizationAssignedContentDTO.builder()
                     .projects(projects)

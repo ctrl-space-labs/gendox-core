@@ -27,7 +27,7 @@ public interface TempIntegrationFileCheckRepository extends JpaRepository<TempIn
                                        AND temp.content_id = doc.content_id
                 WHERE temp.integration_id = :integrationId
                   AND temp.trace_id = :traceId
-                  AND doc.content_id IS NULL;
+                  AND doc.content_id IS NULL
             """)
     List<TempIntegrationFileCheck> findDocsToCreateByIntegrationId(@Param("integrationId") UUID integrationId,
                                                                    @Param("traceId") String traceId);
@@ -46,7 +46,7 @@ public interface TempIntegrationFileCheckRepository extends JpaRepository<TempIn
                                             AND temp.content_id = doc.content_id
                     WHERE temp.integration_id = :integrationId
                       AND temp.trace_id = :traceId
-                      AND temp.updated_at > doc.updated_at;
+                      AND temp.updated_at > doc.updated_at
             """)
     List<TempIntegrationFileCheck> findDocsToUpdate(@Param("integrationId") UUID integrationId,
                                                     @Param("traceId") String traceId);
@@ -66,7 +66,7 @@ public interface TempIntegrationFileCheckRepository extends JpaRepository<TempIn
                         AND temp.content_id = di.content_id
                         and temp.integration_id = :integrationId
             WHERE di.organization_id = :organizationId
-              and temp.id is null;
+              and temp.id is null
             """)
     List<UUID> findDocsToDeleteByOrganizationId(@Param("integrationId") UUID integrationId,
                                                 @Param("organizationId") UUID organizationId);
@@ -80,7 +80,7 @@ public interface TempIntegrationFileCheckRepository extends JpaRepository<TempIn
     @Query(nativeQuery = true, value = """
             DELETE
             FROM gendox_core.temp_integration_file_checks
-            WHERE integration_id = :integrationId;
+            WHERE integration_id = :integrationId
             """)
     @Modifying
     void deleteAllByIntegrationId(@Param("integrationId") UUID integrationId);
