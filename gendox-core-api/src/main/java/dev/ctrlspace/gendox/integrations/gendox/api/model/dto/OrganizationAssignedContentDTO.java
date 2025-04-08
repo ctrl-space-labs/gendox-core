@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -12,5 +13,5 @@ import java.util.List;
 @NoArgsConstructor
 @Builder(toBuilder = true)
 public class OrganizationAssignedContentDTO {
-    private List<AssignedProjectDTO> projects;
+    private List<AssignedProjectDTO> projects = new ArrayList<>();
 }

@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -45,13 +46,13 @@ public class GendoxAPIIntegrationService {
             logger.info("Fetching assigned projects with URL: {}", url);
 
             // Log raw response
-            ResponseEntity<String> rawResponse = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    entity,
-                    String.class
-            );
-            logger.debug("Raw API response: {}", rawResponse.getBody());
+//            ResponseEntity<String> rawResponse = restTemplate.exchange(
+//                    url,
+//                    HttpMethod.GET,
+//                    entity,
+//                    String.class
+//            );
+//            logger.debug("Raw API response: {}", rawResponse.getBody());
 
 
             ResponseEntity<List<AssignedProjectDTO>> response = restTemplate.exchange(
@@ -65,12 +66,20 @@ public class GendoxAPIIntegrationService {
 
 
 
-            logger.info("Deserialized Response: {}", projects);
+            logger.debug("Deserialized Response: {}", projects);
 //            return response.getBody();
             return OrganizationAssignedContentDTO.builder()
                     .projects(projects)
                     .build();
 
+        } catch (HttpClientErrorException e) {
+
+            // Empty response handling
+            if (e.getMessage().contains("No assigned projects with content or chat settings found.")) {
+                return new OrganizationAssignedContentDTO();
+            }
+            logger.error("Client error while fetching project assigned contents: {}", e.getMessage());
+            throw new RuntimeException("Client error: Failed to fetch project assigned contents", e);
         } catch (Exception e) {
             logger.error("Error fetching project assigned contents: {}", e.getMessage());
             throw new RuntimeException("Failed to fetch project assigned contents", e);
