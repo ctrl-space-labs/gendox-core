@@ -119,14 +119,16 @@ export const loadThread = createAsyncThunk(
         return _createNewThread(state, projectId, organizationId)
       }
 
-      let currentThread = await _fetchExistingThreadWithMessages(
-        threadId,
-        projectId,
-        organizationId,
-        dispatch,
-        token,
-        state
-      )
+        // If the threadId is the same as the current threadId, return the current thread
+        let currentThread = await _fetchExistingThreadWithMessages(
+          threadId,
+          projectId,
+          organizationId,
+          dispatch,
+          token,
+          state
+        )
+
 
       return currentThread
     } catch (error) {
@@ -229,7 +231,6 @@ export const sendMessage = createAsyncThunk(
       // TODO this should change the URL in the browser, fix in the future
       dispatch(loadThread({ threadId: finalThreadId, projectId, organizationId, token }))
     }
-
   }
 )
 

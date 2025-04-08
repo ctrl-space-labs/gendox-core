@@ -7,7 +7,7 @@ import IconButton from '@mui/material/IconButton'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Typography from '@mui/material/Typography'
-import CardHeader from '@mui/material/CardHeader'
+import { useAuth } from 'src/authentication/useAuth'
 import { DataGrid } from '@mui/x-data-grid'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import Chip from 'src/views/custom-components/mui/chip/index'
@@ -23,9 +23,17 @@ import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 
-import { userTypeStatus, memberRoleStatus, escapeRegExp, renderClientAvatar } from 'src/utils/membersUtils'
+import {
+  userTypeStatus,
+  memberRoleStatus,
+  escapeRegExp,
+  renderClientAvatar,
+  getAllowedRoles,
+  roleRankMap
+} from 'src/utils/membersUtils'
 
 const MembersOrganizationSettings = () => {
+  const auth = useAuth()
   const dispatch = useDispatch()
   const { settings } = useSettings()
   const isDemo = settings.isDemo
@@ -35,7 +43,7 @@ const MembersOrganizationSettings = () => {
   const { id: organizationId } = organization
   const organizationMembers = useSelector(state => state.activeOrganization.organizationMembers)
   const isFetchingMembers = useSelector(state => state.activeOrganization.isFetchingMembers)
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState('')
   const [filteredOrganizationMembers, setFilteredOrganizationMembers] = useState([])
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
@@ -49,6 +57,10 @@ const MembersOrganizationSettings = () => {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showInviteDialog, setShowInviteDialog] = useState(false)
 
+  const members = organizationMembers.filter(member => member.user.email !== null)
+  const userRole = members.find(member => member.user.email === auth.user.email)?.role?.name
+  const allowedRoles = getAllowedRoles(userRole)
+
   useEffect(() => {
     if (organizationId) {
       dispatch(fetchOrganizationMembers({ organizationId, token }))
@@ -57,9 +69,9 @@ const MembersOrganizationSettings = () => {
 
   useEffect(() => {
     if (!searchText) {
-      setFilteredOrganizationMembers(organizationMembers);
+      setFilteredOrganizationMembers(organizationMembers)
     }
-  }, [organizationMembers, searchText]);
+  }, [organizationMembers, searchText])
 
   const handleSearch = searchValue => {
     setSearchText(searchValue)
@@ -207,7 +219,7 @@ const MembersOrganizationSettings = () => {
               {status.title}
             </Typography>
 
-            {status?.title !== 'ADMIN' && (
+            {userRole !== 'ROLE_READER' && roleRankMap[userRole] >= (roleRankMap[params.row.role?.name] || 0) && (
               <>
                 <IconButton onClick={event => handleRoleMenuClick(event, params.row)}>
                   <Icon icon='mdi:menu-swap-outline' />
@@ -220,18 +232,18 @@ const MembersOrganizationSettings = () => {
                   anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
                   transformOrigin={{ vertical: 'top', horizontal: 'center' }}
                 >
-                  {Object.keys(memberRoleStatus)
-                    .filter(roleKey => roleKey !== role && roleKey !== 'UNKNOWN')
-                    .map(roleKey => (
-                      <MenuItem key={roleKey} onClick={() => handleChangeUserRole(roleKey)}>
+                  {allowedRoles
+                    .filter(roleKey => roleKey !== params.row.role?.name && roleKey !== 'UNKNOWN')
+                    .map(role => (
+                      <MenuItem key={role} value={role} onClick={() => handleChangeUserRole(role)}>
                         <Icon
-                          icon={memberRoleStatus[roleKey].icon}
+                          icon={memberRoleStatus[role].icon}
                           style={{
                             marginRight: '0.5rem',
-                            color: memberRoleStatus[roleKey].color
+                            color: memberRoleStatus[role].color
                           }}
                         />
-                        {memberRoleStatus[roleKey].title}
+                        {memberRoleStatus[role] ? memberRoleStatus[role].title : role}
                       </MenuItem>
                     ))}
                 </Menu>

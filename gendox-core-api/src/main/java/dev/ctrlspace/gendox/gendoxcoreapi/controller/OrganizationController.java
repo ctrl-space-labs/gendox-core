@@ -17,6 +17,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.OrganizationRoleUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
@@ -245,11 +246,30 @@ public class OrganizationController {
         return userOrganizationService.addUserToOrganization(organizationId, userOrganizationDTO);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_REMOVE_PROJECT_MEMBERS', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
     @PutMapping("/organizations/{organizationId}/users/{userId}/roles")
     @Operation(summary = "Update user role in organization",
             description = "Update a user's role in an organization by specifying the user's unique ID, the organization's unique ID, and the new role name.")
-    public UserOrganization updateUserRoleInOrganization(@RequestBody UpdateUserRoleRequestDTO request) throws Exception {
+    public UserOrganization updateUserRoleInOrganization(@PathVariable UUID organizationId,
+                                                         @PathVariable UUID userId,
+                                                         @RequestBody UpdateUserRoleRequestDTO request) throws GendoxException {
+        // Retrieve the current user's profile from the security context
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserProfile currentUserProfile = (UserProfile) authentication.getPrincipal();
+
+        String requesterOrganizationRole = userOrganizationService.getUserOrganizationRoleType(UUID.fromString(currentUserProfile.getId()), organizationId).getName();
+        String targetOrganizationRole = userOrganizationService.getUserOrganizationRoleType(userId, organizationId).getName();
+
+        if (!OrganizationRoleUtils.canChangeRole(requesterOrganizationRole, targetOrganizationRole)) {
+            throw new GendoxException("USER_ROLE_CHANGE_NOT_ALLOWED", "You cannot change the role of this user", HttpStatus.FORBIDDEN);
+        }
+        if (!OrganizationRoleUtils.canChangeRole(requesterOrganizationRole, request.getRoleName())) {
+            throw new GendoxException("USER_ROLE_CHANGE_NOT_ALLOWED", "You cannot change the role of this user", HttpStatus.FORBIDDEN);
+        }
+
+
+
+
         return userOrganizationService.updateUserRole(request.getUserOrganizationId(), request.getRoleName());
 
     }
@@ -263,7 +283,6 @@ public class OrganizationController {
         userOrganizationService.deleteUserOrganization(userId, organizationId);
 
     }
-
 
 
 }

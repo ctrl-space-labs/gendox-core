@@ -42,7 +42,8 @@ export const fetchOrganizationAiModelKeys = createAsyncThunk(
       const response = await aiModelService.getModelKeysByOrganizationId(organizationId, token)
       return response.data.content
     } catch (error) {
-      toast.error(`Failed to fetch organization Ai model keys. Error: ${getErrorMessage(error)}`)
+      // toast.error(`Failed to fetch organization Ai model keys. Error: ${getErrorMessage(error)}`)
+      console.error(`Failed to fetch organization Ai model keys. Error: ${getErrorMessage(error)}`)
       return thunkAPI.rejectWithValue(error.response.data)
     }
   }
@@ -55,7 +56,8 @@ export const fetchOrganizationPlans = createAsyncThunk(
       const response = await subscriptionPlanService.getOrganizationPlans(organizationId, token)
       return response.data
     } catch (error) {
-      toast.error(`Failed to fetch organization plans. Error: ${getErrorMessage(error)}`)
+      // toast.error(`Failed to fetch organization plans. Error: ${getErrorMessage(error)}`)
+      console.error(`Failed to fetch organization plans. Error: ${getErrorMessage(error)}`)
       return thunkAPI.rejectWithValue(error.response.data)
     }
   }
@@ -68,7 +70,8 @@ export const fetchApiKeys = createAsyncThunk(
       const response = await apiKeyService.getApiKeysByOrganizationId(organizationId, token)
       return response.data
     } catch (error) {
-      toast.error(`Failed to fetch API Keys. Error: ${getErrorMessage(error)}`)
+      // toast.error(`Failed to fetch API Keys. Error: ${getErrorMessage(error)}`)
+      console.error(`Failed to fetch API Keys. Error: ${getErrorMessage(error)}`)
       return thunkAPI.rejectWithValue(error.response.data)
     }
   }
@@ -81,7 +84,8 @@ export const fetchOrganizationWebSites = createAsyncThunk(
       const response = await organizationWebSiteService.getOrganizationWebSitesByOrganizationId(organizationId, token)
       return response.data
     } catch (error) {
-      toast.error(`Failed to fetch organization websites. Error: ${getErrorMessage(error)}`)
+      // toast.error(`Failed to fetch organization websites. Error: ${getErrorMessage(error)}`)
+      console.error(`Failed to fetch organization websites. Error: ${getErrorMessage(error)}`)
       return thunkAPI.rejectWithValue(error.response.data)
     }
   }

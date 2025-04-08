@@ -30,7 +30,6 @@ const GendoxChat = props => {
   const embedMode = props.embedView || false
   // Redux state from chat store
   const { currentThread, agents, threads } = useSelector(state => state.gendoxChat)
- 
   // For responsive layout: hide sidebar if below large breakpoint
   const hidden = useMediaQuery(theme.breakpoints.down('lg'))
 

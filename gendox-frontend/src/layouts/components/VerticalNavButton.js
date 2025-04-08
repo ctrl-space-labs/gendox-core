@@ -27,7 +27,7 @@ const StyledButton = styled(Button)(({ theme, variant }) => ({
 const ChatButton = () => {
   const project = useSelector((state) => state.activeProject.projectDetails);
   const organization = useSelector((state) => state.activeOrganization.activeOrganization);
-  const chatUrl = `/gendox/chat/?organizationId=${organization.id}&projectId=${project.id}`;
+  const chatUrl = `/gendox/chat/?organizationId=${organization.id}&=${project.id}`;
 
   return (
     <Box >

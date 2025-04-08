@@ -34,4 +34,8 @@ public interface UserOrganizationRepository extends JpaRepository<UserOrganizati
             "ORDER BY uo.created_at ASC LIMIT 1",
             nativeQuery = true)
     Optional<UserOrganization> findFirstByUserIdAndRoleNative(@Param("userId") UUID userId, @Param("role") String role);
+
+    @Query("SELECT uo FROM UserOrganization uo WHERE uo.user.id = :userId AND uo.organization.id = :organizationId ORDER BY uo.createdAt ASC")
+    Optional<UserOrganization> findFirstByUserIdAndOrganizationIdOrderByCreatedAtAsc(@Param("userId") UUID userId, @Param("organizationId") UUID organizationId);
+
 }
