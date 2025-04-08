@@ -112,7 +112,7 @@ export const removeOrganizationMember = createAsyncThunk(
       // Return the member ID to remove from state
       return { memberId: userId }
     } catch (error) {
-      toast.error(`Failed to remove user. Error: ${getErrorMessage(error)}`)
+      toast.error(`${getErrorMessage(error)}`)
       return thunkAPI.rejectWithValue(error.response.data)
     }
   }

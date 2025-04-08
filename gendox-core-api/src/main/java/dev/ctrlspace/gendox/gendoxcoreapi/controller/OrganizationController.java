@@ -13,6 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.OrganizationRoleUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -244,13 +245,11 @@ public class OrganizationController {
         String targetOrganizationRole = userOrganizationService.getUserOrganizationRoleType(userId, organizationId).getName();
 
         if (!OrganizationRoleUtils.canChangeRole(requesterOrganizationRole, targetOrganizationRole)) {
-            throw new GendoxException("USER_ROLE_CHANGE_NOT_ALLOWED", "You cannot change the role of this user", HttpStatus.FORBIDDEN);
+            throw new GendoxException("USER_ROLE_CHANGE_NOT_ALLOWED", "You cannot change the role of this user", HttpStatus.BAD_REQUEST);
         }
         if (!OrganizationRoleUtils.canChangeRole(requesterOrganizationRole, request.getRoleName())) {
-            throw new GendoxException("USER_ROLE_CHANGE_NOT_ALLOWED", "You cannot change the role of this user", HttpStatus.FORBIDDEN);
+            throw new GendoxException("USER_ROLE_CHANGE_NOT_ALLOWED", "You cannot change the role of this user", HttpStatus.BAD_REQUEST );
         }
-
-
 
 
         return userOrganizationService.updateUserRole(request.getUserOrganizationId(), request.getRoleName());
@@ -263,6 +262,10 @@ public class OrganizationController {
     @Operation(summary = "Remove user from organization",
             description = "Remove a user from an organization by specifying the user's unique ID and the organization's unique ID.")
     public void removeUserFromOrganization(@PathVariable UUID organizationId, @PathVariable UUID userId) throws Exception {
+        User user = userService.getById(userId);
+        if (user.getUserType().getName().equals(UserNamesConstants.GENDOX_AGENT)) {
+            throw new GendoxException("USER_REMOVE_NOT_ALLOWED", "You cannot remove this user from the organization", HttpStatus.BAD_REQUEST);
+        }
         userOrganizationService.deleteUserOrganization(userId, organizationId);
         List<ProjectMember> projectMembers = projectMemberService.getProjectMembersByUserAndOrganization(userId, organizationId);
         projectMemberService.deleteProjectMembers(projectMembers);

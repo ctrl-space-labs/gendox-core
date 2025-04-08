@@ -49,7 +49,6 @@ const MembersOrganizationSettings = () => {
     page: 0,
     pageSize: 10
   })
-
   const [roleAnchorEl, setRoleAnchorEl] = useState(null)
   const [actionAnchorEl, setActionAnchorEl] = useState(null)
   const [selectedUserForRole, setSelectedUserForRole] = useState(null)
@@ -61,6 +60,10 @@ const MembersOrganizationSettings = () => {
   const userRole = members.find(member => member.user.email === auth.user.email)?.role?.name
   const allowedRoles = getAllowedRoles(userRole)
 
+  const membersWithoutAgents = organizationMembers.filter(member => {
+    return member.user?.userType?.name !== 'GENDOX_AGENT'
+  })
+
   useEffect(() => {
     if (organizationId) {
       dispatch(fetchOrganizationMembers({ organizationId, token }))
@@ -69,7 +72,7 @@ const MembersOrganizationSettings = () => {
 
   useEffect(() => {
     if (!searchText) {
-      setFilteredOrganizationMembers(organizationMembers)
+      setFilteredOrganizationMembers(membersWithoutAgents)
     }
   }, [organizationMembers, searchText])
 
@@ -77,7 +80,7 @@ const MembersOrganizationSettings = () => {
     setSearchText(searchValue)
     const searchRegex = new RegExp(escapeRegExp(searchValue), 'i')
 
-    const filteredRows = organizationMembers.filter(row => {
+    const filteredRows = membersWithoutAgents.filter(row => {
       return (
         searchRegex.test(row.user.name || '') ||
         searchRegex.test(row.user.userName || '') ||
@@ -88,7 +91,7 @@ const MembersOrganizationSettings = () => {
       )
     })
 
-    setFilteredOrganizationMembers(searchValue.length ? filteredRows : organizationMembers)
+    setFilteredOrganizationMembers(searchValue.length ? filteredRows : membersWithoutAgents)
   }
 
   const handleRoleMenuClick = (event, row) => {
@@ -161,7 +164,6 @@ const MembersOrganizationSettings = () => {
         })
         .catch(error => {
           console.error('Failed to delete user:', error)
-          toast.error(`Failed to delete user. Error: ${getErrorMessage(error)}`)
         })
       setConfirmDelete(false)
       handleMenuClose()
