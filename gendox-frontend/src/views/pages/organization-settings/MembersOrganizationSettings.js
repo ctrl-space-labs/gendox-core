@@ -157,6 +157,7 @@ const MembersOrganizationSettings = () => {
         .unwrap()
         .then(() => {
           toast.success('User deleted successfully')
+          dispatch(fetchOrganizationMembers({ organizationId, token }))
         })
         .catch(error => {
           console.error('Failed to delete user:', error)

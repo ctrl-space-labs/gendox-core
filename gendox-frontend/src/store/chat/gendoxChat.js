@@ -31,8 +31,6 @@ export const fetchAgents = createAsyncThunk(
       const projectsResponse = await projectService.getProjectsByOrganization(organizationId, token)
       const projects = projectsResponse.data.content
 
-      console.log('projects1', projects)
-
       // 2. Transform projects to agents.
       const agents = projects.map(project => {
         if (!project.projectAgent) {

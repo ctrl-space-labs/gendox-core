@@ -1,18 +1,13 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserOrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserOrganizationPredicate;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,9 +31,6 @@ public class UserOrganizationService {
     private UserService userService;
     private OrganizationService organizationService;
     private TypeService typeService;
-
-
-
 
 
     @Autowired
@@ -176,6 +168,7 @@ public class UserOrganizationService {
             throw new GendoxException("USER_ORGANIZATION_NOT_FOUND", "User-organization combination not found", HttpStatus.BAD_REQUEST);
         }
         userOrganizationRepository.delete(userOrganization);
+
     }
 
     @Transactional
