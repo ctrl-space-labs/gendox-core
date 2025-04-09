@@ -1,5 +1,4 @@
 // ** MUI Imports
-import Box from '@mui/material/Box'
 import useMediaQuery from '@mui/material/useMediaQuery'
 
 // ** Layout Imports
@@ -10,38 +9,29 @@ import VerticalLayout from 'src/@core/layouts/VerticalLayout'
 import VerticalNavItems from 'src/navigation/vertical'
 
 // ** Component Import
-import UpgradeToProButton from './components/UpgradeToProButton'
 import VerticalAppBarContent from './components/vertical/AppBarContent'
 
 // ** Hook Import
 import { useSettings } from 'src/@core/hooks/useSettings'
-import GendoxAppBrand from "./components/shared-components/GendoxAppBrand";
-import VerticalNavButtons from "src/layouts/components/VerticalNavButton";
-import PoweredByGendox from "./components/shared-components/PoweredByGendox";
-import GendoxFooterContent from "./components/shared-components/GendoxFooterContent";
-import {useEffect} from "react";
+import GendoxAppBrand from './components/shared-components/GendoxAppBrand'
+import VerticalNavButtons from 'src/layouts/components/VerticalNavButton'
 
 
 const GendoxChatLayout = ({ children }) => {
   // ** Hooks
   const { settings, saveSettings } = useSettings()
+  const { ChatButton, NewProjectButton } = VerticalNavButtons
 
-  const { ChatButton, NewProjectButton } = VerticalNavButtons;
+  const updatedSettings = {
+    ...settings,
+    footerContent: 'hidden',
+    navBarContent: 'hidden',
+    globalSearch: false
+  }
 
-
-  useEffect(() => {
-    const originalSettings = settings;
-
-    // Update settings specifically for this page
-    saveSettings({
-      ...settings,
-      footerContent: 'hidden',
-      navBarContent: 'hidden',
-      globalSearch: false,
-    })
-
-    return () => saveSettings(originalSettings);
-  }, [])
+  if (settings.navBarContent !== 'hidden') {
+    saveSettings(updatedSettings)
+  }
 
   /**
    *  The below variable will hide the current layout menu at given screen size.
@@ -52,6 +42,7 @@ const GendoxChatLayout = ({ children }) => {
    *  ! Do not change this value unless you know what you are doing. It can break the template.
    */
   const hidden = useMediaQuery(theme => theme.breakpoints.down('lg'))
+  // if (!settingsUpdated) return null
 
   return (
     <VerticalLayout

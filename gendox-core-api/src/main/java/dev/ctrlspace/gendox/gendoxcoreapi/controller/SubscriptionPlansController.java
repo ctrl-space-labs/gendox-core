@@ -60,7 +60,7 @@ public class SubscriptionPlansController {
     }
 
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_MANAGE_SUBSCRIPTIONS', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.isSuperAdmin()")
     @PostMapping("/organizations/{organizationId}/subscription-notifications")
     public OrganizationPlan createOrganizationPlanBySubscriptionNotification(@RequestBody SubscriptionNotificationDTO subscriptionNotificationDTO, @PathVariable UUID organizationId) throws GendoxException {
         Organization organization = organizationService.getById(organizationId);
@@ -68,7 +68,7 @@ public class SubscriptionPlansController {
     }
 
 
-    @PreAuthorize("@securityUtils.isOrganizationOwner()")
+    @PreAuthorize("@securityUtils.isSuperAdmin()")
     @PostMapping("/subscription-notifications")
     public OrganizationPlan createOrganizationPlanBySubscriptionNotification(@RequestBody SubscriptionNotificationDTO subscriptionNotificationDTO) throws GendoxException {
 

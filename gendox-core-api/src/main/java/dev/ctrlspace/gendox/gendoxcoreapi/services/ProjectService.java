@@ -5,39 +5,26 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectPredicates;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
-import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 @Service
 public class ProjectService {
 
     private ProjectRepository projectRepository;
-
     private ProjectAgentService projectAgentService;
     private ProjectMemberService projectMemberService;
     private UserOrganizationService userOrganizationService;
-
     private ProjectConverter projectConverter;
-
-    private ProjectMemberRepository projectMemberRepository;
-
     private TypeService typeService;
-
     private AuditLogsService auditLogsService;
 
 
@@ -47,7 +34,6 @@ public class ProjectService {
                           ProjectConverter projectConverter,
                           ProjectMemberService projectMemberService,
                           UserOrganizationService userOrganizationService,
-                          ProjectMemberRepository projectMemberRepository,
                           TypeService typeService,
                           AuditLogsService auditLogsService) {
         this.projectRepository = projectRepository;
@@ -55,7 +41,6 @@ public class ProjectService {
         this.projectConverter = projectConverter;
         this.projectMemberService = projectMemberService;
         this.userOrganizationService = userOrganizationService;
-        this.projectMemberRepository = projectMemberRepository;
         this.typeService = typeService;
         this.auditLogsService = auditLogsService;
     }

@@ -2,19 +2,11 @@ import GendoxChat from "src/views/pages/chat/GendoxChat";
 import Box from "@mui/material/Box";
 import {useTheme} from "@mui/material/styles";
 import GendoxChatLayout from "../../../layouts/GendoxChatLayout";
-import {useSettings} from "../../../@core/hooks/useSettings";
-import {routeTypes} from "../../../authentication/components/RouteHandler";
-import EmbeddedChatPage from "../embed/embedded-chat";
+
 
 const ChatPage = () => {  
 
   const theme = useTheme();
-
-  const {settings, saveSettings} = useSettings();
-
-  console.log("Mixin Min Height: ", theme.mixins.toolbar.minHeight);
-
-  console.log("Settings: ", settings);
 
   return (
     <Box

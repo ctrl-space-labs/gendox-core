@@ -75,6 +75,7 @@ const ChatConversation = props => {
             openInfoToggle={props.openInsightsToggle}
             isLoadingMessages={isLoadingMessages}
             embedMode={props.embedMode}
+            chatInsightView={props.chatInsightView}
           />
         </Box>
 

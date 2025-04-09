@@ -124,6 +124,7 @@ public class IntegrationManager {
                     return existingList;
                 });
             }
+            logger.debug("Integration update found for project: {}", entry.getKey().getProjectId());
         }
 
     }

@@ -49,7 +49,9 @@ public class TempIntegrationFileCheck {
     @Column(name = "updated_at", nullable = true)
     @LastModifiedDate
     private Instant updatedAt;
-
+    @Basic
+    @Column(name = "trace_id")
+    private String traceId;
     @ManyToOne
     @JoinColumn(name = "file_type_id", referencedColumnName = "id", nullable = false)
     private Type fileType;
@@ -134,16 +136,24 @@ public class TempIntegrationFileCheck {
         this.fileType = fileType;
     }
 
+    public String getTraceId() {
+        return traceId;
+    }
+
+    public void setTraceId(String traceId) {
+        this.traceId = traceId;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TempIntegrationFileCheck that = (TempIntegrationFileCheck) o;
-        return Objects.equals(id, that.id) && Objects.equals(contentId, that.contentId) && Objects.equals(externalUrl, that.externalUrl) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(projectID, that.projectID) && Objects.equals(integrationId, that.integrationId) && Objects.equals(title, that.title) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(fileType, that.fileType);
+        return Objects.equals(id, that.id) && Objects.equals(contentId, that.contentId) && Objects.equals(externalUrl, that.externalUrl) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(projectID, that.projectID) && Objects.equals(integrationId, that.integrationId) && Objects.equals(title, that.title) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(traceId, that.traceId) && Objects.equals(fileType, that.fileType);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, contentId, externalUrl, remoteUrl, projectID, integrationId, title, createdAt, updatedAt, fileType);
+        return Objects.hash(id, contentId, externalUrl, remoteUrl, projectID, integrationId, title, createdAt, updatedAt, traceId, fileType);
     }
 }
