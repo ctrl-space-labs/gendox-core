@@ -8,7 +8,7 @@ import { fetchMessageMetadata } from '../../../../store/chat/gendoxChat'
 import Tooltip from '@mui/material/Tooltip'
 import { copyToClipboard } from 'src/utils/copyToClipboard'
 
-const MessageActions = ({ message, isMyMessage, openMetadata, embedMode }) => {
+const MessageActions = ({ message, isMyMessage, openMetadata, embedMode, chatInsightView }) => {
   if (!message) {
     return null
   }
@@ -20,7 +20,6 @@ const MessageActions = ({ message, isMyMessage, openMetadata, embedMode }) => {
       setCopyActive(false) // Reset after a short delay
     }, 8000) // 2 seconds delay
   }
-console.log("embedMode", embedMode)
   const timeString = message.createdAt ? new Date(message.createdAt).toLocaleString() : ''
 
   // If it's my message, show only the time, aligned right.
@@ -47,6 +46,7 @@ console.log("embedMode", embedMode)
       }}
     >
       {/* First row: Sources Chip */}
+      {chatInsightView && (
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
         <Chip
           clickable
@@ -65,6 +65,7 @@ console.log("embedMode", embedMode)
           }
         />
       </Box>
+      )}
 
       {/* Second row: Time and icons */}
       <Box

@@ -16,7 +16,8 @@ const ThreadMessagesArea = ({
   token,
   openInfoToggle,
   isLoadingMessages,
-  embedMode
+  embedMode,
+  chatInsightView
 }) => {
   const containerRef = useRef(null)
 
@@ -102,6 +103,7 @@ const ThreadMessagesArea = ({
                       openInfoToggle()
                     }}
                     embedMode={embedMode}
+                    chatInsightView={chatInsightView}
                   />
                 </React.Fragment>
               )
