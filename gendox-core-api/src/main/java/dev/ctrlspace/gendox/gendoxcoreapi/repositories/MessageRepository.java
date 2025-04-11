@@ -30,7 +30,7 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
 
     @Query(value = """
     WITH ranked_messages AS (
-        SELECT 
+        SELECT
             id,
             value,
             project_id,

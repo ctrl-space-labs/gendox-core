@@ -27,7 +27,7 @@ const GeneralProjectSettings = () => {
   const router = useRouter()
   const dispatch = useDispatch()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-  const {provenAiEnabled, provenAiUrl } = commonConfig
+  const { provenAiEnabled, provenAiUrl } = commonConfig
 
   const project = useSelector(state => state.activeProject.projectDetails)
   const isBlurring = useSelector(state => state.activeProject.isBlurring)
