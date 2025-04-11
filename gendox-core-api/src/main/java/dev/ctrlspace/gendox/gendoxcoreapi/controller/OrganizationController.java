@@ -230,7 +230,7 @@ public class OrganizationController {
         return userOrganizationService.addUserToOrganization(organizationId, userOrganizationDTO);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.canChangeUserRole(#organizationId, #userId, #request.roleName)")
     @PutMapping("/organizations/{organizationId}/users/{userId}/roles")
     @Operation(summary = "Update user role in organization",
             description = "Update a user's role in an organization by specifying the user's unique ID, the organization's unique ID, and the new role name.")
@@ -238,18 +238,18 @@ public class OrganizationController {
                                                          @PathVariable UUID userId,
                                                          @RequestBody UpdateUserRoleRequestDTO request) throws GendoxException {
         // Retrieve the current user's profile from the security context
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UserProfile currentUserProfile = (UserProfile) authentication.getPrincipal();
-
-        String requesterOrganizationRole = userOrganizationService.getUserOrganizationRoleType(UUID.fromString(currentUserProfile.getId()), organizationId).getName();
-        String targetOrganizationRole = userOrganizationService.getUserOrganizationRoleType(userId, organizationId).getName();
-
-        if (!OrganizationRoleUtils.canChangeRole(requesterOrganizationRole, targetOrganizationRole)) {
-            throw new GendoxException("USER_ROLE_CHANGE_NOT_ALLOWED", "You cannot change the role of this user", HttpStatus.BAD_REQUEST);
-        }
-        if (!OrganizationRoleUtils.canChangeRole(requesterOrganizationRole, request.getRoleName())) {
-            throw new GendoxException("USER_ROLE_CHANGE_NOT_ALLOWED", "You cannot change the role of this user", HttpStatus.BAD_REQUEST );
-        }
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        UserProfile currentUserProfile = (UserProfile) authentication.getPrincipal();
+//
+//        String requesterOrganizationRole = userOrganizationService.getUserOrganizationRoleType(UUID.fromString(currentUserProfile.getId()), organizationId).getName();
+//        String targetOrganizationRole = userOrganizationService.getUserOrganizationRoleType(userId, organizationId).getName();
+//
+//        if (!OrganizationRoleUtils.canChangeRole(requesterOrganizationRole, targetOrganizationRole)) {
+//            throw new GendoxException("USER_ROLE_CHANGE_NOT_ALLOWED", "You cannot change the role of this user", HttpStatus.BAD_REQUEST);
+//        }
+//        if (!OrganizationRoleUtils.canChangeRole(requesterOrganizationRole, request.getRoleName())) {
+//            throw new GendoxException("USER_ROLE_CHANGE_NOT_ALLOWED", "You cannot change the role of this user", HttpStatus.BAD_REQUEST );
+//        }
 
 
         return userOrganizationService.updateUserRole(request.getUserOrganizationId(), request.getRoleName());

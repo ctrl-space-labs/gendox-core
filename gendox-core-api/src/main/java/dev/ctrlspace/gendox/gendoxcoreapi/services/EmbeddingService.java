@@ -14,7 +14,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SearchResult;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.provenAi.utils.ProvenAiService;
 import io.micrometer.observation.annotation.Observed;
@@ -38,37 +37,26 @@ public class EmbeddingService {
     private static final Logger logger = LoggerFactory.getLogger(EmbeddingService.class);
 
     private EmbeddingRepository embeddingRepository;
-    private AuditLogsRepository auditLogsRepository;
     private EmbeddingGroupRepository embeddingGroupRepository;
     private TypeService typeService;
     private AiModelEmbeddingConverter aiModelEmbeddingConverter;
-    private SecurityUtils securityUtils;
     private DocumentSectionService documentSectionService;
     private AiModelUtils aiModelUtils;
     private ProjectService projectService;
-
     private ProvenAiService provenAiService;
-
     private SearchResultConverter searchResultConverter;
-
     private DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter;
-
     private ProjectAgentService projectAgentService;
-
     private OrganizationModelKeyService organizationModelKeyService;
-
     private AuditLogsService auditLogsService;
-
     private CryptographyUtils cryptographyUtils;
 
 
     @Autowired
     public EmbeddingService(
             EmbeddingRepository embeddingRepository,
-            AuditLogsRepository auditLogsRepository,
             EmbeddingGroupRepository embeddingGroupRepository,
             TypeService typeService,
-            SecurityUtils securityUtils,
             DocumentSectionService documentSectionService,
             AiModelEmbeddingConverter aiModelEmbeddingConverter,
             AiModelUtils aiModelUtils,
@@ -82,10 +70,8 @@ public class EmbeddingService {
             CryptographyUtils cryptographyUtils
     ) {
         this.embeddingRepository = embeddingRepository;
-        this.auditLogsRepository = auditLogsRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
         this.typeService = typeService;
-        this.securityUtils = securityUtils;
         this.documentSectionService = documentSectionService;
         this.aiModelUtils = aiModelUtils;
         this.projectService = projectService;

@@ -136,8 +136,7 @@ const EmbeddedChatPage = props => {
               // color: '#fff', // Customize color if needed
             }}
           >
-            {/* <Icon icon='mdi:close' /> */}
-            <Icon icon='mdi:window-minimize' />
+            <Icon icon='mdi:close' />
           </IconButton>
         )}
 

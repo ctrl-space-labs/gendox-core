@@ -1,11 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
+
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
@@ -14,7 +10,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
@@ -475,5 +470,36 @@ public class SecurityUtils {
         } catch (NoSuchAlgorithmException e) {
             throw new GendoxException("HASHING_ERROR", "An error occurred while hashing the text", HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public boolean canChangeUserRole(UUID organizationId, UUID targetUserId, String newRole) throws GendoxException {
+        // Retrieve the current user's profile from the security context
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!(authentication.getPrincipal() instanceof UserProfile)) {
+            return false;
+        }
+        UserProfile currentUserProfile = (UserProfile) authentication.getPrincipal();
+
+        // Get the requester's organization role name for the given organization
+        String requesterOrganizationRole = userOrganizationService
+                .getUserOrganizationRoleType(UUID.fromString(currentUserProfile.getId()), organizationId)
+                .getName();
+
+        // Get the target user's current organization role name for the organization
+        String targetOrganizationRole = userOrganizationService
+                .getUserOrganizationRoleType(targetUserId, organizationId)
+                .getName();
+
+        // Check if the requester is allowed to change the current role of the target user
+        if (!OrganizationRoleUtils.canChangeRole(requesterOrganizationRole, targetOrganizationRole)) {
+            return false;
+        }
+
+        // Check if the requester is allowed to change to the new role
+        if (!OrganizationRoleUtils.canChangeRole(requesterOrganizationRole, newRole)) {
+            return false;
+        }
+
+        return true;
     }
 }
