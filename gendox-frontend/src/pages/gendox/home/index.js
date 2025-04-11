@@ -6,16 +6,13 @@ import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import Tooltip from '@mui/material/Tooltip'
-import Link from 'next/link'
 import ProjectButtons from 'src/views/custom-components/home-page-components/project-buttons-components/ProjectButtons'
 import Documents from 'src/views/custom-components/home-page-components/document-components/Documents'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
-import ChatPage from '../chat'
 
 const GendoxHome = () => {
   const router = useRouter()
   const { organizationId, projectId } = router.query
-
   const project = useSelector(state => state.activeProject.projectDetails)
   const isBlurring = useSelector(state => state.activeProject.isBlurring)
 

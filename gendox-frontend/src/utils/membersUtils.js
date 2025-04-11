@@ -12,7 +12,8 @@ export const userTypeStatus = {
 };
 
 export const memberRoleStatus = {
-  ROLE_ADMIN: { title: "ADMIN", color: "#1976d2", icon: "mdi:shield-crown-outline" },
+  ROLE_OWNER: { title: "Owner", color: "#673ab7", icon: "mdi:shield-account" },
+  ROLE_ADMIN: { title: "Admin", color: "#1976d2", icon: "mdi:shield-crown-outline" },
   ROLE_READER: { title: "Read Only", color: "#4caf50", icon: "mdi:smart-card-reader-outline" },
   ROLE_EDITOR: { title: "Editor", color: "#ff9800", icon: "mdi:pencil-outline" },
   UNKNOWN: { title: "UNKNOWN", color: "#f44336", icon: "mdi:account-question" },
@@ -61,3 +62,24 @@ export const renderClientAvatar = (user) => {
     </CustomAvatar>
   );
 };
+
+
+// Mapping to determine the allowed roles for a given user role.
+const allowedRolesMap = {
+  ROLE_OWNER: ["ROLE_ADMIN", "ROLE_EDITOR", "ROLE_READER"],
+  ROLE_ADMIN: ["ROLE_ADMIN", "ROLE_EDITOR", "ROLE_READER"],
+  ROLE_EDITOR: ["ROLE_EDITOR", "ROLE_READER"],
+  ROLE_READER: ["ROLE_READER"],
+};
+
+// Return allowed roles based on the current user role.
+export const getAllowedRoles = (userRole) => allowedRolesMap[userRole] || [];
+
+export const roleRankMap = {
+  ROLE_OWNER: 4,
+  ROLE_ADMIN: 3,
+  ROLE_EDITOR: 2,
+  ROLE_READER: 1,
+  UNKNOWN: 0
+};
+

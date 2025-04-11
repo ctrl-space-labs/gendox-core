@@ -107,6 +107,7 @@ export const deleteProjectMember = createAsyncThunk(
       // Return the userId so we can filter it out of the Redux state
       return userId
     } catch (error) {
+      toast.error(`${getErrorMessage(error)}`)
       return thunkAPI.rejectWithValue(error.response.data)
     }
   }

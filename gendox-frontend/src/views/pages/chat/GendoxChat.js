@@ -28,9 +28,9 @@ const GendoxChat = props => {
   const chatUrlPath = props.chatUrlPath || '/gendox/chat'
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   const embedMode = props.embedView || false
+  const chatInsightView = props.chatInsightView ?? true;
   // Redux state from chat store
   const { currentThread, agents, threads } = useSelector(state => state.gendoxChat)
- 
   // For responsive layout: hide sidebar if below large breakpoint
   const hidden = useMediaQuery(theme.breakpoints.down('lg'))
 
@@ -123,10 +123,11 @@ const GendoxChat = props => {
         openInsightsToggle={openInsightsToggle}
         handleInsightsToggle={handleInsightsToggle}
         embedMode={embedMode}
+        chatInsightView={chatInsightView}
       />
 
       {/* Right sidebar for additional chat insights */}
-      {infoSidebarIsOpen && (
+      {infoSidebarIsOpen && chatInsightView && (
         <ChatInsight
           mobileInfoOpen={infoSidebarIsOpen}
           closeInsightsToggle={closeInsightsToggle}

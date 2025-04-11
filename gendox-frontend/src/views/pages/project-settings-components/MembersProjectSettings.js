@@ -20,7 +20,7 @@ import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 import { fetchProjectMembersAndRoles, deleteProjectMember } from 'src/store/activeProject/activeProject'
-import {fetchOrganizationMembers} from 'src/store/activeOrganization/activeOrganization'
+import { fetchOrganizationMembers } from 'src/store/activeOrganization/activeOrganization'
 
 import { userTypeStatus, memberRoleStatus, escapeRegExp, renderClientAvatar } from 'src/utils/membersUtils'
 import { localStorageConstants } from 'src/utils/generalConstants'
@@ -47,31 +47,34 @@ const MembersProjectSettings = () => {
 
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showInviteDialog, setShowInviteDialog] = useState(false)
+  const membersWithoutAgents = projectMembers.filter(member => {
+    return member.userType !== 'GENDOX_AGENT'
+  })
 
   useEffect(() => {
     if (projectId) {
-      dispatch(fetchProjectMembersAndRoles({ organizationId, projectId, token }));
+      dispatch(fetchProjectMembersAndRoles({ organizationId, projectId, token }))
     }
     if (organizationId) {
-      dispatch(fetchOrganizationMembers({ organizationId, token }));
+      dispatch(fetchOrganizationMembers({ organizationId, token }))
     }
   }, [projectId, organizationId, token, dispatch])
 
   useEffect(() => {
-    setFilteredProjectMembers(projectMembers)
+    setFilteredProjectMembers(membersWithoutAgents)
   }, [projectMembers])
 
   const handleSearch = searchValue => {
     setSearchText(searchValue)
     const searchRegex = new RegExp(escapeRegExp(searchValue), 'i')
 
-    const filteredRows = projectMembers.filter(row => {
+    const filteredRows = membersWithoutAgents.filter(row => {
       return Object.keys(row).some(field => {
         const fieldValue = row[field]
         return fieldValue && searchRegex.test(fieldValue.toString())
       })
     })
-    setFilteredProjectMembers(searchValue.length ? filteredRows : projectMembers)
+    setFilteredProjectMembers(searchValue.length ? filteredRows : membersWithoutAgents)
   }
 
   const handleMenuClick = (event, row) => {
@@ -99,7 +102,7 @@ const MembersProjectSettings = () => {
           dispatch(fetchProjectMembersAndRoles({ organizationId, projectId, token }))
         })
         .catch(error => {
-          toast.error(`Failed to delete user. Error: ${getErrorMessage(error)}`)
+          console.log('Failed to delete user:', error)
         })
       setConfirmDelete(false)
       handleMenuClose()
@@ -268,7 +271,7 @@ const MembersProjectSettings = () => {
             paginationModel={paginationModel}
             slots={{ toolbar: SearchToolbar }}
             onPaginationModelChange={setPaginationModel}
-            rows={filteredProjectMembers.length ? filteredProjectMembers : projectMembers}
+            rows={filteredProjectMembers.length ? filteredProjectMembers : membersWithoutAgents}
             slotProps={{
               baseButton: {
                 variant: 'outlined'

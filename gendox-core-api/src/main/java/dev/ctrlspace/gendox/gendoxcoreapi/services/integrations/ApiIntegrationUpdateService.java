@@ -14,6 +14,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.TempIntegrationFileCheckServi
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.AssignedContentDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.OrganizationAssignedContentDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
+import io.micrometer.tracing.Tracer;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -33,18 +34,21 @@ public class ApiIntegrationUpdateService implements IntegrationUpdateService {
     private TempIntegrationFileCheckService tempIntegrationFileCheckService;
     private ApiKeyService apiKeyService;
     private OrganizationWebSiteService organizationWebSiteService;
+    private Tracer tracer;
 
     @Autowired
     public ApiIntegrationUpdateService(DocumentService documentService,
                                        GendoxAPIIntegrationService gendoxAPIIntegrationService,
                                        TempIntegrationFileCheckService tempIntegrationFileCheckService,
                                        ApiKeyService apiKeyService,
-                                       OrganizationWebSiteService organizationWebSiteService) {
+                                       OrganizationWebSiteService organizationWebSiteService,
+                                       Tracer tracer) {
         this.documentService = documentService;
         this.gendoxAPIIntegrationService = gendoxAPIIntegrationService;
         this.tempIntegrationFileCheckService = tempIntegrationFileCheckService;
         this.apiKeyService = apiKeyService;
         this.organizationWebSiteService = organizationWebSiteService;
+        this.tracer = tracer;
     }
 
     @Override
@@ -53,6 +57,7 @@ public class ApiIntegrationUpdateService implements IntegrationUpdateService {
         String apiKey = apiKeyService.getByIntegrationId(integration.getId()).getApiKey();
         String domain = organizationWebSiteService.getByIntegrationId(integration.getId()).getUrl();
         String baseUrl = domain + integration.getUrl();
+        String traceId = tracer.currentSpan().context().traceId();
         UUID organizationId = integration.getOrganizationId();
         Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> organizationMap = new HashMap<>();
         OrganizationAssignedContentDTO organizationAssignedContentDTO = gendoxAPIIntegrationService.getProjectAssignedContentsByOrganizationId(baseUrl, organizationId.toString(), apiKey);
@@ -61,9 +66,9 @@ public class ApiIntegrationUpdateService implements IntegrationUpdateService {
 
 
         // Retrieve lists of document actions
-        List<TempIntegrationFileCheck> docsToCreate = tempIntegrationFileCheckService.getDocsToCreate(integration.getId());
-        List<TempIntegrationFileCheck> docsToUpdate = tempIntegrationFileCheckService.getDocsToUpdate(integration.getId());
-        List<UUID> docsToDelete = tempIntegrationFileCheckService.getDocsToDelete(integration.getId(), organizationId);
+        List<TempIntegrationFileCheck> docsToCreate = tempIntegrationFileCheckService.getDocsToCreate(integration.getId(), traceId);
+        List<TempIntegrationFileCheck> docsToUpdate = tempIntegrationFileCheckService.getDocsToUpdate(integration.getId(), traceId);
+        List<UUID> docsToDelete = tempIntegrationFileCheckService.getDocsToDelete(integration.getId(), organizationId, traceId);
 
         // Log the results
         logger.debug("Docs to Create (content IDs): {}", docsToCreate.size());

@@ -21,6 +21,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import kotlinx.serialization.json.JsonElement;
@@ -305,6 +306,10 @@ public class ProjectController {
             description = "Remove a member from a project by specifying both the project ID and the user ID. " +
                     "The user must have the necessary permissions to remove members from this project.")
     public void removeMemberFromProject(@PathVariable UUID projectId, @PathVariable UUID userId) throws Exception {
+        ProjectAgent projectAgent = projectAgentService.getAgentByProjectId(projectId);
+        if (projectAgent.getUserId().equals(userId)) {
+            throw new GendoxException("CANT_REMOVE_PROJECT_AGENT", "You can't remove the project agent from the project", HttpStatus.BAD_REQUEST);
+        }
         User invitedUser = userService.getById(userId);
         userService.evictUserProfileByUniqueIdentifier(userService.getUserIdentifier(invitedUser));
 
@@ -322,7 +327,7 @@ public class ProjectController {
         ProjectAgent projectAgent = projectAgentService.getAgentById(agentId);
         ProjectAgentVPCredential projectAgentVPCredential = new ProjectAgentVPCredential();
 
-        Object agentVpJwt = projectAgentService.createVerifiablePresentation( projectAgent,projectAgentVPOfferRequest.getSubjectKey(),
+        Object agentVpJwt = projectAgentService.createVerifiablePresentation(projectAgent, projectAgentVPOfferRequest.getSubjectKey(),
                 projectAgentVPOfferRequest.getSubjectDid());
 
         projectAgentVPCredential.setAgentId(projectAgent.getId().toString());
@@ -330,11 +335,6 @@ public class ProjectController {
 
         return projectAgentVPCredential;
     }
-
-
-
-
-
 
 
 }

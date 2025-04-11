@@ -22,6 +22,7 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 import CardContent from '@mui/material/CardContent'
 import Card from '@mui/material/Card'
 import { getErrorMessage } from 'src/utils/errorHandler'
+import { getAllowedRoles, memberRoleStatus } from 'src/utils/membersUtils'
 
 const InviteDialog = ({ open, handleClose }) => {
   const auth = useAuth()
@@ -34,6 +35,8 @@ const InviteDialog = ({ open, handleClose }) => {
   const [selectedRole, setSelectedRole] = useState('')
 
   const members = organizationMembers.filter(member => member.user.email !== null)
+  const userRole = members.find(member => member.user.email === auth.user.email)?.role?.name
+  const allowedRoles = getAllowedRoles(userRole)
 
   const validateEmail = email => {
     // Simple email validation regex
@@ -55,7 +58,6 @@ const InviteDialog = ({ open, handleClose }) => {
     setError('') // Clear any existing error
 
     const existingMember = members.find(member => member.user.email === email)
-
     const invitationBody = {
       inviteeEmail: email,
       projectId,
@@ -103,7 +105,7 @@ const InviteDialog = ({ open, handleClose }) => {
   return (
     <Dialog
       fullWidth
-      open={open}      
+      open={open}
       onClose={handleClose}
       PaperProps={{
         style: {
@@ -228,9 +230,11 @@ const InviteDialog = ({ open, handleClose }) => {
                 displayEmpty
                 sx={{ ml: { xs: 0, sm: 2 }, width: { xs: '100%', sm: 'auto' } }}
               >
-                <MenuItem value='ROLE_EDITOR'>EDITOR</MenuItem>
-                <MenuItem value='ROLE_READER'>READER</MenuItem>
-                <MenuItem value='ROLE_ADMIN'>ADMIN</MenuItem>
+                {allowedRoles.map(role => (
+                  <MenuItem key={role} value={role}>
+                    {memberRoleStatus[role] ? memberRoleStatus[role].title : role}
+                  </MenuItem>
+                ))}
               </Select>
             </Tooltip>
 

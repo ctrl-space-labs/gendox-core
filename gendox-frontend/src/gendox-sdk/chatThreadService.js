@@ -35,8 +35,8 @@ const getThreadMessageMetadataByMessageId = async (threadId, messageId, token) =
   if (token) {
     headers.Authorization = 'Bearer ' + token
   }
-  return axios.get(apiRequests.getThreadMessageMetadata(threadId, messageId), { headers })   
-  
+  return axios.get(apiRequests.getThreadMessageMetadata(threadId, messageId), { headers })
+
 }
 
 /**

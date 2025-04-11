@@ -2,12 +2,11 @@ import React from "react";
 import Button from "@mui/material/Button";
 import { useRouter } from "next/router";
 import { styled } from "@mui/material/styles";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import Icon from "src/views/custom-components/mui/icon/icon";
 import Tooltip from "@mui/material/Tooltip";
 import Box from "@mui/material/Box";
 import Link from "next/link";
-import MuiListSubheader from "@mui/material/ListSubheader";
 
 
 import styles from './styles.module.css'
@@ -26,11 +25,9 @@ const StyledButton = styled(Button)(({ theme, variant }) => ({
 
 // Button component for Chat
 const ChatButton = () => {
-  const router = useRouter();
-  const { organizationId, projectId } = router.query;
   const project = useSelector((state) => state.activeProject.projectDetails);
-
-  const chatUrl = `/gendox/chat/?organizationId=${organizationId}&projectId=${projectId}`;
+  const organization = useSelector((state) => state.activeOrganization.activeOrganization);
+  const chatUrl = `/gendox/chat/?organizationId=${organization.id}&=${project.id}`;
 
   return (
     <Box >

@@ -6,7 +6,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectMemberCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectMemberRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectMemberPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +16,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -28,21 +26,18 @@ public class ProjectMemberService {
     private ProjectMemberRepository projectMemberRepository;
     private UserService userService;
     private ProjectService projectService;
-
     private UserOrganizationService userOrganizationService;
-    private final ProjectRepository projectRepository;
 
     @Autowired
     public ProjectMemberService(ProjectMemberRepository projectMemberRepository,
                                 @Lazy UserService userService,
                                 @Lazy ProjectService projectService,
-                                UserOrganizationService userOrganizationService,
-                                ProjectRepository projectRepository) {
+                                UserOrganizationService userOrganizationService
+    ) {
         this.projectMemberRepository = projectMemberRepository;
         this.userService = userService;
         this.projectService = projectService;
         this.userOrganizationService = userOrganizationService;
-        this.projectRepository = projectRepository;
     }
 
     public List<ProjectMember> getAll(ProjectMemberCriteria criteria) throws GendoxException {
@@ -60,6 +55,16 @@ public class ProjectMemberService {
     public boolean isUserProjectMember(UUID userId, UUID projectId) {
         return projectMemberRepository.existsByProjectIdAndUserId(projectId, userId);
     }
+
+    public List<ProjectMember> getProjectMembersByUserAndOrganization(UUID userId, UUID organizationId) throws GendoxException {
+        try {
+            return projectMemberRepository.findByUserIdAndProject_OrganizationId(userId, organizationId);
+        } catch (Exception e) {
+            throw new GendoxException("PROJECT_MEMBERS_QUERY_FAILED", "Failed to retrieve project members for the user in the organization", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
 
 
     public ProjectMember createProjectMember(ProjectMember projectMember) throws GendoxException {
@@ -147,15 +152,15 @@ public class ProjectMemberService {
      * Add the default members to the project
      * The default members are the project's creator and the organization's admins
      *
-     * @param project the project to add the default members to
+     * @param project        the project to add the default members to
      * @param organizationId the organization id where the project belongs and all the admins will be members
-     * @param creatorUserId the creator of the project to be added as a member
+     * @param creatorUserId  the creator of the project to be added as a member
      * @throws Exception
      */
     public void addDefaultMembersToTheProject(Project project, UUID organizationId, String creatorUserId) throws GendoxException {
 
-        // project's users all the organization admins
-        Set<UUID> userIds = userOrganizationService.getAll(UserOrganizationCriteria
+        // Retrieve organization members with the ADMIN role
+        Set<UUID> adminUserIds = userOrganizationService.getAll(UserOrganizationCriteria
                         .builder()
                         .organizationId(organizationId.toString())
                         .roleName(OrganizationRolesConstants.ADMIN)
@@ -164,9 +169,24 @@ public class ProjectMemberService {
                 .map(userOrganization -> userOrganization.getUser().getId())
                 .collect(Collectors.toSet());
 
-        userIds.add(UUID.fromString(creatorUserId));
+        // Retrieve organization members with the OWNER role
+        Set<UUID> ownerUserIds = userOrganizationService.getAll(UserOrganizationCriteria
+                        .builder()
+                        .organizationId(organizationId.toString())
+                        .roleName(OrganizationRolesConstants.OWNER)
+                        .build())
+                .stream()
+                .map(userOrganization -> userOrganization.getUser().getId())
+                .collect(Collectors.toSet());
 
-        createAllProjectMembers(userIds, project.getId());
+        // Merge both sets, ensuring uniqueness
+        adminUserIds.addAll(ownerUserIds);
+
+        // Add the project creator to the set
+        adminUserIds.add(UUID.fromString(creatorUserId));
+
+        // Create project members for the aggregated users
+        createAllProjectMembers(adminUserIds, project.getId());
 
     }
 
@@ -184,6 +204,18 @@ public class ProjectMemberService {
 
     }
 
+    public void deleteProjectMembers(List<ProjectMember> projectMembers) throws GendoxException {
+        try {
+            projectMemberRepository.deleteAll(projectMembers);
+        } catch (Exception e) {
+            throw new GendoxException(
+                    "PROJECT_MEMBERS_DELETION_FAILED",
+                    "An error occurred while deleting the project members",
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
     public void deleteAllProjectMembers(Project project) throws GendoxException {
         List<ProjectMember> projectMembers = projectMemberRepository.findByProjectId(project.getId());
 
@@ -195,10 +227,7 @@ public class ProjectMemberService {
 
 
     public void removeMemberFromProject(UUID projectId, UUID userId) throws GendoxException {
-
-
         ProjectMember projectMember = projectMemberRepository.findByProjectIdAndUserId(projectId, userId);
-
         if (projectMember != null) {
             projectMemberRepository.deleteById(projectMember.getId());
         } else {

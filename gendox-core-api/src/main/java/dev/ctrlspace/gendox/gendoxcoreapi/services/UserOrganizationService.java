@@ -1,18 +1,13 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.UserOrganizationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserOrganizationCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.UserOrganizationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.UserOrganizationPredicate;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.OrganizationRolesConstants;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 
@@ -35,9 +31,6 @@ public class UserOrganizationService {
     private UserService userService;
     private OrganizationService organizationService;
     private TypeService typeService;
-
-
-
 
 
     @Autowired
@@ -61,6 +54,12 @@ public class UserOrganizationService {
         return getAll(criteria, pageable);
     }
 
+    public UserOrganization getById(UUID userOrganizationId) throws GendoxException {
+        return userOrganizationRepository.findById(userOrganizationId)
+                .orElseThrow(() -> new GendoxException("USER_ORGANIZATION_NOT_FOUND", "User organization not found", HttpStatus.NOT_FOUND));
+    }
+
+
     public List<UserOrganization> getAll(UserOrganizationCriteria criteria, Pageable pageable) throws GendoxException {
         if (pageable == null) {
             throw new GendoxException("Pageable cannot be null", "pageable.null", HttpStatus.BAD_REQUEST);
@@ -76,6 +75,30 @@ public class UserOrganizationService {
     public UserOrganization getUserOrganizationByOwnerId(UUID userId) {
         return userOrganizationRepository.findFirstByUserIdAndRoleNative(userId, OrganizationRolesConstants.OWNER)
                 .orElse(null);
+    }
+
+    public Type getUserOrganizationRoleType(UUID userId, UUID organizationId) throws GendoxException {
+        // Retrieve the first matching UserOrganization record
+        Optional<UserOrganization> optionalUserOrganization = userOrganizationRepository.findFirstByUserIdAndOrganizationIdOrderByCreatedAtAsc(userId, organizationId);
+
+        // If no membership record is found, throw an exception.
+        if (optionalUserOrganization.isEmpty()) {
+            throw new GendoxException("USER_ORGANIZATION_NOT_FOUND",
+                    "No membership found for the provided user and organization",
+                    HttpStatus.NOT_FOUND);
+        }
+
+        UserOrganization userOrganization = optionalUserOrganization.get();
+
+        // Ensure that the organization role is defined.
+        if (userOrganization.getRole() == null) {
+            throw new GendoxException("ORGANIZATION_ROLE_NOT_FOUND",
+                    "The organization role is not defined for the user",
+                    HttpStatus.NOT_FOUND);
+        }
+
+        // Return the ID of the associated organization role.
+        return userOrganization.getRole();
     }
 
     public boolean isUserOrganizationMember(UUID userId, UUID organizationID) {
@@ -145,6 +168,7 @@ public class UserOrganizationService {
             throw new GendoxException("USER_ORGANIZATION_NOT_FOUND", "User-organization combination not found", HttpStatus.BAD_REQUEST);
         }
         userOrganizationRepository.delete(userOrganization);
+
     }
 
     @Transactional

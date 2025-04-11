@@ -10,14 +10,12 @@ import VerticalLayout from 'src/@core/layouts/VerticalLayout'
 import VerticalNavItems from 'src/navigation/vertical'
 
 // ** Component Import
-import UpgradeToProButton from './components/UpgradeToProButton'
 import VerticalAppBarContent from './components/vertical/AppBarContent'
 
 // ** Hook Import
 import { useSettings } from 'src/@core/hooks/useSettings'
 import GendoxAppBrand from "./components/shared-components/GendoxAppBrand";
 import VerticalNavButtons from "src/layouts/components/VerticalNavButton";
-import PoweredByGendox from "./components/shared-components/PoweredByGendox";
 import GendoxFooterContent from "./components/shared-components/GendoxFooterContent";
 
 
@@ -26,6 +24,17 @@ const UserLayout = ({ children }) => {
   const { settings, saveSettings } = useSettings()
 
   const { ChatButton, NewProjectButton } = VerticalNavButtons;
+
+  const updatedSettings = {
+    ...settings,
+    footerContent: 'default',
+    navBarContent: 'default',
+    globalSearch: true
+  }
+
+  if (settings.navBarContent !== 'default') {
+    saveSettings(updatedSettings)
+  }
 
   /**
    *  The below variable will hide the current layout menu at given screen size.

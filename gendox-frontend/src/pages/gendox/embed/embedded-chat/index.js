@@ -9,12 +9,14 @@ import { useIFrameMessageManager } from 'src/authentication/context/IFrameMessag
 import GendoxChat from 'src/views/pages/chat/GendoxChat'
 import { routeTypes } from 'src/authentication/components/RouteHandler'
 import Icon from 'src/views/custom-components/mui/icon/icon'
+import ChatInsight from 'src/views/pages/chat/ChatInsight'
 
 // Add any extra configurations here
 const gendoxChatConfig = {
   authProviderOption: 'IFrameAuthProvider',
   embedView: true,
-  chatUrlPath: '/gendox/embed/embedded-chat'
+  chatUrlPath: '/gendox/embed/embedded-chat',
+  chatInsightView: false,
 }
 
 const StyledWrapper = styled(Box, {

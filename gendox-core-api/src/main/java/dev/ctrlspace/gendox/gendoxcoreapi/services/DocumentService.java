@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,8 @@ public class DocumentService {
     private AuditLogsService auditLogsService;
     private SubscriptionValidationService subscriptionValidationService;
 
+    private EntityManager entityManager;
+
 
     @Autowired
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
@@ -42,13 +45,15 @@ public class DocumentService {
                            ProjectDocumentService projectDocumentService,
                            TypeService typeService,
                            AuditLogsService auditLogsService,
-                           SubscriptionValidationService subscriptionValidationService) {
+                           SubscriptionValidationService subscriptionValidationService,
+                           EntityManager entityManager) {
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentSectionService = documentSectionService;
         this.projectDocumentService = projectDocumentService;
         this.typeService = typeService;
         this.auditLogsService = auditLogsService;
         this.subscriptionValidationService = subscriptionValidationService;
+        this.entityManager = entityManager;
     }
 
 
@@ -200,6 +205,7 @@ public class DocumentService {
     }
 
 
+    @Transactional
     public void deleteDocument(UUID documentIid, UUID projectId) throws GendoxException {
         DocumentInstance documentInstance = getDocumentInstanceById(documentIid);
         deleteDocument(documentInstance, projectId);
@@ -239,7 +245,9 @@ public class DocumentService {
             UUID projectId = projectDocumentService.getProjectIdByDocumentId(documentId);
             try {
                 this.deleteDocument(documentId, projectId);
-                logger.info("Successfully deleted all provided DocumentInstances.");
+                entityManager.flush();
+                entityManager.clear();
+                logger.info("Successfully deleted document Instance with ID: {}", documentId);
             } catch (Exception e) {
                 logger.error("Failed to delete DocumentInstances with IDs: {}", documentIds, e);
                 throw new GendoxException("DELETE_FAILED", "Failed to delete document instances", HttpStatus.INTERNAL_SERVER_ERROR);

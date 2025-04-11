@@ -94,7 +94,6 @@ const GlobalSearchDialog = ({ globalSearchDialogOpen, closeGlobalSearchDialog, u
       resetDocumentState()
     }
   }, [activeTab, dispatch])
-
   useEffect(() => {
     if (user?.organizations) {
       const agents = user.organizations.flatMap(org =>
@@ -106,7 +105,7 @@ const GlobalSearchDialog = ({ globalSearchDialogOpen, closeGlobalSearchDialog, u
             icon: 'mdi:account',
             category: 'Project Agents',
             optionId: agent.id,
-            link: `/gendox/chat/?organizationId=${org.id}&threadId=${agent.userId}`
+            link: `/gendox/chat/?organizationId=${org.id}&projectId=${agent.projectId}`
           }))
       )
       setAgentOptions(agents)
@@ -135,13 +134,7 @@ const GlobalSearchDialog = ({ globalSearchDialogOpen, closeGlobalSearchDialog, u
     }
   }, [closerDocumentsFromProject, projectId, dispatch])
 
-  const navigateToSelectedOption = selectedOption => {
-    setSearchValue('')
-    closeGlobalSearchDialog()
-    if (selectedOption.link) {
-      router.push(selectedOption.link)
-    }
-  }
+  
 
   const handleLoadMore = () => {
     const nextPage = documentsPage + 1
@@ -257,7 +250,11 @@ const GlobalSearchDialog = ({ globalSearchDialogOpen, closeGlobalSearchDialog, u
                     agentOptions.map(option => (
                       <ListItem
                         key={option.optionId}
-                        onClick={() => navigateToSelectedOption(option)}
+                        onClick={e => {
+                          e.stopPropagation(); // Prevents parent's onClick from firing
+                          closeGlobalSearchDialog(); // Close the dialog immediately
+                          router.push(option.link);
+                        }}
                         sx={{ padding: '0px' }}
                       >
                         <ListItemButton>
@@ -305,7 +302,11 @@ const GlobalSearchDialog = ({ globalSearchDialogOpen, closeGlobalSearchDialog, u
                   ? projectDocumentOptions.map(option => (
                       <ListItem
                         key={`${option.optionId}-${option.title}`}
-                        onClick={() => navigateToSelectedOption(option)}
+                        onClick={e => {
+                          e.stopPropagation() // Prevents the parent's onClick from firing
+                          closeGlobalSearchDialog() // This sets globalSearchDialogOpen to false
+                          router.push(option.link)
+                        }}
                         sx={{ padding: '0px' }}
                       >
                         <ListItemButton sx={{ display: 'flex', alignItems: 'center' }}>
