@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://ctrl-space-labs.github.io/gendox-core/blog</id>
     <title>Gendox Blog</title>
-    <updated>2019-05-28T00:00:00.000Z</updated>
+    <updated>2024-05-28T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://ctrl-space-labs.github.io/gendox-core/blog"/>
     <subtitle>Gendox Blog</subtitle>
@@ -11,7 +11,7 @@
         <title type="html"><![CDATA[What is GenDox?]]></title>
         <id>https://ctrl-space-labs.github.io/gendox-core/blog/what-is-gendox</id>
         <link href="https://ctrl-space-labs.github.io/gendox-core/blog/what-is-gendox"/>
-        <updated>2019-05-28T00:00:00.000Z</updated>
+        <updated>2024-05-28T00:00:00.000Z</updated>
         <summary type="html"><![CDATA[Gendox is an Enterprice ready RAG system capable of importing data from multiple sources and create AI Agents experts on this data!]]></summary>
         <content type="html"><![CDATA[<p>Gendox is an Enterprice ready RAG system capable of importing data from multiple sources and create AI Agents experts on this data!</p>
 <p>This is a test blog :)</p>]]></content>
