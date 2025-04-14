@@ -1,5 +1,8 @@
 ---
-sidebar_position: 1
+sidebar_position: 0
+id: intro
+slug: /
+title: Introduction
 ---
 
 # Gendox Tutorial Intro
