@@ -26,6 +26,12 @@ This command generates static content into the `build` directory and can be serv
 
 ### Deployment
 
+Currently, this site is deployed to Cloudflare Pages. 
+
+
+To deploy the site to Github Actions, you can use the following command:
+```
+
 Using SSH:
 
 ```
