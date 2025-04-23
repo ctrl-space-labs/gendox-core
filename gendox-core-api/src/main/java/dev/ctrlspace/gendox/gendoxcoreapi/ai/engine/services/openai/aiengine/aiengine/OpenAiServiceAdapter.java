@@ -1,9 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
+
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
@@ -107,13 +108,10 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         sleepIfLowRateLimit(openAiAda2Response);
 
 
-
-
         return openAiAda2Response;
     }
 
     /**
-     *
      * @param openAiAda2Response
      */
     private void sleepIfLowRateLimit(OpenAiAda2Response openAiAda2Response) {
@@ -154,6 +152,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
     /**
      * This limits requests sent to OpenAI to not pass the rate limits
      * TODO Not implemented yet, complex logic should be applied to update the limits depending the actual usage of the API
+     *
      * @param embeddingRequestHttpEntity
      * @param apiKey
      * @throws GendoxException
@@ -234,7 +233,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         if (aiModel.getModel().contains("o1")) {
             openAiGptRequest.setTopP(1);
             openAiGptRequest.setTemperature(1);
-            openAiGptRequest.setMaxCompletionTokens(2*openAiGptRequest.getMaxTokens());
+            openAiGptRequest.setMaxCompletionTokens(2 * openAiGptRequest.getMaxTokens());
             openAiGptRequest.setMaxTokens(null);
             messages.getFirst().setRole("user");
 
@@ -287,9 +286,6 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
         return rateLimitInfo;
     }
-
-
-
 
 
     @Override

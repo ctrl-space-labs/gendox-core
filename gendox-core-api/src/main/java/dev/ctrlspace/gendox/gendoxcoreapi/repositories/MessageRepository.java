@@ -1,11 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageMetadataDTO;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
@@ -30,7 +28,7 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
 
     @Query(value = """
     WITH ranked_messages AS (
-        SELECT 
+        SELECT
             id,
             value,
             project_id,

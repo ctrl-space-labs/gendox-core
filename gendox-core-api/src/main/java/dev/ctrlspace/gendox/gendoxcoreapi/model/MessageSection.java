@@ -1,7 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -22,10 +21,6 @@ public class MessageSection {
     @Column(name = "id", nullable = false)
     private UUID id;
 
-//    @JsonManagedReference(value = "message")
-//    @ManyToOne
-//    @JoinColumn(name = "message_id", referencedColumnName = "id", nullable = false)
-//    private Message message;
     @JsonBackReference(value = "message")
     @ManyToOne
     @JoinColumn(name = "message_id", referencedColumnName = "id", nullable = false)

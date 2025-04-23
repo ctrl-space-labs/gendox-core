@@ -1,13 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 @Data
 @AllArgsConstructor

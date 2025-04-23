@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.CompletionResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.CompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGptResponse;
 import org.springframework.stereotype.Component;
 

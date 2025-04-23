@@ -4,7 +4,6 @@ import { Box, IconButton } from '@mui/material'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import Typography from '@mui/material/Typography'
 import Chip from '../../../custom-components/mui/chip'
-import { fetchMessageMetadata } from '../../../../store/chat/gendoxChat'
 import Tooltip from '@mui/material/Tooltip'
 import { copyToClipboard } from 'src/utils/copyToClipboard'
 

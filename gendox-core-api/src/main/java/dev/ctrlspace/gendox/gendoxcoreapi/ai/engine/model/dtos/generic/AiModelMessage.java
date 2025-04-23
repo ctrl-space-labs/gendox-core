@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
