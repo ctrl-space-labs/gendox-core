@@ -1,6 +1,6 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.impl;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;

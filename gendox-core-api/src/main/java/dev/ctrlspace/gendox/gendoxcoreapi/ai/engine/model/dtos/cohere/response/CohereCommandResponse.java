@@ -1,8 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.AiModelMessage;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Choice;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

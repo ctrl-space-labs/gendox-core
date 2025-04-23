@@ -1,7 +1,5 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereBilledUnits;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereGenerations;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Choice;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Usage;
 import lombok.AllArgsConstructor;
