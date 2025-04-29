@@ -1,13 +1,13 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereCompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereGenerations;
 
 public class AiModelMessagetoCohereGenerationsTextConverter {
-    public static AiModelMessage toCohereGenerationsText(CohereGenerations cohereGenerations, String role) {
+    public static AiModelMessage toCohereGenerationsText(CohereCompletionResponse.Content contents, String role) {
         return AiModelMessage.builder()
                 .role(role)
-                .content(cohereGenerations.getText())
+                .content(contents.getText())
                 .build();
     }
 }

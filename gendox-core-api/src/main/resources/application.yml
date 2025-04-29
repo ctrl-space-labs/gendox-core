@@ -137,6 +137,10 @@ gendox:
       key: ${COHERE_KEY}
     groq:
       key: ${GROQ_KEY:default-token}
+    gemini:
+      key: ${GEMINI_KEY:default-token}
+    anthropic:
+      key: ${ANTHROPIC_KEY:default-token}
   domain:
     base-url: http://localhost:${server.port}
     document-sections:

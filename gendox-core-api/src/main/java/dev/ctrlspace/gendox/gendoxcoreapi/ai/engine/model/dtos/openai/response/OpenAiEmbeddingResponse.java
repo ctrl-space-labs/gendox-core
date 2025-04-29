@@ -1,6 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response;
 
-import com.sun.xml.xsom.impl.ListSimpleTypeImpl;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,7 +11,7 @@ import java.util.List;
 @Builder(toBuilder = true)
 @AllArgsConstructor
 @NoArgsConstructor
-public class OpenAiAda2Response {
+public class OpenAiEmbeddingResponse {
 
     private List<EmbeddingData> data;
     private String model;

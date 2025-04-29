@@ -17,7 +17,7 @@ public interface AiModelApiAdapterService {
 
     Set<String> getSupportedApiTypeNames();
 
-    OpenAiGpt35ModerationResponse moderationCheck(String message, String apiKey);
+    OpenAiModerationResponse moderationCheck(String message, String apiKey);
 
     boolean supports(String apiTypeName);
 }

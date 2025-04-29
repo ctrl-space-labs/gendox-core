@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -255,10 +255,10 @@ public class EmbeddingsController {
 
 
     @PostMapping("/messages/moderation")
-    public OpenAiGpt35ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
+    public OpenAiModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
         String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(message, moderationApiKey);
-        return openAiGpt35ModerationResponse;
+        OpenAiModerationResponse openAiModerationResponse = trainingService.getModeration(message, moderationApiKey);
+        return openAiModerationResponse;
     }
 
     @PostMapping("/messages/moderation/document")

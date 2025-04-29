@@ -1,6 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response;
 
-import io.swagger.models.Swagger;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,7 +12,7 @@ import java.util.Map;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class OpenAiGpt35ModerationResponse {
+public class OpenAiModerationResponse {
     private String id;
     private String model;
     private List<OpenAiGpt35ModerationResult> results;

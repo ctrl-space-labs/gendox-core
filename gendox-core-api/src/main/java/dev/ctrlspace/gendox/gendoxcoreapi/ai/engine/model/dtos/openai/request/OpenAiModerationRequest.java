@@ -9,6 +9,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class Gpt35ModerationRequest {
+public class OpenAiModerationRequest {
     private String input;
 }

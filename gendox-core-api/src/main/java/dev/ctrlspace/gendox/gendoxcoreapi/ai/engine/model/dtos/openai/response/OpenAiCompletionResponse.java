@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -7,24 +7,24 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class CohereCommandResponse {
+public class OpenAiCompletionResponse {
+
     private String id;
-    @JsonProperty("prompt")
-    private String prompt;
+    private String object;
+    private long created;
     private String model;
-    @JsonProperty("generations")
-    private List<CohereGenerations> cohereGenerations;
+    private Usage usage;
+    private List<Choice> choices;
     @JsonProperty("temperature")
     private double temperature;
-    @JsonProperty("p")
+    @JsonProperty("top_p")
     private double topP;
-    @JsonProperty("max_tokens")
-    private Long maxTokens;
-    private CohereMetadata meta;
-
+    @JsonProperty("max_token")
+    private Long maxToken;
 }
+
+

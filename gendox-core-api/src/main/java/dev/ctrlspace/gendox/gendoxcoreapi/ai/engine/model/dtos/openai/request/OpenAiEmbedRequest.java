@@ -11,7 +11,7 @@ import java.io.Serializable;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class OpenAiAda2Request implements Serializable {
+public class OpenAiEmbedRequest implements Serializable {
 
     private String model;
     private String input;

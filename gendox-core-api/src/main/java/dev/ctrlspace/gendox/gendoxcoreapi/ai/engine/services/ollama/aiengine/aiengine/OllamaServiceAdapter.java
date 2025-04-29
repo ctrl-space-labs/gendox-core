@@ -1,7 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.ollama.aiengine.aiengine;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
@@ -31,7 +31,7 @@ public class OllamaServiceAdapter implements AiModelApiAdapterService {
     }
 
     @Override
-    public OpenAiGpt35ModerationResponse moderationCheck(String message, String apiKey) {
+    public OpenAiModerationResponse moderationCheck(String message, String apiKey) {
         return null;
     }
 

@@ -33,7 +33,7 @@ import commonConfig from 'src/configs/common.config.js'
 const AiAgentProjectSettings = () => {
   const dispatch = useDispatch()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-  const {provenAiEnabled, provenAiUrl } = commonConfig
+  const { provenAiEnabled, provenAiUrl } = commonConfig
 
   const { projectDetails: project, isBlurring: isUpdatingProject } = useSelector(state => state.activeProject)
 
@@ -140,16 +140,15 @@ const AiAgentProjectSettings = () => {
         moderationCheck: data.moderationCheck
       }
     }
-    dispatch(updateProjectAgent({ organizationId, projectId, payload: updatedProjectPayload, token }))
-      .unwrap()
-      .then(() => {
-        toast.success('Project updated successfully!')
-        dispatch(fetchProject({ organizationId, projectId, token }))
-      })
-      .catch(error => {
-        toast.error(`Failed to update project. Error: ${getErrorMessage(error)}`)
-        console.error('Failed to update project', error)
-      })
+    dispatch(updateProjectAgent({ organizationId, projectId, payload: updatedProjectPayload, token }))    
+    .unwrap()
+    .then(() => {
+      toast.success('Project updated successfully!')
+      dispatch(fetchProject({ organizationId, projectId, token }))
+    })
+    .catch(error => {
+      console.error('Failed to update project', error)
+    })
   }
 
   return (
@@ -389,20 +388,20 @@ const AiAgentProjectSettings = () => {
                 </Grid>
 
                 {provenAiEnabled && (
-                <Grid item xs={12} sm={6} sx={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <Button
-                    size='large'
-                    variant='outlined'
-                    href={`${provenAiUrl}/provenAI/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                  >
-                    <Box component='span' sx={{ mr: 5 }}>
-                      Go to Proven-Ai
-                    </Box>
-                    <Icon icon='mdi:arrow-right-thin' />
-                  </Button>
-                </Grid>
+                  <Grid item xs={12} sm={6} sx={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <Button
+                      size='large'
+                      variant='outlined'
+                      href={`${provenAiUrl}/provenAI/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                    >
+                      <Box component='span' sx={{ mr: 5 }}>
+                        Go to Proven-Ai
+                      </Box>
+                      <Icon icon='mdi:arrow-right-thin' />
+                    </Button>
+                  </Grid>
                 )}
               </Grid>
             </CardContent>

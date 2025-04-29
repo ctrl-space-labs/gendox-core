@@ -1,7 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -135,12 +135,12 @@ public class TrainingService {
         return projectEmbeddings;
     }
 
-    public OpenAiGpt35ModerationResponse getModeration(String message, String apiKey) throws GendoxException {
+    public OpenAiModerationResponse getModeration(String message, String apiKey) throws GendoxException {
         AiModel aiModel = new AiModel();
         aiModel.setName("OPENAI_MODERATION");
         AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl("OPEN_AI_API");
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = aiModelApiAdapterService.moderationCheck(message, apiKey);
-        return openAiGpt35ModerationResponse;
+        OpenAiModerationResponse openAiModerationResponse = aiModelApiAdapterService.moderationCheck(message, apiKey);
+        return openAiModerationResponse;
     }
 
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(UUID documentInstanceId) throws GendoxException {
@@ -149,7 +149,7 @@ public class TrainingService {
         String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
 
         for (DocumentInstanceSection section : documentInstanceSections) {
-            OpenAiGpt35ModerationResponse moderationResponse = getModeration(section.getSectionValue(), moderationApiKey);
+            OpenAiModerationResponse moderationResponse = getModeration(section.getSectionValue(), moderationApiKey);
             if (moderationResponse.getResults().get(0).isFlagged()) {
                 isFlaggedSections.put(moderationResponse.getResults().get(0).getCategories(), section.getSectionValue());
             }

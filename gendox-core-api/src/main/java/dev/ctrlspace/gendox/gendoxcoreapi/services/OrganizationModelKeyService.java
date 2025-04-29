@@ -155,7 +155,6 @@ public class OrganizationModelKeyService {
         String providerKeyProperty = "gendox.models." + model.getAiModelProvider().getName().toLowerCase() + ".key";
 
         logger.info("Using default provider key: {} - for agent: {}", providerKeyProperty, agent.getId());
-
         return environment.getProperty(providerKeyProperty);
 
 

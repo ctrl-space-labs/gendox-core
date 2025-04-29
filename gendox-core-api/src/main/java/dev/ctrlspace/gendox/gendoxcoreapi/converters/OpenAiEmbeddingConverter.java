@@ -1,21 +1,21 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiAda2Response;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiEmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Embedding;
 import org.springframework.stereotype.Component;
 
 @Component
-public class OpenAiEmbeddingConverter implements GendoxConverter<Embedding, OpenAiAda2Response> {
+public class OpenAiEmbeddingConverter implements GendoxConverter<Embedding, OpenAiEmbeddingResponse> {
     @Override
-    public OpenAiAda2Response toDTO(Embedding embedding) {
+    public OpenAiEmbeddingResponse toDTO(Embedding embedding) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Embedding toEntity(OpenAiAda2Response openAiAda2Response) {
+    public Embedding toEntity(OpenAiEmbeddingResponse openAiEmbeddingResponse) {
         Embedding embedding = new Embedding();
 
-        embedding.setEmbeddingVector(openAiAda2Response.getData().get(0).getEmbedding());
+        embedding.setEmbeddingVector(openAiEmbeddingResponse.getData().get(0).getEmbedding());
 
         return embedding;
     }

@@ -3,7 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.CompletionResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -95,8 +95,8 @@ public class CompletionService {
         String question = convertToAiModelTextQuestion(message, nearestSections, projectId);
         // check moderation
         String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(question, moderationApiKey);
-        if (openAiGpt35ModerationResponse.getResults().get(0).isFlagged()) {
+        OpenAiModerationResponse openAiModerationResponse = trainingService.getModeration(question, moderationApiKey);
+        if (openAiModerationResponse.getResults().get(0).isFlagged()) {
             throw new GendoxException("MODERATION_CHECK_FAILED", "The question did not pass moderation.", HttpStatus.NOT_ACCEPTABLE);
         }
 
