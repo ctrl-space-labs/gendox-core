@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,8 @@ import org.springframework.batch.core.JobExecution;
 
 @Service
 public class AsyncService {
+
+    Logger logger = org.slf4j.LoggerFactory.getLogger(this.getClass());
 
     private SplitterBatchService splitterBatchService;
     private TrainingBatchService trainingBatchService;
