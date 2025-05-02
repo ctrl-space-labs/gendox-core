@@ -15,9 +15,7 @@ import java.util.List;
 public class CohereRerankRequest {
 
     private String model;
-
     private String query;
-
     private List<String> documents;
 
     @JsonProperty("top_n")

@@ -31,7 +31,7 @@ public class OllamaServiceAdapter implements AiModelApiAdapterService {
     }
 
     @Override
-    public OpenAiModerationResponse moderationCheck(String message, String apiKey) {
+    public ModerationResponse moderationCheck(String message, String apiKey, AiModel aiModel) {
         return null;
     }
 

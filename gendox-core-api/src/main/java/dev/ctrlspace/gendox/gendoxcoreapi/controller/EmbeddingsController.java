@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -44,6 +45,7 @@ public class EmbeddingsController {
     private OrganizationModelKeyService organizationModelKeyService;
     private SubscriptionValidationService subscriptionValidationService;
     private ProjectService projectService;
+    private TypeService typeService;
 
 
     @Value("${proven-ai.enabled}")
@@ -57,7 +59,8 @@ public class EmbeddingsController {
                                 MessageService messageService,
                                 OrganizationModelKeyService organizationModelKeyService,
                                 SubscriptionValidationService subscriptionValidationService,
-                                ProjectService projectService
+                                ProjectService projectService,
+                                TypeService typeService
     ) {
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
@@ -67,6 +70,7 @@ public class EmbeddingsController {
         this.organizationModelKeyService = organizationModelKeyService;
         this.subscriptionValidationService = subscriptionValidationService;
         this.projectService = projectService;
+        this.typeService = typeService;
     }
 
 
@@ -255,14 +259,17 @@ public class EmbeddingsController {
 
 
     @PostMapping("/messages/moderation")
-    public OpenAiModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
+    public ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
         String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
-        OpenAiModerationResponse openAiModerationResponse = trainingService.getModeration(message, moderationApiKey);
-        return openAiModerationResponse;
+        AiModel aiModel = new AiModel();
+        aiModel.setName("OPENAI_MODERATION");
+        ModerationResponse moderationResponse = trainingService.getModeration(message, moderationApiKey, aiModel);
+        return moderationResponse;
     }
 
     @PostMapping("/messages/moderation/document")
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
+
         return trainingService.getModerationForDocumentSections(documentId);
     }
 

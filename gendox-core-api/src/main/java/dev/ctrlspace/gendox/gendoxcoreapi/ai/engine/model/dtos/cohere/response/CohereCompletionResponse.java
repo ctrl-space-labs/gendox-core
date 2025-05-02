@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -12,61 +14,53 @@ import lombok.NoArgsConstructor;
 
 public class CohereCompletionResponse {
     private String id;
-
-    @JsonProperty("finish_reason")
-    private String finishReason;
-    private String prompt;
+    private String finish_reason;
     private Message message;
     private Usage usage;
-    private String model;
-    private Double temperature;
-    private Double topP;
-    private Long maxToken;
 
-
-    // Inner class for Message
     @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
     @Builder(toBuilder = true)
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Message {
-        private String role;
-        private java.util.List<Content> content;
+        private String role; // "assistant"
+        private List<Content> content;
+
+        @Data
+        @Builder(toBuilder = true)
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class Content {
+            private String type; // "text"
+            private String text;
+        }
     }
 
-    // Inner class for Content inside Message
     @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
     @Builder(toBuilder = true)
-    public static class Content {
-        private String type;
-        private String text;
-    }
-
-    // Inner class for Usage
-    @Data
-    @AllArgsConstructor
     @NoArgsConstructor
-    @Builder(toBuilder = true)
+    @AllArgsConstructor
     public static class Usage {
-        @JsonProperty("billed_units")
-        private Tokens billedUnits;
-
+        private BilledUnits billed_units;
         private Tokens tokens;
-    }
 
-    // Inner class for Tokens (used inside Usage)
-    @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Builder(toBuilder = true)
-    public static class Tokens {
-        @JsonProperty("input_tokens")
-        private Integer inputTokens;
+        @Data
+        @Builder(toBuilder = true)
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class BilledUnits {
+            private Integer input_tokens;
+            private Integer output_tokens;
+        }
 
-        @JsonProperty("output_tokens")
-        private Integer outputTokens;
+        @Data
+        @Builder(toBuilder = true)
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class Tokens {
+            private Integer input_tokens;
+            private Integer output_tokens;
+        }
     }
 }
 

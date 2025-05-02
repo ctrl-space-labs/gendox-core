@@ -17,15 +17,25 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class CohereCompletionRequest {
     private String model;
-    private List<AiModelMessage> messages;
-    @JsonProperty("temperature")
-    private Double temperature;
-    @JsonProperty("top_p")
-    private Double topP;
-    @JsonProperty("max_tokens")
-    private Long maxTokens;
-    @JsonProperty("max_completion_tokens")
-    private Long maxCompletionTokens;
+    private List<Message> messages;
+
+    @Data
+    @Builder(toBuilder = true)
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Message {
+        private String role; // "user" or "assistant"
+        private List<Content> content;
+
+        @Data
+        @Builder(toBuilder = true)
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class Content {
+            private String type; // always "text"
+            private String text;
+        }
+    }
 
 
 }

@@ -141,8 +141,8 @@ public class OrganizationModelKeyService {
         } else if ("SEMANTIC_SEARCH_MODEL".equals(aiModelType)) {
             model = agent.getSemanticSearchModel();
         } else if ("MODERATION_MODEL".equals(aiModelType)) {
-            //always the OpenAI Moderation
-            return environment.getProperty("gendox.models.open_ai.key");
+            model = agent.getModerationModel();
+
         }
 
 

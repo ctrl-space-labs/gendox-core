@@ -1,7 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 
 import java.util.List;
@@ -17,7 +16,7 @@ public interface AiModelApiAdapterService {
 
     Set<String> getSupportedApiTypeNames();
 
-    OpenAiModerationResponse moderationCheck(String message, String apiKey);
+    ModerationResponse moderationCheck(String message, String apiKey, AiModel aiModel);
 
     boolean supports(String apiTypeName);
 }

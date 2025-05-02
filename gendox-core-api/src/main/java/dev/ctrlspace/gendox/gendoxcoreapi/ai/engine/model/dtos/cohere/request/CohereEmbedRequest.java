@@ -12,7 +12,7 @@ import java.util.List;
 @Builder(toBuilder = true)
 @AllArgsConstructor
 @NoArgsConstructor
-public class CohereEmbedRequest implements Serializable {
+public class CohereEmbedRequest {
 
     private String model;
     @JsonProperty("input_type")

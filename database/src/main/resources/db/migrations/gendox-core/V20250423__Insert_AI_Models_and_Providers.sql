@@ -1,4 +1,25 @@
--- Liquibase Migration to update OpenAI models in the database
+-- AI Models and Providers
+INSERT INTO gendox_core.types (type_category, name, description)
+SELECT 'AI_MODEL_TYPE', 'RERANK_MODEL', 'This ai-model is for rerank'
+WHERE NOT EXISTS (SELECT 1
+                  FROM gendox_core.types
+                  WHERE type_category = 'AI_MODEL_TYPE'
+                    AND name = 'RERANK_MODEL');
+
+INSERT INTO gendox_core.types (type_category, name, description)
+SELECT 'AI_MODEL_TYPE', 'OCR_MODEL', 'This ai-model is for OCR'
+WHERE NOT EXISTS (SELECT 1
+                  FROM gendox_core.types
+                  WHERE type_category = 'AI_MODEL_TYPE'
+                    AND name = 'OCR_MODEL');
+
+UPDATE gendox_core.ai_models
+SET model = 'text-moderation-latest'
+WHERE name = 'OPENAI_MODERATION' AND model != 'text-moderation-latest';
+
+
+
+-- OPENAI AI Models ----------------------------------------------------------------------------------------------
 INSERT INTO gendox_core.ai_models
     (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
 SELECT
@@ -179,7 +200,7 @@ WHERE NOT EXISTS (
 INSERT INTO gendox_core.ai_models
     (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
 SELECT
-    'omni-moderation-2024-09-26',
+    'omni-moderation-latest',
     'https://api.openai.com/v1/moderations',
     'OMNI_MODERATION',
     0.000,
@@ -198,7 +219,7 @@ WHERE NOT EXISTS (
     WHERE name = 'OMNI_MODERATION'
 );
 
--- New ai provider for Gemini
+-- Gemini AI models ----------------------------------------------------------------------------------------------
 INSERT INTO gendox_core.ai_model_providers
 (name, api_type_id, description, created_at, updated_at)
 SELECT 'GEMINI',
@@ -318,34 +339,41 @@ WHERE NOT EXISTS (
     WHERE name = 'GEMINI_EMBEDDING'
 );
 
--- Anthropic AI
+-- Anthropic AI models ----------------------------------------------------------------------------------------------
+INSERT INTO gendox_core.types (type_category, name, description)
+SELECT 'AI_MODEL_API_TYPE', 'ANTHROPIC_AI_API', 'AnthropicAi Compatible API'
+WHERE NOT EXISTS (SELECT 1
+                  FROM gendox_core.types
+                  WHERE type_category = 'AI_MODEL_API_TYPE'
+                    AND name = 'ANTHROPIC_AI_API');
+
 INSERT INTO gendox_core.ai_model_providers
 (name, api_type_id, description, created_at, updated_at)
-SELECT 'ANTHROPIC',
-       (SELECT id FROM gendox_core.types WHERE name = 'OPEN_AI_API'), --It uses the OPEN_AI_API standard
-       'Anthropic',
+SELECT 'ANTHROPIC_AI',
+       (SELECT id FROM gendox_core.types WHERE name = 'ANTHROPIC_AI_API'),
+       'AnthropicAi',
        timezone('UTC', NOW()),
        timezone('UTC', NOW())
 WHERE NOT EXISTS
           (SELECT 1
            FROM gendox_core.ai_model_providers
-           WHERE name = 'ANTHROPIC');
+           WHERE name = 'ANTHROPIC_AI');
 
 INSERT INTO gendox_core.ai_models
     (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
 SELECT
     'claude-3-7-sonnet-20250219',
-    'https://api.anthropic.com/v1/',
+    'https://api.anthropic.com/v1/messages',
     'CLAUDE-3-7-SONNET',
     0.015,
     NOW(),
     NOW(),
     'Our most intelligent model, Highest level of intelligence and capability with toggleable extended thinking',
     (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
-    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'OPEN_AI'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'ANTHROPIC_AI'),
     (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
-    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'ANTHROPIC'),
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'ANTHROPIC_AI'),
     TRUE
 WHERE NOT EXISTS (
     SELECT 1
@@ -357,17 +385,17 @@ INSERT INTO gendox_core.ai_models
     (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
 SELECT
     'claude-3-5-haiku-20241022',
-    'https://api.anthropic.com/v1/',
+    'https://api.anthropic.com/v1/messages',
     'CLAUDE-3-5-HAIKU',
     0.004,
     NOW(),
     NOW(),
     'Our fastest model. Intelligence at blazing speeds',
     (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
-    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'OPEN_AI'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'ANTHROPIC_AI'),
     (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
-    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'ANTHROPIC'),
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'ANTHROPIC_AI'),
     TRUE
 WHERE NOT EXISTS (
     SELECT 1
@@ -379,17 +407,17 @@ INSERT INTO gendox_core.ai_models
     (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
 SELECT
     'claude-3-opus-20240229',
-    'https://api.anthropic.com/v1/',
+    'https://api.anthropic.com/v1/messages',
     'CLAUDE-3-OPUS',
     0.075,
     NOW(),
     NOW(),
     'Powerful model for complex tasks. Top-level intelligence, fluency, and understanding',
     (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
-    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'OPEN_AI'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'ANTHROPIC_AI'),
     (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
-    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'ANTHROPIC'),
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'ANTHROPIC_AI'),
     TRUE
 WHERE NOT EXISTS (
     SELECT 1
@@ -397,7 +425,7 @@ WHERE NOT EXISTS (
     WHERE name = 'CLAUDE-3-OPUS'
 );
 
--- Cohere AI
+-- Cohere AI models ----------------------------------------------------------------------------------------------
 INSERT INTO gendox_core.ai_models
     (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
 SELECT
@@ -518,5 +546,421 @@ UPDATE gendox_core.ai_models
 SET url = 'https://api.cohere.ai/v2/embed'
 WHERE name = 'COHERE_EMBED_MULTILINGUAL_V3.0'
   AND (url IS DISTINCT FROM 'https://api.cohere.ai/v2/embed');
+
+-- Voyage AI Embeddings ----------------------------------------------------------------------------------------------
+INSERT INTO gendox_core.types (type_category, name, description)
+SELECT 'AI_MODEL_API_TYPE', 'VOYAGE_AI_API', 'VoyageAi Compatible API'
+WHERE NOT EXISTS (SELECT 1
+                  FROM gendox_core.types
+                  WHERE type_category = 'AI_MODEL_API_TYPE'
+                    AND name = 'VOYAGE_AI_API');
+
+INSERT INTO gendox_core.ai_model_providers
+(name, api_type_id, description, created_at, updated_at)
+SELECT 'VOYAGE_AI',
+       (SELECT id FROM gendox_core.types WHERE name = 'VOYAGE_AI_API'),
+       'VoyageAi',
+       timezone('UTC', NOW()),
+       timezone('UTC', NOW())
+WHERE NOT EXISTS
+          (SELECT 1
+           FROM gendox_core.ai_model_providers
+           WHERE name = 'VOYAGE_AI');
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'voyage-3-large',
+    'https://api.voyageai.com/v1/embeddings',
+    'VOYAGE_3_LARGE',
+    0.00018,
+    NOW(),
+    NOW(),
+    'The best general-purpose and multilingual retrieval quality. ',
+    (SELECT id FROM gendox_core.types WHERE name = 'SEMANTIC_SEARCH_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'VOYAGE_3_LARGE'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'voyage-3',
+    'https://api.voyageai.com/v1/embeddings',
+    'VOYAGE_3',
+    0.00006,
+    NOW(),
+    NOW(),
+    'Optimized for general-purpose and multilingual retrieval quality. ',
+    (SELECT id FROM gendox_core.types WHERE name = 'SEMANTIC_SEARCH_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'VOYAGE_3'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'voyage-3-lite',
+    'https://api.voyageai.com/v1/embeddings',
+    'VOYAGE_3_LITE',
+    0.00002,
+    NOW(),
+    NOW(),
+    'Optimized for latency and cost. ',
+    (SELECT id FROM gendox_core.types WHERE name = 'SEMANTIC_SEARCH_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'VOYAGE_3_LITE'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'voyage-code-3',
+    'https://api.voyageai.com/v1/embeddings',
+    'VOYAGE_CODE_3',
+    0.00018,
+    NOW(),
+    NOW(),
+    'Optimized for code retrieval. ',
+    (SELECT id FROM gendox_core.types WHERE name = 'SEMANTIC_SEARCH_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'VOYAGE_CODE_3'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'voyage-finance-2',
+    'https://api.voyageai.com/v1/embeddings',
+    'VOYAGE_FINANCE_2',
+    0.00012,
+    NOW(),
+    NOW(),
+    'Optimized for finance retrieval and RAG.  ',
+    (SELECT id FROM gendox_core.types WHERE name = 'SEMANTIC_SEARCH_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'VOYAGE_FINANCE_2'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'voyage-law-2',
+    'https://api.voyageai.com/v1/embeddings',
+    'VOYAGE_LAW_2',
+    0.00012,
+    NOW(),
+    NOW(),
+    'Optimized for legal retrieval and RAG. Also improved performance across all domains. ',
+    (SELECT id FROM gendox_core.types WHERE name = 'SEMANTIC_SEARCH_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'VOYAGE_LAW_2'
+);
+
+
+-- Mistral AI models ----------------------------------------------------------------------------------------------
+
+INSERT INTO gendox_core.types (type_category, name, description)
+SELECT 'AI_MODEL_API_TYPE', 'MISTRAL_AI_API', 'MistralAi Compatible API'
+WHERE NOT EXISTS (SELECT 1
+                  FROM gendox_core.types
+                  WHERE type_category = 'AI_MODEL_API_TYPE'
+                    AND name = 'MISTRAL_AI_API');
+
+INSERT INTO gendox_core.ai_model_providers
+(name, api_type_id, description, created_at, updated_at)
+SELECT 'MISTRAL_AI',
+       (SELECT id FROM gendox_core.types WHERE name = 'MISTRAL_AI_API'),
+       'MistralAi',
+       timezone('UTC', NOW()),
+       timezone('UTC', NOW())
+WHERE NOT EXISTS
+          (SELECT 1
+           FROM gendox_core.ai_model_providers
+           WHERE name = 'MISTRAL_AI');
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'mistral-large-latest',
+    'https://api.mistral.ai/v1/chat/completions',
+    'MISTRAL_LARGE',
+    0.006,
+    NOW(),
+    NOW(),
+    'Our top-tier reasoning model for high-complexity tasks with the lastest version released November 2024. ',
+    (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'MISTRAL_LARGE'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'codestral-latest',
+    'https://api.mistral.ai/v1/chat/completions',
+    'CODESTRAL',
+    0.0009,
+    NOW(),
+    NOW(),
+    'Our cutting-edge language model for coding with the second version released January 2025, Codestral specializes in low-latency, high-frequency tasks such as fill-in-the-middle (FIM), code correction and test generation.',
+    (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'CODESTRAL'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'pixtral-large-latest',
+    'https://api.mistral.ai/v1/chat/completions',
+    'PIXTRAL_LARGE',
+    0.006,
+    NOW(),
+    NOW(),
+    'Our frontier-class multimodal model released November 2024. ',
+    (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'PIXTRAL_LARGE'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'ministral-3b-latest',
+    'https://api.mistral.ai/v1/chat/completions',
+    'MISTRAL_3B',
+    0.00004,
+    NOW(),
+    NOW(),
+    'World’s best edge model.',
+    (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'MISTRAL_3B'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'ministral-8b-latest',
+    'https://api.mistral.ai/v1/chat/completions',
+    'MISTRAL_8B',
+    0.0001,
+    NOW(),
+    NOW(),
+    'Powerful edge model with extremely high performance/price ratio.',
+    (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'MISTRAL_8B'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'open-mistral-nemo',
+    'https://api.mistral.ai/v1/chat/completions',
+    'OPEN_MISTRAL_NEMO',
+    0.00,
+    NOW(),
+    NOW(),
+    'Our best multilingual open source model released July 2024.',
+    (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'OPEN_MISTRAL_NEMO'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'mistral-small-latest',
+    'https://api.mistral.ai/v1/chat/completions',
+    'MISTRAL_SMALL',
+    0.00,
+    NOW(),
+    NOW(),
+    'A new leader in the small models category with image understanding capabilities, with the lastest version v3.1 released March 2025.',
+    (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'MISTRAL_SMALL'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'mistral-saba-latest',
+    'https://api.mistral.ai/v1/chat/completions',
+    'MISTRAL_SABA',
+    0.0006,
+    NOW(),
+    NOW(),
+    'A powerfull and efficient model for languages from the Middle East and South Asia.',
+    (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'MISTRAL_SABA'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'mistral-ocr-latest',
+    'https://api.mistral.ai/v1/ocr',
+    'MISTRAL_OCR',
+    0.0006,
+    NOW(),
+    NOW(),
+    'Our OCR service that enables our users to extract interleaved text and images',
+    (SELECT id FROM gendox_core.types WHERE name = 'OCR_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'MISTRAL_OCR'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'mistral-embed',
+    'https://api.mistral.ai/v1/embeddings',
+    'MISTRAL_EMBED',
+    0.0001,
+    NOW(),
+    NOW(),
+    'Our state-of-the-art semantic for extracting representation of text extracts',
+    (SELECT id FROM gendox_core.types WHERE name = 'SEMANTIC_SEARCH_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'MISTRAL_EMBED'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'mistral-moderation-latest',
+    'https://api.mistral.ai/v1/moderations',
+    'MISTRAL_MODERATION',
+    0.0001,
+    NOW(),
+    NOW(),
+    'Our moderation service that enables our users to detect harmful text content',
+    (SELECT id FROM gendox_core.types WHERE name = 'MODERATION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'MISTRAL_MODERATION'
+);
 
 

@@ -5,11 +5,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.request.Co
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereCompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.cohere.response.CohereEmbedResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.CohereConfig;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.CohereCompletionResponseConverter;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.CohereEmbeddingResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.CohereCompletionResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.CohereEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import org.apache.logging.log4j.util.Strings;
@@ -33,13 +32,9 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
     Logger logger = LoggerFactory.getLogger(CohereAiServiceAdapter.class);
 
     private Set<String> supportedApiTypeNames = Set.of("COHERE_API");
-
-
     private AiModelRepository aiModelRepository;
-
     private CohereCompletionResponseConverter cohereCompletionResponseConverter;
     private RestTemplate restTemplate;
-
     private CohereEmbeddingResponseConverter cohereEmbeddingResponseConverter;
     @Value("${gendox.models.cohere.key}")
     private String coherekey;
@@ -49,7 +44,7 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
     public CohereAiServiceAdapter(AiModelRepository aiModelRepository,
                                   CohereCompletionResponseConverter cohereCompletionResponseConverter,
                                   CohereEmbeddingResponseConverter cohereEmbeddingResponseConverter,
-                                  RestTemplate restTemplate){
+                                  RestTemplate restTemplate) {
         this.aiModelRepository = aiModelRepository;
         this.cohereEmbeddingResponseConverter = cohereEmbeddingResponseConverter;
         this.cohereCompletionResponseConverter = cohereCompletionResponseConverter;
@@ -68,45 +63,44 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
     }
 
 
-    public CohereEmbedResponse getEmbeddingResponse(CohereEmbedRequest embeddingRequestHttpEntity, AiModel aiModel, String apiKey) {
+    public CohereEmbedResponse getEmbeddingResponse(CohereEmbedRequest embeddingRequestHttpEntity, AiModel aiModel) {
         String embeddingsApiUrl = aiModel.getUrl();
         logger.debug("Sending Embedding Request to '{}': {}", embeddingsApiUrl, embeddingRequestHttpEntity);
+        logger.info("AiModel for embeddings-->: {}", aiModel.getModel());
         ResponseEntity<CohereEmbedResponse> responseEntity = restTemplate.postForEntity(
                 embeddingsApiUrl,
                 new HttpEntity<>(embeddingRequestHttpEntity, buildHeader()),
                 CohereEmbedResponse.class);
         logger.info("Received Embedding Response from '{}'. Tokens billed: {}", embeddingsApiUrl,
-                responseEntity.getBody().getMeta().getBilledUnits().getInputTokens());
+                responseEntity.getBody().getMeta().getBilled_units().getInput_tokens());
 
         return responseEntity.getBody();
     }
 
 
-    public CohereCompletionResponse getCompletionResponse(CohereCompletionRequest chatRequestHttpEntity, AiModel aiModel, String apiKey) {
+    public CohereCompletionResponse getCompletionResponse(CohereCompletionRequest chatRequestHttpEntity, AiModel aiModel) {
         String completionApiUrl = aiModel.getUrl();
         logger.debug("Sending completion Request to '{}': {}", completionApiUrl, chatRequestHttpEntity);
-        logger.info("AiModel: {}", aiModel.getModel());
+        logger.info("AiModel for completion: {}", aiModel.getModel());
         ResponseEntity<CohereCompletionResponse> responseEntity = restTemplate.postForEntity(
                 completionApiUrl,
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader()),
                 CohereCompletionResponse.class);
         logger.info("Received completion Response from '{}'. Tokens billed: {}", completionApiUrl,
-                responseEntity.getBody().getUsage().getBilledUnits().getInputTokens() + responseEntity.getBody().getUsage().getBilledUnits().getOutputTokens());
+                responseEntity.getBody().getUsage().getBilled_units().getInput_tokens() + responseEntity.getBody().getUsage().getBilled_units().getOutput_tokens());
 
         return responseEntity.getBody();
     }
 
-
-
+    @Override
     public EmbeddingResponse askEmbedding(BotRequest botRequest, AiModel aiModel, String apiKey) {
         CohereEmbedResponse cohereEmbedResponse = this.getEmbeddingResponse((CohereEmbedRequest.builder()
-                .model(aiModel.getModel())
-                .texts(botRequest.getMessages())
-                .inputType("search-document")
-                .embeddingTypes(List.of("float"))
-                .build()),
-                aiModel,
-                apiKey);
+                        .model(aiModel.getModel())
+                        .texts(botRequest.getMessages())
+                        .inputType("search-document")
+                        .embeddingTypes(List.of("float"))
+                        .build()),
+                aiModel);
 
         EmbeddingResponse embeddingResponse = cohereEmbeddingResponseConverter.coheretoEmbeddingResponse(cohereEmbedResponse, aiModel);
 
@@ -118,42 +112,28 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
     public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey) {
 
         if (Strings.isNotEmpty(agentRole)) {
-            messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
+            messages.add(0, AiModelMessage.builder().role("user").content(agentRole).build());
         }
 
-//        AiModelMessage message = messages.get(0);
-//        StringBuilder sb = new StringBuilder();
-//
-//        sb.append(message.getRole())
-//                .append("\n\n")
-//                .append(message.getContent());
-//
-//        String inputString = sb.toString();
 
         CohereCompletionRequest.CohereCompletionRequestBuilder cohereCommandRequestBuilder = CohereCompletionRequest.builder()
                 .model(aiModel.getModel())
-                .messages(messages)
-                .temperature(aiModelRequestParams.getTemperature())
-                .topP(aiModelRequestParams.getTopP())
-                .maxTokens(aiModelRequestParams.getMaxTokens());
+                .messages(
+                        messages.stream()
+                                .map(message -> CohereCompletionRequest.Message.builder()
+                                        .role(message.getRole())
+                                        .content(List.of(CohereCompletionRequest.Message.Content.builder()
+                                                .type("text")
+                                                .text(message.getContent())
+                                                .build()))
+                                        .build())
+                                .toList()
+                );
 
-//        CohereCommandResponse cohereComgetCompletionResponsemandResponse = this.getCompletionResponse((CohereCommandRequest.builder()
-//                .model(aiModel.getModel())
-////                .temperature(aiModelRequestParams.getTemperature())
-////                .topP(aiModelRequestParams.getTopP())
-////                .k(aiModelRequestParams.getK())
-////                .maxTokens(aiModelRequestParams.getMaxTokens())
-//                .prompt(inputString).build()),
-//                aiModel,
-//                apiKey);
+
 
         CohereCompletionRequest cohereCompletionRequest = cohereCommandRequestBuilder.build();
-        CohereCompletionResponse cohereCompletionResponse = this.getCompletionResponse(cohereCompletionRequest, aiModel, apiKey);
-        cohereCompletionResponse.setModel(aiModel.getModel());
-        cohereCompletionResponse.setTemperature(aiModelRequestParams.getTemperature());
-        cohereCompletionResponse.setTopP(aiModelRequestParams.getTopP());
-        cohereCompletionResponse.setMaxToken(aiModelRequestParams.getMaxTokens());
-        cohereCompletionResponse.setPrompt(cohereCompletionRequest.getMessages().get(0).getContent());
+        CohereCompletionResponse cohereCompletionResponse = this.getCompletionResponse(cohereCompletionRequest, aiModel);
 
         CompletionResponse completionResponse = cohereCompletionResponseConverter.toCompletionResponse(cohereCompletionResponse);
 
@@ -161,7 +141,7 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
     }
 
     @Override
-    public OpenAiModerationResponse moderationCheck(String message, String apiKey) {
+    public ModerationResponse moderationCheck(String message, String apiKey, AiModel aiModel) {
         return null;
     }
 
@@ -170,7 +150,6 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
     public boolean supports(String apiTypeName) {
         return supportedApiTypeNames.contains(apiTypeName);
     }
-
 
 
     @Override

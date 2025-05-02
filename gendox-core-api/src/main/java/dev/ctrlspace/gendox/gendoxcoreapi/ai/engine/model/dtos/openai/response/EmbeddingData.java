@@ -15,6 +15,6 @@ import java.util.List;
 public class EmbeddingData {
     //    private List<Double> embedding; //data type in Postgres - vector
     private List<Double> embedding;
-    private int index;
+    private Integer index;
     private String object;
 }

@@ -4,6 +4,7 @@ import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.OpenAiModerationResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
@@ -38,6 +39,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
     private AiModelRepository aiModelRepository;
     private OpenAiCompletionResponseConverter openAiCompletionResponseConverter;
     private OpenAiEmbeddingResponseConverter openAiEmbeddingResponseConverter;
+    private OpenAiModerationResponseConverter openAiModerationResponseConverter;
     private DurationUtils durationUtils;
     private ApiRateLimitService apiRateLimitService;
 
@@ -46,12 +48,14 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                                 ApiRateLimitService apiRateLimitService,
                                 OpenAiCompletionResponseConverter openAiCompletionResponseConverter,
                                 OpenAiEmbeddingResponseConverter openAiEmbeddingResponseConverter,
-                                DurationUtils durationUtils) {
+                                DurationUtils durationUtils,
+                                OpenAiModerationResponseConverter openAiModerationResponseConverter) {
         this.aiModelRepository = aiModelRepository;
         this.apiRateLimitService = apiRateLimitService;
         this.openAiEmbeddingResponseConverter = openAiEmbeddingResponseConverter;
         this.openAiCompletionResponseConverter = openAiCompletionResponseConverter;
         this.durationUtils = durationUtils;
+        this.openAiModerationResponseConverter = openAiModerationResponseConverter;
     }
 
     private static final RestTemplate restTemplate = new RestTemplate();
@@ -73,7 +77,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 //        Bucket bucket = waitOpenAiRateLimit(embeddingRequestHttpEntity, apiKey);
 
         logger.trace("Sending Embedding Request to {}: {}", embeddingsApiUrl, embeddingRequestHttpEntity);
-        logger.info("AiModel-->: {}", aiModel.getModel());
+        logger.info("AiModel for Search -->: {}", aiModel.getModel());
         ResponseEntity<OpenAiEmbeddingResponse> responseEntity = restTemplate.postForEntity(
                 embeddingsApiUrl,
                 new HttpEntity<>(embeddingRequestHttpEntity, buildHeader(apiKey)),
@@ -180,7 +184,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
     public OpenAiCompletionResponse getCompletionResponse(OpenAiCompletionRequest chatRequestHttpEntity, AiModel aiModel, String apiKey) {
         String completionApiUrl = aiModel.getUrl();
         logger.trace("Sending completion Request to {}: {}", completionApiUrl, chatRequestHttpEntity);
-        logger.info("AiModel: {}", aiModel.getModel());
+        logger.info("AiModel for Completion: {}", aiModel.getModel());
         ResponseEntity<OpenAiCompletionResponse> responseEntity = restTemplate.postForEntity(
                 completionApiUrl,
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader(apiKey)),
@@ -192,13 +196,15 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         return responseEntity.getBody();
     }
 
-    public OpenAiModerationResponse getModerationResponse(OpenAiModerationRequest moderationRequest, String apiKey) {
-        logger.trace("Sending moderation Request to {}: {}", GPT35Moderation.URL, moderationRequest);
+    public OpenAiModerationResponse getModerationResponse(OpenAiModerationRequest moderationRequest, String apiKey, AiModel aiModel) {
+        String moderationApiUrl = aiModel.getUrl();
+        logger.info("Moderation Request: {}", moderationRequest);
+        logger.info("AiModel for Moderation: {}", aiModel.getModel());
         ResponseEntity<OpenAiModerationResponse> responseEntity = restTemplate.postForEntity(
-                GPT35Moderation.URL,
+                moderationApiUrl,
                 new HttpEntity<>(moderationRequest, buildHeader(apiKey)),
                 OpenAiModerationResponse.class);
-        logger.debug("Received moderation Response from {}.", GPT35Moderation.URL);
+        logger.debug("Received moderation Response from {}.", moderationApiUrl);
 
         return responseEntity.getBody();
     }
@@ -265,11 +271,19 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
     }
 
 
-    public OpenAiModerationResponse moderationCheck(String message, String apiKey) {
-        return getModerationResponse(OpenAiModerationRequest.builder()
+
+    @Override
+    public ModerationResponse moderationCheck(String message, String apiKey, AiModel aiModel) {
+        OpenAiModerationResponse openAiModerationResponse = this.getModerationResponse(OpenAiModerationRequest.builder()
+                        .model(aiModel.getModel())
                         .input(message)
                         .build(),
-                apiKey);
+                apiKey,
+                aiModel);
+
+        ModerationResponse moderationResponse = openAiModerationResponseConverter.toModerationResponse(openAiModerationResponse);
+        logger.info("Moderation Response: {}", moderationResponse);
+        return moderationResponse;
     }
 
     public RateLimitInfo extractRateLimitHeaders(HttpHeaders headers) {
@@ -313,5 +327,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
     public Set<String> getSupportedApiTypeNames() {
         return supportedApiType;
     }
+
+
 
 }

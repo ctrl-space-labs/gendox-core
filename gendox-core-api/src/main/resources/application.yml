@@ -141,6 +141,10 @@ gendox:
       key: ${GEMINI_KEY:default-token}
     anthropic:
       key: ${ANTHROPIC_KEY:default-token}
+    voyage:
+      key: ${VOYAGE_KEY:default-token}
+    mistral:
+      key: ${MISTRAL_KEY:default-token}
   domain:
     base-url: http://localhost:${server.port}
     document-sections:

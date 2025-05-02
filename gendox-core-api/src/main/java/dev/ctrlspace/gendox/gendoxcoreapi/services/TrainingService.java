@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -37,7 +38,7 @@ public class TrainingService {
     private AiModelUtils aiModelUtils;
     private ProjectService projectService;
     private OrganizationModelKeyService organizationModelKeyService;
-    private ProjectAgentRepository projectAgentRepository;
+    private ProjectAgentService projectAgentService;
     private TemplateRepository templateRepository;
     private CryptographyUtils cryptographyUtils;
     private DocumentUtils documentUtils;
@@ -63,7 +64,7 @@ public class TrainingService {
                            AiModelUtils aiModelUtils,
                            ProjectService projectService,
                            OrganizationModelKeyService organizationModelKeyService,
-                           ProjectAgentRepository projectAgentRepository,
+                           ProjectAgentService projectAgentService,
                            TemplateRepository templateRepository,
                            CryptographyUtils cryptographyUtils,
                            DocumentUtils documentUtils) {
@@ -73,7 +74,7 @@ public class TrainingService {
         this.projectService = projectService;
         this.aiModelUtils = aiModelUtils;
         this.organizationModelKeyService = organizationModelKeyService;
-        this.projectAgentRepository = projectAgentRepository;
+        this.projectAgentService = projectAgentService;
         this.templateRepository = templateRepository;
         this.cryptographyUtils = cryptographyUtils;
         this.documentUtils = documentUtils;
@@ -91,7 +92,7 @@ public class TrainingService {
         // Create an instance of EmbeddingTemplateAuthor
         EmbeddingTemplateAuthor embeddingTemplateAuthor = new EmbeddingTemplateAuthor();
 
-        ProjectAgent agent = projectAgentRepository.findByProjectId(projectId);
+        ProjectAgent agent = projectAgentService.getAgentByProjectId(projectId);
 
         Template agentSectionTemplate = templateRepository.findByIdIs(agent.getSectionTemplateId());
 
@@ -135,21 +136,21 @@ public class TrainingService {
         return projectEmbeddings;
     }
 
-    public OpenAiModerationResponse getModeration(String message, String apiKey) throws GendoxException {
-        AiModel aiModel = new AiModel();
-        aiModel.setName("OPENAI_MODERATION");
-        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl("OPEN_AI_API");
-        OpenAiModerationResponse openAiModerationResponse = aiModelApiAdapterService.moderationCheck(message, apiKey);
-        return openAiModerationResponse;
+    public ModerationResponse getModeration(String message, String apiKey, AiModel aiModel) throws GendoxException {
+
+        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
+        ModerationResponse moderationResponse = aiModelApiAdapterService.moderationCheck(message, apiKey, aiModel);
+        return moderationResponse;
     }
 
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(UUID documentInstanceId) throws GendoxException {
         List<DocumentInstanceSection> documentInstanceSections = documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
         Map<Map<String, Boolean>, String> isFlaggedSections = new HashMap<>();
         String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
+        ProjectAgent projectAgent = projectAgentService.getAgentByDocumentId(documentInstanceId);
 
         for (DocumentInstanceSection section : documentInstanceSections) {
-            OpenAiModerationResponse moderationResponse = getModeration(section.getSectionValue(), moderationApiKey);
+            ModerationResponse moderationResponse = getModeration(section.getSectionValue(), moderationApiKey, projectAgent.getModerationModel());
             if (moderationResponse.getResults().get(0).isFlagged()) {
                 isFlaggedSections.put(moderationResponse.getResults().get(0).getCategories(), section.getSectionValue());
             }
