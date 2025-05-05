@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.converters;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiEmbeddingResponse;

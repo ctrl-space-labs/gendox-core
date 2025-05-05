@@ -1,7 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.ollama.aiengine.aiengine;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
@@ -21,7 +20,7 @@ public class OllamaServiceAdapter implements AiModelApiAdapterService {
     private AiModelRepository aiModelRepository;
 
     @Override
-    public EmbeddingResponse askEmbedding(BotRequest botRequest, AiModel aiModel, String apiKey) {
+    public EmbeddingResponse askEmbedding(EmbeddingMessage embeddingMessage, AiModel aiModel, String apiKey) {
         return null;
     }
 
@@ -31,7 +30,12 @@ public class OllamaServiceAdapter implements AiModelApiAdapterService {
     }
 
     @Override
-    public ModerationResponse moderationCheck(String message, String apiKey, AiModel aiModel) {
+    public ModerationResponse askModeration(String message, String apiKey, AiModel aiModel) {
+        return null;
+    }
+
+    @Override
+    public RerankResponse askRerank(List<String> documents, String query, AiModel aiModel, String apiKey) {
         return null;
     }
 

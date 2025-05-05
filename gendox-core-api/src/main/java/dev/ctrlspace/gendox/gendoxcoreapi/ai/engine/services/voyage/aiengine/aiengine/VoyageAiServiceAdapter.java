@@ -1,10 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.voyage.aiengine.aiengine;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.VoyageEmbeddingResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.VoyageRerankResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.voyage.request.VoyageEmbedRequest;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.voyage.request.VoyageRerankRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.voyage.response.VoyageEmbedResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.voyage.response.VoyageRerankResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.VoyageConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
@@ -28,15 +30,19 @@ public class VoyageAiServiceAdapter implements AiModelApiAdapterService {
     private Set<String> supportedApiTypeNames = Set.of("VOYAGE_AI_API");
     private RestTemplate restTemplate;
     private VoyageEmbeddingResponseConverter voyageEmbeddingResponseConverter;
+    private VoyageRerankResponseConverter voyageRerankResponseConverter;
 
     @Value("${gendox.models.voyage.key}")
     private String voyageKey;
 
     @Autowired
     public VoyageAiServiceAdapter(RestTemplate restTemplate,
-                                  VoyageEmbeddingResponseConverter voyageEmbeddingResponseConverter) {
+                                  VoyageEmbeddingResponseConverter voyageEmbeddingResponseConverter,
+                                  VoyageRerankResponseConverter voyageRerankResponseConverter) {
+
         this.restTemplate = restTemplate;
         this.voyageEmbeddingResponseConverter = voyageEmbeddingResponseConverter;
+        this.voyageRerankResponseConverter = voyageRerankResponseConverter;
     }
 
     private HttpHeaders buildHeader() {
@@ -60,12 +66,26 @@ public class VoyageAiServiceAdapter implements AiModelApiAdapterService {
         return response.getBody();
     }
 
+    public VoyageRerankResponse getRerankResponse (VoyageRerankRequest rerankRequestHttpEntity, AiModel aiModel) {
+        String rerankApiUrl = aiModel.getUrl();
+        logger.debug("Sending Rerank Request to '{}': {}", rerankApiUrl, rerankRequestHttpEntity);
+        logger.info("AiModel for Rerank-->: {}", aiModel.getModel());
+        ResponseEntity<VoyageRerankResponse> response = restTemplate.postForEntity(
+                rerankApiUrl,
+                new HttpEntity<>(rerankRequestHttpEntity, buildHeader()),
+                VoyageRerankResponse.class);
+        logger.info("Received Rerank Response from '{}'. Tokens billed: {}", rerankApiUrl,
+                response.getBody().getUsage().getTotal_tokens());
+
+        return response.getBody();
+    }
+
 
     @Override
-    public EmbeddingResponse askEmbedding(BotRequest botRequest, AiModel aiModel, String apiKey) {
+    public EmbeddingResponse askEmbedding(EmbeddingMessage embeddingMessage, AiModel aiModel, String apiKey) {
         VoyageEmbedResponse voyageEmbedResponse = this.getEmbeddingResponse((
                         VoyageEmbedRequest.builder()
-                                .input(botRequest.getMessages())
+                                .input(embeddingMessage.getMessages())
                                 .model(aiModel.getModel())
                                 .build()),
                 aiModel,
@@ -88,8 +108,20 @@ public class VoyageAiServiceAdapter implements AiModelApiAdapterService {
     }
 
     @Override
-    public ModerationResponse moderationCheck(String message, String apiKey, AiModel aiModel) {
+    public ModerationResponse askModeration(String message, String apiKey, AiModel aiModel) {
         return null;
+    }
+
+    @Override
+    public RerankResponse askRerank(List<String> documents, String query, AiModel aiModel, String apiKey) {
+        VoyageRerankResponse voyageRerankResponse = this.getRerankResponse((
+                        VoyageRerankRequest.builder()
+                                .query(query)
+                                .documents(documents)
+                                .model(aiModel.getModel())
+                                .build()),
+                aiModel);
+        return  voyageRerankResponseConverter.toRerankResponse(voyageRerankResponse);
     }
 
     @Override

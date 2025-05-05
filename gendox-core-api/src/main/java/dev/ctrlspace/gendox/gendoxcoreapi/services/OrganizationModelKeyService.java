@@ -110,6 +110,8 @@ public class OrganizationModelKeyService {
             model = agent.getSemanticSearchModel();
         } else if ("MODERATION_MODEL".equals(aiModelType)) {
             model = agent.getModerationModel();
+        } else if ("RERANK_MODEL".equals(aiModelType)) {
+            model = agent.getRerankModel();
         }
 
         // find Organization Key
@@ -142,7 +144,8 @@ public class OrganizationModelKeyService {
             model = agent.getSemanticSearchModel();
         } else if ("MODERATION_MODEL".equals(aiModelType)) {
             model = agent.getModerationModel();
-
+        } else if ("RERANK_MODEL".equals(aiModelType)) {
+            model = agent.getRerankModel();
         }
 
 

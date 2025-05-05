@@ -32,6 +32,13 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         projectAgentDTO.setMaxSearchLimit(projectAgent.getMaxSearchLimit());
         projectAgentDTO.setMaxCompletionLimit(projectAgent.getMaxCompletionLimit());
 
+        if(projectAgent.getRerankEnable() != null) {
+            projectAgentDTO.setRerankEnable(projectAgent.getRerankEnable());
+        }
+
+        if(projectAgent.getRerankModel() != null) {
+            projectAgentDTO.setRerankModel(projectAgent.getRerankModel());
+        }
 
 
         return projectAgentDTO;
@@ -62,6 +69,14 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         projectAgent.setOrganizationDid(projectAgentDTO.getOrganizationDid());
         projectAgent.setMaxSearchLimit(projectAgentDTO.getMaxSearchLimit());
         projectAgent.setMaxCompletionLimit(projectAgentDTO.getMaxCompletionLimit());
+
+        if(projectAgentDTO.getRerankEnable() != null) {
+            projectAgent.setRerankEnable(projectAgentDTO.getRerankEnable());
+        }
+
+        if(projectAgentDTO.getRerankModel() != null) {
+            projectAgent.setRerankModel(projectAgentDTO.getRerankModel());
+        }
 
         return projectAgent;
     }

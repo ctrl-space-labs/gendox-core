@@ -12,7 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class BotRequest implements Serializable {
+public class EmbeddingMessage implements Serializable {
     private List<String> messages;
 }
 

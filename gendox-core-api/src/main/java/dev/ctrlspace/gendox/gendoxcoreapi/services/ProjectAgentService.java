@@ -158,7 +158,7 @@ public class ProjectAgentService {
             projectAgent.setPrivateAgent(true);
         }
         if (projectAgent.getSemanticSearchModel() == null) {
-            projectAgent.setSemanticSearchModel(aiModelService.getByName(AiModelConstants.ADA_3_SMALL));
+            projectAgent.setSemanticSearchModel(aiModelService.getByName(AiModelConstants.COHERE_EMBED_V4));
         }
         if (projectAgent.getCompletionModel() == null) {
             projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_4_OMNI_MINI));
@@ -166,8 +166,15 @@ public class ProjectAgentService {
         if (projectAgent.getModerationModel() == null) {
             projectAgent.setModerationModel(aiModelService.getByName(AiModelConstants.OPEN_AI_MODERATION));
         }
+        if (projectAgent.getRerankModel() == null) {
+            projectAgent.setRerankModel(aiModelService.getByName(AiModelConstants.VOYAGE_RERANK_2_LITE));
+        }
+
         if (projectAgent.getModerationCheck() == null) {
             projectAgent.setModerationCheck(true);
+        }
+        if(projectAgent.getRerankEnable() == null) {
+            projectAgent.setRerankEnable(false);
         }
         if (projectAgent.getChatTemplateId() == null) {
             projectAgent.setChatTemplateId(templateRepository.findIdByIsDefaultTrueAndTemplateTypeName("CHAT_TEMPLATE"));
@@ -195,6 +202,8 @@ public class ProjectAgentService {
         if (projectAgent.getMaxCompletionLimit() == null) {
             projectAgent.setMaxCompletionLimit(maxCompletionLimit);
         }
+
+
     }
 
 

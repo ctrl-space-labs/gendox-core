@@ -17,6 +17,41 @@ UPDATE gendox_core.ai_models
 SET model = 'text-moderation-latest'
 WHERE name = 'OPENAI_MODERATION' AND model != 'text-moderation-latest';
 
+UPDATE gendox_core.ai_models
+set is_active = false
+where name = 'OLLAMA_MXBAI_EMBED_LARGE'
+  and is_active = true;
+
+UPDATE gendox_core.ai_models
+set is_active = false
+where name = 'GPT_3.5_TURBO'
+  and is_active = true;
+
+UPDATE gendox_core.ai_models
+set is_active = false
+where name = 'GPT_4'
+  and is_active = true;
+
+UPDATE gendox_core.ai_models
+set is_active = false
+where name = 'O1_MINI'
+  and is_active = true;
+
+UPDATE gendox_core.ai_models
+set is_active = false
+where name = 'Ada2'
+  and is_active = true;
+
+UPDATE gendox_core.ai_models
+set is_active = false
+where name = 'OLLAMA_PHI3_3.8B'
+  and is_active = true;
+
+UPDATE gendox_core.ai_models
+set is_active = false
+where name = 'OLLAMA_NOMIC_EMBED_TEXT'
+  and is_active = true;
+
 
 
 -- OPENAI AI Models ----------------------------------------------------------------------------------------------
@@ -964,3 +999,140 @@ WHERE NOT EXISTS (
 );
 
 
+-- RERANK MODELS ----------------------------------------------------------------------------------------------
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'rerank-v3.5',
+    'https://api.cohere.ai/v2/rerank',
+    'RERANK-V3.5',
+    0.002,
+    NOW(),
+    NOW(),
+    'A model that allows for re-ranking English Language documents and semi-structured data (JSON). This model has a context length of 4096 tokens.',
+    (SELECT id FROM gendox_core.types WHERE name = 'RERANK_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'COHERE'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'COHERE'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'RERANK-V3.5'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'rerank-multilingual-v3.0',
+    'https://api.cohere.ai/v2/rerank',
+    'RERANK-MULTILINGUAL-V3.0',
+    0.002,
+    NOW(),
+    NOW(),
+    'A model for documents and semi-structure data (JSON) that are not in English. Supports the same languages as embed-multilingual-v3.0. This model has a context length of 4096 tokens.',
+    (SELECT id FROM gendox_core.types WHERE name = 'RERANK_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'COHERE'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'COHERE'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'RERANK-MULTILINGUAL-V3.0'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'rerank-2-lite',
+    'https://api.voyageai.com/v1/rerank',
+    'RERANK-2-LITE',
+    0.00005,
+    NOW(),
+    NOW(),
+    'Our generalist reranker optimized for quality with multilingual support.',
+    (SELECT id FROM gendox_core.types WHERE name = 'RERANK_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'RERANK-2-LITE'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'rerank-2',
+    'https://api.voyageai.com/v1/rerank',
+    'RERANK-2',
+    0.00002,
+    NOW(),
+    NOW(),
+    'Our generalist reranker optimized for both latency and quality with multilingual support.',
+    (SELECT id FROM gendox_core.types WHERE name = 'RERANK_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'RERANK-2'
+);
+
+-- Add `rerank_enable` column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'gendox_core'
+          AND table_name = 'project_agent'
+          AND column_name = 'rerank_enable'
+    ) THEN
+        ALTER TABLE gendox_core.project_agent
+        ADD COLUMN rerank_enable BOOLEAN;
+    END IF;
+END$$;
+
+-- Add `rerank_model_id` column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'gendox_core'
+          AND table_name = 'project_agent'
+          AND column_name = 'rerank_model_id'
+    ) THEN
+        ALTER TABLE gendox_core.project_agent
+        ADD COLUMN rerank_model_id UUID;
+    END IF;
+END$$;
+
+--  add FK constraint (optional and only once!)
+ DO $$ BEGIN
+     ALTER TABLE gendox_core.project_agent
+     ADD CONSTRAINT fk_rerank_model FOREIGN KEY (rerank_model_id)
+     REFERENCES gendox_core.ai_models(id);
+ EXCEPTION
+     WHEN duplicate_object THEN NULL;
+ END$$;
+
+-- Set default values for existing rows
+UPDATE gendox_core.project_agent
+SET rerank_enable = true,
+    rerank_model_id = (
+        SELECT id FROM gendox_core.ai_models WHERE name = 'RERANK-2-LITE' LIMIT 1
+    )
+WHERE rerank_enable IS NULL
+   OR rerank_model_id IS NULL;

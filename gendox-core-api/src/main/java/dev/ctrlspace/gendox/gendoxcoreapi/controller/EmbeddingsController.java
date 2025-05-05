@@ -1,7 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -45,7 +44,7 @@ public class EmbeddingsController {
     private OrganizationModelKeyService organizationModelKeyService;
     private SubscriptionValidationService subscriptionValidationService;
     private ProjectService projectService;
-    private TypeService typeService;
+    private RerankService rerankService;
 
 
     @Value("${proven-ai.enabled}")
@@ -60,7 +59,7 @@ public class EmbeddingsController {
                                 OrganizationModelKeyService organizationModelKeyService,
                                 SubscriptionValidationService subscriptionValidationService,
                                 ProjectService projectService,
-                                TypeService typeService
+                                RerankService rerankService
     ) {
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
@@ -70,7 +69,7 @@ public class EmbeddingsController {
         this.organizationModelKeyService = organizationModelKeyService;
         this.subscriptionValidationService = subscriptionValidationService;
         this.projectService = projectService;
-        this.typeService = typeService;
+        this.rerankService = rerankService;
     }
 
 
@@ -211,6 +210,22 @@ public class EmbeddingsController {
         List<DocumentInstanceSection> instanceSections = sections.stream()
                 .map(dto -> documentInstanceSectionWithDocumentConverter.toEntity(dto))
                 .toList();
+
+        // Rerank the sections
+        if (project.getProjectAgent().getRerankEnable() && !instanceSections.isEmpty()) {
+            try {
+                logger.info("Reranking sections");
+                instanceSections = rerankService.rerankSections(project.getProjectAgent(), instanceSections, message.getValue());
+                logger.info("Reranking completed");
+            } catch (GendoxException e) {
+                // swallow exception
+                if ("RERANK_MODEL_NOT_FOUND".equals(e.getErrorCode())) {
+                    logger.debug("Rerank model not found");
+                } else {
+                    throw e;
+                }
+            }
+        }
 
         int maxCompletionLimit = project.getProjectAgent().getMaxCompletionLimit().intValue();
 

@@ -65,7 +65,7 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
 
 
     @Override
-    public EmbeddingResponse askEmbedding(BotRequest botRequest, AiModel aiModel, String apiKey) {
+    public EmbeddingResponse askEmbedding(EmbeddingMessage embeddingMessage, AiModel aiModel, String apiKey) {
         return null;
     }
 
@@ -99,7 +99,12 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
     }
 
     @Override
-    public ModerationResponse moderationCheck(String message, String apiKey, AiModel aiModel) {
+    public ModerationResponse askModeration(String message, String apiKey, AiModel aiModel) {
+        return null;
+    }
+
+    @Override
+    public RerankResponse askRerank(List<String> documents, String query, AiModel aiModel, String apiKey) {
         return null;
     }
 

@@ -22,7 +22,7 @@ public class MockAiServiceAdapter {
     @Autowired
     private AiModelRepository aiModelRepository;
 
-    public EmbeddingResponse askEmbedding(BotRequest botRequest) {
+    public EmbeddingResponse askEmbedding(EmbeddingMessage embeddingMessage) {
         logger.debug("Embedding Response from Mock Service.");
         return EmbeddingResponse.builder()
                 .model(OpenAIADA2.MODEL)                .object("list")

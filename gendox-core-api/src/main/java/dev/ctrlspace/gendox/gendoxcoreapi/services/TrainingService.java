@@ -2,7 +2,6 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -139,7 +138,7 @@ public class TrainingService {
     public ModerationResponse getModeration(String message, String apiKey, AiModel aiModel) throws GendoxException {
 
         AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
-        ModerationResponse moderationResponse = aiModelApiAdapterService.moderationCheck(message, apiKey, aiModel);
+        ModerationResponse moderationResponse = aiModelApiAdapterService.askModeration(message, apiKey, aiModel);
         return moderationResponse;
     }
 

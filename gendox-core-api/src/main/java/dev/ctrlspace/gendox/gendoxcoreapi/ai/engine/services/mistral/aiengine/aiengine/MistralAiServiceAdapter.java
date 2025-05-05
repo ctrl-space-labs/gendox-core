@@ -2,14 +2,15 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.mistral.aiengine.a
 
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralEmbeddingResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralModerationResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.mistral.request.MistralCompletionRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.mistral.request.MistralEmbedRequest;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.mistral.request.MistralModerationRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.mistral.response.MistralCompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.mistral.response.MistralEmbedResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiModerationResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.mistral.response.MistralModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.cohere.aiengine.aiengine.CohereAiServiceAdapter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.MistralConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import org.apache.logging.log4j.util.Strings;
@@ -34,16 +35,19 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
     private RestTemplate restTemplate;
     private MistralEmbeddingResponseConverter mistralEmbeddingResponseConverter;
     private MistralCompletionResponseConverter mistralCompletionResponseConverter;
+    private MistralModerationResponseConverter mistralModerationResponseConverter;
     @Value("${gendox.models.mistral.key}")
     private String mistralKey;
 
     @Autowired
     public MistralAiServiceAdapter(RestTemplate restTemplate,
                                    MistralEmbeddingResponseConverter mistralEmbeddingResponseConverter,
-                                   MistralCompletionResponseConverter mistralCompletionResponseConverter) {
+                                   MistralCompletionResponseConverter mistralCompletionResponseConverter,
+                                   MistralModerationResponseConverter mistralModerationResponseConverter) {
         this.restTemplate = restTemplate;
         this.mistralEmbeddingResponseConverter = mistralEmbeddingResponseConverter;
         this.mistralCompletionResponseConverter = mistralCompletionResponseConverter;
+        this.mistralModerationResponseConverter = mistralModerationResponseConverter;
     }
 
     private HttpHeaders buildHeader() {
@@ -81,12 +85,26 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
         return responseEntity.getBody();
     }
 
+    public MistralModerationResponse getModerationResponse(MistralModerationRequest moderationRequest, AiModel aiModel) {
+        String moderationApiUrl = aiModel.getUrl();
+        logger.info("Moderation Request: {}", moderationRequest);
+        logger.info("AiModel for Moderation: {}", aiModel.getModel());
+        ResponseEntity<MistralModerationResponse> responseEntity = restTemplate.postForEntity(
+                moderationApiUrl,
+                new HttpEntity<>(moderationRequest, buildHeader()),
+                MistralModerationResponse.class);
+        logger.debug("Received moderation Response from {}.", moderationApiUrl);
+
+        return responseEntity.getBody();
+
+    }
+
 
     @Override
-    public EmbeddingResponse askEmbedding(BotRequest botRequest, AiModel aiModel, String apiKey) {
+    public EmbeddingResponse askEmbedding(EmbeddingMessage embeddingMessage, AiModel aiModel, String apiKey) {
         MistralEmbedResponse mistralEmbedResponse = this.getEmbeddingResponse((MistralEmbedRequest.builder()
                         .model(aiModel.getModel())
-                        .input(botRequest.getMessages())
+                        .input(embeddingMessage.getMessages())
                         .build()),
                 aiModel);
 
@@ -114,19 +132,16 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
                 .model(aiModel.getModel())
                 .messages(mistralMessages);
 
-
-
         MistralCompletionRequest completionRequest = completionRequestBuilder.build();
         MistralCompletionResponse mistralCompletionResponse = this.getCompletionResponse(completionRequest, aiModel);
         logger.info("Completion Response: {}", mistralCompletionResponse);
         CompletionResponse completionResponse = mistralCompletionResponseConverter.toCompletionResponse(mistralCompletionResponse);
         logger.info("Completion Response: {}", completionResponse);
 
-
         return completionResponse;
-
-
     }
+
+
 
     @Override
     public Set<String> getSupportedApiTypeNames() {
@@ -134,7 +149,22 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
     }
 
     @Override
-    public ModerationResponse moderationCheck(String message, String apiKey, AiModel aiModel) {
+    public ModerationResponse askModeration(String message, String apiKey, AiModel aiModel) {
+       MistralModerationResponse mistralModerationResponse = this.getModerationResponse(
+                MistralModerationRequest.builder()
+                        .model(aiModel.getModel())
+                        .input(message)
+                        .build(),
+                aiModel);
+
+        ModerationResponse moderationResponse = mistralModerationResponseConverter.toModerationResponse(mistralModerationResponse);
+        logger.info("Moderation Response: {}", moderationResponse);
+        return moderationResponse;
+
+    }
+
+    @Override
+    public RerankResponse askRerank(List<String> documents, String query, AiModel aiModel, String apiKey) {
         return null;
     }
 

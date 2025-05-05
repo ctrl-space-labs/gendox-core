@@ -9,10 +9,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35Moderation;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiCompletionResponseConverter;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiEmbeddingResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.OpenAiCompletionResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.OpenAiEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
@@ -210,8 +209,8 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
     }
 
 
-    public EmbeddingResponse askEmbedding(BotRequest botRequest, AiModel aiModel, String apiKey) {
-        String message = botRequest.getMessages().get(0);
+    public EmbeddingResponse askEmbedding(EmbeddingMessage embeddingMessage, AiModel aiModel, String apiKey) {
+        String message = embeddingMessage.getMessages().get(0);
         OpenAiEmbeddingResponse openAiEmbeddingResponse = this.getEmbeddingResponse((OpenAiEmbedRequest.builder()
                         .model(aiModel.getModel())
                         .input(message).build()),
@@ -273,7 +272,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
 
     @Override
-    public ModerationResponse moderationCheck(String message, String apiKey, AiModel aiModel) {
+    public ModerationResponse askModeration(String message, String apiKey, AiModel aiModel) {
         OpenAiModerationResponse openAiModerationResponse = this.getModerationResponse(OpenAiModerationRequest.builder()
                         .model(aiModel.getModel())
                         .input(message)
@@ -284,6 +283,11 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         ModerationResponse moderationResponse = openAiModerationResponseConverter.toModerationResponse(openAiModerationResponse);
         logger.info("Moderation Response: {}", moderationResponse);
         return moderationResponse;
+    }
+
+    @Override
+    public RerankResponse askRerank(List<String> documents, String query, AiModel aiModel, String apiKey) {
+        return null;
     }
 
     public RateLimitInfo extractRateLimitHeaders(HttpHeaders headers) {

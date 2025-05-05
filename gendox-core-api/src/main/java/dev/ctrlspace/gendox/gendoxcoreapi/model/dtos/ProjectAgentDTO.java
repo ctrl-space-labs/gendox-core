@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.checkerframework.checker.units.qual.A;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -40,6 +41,8 @@ public class ProjectAgentDTO {
     private String organizationDid;
     private Long maxSearchLimit;
     private Long maxCompletionLimit;
+    private Boolean rerankEnable;
+    private AiModel rerankModel;
 
 
 
