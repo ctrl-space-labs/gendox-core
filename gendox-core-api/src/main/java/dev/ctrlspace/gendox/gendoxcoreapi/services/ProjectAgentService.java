@@ -254,6 +254,10 @@ public class ProjectAgentService {
         if (projectAgent.getModerationModel() != null && projectAgent.getModerationCheck()) {
             existingProjectAgent.setModerationModel(aiModelService.getByName(projectAgent.getModerationModel().getName()));
         }
+        existingProjectAgent.setRerankEnable(projectAgent.getRerankEnable());
+        if (projectAgent.getRerankModel() != null && projectAgent.getRerankEnable()) {
+            existingProjectAgent.setRerankModel(aiModelService.getByName(projectAgent.getRerankModel().getName()));
+        }
         existingProjectAgent.setOrganizationDid(projectAgent.getOrganizationDid());
         existingProjectAgent = projectAgentRepository.save(existingProjectAgent);
         return existingProjectAgent;

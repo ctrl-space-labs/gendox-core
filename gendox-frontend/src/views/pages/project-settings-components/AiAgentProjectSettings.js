@@ -13,6 +13,7 @@ import Typography from '@mui/material/Typography'
 import CardContent from '@mui/material/CardContent'
 import CardActions from '@mui/material/CardActions'
 import FormControl from '@mui/material/FormControl'
+import Autocomplete from '@mui/material/Autocomplete'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import Select from '@mui/material/Select'
 import InputAdornment from '@mui/material/InputAdornment'
@@ -38,15 +39,20 @@ const AiAgentProjectSettings = () => {
   const { projectDetails: project, isBlurring: isUpdatingProject } = useSelector(state => state.activeProject)
 
   const { isFetchingAiModels, isUpdatingProjectAgent, aiModels } = useSelector(state => state.activeProjectAgent)
-  const { semanticModels, completionModels, moderationModels } = aiModels
+  const { semanticModels, completionModels, moderationModels, rerankModels } = aiModels
   const isLoading = isUpdatingProjectAgent || isFetchingAiModels || isUpdatingProject
 
   const { id: projectId, organizationId } = project
 
+  console.log('AI Models', aiModels)
+
   const defaultValues = {
     semanticSearchModel: project.projectAgent.semanticSearchModel?.name || '',
     completionModel: project.projectAgent.completionModel?.name || '',
-    moderationModel: project.projectAgent.moderation ? project.projectAgent.moderation.name : 'OPENAI_MODERATION',
+    moderationModel: project.projectAgent.moderationModel?.name || '',
+    rerankModel: project.projectAgent.rerankModel?.name || '',
+    moderationCheck: project.projectAgent.moderationCheck,
+    rerankEnable: project.projectAgent.rerankEnable,
     documentSplitterType: project.projectAgent.documentSplitterType?.name || '',
     maxToken: project.projectAgent.maxToken,
     temperature: project.projectAgent.temperature,
@@ -114,6 +120,17 @@ const AiAgentProjectSettings = () => {
     }
   }, [moderationModels, watch('moderationModel'), setValue])
 
+  // Synchronize rerankModel with available options
+  useEffect(() => {
+    if (rerankModels.length > 0) {
+      const current = watch('rerankModel')
+      const exists = rerankModels.some(model => model.name === current)
+      if (!exists) {
+        setValue('rerankModel', rerankModels[0].name)
+      }
+    }
+  }, [rerankModels, watch('rerankModel'), setValue])
+
   // Fetch AI models on mount
   useEffect(() => {
     if (organizationId && projectId && token) {
@@ -129,7 +146,8 @@ const AiAgentProjectSettings = () => {
         ...project.projectAgent,
         semanticSearchModel: { name: data.semanticSearchModel },
         completionModel: { name: data.completionModel },
-        moderation: { name: data.moderationModel },
+        moderationModel: { name: data.moderationModel },
+        rerankModel: { name: data.rerankModel },
         privateAgent: data.selected === 'private',
         maxToken: data.maxToken,
         temperature: data.temperature,
@@ -137,18 +155,19 @@ const AiAgentProjectSettings = () => {
         maxSearchLimit: data.maxSearchLimit,
         maxCompletionLimit: data.maxCompletionLimit,
         agentBehavior: data.agentBehavior,
-        moderationCheck: data.moderationCheck
+        moderationCheck: data.moderationCheck,
+        rerankEnable: data.rerankEnable
       }
     }
-    dispatch(updateProjectAgent({ organizationId, projectId, payload: updatedProjectPayload, token }))    
-    .unwrap()
-    .then(() => {
-      toast.success('Project updated successfully!')
-      dispatch(fetchProject({ organizationId, projectId, token }))
-    })
-    .catch(error => {
-      console.error('Failed to update project', error)
-    })
+    dispatch(updateProjectAgent({ organizationId, projectId, payload: updatedProjectPayload, token }))
+      .unwrap()
+      .then(() => {
+        toast.success('Project updated successfully!')
+        dispatch(fetchProject({ organizationId, projectId, token }))
+      })
+      .catch(error => {
+        console.error('Failed to update project', error)
+      })
   }
 
   return (
@@ -181,46 +200,56 @@ const AiAgentProjectSettings = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <InputLabel id='search-model'>Semantic Search Model</InputLabel>
+                    <InputLabel id='search-model'></InputLabel>
                     <Controller
                       name='semanticSearchModel'
                       control={control}
                       render={({ field }) => (
-                        <Select
+                        <Autocomplete
                           {...field}
-                          labelId='search-model'
-                          label='Semantic Search Model'
-                          disabled={semanticModels.length === 0}
-                        >
-                          {semanticModels.map(model => (
-                            <MenuItem key={model.id} value={model.name}>
-                              {model.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
+                          options={semanticModels}
+                          getOptionLabel={option => option.name} // Label for autocomplete
+                          onChange={(_, value) => setValue('semanticSearchModel', value?.name)} // Update form state
+                          value={semanticModels.find(model => model.name === watch('semanticSearchModel')) || null} // Set selected value
+                          disableClearable
+                          renderInput={params => <TextField {...params} label='Semantic Search Model' />}
+                          renderOption={(props, option) => (
+                            <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
+                              <Typography variant='body1'>{option.name}</Typography>
+                              <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
+                                {option.aiModelProvider?.name}
+                              </Typography>
+                            </Box>
+                          )}
+                        />
                       )}
                     />
                   </FormControl>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <InputLabel id='completion-model'>Completion Model</InputLabel>
+                    <InputLabel id='completion-model'></InputLabel>
                     <Controller
                       name='completionModel'
                       control={control}
                       render={({ field }) => (
-                        <Select
+                        <Autocomplete
                           {...field}
-                          labelId='completion-model'
-                          label='Completion Model'
-                          disabled={completionModels.length === 0}
-                        >
-                          {completionModels.map(model => (
-                            <MenuItem key={model.id} value={model.name}>
-                              {model.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
+                          options={completionModels}
+                          getOptionLabel={option => option.name} // Label for autocomplete
+                          onChange={(_, value) => setValue('completionModel', value?.name)} // Update form state
+                          value={completionModels.find(model => model.name === watch('completionModel')) || null} // Set selected value
+                          disableClearable
+                          renderInput={params => <TextField {...params} label='Completion Model' />}
+                          renderOption={(props, option) => (
+                            <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
+                              <Typography variant='body1'>{option.name}</Typography>
+                              <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
+                                {option.aiModelProvider?.name}
+                              </Typography>
+                            </Box>
+                          )}
+                        />
                       )}
                     />
                   </FormControl>
@@ -323,32 +352,77 @@ const AiAgentProjectSettings = () => {
                         }}
                       />
                     </Grid>
-                    <Grid item xs={12} sm={6} sx={{ mb: 15 }}>
+                    {/* Moderation Check */}
+                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
                       <FormControlLabel
                         label='Moderation Check'
-                        control={<Checkbox {...register('moderationCheck')} />}
+                        control={<Checkbox {...register('moderationCheck')} checked={watch('moderationCheck')} />}
                       />
                     </Grid>
-                    {watch('moderationCheck') && (
-                      <Grid item xs={12} sm={6}>
+
+                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                      {watch('moderationCheck') && (
                         <FormControl fullWidth>
-                          <InputLabel id='moderation'>Moderation</InputLabel>
+                          <InputLabel id='moderation-model-label'></InputLabel>
                           <Controller
                             name='moderationModel'
                             control={control}
                             render={({ field }) => (
-                              <Select
+                              <Autocomplete
                                 {...field}
-                                labelId='moderation'
-                                label='Moderation'
-                                disabled={moderationModels.length === 0}
-                              >
-                                {moderationModels.map(model => (
-                                  <MenuItem key={model.id} value={model.name}>
-                                    {model.name}
-                                  </MenuItem>
-                                ))}
-                              </Select>
+                                options={moderationModels}
+                                getOptionLabel={option => option.name} // Label for autocomplete
+                                onChange={(_, value) => setValue('moderationModel', value?.name)} // Update form state
+                                value={moderationModels.find(model => model.name === watch('moderationModel')) || null} // Set selected value
+                                disableClearable
+                                renderInput={params => <TextField {...params} label='Moderation Model' />}
+                                renderOption={(props, option) => (
+                                  <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
+                                    <Typography variant='body1'>{option.name}</Typography>
+                                    <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
+                                      {option.aiModelProvider?.name}
+                                    </Typography>
+                                  </Box>
+                                )}
+                              />                              
+                            )}
+                          />
+                        </FormControl>
+                      )}
+                    </Grid>
+
+                    {/* Rerank Search Results */}
+                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                      <FormControlLabel
+                        label='Rerank Search Results'
+                        control={<Checkbox {...register('rerankEnable')} checked={watch('rerankEnable')} />}
+                      />
+                    </Grid>
+                    {watch('rerankEnable') && (
+                      <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                        <FormControl fullWidth>
+                          <InputLabel id='rerank-model-label'></InputLabel>
+                          <Controller
+                            name='rerankModel'
+                            control={control}
+                            render={({ field }) => (
+                              <Autocomplete
+                                {...field}
+                                options={rerankModels}
+                                getOptionLabel={option => option.name} // Label for autocomplete
+                                onChange={(_, value) => setValue('rerankModel', value?.name)} // Update form state
+                                value={rerankModels.find(model => model.name === watch('rerankModel')) || null} // Set selected value
+                                disableClearable
+                                renderInput={params => <TextField {...params} label='Rerank Model' />}
+                                renderOption={(props, option) => (
+                                  <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
+                                    <Typography variant='body1'>{option.name}</Typography>
+                                    <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
+                                      {option.aiModelProvider?.name}
+                                    </Typography>
+                                  </Box>
+                                )}
+                              />
                             )}
                           />
                         </FormControl>
