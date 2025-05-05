@@ -52,6 +52,16 @@ set is_active = false
 where name = 'OLLAMA_NOMIC_EMBED_TEXT'
   and is_active = true;
 
+UPDATE gendox_core.ai_models
+set is_active = false
+where name = 'GROQ_LLAMA_3_70B_8192'
+  and is_active = true;
+
+UPDATE gendox_core.ai_models
+set is_active = false
+where name = 'GROQ_LLAMA_3_8B_8192'
+  and is_active = true;
+
 
 
 -- OPENAI AI Models ----------------------------------------------------------------------------------------------
@@ -1136,3 +1146,138 @@ SET rerank_enable = true,
     )
 WHERE rerank_enable IS NULL
    OR rerank_model_id IS NULL;
+
+
+-- Groq AI models ----------------------------------------------------------------------------------------------
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'gemma2-9b-it',
+    'https://api.groq.com/openai/v1/chat/completions',
+    'GEMMA2_9B_IT',
+    0.003,
+    NOW(),
+    NOW(),
+    'Google’s model. Summary description and brief definition of inputs and outputs.',
+    (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'GROQ'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'GROQ'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'GEMMA2_9B_IT'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'llama-3.3-70b-versatile',
+    'https://api.groq.com/openai/v1/chat/completions',
+    'LLAMA_3.3_70B_VERSATILE',
+    0.003,
+    NOW(),
+    NOW(),
+    'Meta models. Llama-3.3-70B-Versatile is Metas advanced multilingual large language model, optimized for a wide range of natural language processing tasks. With 70 billion parameters, it offers high performance across various benchmarks while maintaining efficiency suitable for diverse applications.',
+    (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'GROQ'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'GROQ'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'LLAMA_3.3_70B_VERSATILE'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'llama-3.3-70b-versatile',
+    'https://api.groq.com/openai/v1/chat/completions',
+    'LLAMA_3.3_70B_VERSATILE',
+    0.003,
+    NOW(),
+    NOW(),
+    'Meta models. Llama-3.3-70B-Versatile is Metas advanced multilingual large language model, optimized for a wide range of natural language processing tasks. With 70 billion parameters, it offers high performance across various benchmarks while maintaining efficiency suitable for diverse applications.',
+    (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'GROQ'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'GROQ'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'LLAMA_3.3_70B_VERSATILE'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'llama-3.1-8b-instant',
+    'https://api.groq.com/openai/v1/chat/completions',
+    'LLAMA_3.1_8B_INSTANT',
+    0.003,
+    NOW(),
+    NOW(),
+    'Meta models. Llama 3.1 8B on Groq provides low-latency, high-quality responses suitable for real-time conversational interfaces, content filtering systems, and data analysis applications. This model offers a balance of speed and performance with significant cost savings compared to larger models. Technical capabilities include native function calling support, JSON mode for structured output generation, and a 128K token context window for handling large documents.',
+    (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'GROQ'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'GROQ'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'LLAMA_3.1_8B_INSTANT'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'llama-guard-3-8b',
+    'https://api.groq.com/openai/v1/chat/completions',
+    'LLAMA_GUARD_3_8B',
+    0.003,
+    NOW(),
+    NOW(),
+    'Meta models. Llama-Guard-3-8B is Metas specialized content moderation model designed to identify and classify potentially harmful content. Fine-tuned specifically for content safety, this model analyzes both user inputs and AI-generated outputs using categories based on the MLCommons Taxonomy framework. The model delivers efficient, consistent content screening while maintaining transparency in its classification decisions.',
+    (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'GROQ'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'GROQ'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'LLAMA_GUARD_3_8B'
+);
+
+INSERT INTO gendox_core.ai_models
+    (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
+SELECT
+    'deepseek-r1-distill-llama-70b',
+    'https://api.groq.com/openai/v1/chat/completions',
+    'DEEPSEEK_R1_DISTILL_LLAMA_70B',
+    0.003,
+    NOW(),
+    NOW(),
+    'DeepSeek-R1-Distill-Llama-70B is a distilled version of DeepSeeks R1 model, fine-tuned from the Llama-3.3-70B-Instruct base model. This model leverages knowledge distillation to retain robust reasoning capabilities and deliver exceptional performance on mathematical and logical reasoning tasks with Groqs industry-leading speed.',
+    (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+    (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'GROQ'),
+    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    NULL,
+    (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'GROQ'),
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.ai_models
+    WHERE name = 'DEEPSEEK_R1_DISTILL_LLAMA_70B'
+);
