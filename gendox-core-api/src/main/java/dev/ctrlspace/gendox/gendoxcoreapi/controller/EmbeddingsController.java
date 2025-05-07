@@ -190,6 +190,7 @@ public class EmbeddingsController {
                 PageRequest.of(0, project.getProjectAgent().getMaxSearchLimit().intValue())
         );
 
+        logger.info("Sections found: {}", sections.size());
 
         if (provenAiEnabled) {
             try {
@@ -211,21 +212,21 @@ public class EmbeddingsController {
                 .map(dto -> documentInstanceSectionWithDocumentConverter.toEntity(dto))
                 .toList();
 
+        logger.info("Sections after conversion: {}",
+                instanceSections.stream()
+                        .map(DocumentInstanceSection::getId)
+                        .toList());
+
         // Rerank the sections
         if (project.getProjectAgent().getRerankEnable() && !instanceSections.isEmpty()) {
-            try {
-                logger.info("Reranking sections");
-                instanceSections = rerankService.rerankSections(project.getProjectAgent(), instanceSections, message.getValue());
-                logger.info("Reranking completed");
-            } catch (GendoxException e) {
-                // swallow exception
-                if ("RERANK_MODEL_NOT_FOUND".equals(e.getErrorCode())) {
-                    logger.debug("Rerank model not found");
-                } else {
-                    throw e;
-                }
-            }
+            instanceSections = rerankService.rerankSections(project.getProjectAgent(), instanceSections, message.getValue());
+            logger.info("Sections after rerank: {}",
+                    instanceSections.stream()
+                            .map(DocumentInstanceSection::getId)
+                            .toList());
         }
+
+
 
         int maxCompletionLimit = project.getProjectAgent().getMaxCompletionLimit().intValue();
 

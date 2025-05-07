@@ -21,6 +21,7 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import toast from 'react-hot-toast'
 import { useSelector, useDispatch } from 'react-redux'
+import { sortModels } from 'src/utils/sortModels'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import { ButtonBase } from '@mui/material'
 import Radio from '@mui/material/Radio'
@@ -43,8 +44,6 @@ const AiAgentProjectSettings = () => {
   const isLoading = isUpdatingProjectAgent || isFetchingAiModels || isUpdatingProject
 
   const { id: projectId, organizationId } = project
-
-  console.log('AI Models', aiModels)
 
   const defaultValues = {
     semanticSearchModel: project.projectAgent.semanticSearchModel?.name || '',
@@ -87,7 +86,7 @@ const AiAgentProjectSettings = () => {
     }
   ]
 
-  // Synchronize semanticSearchModel with available options
+  // Synchronize models with available options
   useEffect(() => {
     if (semanticModels.length > 0) {
       const current = watch('semanticSearchModel')
@@ -98,7 +97,6 @@ const AiAgentProjectSettings = () => {
     }
   }, [semanticModels, watch('semanticSearchModel'), setValue])
 
-  // Synchronize completionModel with available options
   useEffect(() => {
     if (completionModels.length > 0) {
       const current = watch('completionModel')
@@ -109,7 +107,6 @@ const AiAgentProjectSettings = () => {
     }
   }, [completionModels, watch('completionModel'), setValue])
 
-  // Synchronize moderationModel with available options
   useEffect(() => {
     if (moderationModels.length > 0) {
       const current = watch('moderationModel')
@@ -120,7 +117,6 @@ const AiAgentProjectSettings = () => {
     }
   }, [moderationModels, watch('moderationModel'), setValue])
 
-  // Synchronize rerankModel with available options
   useEffect(() => {
     if (rerankModels.length > 0) {
       const current = watch('rerankModel')
@@ -207,7 +203,7 @@ const AiAgentProjectSettings = () => {
                       render={({ field }) => (
                         <Autocomplete
                           {...field}
-                          options={semanticModels}
+                          options={sortModels(semanticModels)}
                           getOptionLabel={option => option.name} // Label for autocomplete
                           onChange={(_, value) => setValue('semanticSearchModel', value?.name)} // Update form state
                           value={semanticModels.find(model => model.name === watch('semanticSearchModel')) || null} // Set selected value
@@ -235,7 +231,7 @@ const AiAgentProjectSettings = () => {
                       render={({ field }) => (
                         <Autocomplete
                           {...field}
-                          options={completionModels}
+                          options={sortModels(completionModels)}
                           getOptionLabel={option => option.name} // Label for autocomplete
                           onChange={(_, value) => setValue('completionModel', value?.name)} // Update form state
                           value={completionModels.find(model => model.name === watch('completionModel')) || null} // Set selected value
@@ -370,7 +366,7 @@ const AiAgentProjectSettings = () => {
                             render={({ field }) => (
                               <Autocomplete
                                 {...field}
-                                options={moderationModels}
+                                options={sortModels(moderationModels)}
                                 getOptionLabel={option => option.name} // Label for autocomplete
                                 onChange={(_, value) => setValue('moderationModel', value?.name)} // Update form state
                                 value={moderationModels.find(model => model.name === watch('moderationModel')) || null} // Set selected value
@@ -384,7 +380,7 @@ const AiAgentProjectSettings = () => {
                                     </Typography>
                                   </Box>
                                 )}
-                              />                              
+                              />
                             )}
                           />
                         </FormControl>
@@ -408,7 +404,7 @@ const AiAgentProjectSettings = () => {
                             render={({ field }) => (
                               <Autocomplete
                                 {...field}
-                                options={rerankModels}
+                                options={sortModels(rerankModels)}
                                 getOptionLabel={option => option.name} // Label for autocomplete
                                 onChange={(_, value) => setValue('rerankModel', value?.name)} // Update form state
                                 value={rerankModels.find(model => model.name === watch('rerankModel')) || null} // Set selected value

@@ -34,7 +34,7 @@ const ProjectCreate = () => {
 
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
 
-  const [autoTraining, setAutoTraining] = useState(false)
+  const [autoTraining, setAutoTraining] = useState(true)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [loading, setLoading] = useState(false)

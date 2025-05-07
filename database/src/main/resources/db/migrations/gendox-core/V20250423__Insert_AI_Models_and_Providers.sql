@@ -1140,9 +1140,9 @@ END$$;
 
 -- Set default values for existing rows
 UPDATE gendox_core.project_agent
-SET rerank_enable = true,
+SET rerank_enable = false,
     rerank_model_id = (
-        SELECT id FROM gendox_core.ai_models WHERE name = 'RERANK-2-LITE' LIMIT 1
+        SELECT id FROM gendox_core.ai_models WHERE name = 'RERANK-2' LIMIT 1
     )
 WHERE rerank_enable IS NULL
    OR rerank_model_id IS NULL;
@@ -1281,3 +1281,8 @@ WHERE NOT EXISTS (
     FROM gendox_core.ai_models
     WHERE name = 'DEEPSEEK_R1_DISTILL_LLAMA_70B'
 );
+
+UPDATE gendox_core.ai_models
+set is_active = false
+where name = 'DEEPSEEK_R1_DISTILL_LLAMA_70B'
+  and is_active = true;

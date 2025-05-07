@@ -3,7 +3,6 @@ package dev.ctrlspace.gendox.gendoxcoreapi.utils.constants;
 public class AiModelConstants {
 
     public static final String ADA2_MODEL = "Ada2";
-    public static final String ADA_3_SMALL = "OPENAI_EMBEDDING_V3_SMALL";
     public static final String GPT_3_5_TURBO_MODEL = "GPT_3.5_TURBO";
     public static final String OPEN_AI_MODERATION = "OPENAI_MODERATION";
     public static final String GPT_4 = "GPT_4";
@@ -13,6 +12,8 @@ public class AiModelConstants {
     public static final String GROQ_LLAMA_3_8B_8192 = "GROQ_LLAMA_3_8B_8192";
     public static final String GROQ_LLAMA_3_70B_8192 = "GROQ_LLAMA_3_70B_8192";
     public static final String OLLAMA_MISTRAL_8B = "OLLAMA_MISTRAL_8B";
+    public static final String GEMINI_2_FLASH = "gemini-2.0-flash";
+
     // Embedding models
     public static final String OPENAI_EMBEDDING_V3_SMALL = "OPENAI_EMBEDDING_V3_SMALL";
     public static final String OPENAI_EMBEDDING_V3_LARGE = "OPENAI_EMBEDDING_V3_LARGE";
