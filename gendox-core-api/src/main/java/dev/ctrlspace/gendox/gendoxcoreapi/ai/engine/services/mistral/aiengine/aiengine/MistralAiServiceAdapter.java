@@ -87,7 +87,6 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
 
     public MistralModerationResponse getModerationResponse(MistralModerationRequest moderationRequest, AiModel aiModel) {
         String moderationApiUrl = aiModel.getUrl();
-        logger.info("Moderation Request: {}", moderationRequest);
         logger.info("AiModel for Moderation: {}", aiModel.getModel());
         ResponseEntity<MistralModerationResponse> responseEntity = restTemplate.postForEntity(
                 moderationApiUrl,

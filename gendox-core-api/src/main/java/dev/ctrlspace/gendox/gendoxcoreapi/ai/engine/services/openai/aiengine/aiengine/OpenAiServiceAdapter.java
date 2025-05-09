@@ -197,7 +197,6 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
     public OpenAiModerationResponse getModerationResponse(OpenAiModerationRequest moderationRequest, String apiKey, AiModel aiModel) {
         String moderationApiUrl = aiModel.getUrl();
-        logger.info("Moderation Request: {}", moderationRequest);
         logger.info("AiModel for Moderation: {}", aiModel.getModel());
         ResponseEntity<OpenAiModerationResponse> responseEntity = restTemplate.postForEntity(
                 moderationApiUrl,
