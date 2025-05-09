@@ -1,16 +1,17 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
+
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.OpenAiModerationResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.GPT35Moderation;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiCompletionResponseConverter;
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.OpenAiEmbeddingResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.OpenAiCompletionResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.OpenAiEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
@@ -32,20 +33,13 @@ import java.util.*;
 @Service
 public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
-
     protected Set<String> supportedApiType = Set.of("OPEN_AI_API");
-
-
     protected Logger logger = LoggerFactory.getLogger(OpenAiServiceAdapter.class);
-
     private AiModelRepository aiModelRepository;
-
     private OpenAiCompletionResponseConverter openAiCompletionResponseConverter;
-
     private OpenAiEmbeddingResponseConverter openAiEmbeddingResponseConverter;
-
+    private OpenAiModerationResponseConverter openAiModerationResponseConverter;
     private DurationUtils durationUtils;
-
     private ApiRateLimitService apiRateLimitService;
 
     @Autowired
@@ -53,12 +47,14 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                                 ApiRateLimitService apiRateLimitService,
                                 OpenAiCompletionResponseConverter openAiCompletionResponseConverter,
                                 OpenAiEmbeddingResponseConverter openAiEmbeddingResponseConverter,
-                                DurationUtils durationUtils) {
+                                DurationUtils durationUtils,
+                                OpenAiModerationResponseConverter openAiModerationResponseConverter) {
         this.aiModelRepository = aiModelRepository;
         this.apiRateLimitService = apiRateLimitService;
         this.openAiEmbeddingResponseConverter = openAiEmbeddingResponseConverter;
         this.openAiCompletionResponseConverter = openAiCompletionResponseConverter;
         this.durationUtils = durationUtils;
+        this.openAiModerationResponseConverter = openAiModerationResponseConverter;
     }
 
     private static final RestTemplate restTemplate = new RestTemplate();
@@ -74,59 +70,67 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         return aiModelRepository.findUrlByModel(model);
     }
 
-    public OpenAiAda2Response getEmbeddingResponse(OpenAiAda2Request embeddingRequestHttpEntity, AiModel aiModel, String apiKey) {
+    public OpenAiEmbeddingResponse getEmbeddingResponse(OpenAiEmbedRequest embeddingRequestHttpEntity, AiModel aiModel, String apiKey) {
         String embeddingsApiUrl = aiModel.getUrl();
 
 //        Bucket bucket = waitOpenAiRateLimit(embeddingRequestHttpEntity, apiKey);
 
         logger.trace("Sending Embedding Request to {}: {}", embeddingsApiUrl, embeddingRequestHttpEntity);
-        ResponseEntity<OpenAiAda2Response> responseEntity = restTemplate.postForEntity(
+        logger.info("AiModel for Search -->: {}", aiModel.getModel());
+        ResponseEntity<OpenAiEmbeddingResponse> responseEntity = restTemplate.postForEntity(
                 embeddingsApiUrl,
                 new HttpEntity<>(embeddingRequestHttpEntity, buildHeader(apiKey)),
-                OpenAiAda2Response.class);
+                OpenAiEmbeddingResponse.class);
 
         // Extract rate limit headers
         HttpHeaders headers = responseEntity.getHeaders();
         RateLimitInfo rateLimitInfo = extractRateLimitHeaders(headers);
 
-        logger.info("Received Embedding Response from {}. Tokens billed: {}", embeddingsApiUrl, responseEntity.getBody().getUsage().getTotalTokens());
 
+        OpenAiEmbeddingResponse openAiEmbeddingResponse = responseEntity.getBody();
 
-        OpenAiAda2Response openAiAda2Response = responseEntity.getBody();
+        // for gemini embedding because it is free
+        if (openAiEmbeddingResponse.getUsage() == null) {
+            Usage freeUsage = Usage.builder()
+                    .promptTokens(0)
+                    .completionTokens(0)
+                    .totalTokens(0)
+                    .build();
+            openAiEmbeddingResponse.setUsage(freeUsage);
+        }
 
-        openAiAda2Response.setTotalRateLimitRequests(rateLimitInfo.getTotalRateLimitRequests());
-        openAiAda2Response.setTotalRateLimitTokens(rateLimitInfo.getTotalRateLimitTokens());
-        openAiAda2Response.setRateLimitRemainingRequests(rateLimitInfo.getRateLimitRemainingRequests());
-        openAiAda2Response.setRateLimitRemainingTokens(rateLimitInfo.getRateLimitRemainingTokens());
-        openAiAda2Response.setRateLimitResetRequestsMilliseconds(rateLimitInfo.getRateLimitResetRequestsMilliseconds());
-        openAiAda2Response.setRateLimitResetTokensMilliseconds(rateLimitInfo.getRateLimitResetTokensMilliseconds());
+        logger.info("Received Embedding Response from {}. Tokens billed: {}", embeddingsApiUrl, openAiEmbeddingResponse.getUsage().getTotalTokens());
+
+        openAiEmbeddingResponse.setTotalRateLimitRequests(rateLimitInfo.getTotalRateLimitRequests());
+        openAiEmbeddingResponse.setTotalRateLimitTokens(rateLimitInfo.getTotalRateLimitTokens());
+        openAiEmbeddingResponse.setRateLimitRemainingRequests(rateLimitInfo.getRateLimitRemainingRequests());
+        openAiEmbeddingResponse.setRateLimitRemainingTokens(rateLimitInfo.getRateLimitRemainingTokens());
+        openAiEmbeddingResponse.setRateLimitResetRequestsMilliseconds(rateLimitInfo.getRateLimitResetRequestsMilliseconds());
+        openAiEmbeddingResponse.setRateLimitResetTokensMilliseconds(rateLimitInfo.getRateLimitResetTokensMilliseconds());
 
         // TODO update rate limit bucket
         // For now just sleep for a small amount of time when we are near the API limits
 
-        sleepIfLowRateLimit(openAiAda2Response);
+        sleepIfLowRateLimit(openAiEmbeddingResponse);
 
 
-
-
-        return openAiAda2Response;
+        return openAiEmbeddingResponse;
     }
 
     /**
-     *
-     * @param openAiAda2Response
+     * @param openAiEmbeddingResponse
      */
-    private void sleepIfLowRateLimit(OpenAiAda2Response openAiAda2Response) {
+    private void sleepIfLowRateLimit(OpenAiEmbeddingResponse openAiEmbeddingResponse) {
         // Check if remaining requests or tokens are less than 10% of the total
-        boolean isLowOnRequests = openAiAda2Response.getRateLimitRemainingRequests() != null &&
-                openAiAda2Response.getRateLimitRemainingRequests() < 0.1 * openAiAda2Response.getTotalRateLimitRequests();
-        boolean isLowOnTokens = openAiAda2Response.getRateLimitRemainingTokens() != null &&
-                openAiAda2Response.getRateLimitRemainingTokens() < 0.1 * openAiAda2Response.getTotalRateLimitTokens();
+        boolean isLowOnRequests = openAiEmbeddingResponse.getRateLimitRemainingRequests() != null &&
+                openAiEmbeddingResponse.getRateLimitRemainingRequests() < 0.1 * openAiEmbeddingResponse.getTotalRateLimitRequests();
+        boolean isLowOnTokens = openAiEmbeddingResponse.getRateLimitRemainingTokens() != null &&
+                openAiEmbeddingResponse.getRateLimitRemainingTokens() < 0.1 * openAiEmbeddingResponse.getTotalRateLimitTokens();
 
         if (isLowOnRequests || isLowOnTokens) {
             // Get the reset times in milliseconds
-            long resetRequestsMillis = openAiAda2Response.getRateLimitResetRequestsMilliseconds();
-            long resetTokensMillis = openAiAda2Response.getRateLimitResetTokensMilliseconds();
+            long resetRequestsMillis = openAiEmbeddingResponse.getRateLimitResetRequestsMilliseconds();
+            long resetTokensMillis = openAiEmbeddingResponse.getRateLimitResetTokensMilliseconds();
 
             // Calculate the maximum of the reset times
             long maxResetMillis = Math.max(resetRequestsMillis, resetTokensMillis);
@@ -154,11 +158,12 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
     /**
      * This limits requests sent to OpenAI to not pass the rate limits
      * TODO Not implemented yet, complex logic should be applied to update the limits depending the actual usage of the API
+     *
      * @param embeddingRequestHttpEntity
      * @param apiKey
      * @throws GendoxException
      */
-    private Bucket waitOpenAiRateLimit(OpenAiAda2Request embeddingRequestHttpEntity, String apiKey) throws GendoxException {
+    private Bucket waitOpenAiRateLimit(OpenAiEmbedRequest embeddingRequestHttpEntity, String apiKey) throws GendoxException {
         logger.debug("Applying OpenAI rate Limit wait for Embedding API");
         EncodingRegistry registry = Encodings.newDefaultEncodingRegistry();
         Encoding enc = registry.getEncodingForModel(ModelType.TEXT_EMBEDDING_3_SMALL);
@@ -175,13 +180,14 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
     }
 
 
-    public OpenAiGptResponse getCompletionResponse(OpenAiGptRequest chatRequestHttpEntity, AiModel aiModel, String apiKey) {
+    public OpenAiCompletionResponse getCompletionResponse(OpenAiCompletionRequest chatRequestHttpEntity, AiModel aiModel, String apiKey) {
         String completionApiUrl = aiModel.getUrl();
         logger.trace("Sending completion Request to {}: {}", completionApiUrl, chatRequestHttpEntity);
-        ResponseEntity<OpenAiGptResponse> responseEntity = restTemplate.postForEntity(
+        logger.info("AiModel for Completion: {}", aiModel.getModel());
+        ResponseEntity<OpenAiCompletionResponse> responseEntity = restTemplate.postForEntity(
                 completionApiUrl,
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader(apiKey)),
-                OpenAiGptResponse.class);
+                OpenAiCompletionResponse.class);
         logger.info("Received completion Response from {}. Prompt Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getPromptTokens());
         logger.info("Received completion Response from {}. Completion Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getCompletionTokens());
         logger.info("Received completion Response from {}. Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getTotalTokens());
@@ -189,27 +195,28 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         return responseEntity.getBody();
     }
 
-    public OpenAiGpt35ModerationResponse getModerationResponse(Gpt35ModerationRequest moderationRequest, String apiKey) {
-        logger.trace("Sending moderation Request to {}: {}", GPT35Moderation.URL, moderationRequest);
-        ResponseEntity<OpenAiGpt35ModerationResponse> responseEntity = restTemplate.postForEntity(
-                GPT35Moderation.URL,
+    public OpenAiModerationResponse getModerationResponse(OpenAiModerationRequest moderationRequest, String apiKey, AiModel aiModel) {
+        String moderationApiUrl = aiModel.getUrl();
+        logger.info("AiModel for Moderation: {}", aiModel.getModel());
+        ResponseEntity<OpenAiModerationResponse> responseEntity = restTemplate.postForEntity(
+                moderationApiUrl,
                 new HttpEntity<>(moderationRequest, buildHeader(apiKey)),
-                OpenAiGpt35ModerationResponse.class);
-        logger.debug("Received moderation Response from {}.", GPT35Moderation.URL);
+                OpenAiModerationResponse.class);
+        logger.debug("Received moderation Response from {}.", moderationApiUrl);
 
         return responseEntity.getBody();
     }
 
 
-    public EmbeddingResponse askEmbedding(BotRequest botRequest, AiModel aiModel, String apiKey) {
-        String message = botRequest.getMessages().get(0);
-        OpenAiAda2Response openAiAda2Response = this.getEmbeddingResponse((OpenAiAda2Request.builder()
+    public EmbeddingResponse askEmbedding(EmbeddingMessage embeddingMessage, AiModel aiModel, String apiKey) {
+        String message = embeddingMessage.getMessages().get(0);
+        OpenAiEmbeddingResponse openAiEmbeddingResponse = this.getEmbeddingResponse((OpenAiEmbedRequest.builder()
                         .model(aiModel.getModel())
                         .input(message).build()),
                 aiModel,
                 apiKey);
 
-        EmbeddingResponse embeddingResponse = openAiEmbeddingResponseConverter.openAitoEmbeddingResponse(openAiAda2Response);
+        EmbeddingResponse embeddingResponse = openAiEmbeddingResponseConverter.openAitoEmbeddingResponse(openAiEmbeddingResponse);
 
         return embeddingResponse;
 
@@ -221,40 +228,65 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
             messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
 
         }
-
-        var openAiGptRequest = OpenAiGptRequest.builder()
+        OpenAiCompletionRequest.OpenAiCompletionRequestBuilder openAiGptRequestBuilder = OpenAiCompletionRequest.builder()
                 .model(aiModel.getModel())
-                .temperature(aiModelRequestParams.getTemperature())
-                .topP(aiModelRequestParams.getTopP())
-                .maxTokens(aiModelRequestParams.getMaxTokens())
-                .messages(messages)
-                .build();
+                .messages(messages);
 
-        // handle o1 params
-        if (aiModel.getModel().contains("o1")) {
-            openAiGptRequest.setTopP(1);
-            openAiGptRequest.setTemperature(1);
-            openAiGptRequest.setMaxCompletionTokens(2*openAiGptRequest.getMaxTokens());
-            openAiGptRequest.setMaxTokens(null);
+        // Special case for preview search models
+        if (aiModel.getModel().toLowerCase().contains("search-preview")) {
+            // Only model and messages are set, no temperature, top_p, max_tokens
+            logger.info("Detected Preview Search Model: Only setting model and messages for {}", aiModel.getModel());
+            openAiGptRequestBuilder
+                    .temperature(null)
+                    .topP(null)
+                    .maxTokens(null)
+                    .maxCompletionTokens(null);
+        }
+        // Special case for o1, o3, o4 models
+        else if (List.of("o1", "o3", "o4").stream()
+                .anyMatch(aiModel.getModel()::contains)) {
+            openAiGptRequestBuilder
+                    .temperature(1.0)
+                    .topP(1.0)
+                    .maxCompletionTokens(2 * aiModelRequestParams.getMaxTokens())
+                    .maxTokens(null);
+
+            // Make first message "user"
             messages.getFirst().setRole("user");
-
+        } else {
+            // Default setting for normal models
+            openAiGptRequestBuilder
+                    .temperature(aiModelRequestParams.getTemperature())
+                    .topP(aiModelRequestParams.getTopP())
+                    .maxTokens(aiModelRequestParams.getMaxTokens());
         }
 
-        OpenAiGptResponse openAiGptResponse = this.getCompletionResponse(openAiGptRequest,
-                aiModel,
-                apiKey);
-
-        CompletionResponse completionResponse = openAiCompletionResponseConverter.toCompletionResponse(openAiGptResponse);
+        OpenAiCompletionRequest openAiCompletionRequest = openAiGptRequestBuilder.build();
+        OpenAiCompletionResponse openAiCompletionResponse = this.getCompletionResponse(openAiCompletionRequest, aiModel, apiKey);
+        CompletionResponse completionResponse = openAiCompletionResponseConverter.toCompletionResponse(openAiCompletionResponse);
 
         return completionResponse;
     }
 
 
-    public OpenAiGpt35ModerationResponse moderationCheck(String message, String apiKey) {
-        return getModerationResponse(Gpt35ModerationRequest.builder()
+
+    @Override
+    public ModerationResponse askModeration(String message, String apiKey, AiModel aiModel) {
+        OpenAiModerationResponse openAiModerationResponse = this.getModerationResponse(OpenAiModerationRequest.builder()
+                        .model(aiModel.getModel())
                         .input(message)
                         .build(),
-                apiKey);
+                apiKey,
+                aiModel);
+
+        ModerationResponse moderationResponse = openAiModerationResponseConverter.toModerationResponse(openAiModerationResponse);
+        logger.info("Moderation Response: {}", moderationResponse);
+        return moderationResponse;
+    }
+
+    @Override
+    public RerankResponse askRerank(List<String> documents, String query, AiModel aiModel, String apiKey) {
+        return null;
     }
 
     public RateLimitInfo extractRateLimitHeaders(HttpHeaders headers) {
@@ -289,9 +321,6 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
     }
 
 
-
-
-
     @Override
     public boolean supports(String apiTypeName) {
         return getSupportedApiTypeNames().contains(apiTypeName);
@@ -301,5 +330,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
     public Set<String> getSupportedApiTypeNames() {
         return supportedApiType;
     }
+
+
 
 }

@@ -11,6 +11,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationPlanRepositor
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationPlanPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.SubscriptionStatusConstants;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,8 +28,7 @@ import java.util.UUID;
 @Service
 public class OrganizationPlanService {
 
-    Logger logger = org.slf4j.LoggerFactory.getLogger(getClass());
-
+    Logger logger = LoggerFactory.getLogger(OrganizationPlanService.class);
     private OrganizationPlanRepository organizationPlanRepository;
     private SubscriptionPlanService subscriptionPlanService;
     private SubscriptionNotificationConverter subscriptionNotificationConverter;
@@ -86,8 +86,15 @@ public class OrganizationPlanService {
 
     // Create or update organization plan based on subscription notification
     public OrganizationPlan upsertOrganizationPlan(SubscriptionNotificationDTO subscriptionNotificationDTO, Organization organization) throws GendoxException {
+        logger.info("Processing subscription notification for organization: {}", organization.getId());
         validateSubscriptionData(subscriptionNotificationDTO); // 🚨 Validate input data
-
+        logger.info("Validating subscription data: email: {}, productSKU: {}, numberOfSeats: {}, startDate: {}, endDate: {}, status: {}",
+                subscriptionNotificationDTO.getEmail(),
+                subscriptionNotificationDTO.getProductSKU(),
+                subscriptionNotificationDTO.getNumberOfSeats(),
+                subscriptionNotificationDTO.getStartDate(),
+                subscriptionNotificationDTO.getEndDate(),
+                subscriptionNotificationDTO.getStatus());
         List<OrganizationPlan> organizationPlans = this.getAllOrganizationPlansByOrganizationId(organization.getId());
 
         OrganizationPlan matchingPlan = findOverlappingPlan(organizationPlans, subscriptionNotificationDTO.getStartDate(), subscriptionNotificationDTO.getEndDate());
@@ -95,7 +102,6 @@ public class OrganizationPlanService {
         if (matchingPlan != null) {
             return processOverlappingPlan(matchingPlan, subscriptionNotificationDTO); // 🔄 Handle existing plan
         }
-
         return createNewOrganizationPlan(subscriptionNotificationDTO, organization); // ✅ Create a new plan if no overlap
     }
 
@@ -162,6 +168,7 @@ public class OrganizationPlanService {
         newPlanEntry.setUpdatedAt(Instant.now());
         newPlanEntry.setOrganization(organization);
         newPlanEntry.setStatus(SubscriptionStatusConstants.ACTIVE);
+        logger.info("Creating new organization plan: {}", newPlanEntry);
         return organizationPlanRepository.save(newPlanEntry);
     }
 

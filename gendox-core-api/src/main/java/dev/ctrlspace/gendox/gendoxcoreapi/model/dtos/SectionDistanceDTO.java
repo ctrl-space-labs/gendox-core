@@ -35,7 +35,7 @@ import java.util.UUID;
                 WHERE emb.project_id = :projectId
                   AND emb.section_id IS NOT NULL
                   AND emb.semantic_search_model_id = :semanticSearchModelId
-                ORDER BY CAST(emb.embedding_vector AS vector(1536)) <-> cast(:embedding as vector)
+                ORDER BY CAST(emb.embedding_vector AS vector) <-> cast(:embedding as vector)
                 LIMIT :pageSize OFFSET :offset
               """,
         resultSetMapping = "SectionDistanceDTOMapping"

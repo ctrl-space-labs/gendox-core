@@ -1,7 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.BotRequest;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.EmbeddingResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingMessage;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.AiModelEmbeddingConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithDocumentConverter;
@@ -42,23 +42,15 @@ public class EmbeddingService {
     private EmbeddingGroupRepository embeddingGroupRepository;
     private TypeService typeService;
     private AiModelEmbeddingConverter aiModelEmbeddingConverter;
-    private SecurityUtils securityUtils;
     private DocumentSectionService documentSectionService;
     private AiModelUtils aiModelUtils;
     private ProjectService projectService;
-
     private ProvenAiService provenAiService;
-
     private SearchResultConverter searchResultConverter;
-
     private DocumentInstanceSectionWithDocumentConverter documentInstanceSectionWithDocumentConverter;
-
     private ProjectAgentService projectAgentService;
-
     private OrganizationModelKeyService organizationModelKeyService;
-
     private AuditLogsService auditLogsService;
-
     private CryptographyUtils cryptographyUtils;
 
 
@@ -68,7 +60,6 @@ public class EmbeddingService {
             AuditLogsRepository auditLogsRepository,
             EmbeddingGroupRepository embeddingGroupRepository,
             TypeService typeService,
-            SecurityUtils securityUtils,
             DocumentSectionService documentSectionService,
             AiModelEmbeddingConverter aiModelEmbeddingConverter,
             AiModelUtils aiModelUtils,
@@ -85,7 +76,6 @@ public class EmbeddingService {
         this.auditLogsRepository = auditLogsRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
         this.typeService = typeService;
-        this.securityUtils = securityUtils;
         this.documentSectionService = documentSectionService;
         this.aiModelUtils = aiModelUtils;
         this.projectService = projectService;
@@ -170,9 +160,9 @@ public class EmbeddingService {
 
 
     public EmbeddingResponse getEmbeddingForMessage(ProjectAgent agent, List<String> value, AiModel aiModel) throws GendoxException {
-        BotRequest botRequest = new BotRequest();
-        botRequest.setMessages(value);
-        return this.getEmbeddingForMessage(agent, botRequest, aiModel);
+        EmbeddingMessage embeddingMessage = new EmbeddingMessage();
+        embeddingMessage.setMessages(value);
+        return this.getEmbeddingForMessage(agent, embeddingMessage, aiModel);
     }
 
     @Observed(name = "EmbeddingService.getEmbeddingForMessage",
@@ -183,10 +173,10 @@ public class EmbeddingService {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    private EmbeddingResponse getEmbeddingForMessage(ProjectAgent agent, BotRequest botRequest, AiModel aiModel) throws GendoxException {
+    private EmbeddingResponse getEmbeddingForMessage(ProjectAgent agent, EmbeddingMessage embeddingMessage, AiModel aiModel) throws GendoxException {
         String apiKey = this.getApiKey(agent, "SEMANTIC_SEARCH_MODEL");
         AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
-        EmbeddingResponse embeddingResponse = aiModelApiAdapterService.askEmbedding(botRequest, aiModel, apiKey);
+        EmbeddingResponse embeddingResponse = aiModelApiAdapterService.askEmbedding(embeddingMessage, aiModel, apiKey);
 
         Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_RESPONSE");
         AuditLogs auditLogs = auditLogsService.createDefaultAuditLogs(embeddingType);

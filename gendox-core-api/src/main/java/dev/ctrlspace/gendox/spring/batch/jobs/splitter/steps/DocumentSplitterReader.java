@@ -73,6 +73,7 @@ public class DocumentSplitterReader extends GendoxJpaPageReader<DocumentInstance
 
     @Override
     protected Page<DocumentInstance> getPageFromRepository(Pageable pageable) throws GendoxException {
+        logger.trace("Is virtual thread? {}", Thread.currentThread().isVirtual());
         PageRequest sortedPageRequest = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         return documentService.getAllDocuments(criteria, sortedPageRequest);
     }

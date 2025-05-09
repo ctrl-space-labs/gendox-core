@@ -17,7 +17,7 @@ const PlansOrganizationSettings = () => {
   const organizationPlan = useSelector(state => state.activeOrganization.organizationPlans)
   const isBlurring = useSelector(state => state.activeOrganization.isBlurring)
 
-  const manageSubscription = () => window.open('https://gendox.obstechnologies.com/', '_blank')
+  const manageSubscription = () => window.open('https://gendox.dev/my-account', '_blank')
   return (
     <>
       <Box

@@ -9,6 +9,9 @@ logging:
     dev.ctrlspace: DEBUG
     org.springframework: INFO
 spring:
+  threads:
+    virtual:
+      enabled: true
   mail:
     host: ${GENDOX_SPRING_EMAIL_HOST:no-env-variable}
     port: ${GENDOX_SPRING_EMAIL_PORT:0}
@@ -137,6 +140,14 @@ gendox:
       key: ${COHERE_KEY}
     groq:
       key: ${GROQ_KEY:default-token}
+    gemini:
+      key: ${GEMINI_KEY:default-token}
+    anthropic:
+      key: ${ANTHROPIC_KEY:default-token}
+    voyage:
+      key: ${VOYAGE_KEY:default-token}
+    mistral:
+      key: ${MISTRAL_KEY:default-token}
   domain:
     base-url: http://localhost:${server.port}
     document-sections:

@@ -37,7 +37,8 @@ const initialState = {
   aiModels: {
     semanticModels: [],
     completionModels: [],
-    moderationModels: []
+    moderationModels: [],
+    rerankModels: []
   },
   isFetchingAiModels: false,
   isUpdatingProjectAgent: false,
@@ -60,6 +61,7 @@ const activeProjectAgentSlice = createSlice({
         state.aiModels.semanticModels = models.filter(model => model.aiModelType.name === 'SEMANTIC_SEARCH_MODEL')
         state.aiModels.completionModels = models.filter(model => model.aiModelType.name === 'COMPLETION_MODEL')
         state.aiModels.moderationModels = models.filter(model => model.aiModelType.name === 'MODERATION_MODEL')
+        state.aiModels.rerankModels = models.filter(model => model.aiModelType.name === 'RERANK_MODEL')
       })
       .addCase(fetchAiModels.rejected, (state, action) => {
         state.isFetchingAiModels = false
