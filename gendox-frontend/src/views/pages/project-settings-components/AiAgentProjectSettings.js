@@ -14,6 +14,7 @@ import CardContent from '@mui/material/CardContent'
 import CardActions from '@mui/material/CardActions'
 import FormControl from '@mui/material/FormControl'
 import Autocomplete from '@mui/material/Autocomplete'
+import Link from 'next/link'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import Select from '@mui/material/Select'
 import InputAdornment from '@mui/material/InputAdornment'
@@ -44,6 +45,8 @@ const AiAgentProjectSettings = () => {
   const isLoading = isUpdatingProjectAgent || isFetchingAiModels || isUpdatingProject
 
   const { id: projectId, organizationId } = project
+
+  console.log('AI Models', aiModels)
 
   const defaultValues = {
     semanticSearchModel: project.projectAgent.semanticSearchModel?.name || '',
@@ -213,7 +216,24 @@ const AiAgentProjectSettings = () => {
                             <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
                               <Typography variant='body1'>{option.name}</Typography>
                               <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
-                                {option.aiModelProvider?.name}
+                                {option.aiModelProvider?.name + '   '}
+                                {option.modelTierType?.name === 'FREE_MODEL' && (
+                                  <Box
+                                    component='span'
+                                    sx={{
+                                      ml: 1,
+                                      px: 1.5,
+                                      py: 0.3,
+                                      backgroundColor: '#e0f2f1',
+                                      color: '#00695c',
+                                      fontWeight: 600,
+                                      fontSize: '0.75rem',
+                                      borderRadius: '6px'
+                                    }}
+                                  >
+                                    Free
+                                  </Box>
+                                )}
                               </Typography>
                             </Box>
                           )}
@@ -241,7 +261,24 @@ const AiAgentProjectSettings = () => {
                             <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
                               <Typography variant='body1'>{option.name}</Typography>
                               <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
-                                {option.aiModelProvider?.name}
+                                {option.aiModelProvider?.name + '   '}
+                                {option.modelTierType?.name === 'FREE_MODEL' && (
+                                  <Box
+                                    component='span'
+                                    sx={{
+                                      ml: 1,
+                                      px: 1.5,
+                                      py: 0.3,
+                                      backgroundColor: '#e0f2f1',
+                                      color: '#00695c',
+                                      fontWeight: 600,
+                                      fontSize: '0.75rem',
+                                      borderRadius: '6px'
+                                    }}
+                                  >
+                                    Free
+                                  </Box>
+                                )}
                               </Typography>
                             </Box>
                           )}
@@ -264,6 +301,19 @@ const AiAgentProjectSettings = () => {
                     />
                   </FormControl>
                 </Grid>
+                <Grid item xs={12} sx={{ mb: 2 }}>
+                  <Typography variant='body2'>
+                    Basic and Pro models require an API key for their
+                    providers.{' '}
+                    <Link
+                      href={`/gendox/organization-settings/?organizationId=${organizationId}&tab=advancedSettings`}
+                      style={{ color: '#1976d2', textDecoration: 'underline', fontWeight: 500 }}
+                    >
+                      Go to Advanced Settings
+                    </Link>
+                  </Typography>
+                </Grid>
+                
                 {/* 2. Agent's Personality */}
                 <Grid item xs={12}>
                   <Divider sx={{ mt: 5, mb: '0 !important' }} />
@@ -376,7 +426,24 @@ const AiAgentProjectSettings = () => {
                                   <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
                                     <Typography variant='body1'>{option.name}</Typography>
                                     <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
-                                      {option.aiModelProvider?.name}
+                                      {option.aiModelProvider?.name + '   '}
+                                      {option.modelTierType?.name === 'FREE_MODEL' && (
+                                        <Box
+                                          component='span'
+                                          sx={{
+                                            ml: 1,
+                                            px: 1.5,
+                                            py: 0.3,
+                                            backgroundColor: '#e0f2f1',
+                                            color: '#00695c',
+                                            fontWeight: 600,
+                                            fontSize: '0.75rem',
+                                            borderRadius: '6px'
+                                          }}
+                                        >
+                                          Free
+                                        </Box>
+                                      )}
                                     </Typography>
                                   </Box>
                                 )}
@@ -414,7 +481,24 @@ const AiAgentProjectSettings = () => {
                                   <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
                                     <Typography variant='body1'>{option.name}</Typography>
                                     <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
-                                      {option.aiModelProvider?.name}
+                                      {option.aiModelProvider?.name + '   '}
+                                      {option.modelTierType?.name === 'FREE_MODEL' && (
+                                        <Box
+                                          component='span'
+                                          sx={{
+                                            ml: 1,
+                                            px: 1.5,
+                                            py: 0.3,
+                                            backgroundColor: '#e0f2f1',
+                                            color: '#00695c',
+                                            fontWeight: 600,
+                                            fontSize: '0.75rem',
+                                            borderRadius: '6px'
+                                          }}
+                                        >
+                                          Free
+                                        </Box>
+                                      )}
                                     </Typography>
                                   </Box>
                                 )}

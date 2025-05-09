@@ -164,7 +164,7 @@ public class ProjectAgentService {
             projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GEMINI_2_FLASH));
         }
         if (projectAgent.getModerationModel() == null) {
-            projectAgent.setModerationModel(aiModelService.getByName(AiModelConstants.OPEN_AI_MODERATION));
+            projectAgent.setModerationModel(aiModelService.getByName(AiModelConstants.OMNI_MODERATION));
         }
         if (projectAgent.getRerankModel() == null) {
             projectAgent.setRerankModel(aiModelService.getByName(AiModelConstants.VOYAGE_RERANK_2));
@@ -211,9 +211,11 @@ public class ProjectAgentService {
         UUID projectAgentId = projectAgent.getId();
         ProjectAgent existingProjectAgent = projectAgentRepository.getById(projectAgentId);
 
-        // Update the properties         existingProjectAgent.setCompletionModelId(aiModelRepo.findByName(projectAgent.getCompletionModelId().getName()));
+        // Update the properties
         AiModel completionModel = aiModelService.getByName(projectAgent.getCompletionModel().getName());
         AiModel semanticSearchModel = aiModelService.getByName(projectAgent.getSemanticSearchModel().getName());
+        AiModel moderationModel = aiModelService.getByName(projectAgent.getModerationModel().getName());
+        AiModel rerankModel = aiModelService.getByName(projectAgent.getRerankModel().getName());
 
         UUID subscriptionPlanId = organizationPlanService
                 .getActiveOrganizationPlan(existingProjectAgent.getProject().getOrganizationId())
@@ -229,12 +231,29 @@ public class ProjectAgentService {
         }
 
         if (!subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, completionModel.getModelTierType().getId())) {
-            throw new GendoxException("NO_ACCESS_TO_COMPLETION_MODEL", "No access to the completion model", HttpStatus.FORBIDDEN);
+            throw new GendoxException("NO_ACCESS_TO_COMPLETION_MODEL",
+                    "No access to the completion model. Basic or Pro subscription is required",
+                    HttpStatus.FORBIDDEN);
         }
 
         if (!subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, semanticSearchModel.getModelTierType().getId())) {
-            throw new GendoxException("NO_ACCESS_TO_SEMANTIC_SEARCH_MODEL", "No access to the semantic search model", HttpStatus.FORBIDDEN);
+            throw new GendoxException("NO_ACCESS_TO_SEMANTIC_SEARCH_MODEL",
+                    "No access to the semantic search model. Basic or Pro subscription is required",
+                    HttpStatus.FORBIDDEN);
         }
+
+        if (!subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, moderationModel.getModelTierType().getId())) {
+            throw new GendoxException("NO_ACCESS_TO_MODERATION_MODEL",
+                    "No access to the moderation model. Basic or Pro subscription is required",
+                    HttpStatus.FORBIDDEN);
+        }
+
+        if (projectAgent.getRerankEnable() && !subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, rerankModel.getModelTierType().getId())) {
+            throw new GendoxException("NO_ACCESS_TO_RERANK_MODEL",
+                    "No access to the rerank model. Basic or Pro subscription is required",
+                    HttpStatus.FORBIDDEN);
+        }
+
 
         existingProjectAgent.setAgentName(projectAgent.getAgentName());
         existingProjectAgent.setCompletionModel(completionModel);

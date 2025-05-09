@@ -10,7 +10,7 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
     public ProjectAgentDTO toDTO(ProjectAgent projectAgent) {
         ProjectAgentDTO projectAgentDTO = new ProjectAgentDTO();
 
-        projectAgentDTO.setId(projectAgent.getId()) ;
+        projectAgentDTO.setId(projectAgent.getId());
         projectAgentDTO.setUserId(projectAgent.getUserId());
         projectAgentDTO.setSemanticSearchModel(projectAgent.getSemanticSearchModel());
         projectAgentDTO.setCompletionModel(projectAgent.getCompletionModel());
@@ -32,11 +32,11 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         projectAgentDTO.setMaxSearchLimit(projectAgent.getMaxSearchLimit());
         projectAgentDTO.setMaxCompletionLimit(projectAgent.getMaxCompletionLimit());
 
-        if(projectAgent.getRerankEnable() != null) {
+        if (projectAgent.getRerankEnable() != null) {
             projectAgentDTO.setRerankEnable(projectAgent.getRerankEnable());
         }
 
-        if(projectAgent.getRerankModel() != null) {
+        if (projectAgent.getRerankModel() != null) {
             projectAgentDTO.setRerankModel(projectAgent.getRerankModel());
         }
 
@@ -70,11 +70,11 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         projectAgent.setMaxSearchLimit(projectAgentDTO.getMaxSearchLimit());
         projectAgent.setMaxCompletionLimit(projectAgentDTO.getMaxCompletionLimit());
 
-        if(projectAgentDTO.getRerankEnable() != null) {
+        if (projectAgentDTO.getRerankEnable() != null) {
             projectAgent.setRerankEnable(projectAgentDTO.getRerankEnable());
         }
 
-        if(projectAgentDTO.getRerankModel() != null) {
+        if (projectAgentDTO.getRerankModel() != null) {
             projectAgent.setRerankModel(projectAgentDTO.getRerankModel());
         }
 

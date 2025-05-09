@@ -62,6 +62,14 @@ set is_active = false
 where name = 'GROQ_LLAMA_3_8B_8192'
   and is_active = true;
 
+-- DELETE AI Models tier from FREE plan
+DELETE from gendox_core.subscription_ai_model_tier
+where subscription_plan_id in (
+    select id from gendox_core.subscription_plans where sku = 'gd-free-001'
+)
+and ai_model_tier_id in (
+    select id from gendox_core.types where type_category = 'MODEL_TIER' and name = 'STANDARD_MODEL'
+);
 
 
 -- OPENAI AI Models ----------------------------------------------------------------------------------------------
@@ -209,7 +217,7 @@ SELECT
     'Fast, affordable small model for web search',
     (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
     (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'OPEN_AI'),
-    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    (SELECT id FROM gendox_core.types WHERE name = 'FREE_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
     (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'OPEN_AI'),
     TRUE
@@ -289,7 +297,7 @@ SELECT
     'Next generation features, speed, thinking, realtime streaming, and multimodal generation',
     (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
     (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'OPEN_AI'),
-    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    (SELECT id FROM gendox_core.types WHERE name = 'FREE_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
     (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'GEMINI'),
     TRUE
@@ -310,7 +318,7 @@ SELECT
     'Cost efficiency and low latency',
     (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
     (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'OPEN_AI'),
-    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    (SELECT id FROM gendox_core.types WHERE name = 'FREE_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
     (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'GEMINI'),
     TRUE
@@ -365,7 +373,7 @@ WHERE NOT EXISTS (
 INSERT INTO gendox_core.ai_models
     (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
 SELECT
-    'gemini-embedding-exp',
+    'gemini-embedding-exp-03-07',
     'https://generativelanguage.googleapis.com/v1beta/openai/embeddings',
     'GEMINI_EMBEDDING',
     0,
@@ -496,13 +504,13 @@ WHERE NOT EXISTS (
 INSERT INTO gendox_core.ai_models
     (model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id, model_tier_type_id, organization_id, ai_model_provider_id, is_active)
 SELECT
-    'command-r',
+    'command-r-08-2024',
     'https://api.cohere.ai/v2/chat',
     'COMMAND-R',
     0.0006,
     NOW(),
     NOW(),
-    'command-r is an alias for command-r-03-2024, so if you use command-r in the API, that’s the model you’re pointing to.',
+    'command-r is an alias for command-r-08-2024, so if you use command-r in the API, that’s the model you’re pointing to.',
     (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
     (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'COHERE'),
     (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
@@ -549,7 +557,7 @@ SELECT
     'command-r7b-12-2024 is a small, fast update delivered in December 2024. It excels at RAG, tool use, agents, and similar tasks requiring complex reasoning and multiple steps.',
     (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
     (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'COHERE'),
-    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    (SELECT id FROM gendox_core.types WHERE name = 'FREE_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
     (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'COHERE'),
     TRUE
@@ -571,7 +579,7 @@ SELECT
     'A model that allows for text and images to be classified or turned into embeddings',
     (SELECT id FROM gendox_core.types WHERE name = 'SEMANTIC_SEARCH_MODEL' AND type_category = 'AI_MODEL_TYPE'),
     (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'COHERE'),
-    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    (SELECT id FROM gendox_core.types WHERE name = 'FREE_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
     (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'COHERE'),
     TRUE
@@ -646,7 +654,7 @@ SELECT
     'Optimized for general-purpose and multilingual retrieval quality. ',
     (SELECT id FROM gendox_core.types WHERE name = 'SEMANTIC_SEARCH_MODEL' AND type_category = 'AI_MODEL_TYPE'),
     (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
-    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    (SELECT id FROM gendox_core.types WHERE name = 'FREE_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
     (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
     TRUE
@@ -668,7 +676,7 @@ SELECT
     'Optimized for latency and cost. ',
     (SELECT id FROM gendox_core.types WHERE name = 'SEMANTIC_SEARCH_MODEL' AND type_category = 'AI_MODEL_TYPE'),
     (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
-    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    (SELECT id FROM gendox_core.types WHERE name = 'FREE_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
     (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'VOYAGE_AI'),
     TRUE
@@ -844,7 +852,7 @@ SELECT
     'World’s best edge model.',
     (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
     (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
-    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    (SELECT id FROM gendox_core.types WHERE name = 'FREE_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
     (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
     TRUE
@@ -866,7 +874,7 @@ SELECT
     'Powerful edge model with extremely high performance/price ratio.',
     (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
     (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
-    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    (SELECT id FROM gendox_core.types WHERE name = 'FREE_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
     (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
     TRUE
@@ -888,7 +896,7 @@ SELECT
     'Our best multilingual open source model released July 2024.',
     (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
     (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
-    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    (SELECT id FROM gendox_core.types WHERE name = 'FREE_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
     (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
     TRUE
@@ -910,7 +918,7 @@ SELECT
     'A new leader in the small models category with image understanding capabilities, with the lastest version v3.1 released March 2025.',
     (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
     (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
-    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    (SELECT id FROM gendox_core.types WHERE name = 'FREE_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
     (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
     TRUE
@@ -976,7 +984,7 @@ SELECT
     'Our state-of-the-art semantic for extracting representation of text extracts',
     (SELECT id FROM gendox_core.types WHERE name = 'SEMANTIC_SEARCH_MODEL' AND type_category = 'AI_MODEL_TYPE'),
     (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
-    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    (SELECT id FROM gendox_core.types WHERE name = 'FREE_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
     (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
     TRUE
@@ -998,7 +1006,7 @@ SELECT
     'Our moderation service that enables our users to detect harmful text content',
     (SELECT id FROM gendox_core.types WHERE name = 'MODERATION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
     (SELECT api_type_id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
-    (SELECT id FROM gendox_core.types WHERE name = 'STANDARD_MODEL' AND type_category = 'MODEL_TIER'),
+    (SELECT id FROM gendox_core.types WHERE name = 'FREE_MODEL' AND type_category = 'MODEL_TIER'),
     NULL,
     (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'MISTRAL_AI'),
     TRUE
