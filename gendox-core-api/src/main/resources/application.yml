@@ -9,6 +9,9 @@ logging:
     dev.ctrlspace: DEBUG
     org.springframework: INFO
 spring:
+  threads:
+    virtual:
+      enabled: true
   mail:
     host: ${GENDOX_SPRING_EMAIL_HOST:no-env-variable}
     port: ${GENDOX_SPRING_EMAIL_PORT:0}

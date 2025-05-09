@@ -20,7 +20,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.core.task.VirtualThreadTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -99,14 +101,14 @@ public class SplitterJobConfig {
     @Bean
     public TaskExecutor asyncBatchSplitterExecutor(ObservationRegistry observationRegistry) {
 
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(threadPoolSize); // This is the number of concurrent tasks you want to run
-        executor.setMaxPoolSize(threadPoolSize); // This allows the pool to grow under load, up to ten concurrent tasks
-        executor.setQueueCapacity(threadPoolSize); // This is the queue capacity. Once the queue is full, new tasks will wait.
-        executor.setThreadNamePrefix("b-splitter-");
+
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("b-splitter-");
+        // switch to Loom’s virtual threads (each task → its own VT)
+        executor.setVirtualThreads(true);
 
         executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
-        executor.initialize();
+        // Throttle concurrency
+        executor.setConcurrencyLimit(threadPoolSize);
         return executor;
 
     }
