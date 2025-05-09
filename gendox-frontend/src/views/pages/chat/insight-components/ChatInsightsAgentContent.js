@@ -19,7 +19,6 @@ const ChatInsightAgentContent = ({ projectId, currentThread }) => {
   const { projectDetails: project, isUpdatingProject } = useSelector(state => state.activeProject)
 
   const projectAgent = project?.projectAgent
-  console.log('projectAgent222', projectAgent)
 
   if (isUpdatingProject) {
     return (
