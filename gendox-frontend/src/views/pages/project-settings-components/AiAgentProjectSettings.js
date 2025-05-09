@@ -13,6 +13,8 @@ import Typography from '@mui/material/Typography'
 import CardContent from '@mui/material/CardContent'
 import CardActions from '@mui/material/CardActions'
 import FormControl from '@mui/material/FormControl'
+import Autocomplete from '@mui/material/Autocomplete'
+import Link from 'next/link'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import Select from '@mui/material/Select'
 import InputAdornment from '@mui/material/InputAdornment'
@@ -20,6 +22,7 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import toast from 'react-hot-toast'
 import { useSelector, useDispatch } from 'react-redux'
+import { sortModels } from 'src/utils/sortModels'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import { ButtonBase } from '@mui/material'
 import Radio from '@mui/material/Radio'
@@ -33,20 +36,25 @@ import commonConfig from 'src/configs/common.config.js'
 const AiAgentProjectSettings = () => {
   const dispatch = useDispatch()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-  const {provenAiEnabled, provenAiUrl } = commonConfig
+  const { provenAiEnabled, provenAiUrl } = commonConfig
 
   const { projectDetails: project, isBlurring: isUpdatingProject } = useSelector(state => state.activeProject)
 
   const { isFetchingAiModels, isUpdatingProjectAgent, aiModels } = useSelector(state => state.activeProjectAgent)
-  const { semanticModels, completionModels, moderationModels } = aiModels
+  const { semanticModels, completionModels, moderationModels, rerankModels } = aiModels
   const isLoading = isUpdatingProjectAgent || isFetchingAiModels || isUpdatingProject
 
   const { id: projectId, organizationId } = project
 
+  console.log('AI Models', aiModels)
+
   const defaultValues = {
     semanticSearchModel: project.projectAgent.semanticSearchModel?.name || '',
     completionModel: project.projectAgent.completionModel?.name || '',
-    moderationModel: project.projectAgent.moderation ? project.projectAgent.moderation.name : 'OPENAI_MODERATION',
+    moderationModel: project.projectAgent.moderationModel?.name || '',
+    rerankModel: project.projectAgent.rerankModel?.name || '',
+    moderationCheck: project.projectAgent.moderationCheck,
+    rerankEnable: project.projectAgent.rerankEnable,
     documentSplitterType: project.projectAgent.documentSplitterType?.name || '',
     maxToken: project.projectAgent.maxToken,
     temperature: project.projectAgent.temperature,
@@ -81,7 +89,7 @@ const AiAgentProjectSettings = () => {
     }
   ]
 
-  // Synchronize semanticSearchModel with available options
+  // Synchronize models with available options
   useEffect(() => {
     if (semanticModels.length > 0) {
       const current = watch('semanticSearchModel')
@@ -92,7 +100,6 @@ const AiAgentProjectSettings = () => {
     }
   }, [semanticModels, watch('semanticSearchModel'), setValue])
 
-  // Synchronize completionModel with available options
   useEffect(() => {
     if (completionModels.length > 0) {
       const current = watch('completionModel')
@@ -103,7 +110,6 @@ const AiAgentProjectSettings = () => {
     }
   }, [completionModels, watch('completionModel'), setValue])
 
-  // Synchronize moderationModel with available options
   useEffect(() => {
     if (moderationModels.length > 0) {
       const current = watch('moderationModel')
@@ -113,6 +119,16 @@ const AiAgentProjectSettings = () => {
       }
     }
   }, [moderationModels, watch('moderationModel'), setValue])
+
+  useEffect(() => {
+    if (rerankModels.length > 0) {
+      const current = watch('rerankModel')
+      const exists = rerankModels.some(model => model.name === current)
+      if (!exists) {
+        setValue('rerankModel', rerankModels[0].name)
+      }
+    }
+  }, [rerankModels, watch('rerankModel'), setValue])
 
   // Fetch AI models on mount
   useEffect(() => {
@@ -129,7 +145,8 @@ const AiAgentProjectSettings = () => {
         ...project.projectAgent,
         semanticSearchModel: { name: data.semanticSearchModel },
         completionModel: { name: data.completionModel },
-        moderation: { name: data.moderationModel },
+        moderationModel: { name: data.moderationModel },
+        rerankModel: { name: data.rerankModel },
         privateAgent: data.selected === 'private',
         maxToken: data.maxToken,
         temperature: data.temperature,
@@ -137,7 +154,8 @@ const AiAgentProjectSettings = () => {
         maxSearchLimit: data.maxSearchLimit,
         maxCompletionLimit: data.maxCompletionLimit,
         agentBehavior: data.agentBehavior,
-        moderationCheck: data.moderationCheck
+        moderationCheck: data.moderationCheck,
+        rerankEnable: data.rerankEnable
       }
     }
     dispatch(updateProjectAgent({ organizationId, projectId, payload: updatedProjectPayload, token }))
@@ -147,7 +165,6 @@ const AiAgentProjectSettings = () => {
         dispatch(fetchProject({ organizationId, projectId, token }))
       })
       .catch(error => {
-        toast.error(`Failed to update project. Error: ${getErrorMessage(error)}`)
         console.error('Failed to update project', error)
       })
   }
@@ -182,46 +199,90 @@ const AiAgentProjectSettings = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <InputLabel id='search-model'>Semantic Search Model</InputLabel>
+                    <InputLabel id='search-model'></InputLabel>
                     <Controller
                       name='semanticSearchModel'
                       control={control}
                       render={({ field }) => (
-                        <Select
+                        <Autocomplete
                           {...field}
-                          labelId='search-model'
-                          label='Semantic Search Model'
-                          disabled={semanticModels.length === 0}
-                        >
-                          {semanticModels.map(model => (
-                            <MenuItem key={model.id} value={model.name}>
-                              {model.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
+                          options={sortModels(semanticModels)}
+                          getOptionLabel={option => option.name} // Label for autocomplete
+                          onChange={(_, value) => setValue('semanticSearchModel', value?.name)} // Update form state
+                          value={semanticModels.find(model => model.name === watch('semanticSearchModel')) || null} // Set selected value
+                          disableClearable
+                          renderInput={params => <TextField {...params} label='Semantic Search Model' />}
+                          renderOption={(props, option) => (
+                            <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
+                              <Typography variant='body1'>{option.name}</Typography>
+                              <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
+                                {option.aiModelProvider?.name + '   '}
+                                {option.modelTierType?.name === 'FREE_MODEL' && (
+                                  <Box
+                                    component='span'
+                                    sx={{
+                                      ml: 1,
+                                      px: 1.5,
+                                      py: 0.3,
+                                      backgroundColor: '#e0f2f1',
+                                      color: '#00695c',
+                                      fontWeight: 600,
+                                      fontSize: '0.75rem',
+                                      borderRadius: '6px'
+                                    }}
+                                  >
+                                    Free
+                                  </Box>
+                                )}
+                              </Typography>
+                            </Box>
+                          )}
+                        />
                       )}
                     />
                   </FormControl>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <InputLabel id='completion-model'>Completion Model</InputLabel>
+                    <InputLabel id='completion-model'></InputLabel>
                     <Controller
                       name='completionModel'
                       control={control}
                       render={({ field }) => (
-                        <Select
+                        <Autocomplete
                           {...field}
-                          labelId='completion-model'
-                          label='Completion Model'
-                          disabled={completionModels.length === 0}
-                        >
-                          {completionModels.map(model => (
-                            <MenuItem key={model.id} value={model.name}>
-                              {model.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
+                          options={sortModels(completionModels)}
+                          getOptionLabel={option => option.name} // Label for autocomplete
+                          onChange={(_, value) => setValue('completionModel', value?.name)} // Update form state
+                          value={completionModels.find(model => model.name === watch('completionModel')) || null} // Set selected value
+                          disableClearable
+                          renderInput={params => <TextField {...params} label='Completion Model' />}
+                          renderOption={(props, option) => (
+                            <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
+                              <Typography variant='body1'>{option.name}</Typography>
+                              <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
+                                {option.aiModelProvider?.name + '   '}
+                                {option.modelTierType?.name === 'FREE_MODEL' && (
+                                  <Box
+                                    component='span'
+                                    sx={{
+                                      ml: 1,
+                                      px: 1.5,
+                                      py: 0.3,
+                                      backgroundColor: '#e0f2f1',
+                                      color: '#00695c',
+                                      fontWeight: 600,
+                                      fontSize: '0.75rem',
+                                      borderRadius: '6px'
+                                    }}
+                                  >
+                                    Free
+                                  </Box>
+                                )}
+                              </Typography>
+                            </Box>
+                          )}
+                        />
                       )}
                     />
                   </FormControl>
@@ -240,6 +301,19 @@ const AiAgentProjectSettings = () => {
                     />
                   </FormControl>
                 </Grid>
+                <Grid item xs={12} sx={{ mb: 2 }}>
+                  <Typography variant='body2'>
+                    Basic and Pro models require an API key for their
+                    providers.{' '}
+                    <Link
+                      href={`/gendox/organization-settings/?organizationId=${organizationId}&tab=advancedSettings`}
+                      style={{ color: '#1976d2', textDecoration: 'underline', fontWeight: 500 }}
+                    >
+                      Go to Advanced Settings
+                    </Link>
+                  </Typography>
+                </Grid>
+                
                 {/* 2. Agent's Personality */}
                 <Grid item xs={12}>
                   <Divider sx={{ mt: 5, mb: '0 !important' }} />
@@ -324,32 +398,111 @@ const AiAgentProjectSettings = () => {
                         }}
                       />
                     </Grid>
-                    <Grid item xs={12} sm={6} sx={{ mb: 15 }}>
+                    {/* Moderation Check */}
+                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
                       <FormControlLabel
                         label='Moderation Check'
-                        control={<Checkbox {...register('moderationCheck')} />}
+                        control={<Checkbox {...register('moderationCheck')} checked={watch('moderationCheck')} />}
                       />
                     </Grid>
-                    {watch('moderationCheck') && (
-                      <Grid item xs={12} sm={6}>
+
+                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                      {watch('moderationCheck') && (
                         <FormControl fullWidth>
-                          <InputLabel id='moderation'>Moderation</InputLabel>
+                          <InputLabel id='moderation-model-label'></InputLabel>
                           <Controller
                             name='moderationModel'
                             control={control}
                             render={({ field }) => (
-                              <Select
+                              <Autocomplete
                                 {...field}
-                                labelId='moderation'
-                                label='Moderation'
-                                disabled={moderationModels.length === 0}
-                              >
-                                {moderationModels.map(model => (
-                                  <MenuItem key={model.id} value={model.name}>
-                                    {model.name}
-                                  </MenuItem>
-                                ))}
-                              </Select>
+                                options={sortModels(moderationModels)}
+                                getOptionLabel={option => option.name} // Label for autocomplete
+                                onChange={(_, value) => setValue('moderationModel', value?.name)} // Update form state
+                                value={moderationModels.find(model => model.name === watch('moderationModel')) || null} // Set selected value
+                                disableClearable
+                                renderInput={params => <TextField {...params} label='Moderation Model' />}
+                                renderOption={(props, option) => (
+                                  <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
+                                    <Typography variant='body1'>{option.name}</Typography>
+                                    <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
+                                      {option.aiModelProvider?.name + '   '}
+                                      {option.modelTierType?.name === 'FREE_MODEL' && (
+                                        <Box
+                                          component='span'
+                                          sx={{
+                                            ml: 1,
+                                            px: 1.5,
+                                            py: 0.3,
+                                            backgroundColor: '#e0f2f1',
+                                            color: '#00695c',
+                                            fontWeight: 600,
+                                            fontSize: '0.75rem',
+                                            borderRadius: '6px'
+                                          }}
+                                        >
+                                          Free
+                                        </Box>
+                                      )}
+                                    </Typography>
+                                  </Box>
+                                )}
+                              />
+                            )}
+                          />
+                        </FormControl>
+                      )}
+                    </Grid>
+
+                    {/* Rerank Search Results */}
+                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                      <FormControlLabel
+                        label='Rerank Search Results'
+                        control={<Checkbox {...register('rerankEnable')} checked={watch('rerankEnable')} />}
+                      />
+                    </Grid>
+                    {watch('rerankEnable') && (
+                      <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                        <FormControl fullWidth>
+                          <InputLabel id='rerank-model-label'></InputLabel>
+                          <Controller
+                            name='rerankModel'
+                            control={control}
+                            render={({ field }) => (
+                              <Autocomplete
+                                {...field}
+                                options={sortModels(rerankModels)}
+                                getOptionLabel={option => option.name} // Label for autocomplete
+                                onChange={(_, value) => setValue('rerankModel', value?.name)} // Update form state
+                                value={rerankModels.find(model => model.name === watch('rerankModel')) || null} // Set selected value
+                                disableClearable
+                                renderInput={params => <TextField {...params} label='Rerank Model' />}
+                                renderOption={(props, option) => (
+                                  <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
+                                    <Typography variant='body1'>{option.name}</Typography>
+                                    <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
+                                      {option.aiModelProvider?.name + '   '}
+                                      {option.modelTierType?.name === 'FREE_MODEL' && (
+                                        <Box
+                                          component='span'
+                                          sx={{
+                                            ml: 1,
+                                            px: 1.5,
+                                            py: 0.3,
+                                            backgroundColor: '#e0f2f1',
+                                            color: '#00695c',
+                                            fontWeight: 600,
+                                            fontSize: '0.75rem',
+                                            borderRadius: '6px'
+                                          }}
+                                        >
+                                          Free
+                                        </Box>
+                                      )}
+                                    </Typography>
+                                  </Box>
+                                )}
+                              />
                             )}
                           />
                         </FormControl>
@@ -389,20 +542,20 @@ const AiAgentProjectSettings = () => {
                 </Grid>
 
                 {provenAiEnabled && (
-                <Grid item xs={12} sm={6} sx={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <Button
-                    size='large'
-                    variant='outlined'
-                    href={`${provenAiUrl}/provenAI/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                  >
-                    <Box component='span' sx={{ mr: 5 }}>
-                      Go to Proven-Ai
-                    </Box>
-                    <Icon icon='mdi:arrow-right-thin' />
-                  </Button>
-                </Grid>
+                  <Grid item xs={12} sm={6} sx={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <Button
+                      size='large'
+                      variant='outlined'
+                      href={`${provenAiUrl}/provenAI/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                    >
+                      <Box component='span' sx={{ mr: 5 }}>
+                        Go to Proven-Ai
+                      </Box>
+                      <Icon icon='mdi:arrow-right-thin' />
+                    </Button>
+                  </Grid>
                 )}
               </Grid>
             </CardContent>

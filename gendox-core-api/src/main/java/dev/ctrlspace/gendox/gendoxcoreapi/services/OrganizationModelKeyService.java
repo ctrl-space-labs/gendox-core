@@ -110,6 +110,8 @@ public class OrganizationModelKeyService {
             model = agent.getSemanticSearchModel();
         } else if ("MODERATION_MODEL".equals(aiModelType)) {
             model = agent.getModerationModel();
+        } else if ("RERANK_MODEL".equals(aiModelType)) {
+            model = agent.getRerankModel();
         }
 
         // find Organization Key
@@ -141,8 +143,9 @@ public class OrganizationModelKeyService {
         } else if ("SEMANTIC_SEARCH_MODEL".equals(aiModelType)) {
             model = agent.getSemanticSearchModel();
         } else if ("MODERATION_MODEL".equals(aiModelType)) {
-            //always the OpenAI Moderation
-            return environment.getProperty("gendox.models.open_ai.key");
+            model = agent.getModerationModel();
+        } else if ("RERANK_MODEL".equals(aiModelType)) {
+            model = agent.getRerankModel();
         }
 
 
@@ -155,7 +158,6 @@ public class OrganizationModelKeyService {
         String providerKeyProperty = "gendox.models." + model.getAiModelProvider().getName().toLowerCase() + ".key";
 
         logger.info("Using default provider key: {} - for agent: {}", providerKeyProperty, agent.getId());
-
         return environment.getProperty(providerKeyProperty);
 
 

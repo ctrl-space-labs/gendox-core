@@ -1,10 +1,13 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
 
+import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
+import io.micrometer.observation.ObservationRegistry;
 import io.micrometer.tracing.Tracer;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
@@ -15,6 +18,20 @@ import java.util.List;
 
 @Configuration
 public class RestTemplateConfiguration {
+
+    /**
+     * This bean will be used by all @Async methods (because it's named "taskExecutor").
+     * SimpleAsyncTaskExecutor supports virtual threads + task decoration.
+     */
+    @Bean(name = "taskExecutor")
+    public SimpleAsyncTaskExecutor taskExecutor(ObservationRegistry registry) {
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("async-");
+        executor.setVirtualThreads(true);
+        executor.setTaskDecorator(new ObservabilityTaskDecorator(registry));
+        // Set the concurrency limit to not look like a DOS attack :)
+        executor.setConcurrencyLimit(500);
+        return executor;
+    }
 
     @Bean
     public RestTemplate restTemplate(Tracer tracer) {

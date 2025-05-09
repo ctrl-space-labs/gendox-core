@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.VoyageEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeService;
@@ -48,7 +49,8 @@ import java.util.StringJoiner;
         SpringBatchConfiguration.class,
         GendoxAuthenticationToken.class,
         GendoxAPIIntegrationService.class,
-        UniqueIdentifierCodeService.class
+        UniqueIdentifierCodeService.class,
+        VoyageEmbeddingResponseConverter.class
         })
 @EnableCaching
 @EnableJpaRepositories(basePackageClasses = {UserRepository.class})

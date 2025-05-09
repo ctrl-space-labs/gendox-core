@@ -3,7 +3,8 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.CompletionResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.ModerationResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -93,16 +94,18 @@ public class CompletionService {
             })
     public Message getCompletion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
         String question = convertToAiModelTextQuestion(message, nearestSections, projectId);
+        Project project = projectService.getProjectById(projectId);
+        ProjectAgent agent = project.getProjectAgent();
+
         // check moderation
-        String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(question, moderationApiKey);
-        if (openAiGpt35ModerationResponse.getResults().get(0).isFlagged()) {
+        String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(agent, "MODERATION_MODEL");
+        ModerationResponse moderationResponse = trainingService.getModeration(question, moderationApiKey, agent.getModerationModel());
+        if (moderationResponse.getResults().get(0).isFlagged()) {
             throw new GendoxException("MODERATION_CHECK_FAILED", "The question did not pass moderation.", HttpStatus.NOT_ACCEPTABLE);
         }
 
 
-        Project project = projectService.getProjectById(projectId);
-        ProjectAgent agent = project.getProjectAgent();
+
         List<AiModelMessage> previousMessages = messageService.getPreviousMessages(message, 4);
 
         // clone message to avoid changing the original message text in DB

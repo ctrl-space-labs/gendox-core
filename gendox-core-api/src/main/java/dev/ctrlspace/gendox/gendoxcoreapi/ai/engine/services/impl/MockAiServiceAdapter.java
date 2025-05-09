@@ -22,7 +22,7 @@ public class MockAiServiceAdapter {
     @Autowired
     private AiModelRepository aiModelRepository;
 
-    public EmbeddingResponse askEmbedding(BotRequest botRequest) {
+    public EmbeddingResponse askEmbedding(EmbeddingMessage embeddingMessage) {
         logger.debug("Embedding Response from Mock Service.");
         return EmbeddingResponse.builder()
                 .model(OpenAIADA2.MODEL)                .object("list")
@@ -64,12 +64,12 @@ public class MockAiServiceAdapter {
 
     }
 
-    public OpenAiGpt35ModerationResponse moderationCheck(String message) {
-        OpenAiGpt35ModerationResponse.OpenAiGpt35ModerationResult defaultResult = OpenAiGpt35ModerationResponse.OpenAiGpt35ModerationResult.builder()
+    public OpenAiModerationResponse moderationCheck(String message) {
+        OpenAiModerationResponse.OpenAiGpt35ModerationResult defaultResult = OpenAiModerationResponse.OpenAiGpt35ModerationResult.builder()
                 .flagged(false)
                 .build();
 //
-        return OpenAiGpt35ModerationResponse.builder()
+        return OpenAiModerationResponse.builder()
                 .id("default-id")
                 .model("default-model")
                 .results(List.of(defaultResult))

@@ -1,6 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiGpt35ModerationResponse;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
@@ -44,6 +44,7 @@ public class EmbeddingsController {
     private OrganizationModelKeyService organizationModelKeyService;
     private SubscriptionValidationService subscriptionValidationService;
     private ProjectService projectService;
+    private RerankService rerankService;
 
 
     @Value("${proven-ai.enabled}")
@@ -57,7 +58,8 @@ public class EmbeddingsController {
                                 MessageService messageService,
                                 OrganizationModelKeyService organizationModelKeyService,
                                 SubscriptionValidationService subscriptionValidationService,
-                                ProjectService projectService
+                                ProjectService projectService,
+                                RerankService rerankService
     ) {
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
@@ -67,6 +69,7 @@ public class EmbeddingsController {
         this.organizationModelKeyService = organizationModelKeyService;
         this.subscriptionValidationService = subscriptionValidationService;
         this.projectService = projectService;
+        this.rerankService = rerankService;
     }
 
 
@@ -187,6 +190,7 @@ public class EmbeddingsController {
                 PageRequest.of(0, project.getProjectAgent().getMaxSearchLimit().intValue())
         );
 
+        logger.info("Sections found: {}", sections.size());
 
         if (provenAiEnabled) {
             try {
@@ -207,6 +211,22 @@ public class EmbeddingsController {
         List<DocumentInstanceSection> instanceSections = sections.stream()
                 .map(dto -> documentInstanceSectionWithDocumentConverter.toEntity(dto))
                 .toList();
+
+        logger.info("Sections after conversion: {}",
+                instanceSections.stream()
+                        .map(DocumentInstanceSection::getId)
+                        .toList());
+
+        // Rerank the sections
+        if (project.getProjectAgent().getRerankEnable() && !instanceSections.isEmpty()) {
+            instanceSections = rerankService.rerankSections(project.getProjectAgent(), instanceSections, message.getValue());
+            logger.info("Sections after rerank: {}",
+                    instanceSections.stream()
+                            .map(DocumentInstanceSection::getId)
+                            .toList());
+        }
+
+
 
         int maxCompletionLimit = project.getProjectAgent().getMaxCompletionLimit().intValue();
 
@@ -255,14 +275,17 @@ public class EmbeddingsController {
 
 
     @PostMapping("/messages/moderation")
-    public OpenAiGpt35ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
+    public ModerationResponse getModerationCheck(@RequestBody String message) throws GendoxException {
         String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(null, "MODERATION_MODEL");
-        OpenAiGpt35ModerationResponse openAiGpt35ModerationResponse = trainingService.getModeration(message, moderationApiKey);
-        return openAiGpt35ModerationResponse;
+        AiModel aiModel = new AiModel();
+        aiModel.setName("OPENAI_MODERATION");
+        ModerationResponse moderationResponse = trainingService.getModeration(message, moderationApiKey, aiModel);
+        return moderationResponse;
     }
 
     @PostMapping("/messages/moderation/document")
     public Map<Map<String, Boolean>, String> getModerationForDocumentSections(@RequestParam UUID documentId) throws GendoxException {
+
         return trainingService.getModerationForDocumentSections(documentId);
     }
 

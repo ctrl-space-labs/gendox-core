@@ -19,6 +19,7 @@ const ChatInsightAgentContent = ({ projectId, currentThread }) => {
   const { projectDetails: project, isUpdatingProject } = useSelector(state => state.activeProject)
 
   const projectAgent = project?.projectAgent
+  console.log('projectAgent222', projectAgent)
 
   if (isUpdatingProject) {
     return (
@@ -37,7 +38,6 @@ const ChatInsightAgentContent = ({ projectId, currentThread }) => {
 
   return (
     <Card sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
-
       {currentThread && projectAgent ? (
         <Fragment>
           <Box sx={{ position: 'relative', p: 3 }}>
@@ -80,6 +80,24 @@ const ChatInsightAgentContent = ({ projectId, currentThread }) => {
                 </ListItem>
                 <ListItem>
                   <ListItemIcon>
+                    <Icon icon='mdi:shield-check-outline' />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary='Moderation Check'
+                    secondary={projectAgent.moderationCheck ? `${projectAgent.moderationModel?.name}` : 'No'}
+                  />
+                </ListItem>
+                <ListItem>
+                  <ListItemIcon>
+                    <Icon icon='mdi:refresh' />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary='Rerank'
+                    secondary={projectAgent.rerankEnable ? `${projectAgent.rerankModel?.name}` : 'Disabled'}
+                  />
+                </ListItem>
+                <ListItem>
+                  <ListItemIcon>
                     <Icon icon='mdi:file-document-outline' />
                   </ListItemIcon>
                   <ListItemText
@@ -107,6 +125,19 @@ const ChatInsightAgentContent = ({ projectId, currentThread }) => {
                 </ListItem>
                 <ListItem>
                   <ListItemIcon>
+                    <Icon icon='mdi:scale-balance' />
+                  </ListItemIcon>
+                  <ListItemText primary='Max Search Limit' secondary={projectAgent.maxSearchLimit || 'N/A'} />
+                </ListItem>
+
+                <ListItem>
+                  <ListItemIcon>
+                    <Icon icon='mdi:chart-line' />
+                  </ListItemIcon>
+                  <ListItemText primary='Max Completion Limit' secondary={projectAgent.maxCompletionLimit || 'N/A'} />
+                </ListItem>
+                <ListItem>
+                  <ListItemIcon>
                     <Icon icon='mdi:calendar-clock' />
                   </ListItemIcon>
                   <ListItemText
@@ -114,12 +145,7 @@ const ChatInsightAgentContent = ({ projectId, currentThread }) => {
                     secondary={projectAgent.createdAt ? format(parseISO(projectAgent.createdAt), 'PPP') : 'N/A'}
                   />
                 </ListItem>
-                <ListItem>
-                  <ListItemIcon>
-                    <Icon icon='mdi:shield-check-outline' />
-                  </ListItemIcon>
-                  <ListItemText primary='Moderation Check' secondary={projectAgent.moderationCheck ? 'Yes' : 'No'} />
-                </ListItem>
+
                 <ListItem>
                   <ListItemIcon>
                     <Icon icon='mdi:account-key-outline' />
