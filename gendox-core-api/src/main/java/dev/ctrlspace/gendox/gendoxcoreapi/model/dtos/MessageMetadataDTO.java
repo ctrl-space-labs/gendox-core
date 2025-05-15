@@ -40,7 +40,7 @@ import java.util.UUID;
                                 @ColumnResult(name = "documenttitle", type = String.class),
                                 @ColumnResult(name = "sectiontitle", type = String.class),
                                 @ColumnResult(name = "policytypename", type = String.class),
-                                @ColumnResult(name = "policyvalue", type = String[].class)
+                                @ColumnResult(name = "policyvalue")
                         }
                 )
         }
