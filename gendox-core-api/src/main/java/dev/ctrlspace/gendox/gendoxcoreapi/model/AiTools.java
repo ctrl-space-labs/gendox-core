@@ -1,0 +1,33 @@
+package dev.ctrlspace.gendox.gendoxcoreapi.model;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.UUID;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = "ai_tools", schema = "gendox_core")
+public class AiTools {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", nullable = false)
+    private UUID id;
+
+    @Column(name = "type", nullable = false)
+    private String type;  // function
+
+    @Column(name = "json_schema", columnDefinition = "JSONB", nullable = false)
+    private String jsonSchema;
+
+    @JsonBackReference(value = "aiTools")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "agent_id", referencedColumnName = "id", nullable = false)
+    private ProjectAgent agent;
+}

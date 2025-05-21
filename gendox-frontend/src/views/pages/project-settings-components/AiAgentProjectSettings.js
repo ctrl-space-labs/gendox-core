@@ -24,7 +24,7 @@ import toast from 'react-hot-toast'
 import { useSelector, useDispatch } from 'react-redux'
 import { sortModels } from 'src/utils/sortModels'
 import { getErrorMessage } from 'src/utils/errorHandler'
-import { ButtonBase } from '@mui/material'
+import {ButtonBase, DialogActions, DialogTitle, Stack} from '@mui/material'
 import Radio from '@mui/material/Radio'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import IconButton from '@mui/material/IconButton'
@@ -32,6 +32,77 @@ import Tooltip from '@mui/material/Tooltip'
 import { fetchAiModels, updateProjectAgent } from 'src/store/activeProjectAgent/activeProjectAgent'
 import { fetchProject } from 'src/store/activeProject/activeProject'
 import commonConfig from 'src/configs/common.config.js'
+import Dialog from "@mui/material/Dialog";
+import DialogContent from "@mui/material/DialogContent";
+import Chip from "@mui/material/Chip";
+
+
+/* ----------  constants & extra state  ---------- */
+// place near the other hooks / utils
+const toolExamples = [
+  {
+    label: 'open_web_page',
+    schema: `{
+  "name": "open_web_page",
+  "description": "Open a web page",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "URL of the page"
+      }
+    },
+    "required": ["url"]
+  }
+}`
+  },
+  {
+    label: 'fill_form',
+    schema: `{
+  "name": "fill_form",
+  "description": "Fill a form field",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "entries": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "key": { "type": "string" },
+            "value": { "type": "string" }
+          },
+          "required": ["key", "value"]
+        }
+      }
+    },
+    "required": ["entries"]
+  }
+}`
+  },
+  {
+    label: 'get_stock_price',
+    schema: `{
+  "name": "get_stock_price",
+  "description": "Get the current stock price",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "symbol": {
+        "type": "string",
+        "description": "The stock symbol"
+      }
+    },
+    "required": ["symbol"],
+    "additionalProperties": false
+  }
+}`
+  }
+]
 
 const AiAgentProjectSettings = () => {
   const dispatch = useDispatch()
@@ -43,6 +114,43 @@ const AiAgentProjectSettings = () => {
   const { isFetchingAiModels, isUpdatingProjectAgent, aiModels } = useSelector(state => state.activeProjectAgent)
   const { semanticModels, completionModels, moderationModels, rerankModels } = aiModels
   const isLoading = isUpdatingProjectAgent || isFetchingAiModels || isUpdatingProject
+
+  const [selectedExample, setSelectedExample] = useState('')
+  /* ----------  Add these state hooks (place near the other hooks, before the return)  ---------- */
+  const [tools, setTools] = useState(project.projectAgent.tools || [])          // existing tools
+  const [toolModalOpen, setToolModalOpen] = useState(false)                     // add / edit modal
+  const [editingIndex, setEditingIndex] = useState(null)         // index of tool under edit
+  const [toolSchema, setToolSchema] = useState('')                              // JSON string in modal textarea
+
+  const handleAddTool = () => {
+    setEditingIndex(null)
+    setToolSchema('')
+    setToolModalOpen(true)
+  }
+
+  const handleEditTool = (idx) => {
+    setEditingIndex(idx)
+    setToolSchema(JSON.stringify(tools[idx], null, 2))
+    setToolModalOpen(true)
+  }
+
+
+  const handleDeleteTool = (idx) => {
+    setTools(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  const handleCloseToolModal = () => setToolModalOpen(false)
+
+  const handleSaveTool = () => {
+    try {
+      const parsed = JSON.parse(toolSchema)
+      const updated = editingIndex === null ? [...tools, parsed] : tools.map((t, i) => (i === editingIndex ? parsed : t))
+      setTools(updated)
+      setToolModalOpen(false)
+    } catch (err) {
+      toast.error('Invalid JSON')
+    }
+  }
 
   const { id: projectId, organizationId } = project
 
@@ -313,7 +421,7 @@ const AiAgentProjectSettings = () => {
                     </Link>
                   </Typography>
                 </Grid>
-                
+
                 {/* 2. Agent's Personality */}
                 <Grid item xs={12}>
                   <Divider sx={{ mt: 5, mb: '0 !important' }} />
@@ -513,50 +621,155 @@ const AiAgentProjectSettings = () => {
                 <Grid item xs={12} sm={6}>
                   <TextField fullWidth multiline rows={10} label='Agent Behavior' {...register('agentBehavior')} />
                 </Grid>
-                {/* 3. Access */}
-                <Grid item xs={12}>
-                  <Divider sx={{ mt: 5, mb: '0 !important' }} />
-                </Grid>
-                <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography variant='body2' sx={{ fontWeight: 600, color: 'primary.main' }}>
-                    3. Access
-                  </Typography>
-                  <Tooltip title='With a public Agent you can use the API without any authentication, use with caution.'>
-                    <IconButton color='primary' sx={{ ml: 1 }}>
-                      <Icon icon='mdi:information-outline' />
-                    </IconButton>
-                  </Tooltip>
-                </Grid>
-                <Grid container spacing={4} item xs={12} sm={6}>
-                  {AgentPrivate.map(item => (
-                    <ButtonBase key={item.value} onClick={() => setValue('selected', item.value)}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
-                        <Radio checked={watch('selected') === item.value} value={item.value} />
-                        <Box sx={{ ml: 1 }}>
-                          <Typography variant='body1'>{item.title}</Typography>
-                          <Typography variant='body2'>{item.content}</Typography>
-                        </Box>
-                      </Box>
-                    </ButtonBase>
-                  ))}
-                </Grid>
 
-                {provenAiEnabled && (
-                  <Grid item xs={12} sm={6} sx={{ display: 'flex', alignItems: 'flex-end' }}>
-                    <Button
-                      size='large'
-                      variant='outlined'
-                      href={`${provenAiUrl}/provenAI/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                    >
-                      <Box component='span' sx={{ mr: 5 }}>
-                        Go to Proven-Ai
-                      </Box>
-                      <Icon icon='mdi:arrow-right-thin' />
+                {/* 3. Tools */}
+                <>
+                  <Grid item xs={12}>
+                    <Divider sx={{ mt: 5, mb: '0 !important' }} />
+                  </Grid>
+
+                  {/* header + description */}
+                  <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Typography variant='body2' sx={{ fontWeight: 600, color: 'primary.main', mr: 1 }}>
+                      3. Tools
+                    </Typography>
+                    <Tooltip title='Tools are described by a JSON schema. You can start from one of the examples below or write your own.'>
+                      <IconButton color='primary' size='small'>
+                        <Icon icon='mdi:information-outline' />
+                      </IconButton>
+                    </Tooltip>
+                  </Grid>
+
+                  {/* list of existing tools */}
+                  <Grid item xs={12}>
+                    <Stack direction='row' spacing={2} flexWrap='wrap'>
+                      {tools.map((tool, idx) => (
+                        <Tooltip
+                          key={idx}
+                          title={tool.description}
+                          arrow
+                          placement='top'
+                          componentsProps={{
+                            tooltip: {
+                              sx: { whiteSpace: 'pre-line', maxWidth: 300 }
+                            }
+                          }}
+                        >
+                          <Chip
+                            variant='filled'
+                            clickable
+                            onClick={() => handleEditTool(idx)}
+                            onDelete={() => handleDeleteTool(idx)}
+                            deleteIcon={<Icon icon='mdi:close' />}
+                            icon={<Icon icon='mdi:curly-braces' />}
+                            label={tool.name}
+                            sx={{ mb: 1 }}
+                          />
+                        </Tooltip>
+                      ))}
+
+                    </Stack>
+                  </Grid>
+                  {/* add tool button */}
+                  <Grid item xs={12}>
+                    <Button variant='outlined' startIcon={<Icon icon='mdi:plus' />} onClick={handleAddTool}>
+                      Add Tool
                     </Button>
                   </Grid>
-                )}
+
+                  {/* add / edit modal (merged with examples) */}
+                  <Dialog open={toolModalOpen} onClose={handleCloseToolModal} maxWidth='md' fullWidth>
+                    <DialogTitle>{editingIndex === null ? 'Add Tool' : 'Edit Tool'}</DialogTitle>
+
+                    <DialogContent dividers>
+                      {/* example selector */}
+                      <FormControl fullWidth sx={{ mb: 4 }}>
+                        <InputLabel id='example-select-label'>Insert example…</InputLabel>
+                        <Select
+                          labelId='example-select-label'
+                          label='Insert example…'
+                          value={selectedExample}
+                          onChange={e => {
+                            const val = e.target.value
+                            setSelectedExample(val)
+                            const ex = toolExamples.find(t => t.label === val)
+                            if (ex) setToolSchema(ex.schema)
+                          }}
+                        >
+                          {toolExamples.map(ex => (
+                            <MenuItem key={ex.label} value={ex.label}>
+                              {ex.label}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      {/* json editor */}
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={20}
+                        value={toolSchema}
+                        onChange={e => setToolSchema(e.target.value)}
+                        placeholder='Paste or write the tool JSON schema here…'
+                      />
+                    </DialogContent>
+
+                    <DialogActions>
+                      <Button onClick={handleCloseToolModal}>Cancel</Button>
+                      <Button variant='contained' onClick={handleSaveTool}>
+                        Save
+                      </Button>
+                    </DialogActions>
+                  </Dialog>
+                </>
+
+                {/* 4. Access */}
+                <>
+                  <Grid item xs={12}>
+                    <Divider sx={{ mt: 5, mb: '0 !important' }} />
+                  </Grid>
+                  <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography variant='body2' sx={{ fontWeight: 600, color: 'primary.main' }}>
+                      4. Access
+                    </Typography>
+                    <Tooltip title='With a public Agent you can use the API without any authentication, use with caution.'>
+                      <IconButton color='primary' sx={{ ml: 1 }}>
+                        <Icon icon='mdi:information-outline' />
+                      </IconButton>
+                    </Tooltip>
+                  </Grid>
+                  <Grid container spacing={4} item xs={12} sm={6}>
+                    {AgentPrivate.map(item => (
+                      <ButtonBase key={item.value} onClick={() => setValue('selected', item.value)}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+                          <Radio checked={watch('selected') === item.value} value={item.value} />
+                          <Box sx={{ ml: 1 }}>
+                            <Typography variant='body1'>{item.title}</Typography>
+                            <Typography variant='body2'>{item.content}</Typography>
+                          </Box>
+                        </Box>
+                      </ButtonBase>
+                    ))}
+                  </Grid>
+
+                  {provenAiEnabled && (
+                    <Grid item xs={12} sm={6} sx={{ display: 'flex', alignItems: 'flex-end' }}>
+                      <Button
+                        size='large'
+                        variant='outlined'
+                        href={`${provenAiUrl}/provenAI/agent-control/?organizationId=${organizationId}&agentId=${project.projectAgent.id}`}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                      >
+                        <Box component='span' sx={{ mr: 5 }}>
+                          Go to Proven-Ai
+                        </Box>
+                        <Icon icon='mdi:arrow-right-thin' />
+                      </Button>
+                    </Grid>
+                  )}
+                </>
               </Grid>
             </CardContent>
             <Divider sx={{ mt: 5, mb: '0 !important' }} />

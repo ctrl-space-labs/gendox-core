@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -9,6 +10,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -115,6 +117,10 @@ public class ProjectAgent {
     @ManyToOne
     @JoinColumn(name= "rerank_model_id", referencedColumnName = "id", nullable = true)
     private AiModel rerankModel;
+
+    @JsonManagedReference(value = "aiTools")
+    @OneToMany(mappedBy = "agent")
+    private List<AiTools> aiTools;
 
     public UUID getId() {
         return id;
