@@ -1,10 +1,13 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
 
@@ -23,9 +26,11 @@ public class AiTools {
     @Column(name = "type", nullable = false)
     private String type;  // function
 
+    @JdbcTypeCode(SqlTypes.JSON)        // transform it to jsonb in postgresql
     @Column(name = "json_schema", columnDefinition = "JSONB", nullable = false)
     private String jsonSchema;
 
+    @JsonIgnore
     @JsonBackReference(value = "aiTools")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "agent_id", referencedColumnName = "id", nullable = false)

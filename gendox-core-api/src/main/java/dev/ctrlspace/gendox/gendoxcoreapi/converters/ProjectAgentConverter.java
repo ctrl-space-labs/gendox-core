@@ -40,6 +40,8 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
             projectAgentDTO.setRerankModel(projectAgent.getRerankModel());
         }
 
+        projectAgentDTO.setAiTools(projectAgent.getAiTools());
+
 
         return projectAgentDTO;
     }
@@ -77,6 +79,8 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         if (projectAgentDTO.getRerankModel() != null) {
             projectAgent.setRerankModel(projectAgentDTO.getRerankModel());
         }
+
+        projectAgent.setAiTools(projectAgentDTO.getAiTools());
 
         return projectAgent;
     }

@@ -1,9 +1,9 @@
 CREATE TABLE IF NOT EXISTS gendox_core.ai_tools
 (
-    id          UUID PRIMARY KEY,
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    agent_id    UUID  NOT NULL,
     type        TEXT  NOT NULL,
     json_schema JSONB NOT NULL,
-    agent_id    UUID  NOT NULL,
     FOREIGN KEY (agent_id) REFERENCES gendox_core.project_agent (id)
         ON DELETE CASCADE
 );
@@ -48,9 +48,7 @@ SELECT
     'FILL_FIELDS',
     $${
     "name": "fill_fields",
-    "description": "Generic function to fill a form or apply filters or in general apply key–value combinations on the current webpage. Use this to:\n" ||
-                   "  • Fill out a form (e.g. 'firstName':'Jane', 'lastName':'Doe', 'email':'jane.doe@example.com').\n" ||
-                   "  • Apply filters (e.g. 'color':'red', 'color':'blue', 'size':'M', 'brand':'Acme').",
+    "description": "Generic function to fill a form or apply filters or in general apply key–value combinations on the current webpage. Use this to:\n  • Fill out a form (e.g. 'firstName':'Jane', 'lastName':'Doe', 'email':'jane.doe@example.com').\n  • Apply filters (e.g. 'color':'red', 'color':'blue', 'size':'M', 'brand':'Acme').",
     "strict": true,
     "parameters": {
       "type": "object",

@@ -10,6 +10,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -119,8 +120,8 @@ public class ProjectAgent {
     private AiModel rerankModel;
 
     @JsonManagedReference(value = "aiTools")
-    @OneToMany(mappedBy = "agent")
-    private List<AiTools> aiTools;
+    @OneToMany(mappedBy = "agent", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<AiTools> aiTools = new ArrayList<>();
 
     public UUID getId() {
         return id;
@@ -324,16 +325,25 @@ public class ProjectAgent {
         this.rerankModel = rerankModel;
     }
 
+    public List<AiTools> getAiTools() {
+        return aiTools;
+    }
+
+    public void setAiTools(List<AiTools> aiTools) {
+        this.aiTools = aiTools;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ProjectAgent that = (ProjectAgent) o;
-        return Objects.equals(id, that.id) && Objects.equals(project, that.project) && Objects.equals(userId, that.userId) && Objects.equals(semanticSearchModel, that.semanticSearchModel) && Objects.equals(completionModel, that.completionModel) && Objects.equals(agentName, that.agentName) && Objects.equals(agentBehavior, that.agentBehavior) && Objects.equals(privateAgent, that.privateAgent) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(documentSplitterType, that.documentSplitterType) && Objects.equals(chatTemplateId, that.chatTemplateId) && Objects.equals(sectionTemplateId, that.sectionTemplateId) && Objects.equals(maxToken, that.maxToken) && Objects.equals(temperature, that.temperature) && Objects.equals(topP, that.topP) && Objects.equals(moderationCheck, that.moderationCheck) && Objects.equals(moderationModel, that.moderationModel) && Objects.equals(agentVcJwt, that.agentVcJwt) && Objects.equals(organizationDid, that.organizationDid) && Objects.equals(maxSearchLimit, that.maxSearchLimit) && Objects.equals(maxCompletionLimit, that.maxCompletionLimit) && Objects.equals(rerankEnable, that.rerankEnable) && Objects.equals(rerankModel, that.rerankModel);
+        return Objects.equals(id, that.id) && Objects.equals(project, that.project) && Objects.equals(userId, that.userId) && Objects.equals(semanticSearchModel, that.semanticSearchModel) && Objects.equals(completionModel, that.completionModel) && Objects.equals(agentName, that.agentName) && Objects.equals(agentBehavior, that.agentBehavior) && Objects.equals(privateAgent, that.privateAgent) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(documentSplitterType, that.documentSplitterType) && Objects.equals(chatTemplateId, that.chatTemplateId) && Objects.equals(sectionTemplateId, that.sectionTemplateId) && Objects.equals(maxToken, that.maxToken) && Objects.equals(temperature, that.temperature) && Objects.equals(topP, that.topP) && Objects.equals(moderationCheck, that.moderationCheck) && Objects.equals(moderationModel, that.moderationModel) && Objects.equals(agentVcJwt, that.agentVcJwt) && Objects.equals(organizationDid, that.organizationDid) && Objects.equals(maxSearchLimit, that.maxSearchLimit) && Objects.equals(maxCompletionLimit, that.maxCompletionLimit) && Objects.equals(rerankEnable, that.rerankEnable) && Objects.equals(rerankModel, that.rerankModel) && Objects.equals(aiTools, that.aiTools);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, project, userId, semanticSearchModel, completionModel, agentName, agentBehavior, privateAgent, createdAt, updatedAt, createdBy, updatedBy, documentSplitterType, chatTemplateId, sectionTemplateId, maxToken, temperature, topP, moderationCheck, moderationModel, agentVcJwt, organizationDid, maxSearchLimit, maxCompletionLimit, rerankEnable, rerankModel);
+        return Objects.hash(id, project, userId, semanticSearchModel, completionModel, agentName, agentBehavior, privateAgent, createdAt, updatedAt, createdBy, updatedBy, documentSplitterType, chatTemplateId, sectionTemplateId, maxToken, temperature, topP, moderationCheck, moderationModel, agentVcJwt, organizationDid, maxSearchLimit, maxCompletionLimit, rerankEnable, rerankModel, aiTools);
     }
 }

@@ -176,7 +176,10 @@ export default {
   chatThread: (organizationId, threadId) =>
     `${url}organizations/${organizationId}/threads/${threadId}`,
 
-  userLogout: () => `${url}users/logout`
+  userLogout: () => `${url}users/logout`,
+
+
+  getToolExamples: () => `${url}types/ai-tool-examples`,
 
 
 };
