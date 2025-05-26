@@ -15,10 +15,19 @@ public class MessageAiMessageConverter implements GendoxConverter<Message, AiMod
 
     @Override
     public AiModelMessage toDTO(Message message) throws GendoxException {
+        String role = "user";
+        if (message.getRole() != null) {
+            role = message.getRole();
+        }
+
+
 
         return AiModelMessage.builder()
-                .role("user")
+                .role(role)
                 .content(message.getValue())
+                .name(message.getName())
+                .toolCallId(message.getToolCallId())
+                .toolCalls(message.getToolCalls())
                 .build();
 
 
@@ -28,6 +37,12 @@ public class MessageAiMessageConverter implements GendoxConverter<Message, AiMod
     public Message toEntity(AiModelMessage aiModelMessage) {
         Message message = new Message();
         message.setValue(aiModelMessage.getContent());
+        message.setRole(aiModelMessage.getRole());
+        message.setName(aiModelMessage.getName());
+        message.setToolCallId(aiModelMessage.getToolCallId());
+        message.setToolCalls(aiModelMessage.getToolCalls());
+
+
         return message;
     }
 

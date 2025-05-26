@@ -2,6 +2,8 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,7 +23,10 @@ import java.util.UUID;
                         columns = {
                                 @ColumnResult(name = "id", type = UUID.class),
                                 @ColumnResult(name = "value", type = String.class),
+                                @ColumnResult(name = "role", type = String.class),
+                                @ColumnResult(name = "tool_call_id", type = String.class),
                                 @ColumnResult(name = "name", type = String.class),
+                                @ColumnResult(name = "tool_calls", type = JsonNode.class),
                                 @ColumnResult(name = "created_at", type = Instant.class)
                         }
                 )
@@ -30,7 +35,7 @@ import java.util.UUID;
 @NamedNativeQuery(
         name = "AiModelMessage.findPreviousMessages",
         query = """
-                select m.id, m.value, t.name, m.created_at
+                select m.id, m.value, m.role, m.tool_call_id, m.name, m.tool_calls, m.created_at
                 from gendox_core.message m
                          left join gendox_core.users u on u.id = m.created_by
                          left join gendox_core.types t on t.id = u.users_type_id
@@ -50,6 +55,19 @@ public class AiModelMessage {
     private UUID id;
     private String content;
     private String role;
+    @JsonProperty("tool_call_id")
+    private String toolCallId;
+    private String name;
+    @JsonProperty("tool_calls")
+    private JsonNode toolCalls;
+
     @JsonIgnore
     private Instant createdAt;
+
+//    public AiModelMessage(UUID id, String content, String role, Instant createdAt) {
+//        this.id = id;
+//        this.content = content;
+//        this.role = role;
+//        this.createdAt = createdAt;
+//    }
 }

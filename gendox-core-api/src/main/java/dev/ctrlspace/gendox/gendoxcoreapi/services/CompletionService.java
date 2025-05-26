@@ -1,5 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.CompletionResponse;
@@ -8,6 +11,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.O
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
@@ -46,6 +50,8 @@ public class CompletionService {
 
     private AiModelUtils aiModelUtils;
 
+    private ObjectMapper objectMapper;
+
     @Autowired
     public CompletionService(ProjectService projectService,
                              MessageAiMessageConverter messageAiMessageConverter,
@@ -59,7 +65,8 @@ public class CompletionService {
                              OrganizationModelKeyService organizationModelKeyService,
                              MessageService messageService,
                              AuditLogsService auditLogsService,
-                             DocumentUtils documentUtils) {
+                             DocumentUtils documentUtils,
+                             ObjectMapper objectMapper) {
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
         this.embeddingService = embeddingService;
@@ -72,14 +79,15 @@ public class CompletionService {
         this.messageService = messageService;
         this.auditLogsService = auditLogsService;
         this.documentUtils = documentUtils;
+        this.objectMapper = objectMapper;
     }
 
     private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
-                                                        AiModelRequestParams aiModelRequestParams, String apiKey) throws GendoxException {
+                                                        AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools) throws GendoxException {
 
         //choose the correct aiModel adapter
         AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
-        CompletionResponse completionResponse = aiModelApiAdapterService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey);
+        CompletionResponse completionResponse = aiModelApiAdapterService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey, tools);
         return completionResponse;
     }
 
@@ -96,6 +104,7 @@ public class CompletionService {
         String question = convertToAiModelTextQuestion(message, nearestSections, projectId);
         Project project = projectService.getProjectById(projectId);
         ProjectAgent agent = project.getProjectAgent();
+        List<AiTools> availableTools = agent.getAiTools();
 
         // check moderation
         String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(agent, "MODERATION_MODEL");
@@ -111,10 +120,13 @@ public class CompletionService {
         // clone message to avoid changing the original message text in DB
         AiModelMessage promptMessage = AiModelMessage.builder()
                 .content(question)
-                .role("user")
+                .role(message.getRole() != null ? message.getRole() : "user")
                 .build();
 
         previousMessages.add(promptMessage);
+
+        // TODO detect infinite loop of Agent calling with multiple messages of role "assistant" or "tool".
+        // ......
 
         String apiKey = embeddingService.getApiKey(agent, "COMPLETION_MODEL");
 
@@ -128,7 +140,8 @@ public class CompletionService {
                 project.getProjectAgent().getAgentBehavior(),
                 project.getProjectAgent().getCompletionModel(),
                 aiModelRequestParams,
-                apiKey);
+                apiKey,
+                availableTools);
 
         //        completion request audits
         Type completionRequestType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
@@ -154,8 +167,108 @@ public class CompletionService {
         completionResponseMessage.setUpdatedBy(agent.getUserId());
         completionResponseMessage = messageService.createMessage(completionResponseMessage);
 
+//        return completionResponseMessage;
+
+        List<AiModelMessage> toolResponseMessages = new ArrayList<>();
+        // TODO Handle tool calling
+        if ("tool_calls".equals(completionResponse.getChoices().getFirst().getFinishReason())) {
+            logger.info("Tool calls detected in completion response");
+//            completionResponse.getChoices().getFirst().getMessage().setContent(
+//                    "Calling tool: " + completionResponse.getChoices().getFirst().getMessage().getToolCalls().get(0).get("function").get("name").asText());
+
+            toolResponseMessages = handleToolExecution(completionResponseMessage, project, agent, availableTools);
+
+            // Save tool response messages.
+            toolResponseMessages.forEach(toolResponseMessage -> {
+                Message toolResponse = messageAiMessageConverter.toEntity(toolResponseMessage);
+                toolResponse.setProjectId(projectId);
+                toolResponse.setThreadId(message.getThreadId());
+                toolResponse.setCreatedBy(agent.getUserId());
+                toolResponse.setUpdatedBy(agent.getUserId());
+                messageService.createMessage(toolResponse);
+            });
+
+            // if all tools have response get final completion from the agents
+            if (toolResponseMessages.size() == completionResponseMessage.getToolCalls().size()) {
+                previousMessages.add(completionResponse.getChoices().get(0).getMessage());
+                previousMessages.addAll(toolResponseMessages);
+
+                CompletionResponse finalResponse = getCompletionForMessages(previousMessages,
+                        project.getProjectAgent().getAgentBehavior(),
+                        project.getProjectAgent().getCompletionModel(),
+                        aiModelRequestParams,
+                        apiKey,
+                        availableTools);
+
+
+                Message finalCompletionMessage = messageAiMessageConverter.toEntity(finalResponse.getChoices().get(0).getMessage());
+
+                finalCompletionMessage.setProjectId(projectId);
+                finalCompletionMessage.setThreadId(message.getThreadId());
+                finalCompletionMessage.setCreatedBy(agent.getUserId());
+                finalCompletionMessage.setUpdatedBy(agent.getUserId());
+                finalCompletionMessage = messageService.createMessage(finalCompletionMessage);
+
+                completionResponseMessage = finalCompletionMessage;
+            }
+        }
+
+
         return completionResponseMessage;
 
+    }
+
+    /**
+     * executes the tools that requested by the agent in the completion response.
+     * returns a list of messages that contains the result of the tool execution.
+     *
+     * If the tool execution type is "backend" then it executed the function calling
+     * if the execution is for the "frontend" then it just returns the message for the frontend to handle it.
+     *
+     * @param completionResponseMessage
+     * @param project
+     * @param agent
+     * @param availableTools
+     * @return
+     */
+    private List<AiModelMessage> handleToolExecution(Message completionResponseMessage, Project project, ProjectAgent agent, List<AiTools> availableTools) {
+        Map<String, AiTools> toolMap = new HashMap<>();
+        //map available tools for quick lookup, parse the jsonSchema to JsonNode and find the .function.name property
+        availableTools.forEach(tool -> {
+
+            JsonNode functionObj = null; // json_schema is the whole function block
+            try {
+                functionObj = objectMapper.readTree(tool.getJsonSchema());
+            } catch (JsonProcessingException e) {
+                throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "AI_TOOL_NOT_PROPER_JSON_SCHEMA", "Tool json schema is not a valid JSON", e);
+            }
+            String toolName = functionObj.get("name").asText();
+            toolMap.put(toolName, tool);
+        });
+
+
+        List<AiModelMessage> toolExecutionMessages = new ArrayList<>();
+
+        completionResponseMessage.getToolCalls().forEach(toolCall -> {
+            String toolName = toolCall.get("function").get("name").asText();
+            AiTools tool = toolMap.get(toolName);
+            if (tool == null) {
+                throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "AI_TOOL_NOT_FOUND", "Tool with name " + toolName + " not found in available tools");
+            }
+
+            // TODO add support for actual backend tool execution
+
+            // Here you would execute the tool using the toolCall parameters and the tool's jsonSchema
+            // For now, we will just support frontend actions with no feedback to the llm
+            AiModelMessage message = new AiModelMessage();
+            message.setRole("tool");
+            message.setToolCallId(toolCall.get("id").asText());
+            message.setName(toolName);
+            message.setContent("{\"status\": \"executed\"}");
+            toolExecutionMessages.add(message);
+        });
+
+        return toolExecutionMessages;
     }
 
 

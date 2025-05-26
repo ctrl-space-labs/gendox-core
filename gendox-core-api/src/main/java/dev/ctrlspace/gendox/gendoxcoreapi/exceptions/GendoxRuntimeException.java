@@ -14,6 +14,13 @@ public class GendoxRuntimeException extends RuntimeException {
         this.message = message;
     }
 
+    public GendoxRuntimeException(HttpStatus status, String messageCode, String message, Throwable cause) {
+        super(message, cause);
+        this.status = status;
+        this.messageCode = messageCode;
+        this.message = message;
+    }
+
     public HttpStatus getStatus() {
         return status;
     }

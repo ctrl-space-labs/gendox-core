@@ -9,6 +9,27 @@ CREATE TABLE IF NOT EXISTS gendox_core.ai_tools
 );
 
 
+ALTER TABLE gendox_core.message
+    ADD COLUMN IF NOT EXISTS role           TEXT,
+    ADD COLUMN IF NOT EXISTS name           TEXT,
+    ADD COLUMN IF NOT EXISTS tool_call_id   TEXT,
+    ADD COLUMN IF NOT EXISTS tool_calls     JSONB;
+
+
+UPDATE gendox_core.message AS m
+SET role = CASE
+               WHEN t.name = 'GENDOX_USER'  THEN 'user'
+               WHEN t.name = 'GENDOX_AGENT' THEN 'assistant'
+               ELSE m.role  -- leave anything else (including NULL) untouched
+    END
+FROM gendox_core.users AS u
+         JOIN gendox_core.types AS t
+              ON u.users_type_id = t.id
+WHERE m.created_by = u.id
+  AND m.role IS NULL               -- only fill where it's still null
+  AND t.name IN ('GENDOX_USER','GENDOX_AGENT');
+
+
 
 -- 1) open_web_page tool
 INSERT INTO gendox_core.types (type_category, name, description)

@@ -70,6 +70,10 @@ public class MessageService {
             message.setUpdatedBy(securityUtils.getUserId());
         }
 
+        if (message.getRole() == null) {
+            message.setRole("user");
+        }
+
         message = messageRepository.save(message);
 
         return message;
@@ -152,34 +156,26 @@ public class MessageService {
      * Get the previous messages from the same thread for a given message
      * The messages are ordered by creation date, the oldest message is the first in the list
      *
+     * Note: the first message will be from the role 'user', so we drop all messages before that
+     *
      * @param message
      * @param size
      * @return
      */
     public List<AiModelMessage> getPreviousMessages(Message message, int size) {
         List<AiModelMessage> previousMessages = messageRepository.findPreviousMessages(message.getThreadId(), message.getCreatedAt(), size);
-        previousMessages.forEach(m -> m.setRole(completionRole(m.getRole())));
         // from the latest 4 messages, the first one is the oldest
         Collections.reverse(previousMessages);
-        return previousMessages;
-    }
 
-    /**
-     * Transform the role of the message to the one expected by the AI model provider
-     * eg. GENDOX_USER (or null) -> user
-     * eg. GENDOX_AGENT -> assistant
-     *
-     * @param role
-     * @return
-     */
-    public String completionRole(String role) {
-        if (role == null || "GENDOX_USER".equals(role)) {
-            return "user";
+
+        //drop initial messages, until the 1st message is from role 'user'
+        for (int i = 0; i < previousMessages.size(); i++) {
+            if (previousMessages.get(i).getRole().equals("user")) {
+                previousMessages = previousMessages.subList(i, previousMessages.size());
+                break;
+            }
         }
-        if ("GENDOX_AGENT".equals(role)) {
-            return "assistant";
-        }
-        return role;
+        return previousMessages;
     }
 
     @Transactional

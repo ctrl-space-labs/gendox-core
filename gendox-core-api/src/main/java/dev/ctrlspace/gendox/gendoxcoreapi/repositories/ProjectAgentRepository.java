@@ -15,7 +15,7 @@ import java.util.UUID;
 @Repository
 public interface ProjectAgentRepository extends JpaRepository<ProjectAgent, UUID>, QuerydslPredicateExecutor<ProjectAgent> {
 
-    @EntityGraph(attributePaths = {"project", "semanticSearchModel", "completionModel, aiTools"})
+    @EntityGraph(attributePaths = {"project", "semanticSearchModel", "completionModel", "aiTools"})
     ProjectAgent findByProjectId(UUID projectId);
 
     //is public agent
