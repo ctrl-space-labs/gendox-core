@@ -15,8 +15,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder(toBuilder = true)
 public class CompletionMessageDTO {
-    private Message message;
-    private UUID threadID;
+    private List<Message> messages;
+    private UUID threadId;
     private List<ProvenAiMetadata> provenAiMetadata;
     // TODO review this to add more metadata about the sections involved in the response
 

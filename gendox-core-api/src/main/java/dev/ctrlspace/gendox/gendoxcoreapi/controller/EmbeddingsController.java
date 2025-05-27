@@ -239,14 +239,18 @@ public class EmbeddingsController {
                 .collect(Collectors.toList());
 
 
-        Message completion = completionService.getCompletion(message, participantInstanceSections, UUID.fromString(projectId));
+        List<Message> completions = completionService.getCompletion(message, participantInstanceSections, UUID.fromString(projectId));
 
-        List<MessageSection> participantMessageSections = messageService.createMessageSections(participantInstanceSections, completion, true);
-        List<MessageSection> unParticipantMessageSections = messageService.createMessageSections(unParticipantInstanceSections, completion, false);
-
-
-        completion = messageService.updateMessageWithSections(completion, participantMessageSections);
-
+        List<MessageSection> participantMessageSections;
+        List<MessageSection> unParticipantMessageSections;
+        for (Message m : completions) {
+            if (m.getRole().equals("assistant")) {
+                //each agent message connected with the sections
+                participantMessageSections = messageService.createMessageSections(participantInstanceSections, m, true);
+                unParticipantMessageSections = messageService.createMessageSections(unParticipantInstanceSections, m, false);
+                messageService.updateMessageWithSections(m, participantMessageSections);
+            }
+        }
 
         List<UUID> sectionIds = sections.stream()
                 .map(DocumentInstanceSectionDTO::getId)
@@ -265,10 +269,11 @@ public class EmbeddingsController {
                         .build())
                 .collect(Collectors.toList());
 
+        Message lastMessage = completions.isEmpty() ? null : completions.get(completions.size() - 1);
 
         return CompletionMessageDTO.builder()
-                .message(completion)
-                .threadID(message.getThreadId())
+                .messages(completions)
+                .threadId(message.getThreadId())
                 .provenAiMetadata(sectionInfos) // Populate with detailed section info
                 .build();
     }

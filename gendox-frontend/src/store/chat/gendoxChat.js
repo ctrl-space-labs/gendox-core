@@ -167,8 +167,8 @@ export const sendMessage = createAsyncThunk(
     dispatch(
       addMessage({
         createdBy: user.id,
-        text: message,
-        createdAt: new Date()
+        value: message,
+        createdAt: new Date().toISOString()
       })
     )
 
@@ -195,24 +195,38 @@ export const sendMessage = createAsyncThunk(
       token
     )
 
+
+    const {
+      messages: apiMessages = [],
+      threadId: responseThreadId
+    } = response.data
+
     // sending PostMessage notification
     iFrameMessageManager.messageManager.sendMessage({
       type: 'gendox.events.chat.message.new.response.received',
-      payload: response.data.message.value
+      payload: response.data.messages
     })
 
-    const { id, value, messageSections, threadId: responseThreadId, createdAt: createdAt } = response.data.message
+    const toolCallsToProcess = []
 
-    dispatch(
-      addMessage({
-        id,
-        text: value,
-        sections: messageSections,
-        time: createdAt,
-        createdBy: agentId,
-        createdAt
-      })
-    )
+    apiMessages.forEach(message => {
+
+      dispatch(
+        addMessage(message)
+      )
+
+      // If this message invoked any tool calls, stash them for later
+      if (Array.isArray(message?.toolCalls) && message?.toolCalls.length) {
+        console.log("Message has tool calls: ", message.toolCalls)
+        message.toolCalls.forEach(call => {
+          toolCallsToProcess.push({
+            threadId:       responseThreadId,
+            messageId:      message.id,
+            ...call
+          })
+        })
+      }
+    })
 
     const isNewThread = !threadId
     const finalThreadId = isNewThread ? responseThreadId : threadId
@@ -233,13 +247,7 @@ export const sendMessage = createAsyncThunk(
 )
 
 export const addMessage = createAsyncThunk('gendoxChat/pushMessage', async (message, { dispatch, getState }) => {
-  return {
-    messageId: message.id,
-    message: message.text,
-    sections: message.sections,
-    createdAt: message.createdAt,
-    createdBy: message.createdBy
-  }
+  return chatConverter.gendoxMessageToThreadMessage(message)
 })
 
 export const fetchThreadId = createAsyncThunk('gendoxChat/fetchThreadId', async (arg, thunkAPI) => {

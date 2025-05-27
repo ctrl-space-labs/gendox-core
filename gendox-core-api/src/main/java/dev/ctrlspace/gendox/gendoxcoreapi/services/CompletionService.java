@@ -100,7 +100,7 @@ public class CompletionService {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public Message getCompletion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
+    public List<Message> getCompletion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
         String question = convertToAiModelTextQuestion(message, nearestSections, projectId);
         Project project = projectService.getProjectById(projectId);
         ProjectAgent agent = project.getProjectAgent();
@@ -169,7 +169,9 @@ public class CompletionService {
 
 //        return completionResponseMessage;
 
-        List<AiModelMessage> toolResponseMessages = new ArrayList<>();
+        List<Message> allResponseMessages = new ArrayList<>();
+        allResponseMessages.add(completionResponseMessage);
+        List<AiModelMessage> toolResponseMessages;
         // TODO Handle tool calling
         if ("tool_calls".equals(completionResponse.getChoices().getFirst().getFinishReason())) {
             logger.info("Tool calls detected in completion response");
@@ -186,6 +188,7 @@ public class CompletionService {
                 toolResponse.setCreatedBy(agent.getUserId());
                 toolResponse.setUpdatedBy(agent.getUserId());
                 messageService.createMessage(toolResponse);
+                allResponseMessages.add(toolResponse);
             });
 
             // if all tools have response get final completion from the agents
@@ -209,12 +212,12 @@ public class CompletionService {
                 finalCompletionMessage.setUpdatedBy(agent.getUserId());
                 finalCompletionMessage = messageService.createMessage(finalCompletionMessage);
 
-                completionResponseMessage = finalCompletionMessage;
+                allResponseMessages.add(finalCompletionMessage);
             }
         }
 
 
-        return completionResponseMessage;
+        return allResponseMessages;
 
     }
 
