@@ -47,46 +47,46 @@ public class TypeService {
 
     }
 
-    public Type getGroupingTypeByName(String groupingName){
+    public Type getGroupingTypeByName(String groupingName) {
         return typeRepository.findByTypeCategoryAndName("GROUPING_STRATEGY_TYPE", groupingName)
                 .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "GROUPING_STRATEGY_TYPE_NOT_FOUND", "Grouping strategy field type not found with name: " + groupingName));
 
     }
 
-    public Type getUserTypeByName(String userTypeName){
+    public Type getUserTypeByName(String userTypeName) {
         return typeRepository.findByTypeCategoryAndName("USER_TYPE", userTypeName)
                 .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "USER_TYPE_NOT_FOUND", "User field type not found with name: " + userTypeName));
 
     }
 
-    public Type getEmailInvitationStatusByName(String emailStatusName){
+    public Type getEmailInvitationStatusByName(String emailStatusName) {
         return typeRepository.findByTypeCategoryAndName("USER_INVITATION_STATUS", emailStatusName)
                 .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "EMAIL_INVITATION_STATUS_TYPE_NOT_FOUND", "Email invitation status field type not found with name: " + emailStatusName));
 
     }
 
-    public Type getGlobalApplicationRoleTypeByName(String globalApplicationRoleTypeName){
+    public Type getGlobalApplicationRoleTypeByName(String globalApplicationRoleTypeName) {
         return typeRepository.findByTypeCategoryAndName("GLOBAL_APPLICATION_ROLE_TYPE", globalApplicationRoleTypeName)
                 .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "GLOBAL_APPLICATION_ROLE_TYPE_NOT_FOUND", "Global application role field type not found with name: " + globalApplicationRoleTypeName));
 
     }
 
 
-    public Type getDocumentSplitterTypeByName(String splitterName){
+    public Type getDocumentSplitterTypeByName(String splitterName) {
         return typeRepository.findByTypeCategoryAndName("DOCUMENT_SPLITTER_TYPE", splitterName)
                 .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "DOCUMENT_SPLITTER_TYPE_NOT_FOUND", "Document splitter field type not found with name: " + splitterName));
 
     }
 
 
-    public Type getIntegrationTypeByName(String integrationName){
+    public Type getIntegrationTypeByName(String integrationName) {
         return typeRepository.findByTypeCategoryAndName("INTEGRATION_TYPE", integrationName)
                 .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "INTEGRATION_TYPE_NOT_FOUND", "Integration field type not found with name: " + integrationName));
     }
 
 
     //AUDIT_LOG_TYPES
-    public Type getAuditLogTypeByName(String auditLogTypeName){
+    public Type getAuditLogTypeByName(String auditLogTypeName) {
         return typeRepository.findByTypeCategoryAndName("AUDIT_LOG_TYPE", auditLogTypeName)
                 .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "AUDIT_LOG_TYPE_NOT_FOUND", "Audit log field type not found with name: " + auditLogTypeName));
 
@@ -94,21 +94,21 @@ public class TypeService {
     }
 
     //AI_MODEL_TYPES
-    public Type getAiModelTypeByName(String aiModelTypeName){
+    public Type getAiModelTypeByName(String aiModelTypeName) {
         return typeRepository.findByTypeCategoryAndName("AI_MODEL_TYPE", aiModelTypeName)
                 .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "AI_MODEL_TYPE_NOT_FOUND", "AI model field type not found with name: " + aiModelTypeName));
 
     }
 
     //File Types
-    public Type getFileTypeByName(String fileTypeName){
+    public Type getFileTypeByName(String fileTypeName) {
         return typeRepository.findByTypeCategoryAndName("FILE_TYPE", fileTypeName)
                 .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "FILE_TYPE_NOT_FOUND", "File field type not found with name: " + fileTypeName));
 
     }
 
     //Api Rate Limit Types
-    public Type getApiRateLimitTypeByName(String apiRateLimitTypeName){
+    public Type getApiRateLimitTypeByName(String apiRateLimitTypeName) {
         return typeRepository.findByTypeCategoryAndName("API_RATE_LIMIT_TYPE", apiRateLimitTypeName)
                 .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "API_RATE_LIMIT_TYPE_NOT_FOUND", "Api rate limit field type not found with name: " + apiRateLimitTypeName));
 
@@ -116,12 +116,30 @@ public class TypeService {
 
 
     // get all types by type category
-    public List<Type> getTypeCategories(String typeCategory){
+    public List<Type> getTypeCategories(String typeCategory) {
         return typeRepository.findByTypeCategory(typeCategory);
-               }
+    }
 
+    // get task type by name
+    public Type getTaskTypeByName(String taskTypeName) {
+        return typeRepository.findByTypeCategoryAndName("TASK_TYPE", taskTypeName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "TASK_TYPE_NOT_FOUND", "Task field type not found with name: " + taskTypeName));
 
+    }
 
+    // get node type by name
+    public Type getTaskNodeTypeByName(String nodeTypeName) {
+        return typeRepository.findByTypeCategoryAndName("TASK_NODE_TYPE", nodeTypeName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "TASK_NODE_TYPE_NOT_FOUND", "Node field type not found with name: " + nodeTypeName));
+
+    }
+
+    // get node relationship type by name
+    public Type getTaskNodeRelationshipTypeByName(String nodeRelationshipTypeName) {
+        return typeRepository.findByTypeCategoryAndName("TASK_NODE_RELATIONSHIP_TYPE", nodeRelationshipTypeName)
+                .orElseThrow(() -> new GendoxRuntimeException(HttpStatus.NOT_FOUND, "TASK_NODE_RELATIONSHIP_TYPE_NOT_FOUND", "Node relationship field type not found with name: " + nodeRelationshipTypeName));
+
+    }
 
 
 }
