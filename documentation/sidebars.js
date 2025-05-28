@@ -21,7 +21,7 @@ const sidebars = {
     {
       type: 'link',
       label: 'Full API Reference',
-      href: 'https://dev.gendox.ctrlspace.dev/gendox/api/v1/swagger-ui/index.html', // Direct link to your full API reference
+      href: 'https://app.gendox.dev/gendox/api/v1/swagger-ui/index.html', // Direct link to your full API reference
     },],
 
   // But you can create a sidebar manually
