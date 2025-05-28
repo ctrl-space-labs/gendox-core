@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
@@ -53,11 +54,15 @@ public class AiModelMessage {
     @Id
     @JsonIgnore
     private UUID id;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String content;
     private String role;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonProperty("tool_call_id")
     private String toolCallId;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String name;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonProperty("tool_calls")
     private JsonNode toolCalls;
 
