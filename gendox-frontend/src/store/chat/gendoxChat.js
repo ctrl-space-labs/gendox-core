@@ -228,6 +228,16 @@ export const sendMessage = createAsyncThunk(
       }
     })
 
+    if (toolCallsToProcess.length > 0) {
+      // Process tool calls after the message has been added
+      // Currently, this is 1-way communication, so we send the tool calls to the parent frame
+      // TODO this should be a 2-way communication, where the parent frame processes the tool calls and sends back the results
+      iFrameMessageManager.messageManager.sendMessage({
+        type: 'gendox.events.chat.message.tool_calls.request',
+        payload: toolCallsToProcess
+      })
+    }
+
     const isNewThread = !threadId
     const finalThreadId = isNewThread ? responseThreadId : threadId
 

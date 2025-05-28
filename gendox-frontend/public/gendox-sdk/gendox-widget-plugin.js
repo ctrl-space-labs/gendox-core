@@ -123,14 +123,35 @@
             }
         }
 
+        // Listen for actions from the AI Agent
+        function handleToolUseMessages(event) {
+          if (event.data && event.data.type === 'gendox.events.chat.message.tool_calls.request') {
+            const toolCalls = event.data.payload;
+            console.log("Tool Calls Request Received:", event.data.payload);
+
+            toolCalls.forEach(tool => {
+              if (tool.function.name === 'open_web_page') {
+                const arguments = JSON.parse(tool.function.arguments);
+                console.log("Opening web page:", arguments.url);
+                window.open(arguments.url, '_blank');
+              } else {
+                console.warn("Unknown tool call function:", tool.function.name);
+              }
+            })
+
+          }
+        }
+
         window.addEventListener('message', handleChatWindowToggleMessage, false);
         window.addEventListener('message', handleInitializationRequestMessage);
         window.addEventListener('message', handleLocalContextSelectedText);
+        window.addEventListener('message', handleToolUseMessages);
 
         window.onunload = function() {
             window.removeEventListener('message', handleInitializationRequestMessage);
             window.removeEventListener('message', handleChatWindowToggleMessage);
             window.removeEventListener('message', handleLocalContextSelectedText);
+            window.removeEventListener('message', handleToolUseMessages);
         };
     }
 
