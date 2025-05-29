@@ -59,7 +59,13 @@ public class DocumentInstanceSectionWithDocumentConverter implements GendoxConve
 
             DocumentInstanceDTO documentInstanceDTO = documentOnlyConverter.toDTO(documentInstanceSection.getDocumentInstance());
             documentInstanceSectionDTO.setDocumentInstanceDTO(documentInstanceDTO);
+            documentInstanceSectionDTO.setDocumentURL(documentInstanceDTO.getExternalUrl());
+
         }
+        // This is not used in general, but can be set if needed
+        // ProvenAI populates this to indicate the owner from another (external) project
+//        documentInstanceSectionDTO.setOwnerName(documentInstanceSection.getCreatedBy().to);
+
 
         return documentInstanceSectionDTO;
     }

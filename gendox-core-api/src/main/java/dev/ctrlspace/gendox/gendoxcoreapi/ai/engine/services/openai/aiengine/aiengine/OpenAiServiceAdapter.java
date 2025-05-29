@@ -240,17 +240,22 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
             messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
 
         }
-        List<OpenAiCompletionRequest.ToolDto> toolsDtos = tools.stream()
-                .map(tool -> toolDtoConverter.toToolDto(tool))
-                .toList();
 
 
         OpenAiCompletionRequest.OpenAiCompletionRequestBuilder openAiGptRequestBuilder = OpenAiCompletionRequest.builder()
                 .model(aiModel.getModel())
-                .messages(messages)
-                .toolChoice("auto")
-                .tools(toolsDtos);
+                .messages(messages);
 
+        if (!tools.isEmpty()) {
+            List<OpenAiCompletionRequest.ToolDto> toolsDtos = tools.stream()
+                    .map(tool -> toolDtoConverter.toToolDto(tool))
+                    .toList();
+
+            openAiGptRequestBuilder
+                    .toolChoice("auto")
+                    .tools(toolsDtos);
+
+        }
 
 
         // Special case for preview search models

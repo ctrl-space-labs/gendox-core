@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.MessageCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
@@ -115,15 +116,15 @@ public class MessageService {
     }
 
 
-    public List<MessageSection> createMessageSections(List<DocumentInstanceSection> sections, Message message, Boolean completionParticipant) throws GendoxException {
+    public List<MessageSection> createMessageSections(List<DocumentInstanceSectionDTO> sections, Message message, Boolean completionParticipant) throws GendoxException {
         List<MessageSection> messageSections = new ArrayList<>();
 
-        for (DocumentInstanceSection documentInstanceSection : sections) {
+        for (DocumentInstanceSectionDTO documentInstanceSection : sections) {
             MessageSection messageSection = new MessageSection();
             messageSection.setSectionId(documentInstanceSection.getId());
             messageSection.setMessage(message);
             messageSection.setCompletionParticipant(completionParticipant);
-            messageSection.setDocumentId(documentInstanceSection.getDocumentInstance().getId());
+            messageSection.setDocumentId(documentInstanceSection.getDocumentInstanceDTO().getId());
             messageSections.add(messageSection);
         }
 

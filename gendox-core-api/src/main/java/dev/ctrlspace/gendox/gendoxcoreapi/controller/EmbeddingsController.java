@@ -26,6 +26,7 @@ import io.swagger.v3.oas.annotations.Operation;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -138,7 +139,7 @@ public class EmbeddingsController {
         message.setProjectId(UUID.fromString(projectId));
         message = messageService.createMessage(message);
 
-        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, UUID.fromString(projectId), pageable);
+        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, project, pageable);
 
 //        List<DocumentInstanceSectionDTO> sections = instanceSections
 //                .stream()
@@ -185,78 +186,43 @@ public class EmbeddingsController {
         savedMessage.setLocalContexts(message.getLocalContexts());
         message = savedMessage;
 
-        List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(
-                message, UUID.fromString(projectId),
+        // search and rerank sections
+        List<DocumentInstanceSectionDTO> sectionDTOs = embeddingService.findClosestSections(
+                message,
+                project,
                 PageRequest.of(0, project.getProjectAgent().getMaxSearchLimit().intValue())
         );
-
-        logger.info("Sections found: {}", sections.size());
-
-        if (provenAiEnabled) {
-            try {
-                logger.info("ProvenAI enabled");
-                List<DocumentInstanceSectionDTO> provenAiSections = embeddingService.findProvenAiClosestSections(message, UUID.fromString(projectId));
-                sections.addAll(provenAiSections);
-                logger.info("ProvenAI sections added");
-            } catch (GendoxException e) {
-                // swallow exception
-                if ("PROVENAI_AGENT_NOT_FOUND".equals(e.getErrorCode())) {
-                    logger.debug("ProvenAI agent not found");
-                } else {
-                    throw e;
-                }
-            }
-        }
-
-        List<DocumentInstanceSection> instanceSections = sections.stream()
-                .map(dto -> documentInstanceSectionWithDocumentConverter.toEntity(dto))
-                .toList();
-
-        logger.info("Sections after conversion: {}",
-                instanceSections.stream()
-                        .map(DocumentInstanceSection::getId)
-                        .toList());
-
-        // Rerank the sections
-        if (project.getProjectAgent().getRerankEnable() && !instanceSections.isEmpty()) {
-            instanceSections = rerankService.rerankSections(project.getProjectAgent(), instanceSections, message.getValue());
-            logger.info("Sections after rerank: {}",
-                    instanceSections.stream()
-                            .map(DocumentInstanceSection::getId)
-                            .toList());
-        }
 
 
 
         int maxCompletionLimit = project.getProjectAgent().getMaxCompletionLimit().intValue();
 
-        List<DocumentInstanceSection> participantInstanceSections = instanceSections.stream()
-                .limit(maxCompletionLimit)
-                .collect(Collectors.toList());
-
-        List<DocumentInstanceSection> unParticipantInstanceSections = instanceSections.stream()
-                .skip(maxCompletionLimit)
-                .collect(Collectors.toList());
-
-
-        List<Message> completions = completionService.getCompletion(message, participantInstanceSections, UUID.fromString(projectId));
-
-        List<MessageSection> participantMessageSections;
-        List<MessageSection> unParticipantMessageSections;
-        for (Message m : completions) {
-            if (m.getRole().equals("assistant")) {
-                //each agent message connected with the sections
-                participantMessageSections = messageService.createMessageSections(participantInstanceSections, m, true);
-                unParticipantMessageSections = messageService.createMessageSections(unParticipantInstanceSections, m, false);
-                messageService.updateMessageWithSections(m, participantMessageSections);
+        List<DocumentInstanceSectionDTO> topSectionsForCompletion = new ArrayList<>();
+        List<DocumentInstanceSectionDTO> searchHistorySections = new ArrayList<>();
+        for (int i = 0; i < sectionDTOs.size(); i++) {
+            DocumentInstanceSectionDTO section = sectionDTOs.get(i);
+            if (i < maxCompletionLimit) {
+                topSectionsForCompletion.add(section);
+            } else {
+                searchHistorySections.add(section);
             }
         }
 
-        List<UUID> sectionIds = sections.stream()
-                .map(DocumentInstanceSectionDTO::getId)
-                .collect(Collectors.toList());
 
-        List<ProvenAiMetadata> sectionInfos = sections.stream()
+        List<Message> completions = completionService.getCompletion(message, topSectionsForCompletion, UUID.fromString(projectId));
+
+        List<MessageSection> topCompletionMessageSections;
+        List<MessageSection> searchHistoryMessageSections;
+        for (Message m : completions) {
+            if (m.getRole().equals("assistant")) {
+                //each agent message connected with the sections
+                topCompletionMessageSections = messageService.createMessageSections(topSectionsForCompletion, m, true);
+                searchHistoryMessageSections = messageService.createMessageSections(searchHistorySections, m, false);
+                messageService.updateMessageWithSections(m, topCompletionMessageSections);
+            }
+        }
+
+        List<ProvenAiMetadata> sectionInfos = sectionDTOs.stream()
                 .map(section -> ProvenAiMetadata.builder()
                         .sectionId(section.getId()) // Section ID
                         .iscc(section.getDocumentSectionIsccCode())
@@ -268,8 +234,6 @@ public class EmbeddingsController {
                         .aiModelName(section.getAiModelName())
                         .build())
                 .collect(Collectors.toList());
-
-        Message lastMessage = completions.isEmpty() ? null : completions.get(completions.size() - 1);
 
         return CompletionMessageDTO.builder()
                 .messages(completions)

@@ -13,6 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
@@ -100,7 +101,7 @@ public class CompletionService {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public List<Message> getCompletion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
+    public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, UUID projectId) throws GendoxException {
         String question = convertToAiModelTextQuestion(message, nearestSections, projectId);
         Project project = projectService.getProjectById(projectId);
         ProjectAgent agent = project.getProjectAgent();
@@ -275,7 +276,7 @@ public class CompletionService {
     }
 
 
-    public String convertToAiModelTextQuestion(Message message, List<DocumentInstanceSection> nearestSections, UUID projectId) throws GendoxException {
+    public String convertToAiModelTextQuestion(Message message, List<DocumentInstanceSectionDTO> nearestSections, UUID projectId) throws GendoxException {
 
         // TODO investigate if we want to split the context and question
         //  to 2 different messages with role: "contextProvider" and role: "user"
@@ -286,7 +287,7 @@ public class CompletionService {
         Template agentChatTemplate = templateRepository.findByIdIs(agent.getChatTemplateId());
 
         List<String> documentTitles = nearestSections.stream()
-                .map(section -> documentUtils.extractDocumentNameFromUrl(section.getDocumentInstance().getRemoteUrl()))
+                .map(section -> documentUtils.extractDocumentNameFromUrl(section.getDocumentInstanceDTO().getRemoteUrl()))
                 .toList();
 
         // run sectionTemplate
