@@ -45,9 +45,7 @@ const ThreadMessagesArea = ({
    *  • An assistant “tool-call + its tool responses” becomes
    *    `{ type: 'toolCall', headerMessage, toolResponses: [] }`
    *
-   * The order of items is preserved.  Every element in the returned array
-   * shares the same *wrapper* shape (`{ type, … }`), so the renderer
-   * never has to juggle two unrelated data structures.
+   * The order of items is preserved.
    *
    * @param {Array<Object>} rawMessages – `currentThread.messages`
    * @returns {Array<Object>} displayItems – list ready for `map()`
@@ -57,33 +55,47 @@ const ThreadMessagesArea = ({
     let openToolBundle = null; // tracks the bundle we’re currently filling
 
     rawMessages.forEach(msg => {
-      const isAssistantToolCall =
+      // ────────────────────────────────────────────────────────────────
+      // 1️⃣  Does this assistant message *trigger* tool-calls?
+      //     (Text is optional, toolCalls are mandatory.)
+      // ────────────────────────────────────────────────────────────────
+      const hasToolCalls =
         msg.role === 'assistant' &&
-        (!msg.message || msg.message === '') &&
         Array.isArray(msg.toolCalls) &&
         msg.toolCalls.length > 0;
 
-      if (isAssistantToolCall) {
-        // flush any previous bundle that never got a tool response
+      if (hasToolCalls) {
+        // Flush any previous bundle that never got tool responses
         if (openToolBundle) {
           displayItems.push(openToolBundle);
         }
 
+        // If the assistant ALSO sent visible text, render that first
+        const hasVisibleText = msg.message && msg.message.trim() !== '';
+        if (hasVisibleText) {
+          displayItems.push({ type: 'chatMessage', message: msg });
+        }
+
+        // Start a new bundle that will collect the tool outputs
         openToolBundle = {
           type: 'toolCall',
           headerMessage: msg,
           toolResponses: []
         };
-        return;
+        return; // nothing else to do for this msg
       }
 
+      // ────────────────────────────────────────────────────────────────
+      // 2️⃣  Tool response → attach to the open bundle
+      // ────────────────────────────────────────────────────────────────
       if (msg.role === 'tool' && openToolBundle) {
-        // attach tool output to its header
         openToolBundle.toolResponses.push(msg);
         return;
       }
 
-      // Any other message ends the current bundle (if any)
+      // ────────────────────────────────────────────────────────────────
+      // 3️⃣  Any other message closes the current bundle (if any)
+      // ────────────────────────────────────────────────────────────────
       if (openToolBundle) {
         displayItems.push(openToolBundle);
         openToolBundle = null;
@@ -122,9 +134,8 @@ const ThreadMessagesArea = ({
         <Box sx={{ flex: 1, p: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {auth?.user?.id && displayItems.length > 0 ? (
             displayItems.map((item, index) => {
-              // ──────────────────────────────────────────────────────────
+
               // Tool-call header + its outputs in a single collapsible row
-              // ──────────────────────────────────────────────────────────
               if (item.type === 'toolCall') {
                 return (
                   <Box
@@ -140,12 +151,10 @@ const ThreadMessagesArea = ({
                 );
               }
 
-              // ──────────────────────────────────────────────────────────
-              // Normal chat bubble (user or assistant)
-              // ──────────────────────────────────────────────────────────
               const { message } = item;
               const isMyMessage =
                 message.createdBy === auth?.user?.id || message.createdBy === null;
+              const nextIsToolCall = displayItems[index + 1]?.type === 'toolCall';
 
               return (
                 <React.Fragment key={index}>
@@ -187,16 +196,18 @@ const ThreadMessagesArea = ({
                       />
                     </Box>
                   </Box>
-                  <MessageActions
-                    message={message}
-                    isMyMessage={isMyMessage}
-                    openMetadata={() => {
-                      dispatch(fetchMessageMetadata({ thread: currentThread, message, token }))
-                      openInfoToggle()
-                    }}
-                    embedMode={embedMode}
-                    chatInsightView={chatInsightView}
-                  />
+                  {!nextIsToolCall && (
+                    <MessageActions
+                      message={message}
+                      isMyMessage={isMyMessage}
+                      openMetadata={() => {
+                        dispatch(fetchMessageMetadata({ thread: currentThread, message, token }))
+                        openInfoToggle()
+                      }}
+                      embedMode={embedMode}
+                      chatInsightView={chatInsightView}
+                    />
+                  )}
                 </React.Fragment>
               )
             })
