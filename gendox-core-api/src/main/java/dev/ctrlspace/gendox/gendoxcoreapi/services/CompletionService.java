@@ -116,7 +116,7 @@ public class CompletionService {
 
 
 
-        List<AiModelMessage> previousMessages = messageService.getPreviousMessages(message, 4);
+        List<AiModelMessage> previousMessages = messageService.getPreviousMessages(message, 25);
 
         // clone message to avoid changing the original message text in DB
         AiModelMessage promptMessage = AiModelMessage.builder()

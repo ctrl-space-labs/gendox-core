@@ -16,10 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class MessageService {
@@ -159,12 +156,19 @@ public class MessageService {
      *
      * Note: the first message will be from the role 'user', so we drop all messages before that
      *
+     * The logic of fetching previous messages is as follows:
+     * - calculate the chunks of #messageHistoryLengthWindow messages
+     * - fetch the latest 2 windows of messages from the thread,
+     *
+     * e.g message chunks of 25 messages -> |.....25......|......25......|.....10.....|
+     * This will bring the latest 35 messages (25 + 10) and it is useful for the LLM API caching.
+     *
      * @param message
-     * @param size
+     * @param messageHistoryLengthWindow it brings the latest 2 windows of messageHistoryLengthWindow messages
      * @return
      */
-    public List<AiModelMessage> getPreviousMessages(Message message, int size) {
-        List<AiModelMessage> previousMessages = messageRepository.findPreviousMessages(message.getThreadId(), message.getCreatedAt(), size);
+    public List<AiModelMessage> getPreviousMessages(Message message, int messageHistoryLengthWindow) {
+        List<AiModelMessage> previousMessages = messageRepository.findPreviousMessages(message.getThreadId(), message.getCreatedAt(), messageHistoryLengthWindow);
         // from the latest 4 messages, the first one is the oldest
         Collections.reverse(previousMessages);
 
@@ -172,11 +176,10 @@ public class MessageService {
         //drop initial messages, until the 1st message is from role 'user'
         for (int i = 0; i < previousMessages.size(); i++) {
             if (previousMessages.get(i).getRole().equals("user")) {
-                previousMessages = previousMessages.subList(i, previousMessages.size());
-                break;
+                return previousMessages.subList(i, previousMessages.size());
             }
         }
-        return previousMessages;
+        return new ArrayList<>();
     }
 
     @Transactional

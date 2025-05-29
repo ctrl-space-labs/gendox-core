@@ -19,8 +19,24 @@ import java.util.UUID;
 public interface MessageRepository extends JpaRepository<Message, UUID>, QuerydslPredicateExecutor<Message> {
 
 
+    /**
+     * Fetches the latest messages from a thread in “two-window” chunks:
+     * windowSize + (total % windowSize). This is useful for the LLM API caching.
+     *
+     * <p>
+     * Example: for windowSize=25 and a total of 60 messages, you get
+     * 25 + (60 % 25) = 35 messages.
+     *
+     * In worst case the message history is #25 messages, in best case it is 50 messages
+     * </p>
+     *
+     * @param threadId   ID of the conversation thread
+     * @param before     only include messages created before this timestamp
+     * @param windowSize base window size (e.g. 25)
+     * @return messages ordered by created_at DESC
+     */
     @Query(nativeQuery = true, name = "AiModelMessage.findPreviousMessages")
-    List<AiModelMessage> findPreviousMessages(@Param("threadId") UUID threadId, @Param("before") Instant before, @Param("size") int size);
+    List<AiModelMessage> findPreviousMessages(@Param("threadId") UUID threadId, @Param("before") Instant before, @Param("window_size") int windowSize);
 
 
     @Query(name = "MessageMetadataDTO.getMessageMetadataByMessageId", nativeQuery = true)

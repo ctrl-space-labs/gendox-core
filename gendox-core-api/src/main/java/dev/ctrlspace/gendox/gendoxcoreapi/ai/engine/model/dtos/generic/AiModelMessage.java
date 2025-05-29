@@ -36,13 +36,20 @@ import java.util.UUID;
 @NamedNativeQuery(
         name = "AiModelMessage.findPreviousMessages",
         query = """
-                select m.id, m.value, m.role, m.tool_call_id, m.name, m.tool_calls, m.created_at
-                from gendox_core.message m
-                         left join gendox_core.users u on u.id = m.created_by
-                         left join gendox_core.types t on t.id = u.users_type_id
-                where m.thread_id = :threadId and m.created_at < :before
-                order by m.created_at desc
-                limit :size
+                WITH numbered AS (
+                  SELECT m.id, m.value, m.role, m.tool_call_id, m.name, m.tool_calls, m.created_at,
+                         row_number() OVER (ORDER BY m.created_at DESC) AS rn,   -- 1 = newest 
+                         count(*)     OVER ()                                   AS total
+                  FROM gendox_core.message m
+                  LEFT JOIN gendox_core.users u  ON u.id = m.created_by
+                  LEFT JOIN gendox_core.types t  ON t.id = u.users_type_id
+                  WHERE m.thread_id   = :threadId
+                    AND m.created_at <  :before
+                )
+                SELECT id, value, role, tool_call_id, name, tool_calls, created_at
+                FROM numbered
+                WHERE rn <= (:window_size + (total % :window_size))
+                ORDER BY created_at DESC;
                 """,
         resultSetMapping = "AiModelMessageMapping"
 )
