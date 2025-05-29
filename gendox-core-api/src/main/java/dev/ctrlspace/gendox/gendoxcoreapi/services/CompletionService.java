@@ -84,11 +84,11 @@ public class CompletionService {
     }
 
     private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
-                                                        AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools) throws GendoxException {
+                                                        AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice) throws GendoxException {
 
         //choose the correct aiModel adapter
         AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
-        CompletionResponse completionResponse = aiModelApiAdapterService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey, tools);
+        CompletionResponse completionResponse = aiModelApiAdapterService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice);
         return completionResponse;
     }
 
@@ -142,7 +142,8 @@ public class CompletionService {
                 project.getProjectAgent().getCompletionModel(),
                 aiModelRequestParams,
                 apiKey,
-                availableTools);
+                availableTools,
+                "auto");
 
         //        completion request audits
         Type completionRequestType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
@@ -202,7 +203,8 @@ public class CompletionService {
                         project.getProjectAgent().getCompletionModel(),
                         aiModelRequestParams,
                         apiKey,
-                        availableTools);
+                        availableTools,
+                        "auto");
 
 
                 Message finalCompletionMessage = messageAiMessageConverter.toEntity(finalResponse.getChoices().get(0).getMessage());
@@ -220,6 +222,61 @@ public class CompletionService {
 
         return allResponseMessages;
 
+    }
+
+    public AiModelMessage getAdvancedSearchCompletion(Message message, Project project) throws GendoxException {
+        String question = message.getValue();
+        ProjectAgent agent = project.getProjectAgent();
+        List<AiTools> advancedSearchTools = List.of(
+                AiTools.builder()
+                        .type("function")
+                        .jsonSchema("""
+                                {
+                                  "name": "advanced_search",
+                                  "description": "Compose a single semantic-search query for the vector store.\\n\\n▸ INPUTS\\n  • Full chat history (chronological) plus the user’s latest turn.\\n\\n▸ WHEN THE USER ASKS A FOLLOW-UP (e.g. “Tell me more”, “Why?”)\\n  • Infer the missing subject from the last few assistant/user messages.\\n  • Focus on the newest context; ignore unrelated earlier turns.\\n\\n▸ QUERY LENGTH RULES\\n  • Let query length scale with the user’s current message:\\n      − If the user’s turn is brief (≲ 20 words) → expand with synonyms / related phrases.\\n      − If the turn is long (≫ 100 words) → condense to the core concepts; ~10–50 % of the user’s tokens is fine.\\n\\n▸ QUERY CONTENT RULES\\n  • Preserve the user’s main nouns/verbs.\\n  • Add 2–4 plausible synonyms or closely related terms for each key concept to improve recall.\\n  • Remove filler words, conjunctions, and polite phrases.\\n  • Do NOT answer the question or cite documents—only return the query text.",
+                                  "strict": true,
+                                  "parameters": {
+                                    "type": "object",
+                                    "required": ["search_query"],
+                                    "properties": {
+                                      "search_query": {
+                                        "type": "string",
+                                        "description": "The query to be used in the vector search in a document DB."
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                }
+                                """)
+                        .build());
+
+        List<AiModelMessage> previousMessages = messageService.getPreviousMessages(message, 25);
+
+        // clone message to avoid changing the original message text in DB
+        AiModelMessage promptMessage = AiModelMessage.builder()
+                .content(question)
+                .role(message.getRole() != null ? message.getRole() : "user")
+                .build();
+
+        previousMessages.add(promptMessage);
+
+        String apiKey = embeddingService.getApiKey(agent, "COMPLETION_MODEL");
+
+        AiModelRequestParams aiModelRequestParams = AiModelRequestParams.builder()
+                .maxTokens(agent.getMaxToken())
+                .temperature(agent.getTemperature())
+                .topP(agent.getTopP())
+                .build();
+
+        CompletionResponse completionResponse = getCompletionForMessages(previousMessages,
+                agent.getAgentBehavior(),
+                agent.getCompletionModel(),
+                aiModelRequestParams,
+                apiKey,
+                advancedSearchTools,
+                "required");
+
+        return completionResponse.getChoices().get(0).getMessage();
     }
 
     /**

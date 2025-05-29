@@ -12,7 +12,8 @@ public interface AiModelApiAdapterService {
 
     EmbeddingResponse askEmbedding(EmbeddingMessage embeddingMessage, AiModel aiModel, String apiKey);
     CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel,
-                                     AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools);
+                                     AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice);
+
     ModerationResponse askModeration(String message, String apiKey, AiModel aiModel);
     RerankResponse askRerank(List<String> documents, String query, AiModel aiModel, String apiKey);
     Set<String> getSupportedApiTypeNames();

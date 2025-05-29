@@ -235,7 +235,8 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                                             String agentRole, AiModel aiModel,
                                             AiModelRequestParams aiModelRequestParams,
                                             String apiKey,
-                                            List<AiTools> tools) {
+                                            List<AiTools> tools,
+                                            String toolChoice) {
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
 
@@ -252,7 +253,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                     .toList();
 
             openAiGptRequestBuilder
-                    .toolChoice("auto")
+                    .toolChoice(toolChoice == null ? "auto" : toolChoice) // Default to "auto" if toolChoice is null
                     .tools(toolsDtos);
 
         }
