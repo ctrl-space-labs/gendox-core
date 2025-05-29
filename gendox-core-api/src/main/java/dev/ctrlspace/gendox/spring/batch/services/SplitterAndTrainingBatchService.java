@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.spring.batch.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceCriteriaJobParamsConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentSectionCriteriaJobParamsConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecutionParams;
@@ -16,9 +18,9 @@ import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteExcep
 import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -27,50 +29,33 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Service
-public class TrainingBatchService {
+public class SplitterAndTrainingBatchService {
 
-    @Value("${gendox.batch-jobs.document-training.job.name}")
-    private String documentTrainingJobName;
-
+    @Value("${gendox.batch-jobs.splitter-and-training.job.name}")
+    private String splitterAndTrainingJobName;
     @Autowired
     private BatchJobExecutionRepository batchJobExecutionRepository;
-
     @Autowired
     private BatchJobExecutionParamsRepository batchJobExecutionParamsRepository;
-
+    @Autowired
+    private DocumentInstanceCriteriaJobParamsConverter documentInstanceCriteriaJobParamsConverter;
     @Autowired
     private DocumentSectionCriteriaJobParamsConverter documentSectionCriteriaJobParamsConverter;
-
     @Autowired
-    private Job documentTrainingJob;
-
+    private Job splitterAndTrainingJob;
     @Autowired
     private JobLauncher jobLauncher;
 
-//    public JobExecution runAutoSplit() {
-//
-//    }
-//
-//    public JobExecution runSplitWithParams(DocumentInstanceSectionCriteria criteria) {
-//        criteria.setProjectId(".....");
-//    }
-
-//    public JobExecution runTrainingWithParams(DocumentInstanceSectionCriteria criteria) {
-//        JobParameters params = documentSectionCriteriaJobParamsConverter.toDTO(criteria);
-//        params = new JobParametersBuilder(params)
-//                .addString("now", Instant.now().toString())
-//                .toJobParameters();
-//
-//        return jobLauncher.run(documentTrainingJob, params);
-//    }
-
-
-
-    public JobExecution runAutoTraining(UUID projectId) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
-
+    /**
+     * Run the combined Splitter & Training job for a specific project, or for all projects if projectId is null.
+     * You can extend this method to include custom time ranges or other job parameters as needed.
+     */
+    public JobExecution runSplitterAndTraining(UUID projectId) throws
+            JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException,
+            JobParametersInvalidException, JobRestartException {
 
         BatchExecutionCriteria criteria = BatchExecutionCriteria.builder()
-                .jobName(documentTrainingJobName)
+                .jobName(splitterAndTrainingJobName)
                 .status("COMPLETED")
                 .exitCode("COMPLETED")
                 .build();
@@ -94,30 +79,43 @@ public class TrainingBatchService {
 
         Instant to = now;
 
+        // Prepare criteria for each step
+        DocumentCriteria documentCriteria = DocumentCriteria.builder()
+                .updatedBetween(new TimePeriodDTO(start, to))
+                .build();
 
-//      prepare Job execution params
         DocumentInstanceSectionCriteria sectionCriteria = DocumentInstanceSectionCriteria.builder()
                 .updatedBetween(new TimePeriodDTO(start, to))
                 .projectAutoTraining(true)
                 .build();
+
+
+        // Convert to job parameters
+        JobParameters splitterParams = documentInstanceCriteriaJobParamsConverter.toDTO(documentCriteria);
+        JobParameters trainingParams = documentSectionCriteriaJobParamsConverter.toDTO(sectionCriteria);
+
+//        JobParameters params = new JobParametersBuilder()
+//                .addJobParameters(splitterParams)
+//                .addJobParameters(trainingParams)
+//                .addString("now", now.toString())
+//                .addString("skipUnchangedDocs", "true")
+//                .addString("skipKnownEmbeddings", "true")
+//                .toJobParameters();
+
+        // Build all job params
+        JobParametersBuilder builder = new JobParametersBuilder()
+                .addJobParameters(splitterParams)
+                .addJobParameters(trainingParams)
+                .addString("now", now.toString())
+                .addString("skipUnchangedDocs", "true")
+                .addString("skipKnownEmbeddings", "true");
+
         if (projectId != null) {
-            sectionCriteria.setProjectId(projectId.toString());
+            builder.addString("projectId", projectId.toString());
         }
 
-        JobParameters params = documentSectionCriteriaJobParamsConverter.toDTO(sectionCriteria);
-        params = new JobParametersBuilder(params)
-                .addString("now", now.toString())
-                .addString("skipKnownEmbeddings", "true")
-                .toJobParameters();
+        JobParameters params = builder.toJobParameters();
 
-        return jobLauncher.run(documentTrainingJob, params);
-
-
+        return jobLauncher.run(splitterAndTrainingJob, params);
     }
-
-    public Page<BatchJobExecution> getBatchExecutionByCriteria(BatchExecutionCriteria criteria, Pageable pageable) {
-        return batchJobExecutionRepository.findAll(BatchExecutionPredicates.build(criteria), pageable);
-    }
-
-
 }

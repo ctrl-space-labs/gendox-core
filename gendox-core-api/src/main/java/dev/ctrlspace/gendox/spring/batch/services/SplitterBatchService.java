@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 
 @Service
 public class SplitterBatchService {
@@ -41,7 +42,7 @@ public class SplitterBatchService {
     @Autowired
     private JobLauncher jobLauncher;
 
-    public JobExecution runAutoSplitter() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
+    public JobExecution runAutoSplitter(UUID projectId) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
 
 
         BatchExecutionCriteria criteria = BatchExecutionCriteria.builder()
@@ -74,6 +75,11 @@ public class SplitterBatchService {
         DocumentCriteria documentCriteria = DocumentCriteria.builder()
                 .updatedBetween(new TimePeriodDTO(start, to))
                 .build();
+
+        if (projectId != null) {
+            documentCriteria.setProjectId(projectId.toString());
+        }
+
 
         JobParameters params = documentInstanceCriteriaJobParamsConverter.toDTO(documentCriteria);
         params = new JobParametersBuilder(params)
