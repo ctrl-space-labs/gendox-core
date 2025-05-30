@@ -41,7 +41,7 @@ public class AsyncService {
             throw new GendoxException("EXECUTION_TYPE_NOT_FOUND", "Execution type cannot be null or empty", HttpStatus.NOT_FOUND);
         }
 
-        if ( executionType.equals(AsyncExecutionTypes.SPLITTER_AND_TRAINING) ) {
+        if (executionType.equals(AsyncExecutionTypes.SPLITTER_AND_TRAINING)) {
             // Execute Splitter and Training
             try {
                 JobExecution jobExecution = splitterAndTrainingBatchService.runSplitterAndTraining(projectId);

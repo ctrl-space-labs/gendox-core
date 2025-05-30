@@ -1,4 +1,5 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.splitterAndTraining;
+
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps.*;
@@ -25,8 +26,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration
 public class SplitterAndTrainingJobConfig {
 
-    @Value("${gendox.batch-jobs.splitter-and-training.job.name}")
-    private String splitterAndTrainingJobName;
+    //    @Value("${gendox.batch-jobs.splitter-and-training.job.name}")
+    private String splitterAndTrainingJobName = "splitterAndTrainingJob";
 
     // Splitter step config
     @Value("${gendox.batch-jobs.document-splitter.job.thread-pool-size}")
@@ -48,20 +49,30 @@ public class SplitterAndTrainingJobConfig {
     @Value("${gendox.batch-jobs.document-training.job.steps.document-training-step.chunk-size}")
     private Integer trainingChunkSize;
 
-    @Autowired private JobRepository jobRepository;
-    @Autowired private UniqueInstanceDecider uniqueInstanceDecider;
-    @Autowired private ObservationRegistry observationRegistry;
-    @Autowired private PlatformTransactionManager platformTransactionManager;
+    @Autowired
+    private JobRepository jobRepository;
+    @Autowired
+    private UniqueInstanceDecider uniqueInstanceDecider;
+    @Autowired
+    private ObservationRegistry observationRegistry;
+    @Autowired
+    private PlatformTransactionManager platformTransactionManager;
 
     // Step beans from Splitter
-    @Autowired private DocumentSplitterReader documentSplitterReader;
-    @Autowired private DocumentSplitterProcessor documentSplitterProcessor;
-    @Autowired private DocumentSplitterWriter documentSplitterWriter;
+    @Autowired
+    private DocumentSplitterReader documentSplitterReader;
+    @Autowired
+    private DocumentSplitterProcessor documentSplitterProcessor;
+    @Autowired
+    private DocumentSplitterWriter documentSplitterWriter;
 
     // Step beans from Training
-    @Autowired private DocumentInstanceSectionReader documentInstanceSectionReader;
-    @Autowired private DocumentInstanceSectionProcessor documentInstanceSectionProcessor;
-    @Autowired private DocumentSectionEmbeddingWriter documentSectionEmbeddingWriter;
+    @Autowired
+    private DocumentInstanceSectionReader documentInstanceSectionReader;
+    @Autowired
+    private DocumentInstanceSectionProcessor documentInstanceSectionProcessor;
+    @Autowired
+    private DocumentSectionEmbeddingWriter documentSectionEmbeddingWriter;
 
     @Bean
     public Job splitterAndTrainingJob() {

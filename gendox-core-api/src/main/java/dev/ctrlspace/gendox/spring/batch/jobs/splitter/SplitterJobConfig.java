@@ -54,7 +54,7 @@ public class SplitterJobConfig {
     @Bean
     public Job documentSplitterJob(Step documentSplitterStep) {
 
-        Flow documentSplitterFlow = new FlowBuilder<Flow>(documentSplitterJobName +"Flow")
+        Flow documentSplitterFlow = new FlowBuilder<Flow>(documentSplitterJobName + "Flow")
                 .start(documentSplitterStep)
                 .build();
 
@@ -93,7 +93,6 @@ public class SplitterJobConfig {
                 .processor(documentSplitterProcessor)
                 .writer(documentSplitterWriter)
                 .taskExecutor(asyncBatchSplitterExecutor)
-//                .throttleLimit(throttleLimit)
                 .build();
 
     }
@@ -112,4 +111,6 @@ public class SplitterJobConfig {
         return executor;
 
     }
+
+
 }

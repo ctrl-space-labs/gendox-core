@@ -19,6 +19,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+
 @Component
 @StepScope
 public class DocumentInstanceSectionReader extends GendoxJpaPageReader<DocumentInstanceSection> {
@@ -27,10 +29,7 @@ public class DocumentInstanceSectionReader extends GendoxJpaPageReader<DocumentI
 
     private DocumentInstanceSectionCriteria criteria;
     private Sort sort;
-
     private DocumentSectionService documentSectionService;
-
-
     private DocumentSectionCriteriaJobParamsConverter documentSectionCriteriaJobParamsConverter;
 
     @Autowired
@@ -45,6 +44,7 @@ public class DocumentInstanceSectionReader extends GendoxJpaPageReader<DocumentI
         //sort by documentInstanceId desc and createdAt asc
         sort = Sort.by(Sort.Direction.DESC, "documentInstanceId").and(Sort.by(Sort.Direction.ASC, "createdAt"));
         criteria = documentSectionCriteriaJobParamsConverter.toEntity(jobParameters);
+        Instant now = Instant.now();
 
         // validate criteria
         // now is mandatory for all readers before job execution

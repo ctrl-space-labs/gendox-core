@@ -87,7 +87,6 @@ public class TrainingJobConfig {
                 .processor(documentInstanceSectionProcessor)
                 .writer(documentSectionEmbeddingWriter)
                 .taskExecutor(asyncBatchTrainingExecutor)
-                .throttleLimit(throttleLimit)
                 .build();
     }
 
@@ -104,5 +103,7 @@ public class TrainingJobConfig {
         return executor;
 
     }
+
+
 
 }
