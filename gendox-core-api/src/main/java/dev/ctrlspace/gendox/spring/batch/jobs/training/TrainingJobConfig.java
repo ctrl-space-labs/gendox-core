@@ -33,16 +33,12 @@ public class TrainingJobConfig {
 
     @Value("${gendox.batch-jobs.document-training.job.name}")
     private String documentTrainingJobName;
-
     @Value("${gendox.batch-jobs.document-training.job.thread-pool-size}")
     private Integer threadPoolSize;
-
     @Value("${gendox.batch-jobs.document-training.job.steps.document-training-step.name}")
     private String documentTrainingStepName;
-
     @Value("${gendox.batch-jobs.document-training.job.steps.document-training-step.throttle-limit}")
     private Integer throttleLimit;
-
     @Value("${gendox.batch-jobs.document-training.job.steps.document-training-step.chunk-size}")
     private Integer chunkSize;
 
@@ -91,7 +87,6 @@ public class TrainingJobConfig {
                 .processor(documentInstanceSectionProcessor)
                 .writer(documentSectionEmbeddingWriter)
                 .taskExecutor(asyncBatchTrainingExecutor)
-                .throttleLimit(throttleLimit)
                 .build();
     }
 
@@ -108,5 +103,7 @@ public class TrainingJobConfig {
         return executor;
 
     }
+
+
 
 }
