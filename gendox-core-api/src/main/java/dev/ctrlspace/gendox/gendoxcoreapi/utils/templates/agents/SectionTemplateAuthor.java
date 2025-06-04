@@ -36,10 +36,14 @@ public class SectionTemplateAuthor {
     public Map<String, String> toSectionValues(DocumentInstanceSectionDTO documentInstanceSection,String documentTitle ) {
         Map<String, String> values = new HashMap<>();
         values.put("documentTitle", documentTitle);
-        values.put("sectionText", documentInstanceSection.getSectionValue());
+        if (documentInstanceSection.getDocumentInstanceDTO().getExternalUrl() != null) {
+            values.put("source", documentInstanceSection.getDocumentInstanceDTO().getExternalUrl());
+        } else {
+            values.put("source", "N/A");
+        }
         // TODO fix source
-        values.put("source", "N/A");
         values.put("user", "N/A");
+        values.put("sectionText", documentInstanceSection.getSectionValue());
 
 
         return values;

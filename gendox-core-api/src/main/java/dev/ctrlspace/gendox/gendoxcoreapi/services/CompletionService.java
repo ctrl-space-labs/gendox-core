@@ -224,6 +224,17 @@ public class CompletionService {
 
     }
 
+    /**
+     * TODO enable this from Agent settings
+     *
+     * This method is used to get the advanced search message to get embedding and apply semantic search.
+     * The response of this function will be used to search the vector store, instead of the actual user message.
+     *
+     * @param message
+     * @param project
+     * @return
+     * @throws GendoxException
+     */
     public AiModelMessage getAdvancedSearchCompletion(Message message, Project project) throws GendoxException {
         String question = message.getValue();
         ProjectAgent agent = project.getProjectAgent();

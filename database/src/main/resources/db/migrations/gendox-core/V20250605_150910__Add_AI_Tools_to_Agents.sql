@@ -109,3 +109,18 @@ WHERE NOT EXISTS (
     WHERE type_category = 'AI_TOOL_EXAMPLES'
       AND name = 'FILL_FIELDS'
 );
+
+
+
+UPDATE gendox_core.templates
+SET text =
+        ' Title: ' || '$' || '{documentTitle}
+      Source: ' || '$' || '{source}
+      User: ' || '$' || '{user}
+      Document Text: ' || '$' || '{sectionText}
+      ----------------
+      """ '
+WHERE name = 'Default Section Template';
+
+
+
