@@ -13,6 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
+import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.ContentDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,7 +105,10 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
             }
 
             ApiKey apiKey = apiKeyService.getById(organizationWebSite.getApiKeyId());
-            return gendoxAPIIntegrationService.getContentById(instance.getRemoteUrl(), apiKey.getApiKey()).getContent();
+            ContentDTO contentDTO = gendoxAPIIntegrationService.getContentById(instance.getRemoteUrl(), apiKey.getApiKey());
+            //update external url
+            instance.setExternalUrl(contentDTO.getSource());
+            return contentDTO.getContent();
         }
 
         return downloadService.readDocumentContent(instance.getRemoteUrl());
