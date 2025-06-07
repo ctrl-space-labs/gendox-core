@@ -437,7 +437,9 @@
   function openWebPageToolHandler(arguments) {
 
     console.log("Opening web page:", arguments.url);
-    window.open(arguments.url, '_blank');
+    if (window.location.href !== arguments.url) {
+      window.location.href = arguments.url;
+    }
     return {"status": "executed"}
   }
 
