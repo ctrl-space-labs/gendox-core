@@ -33,6 +33,16 @@ const config = {
     defaultLocale: 'en',
     locales: ['en'],
   },
+  scripts: [
+    {
+      src: 'https://app.gendox.dev/gendox-sdk/gendox-widget-plugin.js',
+      async: true,
+      id: 'gendox-chat-script',
+      'data-gendox-src': 'https://app.gendox.dev',
+      'data-organization-id': 'e3035bad-5df6-46dc-8703-2ad0942a4bed',
+      'data-project-id': '282382a6-fda2-48fa-948f-cc6c2bd0da21',
+    },
+  ],
 
   presets: [
     [
