@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
@@ -31,6 +32,7 @@ public interface AiModelRepository extends JpaRepository<AiModel, UUID>, Queryds
     @Query("SELECT a FROM AiModel a WHERE a.organizationId is null")
     List<AiModel> findAllPublicModels();
 
+    @EntityGraph(attributePaths = { "aiModelProvider", "modelTierType", "aiModelType" })
     @Query("SELECT a FROM AiModel a WHERE (a.organizationId = :organizationId or a.organizationId is null) and a.isActive = true")
     List<AiModel> findAllActiveModelsByOrganizationId(@Param("organizationId") UUID organizationId);
 

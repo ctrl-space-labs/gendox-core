@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.AnthropicConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,8 +29,6 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
     private Set<String> supportedApiTypeNames = Set.of("ANTHROPIC_AI_API");
     private RestTemplate restTemplate;
     private AnthropicCompletionResponseConverter anthropicCompletionResponseConverter;
-    @Value("${gendox.models.anthropic.key}")
-    private String anthropicKey;
 
     @Autowired
     public AnthropicAiServiceAdapter(RestTemplate restTemplate,
@@ -39,22 +38,22 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
     }
 
 
-    private HttpHeaders buildHeader() {
+    private HttpHeaders buildHeader(String apiKey) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.add(AnthropicConfig.API_KEY_HEADER, anthropicKey);
+        headers.add(AnthropicConfig.API_KEY_HEADER, apiKey);
         headers.add(AnthropicConfig.VERSION_HEADER, AnthropicConfig.VERSION);
         return headers;
     }
 
 
-    public AnthropicCompletionResponse getCompletionResponse(AnthropicCompletionRequest anthropicRequest, AiModel aiModel) {
+    public AnthropicCompletionResponse getCompletionResponse(AnthropicCompletionRequest anthropicRequest, AiModel aiModel, String apiKey) {
         String completionApiUrl = aiModel.getUrl();
         logger.debug("Sending completion Request to '{}': {}", completionApiUrl, anthropicRequest);
         logger.info("AiModel for Completion: {}", aiModel.getModel());
         ResponseEntity<AnthropicCompletionResponse> responseEntity = restTemplate.postForEntity(
                 completionApiUrl,
-                new HttpEntity<>(anthropicRequest, buildHeader()),
+                new HttpEntity<>(anthropicRequest, buildHeader(apiKey)),
                 AnthropicCompletionResponse.class);
         logger.info("Received completion Response from '{}'. Tokens billed: {}", completionApiUrl,
                 responseEntity.getBody().getUsage().getInput_tokens() + responseEntity.getBody().getUsage().getOutput_tokens());
@@ -70,7 +69,7 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
     }
 
     @Override
-    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey) {
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice) {
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, AiModelMessage.builder().role("user").content(agentRole).build());
         }
@@ -86,7 +85,7 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
                 .max_tokens(aiModelRequestParams.getMaxTokens().intValue());
 
         AnthropicCompletionRequest anthropicRequest = anthropicRequestBuilder.build();
-        AnthropicCompletionResponse anthropicResponse = this.getCompletionResponse(anthropicRequest, aiModel);
+        AnthropicCompletionResponse anthropicResponse = this.getCompletionResponse(anthropicRequest, aiModel, apiKey);
 
 
         CompletionResponse completionResponse = anthropicCompletionResponseConverter.toCompletionResponse(anthropicResponse);

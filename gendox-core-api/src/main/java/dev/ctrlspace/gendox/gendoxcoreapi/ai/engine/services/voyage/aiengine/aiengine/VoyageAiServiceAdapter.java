@@ -10,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.voyage.response.V
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.VoyageConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,9 +33,6 @@ public class VoyageAiServiceAdapter implements AiModelApiAdapterService {
     private VoyageEmbeddingResponseConverter voyageEmbeddingResponseConverter;
     private VoyageRerankResponseConverter voyageRerankResponseConverter;
 
-    @Value("${gendox.models.voyage.key}")
-    private String voyageKey;
-
     @Autowired
     public VoyageAiServiceAdapter(RestTemplate restTemplate,
                                   VoyageEmbeddingResponseConverter voyageEmbeddingResponseConverter,
@@ -45,10 +43,10 @@ public class VoyageAiServiceAdapter implements AiModelApiAdapterService {
         this.voyageRerankResponseConverter = voyageRerankResponseConverter;
     }
 
-    private HttpHeaders buildHeader() {
+    private HttpHeaders buildHeader(String apiKey) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType(VoyageConfig.MEDIA_TYPE));
-        headers.add(VoyageConfig.AUTHORIZATION, VoyageConfig.BEARER + voyageKey);
+        headers.add(VoyageConfig.AUTHORIZATION, VoyageConfig.BEARER + apiKey);
         return headers;
     }
 
@@ -58,7 +56,7 @@ public class VoyageAiServiceAdapter implements AiModelApiAdapterService {
         logger.info("AiModel for Embeddings-->: {}", aiModel.getModel());
         ResponseEntity<VoyageEmbedResponse> response = restTemplate.postForEntity(
                 embeddingsApiUrl,
-                new HttpEntity<>(embeddingRequestHttpEntity, buildHeader()),
+                new HttpEntity<>(embeddingRequestHttpEntity, buildHeader(apiKey)),
                 VoyageEmbedResponse.class);
         logger.info("Received Embedding Response from '{}'. Tokens billed: {}", embeddingsApiUrl,
                 response.getBody().getUsage().getTotalTokens());
@@ -66,13 +64,14 @@ public class VoyageAiServiceAdapter implements AiModelApiAdapterService {
         return response.getBody();
     }
 
-    public VoyageRerankResponse getRerankResponse (VoyageRerankRequest rerankRequestHttpEntity, AiModel aiModel) {
+    public VoyageRerankResponse getRerankResponse (VoyageRerankRequest rerankRequestHttpEntity, AiModel aiModel, String apiKey) {
         String rerankApiUrl = aiModel.getUrl();
-        logger.debug("Sending Rerank Request to '{}': {}", rerankApiUrl, rerankRequestHttpEntity);
+        logger.debug("Sending Rerank Request to '{}'", rerankApiUrl);
+        logger.trace("Rerank Request HttpEntity: {}", rerankRequestHttpEntity);
         logger.info("AiModel for Rerank-->: {}", aiModel.getModel());
         ResponseEntity<VoyageRerankResponse> response = restTemplate.postForEntity(
                 rerankApiUrl,
-                new HttpEntity<>(rerankRequestHttpEntity, buildHeader()),
+                new HttpEntity<>(rerankRequestHttpEntity, buildHeader(apiKey)),
                 VoyageRerankResponse.class);
         logger.info("Received Rerank Response from '{}'. Tokens billed: {}", rerankApiUrl,
                 response.getBody().getUsage().getTotal_tokens());
@@ -98,7 +97,7 @@ public class VoyageAiServiceAdapter implements AiModelApiAdapterService {
     }
 
     @Override
-    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey) {
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice) {
         return null;
     }
 
@@ -120,7 +119,8 @@ public class VoyageAiServiceAdapter implements AiModelApiAdapterService {
                                 .documents(documents)
                                 .model(aiModel.getModel())
                                 .build()),
-                aiModel);
+                aiModel,
+                apiKey);
         return  voyageRerankResponseConverter.toRerankResponse(voyageRerankResponse);
     }
 

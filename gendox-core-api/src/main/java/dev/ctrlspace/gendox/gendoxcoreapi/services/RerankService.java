@@ -7,10 +7,12 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,21 +26,21 @@ public class RerankService {
 
     @Autowired
     public RerankService(AiModelUtils aiModelUtils,
-                         EmbeddingService embeddingService) {
+                         @Lazy EmbeddingService embeddingService) {
         this.aiModelUtils = aiModelUtils;
         this.embeddingService = embeddingService;
     }
 
-    public List<DocumentInstanceSection> rerankSections(ProjectAgent agent, List<DocumentInstanceSection> sectionList, String query) throws GendoxException {
+    public List<DocumentInstanceSectionDTO> rerankSections(ProjectAgent agent, List<DocumentInstanceSectionDTO> sectionDTOList, String query) throws GendoxException {
         AiModel aiModel = agent.getRerankModel();
         String apiKey = embeddingService.getApiKey(agent, "RERANK_MODEL");
-        List<String> documents = toDocumentStrings(sectionList);
+        List<String> documents = toDocumentStrings(sectionDTOList);
         RerankResponse rerankResponse = this.rerankList(documents, query, aiModel, apiKey);
 
-        logger.info("Rerank response: {}", rerankResponse);
+        logger.trace("Rerank response: {}", rerankResponse);
 
         return rerankResponse.getResults().stream()
-                .map(result -> sectionList.get(result.getIndex()))
+                .map(result -> sectionDTOList.get(result.getIndex()))
                 .toList();
 
     }
@@ -49,9 +51,9 @@ public class RerankService {
 
     }
 
-    private List<String> toDocumentStrings(List<DocumentInstanceSection> sections) {
+    private List<String> toDocumentStrings(List<DocumentInstanceSectionDTO> sections) {
         return sections.stream()
-                .map(DocumentInstanceSection::getSectionValue)
+                .map(DocumentInstanceSectionDTO::getSectionValue)
                 .toList();
     }
 

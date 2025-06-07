@@ -5,13 +5,11 @@ import dev.ctrlspace.gendox.authentication.AuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectAgentCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationPlanRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ProjectAgentPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
@@ -29,7 +27,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class ProjectAgentService {
@@ -58,6 +58,8 @@ public class ProjectAgentService {
     private AuthenticationService authenticationService;
     private OrganizationPlanService organizationPlanService;
 
+    private AiToolsRepository aiToolsRepository;
+
 
     @Autowired
     public ProjectAgentService(AuthenticationService authenticationService,
@@ -68,7 +70,8 @@ public class ProjectAgentService {
                                AiModelService aiModelService,
                                CryptographyUtils cryptographyUtils,
                                SubscriptionAiModelTierService subscriptionAiModelTierService,
-                               OrganizationPlanService organizationPlanService
+                               OrganizationPlanService organizationPlanService,
+                               AiToolsRepository aiToolsRepository
 
     ) {
         this.authenticationService = authenticationService;
@@ -80,6 +83,7 @@ public class ProjectAgentService {
         this.cryptographyUtils = cryptographyUtils;
         this.subscriptionAiModelTierService = subscriptionAiModelTierService;
         this.organizationPlanService = organizationPlanService;
+        this.aiToolsRepository = aiToolsRepository;
     }
 
     public ProjectAgent getAgentByProjectId(UUID projectId) {
@@ -278,8 +282,51 @@ public class ProjectAgentService {
             existingProjectAgent.setRerankModel(aiModelService.getByName(projectAgent.getRerankModel().getName()));
         }
         existingProjectAgent.setOrganizationDid(projectAgent.getOrganizationDid());
+
+
+        syncAiTools(projectAgent, existingProjectAgent);
+
         existingProjectAgent = projectAgentRepository.save(existingProjectAgent);
         return existingProjectAgent;
+    }
+
+    /**
+     * Sync AI-Tools between the incoming ProjectAgent (source) and the
+     * already-persisted ProjectAgent (target).
+     *
+     * 1. Update tools whose id exists on both sides.
+     * 2. Remove tools that exist only on target.
+     * 3. Add tools that exist only on source (id == null *or* id not on target).
+     */
+    private void syncAiTools(ProjectAgent source, ProjectAgent target) {
+
+        List<AiTools> incomingTools = source.getAiTools();
+
+        Map<UUID, AiTools> currentToolsById = target.getAiTools().stream()
+                .collect(Collectors.toMap(AiTools::getId, Function.identity()));
+
+        Set<UUID> keepIds = new HashSet<>();
+
+        for (AiTools incTool : incomingTools) {
+            UUID id = incTool.getId();
+
+            if (id != null && currentToolsById.containsKey(id)) {
+                // update existing
+                AiTools managed = currentToolsById.get(id);
+                managed.setJsonSchema(incTool.getJsonSchema());
+
+                keepIds.add(id);
+            } else {
+                incTool.setAgent(target);
+                incTool.setType("function");
+                target.getAiTools().add(incTool);
+            }
+        }
+
+        target.getAiTools().removeIf(t -> {
+            UUID id = t.getId();
+            return id != null && !keepIds.contains(id);
+        });
     }
 
 

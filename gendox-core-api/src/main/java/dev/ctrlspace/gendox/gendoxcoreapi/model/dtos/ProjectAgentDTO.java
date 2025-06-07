@@ -2,15 +2,16 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.checkerframework.checker.units.qual.A;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -43,7 +44,7 @@ public class ProjectAgentDTO {
     private Long maxCompletionLimit;
     private Boolean rerankEnable;
     private AiModel rerankModel;
-
+    private List<AiTools> aiTools = new ArrayList<>();
 
 
 
