@@ -90,7 +90,7 @@ export default {
     `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,
 
   triggerJobs: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/splitting/training`,
+    `${url}organizations/${organizationId}/projects/${projectId}/splitting/training/project`,
 
   getOrganizationById: (organizationId) =>
     `${url}organizations/${organizationId}`,

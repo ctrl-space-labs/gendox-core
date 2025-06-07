@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 
 @Service
 public class TrainingBatchService {
@@ -65,7 +66,7 @@ public class TrainingBatchService {
 
 
 
-    public JobExecution runAutoTraining() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
+    public JobExecution runAutoTraining(UUID projectId) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
 
 
         BatchExecutionCriteria criteria = BatchExecutionCriteria.builder()
@@ -99,6 +100,9 @@ public class TrainingBatchService {
                 .updatedBetween(new TimePeriodDTO(start, to))
                 .projectAutoTraining(true)
                 .build();
+        if (projectId != null) {
+            sectionCriteria.setProjectId(projectId.toString());
+        }
 
         JobParameters params = documentSectionCriteriaJobParamsConverter.toDTO(sectionCriteria);
         params = new JobParametersBuilder(params)
