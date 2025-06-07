@@ -217,7 +217,6 @@ export const sendMessage = createAsyncThunk(
 
       // If this message invoked any tool calls, stash them for later
       if (Array.isArray(message?.toolCalls) && message?.toolCalls.length) {
-        console.log("Message has tool calls: ", message.toolCalls)
         message.toolCalls.forEach(call => {
           toolCallsToProcess.push({
             threadId:       responseThreadId,
