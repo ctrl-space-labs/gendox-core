@@ -67,7 +67,11 @@ const gendoxMessageToThreadMessage = (message) => {
     createdBy: message.createdBy || 'anonymous',
     message: message.value,
     sections: message.messageSections,
-    createdAt: message.createdAt
+    createdAt: message.createdAt,
+    role: message.role,
+    toolName: message.name,
+    toolCallId: message.toolCallId,
+    toolCalls: message.toolCalls
   };
 };
 

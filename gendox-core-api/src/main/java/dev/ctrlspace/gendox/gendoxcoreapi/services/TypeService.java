@@ -8,7 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class TypeService {
@@ -23,6 +25,13 @@ public class TypeService {
 
     public List<Type> getOrganizationRoles() {
         return typeRepository.findByTypeCategory("ORGANIZATION_ROLE_TYPE");
+    }
+
+    public List<Type> getToolExamples() {
+        return typeRepository.findByTypeCategory("AI_TOOL_EXAMPLES")
+                .stream()
+                .sorted(Comparator.comparing(Type::getName, Comparator.reverseOrder()))
+                .collect(Collectors.toList());
     }
 
     //by category and name
@@ -116,9 +125,9 @@ public class TypeService {
 
 
     // get all types by type category
-    public List<Type> getTypeCategories(String typeCategory){
+    public List<Type> getTypeCategories(String typeCategory) {
         return typeRepository.findByTypeCategory(typeCategory);
-               }
+    }
 
 
 

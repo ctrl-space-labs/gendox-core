@@ -80,7 +80,7 @@ public class IntegrationManager {
 
     private void processIntegration(Integration integration, Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map) throws GendoxException {
 
-        logger.debug("Processing integration");
+        logger.debug("Processing integration with id: {} for project: {}", integration.getId(), integration.getProjectId());
 
         if (integration.getIntegrationType().equals(typeService.getIntegrationTypeByName(IntegrationTypesConstants.GIT_INTEGRATION))) {
             processGitIntegration(integration, map);

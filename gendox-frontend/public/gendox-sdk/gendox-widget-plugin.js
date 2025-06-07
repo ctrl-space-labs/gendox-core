@@ -123,15 +123,59 @@
             }
         }
 
+        // Listen for actions from the AI Agent
+        function handleToolUseMessages(event) {
+          if (event.data && event.data.type === 'gendox.events.chat.message.tool_calls.request') {
+            const toolCalls = event.data.payload;
+            console.log("Tool Calls Request Received:", event.data.payload);
+
+            toolCalls.forEach(tool => {
+              const fnName = tool.function.name;
+              let parsedArgs = {};
+
+              try {
+                parsedArgs = JSON.parse(tool.function.arguments || '{}');
+              } catch (err) {
+                console.error('Failed to parse arguments for', fnName, err);
+                return;
+              }
+
+              const handler = window.gendox.tools.allTools[fnName];
+              if (handler) {
+                try {
+
+                  const result = handler(parsedArgs);
+                  console.log(`Tool “${fnName}” returned:`, result);
+                  tool.response = result;
+                } catch (err) {
+                  console.error(`Error executing handler "${fnName}":`, err);
+                }
+              } else {
+                console.warn('Unknown tool call function:', fnName);
+              }
+            })
+
+            // TODO return all toolCalls->response to the iframe with 'gendox.events.chat.message.tool_calls.response' type
+
+          }
+        }
+
         window.addEventListener('message', handleChatWindowToggleMessage, false);
         window.addEventListener('message', handleInitializationRequestMessage);
         window.addEventListener('message', handleLocalContextSelectedText);
+        window.addEventListener('message', handleToolUseMessages);
 
         window.onunload = function() {
             window.removeEventListener('message', handleInitializationRequestMessage);
             window.removeEventListener('message', handleChatWindowToggleMessage);
             window.removeEventListener('message', handleLocalContextSelectedText);
+            window.removeEventListener('message', handleToolUseMessages);
         };
+    }
+
+    function initializeDefaultTools() {
+        // Register the default "open_web_page" tool
+        registerTool('open_web_page', openWebPageToolHandler);
     }
 
     window.gendox = {};
@@ -146,6 +190,10 @@
 
         window.gendox.widget = {};
         window.gendox.widget.config = config;
+        window.gendox.tools = window.gendox.tools || {};
+        window.gendox.tools.allTools = {};
+        window.gendox.tools.registerTool = registerTool;
+        window.gendox.tools.removeTool = removeTool;
 
         function runChatInitializationOnLoadedDOM() {
             // Create container and iframe elements dynamically
@@ -157,6 +205,7 @@
             }
 
             initializeChat(config);
+            initializeDefaultTools();
         }
 
         // Check if DOM is already loaded
@@ -343,5 +392,55 @@
 
         return container.innerHTML;
     }
+
+  /**
+   * Register a new tool handler by name.
+   *
+   * @param {string} name - Unique identifier for the tool e.g 'open_web_page'.
+   * @param {function(Object): Object} handler -
+   *   A function that accepts a single argument (an Object containing
+   *   the tool’s parameters) and returns an Object (the result of running the tool).
+   *
+   */
+  function registerTool(name, handler) {
+    if (typeof handler !== 'function') {
+      throw new Error('Handler must be a function');
+    }
+
+    if (window.gendox.tools.allTools.hasOwnProperty(name)) {
+      throw new Error(`A tool named "${name}" is already registered. You will have to remove it first.`);
+    }
+
+    window.gendox.tools.allTools[name] = handler;
+  }
+
+  /**
+   * Remove a previously registered tool handler by name.
+   *
+   * @param {string} name - The unique identifier of the tool to remove (e.g. 'open_web_page').
+   *
+   * @throws {Error} If no tool with the given `name` is registered.
+   */
+  function removeTool(name) {
+    if (!window.gendox.tools.allTools.hasOwnProperty(name)) {
+      throw new Error(`No tool named "${name}" is registered.`);
+    }
+    delete window.gendox.tools.allTools[name];
+  }
+
+
+  /**
+   * Default implementation for the "open_web_page" tool.
+   *
+   * @param {Object} arguments - The arguments passed to the tool.
+   */
+  function openWebPageToolHandler(arguments) {
+
+    console.log("Opening web page:", arguments.url);
+    if (window.location.href !== arguments.url) {
+      window.location.href = arguments.url;
+    }
+    return {"status": "executed"}
+  }
 
 })();

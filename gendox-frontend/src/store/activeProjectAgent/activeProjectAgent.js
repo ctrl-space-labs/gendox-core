@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import projectService from 'src/gendox-sdk/projectService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
+import typesService from "../../gendox-sdk/typesService";
 
 // Async thunk to fetch AI models for the project agent
 export const fetchAiModels = createAsyncThunk(
@@ -13,6 +14,21 @@ export const fetchAiModels = createAsyncThunk(
     } catch (error) {
       toast.error(`${getErrorMessage(error)}`)
       console.error('Failed to fetch AI models', error)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const fetchExampleTools = createAsyncThunk(
+  'activeProjectAgent/fetchExampleTools',
+  async ({ token }, thunkAPI) => {
+    try {
+      const response = await typesService.getToolExamples(token)
+      console.log('Fetched example tools:', response.data)
+      return response.data
+    } catch (error) {
+      toast.error(`${getErrorMessage(error)}`)
+      console.error('Failed to fetch example tools', error)
       return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
@@ -40,8 +56,10 @@ const initialState = {
     moderationModels: [],
     rerankModels: []
   },
+  exampleTools: [],
   isFetchingAiModels: false,
   isUpdatingProjectAgent: false,
+  isFetchingExampleTools: false,
   error: null
 }
 
@@ -65,6 +83,19 @@ const activeProjectAgentSlice = createSlice({
       })
       .addCase(fetchAiModels.rejected, (state, action) => {
         state.isFetchingAiModels = false
+        state.fetchStatus = 'failed'
+        state.error = action.payload
+      })
+      // Handle fetching example tools
+      .addCase(fetchExampleTools.pending, state => {
+        state.isFetchingExampleTools = true
+      })
+      .addCase(fetchExampleTools.fulfilled, (state, action) => {
+        state.isFetchingExampleTools = false
+        state.exampleTools = action.payload
+      })
+      .addCase(fetchExampleTools.rejected, (state, action) => {
+        state.isFetchingExampleTools = false
         state.fetchStatus = 'failed'
         state.error = action.payload
       })
