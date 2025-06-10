@@ -2,7 +2,6 @@ package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.AsyncService;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AsyncExecutionTypes;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,7 +27,7 @@ public class AsyncController {
     @Operation(summary = "Trigger splitter and training Spring Jobs",
             description = "Trigger splitter and training Spring Jobs.")
     public String AsyncSplittingAndTraining() throws GendoxException {
-        asyncService.executeSplitterAndTraining(null, AsyncExecutionTypes.SPLITTER_AND_TRAINING);
+        asyncService.executeSplitterAndTraining(null);
         return "STARTED";
     }
 
@@ -39,7 +38,7 @@ public class AsyncController {
             description = "Trigger project-specific splitter and training Spring Jobs.")
     public String AsyncSplittingAndTrainingProject(@PathVariable UUID organizationId,
                                                    @PathVariable UUID projectId) throws GendoxException {
-        asyncService.executeSplitterAndTraining(projectId, AsyncExecutionTypes.SPLITTER_AND_TRAINING);
+        asyncService.executeSplitterAndTraining(projectId);
         return "STARTED";
     }
 
@@ -50,7 +49,7 @@ public class AsyncController {
             description = "Trigger splitter Spring Jobs.")
     public String AsyncSplitting(@PathVariable UUID organizationId,
                                  @PathVariable UUID projectId) throws GendoxException {
-        asyncService.executeSplitterAndTraining(null, AsyncExecutionTypes.SPLITTER);
+        asyncService.executeSplitter(null);
         return "STARTED";
     }
 
@@ -61,7 +60,7 @@ public class AsyncController {
             description = "Trigger project-specific splitter Spring Jobs.")
     public String AsyncSplittingProject(@PathVariable UUID organizationId,
                                         @PathVariable UUID projectId) throws GendoxException {
-        asyncService.executeSplitterAndTraining(projectId, AsyncExecutionTypes.SPLITTER);
+        asyncService.executeSplitter(projectId);
         return "STARTED";
     }
 
@@ -72,7 +71,7 @@ public class AsyncController {
             description = "Trigger training Spring Jobs.")
     public String AsyncTraining(@PathVariable UUID organizationId,
                                 @PathVariable UUID projectId) throws GendoxException {
-        asyncService.executeSplitterAndTraining(null, AsyncExecutionTypes.TRAINING);
+        asyncService.executeTraining(null);
         return "STARTED";
     }
 
@@ -83,7 +82,7 @@ public class AsyncController {
             description = "Trigger project-specific training Spring Jobs.")
     public String AsyncTrainingProject(@PathVariable UUID organizationId,
                                        @PathVariable UUID projectId) throws GendoxException {
-        asyncService.executeSplitterAndTraining(projectId, AsyncExecutionTypes.TRAINING);
+        asyncService.executeTraining(projectId);
         return "STARTED";
     }
 }
