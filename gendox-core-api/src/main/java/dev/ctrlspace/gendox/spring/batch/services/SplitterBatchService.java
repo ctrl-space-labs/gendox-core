@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.spring.batch.services;
 
+import brave.internal.Nullable;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceCriteriaJobParamsConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
@@ -42,7 +43,11 @@ public class SplitterBatchService {
     @Autowired
     private JobLauncher jobLauncher;
 
-    public JobExecution runAutoSplitter(UUID projectId) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
+    public JobExecution runAutoSplitter() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
+        return this.runAutoSplitter(null);
+    }
+
+        public JobExecution runAutoSplitter(@Nullable UUID projectId) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
 
 
         BatchExecutionCriteria criteria = BatchExecutionCriteria.builder()

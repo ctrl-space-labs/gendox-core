@@ -16,9 +16,10 @@ public class DocumentInstanceCriteriaJobParamsConverter implements GendoxConvert
     public JobParameters toDTO(DocumentCriteria criteria) {
 
         JobParametersBuilder paramsBuilder = new JobParametersBuilder();
-        if (criteria.getProjectId() != null) {
-            paramsBuilder.addString("projectId", criteria.getProjectId());
-        }
+
+        // Ensure that the projectId is always set, even if it is null. It is required for the job to calculate the previous run
+        paramsBuilder.addString("projectId", criteria.getProjectId());
+
         if (criteria.getOrganizationId() != null) {
             paramsBuilder.addString("organizationId", criteria.getOrganizationId());
         }

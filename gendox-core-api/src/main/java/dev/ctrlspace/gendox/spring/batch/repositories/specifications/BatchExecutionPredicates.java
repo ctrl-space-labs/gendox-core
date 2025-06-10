@@ -8,7 +8,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.spring.batch.model.QBatchJobExecution;
 import dev.ctrlspace.gendox.spring.batch.model.QBatchJobInstance;
 import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionCriteria;
+import dev.ctrlspace.gendox.spring.batch.model.criteria.ParamCriteria;
 
+import java.util.List;
 import java.util.UUID;
 
 public class BatchExecutionPredicates {
@@ -20,8 +22,23 @@ public class BatchExecutionPredicates {
         return ExpressionUtils.allOf(
                 jobName(criteria.getJobName()),
                 status(criteria.getStatus()),
-                exitCode(criteria.getExitCode())
+                exitCode(criteria.getExitCode()),
+                allParams(criteria.getMatchAllParams())
         );
+    }
+
+    private static Predicate allParams(List<ParamCriteria> matchAllParams) {
+
+        if (matchAllParams == null || matchAllParams.isEmpty()) {
+            return null;
+        }
+
+        Predicate[] predicates = matchAllParams.stream()
+                .map(param -> qBatchJobExecution.batchJobExecutionParams.any().parameterName.eq(param.getParamName())
+                        .and(qBatchJobExecution.batchJobExecutionParams.any().parameterValue.eq(param.getParamValue())))
+                .toArray(Predicate[]::new);
+
+        return ExpressionUtils.allOf(predicates);
     }
 
     private static Predicate status(String status) {

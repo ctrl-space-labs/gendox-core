@@ -8,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSe
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecutionParams;
 import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionCriteria;
+import dev.ctrlspace.gendox.spring.batch.model.criteria.ParamCriteria;
 import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionParamsRepository;
 import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionRepository;
 import dev.ctrlspace.gendox.spring.batch.repositories.specifications.BatchExecutionPredicates;
@@ -135,36 +136,30 @@ public class SplitterAndTrainingBatchService {
                 .exitCode("COMPLETED")
                 .build();
 
+        if (projectId != null) {
+            criteria.getMatchAllParams().add(new ParamCriteria("projectId", projectId.toString()));
+        } else {
+            criteria.getMatchAllParams().add(new ParamCriteria("projectId", null));
+        }
+
         Page<BatchJobExecution> batchJobExecutions =
                 batchJobExecutionRepository.findAll(BatchExecutionPredicates.build(criteria), pageRequest);
 
-        if (projectId != null) {
-            BatchJobExecutionParams pidParam = batchJobExecutionParamsRepository
-                    .findByExecutionIdAndName(batchJobExecutions.getContent().getFirst().getJobExecutionId(), "projectId");
-            if (pidParam != null && projectId.toString().equals(pidParam.getParameterValue())) {
-                // Found a job execution for the specific project
-                BatchJobExecutionParams nowParam = batchJobExecutionParamsRepository
-                        .findByExecutionIdAndName(batchJobExecutions.getContent().getFirst().getJobExecutionId(), "now");
-                if (nowParam != null) {
-                    return Instant.parse(nowParam.getParameterValue());
-                }
+        Instant now = Instant.now();
 
-            }
+        Instant start;
+        if (batchJobExecutions.getContent().isEmpty()) {
+            start = now.minus(365, ChronoUnit.DAYS);
+        } else {
+            BatchJobExecutionParams previousJobExecutionNowParam = batchJobExecutionParamsRepository
+                    .findByExecutionIdAndName(batchJobExecutions.getContent().get(0).getJobExecutionId(), "now");
+            start = Instant.parse(previousJobExecutionNowParam.getParameterValue());
+
         }
 
 
-        BatchJobExecutionParams param = batchJobExecutionParamsRepository
-                .findByExecutionIdAndName(batchJobExecutions.getContent().getFirst().getJobExecutionId(), "projectId");
-        if (param == null || param.getParameterValue() == null) {
-            BatchJobExecutionParams nowParam = batchJobExecutionParamsRepository
-                    .findByExecutionIdAndName(batchJobExecutions.getContent().getFirst().getJobExecutionId(), "now");
-            if (nowParam != null) {
-                return Instant.parse(nowParam.getParameterValue());
-            }
-        }
 
-
-        return defaultIfNone.minus(365, ChronoUnit.DAYS);
+        return start;
     }
 
 
