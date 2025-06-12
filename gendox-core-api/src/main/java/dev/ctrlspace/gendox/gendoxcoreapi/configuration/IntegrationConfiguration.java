@@ -182,8 +182,8 @@ public class IntegrationConfiguration {
                 if (hasNewFiles) {
                     try {
                         logger.debug("Starting splitter and training jobs");
-                        JobExecution splitterJobExecution = splitterBatchService.runAutoSplitter(null);
-                        JobExecution trainingJobExecution = trainingBatchService.runAutoTraining(null);
+                        JobExecution splitterJobExecution = splitterBatchService.runAutoSplitter();
+                        JobExecution trainingJobExecution = trainingBatchService.runAutoTraining();
                         logger.debug("Splitter job status: {}, Training job status: {}", splitterJobExecution.getStatus(), trainingJobExecution.getStatus());
                     } catch (Exception e) {
                         logger.error("Error handling integration message: {}", e.getMessage(), e);
