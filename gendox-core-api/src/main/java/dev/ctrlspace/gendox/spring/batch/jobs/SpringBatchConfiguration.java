@@ -8,8 +8,8 @@ import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionRepositor
 import dev.ctrlspace.gendox.spring.batch.jobs.training.TrainingJobConfig;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
+import dev.ctrlspace.gendox.spring.batch.utils.JobUtils;
 import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +30,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
         TrainingBatchService.class,
         DemoJobConfig.class,
         TrainingJobConfig.class,
-        SplitterJobConfig.class})
+        SplitterJobConfig.class,
+        JobUtils.class})
 @EnableJpaRepositories(basePackageClasses = {BatchJobExecutionRepository.class})
 @EntityScan(basePackageClasses = {BatchJobExecution.class})
 public class SpringBatchConfiguration implements ApplicationRunner {

@@ -16,18 +16,21 @@ public class DocumentInstanceCriteriaJobParamsConverter implements GendoxConvert
     public JobParameters toDTO(DocumentCriteria criteria) {
 
         JobParametersBuilder paramsBuilder = new JobParametersBuilder();
+
         if (criteria.getProjectId() != null) {
             paramsBuilder.addString("projectId", criteria.getProjectId());
+        } else {
+            // Exclude jobs that have projectId set (only jobs without projectId)
+            paramsBuilder.addString("projectId", "ALL_PROJECTS");
         }
+
         if (criteria.getOrganizationId() != null) {
             paramsBuilder.addString("organizationId", criteria.getOrganizationId());
         }
         if (criteria.getDocumentInstanceId() != null) {
             paramsBuilder.addString("documentInstanceId", criteria.getDocumentInstanceId());
         }
-//        if (criteria.getDocumentInstanceIds() != null) {
-//            paramsBuilder.add("documentInstanceIds", criteria.getDocumentInstanceIds());
-//        }
+
         if (criteria.getCreatedBetween() != null && criteria.getCreatedBetween().from() != null) {
             paramsBuilder.addString("createdBetween.from", criteria.getCreatedBetween().from().toString());
         }
@@ -62,15 +65,23 @@ public class DocumentInstanceCriteriaJobParamsConverter implements GendoxConvert
             );
         }
 
-        DocumentCriteria criteria = DocumentCriteria.builder()
-                .projectId(jobParameters.getString("projectId"))
+        String projectId = jobParameters.getString("projectId");
+
+        if (projectId == null || "null".equalsIgnoreCase(projectId.trim()) || "ALL_PROJECTS".equals(projectId.trim())) {
+            projectId = null;
+        }
+
+        DocumentCriteria.DocumentCriteriaBuilder builder = DocumentCriteria.builder()
                 .organizationId(jobParameters.getString("organizationId"))
                 .documentInstanceId(jobParameters.getString("documentInstanceId"))
                 .createdBetween(createdBetween)
-                .updatedBetween(updatedBetween)
-                .build();
+                .updatedBetween(updatedBetween);
 
-        return criteria;
+        if (projectId != null) {
+            builder.projectId(projectId);
+        }
+
+        return builder.build();
 
     }
 }

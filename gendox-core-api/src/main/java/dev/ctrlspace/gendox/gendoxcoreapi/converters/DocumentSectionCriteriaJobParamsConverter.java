@@ -22,6 +22,9 @@ public class DocumentSectionCriteriaJobParamsConverter implements GendoxConverte
         }
         if (criteria.getProjectId() != null) {
             paramsBuilder.addString("projectId", criteria.getProjectId());
+        } else {
+            // Exclude jobs that have projectId set (only jobs without projectId)
+            paramsBuilder.addString("projectId", "ALL_PROJECTS");
         }
 
         if (criteria.getCreatedBetween() != null && criteria.getCreatedBetween().from() != null) {
@@ -61,12 +64,24 @@ public class DocumentSectionCriteriaJobParamsConverter implements GendoxConverte
             );
         }
 
-        return DocumentInstanceSectionCriteria.builder()
-                .documentId(jobParameters.getString("documentInstanceId"))
-                .projectId(jobParameters.getString("projectId"))
-                .projectAutoTraining(Boolean.valueOf(jobParameters.getString("projectAutoTraining")))
-                .createdBetween(createdBetween)
-                .updatedBetween(updatedBetween)
-                .build();
+        String projectId = jobParameters.getString("projectId");
+
+        if (projectId == null || "null".equalsIgnoreCase(projectId.trim()) || "ALL_PROJECTS".equals(projectId.trim())) {
+            projectId = null;
+        }
+
+        DocumentInstanceSectionCriteria.DocumentInstanceSectionCriteriaBuilder builder =
+                DocumentInstanceSectionCriteria.builder()
+                        .documentId(jobParameters.getString("documentInstanceId"))
+                        .projectAutoTraining(Boolean.valueOf(jobParameters.getString("projectAutoTraining")))
+                        .createdBetween(createdBetween)
+                        .updatedBetween(updatedBetween);
+
+        if (projectId != null) {
+            builder.projectId(projectId);
+        }
+
+        return builder.build();
+
     }
 }
