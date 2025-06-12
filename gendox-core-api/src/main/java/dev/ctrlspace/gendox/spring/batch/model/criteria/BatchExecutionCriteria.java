@@ -17,5 +17,7 @@ public class BatchExecutionCriteria {
     private String jobName;
     private String status;
     private String exitCode;
+    @Builder.Default
     private List<ParamCriteria> matchAllParams = new ArrayList<>(); // Parameters that must match all criteria
+
 }

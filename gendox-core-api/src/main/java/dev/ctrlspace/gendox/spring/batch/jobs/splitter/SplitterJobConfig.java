@@ -22,11 +22,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.core.task.VirtualThreadTaskExecutor;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
-import java.util.List;
 
 
 @Configuration
@@ -35,8 +32,6 @@ public class SplitterJobConfig {
 
     @Value("${gendox.batch-jobs.document-splitter.job.thread-pool-size}")
     private Integer threadPoolSize;
-    @Value("${gendox.batch-jobs.document-splitter.job.steps.document-splitter-step.throttle-limit}")
-    private Integer throttleLimit;
     @Value("${gendox.batch-jobs.document-splitter.job.steps.document-splitter-step.chunk-size}")
     private Integer chunkSize;
     @Value("${gendox.batch-jobs.document-splitter.job.name}")

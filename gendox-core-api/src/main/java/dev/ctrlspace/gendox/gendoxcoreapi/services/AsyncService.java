@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AsyncExecutionTypes;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterAndTrainingBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
@@ -34,10 +35,10 @@ public class AsyncService {
     }
 
     @Async
-    public void executeSplitter(UUID projectId) throws GendoxException {
+    public void executeSplitter(UUID projectId, TimePeriodDTO timePeriod) throws GendoxException {
         logger.info("Process Splitter started for Project ID = {}", projectId);
         try {
-            JobExecution splitterJobExecution = splitterBatchService.runAutoSplitter(projectId);
+            JobExecution splitterJobExecution = splitterBatchService.runAutoSplitter(projectId, timePeriod);
             logger.info("Splitter Job Execution Status: {}", splitterJobExecution.getStatus());
         } catch (Exception e) {
             throw new GendoxException("SPLITTER_JOB_FAILED", "Error during splitter job execution: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -46,10 +47,10 @@ public class AsyncService {
     }
 
     @Async
-    public void executeTraining(UUID projectId) throws GendoxException {
+    public void executeTraining(UUID projectId, TimePeriodDTO timePeriod) throws GendoxException {
         logger.info("Process Training started for Project ID = {}", projectId);
         try {
-            JobExecution trainingJobExecution = trainingBatchService.runAutoTraining(projectId);
+            JobExecution trainingJobExecution = trainingBatchService.runAutoTraining(projectId, timePeriod);
             logger.info("Training Job Execution Status: {}", trainingJobExecution.getStatus());
         } catch (Exception e) {
             throw new GendoxException("TRAINING_JOB_FAILED", "Error during training job execution: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -58,10 +59,10 @@ public class AsyncService {
     }
 
     @Async
-    public void executeSplitterAndTraining(UUID projectId) throws GendoxException {
+    public void executeSplitterAndTraining(UUID projectId, TimePeriodDTO timePeriod) throws GendoxException {
         logger.info("Process Splitter and Training started for Project ID = {}", projectId);
         try {
-            JobExecution jobExecution = splitterAndTrainingBatchService.runSplitterAndTraining(projectId);
+            JobExecution jobExecution = splitterAndTrainingBatchService.runSplitterAndTraining(projectId, timePeriod);
             logger.info("Splitter and Training Job Execution Status: {}", jobExecution.getStatus());
         } catch (Exception e) {
             throw new GendoxException("SPLITTER_AND_TRAINING_JOB_FAILED", "Error during splitter and training job execution: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);

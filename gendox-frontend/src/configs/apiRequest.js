@@ -89,8 +89,15 @@ export default {
   uploadDocument: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,
 
-  triggerJobs: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/splitting/training/project`,
+  triggerJobs: (organizationId, projectId, jobName, projectIdParam) => {
+  let urlWithParams = `${url}organizations/${organizationId}/projects/${projectId}/splitting/training?jobName=${jobName}`;
+  
+  if (projectIdParam) {
+    urlWithParams += `&projectId=${projectIdParam}`;
+  }
+  
+  return urlWithParams;
+},
 
   getOrganizationById: (organizationId) =>
     `${url}organizations/${organizationId}`,

@@ -2,14 +2,13 @@ package dev.ctrlspace.gendox.spring.batch.services;
 
 import brave.internal.Nullable;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceCriteriaJobParamsConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
-import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
-import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecutionParams;
-import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionCriteria;
-import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionParamsRepository;
-import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionRepository;
-import dev.ctrlspace.gendox.spring.batch.repositories.specifications.BatchExecutionPredicates;
+import dev.ctrlspace.gendox.spring.batch.utils.JobUtils;
+import dev.ctrlspace.gendox.spring.batch.utils.TimePeriodUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
@@ -17,82 +16,66 @@ import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteExcep
 import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 public class SplitterBatchService {
-
+    Logger logger = LoggerFactory.getLogger(SplitterBatchService.class);
     @Value("${gendox.batch-jobs.document-splitter.job.name}")
     private String documentSplitterJobName;
 
-    @Autowired
-    private BatchJobExecutionRepository batchJobExecutionRepository;
-    @Autowired
-    private BatchJobExecutionParamsRepository batchJobExecutionParamsRepository;
-    @Autowired
-    private DocumentInstanceCriteriaJobParamsConverter documentInstanceCriteriaJobParamsConverter;
-    @Autowired
-    private Job documentSplitterJob;
-    @Autowired
-    private JobLauncher jobLauncher;
+    private final DocumentInstanceCriteriaJobParamsConverter documentInstanceCriteriaJobParamsConverter;
+    private final Job documentSplitterJob;
+    private final JobLauncher jobLauncher;
+    private final JobUtils jobUtils;
 
-    public JobExecution runAutoSplitter() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
-        return this.runAutoSplitter(null);
+    @Autowired
+    public SplitterBatchService(
+            DocumentInstanceCriteriaJobParamsConverter documentInstanceCriteriaJobParamsConverter,
+            Job documentSplitterJob,
+            JobLauncher jobLauncher,
+            JobUtils jobUtils) {
+        this.documentInstanceCriteriaJobParamsConverter = documentInstanceCriteriaJobParamsConverter;
+        this.documentSplitterJob = documentSplitterJob;
+        this.jobLauncher = jobLauncher;
+        this.jobUtils = jobUtils;
     }
 
-        public JobExecution runAutoSplitter(@Nullable UUID projectId) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
+    public JobExecution runAutoSplitter() throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
+        return this.runAutoSplitter(null, null);
+    }
+
+    public JobExecution runAutoSplitter(@Nullable UUID projectId) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
+        return this.runAutoSplitter(projectId, null);
+    }
+
+    public JobExecution runAutoSplitter(@Nullable UUID projectId, @Nullable TimePeriodDTO timePeriod) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
 
 
-        BatchExecutionCriteria criteria = BatchExecutionCriteria.builder()
-                .jobName(documentSplitterJobName)
-                .status("COMPLETED")
-                .exitCode("COMPLETED")
-                .build();
+        var splitterTimePeriodAndOverride = TimePeriodUtils.prepareTimePeriodAndOverride(
+                jobUtils, documentSplitterJobName, timePeriod, projectId);
 
-        Sort sort = Sort.by(Sort.Direction.DESC, "createTime");
-        PageRequest pageRequest = PageRequest.of(0, 1, sort);
-        Instant now = Instant.now();
-
-        //find latest completed job by name
-        Page<BatchJobExecution> batchJobExecutions = batchJobExecutionRepository.findAll(BatchExecutionPredicates.build(criteria), pageRequest);
-
-        Instant start;
-        if (batchJobExecutions.getContent().isEmpty()) {
-            start = now.minus(365, ChronoUnit.DAYS);
-        } else {
-            BatchJobExecutionParams previousJobExecutionNowParam = batchJobExecutionParamsRepository
-                    .findByExecutionIdAndName(batchJobExecutions.getContent().get(0).getJobExecutionId(), "now");
-            start = Instant.parse(previousJobExecutionNowParam.getParameterValue());
-
-        }
-
-        Instant to = now;
-
-
-//      prepare Job execution params
         DocumentCriteria documentCriteria = DocumentCriteria.builder()
-                .updatedBetween(new TimePeriodDTO(start, to))
+                .updatedBetween(splitterTimePeriodAndOverride.timePeriod())
                 .build();
-
         if (projectId != null) {
             documentCriteria.setProjectId(projectId.toString());
         }
 
+        JobParameters splitterParams = jobUtils.buildJobParameters(
+                documentInstanceCriteriaJobParamsConverter.toDTO(documentCriteria),
+                splitterTimePeriodAndOverride.now(),
+                splitterTimePeriodAndOverride.override(),
+                documentSplitterJobName,
+                Map.of("skipUnchangedDocs", "true")
+        );
 
-        JobParameters params = documentInstanceCriteriaJobParamsConverter.toDTO(documentCriteria);
-        params = new JobParametersBuilder(params)
-                .addString("now", now.toString())
-                .addString("skipUnchangedDocs", "true")
-                .toJobParameters();
 
-        return jobLauncher.run(documentSplitterJob, params);
+        logger.info("Start Running document splitter job with parameters: {}", splitterParams);
+        return jobLauncher.run(documentSplitterJob, splitterParams);
 
 
     }
