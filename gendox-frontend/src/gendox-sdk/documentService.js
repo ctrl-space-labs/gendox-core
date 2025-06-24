@@ -160,14 +160,11 @@ const deleteDocumentSection = async (documentId, sectionId, token) => {
  * @param token
  * @returns {Promise<axios.AxiosResponse<String>>}
  */
-const triggerJobs = async (organizationId, projectId, token) => {
-  return axios.get(apiRequests.triggerJobs(organizationId, projectId), {
+const triggerJobs = async (organizationId, projectId, token, jobName, projectIdParam) => {
+  return axios.get(apiRequests.triggerJobs(organizationId, projectId, jobName, projectIdParam), {
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token
-    },
-    params: {
-      projectId: projectId
     }
   })
 }

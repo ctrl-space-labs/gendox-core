@@ -44,7 +44,7 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
     @Override
     public void write(Chunk<? extends DocumentSectionDTO> chunk) throws Exception {
 
-        logger.debug("Start writing sections chunk");
+        logger.debug("Start writing sections chunk {} items", chunk.getItems().size());
 
         Set<DocumentInstance> updatedDocuments = new HashSet<>();
 
