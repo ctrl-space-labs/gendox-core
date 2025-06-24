@@ -12,4 +12,5 @@ import lombok.NoArgsConstructor;
 public class ContentDTO {
     private int id;
     private String content;
+    private String source;
 }

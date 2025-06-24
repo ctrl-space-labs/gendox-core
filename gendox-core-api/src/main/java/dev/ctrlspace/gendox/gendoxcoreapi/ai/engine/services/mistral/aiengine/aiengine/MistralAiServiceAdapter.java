@@ -13,6 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.mistral.response.
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.MistralConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,8 +37,6 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
     private MistralEmbeddingResponseConverter mistralEmbeddingResponseConverter;
     private MistralCompletionResponseConverter mistralCompletionResponseConverter;
     private MistralModerationResponseConverter mistralModerationResponseConverter;
-    @Value("${gendox.models.mistral.key}")
-    private String mistralKey;
 
     @Autowired
     public MistralAiServiceAdapter(RestTemplate restTemplate,
@@ -50,20 +49,20 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
         this.mistralModerationResponseConverter = mistralModerationResponseConverter;
     }
 
-    private HttpHeaders buildHeader() {
+    private HttpHeaders buildHeader(String apiKey) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType(MistralConfig.MEDIA_TYPE));
-        headers.add(MistralConfig.AUTHORIZATION, MistralConfig.BEARER + mistralKey);
+        headers.add(MistralConfig.AUTHORIZATION, MistralConfig.BEARER + apiKey);
         return headers;
     }
 
-    public MistralEmbedResponse getEmbeddingResponse(MistralEmbedRequest embeddingRequestHttpEntity, AiModel aiModel) {
+    public MistralEmbedResponse getEmbeddingResponse(MistralEmbedRequest embeddingRequestHttpEntity, AiModel aiModel, String apiKey) {
         String embeddingsApiUrl = aiModel.getUrl();
         logger.debug("Sending Embedding Request to '{}': {}", embeddingsApiUrl, embeddingRequestHttpEntity);
         logger.info("AiModel for Embedding-->: {}", aiModel.getModel());
         ResponseEntity<MistralEmbedResponse> responseEntity = restTemplate.postForEntity(
                 embeddingsApiUrl,
-                new HttpEntity<>(embeddingRequestHttpEntity, buildHeader()),
+                new HttpEntity<>(embeddingRequestHttpEntity, buildHeader(apiKey)),
                 MistralEmbedResponse.class);
         logger.info("Received Embedding Response from '{}'. Tokens billed: {}", embeddingsApiUrl,
                 responseEntity.getBody().getUsage().getTotal_tokens());
@@ -71,13 +70,13 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
         return responseEntity.getBody();
     }
 
-    public MistralCompletionResponse getCompletionResponse(MistralCompletionRequest completionRequestHttpEntity, AiModel aiModel) {
+    public MistralCompletionResponse getCompletionResponse(MistralCompletionRequest completionRequestHttpEntity, AiModel aiModel, String apiKey) {
         String completionsApiUrl = aiModel.getUrl();
         logger.debug("Sending Completion Request to '{}': {}", completionsApiUrl, completionRequestHttpEntity);
         logger.info("AiModel for Completion-->: {}", aiModel.getModel());
         ResponseEntity<MistralCompletionResponse> responseEntity = restTemplate.postForEntity(
                 completionsApiUrl,
-                new HttpEntity<>(completionRequestHttpEntity, buildHeader()),
+                new HttpEntity<>(completionRequestHttpEntity, buildHeader(apiKey)),
                 MistralCompletionResponse.class);
         logger.info("Received Completion Response from '{}'. Tokens billed: {}", completionsApiUrl,
                 responseEntity.getBody().getUsage().getTotal_tokens());
@@ -85,12 +84,12 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
         return responseEntity.getBody();
     }
 
-    public MistralModerationResponse getModerationResponse(MistralModerationRequest moderationRequest, AiModel aiModel) {
+    public MistralModerationResponse getModerationResponse(MistralModerationRequest moderationRequest, AiModel aiModel, String apiKey) {
         String moderationApiUrl = aiModel.getUrl();
         logger.info("AiModel for Moderation: {}", aiModel.getModel());
         ResponseEntity<MistralModerationResponse> responseEntity = restTemplate.postForEntity(
                 moderationApiUrl,
-                new HttpEntity<>(moderationRequest, buildHeader()),
+                new HttpEntity<>(moderationRequest, buildHeader(apiKey)),
                 MistralModerationResponse.class);
         logger.debug("Received moderation Response from {}.", moderationApiUrl);
 
@@ -105,7 +104,8 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
                         .model(aiModel.getModel())
                         .input(embeddingMessage.getMessages())
                         .build()),
-                aiModel);
+                aiModel,
+                apiKey);
 
         EmbeddingResponse embeddingResponse = mistralEmbeddingResponseConverter.mistraltoEmbeddingResponse(mistralEmbedResponse);
         logger.info("Embedding Response: {}", embeddingResponse);
@@ -115,7 +115,7 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
     }
 
     @Override
-    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey) {
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice) {
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
         }
@@ -132,7 +132,7 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
                 .messages(mistralMessages);
 
         MistralCompletionRequest completionRequest = completionRequestBuilder.build();
-        MistralCompletionResponse mistralCompletionResponse = this.getCompletionResponse(completionRequest, aiModel);
+        MistralCompletionResponse mistralCompletionResponse = this.getCompletionResponse(completionRequest, aiModel, apiKey);
         logger.info("Completion Response: {}", mistralCompletionResponse);
         CompletionResponse completionResponse = mistralCompletionResponseConverter.toCompletionResponse(mistralCompletionResponse);
         logger.info("Completion Response: {}", completionResponse);
@@ -154,7 +154,8 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
                         .model(aiModel.getModel())
                         .input(message)
                         .build(),
-                aiModel);
+                aiModel,
+               apiKey);
 
         ModerationResponse moderationResponse = mistralModerationResponseConverter.toModerationResponse(mistralModerationResponse);
         logger.info("Moderation Response: {}", moderationResponse);

@@ -37,6 +37,7 @@ public interface DocumentInstanceSectionRepository extends JpaRepository<Documen
 
     @Query("SELECT dis FROM DocumentInstanceSection dis " +
             "INNER JOIN ProjectDocument pd ON dis.documentInstance.id = pd.documentId " +
+            "LEFT JOIN FETCH dis.documentSectionMetadata dsm " +
             "WHERE pd.project.id = :projectId AND dis.id IN :sectionIds")
     public List<DocumentInstanceSection> findByProjectAndSectionIds(UUID projectId, Set<UUID> sectionIds);
 

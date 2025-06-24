@@ -14,7 +14,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SearchResult;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.provenAi.utils.ProvenAiService;
 import io.micrometer.observation.annotation.Observed;
@@ -22,6 +21,7 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -53,6 +53,10 @@ public class EmbeddingService {
     private AuditLogsService auditLogsService;
     private CryptographyUtils cryptographyUtils;
 
+    private RerankService rerankService;
+
+    @Value("${proven-ai.enabled}")
+    private Boolean provenAiEnabled;
 
     @Autowired
     public EmbeddingService(
@@ -70,7 +74,8 @@ public class EmbeddingService {
             SearchResultConverter searchResultConverter,
             OrganizationModelKeyService organizationModelKeyService,
             AuditLogsService auditLogsService,
-            CryptographyUtils cryptographyUtils
+            CryptographyUtils cryptographyUtils,
+            RerankService rerankService
     ) {
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
@@ -87,6 +92,7 @@ public class EmbeddingService {
         this.organizationModelKeyService = organizationModelKeyService;
         this.auditLogsService = auditLogsService;
         this.cryptographyUtils = cryptographyUtils;
+        this.rerankService = rerankService;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -302,39 +308,79 @@ public class EmbeddingService {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public List<DocumentInstanceSectionDTO> findClosestSections(Message message, UUID projectId, Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
+    public List<DocumentInstanceSectionDTO> findClosestSections(Message message, Project project, Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
 
-        Project project = projectService.getProjectById(projectId);
+        UUID projectId = project.getId();
 
 
-        EmbeddingResponse embeddingResponse = getEmbeddingForMessage(project.getProjectAgent(), message.getValue(),
+        EmbeddingResponse embeddingResponse = getEmbeddingForMessage(project.getProjectAgent(),
+                message.getValue(),
                 project.getProjectAgent().getSemanticSearchModel());
 
         String sectionSha256Hash = cryptographyUtils.calculateSHA256(message.getValue());
 
-        Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse, projectId, message.getId(), null, project.getProjectAgent().getSemanticSearchModel().getId(), project.getOrganizationId(), sectionSha256Hash);
+        Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse,
+                projectId,
+                message.getId(),
+                null,
+                project.getProjectAgent().getSemanticSearchModel().getId(),
+                project.getOrganizationId(),
+                sectionSha256Hash);
 
         List<SectionDistanceDTO> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, pageable);
 
-        Map<UUID, Double> nearestSectionIds = nearestEmbeddings.stream()
+        Map<UUID, Double> sectionsDistances = nearestEmbeddings.stream()
                 .collect(Collectors.toMap(SectionDistanceDTO::getSectionsId, SectionDistanceDTO::getDistance));
 
-        List<DocumentInstanceSection> sections = documentSectionService.getSectionsBySectionsIn(projectId, nearestSectionIds.keySet());
+        List<DocumentInstanceSection> allSections = documentSectionService.getSectionsBySectionsIn(projectId, sectionsDistances.keySet());
 
-        List<DocumentInstanceSectionDTO> instanceSections = sections
+        List<DocumentInstanceSectionDTO> allSectionsDTO = allSections
                 .stream()
                 .map(section -> documentInstanceSectionWithDocumentConverter.toDTO(section))
-                .peek(sectionDTO -> sectionDTO.setDistanceFromQuestion(nearestSectionIds.get(sectionDTO.getId()))) // Set the distance from the question
+                .peek(sectionDTO -> sectionDTO.setDistanceFromQuestion(sectionsDistances.get(sectionDTO.getId()))) // Set the distance from the question
                 .peek(sectionDTO -> sectionDTO.setDistanceModelName(project.getProjectAgent().getSemanticSearchModel().getName()))
                 .sorted(Comparator.comparing(DocumentInstanceSectionDTO::getDistanceFromQuestion))
                 .collect(Collectors.toList());
 
-        return instanceSections;
+        logger.debug("Base sections found: {}", allSections.size());
+
+        // Find more sections from other Projects using ProvenAI if enabled
+        if (provenAiEnabled) {
+            try {
+                logger.info("ProvenAI enabled");
+                List<DocumentInstanceSectionDTO> provenAiSections = this.findProvenAiClosestSections(message, project);
+                allSectionsDTO.addAll(provenAiSections);
+                logger.debug("ProvenAI sections added");
+            } catch (GendoxException e) {
+                // swallow exception
+                if ("PROVENAI_AGENT_NOT_FOUND".equals(e.getErrorCode())) {
+                    logger.debug("ProvenAI agent not found");
+                } else {
+                    throw e;
+                }
+            }
+        }
+
+        logger.debug("Sections after conversion: {}",
+                allSectionsDTO.stream()
+                        .map(DocumentInstanceSectionDTO::getId)
+                        .toList());
+
+        // Rerank the sections
+        if (project.getProjectAgent().getRerankEnable() && !allSectionsDTO.isEmpty()) {
+            allSectionsDTO = rerankService.rerankSections(project.getProjectAgent(), allSectionsDTO, message.getValue());
+            logger.debug("Sections after rerank: {}",
+                    allSectionsDTO.stream()
+                            .map(DocumentInstanceSectionDTO::getId)
+                            .toList());
+        }
+
+        return allSectionsDTO;
     }
 
-    public List<DocumentInstanceSectionDTO> findProvenAiClosestSections(Message message, UUID projectId) throws GendoxException, IOException {
+    public List<DocumentInstanceSectionDTO> findProvenAiClosestSections(Message message, Project project) throws GendoxException, IOException {
 
-        ProjectAgent projectAgent = projectAgentService.getAgentByProjectId(projectId);
+        ProjectAgent projectAgent = project.getProjectAgent();
         if (projectAgent.getAgentVcJwt() == null) {
             throw new GendoxException("PROVENAI_AGENT_NOT_FOUND", "Agent not found in ProvenAI", HttpStatus.NOT_FOUND);
         }

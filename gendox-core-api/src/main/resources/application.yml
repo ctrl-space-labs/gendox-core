@@ -142,11 +142,11 @@ gendox:
       key: ${GROQ_KEY:default-token}
     gemini:
       key: ${GEMINI_KEY:default-token}
-    anthropic:
+    anthropic_ai:
       key: ${ANTHROPIC_KEY:default-token}
-    voyage:
+    voyage_ai:
       key: ${VOYAGE_KEY:default-token}
-    mistral:
+    mistral_ai:
       key: ${MISTRAL_KEY:default-token}
   domain:
     base-url: http://localhost:${server.port}

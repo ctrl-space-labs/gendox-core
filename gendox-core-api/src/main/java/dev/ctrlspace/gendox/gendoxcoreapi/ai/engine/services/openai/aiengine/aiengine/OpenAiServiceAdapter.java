@@ -1,10 +1,13 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.OpenAiModerationResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.ToolDtoConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
@@ -14,6 +17,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.OpenAiCompletionR
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.OpenAiEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ApiRateLimitService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DurationUtils;
@@ -42,19 +46,23 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
     private DurationUtils durationUtils;
     private ApiRateLimitService apiRateLimitService;
 
+    private ToolDtoConverter toolDtoConverter;
+
     @Autowired
     public OpenAiServiceAdapter(AiModelRepository aiModelRepository,
                                 ApiRateLimitService apiRateLimitService,
                                 OpenAiCompletionResponseConverter openAiCompletionResponseConverter,
                                 OpenAiEmbeddingResponseConverter openAiEmbeddingResponseConverter,
                                 DurationUtils durationUtils,
-                                OpenAiModerationResponseConverter openAiModerationResponseConverter) {
+                                OpenAiModerationResponseConverter openAiModerationResponseConverter,
+                                ToolDtoConverter toolDtoConverter) {
         this.aiModelRepository = aiModelRepository;
         this.apiRateLimitService = apiRateLimitService;
         this.openAiEmbeddingResponseConverter = openAiEmbeddingResponseConverter;
         this.openAiCompletionResponseConverter = openAiCompletionResponseConverter;
         this.durationUtils = durationUtils;
         this.openAiModerationResponseConverter = openAiModerationResponseConverter;
+        this.toolDtoConverter = toolDtoConverter;
     }
 
     private static final RestTemplate restTemplate = new RestTemplate();
@@ -188,8 +196,8 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                 completionApiUrl,
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader(apiKey)),
                 OpenAiCompletionResponse.class);
-        logger.info("Received completion Response from {}. Prompt Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getPromptTokens());
-        logger.info("Received completion Response from {}. Completion Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getCompletionTokens());
+        logger.debug("Received completion Response from {}. Prompt Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getPromptTokens());
+        logger.debug("Received completion Response from {}. Completion Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getCompletionTokens());
         logger.info("Received completion Response from {}. Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getTotalTokens());
 
         return responseEntity.getBody();
@@ -223,14 +231,33 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
     }
 
     @Override
-    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey) {
+    public CompletionResponse askCompletion(List<AiModelMessage> messages,
+                                            String agentRole, AiModel aiModel,
+                                            AiModelRequestParams aiModelRequestParams,
+                                            String apiKey,
+                                            List<AiTools> tools,
+                                            String toolChoice) {
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
 
         }
+
+
         OpenAiCompletionRequest.OpenAiCompletionRequestBuilder openAiGptRequestBuilder = OpenAiCompletionRequest.builder()
                 .model(aiModel.getModel())
                 .messages(messages);
+
+        if (!tools.isEmpty()) {
+            List<OpenAiCompletionRequest.ToolDto> toolsDtos = tools.stream()
+                    .map(tool -> toolDtoConverter.toToolDto(tool))
+                    .toList();
+
+            openAiGptRequestBuilder
+                    .toolChoice(toolChoice == null ? "auto" : toolChoice) // Default to "auto" if toolChoice is null
+                    .tools(toolsDtos);
+
+        }
+
 
         // Special case for preview search models
         if (aiModel.getModel().toLowerCase().contains("search-preview")) {
@@ -252,7 +279,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                     .maxTokens(null);
 
             // Make first message "user"
-            messages.getFirst().setRole("user");
+            messages.getFirst().setRole("developer");
         } else {
             // Default setting for normal models
             openAiGptRequestBuilder

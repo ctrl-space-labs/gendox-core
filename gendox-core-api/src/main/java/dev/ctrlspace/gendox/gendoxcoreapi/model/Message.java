@@ -3,12 +3,15 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContext;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -55,6 +58,23 @@ public class Message {
     @Basic
     @Column(name = "updated_by")
     private UUID updatedBy;
+    @Basic
+    @Column(name = "role")
+    private String role;
+    // the name of the tool to called in this message, if any
+    @Basic
+    @Column(name = "name")
+    private String name;
+    @Basic
+    @Column(name = "tool_call_id")
+    private String toolCallId;
+
+    // if assistant message contains tool calls, this field will contain the json representation of the tool calls
+    @JdbcTypeCode(SqlTypes.JSON)        // transform it to jsonb in postgresql
+    @Column(name = "tool_calls", columnDefinition = "JSONB")
+    private JsonNode toolCalls;
+
+
 
 
     //    @JsonBackReference(value = "message")
@@ -148,17 +168,49 @@ public class Message {
         this.localContexts = localContexts;
     }
 
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public String getToolCallId() {
+        return toolCallId;
+    }
+
+    public void setToolCallId(String toolCallId) {
+        this.toolCallId = toolCallId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public JsonNode getToolCalls() {
+        return toolCalls;
+    }
+
+    public void setToolCalls(JsonNode toolCalls) {
+        this.toolCalls = toolCalls;
+    }
+
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Message message = (Message) o;
-        return Objects.equals(id, message.id) && Objects.equals(value, message.value) && Objects.equals(projectId, message.projectId) && Objects.equals(threadId, message.threadId) && Objects.equals(createdAt, message.createdAt) && Objects.equals(updatedAt, message.updatedAt) && Objects.equals(createdBy, message.createdBy) && Objects.equals(updatedBy, message.updatedBy) && Objects.equals(messageSections, message.messageSections) && Objects.equals(localContexts, message.localContexts);
+        return Objects.equals(id, message.id) && Objects.equals(value, message.value) && Objects.equals(projectId, message.projectId) && Objects.equals(threadId, message.threadId) && Objects.equals(createdAt, message.createdAt) && Objects.equals(updatedAt, message.updatedAt) && Objects.equals(createdBy, message.createdBy) && Objects.equals(updatedBy, message.updatedBy) && Objects.equals(role, message.role) && Objects.equals(name, message.name) && Objects.equals(toolCallId, message.toolCallId) && Objects.equals(toolCalls, message.toolCalls) && Objects.equals(messageSections, message.messageSections) && Objects.equals(localContexts, message.localContexts);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, value, projectId, threadId, createdAt, updatedAt, createdBy, updatedBy, messageSections, localContexts);
+        return Objects.hash(id, value, projectId, threadId, createdAt, updatedAt, createdBy, updatedBy, role, name, toolCallId, toolCalls, messageSections, localContexts);
     }
 }

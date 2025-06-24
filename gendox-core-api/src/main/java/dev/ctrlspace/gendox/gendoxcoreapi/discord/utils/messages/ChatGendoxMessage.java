@@ -20,7 +20,6 @@ import org.springframework.stereotype.Component;
 import java.awt.*;
 import java.util.*;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 public class ChatGendoxMessage {
@@ -42,8 +41,11 @@ public class ChatGendoxMessage {
 
     public void chatMessage(TextChannel channel, CompletionMessageDTO completionMessageDTO) throws GendoxException {
 
-        List<String> answers = listenerService.splitTextToStringsOfMaxLength(completionMessageDTO.getMessage().getValue(), 1900);
-
+        List<String> answers = completionMessageDTO.getMessages().stream()
+                .flatMap(msg -> listenerService
+                        .splitTextToStringsOfMaxLength(msg.getValue(), 1900).stream()
+                )
+                .toList();
         String pathTemplate = new StringBuilder()
 //                .append("<")
                 .append(baseUrl)
@@ -59,15 +61,20 @@ public class ChatGendoxMessage {
         for (String answer : answers) {
             builder.appendDescription("```").appendDescription(answer).appendDescription("```");
         }
-        if (completionMessageDTO.getThreadID() != null) {
-            builder.addField("thread: ", completionMessageDTO.getThreadID().toString(), true);
+        if (completionMessageDTO.getThreadId() != null) {
+            builder.addField("thread: ", completionMessageDTO.getThreadId().toString(), true);
         }
         MessageEmbed messageEmbed = builder.build(); // Build the MessageEmbed
         MessageBuilder messageBuilder = new MessageBuilder()
                 .setEmbeds(messageEmbed);
 
-        if (completionMessageDTO.getMessage().getMessageSections() != null) {
-            List<UUID> sectionIds = completionMessageDTO.getMessage().getMessageSections().stream()
+        var lastAssistant = completionMessageDTO.getMessages().stream()
+                .filter(m -> "assistant".equals(m.getRole()))
+                .reduce((first, second) -> second)
+                .orElse(null);
+
+        if (lastAssistant != null && lastAssistant.getMessageSections() != null) {
+            List<UUID> sectionIds = lastAssistant.getMessageSections().stream()
                     .map(MessageSection::getSectionId)
                     .toList();
 

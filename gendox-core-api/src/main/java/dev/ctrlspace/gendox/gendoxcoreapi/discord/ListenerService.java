@@ -5,10 +5,7 @@ import dev.ctrlspace.gendox.authentication.AuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.JwtDTOUserProfileConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.discord.post.MessageRestClient;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.JwtDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
@@ -23,10 +20,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 
@@ -104,7 +97,7 @@ public class ListenerService {
 
         CompletionMessageDTO completionMessageDTO = getCompletionSearchRestClient(token, message, projectId);
         logger.debug("Received getCompletionSearchRestClient for chat command");
-        completionMessageDTO.getMessage().setThreadId(completionMessageDTO.getThreadID());
+        completionMessageDTO.getMessages().forEach(m -> m.setThreadId(completionMessageDTO.getThreadId()));
         //save the answer as message
 
         // https://github.com/ctrl-space-labs/gendox-core/issues/213
@@ -181,8 +174,8 @@ public class ListenerService {
                         .value(moderationFlaggedMessage)
                         .build();
                 responseDTO = responseDTO.toBuilder()
-                        .message(moderationMessage)
-                        .threadID(null)
+                        .messages(Arrays.asList(moderationMessage))
+                        .threadId(null)
                         .build();
 
                 logger.debug("GendoxException caught: " + e.getMessage());

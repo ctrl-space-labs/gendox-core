@@ -6,7 +6,7 @@ server:
     context-path: /gendox/api/v1
 logging:
   level:
-    dev.ctrlspace: DEBUG
+    dev.ctrlspace: INFO
     org.springframework: INFO
 Spring:
   datasource:
