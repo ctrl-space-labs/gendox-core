@@ -3,7 +3,7 @@ package dev.ctrlspace.gendox.spring.batch.utils;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecutionParams;
 import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionCriteria;
-import dev.ctrlspace.gendox.spring.batch.model.criteria.ParamCriteria;
+import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionParamCriteria;
 import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionParamsRepository;
 import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionRepository;
 import dev.ctrlspace.gendox.spring.batch.repositories.specifications.BatchExecutionPredicates;
@@ -56,13 +56,13 @@ public class JobUtils {
                 .build();
 
         if (projectId != null) {
-            criteria.getMatchAllParams().add(new ParamCriteria("projectId", projectId.toString()));
+            criteria.getMatchAllParams().add(new BatchExecutionParamCriteria("projectId", projectId.toString()));
         } else {
-            criteria.getMatchAllParams().add(new ParamCriteria("projectId", "ALL_PROJECTS"));
+            criteria.getMatchAllParams().add(new BatchExecutionParamCriteria("projectId", "ALL_PROJECTS"));
         }
 
         if (!override) {
-            criteria.getMatchAllParams().add(new ParamCriteria("override", "false"));
+            criteria.getMatchAllParams().add(new BatchExecutionParamCriteria("override", "false"));
         }
 
         Page<BatchJobExecution> batchJobExecutions =
@@ -102,8 +102,18 @@ public class JobUtils {
     }
 
     public void waitForJobCompletion(JobExecution execution) throws InterruptedException {
+        int counterSeconds = 0;
         while (execution.isRunning()) {
             Thread.sleep(1000);
+            counterSeconds++;
+            if (counterSeconds % 600 == 0) {
+                logger.info("Job execution ({}, {}) is still running after {} seconds",
+                        execution.getId(), execution.getJobInstance().getJobName(), counterSeconds);
+            } else if (counterSeconds % 60 == 0) {
+                logger.debug("Job execution ({}, {}) is still running after {} seconds",
+                        execution.getId(), execution.getJobInstance().getJobName(), counterSeconds);
+            }
+
         }
     }
 

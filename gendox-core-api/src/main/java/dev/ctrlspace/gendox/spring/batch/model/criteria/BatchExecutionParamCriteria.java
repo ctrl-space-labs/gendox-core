@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class ParamCriteria {
+public class BatchExecutionParamCriteria {
 
     private String paramName;
     private String paramValue;

@@ -7,7 +7,7 @@ import com.querydsl.jpa.JPAExpressions;
 import dev.ctrlspace.gendox.spring.batch.model.QBatchJobExecution;
 import dev.ctrlspace.gendox.spring.batch.model.QBatchJobInstance;
 import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionCriteria;
-import dev.ctrlspace.gendox.spring.batch.model.criteria.ParamCriteria;
+import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionParamCriteria;
 
 import java.util.List;
 
@@ -26,7 +26,7 @@ public class BatchExecutionPredicates {
         );
     }
 
-    private static Predicate allParams(List<ParamCriteria> matchAllParams) {
+    private static Predicate allParams(List<BatchExecutionParamCriteria> matchAllParams) {
 
         if (matchAllParams == null || matchAllParams.isEmpty()) {
             return null;

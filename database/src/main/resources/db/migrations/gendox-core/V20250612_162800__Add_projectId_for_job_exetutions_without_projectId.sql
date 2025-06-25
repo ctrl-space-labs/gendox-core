@@ -1,4 +1,4 @@
--- Liquibase migration to add projectId for job executions without it
+-- Migration to add projectId for job executions without it
 INSERT INTO gendox_jobs.batch_job_execution_params
     (job_execution_id, parameter_name, parameter_type, parameter_value, identifying)
 SELECT
