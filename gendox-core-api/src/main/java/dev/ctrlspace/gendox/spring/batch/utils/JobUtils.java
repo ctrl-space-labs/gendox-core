@@ -56,13 +56,17 @@ public class JobUtils {
                 .build();
 
         if (projectId != null) {
-            criteria.getMatchAllParams().add(new BatchExecutionParamCriteria("projectId", projectId.toString()));
+            criteria.getMatchAllParams().add(new BatchExecutionParamCriteria(JobExecutionParamConstants.PROJECT_ID, projectId.toString()));
         } else {
-            criteria.getMatchAllParams().add(new BatchExecutionParamCriteria("projectId", "ALL_PROJECTS"));
+            criteria.getMatchAllParams().add(new BatchExecutionParamCriteria(JobExecutionParamConstants.PROJECT_ID, JobExecutionParamConstants.ALL_PROJECTS));
         }
 
+        // TODO: probably this if is not needed. The `overrideDefaultPeriod` parameter is used to determine
+        //  if the job should run with the default period (from the previous successful run) or not.
+        //  But this method should return the last completed job time according to the criteria,
+        //  if the `overrideDefaultPeriod` is true or null, it should return the last completed job, matching the criteria.
         if (!override) {
-            criteria.getMatchAllParams().add(new BatchExecutionParamCriteria("override", "false"));
+            criteria.getMatchAllParams().add(new BatchExecutionParamCriteria(JobExecutionParamConstants.OVERRIDE_DEFAULT_PERIOD, "false"));
         }
 
         Page<BatchJobExecution> batchJobExecutions =
@@ -92,9 +96,9 @@ public class JobUtils {
             Map<String, String> additionalParams) {
 
         JobParametersBuilder builder = new JobParametersBuilder(baseParams)
-                .addString("now", now.toString())
-                .addString("override", Boolean.toString(override))
-                .addString("jobName", jobName);
+                .addString(JobExecutionParamConstants.NOW, now.toString())
+                .addString(JobExecutionParamConstants.OVERRIDE_DEFAULT_PERIOD, Boolean.toString(override))
+                .addString(JobExecutionParamConstants.JOB_NAME, jobName);
 
         additionalParams.forEach(builder::addString);
 

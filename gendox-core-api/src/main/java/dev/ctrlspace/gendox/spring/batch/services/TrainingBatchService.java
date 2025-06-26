@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentSectionCriteriaJobP
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
+import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import dev.ctrlspace.gendox.spring.batch.utils.JobUtils;
 import dev.ctrlspace.gendox.spring.batch.utils.TimePeriodUtils;
 import org.slf4j.Logger;
@@ -69,9 +70,9 @@ public class TrainingBatchService {
         JobParameters trainingParams = jobUtils.buildJobParameters(
                 documentSectionCriteriaJobParamsConverter.toDTO(sectionCriteria),
                 trainingTimePeriodAndOverride.now(),
-                trainingTimePeriodAndOverride.override(),
+                trainingTimePeriodAndOverride.overrideDefaultPeriod(),
                 documentTrainingJobName,
-                Map.of("skipUnchangedDocs", "true")
+                Map.of(JobExecutionParamConstants.SKIP_KNOWN_EMBEDDINGS, "true")
         );
 
         logger.info("Start Running document training job with parameters: {}", trainingParams);
