@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -17,7 +18,7 @@ public class TaskNodeDTO {
     private UUID id;
     private UUID taskId;
     private String nodeType;
-    private String content;
+    private Map<String, Object> jsonSchema;
     private UUID parentNodeId;
     private UUID documentId;
     private Integer pageNumber;

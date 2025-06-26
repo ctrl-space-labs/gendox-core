@@ -1,6 +1,8 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -8,6 +10,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -29,9 +32,9 @@ public class TaskNode {
     @JoinColumn(name = "node_type_id", referencedColumnName = "id", nullable = false)
     private Type nodeType;
 
-    @Basic
-    @Column(name = "content_text")
-    private String content;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "json_schema", columnDefinition = "jsonb")
+    private Map<String, Object> jsonSchema;
 
     @Basic
     @Column(name = "parent_node_id")
@@ -87,12 +90,12 @@ public class TaskNode {
         this.nodeType = nodeType;
     }
 
-    public String getContent() {
-        return content;
+    public Map<String, Object> getJsonSchema() {
+        return jsonSchema;
     }
 
-    public void setContent(String content) {
-        this.content = content;
+    public void setJsonSchema(Map<String, Object> jsonSchema) {
+        this.jsonSchema = jsonSchema;
     }
 
     public UUID getParentNodeId() {
@@ -156,11 +159,11 @@ public class TaskNode {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TaskNode taskNode = (TaskNode) o;
-        return Objects.equals(id, taskNode.id) && Objects.equals(taskId, taskNode.taskId) && Objects.equals(nodeType, taskNode.nodeType) && Objects.equals(content, taskNode.content) && Objects.equals(parentNodeId, taskNode.parentNodeId) && Objects.equals(document, taskNode.document) && Objects.equals(pageNumber, taskNode.pageNumber) && Objects.equals(createdAt, taskNode.createdAt) && Objects.equals(updatedAt, taskNode.updatedAt) && Objects.equals(createdBy, taskNode.createdBy) && Objects.equals(updatedBy, taskNode.updatedBy);
+        return Objects.equals(id, taskNode.id) && Objects.equals(taskId, taskNode.taskId) && Objects.equals(nodeType, taskNode.nodeType) && Objects.equals(jsonSchema, taskNode.jsonSchema) && Objects.equals(parentNodeId, taskNode.parentNodeId) && Objects.equals(document, taskNode.document) && Objects.equals(pageNumber, taskNode.pageNumber) && Objects.equals(createdAt, taskNode.createdAt) && Objects.equals(updatedAt, taskNode.updatedAt) && Objects.equals(createdBy, taskNode.createdBy) && Objects.equals(updatedBy, taskNode.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, taskId, nodeType, content, parentNodeId, document, pageNumber, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, taskId, nodeType, jsonSchema, parentNodeId, document, pageNumber, createdAt, updatedAt, createdBy, updatedBy);
     }
 }

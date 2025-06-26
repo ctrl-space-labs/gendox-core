@@ -24,7 +24,16 @@ public class TaskNodeConverter implements GendoxConverter<TaskNode, TaskNodeDTO>
 
     @Override
     public TaskNodeDTO toDTO(TaskNode taskNode) throws GendoxException {
-        return null;
+        return TaskNodeDTO.builder()
+                .id(taskNode.getId())
+                .taskId(taskNode.getTaskId())
+                .nodeType(taskNode.getNodeType() != null ? taskNode.getNodeType().getName() : null)
+                .jsonSchema(taskNode.getJsonSchema())
+                .parentNodeId(taskNode.getParentNodeId())
+                .documentId(taskNode.getDocument() != null ? taskNode.getDocument().getId() : null)
+                .pageNumber(taskNode.getPageNumber())
+                .userId(taskNode.getCreatedBy())
+                .build();
     }
 
     @Override
@@ -39,8 +48,8 @@ public class TaskNodeConverter implements GendoxConverter<TaskNode, TaskNodeDTO>
         if (taskNodeDTO.getNodeType() != null) {
             taskNode.setNodeType(typeService.getTaskNodeTypeByName(taskNodeDTO.getNodeType()));
         }
-        if (taskNodeDTO.getContent() != null) {
-            taskNode.setContent(taskNodeDTO.getContent());
+        if (taskNodeDTO.getJsonSchema() != null) {
+            taskNode.setJsonSchema(taskNodeDTO.getJsonSchema());
         }
         if (taskNodeDTO.getParentNodeId() != null) {
             taskNode.setParentNodeId(taskNodeDTO.getParentNodeId());

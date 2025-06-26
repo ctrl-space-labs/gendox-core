@@ -1,10 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AsyncExecutionTypes;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterAndTrainingBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
+import dev.ctrlspace.gendox.spring.batch.services.TaskBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,14 +26,20 @@ public class AsyncService {
     private SplitterBatchService splitterBatchService;
     private TrainingBatchService trainingBatchService;
     private SplitterAndTrainingBatchService splitterAndTrainingBatchService;
+    private TaskService taskService;
+    private TaskBatchService taskBatchService;
 
     @Autowired
     public AsyncService(SplitterBatchService splitterBatchService,
                         TrainingBatchService trainingBatchService,
-                        SplitterAndTrainingBatchService splitterAndTrainingBatchService) {
+                        SplitterAndTrainingBatchService splitterAndTrainingBatchService,
+                        TaskService taskService,
+                        TaskBatchService taskBatchService) {
         this.splitterBatchService = splitterBatchService;
         this.trainingBatchService = trainingBatchService;
         this.splitterAndTrainingBatchService = splitterAndTrainingBatchService;
+        this.taskService = taskService;
+        this.taskBatchService = taskBatchService;
     }
 
     @Async
@@ -68,6 +76,24 @@ public class AsyncService {
             throw new GendoxException("SPLITTER_AND_TRAINING_JOB_FAILED", "Error during splitter and training job execution: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         logger.info("Process Splitter and Training finished");
+    }
+
+    @Async
+    public void executeTask(UUID taskId) {
+        try {
+            Task task = taskService.getTaskById(taskId);
+            String taskType = task.getTaskType().getName();
+
+            logger.info("Starting async batch for task {} of type {}", taskId, taskType);
+            JobExecution taskJobExecution = taskBatchService.runTaskJob(task);
+            logger.info("Task Job Execution Status: {}", taskJobExecution.getStatus());
+//            taskService.updateStatus(taskId, "COMPLETED");
+
+
+        } catch (Exception e) {
+            logger.error("Error executing task {}", taskId, e);
+//            taskService.updateStatus(taskId, "FAILED");
+        }
     }
 
 

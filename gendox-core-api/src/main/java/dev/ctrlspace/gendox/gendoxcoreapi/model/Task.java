@@ -32,6 +32,9 @@ public class Task {
     @Basic
     @Column(name = "title")
     private String title;
+    @Basic
+    @Column(name = "description")
+    private String description;
 
     @Basic
     @Column(name="status")
@@ -127,16 +130,24 @@ public class Task {
         this.status = status;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Task task = (Task) o;
-        return Objects.equals(id, task.id) && Objects.equals(projectId, task.projectId) && Objects.equals(taskType, task.taskType) && Objects.equals(title, task.title) && Objects.equals(status, task.status) && Objects.equals(createdAt, task.createdAt) && Objects.equals(updatedAt, task.updatedAt) && Objects.equals(createdBy, task.createdBy) && Objects.equals(updatedBy, task.updatedBy);
+        return Objects.equals(id, task.id) && Objects.equals(projectId, task.projectId) && Objects.equals(taskType, task.taskType) && Objects.equals(title, task.title) && Objects.equals(description, task.description) && Objects.equals(status, task.status) && Objects.equals(createdAt, task.createdAt) && Objects.equals(updatedAt, task.updatedAt) && Objects.equals(createdBy, task.createdBy) && Objects.equals(updatedBy, task.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, projectId, taskType, title, status, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, projectId, taskType, title, description, status, createdAt, updatedAt, createdBy, updatedBy);
     }
 }

@@ -40,6 +40,7 @@ public class TaskService {
         task.setProjectId(projectId);
         task.setTaskType(typeService.getTaskTypeByName(taskDTO.getType()));
         task.setTitle(taskDTO.getTitle());
+        task.setDescription(taskDTO.getDescription());
         logger.info("Creating new task: {}", task);
         return taskRepository.save(task);
     }

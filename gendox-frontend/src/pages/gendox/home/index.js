@@ -8,6 +8,7 @@ import Icon from 'src/views/custom-components/mui/icon/icon'
 import Tooltip from '@mui/material/Tooltip'
 import ProjectButtons from 'src/views/custom-components/home-page-components/project-buttons-components/ProjectButtons'
 import Documents from 'src/views/custom-components/home-page-components/document-components/Documents'
+import Tasks from 'src/views/custom-components/home-page-components/task-components/Tasks'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 
 const GendoxHome = () => {
@@ -87,8 +88,12 @@ const GendoxHome = () => {
         <ProjectButtons />
       </ResponsiveCardContent>
       <Box sx={{ mt: '1.5rem' }}>
+        {/* Tasks Section */}
+        <Tasks />        
+      </Box>
+      <Box sx={{ mt: '1.5rem' }}>
         {/* Documents Section */}
-        <Documents />
+        <Documents />        
       </Box>
     </Card>
   )

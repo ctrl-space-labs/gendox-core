@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS gendox_core.tasks (
     task_type_id bigint NOT NULL,
     status VARCHAR(20) DEFAULT 'PENDING', -- PENDING, IN_PROGRESS, COMPLETED, FAILED
     title TEXT,
+    description TEXT,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
     created_by uuid,
@@ -145,7 +146,7 @@ CREATE TABLE IF NOT EXISTS gendox_core.task_nodes (
   id uuid DEFAULT uuid_generate_v4(),
   task_id uuid NOT NULL,
   node_type_id bigint NOT NULL, -- DOCUMENT, QUESTION, PAGE, PROMPT, NOTE
-  content_text TEXT,
+  json_schema JSONB, -- JSON schema for the node
   parent_node_id uuid,
   document_id uuid, -- only when node_type='DOCUMENT'
   page_number INTEGER, -- used only in DOCUMENT_DIGITIZATION tasks

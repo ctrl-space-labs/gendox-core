@@ -1,0 +1,130 @@
+import axios from 'axios'
+import apiRequests from 'src/configs/apiRequest.js'
+
+/**
+ * Create a Task
+ * @param organizationId
+ * @param projectId
+ * @param taskPayload
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<Task>>}
+ */
+const createTask = async (organizationId, projectId, taskPayload, token) => {
+  return axios.post(apiRequests.createTask(organizationId, projectId), taskPayload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
+ * Get all tasks for a project
+ * @param organizationId
+ * @param projectId
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<Task[]>>}
+ */
+const getTasks = async (organizationId, projectId, token) => {
+  return axios.get(apiRequests.getTasks(organizationId, projectId), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/** Get Task by ID
+ * @param organizationId
+ * @param projectId
+ * @param id
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<Task>>}
+ * */
+const getTaskById = async (organizationId, projectId, taskId, token) => {
+  return axios.get(apiRequests.getTaskById(organizationId, projectId, taskId), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+
+/**
+ * Create Task Node
+ * @param organizationId
+ * @param projectId
+ * @param taskNodePayload
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<TaskNode>>}
+ */
+const createTaskNode = async (organizationId, projectId, taskNodePayload, token) => {
+  return axios.post(apiRequests.createTaskNode(organizationId, projectId), taskNodePayload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
+ * Get Task Node by ID
+ * @param organizationId
+ * @param projectId
+ * @param id
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<TaskNode>>}
+ */
+const getTaskNodeById = async (organizationId, projectId, id, token) => {
+  return axios.get(apiRequests.getTaskNodeById(organizationId, projectId, id), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
+ * Create Task Edge
+ * @param organizationId
+ * @param projectId
+ * @param taskEdgePayload
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<TaskEdge>>}
+ */
+const createTaskEdge = async (organizationId, projectId, taskEdgePayload, token) => {
+  return axios.post(apiRequests.createTaskEdge(organizationId, projectId), taskEdgePayload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
+ * Get Task Edge by ID
+ * @param organizationId
+ * @param projectId
+ * @param id
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<TaskEdge>>}
+ */
+const getTaskEdgeById = async (organizationId, projectId, id, token) => {
+  return axios.get(apiRequests.getTaskEdgeById(organizationId, projectId, id), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+export default {
+  createTask,
+  getTasks,
+  getTaskById,
+  createTaskNode,
+  getTaskNodeById,
+  createTaskEdge,
+  getTaskEdgeById
+}

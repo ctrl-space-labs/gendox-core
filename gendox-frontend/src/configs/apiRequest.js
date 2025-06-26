@@ -188,5 +188,26 @@ export default {
 
   getToolExamples: () => `${url}types/ai-tool-examples`,
 
+  createTask: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks`,
+
+  getTasks: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks`,
+
+  getTaskById: (organizationId, projectId, taskId) =>
+  `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`,
+
+  createTaskNode: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/task-nodes`,
+
+  getTaskNodeById: (organizationId, projectId, id) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/task-nodes?id=${id}`,
+
+  createTaskEdge: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/task-edges`,
+
+  getTaskEdgeById: (organizationId, projectId, id) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/task-edges?id=${id}`,
+
 
 };

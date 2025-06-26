@@ -51,6 +51,17 @@ public class TaskController {
         return taskService.getAllTasksByProjectId(projectId);
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}", produces = {"application/json"})
+    @ResponseStatus(value = HttpStatus.OK)
+    public Task getTaskById(@PathVariable UUID organizationId,
+                            @PathVariable UUID projectId,
+                            @PathVariable UUID taskId) {
+        return taskService.getTaskById(taskId);
+    }
+
+
+
 
 
 
