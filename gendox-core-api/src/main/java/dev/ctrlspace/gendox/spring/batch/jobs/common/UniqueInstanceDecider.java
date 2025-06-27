@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.spring.batch.jobs.common;
 
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
 import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionRepository;
+import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.JobExecution;
@@ -34,9 +35,18 @@ public class UniqueInstanceDecider implements JobExecutionDecider {
     @Override
     public FlowExecutionStatus decide(JobExecution jobExecution, StepExecution stepExecution) {
         JobParameters parameters = jobExecution.getJobParameters();
-        List<BatchJobExecution> batchJobExecutions = batchJobExecutionRepository.findJobExecutionByJobNameAndStatus(jobExecution.getJobInstance().getJobName(), "STARTED");
+        List<BatchJobExecution> batchJobExecutions;
+        // if projectId exists in parameters, filter by projectId
+        if (parameters.getString(JobExecutionParamConstants.PROJECT_ID) != null) {
+            batchJobExecutions = batchJobExecutionRepository.findJobExecutionByJobNameAndStatusAndProjectParam(jobExecution.getJobInstance().getJobName(),
+                    "STARTED",
+                    parameters.getString(JobExecutionParamConstants.PROJECT_ID));
 
-        // only this job with same name is running
+        } else { // if no projectId, just filter by job name and status
+            batchJobExecutions = batchJobExecutionRepository.findJobExecutionByJobNameAndStatus(jobExecution.getJobInstance().getJobName(), "STARTED");
+        }
+
+        // only 1 job with this name (and params) is running (the `jobExecution` received as param)
         if (batchJobExecutions.size() == 1 && batchJobExecutions.get(0).getJobExecutionId().equals(jobExecution.getId())) {
             return new FlowExecutionStatus("CONTINUE");
         }

@@ -20,7 +20,6 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
 
@@ -33,16 +32,10 @@ public class TrainingJobConfig {
 
     @Value("${gendox.batch-jobs.document-training.job.name}")
     private String documentTrainingJobName;
-
     @Value("${gendox.batch-jobs.document-training.job.thread-pool-size}")
     private Integer threadPoolSize;
-
     @Value("${gendox.batch-jobs.document-training.job.steps.document-training-step.name}")
     private String documentTrainingStepName;
-
-    @Value("${gendox.batch-jobs.document-training.job.steps.document-training-step.throttle-limit}")
-    private Integer throttleLimit;
-
     @Value("${gendox.batch-jobs.document-training.job.steps.document-training-step.chunk-size}")
     private Integer chunkSize;
 
@@ -91,7 +84,6 @@ public class TrainingJobConfig {
                 .processor(documentInstanceSectionProcessor)
                 .writer(documentSectionEmbeddingWriter)
                 .taskExecutor(asyncBatchTrainingExecutor)
-                .throttleLimit(throttleLimit)
                 .build();
     }
 

@@ -84,12 +84,12 @@ const GeneralProjectSettings = () => {
 
   const handleTrainingClick = () => {
     documentService
-      .triggerJobs(project.organizationId, project.id, token)
+      .triggerJobs(project.organizationId, project.id, token, "SPLITTER_AND_TRAINING", project.id)
       .then(response => {
         toast.success('Training triggered successfully!')
       })
       .catch(error => {
-        toast.error(`Failed to trigger trainint. Error: ${getErrorMessage(error)}`)
+        toast.error(`Failed to trigger training. Error: ${getErrorMessage(error)}`)
       })
   }
 
