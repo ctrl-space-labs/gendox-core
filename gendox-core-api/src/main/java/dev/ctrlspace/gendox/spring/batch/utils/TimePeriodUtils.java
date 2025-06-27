@@ -23,7 +23,7 @@ public class TimePeriodUtils {
         }
     }
 
-    public record TimePeriodAndOverride(TimePeriodDTO timePeriod, boolean override, Instant now) {}
+    public record TimePeriodAndOverride(TimePeriodDTO timePeriod, boolean overrideDefaultPeriod, Instant now) {}
 
 
     /**

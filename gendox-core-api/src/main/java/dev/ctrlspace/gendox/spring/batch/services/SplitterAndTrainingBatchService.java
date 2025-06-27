@@ -57,15 +57,17 @@ public class SplitterAndTrainingBatchService {
 
         logger.info("Running Splitter and Training job for projectId: {}", projectId);
 
-        // Run splitter job using SplitterBatchService
+        // Run the splitter job using SplitterBatchService
         logger.info("Starting splitter job...");
         JobExecution splitterExecution = splitterBatchService.runAutoSplitter(projectId, timePeriod);
         jobUtils.waitForJobCompletion(splitterExecution);
+
         logger.info("Splitter job completed successfully with status: {}", splitterExecution.getStatus());
 
         // Run training job using TrainingBatchService
         logger.info("Starting training job...");
         JobExecution trainingExecution = trainingBatchService.runAutoTraining(projectId, timePeriod);
+        jobUtils.waitForJobCompletion(trainingExecution);
         logger.info("Training job completed successfully with status: {}", trainingExecution.getStatus());
 
         return trainingExecution;

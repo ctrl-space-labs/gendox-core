@@ -3,7 +3,7 @@ package dev.ctrlspace.gendox.spring.batch.utils;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecutionParams;
 import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionCriteria;
-import dev.ctrlspace.gendox.spring.batch.model.criteria.ParamCriteria;
+import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionParamCriteria;
 import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionParamsRepository;
 import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionRepository;
 import dev.ctrlspace.gendox.spring.batch.repositories.specifications.BatchExecutionPredicates;
@@ -56,13 +56,17 @@ public class JobUtils {
                 .build();
 
         if (projectId != null) {
-            criteria.getMatchAllParams().add(new ParamCriteria("projectId", projectId.toString()));
+            criteria.getMatchAllParams().add(new BatchExecutionParamCriteria(JobExecutionParamConstants.PROJECT_ID, projectId.toString()));
         } else {
-            criteria.getMatchAllParams().add(new ParamCriteria("projectId", "ALL_PROJECTS"));
+            criteria.getMatchAllParams().add(new BatchExecutionParamCriteria(JobExecutionParamConstants.PROJECT_ID, JobExecutionParamConstants.ALL_PROJECTS));
         }
 
+        // TODO: probably this if is not needed. The `overrideDefaultPeriod` parameter is used to determine
+        //  if the job should run with the default period (from the previous successful run) or not.
+        //  But this method should return the last completed job time according to the criteria,
+        //  if the `overrideDefaultPeriod` is true or null, it should return the last completed job, matching the criteria.
         if (!override) {
-            criteria.getMatchAllParams().add(new ParamCriteria("override", "false"));
+            criteria.getMatchAllParams().add(new BatchExecutionParamCriteria(JobExecutionParamConstants.OVERRIDE_DEFAULT_PERIOD, "false"));
         }
 
         Page<BatchJobExecution> batchJobExecutions =
@@ -92,9 +96,9 @@ public class JobUtils {
             Map<String, String> additionalParams) {
 
         JobParametersBuilder builder = new JobParametersBuilder(baseParams)
-                .addString("now", now.toString())
-                .addString("override", Boolean.toString(override))
-                .addString("jobName", jobName);
+                .addString(JobExecutionParamConstants.NOW, now.toString())
+                .addString(JobExecutionParamConstants.OVERRIDE_DEFAULT_PERIOD, Boolean.toString(override))
+                .addString(JobExecutionParamConstants.JOB_NAME, jobName);
 
         additionalParams.forEach(builder::addString);
 
@@ -102,8 +106,18 @@ public class JobUtils {
     }
 
     public void waitForJobCompletion(JobExecution execution) throws InterruptedException {
+        int counterSeconds = 0;
         while (execution.isRunning()) {
             Thread.sleep(1000);
+            counterSeconds++;
+            if (counterSeconds % 600 == 0) {
+                logger.info("Job execution ({}, {}) is still running after {} seconds",
+                        execution.getId(), execution.getJobInstance().getJobName(), counterSeconds);
+            } else if (counterSeconds % 60 == 0) {
+                logger.debug("Job execution ({}, {}) is still running after {} seconds",
+                        execution.getId(), execution.getJobInstance().getJobName(), counterSeconds);
+            }
+
         }
     }
 

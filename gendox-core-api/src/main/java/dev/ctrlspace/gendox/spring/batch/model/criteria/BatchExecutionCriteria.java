@@ -18,6 +18,6 @@ public class BatchExecutionCriteria {
     private String status;
     private String exitCode;
     @Builder.Default
-    private List<ParamCriteria> matchAllParams = new ArrayList<>(); // Parameters that must match all criteria
+    private List<BatchExecutionParamCriteria> matchAllParams = new ArrayList<>(); // Parameters that must match all criteria
 
 }

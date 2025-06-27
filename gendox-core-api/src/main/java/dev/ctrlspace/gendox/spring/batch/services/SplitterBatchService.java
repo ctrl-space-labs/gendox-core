@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceCriteriaJob
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
+import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import dev.ctrlspace.gendox.spring.batch.utils.JobUtils;
 import dev.ctrlspace.gendox.spring.batch.utils.TimePeriodUtils;
 import org.slf4j.Logger;
@@ -68,9 +69,9 @@ public class SplitterBatchService {
         JobParameters splitterParams = jobUtils.buildJobParameters(
                 documentInstanceCriteriaJobParamsConverter.toDTO(documentCriteria),
                 splitterTimePeriodAndOverride.now(),
-                splitterTimePeriodAndOverride.override(),
+                splitterTimePeriodAndOverride.overrideDefaultPeriod(),
                 documentSplitterJobName,
-                Map.of("skipUnchangedDocs", "true")
+                Map.of(JobExecutionParamConstants.SKIP_UNCHANGED_DOCS, "true")
         );
 
 
