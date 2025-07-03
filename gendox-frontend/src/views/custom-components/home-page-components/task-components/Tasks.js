@@ -29,7 +29,7 @@ const Tasks = () => {
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   const { projectTasks, isLoading } = useSelector(state => state.activeTask)
 
-  console.log('Project Tasks:', projectTasks)
+
   const [dialogOpen, setDialogOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(0)
   const theme = useTheme()

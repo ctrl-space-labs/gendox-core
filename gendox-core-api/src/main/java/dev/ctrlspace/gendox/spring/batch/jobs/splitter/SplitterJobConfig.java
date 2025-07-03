@@ -25,7 +25,6 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
 
-
 @Configuration
 //@ComponentScan(basePackageClasses = {DemoReader.class})
 public class SplitterJobConfig {

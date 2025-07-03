@@ -305,6 +305,26 @@ public class DocumentController {
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
             "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @PostMapping("/organizations/{organizationId}/projects/{projectId}/documents/upload-single")
+    @Operation(summary = "Upload a single document file",
+            description = "Upload a single file and return the created or updated DocumentInstance.")
+    public ResponseEntity<DocumentInstance> uploadSingleFile(
+            @RequestParam("file") MultipartFile file,
+            @PathVariable UUID organizationId,
+            @PathVariable UUID projectId) throws IOException, GendoxException {
+
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        DocumentInstance documentInstance = uploadService.uploadFile(file, organizationId, projectId);
+
+        return ResponseEntity.ok(documentInstance);
+    }
+
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("/organizations/{organizationId}/projects/{projectId}/documents/split")
     @Operation(summary = "",
             description = " ")

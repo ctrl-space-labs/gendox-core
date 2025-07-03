@@ -22,9 +22,7 @@ const DocumentInsights = () => {
   const { organizationId, taskId, projectId } = router.query
 
   const { selectedTask, isLoading } = useSelector(state => state.activeTask)
-
-  console.log('Selected Task:', selectedTask)
-
+  
   const handleGoBack = () => {
     router.push(`/gendox/home/?organizationId=${organizationId}&projectId=${projectId}`)
   }
@@ -34,6 +32,8 @@ const DocumentInsights = () => {
       dispatch(fetchTaskById({ organizationId, projectId, taskId, token }))
     }
   }, [organizationId, projectId, taskId, token, dispatch])
+
+  
 
   const IconButtons = () => (
     <Box sx={{ display: 'inline-flex', gap: 1 }}>
@@ -99,7 +99,7 @@ const DocumentInsights = () => {
       <Box sx={{ height: 20 }} />
 
       {/* Main content area */}
-      <DocumentInsightsTable selectedTask={selectedTask}/>
+      <DocumentInsightsTable selectedTask={selectedTask} organizationId={organizationId} />
 
       <Box
         sx={{

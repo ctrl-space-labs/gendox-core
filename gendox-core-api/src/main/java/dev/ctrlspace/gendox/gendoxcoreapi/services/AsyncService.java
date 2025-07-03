@@ -3,11 +3,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AsyncExecutionTypes;
-import dev.ctrlspace.gendox.spring.batch.services.SplitterAndTrainingBatchService;
-import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
-import dev.ctrlspace.gendox.spring.batch.services.TaskBatchService;
-import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
+import dev.ctrlspace.gendox.spring.batch.services.*;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -28,18 +26,21 @@ public class AsyncService {
     private SplitterAndTrainingBatchService splitterAndTrainingBatchService;
     private TaskService taskService;
     private TaskBatchService taskBatchService;
+    private DocumentInsightsBatchService documentInsightsBatchService;
 
     @Autowired
     public AsyncService(SplitterBatchService splitterBatchService,
                         TrainingBatchService trainingBatchService,
                         SplitterAndTrainingBatchService splitterAndTrainingBatchService,
                         TaskService taskService,
-                        TaskBatchService taskBatchService) {
+                        TaskBatchService taskBatchService,
+                        DocumentInsightsBatchService documentInsightsBatchService) {
         this.splitterBatchService = splitterBatchService;
         this.trainingBatchService = trainingBatchService;
         this.splitterAndTrainingBatchService = splitterAndTrainingBatchService;
         this.taskService = taskService;
         this.taskBatchService = taskBatchService;
+        this.documentInsightsBatchService = documentInsightsBatchService;
     }
 
     @Async
@@ -93,6 +94,17 @@ public class AsyncService {
         } catch (Exception e) {
             logger.error("Error executing task {}", taskId, e);
 //            taskService.updateStatus(taskId, "FAILED");
+        }
+    }
+
+    @Async
+    public void executeDocumentInsightsTask(UUID taskId, TaskNodeCriteria criteria) {
+        try {
+            logger.info("Starting Document Insights async batch for task {}", taskId);
+            JobExecution taskJobExecution = documentInsightsBatchService.runDocumentInsights(taskId, criteria);
+            logger.warn("Document Insights job is not yet implemented");
+        } catch (Exception e) {
+            logger.error("Error executing Document Insights task {}", taskId, e);
         }
     }
 

@@ -39,13 +39,11 @@ public class TaskJobConfig {
 
     @Autowired
     private JobRepository jobRepository;
-
     @Autowired
     private UniqueInstanceDecider uniqueInstanceDecider;
 
     @Bean
     public Job taskJob(Step taskStep) {
-        // Flow που εκτελεί πρώτα τον decider κι έπειτα το taskStep
         Flow taskFlow = new FlowBuilder<Flow>(taskJobName + "Flow")
                 .start(taskStep)
                 .build();
@@ -56,14 +54,16 @@ public class TaskJobConfig {
                 .build();
     }
 
-    // 3️⃣ Wrapper flow για μοναδική εκτέλεση (UniqueInstanceDecider)
-    private Flow uniqueExecutionFlow(Flow flow) {
-        return new FlowBuilder<SimpleFlow>("uniqueTaskFlow")
+    public Flow uniqueExecutionFlow(Flow flow) {
+        FlowBuilder<SimpleFlow> flowBuilder = new FlowBuilder<>("uniqueJobExecutionFlow");
+
+        Flow uniqueExecutionFlow = flowBuilder
                 .start(uniqueInstanceDecider)
                 .on("CONTINUE").to(flow)
                 .from(uniqueInstanceDecider)
                 .on("DUPLICATE_EXECUTION").end("DUPLICATE_EXECUTION")
                 .end();
+        return uniqueExecutionFlow;
     }
 
     @Bean

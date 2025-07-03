@@ -1,17 +1,19 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.AsyncService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AsyncExecutionTypes;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,12 +27,15 @@ public class AsyncController {
 
     private final AsyncService asyncService;
     private final SecurityUtils securityUtils;
+    private final TaskService taskService;
 
     @Autowired
     public AsyncController(AsyncService asyncService,
-                           SecurityUtils securityUtils) {
+                           SecurityUtils securityUtils,
+                           TaskService taskService) {
         this.asyncService = asyncService;
         this.securityUtils = securityUtils;
+        this.taskService = taskService;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
@@ -91,12 +96,41 @@ public class AsyncController {
             "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
     @GetMapping("organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/execute")
     @Operation(summary = "Execute a Task asynchronously")
-    public void executeTask(
+    public String executeTaskByType(
             @PathVariable UUID organizationId,
             @PathVariable UUID projectId,
-            @PathVariable UUID taskId) throws GendoxException {
+            @PathVariable UUID taskId,
+            @RequestBody TaskNodeCriteria criteria) throws GendoxException {
 
-        asyncService.executeTask(taskId);
+        Task task = taskService.getTaskById(taskId);
+        String taskType = task.getTaskType().getName();
+
+        switch (taskType.toUpperCase()) {
+            case TaskTypeConstants.DOCUMENT_INSIGHTS:
+                asyncService.executeDocumentInsightsTask(taskId, criteria);
+                break;
+
+            case TaskTypeConstants.DEEP_RESEARCH:
+//                asyncService.executeDeepResearchTask(taskId);
+                break;
+
+            case TaskTypeConstants.DOCUMENT_DIGITIZATION:
+//                asyncService.executeDocumentDigitizationTask(taskId);
+                break;
+
+            // add more task types as needed
+
+            default:
+                throw new GendoxException(
+                        "INVALID_TASK_TYPE",
+                        "Task type not supported: " + taskType,
+                        HttpStatus.BAD_REQUEST
+                );
+        }
+
+        return "Task execution started for task ID: " + taskId;
     }
+
+
 }
 

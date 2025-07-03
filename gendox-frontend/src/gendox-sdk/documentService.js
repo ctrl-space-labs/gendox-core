@@ -105,6 +105,26 @@ const uploadDocument = async (organizationId, projectId, formData, token) => {
 }
 
 /**
+ * Upload a single document file
+ * @param {string} organizationId
+ * @param {string} projectId
+ * @param {File} file - The single file to upload
+ * @param {string} token - Authorization bearer token
+ * @returns {Promise<AxiosResponse>}
+ */
+const uploadSingleDocument = async (organizationId, projectId, file, token) => {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  return axios.post(apiRequests.uploadSingleDocument(organizationId, projectId), formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      Authorization: `Bearer ${token}`
+    }
+  })
+}
+
+/**
  * Update Document Sections Order
  * @param documentId
  * @param token
@@ -176,6 +196,7 @@ export default {
   createDocumentSection,
   updateDocumentSection,
   uploadDocument,
+  uploadSingleDocument,
   updateSectionsOrder,
   deleteDocument,
   deleteDocumentSection,

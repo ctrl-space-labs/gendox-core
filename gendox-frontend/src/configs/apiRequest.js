@@ -89,6 +89,10 @@ export default {
   uploadDocument: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,
 
+  uploadSingleDocument: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/documents/upload-single`,
+
+
   triggerJobs: (organizationId, projectId, jobName, projectIdParam) => {
   let urlWithParams = `${url}organizations/${organizationId}/projects/${projectId}/splitting/training?jobName=${jobName}`;
   
@@ -200,14 +204,24 @@ export default {
   createTaskNode: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes`,
 
+  updateTaskNode: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/task-nodes`,
+
   getTaskNodeById: (organizationId, projectId, id) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes?id=${id}`,
+
+  getTaskNodesByTaskId: (organizationId, projectId, taskId, page = 0, size = 20) =>
+  `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes?page=${page}&size=${size}`,
+
 
   createTaskEdge: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-edges`,
 
   getTaskEdgeById: (organizationId, projectId, id) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-edges?id=${id}`,
+
+  getTaskEdgesByCriteria: (organizationId, projectId) =>
+  `${url}organizations/${organizationId}/projects/${projectId}/task-edges/search`,
 
 
 };

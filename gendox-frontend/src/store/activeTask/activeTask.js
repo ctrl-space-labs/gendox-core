@@ -59,12 +59,38 @@ export const createTaskNode = createAsyncThunk(
   }
 )
 
+export const updateTaskNode = createAsyncThunk(
+  'task/updateTaskNode',
+  async ({ organizationId, projectId, taskNodePayload, token }, thunkAPI) => {
+    try {
+      const response = await taskService.updateTaskNode(organizationId, projectId, taskNodePayload, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
 export const fetchTaskNodeById = createAsyncThunk(
   'task/fetchTaskNodeById',
   async ({ organizationId, projectId, taskId, token }, thunkAPI) => {
     try {
       const response = await taskService.getTaskNodeById(organizationId, projectId, taskId, token)
       return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const fetchTaskNodesByTaskId = createAsyncThunk(
+  'task/fetchTaskNodesByTaskId',
+  async ({ organizationId, projectId, taskId, token, page = 0, size = 20 }, thunkAPI) => {
+    try {
+      const response = await taskService.getTaskNodesByTaskId(organizationId, projectId, taskId, token, page, size)
+      return response.data // this is an array of TaskNodes
     } catch (error) {
       toast.error(getErrorMessage(error))
       return thunkAPI.rejectWithValue(error.response?.data || error.message)
@@ -99,11 +125,28 @@ export const fetchTaskEdgeById = createAsyncThunk(
   }
 )
 
+export const fetchTaskEdgesByCriteria = createAsyncThunk(
+  'task/fetchTaskEdgesByCriteria',
+  async ({ organizationId, projectId, criteria, token, page = 0, size = 20 }, thunkAPI) => {
+    try {
+      // We can add pagination params in criteria if needed or ignore here
+      console.log("PROJECT ID:", projectId)
+      const response = await taskService.getTaskEdgesByCriteria(organizationId, projectId, criteria, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
 // Initial state for task slice
 const initialState = {
   projectTasks: [],
   selectedTask: null,
   taskNodes: {},
+  taskNodesList: [],
+  taskEdgesList: [],
   taskEdges: {},
   isLoading: false,
   error: null
@@ -175,6 +218,26 @@ const taskSlice = createSlice({
         state.error = action.payload
       })
 
+      // update TaskNode
+      .addCase(updateTaskNode.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(updateTaskNode.fulfilled, (state, action) => {
+        state.isLoading = false
+        // Update taskNodes dictionary and taskNodesList accordingly
+        state.taskNodes[action.payload.id] = action.payload
+        // Also update the taskNodesList array if present
+        const idx = state.taskNodesList?.content?.findIndex(n => n.id === action.payload.id)
+        if (idx !== -1) {
+          state.taskNodesList.content[idx] = action.payload
+        }
+      })
+      .addCase(updateTaskNode.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+
       // Fetch TaskNode by ID
       .addCase(fetchTaskNodeById.pending, state => {
         state.isLoading = true
@@ -185,6 +248,20 @@ const taskSlice = createSlice({
         state.taskNodes[action.payload.id] = action.payload
       })
       .addCase(fetchTaskNodeById.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+
+      // Fetch TaskNodes by Task ID
+      .addCase(fetchTaskNodesByTaskId.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(fetchTaskNodesByTaskId.fulfilled, (state, action) => {
+        state.isLoading = false
+        state.taskNodesList = action.payload // set the list of task nodes
+      })
+      .addCase(fetchTaskNodesByTaskId.rejected, (state, action) => {
         state.isLoading = false
         state.error = action.payload
       })
@@ -213,6 +290,20 @@ const taskSlice = createSlice({
         state.taskEdges[action.payload.id] = action.payload
       })
       .addCase(fetchTaskEdgeById.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+
+      // Fetch TaskEdges by Criteria
+      .addCase(fetchTaskEdgesByCriteria.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(fetchTaskEdgesByCriteria.fulfilled, (state, action) => {
+        state.isLoading = false
+        state.taskEdgesList = action.payload // store the list of edges
+      })
+      .addCase(fetchTaskEdgesByCriteria.rejected, (state, action) => {
         state.isLoading = false
         state.error = action.payload
       })

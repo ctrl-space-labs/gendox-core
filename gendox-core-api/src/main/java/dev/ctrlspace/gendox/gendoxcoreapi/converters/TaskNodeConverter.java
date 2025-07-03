@@ -1,7 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TaskNodeDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
@@ -28,7 +27,7 @@ public class TaskNodeConverter implements GendoxConverter<TaskNode, TaskNodeDTO>
                 .id(taskNode.getId())
                 .taskId(taskNode.getTaskId())
                 .nodeType(taskNode.getNodeType() != null ? taskNode.getNodeType().getName() : null)
-                .jsonSchema(taskNode.getJsonSchema())
+                .nodeValue(taskNode.getNodeValue() != null ? taskNode.getNodeValue().toBuilder().build() : null)
                 .parentNodeId(taskNode.getParentNodeId())
                 .documentId(taskNode.getDocument() != null ? taskNode.getDocument().getId() : null)
                 .pageNumber(taskNode.getPageNumber())
@@ -48,8 +47,8 @@ public class TaskNodeConverter implements GendoxConverter<TaskNode, TaskNodeDTO>
         if (taskNodeDTO.getNodeType() != null) {
             taskNode.setNodeType(typeService.getTaskNodeTypeByName(taskNodeDTO.getNodeType()));
         }
-        if (taskNodeDTO.getJsonSchema() != null) {
-            taskNode.setJsonSchema(taskNodeDTO.getJsonSchema());
+        if (taskNodeDTO.getNodeValue() != null) {
+            taskNode.setNodeValue(taskNodeDTO.getNodeValue().toBuilder().build());
         }
         if (taskNodeDTO.getParentNodeId() != null) {
             taskNode.setParentNodeId(taskNodeDTO.getParentNodeId());

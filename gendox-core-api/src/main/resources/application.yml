@@ -201,6 +201,15 @@ gendox:
             throttle-limit: 10    # this should be around 10 to not hit the throttle limit of the OpenAI API
             chunk-size: 10
             pageable-size: 1000
+    document-insights:
+      job:
+        name: documentInsightsJob
+        thread-pool-size: 50
+        steps:
+          document-insights-step:
+            name: documentInsightsStep
+            chunk-size: 10
+            pageable-size: 1000
   user-invitation:
     accept-url-template: /accept-invitation/?email=%s&token=%s
     ttl: 86400  # in seconds

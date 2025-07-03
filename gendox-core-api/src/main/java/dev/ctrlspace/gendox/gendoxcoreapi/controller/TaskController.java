@@ -9,8 +9,11 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TaskDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TaskEdgeDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TaskNodeDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskEdgeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -76,12 +79,33 @@ public class TaskController {
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PutMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-nodes")
+    @ResponseStatus(value = HttpStatus.OK)
+    public TaskNode updateTaskNode(@PathVariable UUID organizationId,
+                                   @PathVariable UUID projectId,
+                                   @RequestBody TaskNodeDTO taskNodeDTO) throws GendoxException {
+        TaskNode taskNode = taskNodeConverter.toEntity(taskNodeDTO);
+        return taskService.updateTaskNode(taskNode);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-nodes", produces = {"application/json"})
     @ResponseStatus(value = HttpStatus.OK)
     public TaskNode getTaskNodeById(@PathVariable UUID organizationId,
                                           @PathVariable UUID projectId,
                                           @RequestParam UUID id) {
         return taskService.getTaskNodeById(id);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/task-nodes", produces = {"application/json"})
+    @ResponseStatus(value = HttpStatus.OK)
+    public Page<TaskNode> getTaskNodesByTaskId(@PathVariable UUID organizationId,
+                                               @PathVariable UUID projectId,
+                                               @PathVariable UUID taskId,
+                                               Pageable pageable){
+
+        return taskService.getTaskNodesByTaskId(taskId, pageable);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -103,4 +127,15 @@ public class TaskController {
         return taskService.getTaskEdgeById(id);
     }
 
-}
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PostMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-edges/search", produces = {"application/json"})
+    @ResponseStatus(value = HttpStatus.OK)
+    public Page<TaskEdge> getTaskEdgesByCriteria(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID projectId,
+            @RequestBody TaskEdgeCriteria criteria,
+            Pageable pageable) {
+        return taskService.getTaskEdgesByCriteria(criteria, pageable);
+    }
+
+    }

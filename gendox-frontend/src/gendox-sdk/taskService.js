@@ -69,6 +69,24 @@ const createTaskNode = async (organizationId, projectId, taskNodePayload, token)
 }
 
 /**
+ * Update Task Node
+ * @param organizationId
+ * @param projectId
+ * @param taskNodePayload
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<TaskNode>>}
+ */
+const updateTaskNode = async (organizationId, projectId, taskNodePayload, token) => {
+  return axios.put(apiRequests.updateTaskNode(organizationId, projectId), taskNodePayload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+
+/**
  * Get Task Node by ID
  * @param organizationId
  * @param projectId
@@ -78,6 +96,25 @@ const createTaskNode = async (organizationId, projectId, taskNodePayload, token)
  */
 const getTaskNodeById = async (organizationId, projectId, id, token) => {
   return axios.get(apiRequests.getTaskNodeById(organizationId, projectId, id), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
+ * Get TaskNodes by Task ID with pagination
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param token
+ * @param page
+ * @param size
+ * @returns {Promise<axios.AxiosResponse<TaskNode[]>>}
+ */
+const getTaskNodesByTaskId = async (organizationId, projectId, taskId, token, page = 0, size = 20) => {
+  return axios.get(apiRequests.getTaskNodesByTaskId(organizationId, projectId, taskId, page, size), {
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token
@@ -119,12 +156,32 @@ const getTaskEdgeById = async (organizationId, projectId, id, token) => {
   })
 }
 
+/**
+ * Get Task Edges by Criteria (POST)
+ * @param organizationId
+ * @param projectId
+ * @param criteria {relationType, fromNodeIds, toNodeIds}
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<TaskEdge[]>>}
+ */
+const getTaskEdgesByCriteria = async (organizationId, projectId, criteria, token) => {
+  return axios.post(apiRequests.getTaskEdgesByCriteria(organizationId, projectId), criteria, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
 export default {
   createTask,
   getTasks,
   getTaskById,
+  getTaskNodesByTaskId,
   createTaskNode,
+  updateTaskNode,
   getTaskNodeById,
   createTaskEdge,
-  getTaskEdgeById
+  getTaskEdgeById,
+  getTaskEdgesByCriteria
 }

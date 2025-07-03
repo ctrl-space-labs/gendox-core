@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,7 +19,7 @@ public class TaskNodeDTO {
     private UUID id;
     private UUID taskId;
     private String nodeType;
-    private Map<String, Object> jsonSchema;
+    private TaskNodeValueDTO nodeValue;
     private UUID parentNodeId;
     private UUID documentId;
     private Integer pageNumber;
