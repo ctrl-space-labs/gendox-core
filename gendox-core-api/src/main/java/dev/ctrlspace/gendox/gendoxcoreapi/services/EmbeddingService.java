@@ -312,6 +312,7 @@ public class EmbeddingService {
 
         UUID projectId = project.getId();
 
+        // TODO add validation that the message fits in the context size of embeddigns (~8K tokens)
 
         EmbeddingResponse embeddingResponse = getEmbeddingForMessage(project.getProjectAgent(),
                 message.getValue(),
