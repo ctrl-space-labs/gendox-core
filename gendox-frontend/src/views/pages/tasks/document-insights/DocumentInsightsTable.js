@@ -8,12 +8,14 @@ import DocumentRows from './table-components/DocumentRows'
 import QuestionsHeader from './table-components/QuestionsHeader'
 import AddEditQuestionDialog from './table-dialogs/AddEditQuestionDialog'
 import UploaderDocumentInsights from './table-dialogs/UploaderDocumentInsigths'
+import { toast } from 'react-hot-toast'
 
 import {
   fetchTaskNodesByTaskId,
   fetchTaskEdgesByCriteria,
   createTaskNode,
-  updateTaskNode
+  updateTaskNode,
+  executeTaskByType
 } from 'src/store/activeTask/activeTask'
 
 const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
@@ -30,7 +32,6 @@ const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
   const [showAddQuestionDialog, setShowAddQuestionDialog] = useState(false)
   const [newQuestionText, setNewQuestionText] = useState('')
   const [editingQuestion, setEditingQuestion] = useState(null)
-
 
   useEffect(() => {
     if (organizationId && projectId && taskId && token) {
@@ -79,8 +80,6 @@ const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
       setQuestions([])
     }
   }, [taskNodesList, dispatch, organizationId, selectedTask, token])
-
-
 
   const handleAddDocument = () => {
     setDocuments(prev => [
@@ -144,6 +143,43 @@ const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
     }
   }
 
+  const handleGenerateClick = async doc => {
+    try {
+      // Build criteria with documentNodeIds = [doc.id]
+      const criteria = {
+        taskId: taskId,
+        documentNodeIds: [doc.id], // your document node UUID for this row
+        questionNodeIds: questions.map(q => q.id) // all question node UUIDs
+      }
+
+      // Call your async backend API via Redux thunk or direct fetch/axios
+      // For example, dispatch a thunk like executeTaskByType({ ... })
+
+      await dispatch(executeTaskByType({ organizationId, projectId, taskId, criteria, token })).unwrap()
+
+      // Optionally show success toast or update UI
+      toast.success(`Started generation for document ${doc.name}`)
+    } catch (error) {
+      console.error('Failed to execute task:', error)
+      toast.error('Failed to start generation')
+    }
+  }
+
+  const handleGenerateAllClick = async () => {
+    try {
+      const criteria = {
+        taskId: taskId,
+        documentNodeIds: documents.map(d => d.id), // all document node UUIDs
+        questionNodeIds: questions.map(q => q.id) // all question node UUIDs
+      }
+      await dispatch(executeTaskByType({ organizationId, projectId, taskId, criteria, token })).unwrap()
+      toast.success('Started generation for all documents')
+    } catch (error) {
+      console.error('Failed to start generation for all documents:', error)
+      toast.error('Failed to start generation for all documents')
+    }
+  }
+
   return (
     <>
       <Paper sx={{ p: 3, overflowX: 'auto', backgroundColor: 'action.hover', mb: 3 }}>
@@ -188,7 +224,7 @@ const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
           <QuestionsHeader
             questions={questions}
             openEditQuestionDialog={openEditQuestionDialog}
-            generateAnswers={() => {}}
+            generateAnswers={handleGenerateAllClick}
           />
           <DocumentRows
             documents={documents}
@@ -202,6 +238,7 @@ const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
             }}
             openUploader={openUploader}
             taskEdgesList={taskEdgesList}
+            onGenerate={handleGenerateClick}
           />
         </Box>
       </Paper>

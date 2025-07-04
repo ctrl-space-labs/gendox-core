@@ -140,6 +140,21 @@ export const fetchTaskEdgesByCriteria = createAsyncThunk(
   }
 )
 
+
+export const executeTaskByType = createAsyncThunk(
+  'task/executeTaskByType',
+  async ({ organizationId, projectId, taskId, criteria, token }, thunkAPI) => {
+    try {
+      const response = await taskService.executeTaskByType(organizationId, projectId, taskId, criteria, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+
 // Initial state for task slice
 const initialState = {
   projectTasks: [],

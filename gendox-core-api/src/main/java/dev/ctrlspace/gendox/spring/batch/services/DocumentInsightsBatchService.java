@@ -9,9 +9,12 @@ import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteExcep
 import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -44,20 +47,26 @@ public class DocumentInsightsBatchService {
         paramsBuilder.addString("taskId", taskId.toString());
 
 
-        // Serialize List<UUID> as comma-separated strings
+        ObjectMapper mapper = new ObjectMapper();
+
         if (criteria.getDocumentNodeIds() != null && !criteria.getDocumentNodeIds().isEmpty()) {
-            String documentNodeIds = criteria.getDocumentNodeIds().stream()
-                    .map(UUID::toString)
-                    .collect(Collectors.joining(","));
-            paramsBuilder.addString("documentNodeIds", documentNodeIds);
+            try {
+                String documentNodeIdsJson = mapper.writeValueAsString(criteria.getDocumentNodeIds());
+                paramsBuilder.addString("documentNodeIds", documentNodeIdsJson);
+            } catch (Exception e) {
+                throw new GendoxException("FAILED_TO_SERIALIZE_DOCUMENT_NODE","Failed to serialize documentNodeIds to JSON", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
         }
 
         if (criteria.getQuestionNodeIds() != null && !criteria.getQuestionNodeIds().isEmpty()) {
-            String questionNodeIds = criteria.getQuestionNodeIds().stream()
-                    .map(UUID::toString)
-                    .collect(Collectors.joining(","));
-            paramsBuilder.addString("questionNodeIds", questionNodeIds);
+            try {
+                String questionNodeIdsJson = mapper.writeValueAsString(criteria.getQuestionNodeIds());
+                paramsBuilder.addString("questionNodeIds", questionNodeIdsJson);
+            } catch (Exception e) {
+                throw new GendoxException("FAILED_TO_SERIALIZE_QUESTION_NODE", "Failed to serialize questionNodeIds to JSON", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
         }
+
 
         // Add a run.id param to force job rerun if needed
         paramsBuilder.addLong("run.id", System.currentTimeMillis());

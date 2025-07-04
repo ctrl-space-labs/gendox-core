@@ -2,7 +2,8 @@ package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TaskDocumentInsightsDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentInsightsAnswerDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentInsightsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.GendoxJpaPageReader;
@@ -18,15 +19,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Component
 @StepScope
-public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentInsightsDTO> {
+public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentInsightsAnswerDTO> {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentInsightsReader.class);
     private final TaskService taskService;
@@ -48,42 +49,45 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentInsi
         criteria = new TaskNodeCriteria();
         criteria.setTaskId(UUID.fromString(taskId));
 
-        // Deserialize documentNodeIds list from comma-separated string
-        String documentNodeIdsStr = jobParameters.getString("documentNodeIds");
-        if (documentNodeIdsStr != null && !documentNodeIdsStr.isBlank()) {
-            List<UUID> documentNodeIds = Arrays.stream(documentNodeIdsStr.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .map(UUID::fromString)
-                    .collect(Collectors.toList());
-            criteria.setDocumentNodeIds(documentNodeIds);
+        ObjectMapper mapper = new ObjectMapper();
+
+        // Deserialize documentNodeIds list from JSON string
+        String documentNodeIdsJson = jobParameters.getString("documentNodeIds");
+        if (documentNodeIdsJson != null && !documentNodeIdsJson.isBlank()) {
+            try {
+                List<UUID> documentNodeIds = mapper.readValue(
+                        documentNodeIdsJson,
+                        new TypeReference<List<UUID>>() {}
+                );
+                criteria.setDocumentNodeIds(documentNodeIds);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to deserialize documentNodeIds JSON", e);
+            }
         }
 
-        // Deserialize questionNodeIds list from comma-separated string
-        String questionNodeIdsStr = jobParameters.getString("questionNodeIds");
-        if (questionNodeIdsStr != null && !questionNodeIdsStr.isBlank()) {
-            List<UUID> questionNodeIds = Arrays.stream(questionNodeIdsStr.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .map(UUID::fromString)
-                    .collect(Collectors.toList());
-            criteria.setQuestionNodeIds(questionNodeIds);
+        // Deserialize questionNodeIds list from JSON string
+        String questionNodeIdsJson = jobParameters.getString("questionNodeIds");
+        if (questionNodeIdsJson != null && !questionNodeIdsJson.isBlank()) {
+            try {
+                List<UUID> questionNodeIds = mapper.readValue(
+                        questionNodeIdsJson,
+                        new TypeReference<List<UUID>>() {}
+                );
+                criteria.setQuestionNodeIds(questionNodeIds);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to deserialize questionNodeIds JSON", e);
+            }
         }
-
 
         return null;
     }
 
+
     @Override
-    protected Page<TaskDocumentInsightsDTO> getPageFromRepository(Pageable pageable) throws GendoxException {
+    protected Page<TaskDocumentInsightsAnswerDTO> getPageFromRepository(Pageable pageable) throws GendoxException {
         logger.trace("Is virtual thread? {}", Thread.currentThread().isVirtual());
-        Page<TaskNode> taskNodes = taskService.getTaskNodesByCriteria(criteria, pageable);
-        TaskDocumentInsightsDTO taskDocumentInsightsDTO = taskService.getTaskDocumentInsights(taskNodes, criteria.getTaskId());
-        return new PageImpl<>(
-                List.of(taskDocumentInsightsDTO),
-                pageable,
-                1  // total elements = 1 because it's an aggregated result, not item-by-item
-        );
+        Page<TaskDocumentInsightsAnswerDTO> dtosPage = taskService.getDocumentQuestionPairs(criteria.getTaskId(), pageable);
+        return dtosPage;
     }
 
     @Override

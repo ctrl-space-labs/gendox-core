@@ -3,7 +3,7 @@ import { Box, IconButton, Chip, TextField, Button } from '@mui/material'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 
-const buildAnswerMap = (taskEdgesList) => {
+const buildAnswerMap = taskEdgesList => {
   // Group edges by fromNodeId (answer node)
   const edgesByFromNode = taskEdgesList.reduce((acc, edge) => {
     if (!acc[edge.fromNode.id]) acc[edge.fromNode.id] = []
@@ -41,20 +41,40 @@ const buildAnswerMap = (taskEdgesList) => {
   return answerMap
 }
 
-const DocumentRows = ({ documents, questions, onAnswerChange, openUploader, taskEdgesList }) => {
+const DocumentRows = ({ documents, questions, onAnswerChange, openUploader, taskEdgesList, onGenerate }) => {
   console.log('Document Rows:', documents, questions, taskEdgesList)
-const answerMap = React.useMemo(() => buildAnswerMap(taskEdgesList?.content || []), [taskEdgesList])
+  const answerMap = React.useMemo(() => buildAnswerMap(taskEdgesList?.content || []), [taskEdgesList])
   return (
     <>
       {documents.map((doc, docIdx) => (
-        <Box key={doc.id} sx={{ display: 'flex', alignItems: 'center', borderBottom: 1, borderColor: 'divider', py: 1, '&:hover': { backgroundColor: 'action.hover' } }}>
+        <Box
+          key={doc.id}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            borderBottom: 1,
+            borderColor: 'divider',
+            py: 1,
+            '&:hover': { backgroundColor: 'action.hover' }
+          }}
+        >
           <Box sx={{ flex: 2, display: 'flex', alignItems: 'center' }}>
             {doc.documentId ? (
-              <IconButton color='error' onClick={() => { /* implement delete */ }}>
+              <IconButton
+                color='error'
+                onClick={() => {
+                  /* implement delete */
+                }}
+              >
                 <DeleteOutlineIcon />
               </IconButton>
             ) : (
-              <IconButton color='primary' onClick={() => { openUploader() }}>
+              <IconButton
+                color='primary'
+                onClick={() => {
+                  openUploader()
+                }}
+              >
                 <UploadFileIcon />
               </IconButton>
             )}
@@ -85,14 +105,13 @@ const answerMap = React.useMemo(() => buildAnswerMap(taskEdgesList?.content || [
           })}
 
           <Box sx={{ flex: 1 }}>
-            <Button size='small' variant='contained' onClick={() => {/* generate answers */}}>
+            <Button size='small' variant='contained' onClick={() => onGenerate(doc)}>
               Generate
             </Button>
           </Box>
         </Box>
       ))}
     </>
-    
   )
 }
 

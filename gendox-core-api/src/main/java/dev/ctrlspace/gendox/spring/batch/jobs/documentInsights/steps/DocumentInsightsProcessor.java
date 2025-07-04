@@ -3,8 +3,7 @@ package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TaskDocumentInsightsDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TaskNodeDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
@@ -14,7 +13,6 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TaskNodeValueDTO;
 
 
 import java.util.ArrayList;
@@ -25,7 +23,7 @@ import java.util.UUID;
 
 @Component
 @StepScope
-public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentInsightsDTO, List<TaskNodeDTO>> {
+public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentInsightsAnswerDTO, TaskDocumentInsightsAnswersDTO> {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentInsightsProcessor.class);
 
@@ -50,43 +48,39 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentInsi
     }
 
     @Override
-    public List<TaskNodeDTO> process(TaskDocumentInsightsDTO taskDocumentInsightsDTO) throws Exception {
-        List<TaskNodeDTO> answerTaskNodeDTOs = new ArrayList<>();
-        List<UUID> previousAnswerToDelete = taskService.deleteAnswerEdgesByTaskDocumentInsights(taskDocumentInsightsDTO);
-        taskService.deleteTaskNodesByIds(previousAnswerToDelete);
+    public TaskDocumentInsightsAnswersDTO process(TaskDocumentInsightsAnswerDTO taskDocumentInsightsAnswerDTO) throws Exception {
+
+        List<TaskNodeDTO> newAnswers = new ArrayList<>();
+        List<TaskNodeDTO> answersToDelete = new ArrayList<>();
+
 
         Type nodeTypeAnswer = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.ANSWER);
 
 
-        // For each document node
-        for (TaskNode documentNode : taskDocumentInsightsDTO.getDocumentNodes()) {
-            // For each question node
-            for (TaskNode questionNode : taskDocumentInsightsDTO.getQuestionNodes()) {
+        // Create TaskNodeValueDTO with random message + linking IDs
+        TaskNodeValueDTO valueDTO = TaskNodeValueDTO.builder()
+                .message(randomSampleMessage())
+                .build();
 
-                // Create TaskNodeValueDTO with random message + linking IDs
-                TaskNodeValueDTO valueDTO = TaskNodeValueDTO.builder()
-                        .message(randomSampleMessage())
-                        .questionNodeId(questionNode.getId().toString())
-                        .documentNodeId(documentNode.getId().toString())
-                        .build();
+        // Build TaskNodeDTO for the ANSWER node
+        TaskNodeDTO answerNodeDTO = TaskNodeDTO.builder()
+                .taskId(taskDocumentInsightsAnswerDTO.getTaskId())
+                .nodeType(nodeTypeAnswer.getName())
+                .nodeValue(valueDTO)
+                .build();
 
-                // Build TaskNodeDTO for the ANSWER node
-                TaskNodeDTO answerNodeDTO = TaskNodeDTO.builder()
-                        .taskId(taskDocumentInsightsDTO.getTaskId())
-                        .nodeType(nodeTypeAnswer.getName())
-                        .nodeValue(valueDTO)
-                        .build();
+        newAnswers.add(answerNodeDTO);
 
-                answerTaskNodeDTOs.add(answerNodeDTO);
-            }
-        }
+        TaskDocumentInsightsAnswersDTO taskDocumentInsightsAnswersDTO = TaskDocumentInsightsAnswersDTO.builder()
+                .newAnswers(newAnswers)
+                .answersToDelete(answersToDelete)
+                .build();
 
-        logger.info("Processed {} document nodes and {} question nodes to create {} answer nodes.",
-                taskDocumentInsightsDTO.getDocumentNodes().size(),
-                taskDocumentInsightsDTO.getQuestionNodes().size(),
-                answerTaskNodeDTOs.size());
 
-        return answerTaskNodeDTOs;
+        logger.info("Processed TaskDocumentInsightsAnswerDTO: {}",
+                taskDocumentInsightsAnswerDTO);
+
+        return taskDocumentInsightsAnswersDTO;
     }
 
 

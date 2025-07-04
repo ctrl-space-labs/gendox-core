@@ -173,6 +173,19 @@ const getTaskEdgesByCriteria = async (organizationId, projectId, criteria, token
   })
 }
 
+const executeTaskByType = async (organizationId, projectId, taskId, criteria, token) => {
+  return axios.post(
+    apiRequests.executeTaskByType(organizationId, projectId, taskId),
+    criteria,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token
+      }
+    }
+  )
+}
+
 export default {
   createTask,
   getTasks,
@@ -183,5 +196,6 @@ export default {
   getTaskNodeById,
   createTaskEdge,
   getTaskEdgeById,
-  getTaskEdgesByCriteria
+  getTaskEdgesByCriteria,
+  executeTaskByType
 }

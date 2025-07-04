@@ -3,7 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TaskEdgeDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskEdgeDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
 import org.springframework.stereotype.Component;

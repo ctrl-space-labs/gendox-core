@@ -103,6 +103,7 @@ public class AsyncService {
             logger.info("Starting Document Insights async batch for task {}", taskId);
             JobExecution taskJobExecution = documentInsightsBatchService.runDocumentInsights(taskId, criteria);
             logger.warn("Document Insights job is not yet implemented");
+            logger.info("Document Insights Job Execution Status: {}", taskJobExecution.getStatus());
         } catch (Exception e) {
             logger.error("Error executing Document Insights task {}", taskId, e);
         }

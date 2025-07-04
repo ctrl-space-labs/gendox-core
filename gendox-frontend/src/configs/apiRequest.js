@@ -223,5 +223,8 @@ export default {
   getTaskEdgesByCriteria: (organizationId, projectId) =>
   `${url}organizations/${organizationId}/projects/${projectId}/task-edges/search`,
 
+  executeTaskByType: (organizationId, projectId, taskId) =>
+  `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/execute`,
+
 
 };

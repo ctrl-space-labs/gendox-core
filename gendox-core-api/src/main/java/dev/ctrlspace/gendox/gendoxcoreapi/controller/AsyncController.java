@@ -94,7 +94,7 @@ public class AsyncController {
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
             "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
-    @GetMapping("organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/execute")
+    @PostMapping("organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/execute")
     @Operation(summary = "Execute a Task asynchronously")
     public String executeTaskByType(
             @PathVariable UUID organizationId,

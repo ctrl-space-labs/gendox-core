@@ -2,9 +2,12 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskEdgeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentInsightsAnswerDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentInsightsDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.TaskEdgePredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.TaskNodePredicates;
@@ -14,16 +17,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.stream.IntStream;
+import java.util.stream.Collectors;
 
 @Service
 public class TaskService {
@@ -147,46 +149,46 @@ public class TaskService {
     }
 
 
-    public List<TaskEdge> createAnswerEdges(List<TaskNode> savedNodes) throws GendoxException {
-
-        Type answersRelationType = typeService.getTaskNodeRelationshipTypeByName(TaskNodeRelationshipTypeConstants.ANSWERS);
-        if (answersRelationType == null) {
-            throw new IllegalStateException("Relation type 'ANSWERS' not found");
-        }
-
-        List<TaskEdge> edgesToSave = new ArrayList<>();
-
-        for (TaskNode savedNode : savedNodes) {
-            if (savedNode.getNodeValue() != null) {
-                UUID documentNodeId = UUID.fromString(savedNode.getNodeValue().getDocumentNodeId());
-                UUID questionNodeId = UUID.fromString(savedNode.getNodeValue().getQuestionNodeId());
-
-                TaskNode documentNode = taskNodeRepository.findById(documentNodeId)
-                        .orElseThrow(() -> new GendoxException("DOCUMENT_NODE_NOT_FOUND", "Document node not found with ID: " + documentNodeId, HttpStatus.NOT_FOUND));
-                TaskNode questionNode = taskNodeRepository.findById(questionNodeId)
-                        .orElseThrow(() -> new GendoxException("QUESTION_NODE_NOT_FOUND", "Question node not found with ID: " + questionNodeId, HttpStatus.NOT_FOUND));
-
-                TaskEdge edgeToDocument = new TaskEdge();
-                edgeToDocument.setFromNode(savedNode);
-                edgeToDocument.setToNode(documentNode);
-                edgeToDocument.setRelationType(answersRelationType);
-                edgesToSave.add(edgeToDocument);
-
-
-                TaskEdge edgeToQuestion = new TaskEdge();
-                edgeToQuestion.setFromNode(savedNode);
-                edgeToQuestion.setToNode(questionNode);
-                edgeToQuestion.setRelationType(answersRelationType);
-                edgesToSave.add(edgeToQuestion);
-
-            }
-        }
-
-
-        List<TaskEdge> savedEdges = taskEdgeRepository.saveAll(edgesToSave);
-        logger.info("Saved {} task edges linking answer nodes to document and question nodes", savedEdges.size());
-        return savedEdges;
-    }
+//    public List<TaskEdge> createAnswerEdges(List<TaskNode> savedNodes) throws GendoxException {
+//
+//        Type answersRelationType = typeService.getTaskNodeRelationshipTypeByName(TaskNodeRelationshipTypeConstants.ANSWERS);
+//        if (answersRelationType == null) {
+//            throw new IllegalStateException("Relation type 'ANSWERS' not found");
+//        }
+//
+//        List<TaskEdge> edgesToSave = new ArrayList<>();
+//
+//        for (TaskNode savedNode : savedNodes) {
+//            if (savedNode.getNodeValue() != null) {
+//                UUID documentNodeId = UUID.fromString(savedNode.getNodeValue().getDocumentNodeId());
+//                UUID questionNodeId = UUID.fromString(savedNode.getNodeValue().getQuestionNodeId());
+//
+//                TaskNode documentNode = taskNodeRepository.findById(documentNodeId)
+//                        .orElseThrow(() -> new GendoxException("DOCUMENT_NODE_NOT_FOUND", "Document node not found with ID: " + documentNodeId, HttpStatus.NOT_FOUND));
+//                TaskNode questionNode = taskNodeRepository.findById(questionNodeId)
+//                        .orElseThrow(() -> new GendoxException("QUESTION_NODE_NOT_FOUND", "Question node not found with ID: " + questionNodeId, HttpStatus.NOT_FOUND));
+//
+//                TaskEdge edgeToDocument = new TaskEdge();
+//                edgeToDocument.setFromNode(savedNode);
+//                edgeToDocument.setToNode(documentNode);
+//                edgeToDocument.setRelationType(answersRelationType);
+//                edgesToSave.add(edgeToDocument);
+//
+//
+//                TaskEdge edgeToQuestion = new TaskEdge();
+//                edgeToQuestion.setFromNode(savedNode);
+//                edgeToQuestion.setToNode(questionNode);
+//                edgeToQuestion.setRelationType(answersRelationType);
+//                edgesToSave.add(edgeToQuestion);
+//
+//            }
+//        }
+//
+//
+//        List<TaskEdge> savedEdges = taskEdgeRepository.saveAll(edgesToSave);
+//        logger.info("Saved {} task edges linking answer nodes to document and question nodes", savedEdges.size());
+//        return savedEdges;
+//    }
 
 
 
@@ -221,6 +223,41 @@ public class TaskService {
         return fromNodeIds;
     }
 
+//    public List<TaskNodeDTO> getAnswersToDelete(TaskDocumentInsightsDTO taskDocumentInsightsDTO) {
+//        // 1. Get the ANSWERS relation type
+//        Type answersRelationType = typeService.getTaskNodeRelationshipTypeByName(TaskNodeRelationshipTypeConstants.ANSWERS);
+//        if (answersRelationType == null) {
+//            throw new IllegalStateException("Relation type 'ANSWERS' not found");
+//        }
+//
+//        // 2. Collect all toNodeIds from documentNodes and questionNodes
+//        List<UUID> toNodeIds = new ArrayList<>();
+//        if (taskDocumentInsightsDTO.getDocumentNodes() != null) {
+//            taskDocumentInsightsDTO.getDocumentNodes().forEach(node -> toNodeIds.add(node.getId()));
+//        }
+//        if (taskDocumentInsightsDTO.getQuestionNodes() != null) {
+//            taskDocumentInsightsDTO.getQuestionNodes().forEach(node -> toNodeIds.add(node.getId()));
+//        }
+//
+//        if (toNodeIds.isEmpty()) {
+//            return List.of(); // nothing to delete
+//        }
+//
+//        // 3. Find all edges with ANSWERS relation type and matching toNodeIds
+//        List<TaskEdge> edges = taskEdgeRepository.findAllByRelationTypeAndToNodeIdIn(answersRelationType, toNodeIds);
+//
+//        if (edges.isEmpty()) {
+//            return List.of();
+//        }
+//
+//        // 4. Extract fromNode (the ANSWER nodes) from edges and map to DTOs, distinct by ID
+//        return edges.stream()
+//                .map(TaskEdge::getFromNode)
+//                .distinct()
+//                .map(this::mapTaskNodeToDTO)
+//                .toList();
+//    }
+
     public void deleteTaskNodesByIds(List<UUID> taskNodeIds) {
         if (taskNodeIds == null || taskNodeIds.isEmpty()) {
             return;
@@ -228,6 +265,39 @@ public class TaskService {
         List<TaskNode> nodesToDelete = taskNodeRepository.findAllById(taskNodeIds);
         taskNodeRepository.deleteAll(nodesToDelete);
     }
+
+    public Page<TaskDocumentInsightsAnswerDTO> getDocumentQuestionPairs(UUID taskId, Pageable pageable) {
+
+        Type documentNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.DOCUMENT);
+        Type questionNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.QUESTION);
+
+        int limit = pageable.getPageSize();
+        int offset = (int) pageable.getOffset();
+
+        List<Object[]> results = taskNodeRepository.findDocumentQuestionPairs(
+                taskId,
+                documentNodeType.getId(),
+                questionNodeType.getId(),
+                limit,
+                offset);
+
+        List<TaskDocumentInsightsAnswerDTO> dtos = results.stream()
+                .map(arr -> {
+                    TaskNode docNode = (TaskNode) arr[0];
+                    TaskNode questionNode = (TaskNode) arr[1];
+                    return TaskDocumentInsightsAnswerDTO.builder()
+                            .taskId(taskId)
+                            .documentNode(docNode)
+                            .questionNode(questionNode)
+                            .build();
+                }).collect(Collectors.toList());
+
+        // You will need total count for correct Page implementation, so get that too:
+        long totalCount = taskNodeRepository.countDocumentQuestionPairs(taskId, documentNodeType.getId(), questionNodeType.getId());
+
+        return new PageImpl<>(dtos, pageable, totalCount);
+    }
+
 }
 
 
