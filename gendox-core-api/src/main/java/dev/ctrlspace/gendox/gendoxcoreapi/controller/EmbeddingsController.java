@@ -141,10 +141,6 @@ public class EmbeddingsController {
 
         List<DocumentInstanceSectionDTO> sections = embeddingService.findClosestSections(message, project, pageable);
 
-//        List<DocumentInstanceSectionDTO> sections = instanceSections
-//                .stream()
-//                .map(section -> documentInstanceSectionWithDocumentConverter.toDTO(section))
-//                .toList();
         return sections;
     }
 

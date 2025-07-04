@@ -1,5 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import com.knuddels.jtokkit.Encodings;
+import com.knuddels.jtokkit.api.Encoding;
+import com.knuddels.jtokkit.api.EncodingRegistry;
+import com.knuddels.jtokkit.api.ModelType;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
@@ -57,6 +61,8 @@ public class EmbeddingService {
 
     @Value("${proven-ai.enabled}")
     private Boolean provenAiEnabled;
+
+    private final int MAX_EMBEDDING_TOKENS = 8000; // Maximum tokens for an embedding request
 
     @Autowired
     public EmbeddingService(
@@ -300,6 +306,19 @@ public class EmbeddingService {
     }
 
 
+    /**
+     * Implementa semantic search for sections based on the message content.
+     * If ProvenAI is enabled, it will also search for sections in other projects.
+     * If ReRank is enabled, it will rerank the sections based on the message content.
+     *
+     * @param message
+     * @param project
+     * @param pageable
+     * @return
+     * @throws GendoxException
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     */
     @Observed(name = "EmbeddingService.findClosestSections",
             contextualName = "EmbeddingService#findClosestSections",
             lowCardinalityKeyValues = {
@@ -311,22 +330,29 @@ public class EmbeddingService {
     public List<DocumentInstanceSectionDTO> findClosestSections(Message message, Project project, Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
 
         UUID projectId = project.getId();
+        ProjectAgent agent = project.getProjectAgent();
+        // this will become Agent property, and can be overridden by request
+        boolean hyDESearchEnabled = false;
 
-        // TODO add validation that the message fits in the context size of embeddigns (~8K tokens)
+        EncodingRegistry registry = Encodings.newDefaultEncodingRegistry();
+        Encoding enc = registry.getEncodingForModel(ModelType.TEXT_EMBEDDING_3_SMALL);
+        int requestTokens = enc.encode(message.getValue()).size();
 
-        EmbeddingResponse embeddingResponse = getEmbeddingForMessage(project.getProjectAgent(),
-                message.getValue(),
-                project.getProjectAgent().getSemanticSearchModel());
+        Embedding messageEmbedding;
+        if (requestTokens < MAX_EMBEDDING_TOKENS) {
 
-        String sectionSha256Hash = cryptographyUtils.calculateSHA256(message.getValue());
+            messageEmbedding = getAndPersistEmbedding(message, project, projectId);
 
-        Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse,
-                projectId,
-                message.getId(),
-                null,
-                project.getProjectAgent().getSemanticSearchModel().getId(),
-                project.getOrganizationId(),
-                sectionSha256Hash);
+        }
+//        else if (requestTokens > MAX_EMBEDDING_TOKENS && agent.getSemanticSearchModel().getName().equals("text-embedding-3-small")) {
+//
+//
+//        }
+        else {
+            logger.warn("Message exceeds maximum embedding tokens. Request tokens: {}, Max tokens: {}", requestTokens, MAX_EMBEDDING_TOKENS);
+            throw new GendoxException("MESSAGE_TOO_LONG_FOR_EMBEDDING", "Message exceeds maximum embedding tokens", HttpStatus.BAD_REQUEST);
+        }
+
 
         List<SectionDistanceDTO> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, pageable);
 
@@ -377,6 +403,24 @@ public class EmbeddingService {
         }
 
         return allSectionsDTO;
+    }
+
+    private Embedding getAndPersistEmbedding(Message message, Project project, UUID projectId) throws GendoxException, NoSuchAlgorithmException {
+        Embedding messageEmbedding;
+        EmbeddingResponse embeddingResponse = getEmbeddingForMessage(project.getProjectAgent(),
+                message.getValue(),
+                project.getProjectAgent().getSemanticSearchModel());
+
+        String sectionSha256Hash = cryptographyUtils.calculateSHA256(message.getValue());
+
+        messageEmbedding = upsertEmbeddingForText(embeddingResponse,
+                projectId,
+                message.getId(),
+                null,
+                project.getProjectAgent().getSemanticSearchModel().getId(),
+                project.getOrganizationId(),
+                sectionSha256Hash);
+        return messageEmbedding;
     }
 
     public List<DocumentInstanceSectionDTO> findProvenAiClosestSections(Message message, Project project) throws GendoxException, IOException {
