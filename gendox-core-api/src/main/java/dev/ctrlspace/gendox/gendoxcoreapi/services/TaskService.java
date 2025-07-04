@@ -1,13 +1,11 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.TaskNodeConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskEdgeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentInsightsAnswerDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentInsightsDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.TaskEdgePredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.TaskNodePredicates;
@@ -34,17 +32,20 @@ public class TaskService {
     private final TaskNodeRepository taskNodeRepository;
     private final TaskEdgeRepository taskEdgeRepository;
     private final TypeService typeService;
+    private final TaskNodeConverter taskNodeConverter;
 
 
     @Autowired
     public TaskService(TaskRepository taskRepository,
                        TaskNodeRepository taskNodeRepository,
                        TaskEdgeRepository taskEdgeRepository,
-                       TypeService typeService) {
+                       TypeService typeService,
+                       TaskNodeConverter taskNodeConverter) {
         this.taskRepository = taskRepository;
         this.taskNodeRepository = taskNodeRepository;
         this.taskEdgeRepository = taskEdgeRepository;
         this.typeService = typeService;
+        this.taskNodeConverter = taskNodeConverter;
     }
 
     public Task createTask(UUID projectId, TaskDTO taskDTO) {
@@ -107,6 +108,12 @@ public class TaskService {
         return taskNodeRepository.findAll(TaskNodePredicates.build(criteria), pageable);
     }
 
+    public TaskNode getAnswerNodeByDocumentAndQuestion(UUID taskId, UUID documentNodeId, UUID questionNodeId) {
+        logger.info("Fetching answer node for task: {}, document: {}, question: {}", taskId, documentNodeId, questionNodeId);
+        return taskNodeRepository.findAnswerNodeByDocumentAndQuestion(taskId, documentNodeId, questionNodeId)
+                .orElseThrow(() -> new RuntimeException("Answer node not found for given document and question"));
+    }
+
     public TaskEdge createTaskEdge(TaskEdge taskEdge) {
         logger.info("Creating new task edge: {}", taskEdge);
         return taskEdgeRepository.save(taskEdge);
@@ -148,48 +155,38 @@ public class TaskService {
         return insightsDTO;
     }
 
+    public List<TaskEdge> createAnswerEdges(List<TaskNewAnswerDTO> newAnswerDTOs) throws GendoxException {
+        if (newAnswerDTOs == null || newAnswerDTOs.isEmpty()) {
+            logger.warn("No new answers provided for creating edges");
+            return new ArrayList<>(); // Return empty list if no answers
+        }
 
-//    public List<TaskEdge> createAnswerEdges(List<TaskNode> savedNodes) throws GendoxException {
-//
-//        Type answersRelationType = typeService.getTaskNodeRelationshipTypeByName(TaskNodeRelationshipTypeConstants.ANSWERS);
-//        if (answersRelationType == null) {
-//            throw new IllegalStateException("Relation type 'ANSWERS' not found");
-//        }
-//
-//        List<TaskEdge> edgesToSave = new ArrayList<>();
-//
-//        for (TaskNode savedNode : savedNodes) {
-//            if (savedNode.getNodeValue() != null) {
-//                UUID documentNodeId = UUID.fromString(savedNode.getNodeValue().getDocumentNodeId());
-//                UUID questionNodeId = UUID.fromString(savedNode.getNodeValue().getQuestionNodeId());
-//
-//                TaskNode documentNode = taskNodeRepository.findById(documentNodeId)
-//                        .orElseThrow(() -> new GendoxException("DOCUMENT_NODE_NOT_FOUND", "Document node not found with ID: " + documentNodeId, HttpStatus.NOT_FOUND));
-//                TaskNode questionNode = taskNodeRepository.findById(questionNodeId)
-//                        .orElseThrow(() -> new GendoxException("QUESTION_NODE_NOT_FOUND", "Question node not found with ID: " + questionNodeId, HttpStatus.NOT_FOUND));
-//
-//                TaskEdge edgeToDocument = new TaskEdge();
-//                edgeToDocument.setFromNode(savedNode);
-//                edgeToDocument.setToNode(documentNode);
-//                edgeToDocument.setRelationType(answersRelationType);
-//                edgesToSave.add(edgeToDocument);
-//
-//
-//                TaskEdge edgeToQuestion = new TaskEdge();
-//                edgeToQuestion.setFromNode(savedNode);
-//                edgeToQuestion.setToNode(questionNode);
-//                edgeToQuestion.setRelationType(answersRelationType);
-//                edgesToSave.add(edgeToQuestion);
-//
-//            }
-//        }
-//
-//
-//        List<TaskEdge> savedEdges = taskEdgeRepository.saveAll(edgesToSave);
-//        logger.info("Saved {} task edges linking answer nodes to document and question nodes", savedEdges.size());
-//        return savedEdges;
-//    }
+        Type answersRelationType = typeService.getTaskNodeRelationshipTypeByName(TaskNodeRelationshipTypeConstants.ANSWERS);
 
+        List<TaskEdge> edgesToSave = new ArrayList<>();
+
+        for (TaskNewAnswerDTO dto : newAnswerDTOs) {
+            // Convert DTO to entity and save
+            TaskNode answerNode = taskNodeConverter.toEntity(dto.getNewAnswer());
+            TaskNode savedAnswerNode = taskNodeRepository.save(answerNode);
+
+            // Create edge to document node
+            TaskEdge docEdge = new TaskEdge();
+            docEdge.setFromNode(savedAnswerNode);
+            docEdge.setToNode(dto.getDocumentNode());
+            docEdge.setRelationType(answersRelationType);
+            edgesToSave.add(docEdge);
+
+            // Create edge to question node
+            TaskEdge questionEdge = new TaskEdge();
+            questionEdge.setFromNode(savedAnswerNode);
+            questionEdge.setToNode(dto.getQuestionNode());
+            questionEdge.setRelationType(answersRelationType);
+            edgesToSave.add(questionEdge);
+        }
+
+        return taskEdgeRepository.saveAll(edgesToSave);
+    }
 
 
     public List<UUID> deleteAnswerEdgesByTaskDocumentInsights(TaskDocumentInsightsDTO taskDocumentInsightsDTO) {
@@ -223,40 +220,7 @@ public class TaskService {
         return fromNodeIds;
     }
 
-//    public List<TaskNodeDTO> getAnswersToDelete(TaskDocumentInsightsDTO taskDocumentInsightsDTO) {
-//        // 1. Get the ANSWERS relation type
-//        Type answersRelationType = typeService.getTaskNodeRelationshipTypeByName(TaskNodeRelationshipTypeConstants.ANSWERS);
-//        if (answersRelationType == null) {
-//            throw new IllegalStateException("Relation type 'ANSWERS' not found");
-//        }
-//
-//        // 2. Collect all toNodeIds from documentNodes and questionNodes
-//        List<UUID> toNodeIds = new ArrayList<>();
-//        if (taskDocumentInsightsDTO.getDocumentNodes() != null) {
-//            taskDocumentInsightsDTO.getDocumentNodes().forEach(node -> toNodeIds.add(node.getId()));
-//        }
-//        if (taskDocumentInsightsDTO.getQuestionNodes() != null) {
-//            taskDocumentInsightsDTO.getQuestionNodes().forEach(node -> toNodeIds.add(node.getId()));
-//        }
-//
-//        if (toNodeIds.isEmpty()) {
-//            return List.of(); // nothing to delete
-//        }
-//
-//        // 3. Find all edges with ANSWERS relation type and matching toNodeIds
-//        List<TaskEdge> edges = taskEdgeRepository.findAllByRelationTypeAndToNodeIdIn(answersRelationType, toNodeIds);
-//
-//        if (edges.isEmpty()) {
-//            return List.of();
-//        }
-//
-//        // 4. Extract fromNode (the ANSWER nodes) from edges and map to DTOs, distinct by ID
-//        return edges.stream()
-//                .map(TaskEdge::getFromNode)
-//                .distinct()
-//                .map(this::mapTaskNodeToDTO)
-//                .toList();
-//    }
+
 
     public void deleteTaskNodesByIds(List<UUID> taskNodeIds) {
         if (taskNodeIds == null || taskNodeIds.isEmpty()) {
@@ -264,6 +228,22 @@ public class TaskService {
         }
         List<TaskNode> nodesToDelete = taskNodeRepository.findAllById(taskNodeIds);
         taskNodeRepository.deleteAll(nodesToDelete);
+    }
+
+    public void deleteTaskEdgesByIds(List<UUID> taskEdgeIds) {
+        if (taskEdgeIds == null || taskEdgeIds.isEmpty()) {
+            return;
+        }
+        List<TaskEdge> edgesToDelete = taskEdgeRepository.findAllById(taskEdgeIds);
+        taskEdgeRepository.deleteAll(edgesToDelete);
+    }
+
+    public void deleteTaskEdgesByFromNodeIds(List<UUID> fromNodeIds) {
+        if (fromNodeIds == null || fromNodeIds.isEmpty()) {
+            return;
+        }
+        List<TaskEdge> edgesToDelete = taskEdgeRepository.findAllByFromNodeIdIn(fromNodeIds);
+        taskEdgeRepository.deleteAll(edgesToDelete);
     }
 
     public Page<TaskDocumentInsightsAnswerDTO> getDocumentQuestionPairs(UUID taskId, Pageable pageable) {

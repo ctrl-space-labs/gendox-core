@@ -13,6 +13,6 @@ import java.util.UUID;
 public interface TaskEdgeRepository extends JpaRepository<TaskEdge, UUID>, QuerydslPredicateExecutor<TaskEdge> {
 
     List<TaskEdge> findAllByRelationTypeAndToNodeIdIn(Type relationType, List<UUID> toNodeIds);
-
+    List<TaskEdge> findAllByFromNodeIdIn(List<UUID> fromNodeIds);
 
 }

@@ -6,13 +6,12 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class TaskDocumentInsightsAnswersDTO {
-    List<TaskNewAnswerDTO> newAnswers;
-    List<TaskNode> answersToDelete;
+public class TaskNewAnswerDTO {
+    TaskNodeDTO newAnswer;
+    TaskNode documentNode;
+    TaskNode questionNode;
 }

@@ -50,11 +50,18 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentInsi
     @Override
     public TaskDocumentInsightsAnswersDTO process(TaskDocumentInsightsAnswerDTO taskDocumentInsightsAnswerDTO) throws Exception {
 
-        List<TaskNodeDTO> newAnswers = new ArrayList<>();
-        List<TaskNodeDTO> answersToDelete = new ArrayList<>();
+        List<TaskNewAnswerDTO> newAnswers = new ArrayList<>();
+        List<TaskNode> answersToDelete = new ArrayList<>();
 
 
         Type nodeTypeAnswer = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.ANSWER);
+        TaskNode taskNode = taskService.getAnswerNodeByDocumentAndQuestion(
+                taskDocumentInsightsAnswerDTO.getTaskId(),
+                taskDocumentInsightsAnswerDTO.getDocumentNode().getId(),
+                taskDocumentInsightsAnswerDTO.getQuestionNode().getId()
+        );
+
+        answersToDelete.add(taskNode);
 
 
         // Create TaskNodeValueDTO with random message + linking IDs
@@ -69,7 +76,13 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentInsi
                 .nodeValue(valueDTO)
                 .build();
 
-        newAnswers.add(answerNodeDTO);
+        TaskNewAnswerDTO taskNewAnswerDTO = TaskNewAnswerDTO.builder()
+                .documentNode(taskDocumentInsightsAnswerDTO.getDocumentNode())
+                .questionNode(taskDocumentInsightsAnswerDTO.getQuestionNode())
+                .newAnswer(answerNodeDTO)
+                .build();
+
+        newAnswers.add(taskNewAnswerDTO);
 
         TaskDocumentInsightsAnswersDTO taskDocumentInsightsAnswersDTO = TaskDocumentInsightsAnswersDTO.builder()
                 .newAnswers(newAnswers)

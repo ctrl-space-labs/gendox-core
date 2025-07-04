@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -52,6 +53,22 @@ public interface TaskNodeRepository extends JpaRepository<TaskNode, UUID>, Query
             @Param("taskId") UUID taskId,
             @Param("documentNodeTypeId") Long documentNodeTypeId,
             @Param("questionNodeTypeId") Long questionNodeTypeId);
+
+
+    @Query("""
+        select answerNode
+        from TaskEdge edge
+        join edge.fromNode answerNode
+        join edge.toNode toNode
+        where edge.relationType.name = 'ANSWERS'
+          and answerNode.taskId = :taskId
+          and toNode.id in (:documentNodeId, :questionNodeId)
+    """)
+    Optional<TaskNode> findAnswerNodeByDocumentAndQuestion(
+            @Param("taskId") UUID taskId,
+            @Param("documentNodeId") UUID documentNodeId,
+            @Param("questionNodeId") UUID questionNodeId);
+
 
 
 }
