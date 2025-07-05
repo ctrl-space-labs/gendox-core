@@ -6,15 +6,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class TaskDocumentInsightsAnswerDTO {
-    private UUID taskId;
-    private TaskNode questionNode;
-    private TaskNode documentNode;
-
+public class TaskAnswerBatchDTO {
+    List<AnswerCreationDTO> newAnswers;
+    List<TaskNode> answersToDelete;
 }

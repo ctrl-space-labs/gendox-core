@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class TaskNewAnswerDTO {
+public class AnswerCreationDTO {
     TaskNodeDTO newAnswer;
     TaskNode documentNode;
     TaskNode questionNode;

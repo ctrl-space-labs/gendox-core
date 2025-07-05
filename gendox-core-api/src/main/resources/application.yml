@@ -191,16 +191,6 @@ gendox:
             name: documentSplitterStep
             chunk-size: 10
             pageable-size: 1000
-    task-job:
-      job:
-        name: taskJob
-        thread-pool-size: 50
-        steps:
-          task-step:
-            name: taskStep
-            throttle-limit: 10    # this should be around 10 to not hit the throttle limit of the OpenAI API
-            chunk-size: 10
-            pageable-size: 1000
     document-insights:
       job:
         name: documentInsightsJob

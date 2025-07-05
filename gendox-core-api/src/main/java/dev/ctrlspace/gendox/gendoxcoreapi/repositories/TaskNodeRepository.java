@@ -22,23 +22,37 @@ public interface TaskNodeRepository extends JpaRepository<TaskNode, UUID>, Query
     @Query("SELECT tn FROM TaskNode tn WHERE tn.taskId = :taskId AND tn.nodeType.name = :nodeTypeName")
     List<TaskNode> findAllByTaskIdAndNodeTypeName(@Param("taskId") UUID taskId, @Param("nodeTypeName") String nodeTypeName);
 
-    @Query(value = """
-        SELECT docs.*, questions.*
-        FROM gendox_core.task_nodes docs
-        CROSS JOIN gendox_core.task_nodes questions
-        WHERE docs.task_id = :taskId
-          AND questions.task_id = :taskId
-          AND docs.node_type_id = :documentNodeTypeId
-          AND questions.node_type_id = :questionNodeTypeId
-        ORDER BY docs.id ASC, questions.id ASC
-        LIMIT :limit OFFSET :offset
-        """, nativeQuery = true)
+//    @Query(value = """
+//        SELECT docs.id, questions.id
+//        FROM gendox_core.task_nodes docs
+//        CROSS JOIN gendox_core.task_nodes questions
+//        WHERE docs.task_id = :taskId
+//          AND questions.task_id = :taskId
+//          AND docs.node_type_id = :documentNodeTypeId
+//          AND questions.node_type_id = :questionNodeTypeId
+//        ORDER BY docs.id ASC, questions.id ASC
+//        """, nativeQuery = true)
+//    List<Object[]> findDocumentQuestionPairs(
+//            @Param("taskId") UUID taskId,
+//            @Param("documentNodeTypeId") Long documentNodeTypeId,
+//            @Param("questionNodeTypeId") Long questionNodeTypeId,
+//            Pageable pageable);
+
+    @Query("""
+    select docNode, quesNode
+    from TaskNode docNode, TaskNode quesNode
+    where docNode.taskId = :taskId
+      and quesNode.taskId = :taskId
+      and docNode.nodeType.id = :documentNodeTypeId
+      and quesNode.nodeType.id = :questionNodeTypeId
+    order by docNode.createdAt asc, quesNode.createdAt asc
+""")
     List<Object[]> findDocumentQuestionPairs(
             @Param("taskId") UUID taskId,
             @Param("documentNodeTypeId") Long documentNodeTypeId,
             @Param("questionNodeTypeId") Long questionNodeTypeId,
-            @Param("limit") int limit,
-            @Param("offset") int offset);
+            Pageable pageable);
+
 
     @Query(value = """
     SELECT COUNT(*)
@@ -55,20 +69,27 @@ public interface TaskNodeRepository extends JpaRepository<TaskNode, UUID>, Query
             @Param("questionNodeTypeId") Long questionNodeTypeId);
 
 
+
+
+
+
     @Query("""
-        select answerNode
-        from TaskEdge edge
-        join edge.fromNode answerNode
-        join edge.toNode toNode
-        where edge.relationType.name = 'ANSWERS'
-          and answerNode.taskId = :taskId
-          and toNode.id in (:documentNodeId, :questionNodeId)
-    """)
+    select answerNode
+    from TaskEdge edgeDoc
+    join edgeDoc.fromNode answerNode
+    join edgeDoc.toNode docNode
+    join TaskEdge edgeQues on edgeQues.fromNode = answerNode
+    join edgeQues.toNode quesNode
+    where edgeDoc.relationType.name = 'ANSWERS'
+      and edgeQues.relationType.name = 'ANSWERS'
+      and answerNode.taskId = :taskId
+      and docNode.id = :documentNodeId
+      and quesNode.id = :questionNodeId
+""")
     Optional<TaskNode> findAnswerNodeByDocumentAndQuestion(
             @Param("taskId") UUID taskId,
             @Param("documentNodeId") UUID documentNodeId,
             @Param("questionNodeId") UUID questionNodeId);
-
 
 
 }

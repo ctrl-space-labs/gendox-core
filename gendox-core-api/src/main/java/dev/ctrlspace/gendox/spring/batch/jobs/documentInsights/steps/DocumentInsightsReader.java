@@ -1,9 +1,7 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentInsightsAnswerDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentInsightsDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentQuestionPairDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.GendoxJpaPageReader;
@@ -16,7 +14,6 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -27,7 +24,7 @@ import java.util.UUID;
 
 @Component
 @StepScope
-public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentInsightsAnswerDTO> {
+public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQuestionPairDTO> {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentInsightsReader.class);
     private final TaskService taskService;
@@ -84,9 +81,9 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentInsi
 
 
     @Override
-    protected Page<TaskDocumentInsightsAnswerDTO> getPageFromRepository(Pageable pageable) throws GendoxException {
+    protected Page<TaskDocumentQuestionPairDTO> getPageFromRepository(Pageable pageable) throws GendoxException {
         logger.trace("Is virtual thread? {}", Thread.currentThread().isVirtual());
-        Page<TaskDocumentInsightsAnswerDTO> dtosPage = taskService.getDocumentQuestionPairs(criteria.getTaskId(), pageable);
+        Page<TaskDocumentQuestionPairDTO> dtosPage = taskService.getDocumentQuestionPairs(criteria.getTaskId(), pageable);
         return dtosPage;
     }
 

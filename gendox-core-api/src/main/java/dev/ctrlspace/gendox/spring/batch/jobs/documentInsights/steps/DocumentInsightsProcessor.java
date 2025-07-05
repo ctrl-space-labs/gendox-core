@@ -15,15 +15,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 
 @Component
 @StepScope
-public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentInsightsAnswerDTO, TaskDocumentInsightsAnswersDTO> {
+public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQuestionPairDTO, TaskAnswerBatchDTO> {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentInsightsProcessor.class);
 
@@ -48,20 +45,22 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentInsi
     }
 
     @Override
-    public TaskDocumentInsightsAnswersDTO process(TaskDocumentInsightsAnswerDTO taskDocumentInsightsAnswerDTO) throws Exception {
+    public TaskAnswerBatchDTO process(TaskDocumentQuestionPairDTO taskDocumentQuestionPairDTO) throws Exception {
 
-        List<TaskNewAnswerDTO> newAnswers = new ArrayList<>();
+        List<AnswerCreationDTO> newAnswers = new ArrayList<>();
         List<TaskNode> answersToDelete = new ArrayList<>();
 
 
         Type nodeTypeAnswer = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.ANSWER);
-        TaskNode taskNode = taskService.getAnswerNodeByDocumentAndQuestion(
-                taskDocumentInsightsAnswerDTO.getTaskId(),
-                taskDocumentInsightsAnswerDTO.getDocumentNode().getId(),
-                taskDocumentInsightsAnswerDTO.getQuestionNode().getId()
+
+
+        Optional<TaskNode> taskNodeOpt = taskService.findAnswerNodeByDocumentAndQuestionOptional(
+                taskDocumentQuestionPairDTO.getTaskId(),
+                taskDocumentQuestionPairDTO.getDocumentNode().getId(),
+                taskDocumentQuestionPairDTO.getQuestionNode().getId()
         );
 
-        answersToDelete.add(taskNode);
+        taskNodeOpt.ifPresent(answersToDelete::add);
 
 
         // Create TaskNodeValueDTO with random message + linking IDs
@@ -71,29 +70,29 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentInsi
 
         // Build TaskNodeDTO for the ANSWER node
         TaskNodeDTO answerNodeDTO = TaskNodeDTO.builder()
-                .taskId(taskDocumentInsightsAnswerDTO.getTaskId())
+                .taskId(taskDocumentQuestionPairDTO.getTaskId())
                 .nodeType(nodeTypeAnswer.getName())
                 .nodeValue(valueDTO)
                 .build();
 
-        TaskNewAnswerDTO taskNewAnswerDTO = TaskNewAnswerDTO.builder()
-                .documentNode(taskDocumentInsightsAnswerDTO.getDocumentNode())
-                .questionNode(taskDocumentInsightsAnswerDTO.getQuestionNode())
+        AnswerCreationDTO answerCreationDTO = AnswerCreationDTO.builder()
+                .documentNode(taskDocumentQuestionPairDTO.getDocumentNode())
+                .questionNode(taskDocumentQuestionPairDTO.getQuestionNode())
                 .newAnswer(answerNodeDTO)
                 .build();
 
-        newAnswers.add(taskNewAnswerDTO);
+        newAnswers.add(answerCreationDTO);
 
-        TaskDocumentInsightsAnswersDTO taskDocumentInsightsAnswersDTO = TaskDocumentInsightsAnswersDTO.builder()
+        TaskAnswerBatchDTO taskAnswerBatchDTO = TaskAnswerBatchDTO.builder()
                 .newAnswers(newAnswers)
                 .answersToDelete(answersToDelete)
                 .build();
 
 
         logger.info("Processed TaskDocumentInsightsAnswerDTO: {}",
-                taskDocumentInsightsAnswerDTO);
+                taskDocumentQuestionPairDTO);
 
-        return taskDocumentInsightsAnswersDTO;
+        return taskAnswerBatchDTO;
     }
 
 

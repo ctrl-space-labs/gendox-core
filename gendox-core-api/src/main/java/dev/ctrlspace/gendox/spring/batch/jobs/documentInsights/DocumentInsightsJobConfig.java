@@ -1,8 +1,6 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentInsightsAnswerDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentInsightsAnswersDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentInsightsDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentQuestionPairDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskAnswerBatchDTO;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
 import dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps.DocumentInsightsProcessor;
@@ -24,8 +22,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
-
-import java.util.List;
 
 @Configuration
 public class DocumentInsightsJobConfig {
@@ -78,7 +74,7 @@ public class DocumentInsightsJobConfig {
         StepBuilder stepBuilder = new StepBuilder(documentInsightsStepName, jobRepository);
 
         return stepBuilder
-                .<TaskDocumentInsightsAnswerDTO, TaskDocumentInsightsAnswersDTO>chunk(chunkSize, platformTransactionManager)
+                .<TaskDocumentQuestionPairDTO, TaskAnswerBatchDTO>chunk(chunkSize, platformTransactionManager)
                 .reader(reader)
                 .processor(processor)
                 .writer(writer)

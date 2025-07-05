@@ -17,11 +17,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -108,10 +108,11 @@ public class TaskService {
         return taskNodeRepository.findAll(TaskNodePredicates.build(criteria), pageable);
     }
 
-    public TaskNode getAnswerNodeByDocumentAndQuestion(UUID taskId, UUID documentNodeId, UUID questionNodeId) {
+
+
+    public Optional<TaskNode> findAnswerNodeByDocumentAndQuestionOptional(UUID taskId, UUID documentNodeId, UUID questionNodeId) {
         logger.info("Fetching answer node for task: {}, document: {}, question: {}", taskId, documentNodeId, questionNodeId);
-        return taskNodeRepository.findAnswerNodeByDocumentAndQuestion(taskId, documentNodeId, questionNodeId)
-                .orElseThrow(() -> new RuntimeException("Answer node not found for given document and question"));
+        return taskNodeRepository.findAnswerNodeByDocumentAndQuestion(taskId, documentNodeId, questionNodeId);
     }
 
     public TaskEdge createTaskEdge(TaskEdge taskEdge) {
@@ -130,32 +131,7 @@ public class TaskService {
         return taskEdgeRepository.findAll(TaskEdgePredicates.build(criteria), pageable);
     }
 
-    public TaskDocumentInsightsDTO getTaskDocumentInsights(Page<TaskNode> taskNodes, UUID taskId) {
-        logger.info("Generating document insightsDTO for task: {}", taskId);
-        TaskDocumentInsightsDTO insightsDTO = TaskDocumentInsightsDTO.builder()
-                .taskId(taskId)
-                .documentNodes(new ArrayList<>())
-                .questionNodes(new ArrayList<>())
-                .build();
-
-        // Process each task node to extract insightsDTO
-        for (TaskNode node : taskNodes) {
-            if (node.getNodeType() == null || node.getNodeType().getName() == null) {
-                continue; // skip nodes without type
-            }
-            String nodeTypeName = node.getNodeType().getName();
-
-            if (TaskNodeTypeConstants.DOCUMENT.equalsIgnoreCase(nodeTypeName)) {
-                insightsDTO.getDocumentNodes().add(node);
-            } else if (TaskNodeTypeConstants.QUESTION.equalsIgnoreCase(nodeTypeName)) {
-                insightsDTO.getQuestionNodes().add(node);
-            }
-        }
-
-        return insightsDTO;
-    }
-
-    public List<TaskEdge> createAnswerEdges(List<TaskNewAnswerDTO> newAnswerDTOs) throws GendoxException {
+    public List<TaskEdge> createAnswerEdges(List<AnswerCreationDTO> newAnswerDTOs) throws GendoxException {
         if (newAnswerDTOs == null || newAnswerDTOs.isEmpty()) {
             logger.warn("No new answers provided for creating edges");
             return new ArrayList<>(); // Return empty list if no answers
@@ -165,7 +141,7 @@ public class TaskService {
 
         List<TaskEdge> edgesToSave = new ArrayList<>();
 
-        for (TaskNewAnswerDTO dto : newAnswerDTOs) {
+        for (AnswerCreationDTO dto : newAnswerDTOs) {
             // Convert DTO to entity and save
             TaskNode answerNode = taskNodeConverter.toEntity(dto.getNewAnswer());
             TaskNode savedAnswerNode = taskNodeRepository.save(answerNode);
@@ -187,40 +163,6 @@ public class TaskService {
 
         return taskEdgeRepository.saveAll(edgesToSave);
     }
-
-
-    public List<UUID> deleteAnswerEdgesByTaskDocumentInsights(TaskDocumentInsightsDTO taskDocumentInsightsDTO) {
-        // 1. get the ANSWERS relation type
-        Type answersRelationType = typeService.getTaskNodeRelationshipTypeByName(TaskNodeRelationshipTypeConstants.ANSWERS);
-        if (answersRelationType == null) {
-            throw new IllegalStateException("Relation type 'ANSWERS' not found");
-        }
-
-        // 2. create a list of toNodeIds from documentNodes and questionNodes
-        List<UUID> toNodeIds = new ArrayList<>();
-        for (TaskNode docNode : taskDocumentInsightsDTO.getDocumentNodes()) {
-            toNodeIds.add(docNode.getId());
-        }
-        for (TaskNode quesNode : taskDocumentInsightsDTO.getQuestionNodes()) {
-            toNodeIds.add(quesNode.getId());
-        }
-
-        // 3. found all edges with the ANSWERS relation type and toNodeIds
-        List<TaskEdge> edgesToDelete = taskEdgeRepository.findAllByRelationTypeAndToNodeIdIn(answersRelationType, toNodeIds);
-
-        // 4. take the fromNodeIds from the edges to delete
-        List<UUID> fromNodeIds = edgesToDelete.stream()
-                .map(edge -> edge.getFromNode().getId())
-                .distinct()
-                .toList();
-
-        // 5. Delete the edges
-        taskEdgeRepository.deleteAll(edgesToDelete);
-
-        return fromNodeIds;
-    }
-
-
 
     public void deleteTaskNodesByIds(List<UUID> taskNodeIds) {
         if (taskNodeIds == null || taskNodeIds.isEmpty()) {
@@ -246,26 +188,21 @@ public class TaskService {
         taskEdgeRepository.deleteAll(edgesToDelete);
     }
 
-    public Page<TaskDocumentInsightsAnswerDTO> getDocumentQuestionPairs(UUID taskId, Pageable pageable) {
-
+    public Page<TaskDocumentQuestionPairDTO> getDocumentQuestionPairs(UUID taskId, Pageable pageable) {
         Type documentNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.DOCUMENT);
         Type questionNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.QUESTION);
 
-        int limit = pageable.getPageSize();
-        int offset = (int) pageable.getOffset();
-
-        List<Object[]> results = taskNodeRepository.findDocumentQuestionPairs(
+        List<Object[]> documentQuestionPairs = taskNodeRepository.findDocumentQuestionPairs(
                 taskId,
                 documentNodeType.getId(),
                 questionNodeType.getId(),
-                limit,
-                offset);
+                pageable);
 
-        List<TaskDocumentInsightsAnswerDTO> dtos = results.stream()
+        List<TaskDocumentQuestionPairDTO> dtos = documentQuestionPairs.stream()
                 .map(arr -> {
                     TaskNode docNode = (TaskNode) arr[0];
                     TaskNode questionNode = (TaskNode) arr[1];
-                    return TaskDocumentInsightsAnswerDTO.builder()
+                    return TaskDocumentQuestionPairDTO.builder()
                             .taskId(taskId)
                             .documentNode(docNode)
                             .questionNode(questionNode)
@@ -273,8 +210,7 @@ public class TaskService {
                 }).collect(Collectors.toList());
 
         // You will need total count for correct Page implementation, so get that too:
-        long totalCount = taskNodeRepository.countDocumentQuestionPairs(taskId, documentNodeType.getId(), questionNodeType.getId());
-
+        long totalCount = dtos.size(); // or implement count query if needed
         return new PageImpl<>(dtos, pageable, totalCount);
     }
 
