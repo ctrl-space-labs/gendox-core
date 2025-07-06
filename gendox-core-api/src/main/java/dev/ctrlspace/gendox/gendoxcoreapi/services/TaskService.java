@@ -188,14 +188,26 @@ public class TaskService {
         taskEdgeRepository.deleteAll(edgesToDelete);
     }
 
-    public Page<TaskDocumentQuestionPairDTO> getDocumentQuestionPairs(UUID taskId, Pageable pageable) {
+    public Page<TaskDocumentQuestionPairDTO> getDocumentQuestionPairs(TaskNodeCriteria criteria, Pageable pageable) {
         Type documentNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.DOCUMENT);
         Type questionNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.QUESTION);
 
-        List<Object[]> documentQuestionPairs = taskNodeRepository.findDocumentQuestionPairs(
-                taskId,
+        List<UUID> documentNodeIds = criteria.getDocumentNodeIds();
+        if (documentNodeIds != null && documentNodeIds.isEmpty()) {
+            documentNodeIds = null; // treat empty as null for query
+        }
+
+        List<UUID> questionNodeIds = criteria.getQuestionNodeIds();
+        if (questionNodeIds != null && questionNodeIds.isEmpty()) {
+            questionNodeIds = null;
+        }
+
+        List<Object[]> documentQuestionPairs = taskNodeRepository.findDocumentQuestionPairsByCriteria(
+                criteria.getTaskId(),
                 documentNodeType.getId(),
                 questionNodeType.getId(),
+                documentNodeIds,
+                questionNodeIds,
                 pageable);
 
         List<TaskDocumentQuestionPairDTO> dtos = documentQuestionPairs.stream()
@@ -203,7 +215,7 @@ public class TaskService {
                     TaskNode docNode = (TaskNode) arr[0];
                     TaskNode questionNode = (TaskNode) arr[1];
                     return TaskDocumentQuestionPairDTO.builder()
-                            .taskId(taskId)
+                            .taskId(criteria.getTaskId())
                             .documentNode(docNode)
                             .questionNode(questionNode)
                             .build();

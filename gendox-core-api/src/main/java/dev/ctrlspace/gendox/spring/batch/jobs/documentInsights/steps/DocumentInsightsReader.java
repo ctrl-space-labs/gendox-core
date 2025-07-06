@@ -76,6 +76,8 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQues
             }
         }
 
+        logger.debug("DocumentInsightsReader initialized with criteria: {}", criteria);
+
         return null;
     }
 
@@ -83,7 +85,7 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQues
     @Override
     protected Page<TaskDocumentQuestionPairDTO> getPageFromRepository(Pageable pageable) throws GendoxException {
         logger.trace("Is virtual thread? {}", Thread.currentThread().isVirtual());
-        Page<TaskDocumentQuestionPairDTO> dtosPage = taskService.getDocumentQuestionPairs(criteria.getTaskId(), pageable);
+        Page<TaskDocumentQuestionPairDTO> dtosPage = taskService.getDocumentQuestionPairs(criteria, pageable);
         return dtosPage;
     }
 

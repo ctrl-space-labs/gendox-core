@@ -107,47 +107,29 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     })
   }
 
-  const handleGenerateClick = async doc => {
+  const handleGenerate = async docs => {
     try {
-      // Build criteria with documentNodeIds = [doc.id]
-      const criteria = {
-        taskId: taskId,
-        documentNodeIds: [doc.id], // your document node UUID for this row
-        questionNodeIds: questions.map(q => q.id) // all question node UUIDs
-      }
+      const docIds = Array.isArray(docs) ? docs.map(d => d.id) : [docs.id]
 
+      const criteria = {
+        taskId,
+        documentNodeIds: docIds,
+        questionNodeIds: questions.map(q => q.id)
+      }
       const jobExecutionId = await dispatch(
         executeTaskByType({ organizationId, projectId, taskId, criteria, token })
       ).unwrap()
 
-      // Optionally show success toast or update UI
-      toast.success(`Started generation for document ${doc.name}`)
-      // Poll job status until complete or failed
+      toast.success(`Started generation for ${docIds.length === 1 ? 'document ' + docs.name : 'all documents'}`)
+
       await pollJobStatus(jobExecutionId)
+
       await refreshAnswers({ dispatch, organizationId, projectId, documents, questions, token })
-      toast.success(`Generation completed for document ${doc.name}`)
+
+      toast.success(`Generation completed for ${docIds.length === 1 ? 'document ' + docs.name : 'all documents'}`)
     } catch (error) {
-      console.error('Failed to execute task:', error)
+      console.error('Failed to start generation:', error)
       toast.error('Failed to start generation')
-    }
-  }
-
-  const handleGenerateAllClick = async () => {
-    try {
-      const criteria = {
-        taskId: taskId,
-        documentNodeIds: documents.map(d => d.id), // all document node UUIDs
-        questionNodeIds: questions.map(q => q.id) // all question node UUIDs
-      }
-      const jobExecutionId = await dispatch(
-        executeTaskByType({ organizationId, projectId, taskId, criteria, token })
-      ).unwrap()
-      toast.success('Started generation for all documents')
-      await pollJobStatus(jobExecutionId)
-      await refreshAnswers({ dispatch, organizationId, projectId, documents, questions, token })
-      toast.success('Generation completed for all documents')
-    } catch (error) {
-      console.error('Failed to start generation for all documents:', error)
     }
   }
 
@@ -195,7 +177,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           <QuestionsHeader
             questions={questions}
             openEditQuestionDialog={openEditDialog}
-            generateAnswers={handleGenerateAllClick}
+            generateAnswers={() => handleGenerate(documents)}
           />
           <DocumentRows
             documents={documents}
@@ -209,7 +191,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             }}
             openUploader={openUploader}
             taskEdgesList={taskEdgesList}
-            onGenerate={handleGenerateClick}
+            onGenerate={handleGenerate}
           />
         </Box>
       </Paper>

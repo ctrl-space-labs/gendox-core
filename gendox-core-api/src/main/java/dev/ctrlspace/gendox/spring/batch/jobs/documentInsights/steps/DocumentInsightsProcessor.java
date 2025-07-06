@@ -88,9 +88,11 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 .answersToDelete(answersToDelete)
                 .build();
 
-
-        logger.info("Processed TaskDocumentInsightsAnswerDTO: {}",
-                taskDocumentQuestionPairDTO);
+        logger.info("Processed TaskDocumentInsightsAnswerDTO: taskId={}, documentNodeId={}, questionNodeId={}",
+                taskDocumentQuestionPairDTO.getTaskId(),
+                taskDocumentQuestionPairDTO.getDocumentNode().getId(),
+                taskDocumentQuestionPairDTO.getQuestionNode().getId()
+        );
 
         return taskAnswerBatchDTO;
     }

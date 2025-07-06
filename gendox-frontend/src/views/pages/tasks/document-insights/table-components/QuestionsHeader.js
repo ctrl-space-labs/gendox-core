@@ -3,7 +3,7 @@ import { Box, Typography, IconButton } from '@mui/material'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import Button from '@mui/material/Button'
 
-const QuestionsHeader = ({ questions, openEditQuestionDialog, generateAnswers }) => {
+const QuestionsHeader = ({ questions, openEditQuestionDialog, generateAnswers, documents }) => {
   return (
     <Box sx={{ display: 'flex', borderBottom: 2, borderColor: 'divider', py: 1 }}>
       <Typography sx={{ flex: 2, fontWeight: 600 }}>Document</Typography>
@@ -31,7 +31,7 @@ const QuestionsHeader = ({ questions, openEditQuestionDialog, generateAnswers })
         <Button
           size='small'
           variant='contained'
-          onClick={generateAnswers}
+          onClick={() => generateAnswers(documents)}
         >
           Generate ALL
         </Button>
