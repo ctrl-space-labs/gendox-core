@@ -50,7 +50,6 @@ const getTaskById = async (organizationId, projectId, taskId, token) => {
   })
 }
 
-
 /**
  * Create Task Node
  * @param organizationId
@@ -84,7 +83,6 @@ const updateTaskNode = async (organizationId, projectId, taskNodePayload, token)
     }
   })
 }
-
 
 /**
  * Get Task Node by ID
@@ -174,16 +172,21 @@ const getTaskEdgesByCriteria = async (organizationId, projectId, criteria, token
 }
 
 const executeTaskByType = async (organizationId, projectId, taskId, criteria, token) => {
-  return axios.post(
-    apiRequests.executeTaskByType(organizationId, projectId, taskId),
-    criteria,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + token
-      }
+  return axios.post(apiRequests.executeTaskByType(organizationId, projectId, taskId), criteria, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
     }
-  )
+  })
+}
+
+const getJobStatus = async (organizationId, projectId, jobExecutionId, token) => {
+  return axios.get(apiRequests.getJobStatus(organizationId, projectId, jobExecutionId), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
 }
 
 export default {
@@ -197,5 +200,6 @@ export default {
   createTaskEdge,
   getTaskEdgeById,
   getTaskEdgesByCriteria,
-  executeTaskByType
+  executeTaskByType,
+  getJobStatus
 }

@@ -42,7 +42,6 @@ const buildAnswerMap = taskEdgesList => {
 }
 
 const DocumentRows = ({ documents, questions, onAnswerChange, openUploader, taskEdgesList, onGenerate }) => {
-  console.log('Document Rows:', documents, questions, taskEdgesList)
   const answerMap = React.useMemo(() => buildAnswerMap(taskEdgesList?.content || []), [taskEdgesList])
   return (
     <>

@@ -12,6 +12,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.batch.core.BatchStatus;
+import org.springframework.batch.core.JobExecution;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -21,9 +25,12 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 public class AsyncController {
+
+    Logger logger = LoggerFactory.getLogger(AsyncController.class);
 
     private final AsyncService asyncService;
     private final SecurityUtils securityUtils;
@@ -86,7 +93,7 @@ public class AsyncController {
                 throw new GendoxException(
                         "INVALID_JOB_NAME",
                         "Allowed values: SPLITTER, TRAINING, SPLITTER_AND_TRAINING",
-                        org.springframework.http.HttpStatus.BAD_REQUEST
+                        HttpStatus.BAD_REQUEST
                 );
         }
         return "STARTED";
@@ -96,7 +103,7 @@ public class AsyncController {
             "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/execute")
     @Operation(summary = "Execute a Task asynchronously")
-    public String executeTaskByType(
+    public Long executeTaskByType(
             @PathVariable UUID organizationId,
             @PathVariable UUID projectId,
             @PathVariable UUID taskId,
@@ -105,30 +112,38 @@ public class AsyncController {
         Task task = taskService.getTaskById(taskId);
         String taskType = task.getTaskType().getName();
 
-        switch (taskType.toUpperCase()) {
-            case TaskTypeConstants.DOCUMENT_INSIGHTS:
-                asyncService.executeDocumentInsightsTask(taskId, criteria);
-                break;
+        if (TaskTypeConstants.DOCUMENT_INSIGHTS.equalsIgnoreCase(taskType)) {
+            CompletableFuture<JobExecution> future = asyncService.executeDocumentInsightsTask(taskId, criteria);
+            JobExecution jobExecution = future.join(); // wait for the async task to complete
+            if (jobExecution == null) {
+                throw new GendoxException("JOB_EXECUTION_FAILED", "Failed to start job for task " + taskId, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+            return jobExecution.getId();
+        } else if (TaskTypeConstants.DOCUMENT_DIGITIZATION.equalsIgnoreCase(taskType)) {
+            // TODO: Implement Document Digitization task execution
+            throw new GendoxException("NOT_IMPLEMENTED", "Document Digitization task execution not implemented yet", HttpStatus.NOT_IMPLEMENTED);
 
-            case TaskTypeConstants.DEEP_RESEARCH:
-//                asyncService.executeDeepResearchTask(taskId);
-                break;
-
-            case TaskTypeConstants.DOCUMENT_DIGITIZATION:
-//                asyncService.executeDocumentDigitizationTask(taskId);
-                break;
-
-            // add more task types as needed
-
-            default:
-                throw new GendoxException(
-                        "INVALID_TASK_TYPE",
-                        "Task type not supported: " + taskType,
-                        HttpStatus.BAD_REQUEST
-                );
+        } else if (TaskTypeConstants.DEEP_RESEARCH.equalsIgnoreCase(taskType)) {
+            // TODO: Implement Deep Research task execution
+            throw new GendoxException("NOT_IMPLEMENTED", "Deep Research task execution not implemented yet", HttpStatus.NOT_IMPLEMENTED);
         }
 
-        return "Task execution started for task ID: " + taskId;
+        throw new GendoxException("INVALID_TASK_TYPE", "Task type not supported: " + taskType, HttpStatus.BAD_REQUEST);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @GetMapping("organizations/{organizationId}/projects/{projectId}/jobs/{jobExecutionId}/status")
+    @Operation(summary = "Get Job Execution Status")
+    public String getJobStatus(@PathVariable UUID organizationId,
+                               @PathVariable UUID projectId,
+                               @PathVariable Long jobExecutionId) throws GendoxException {
+        BatchStatus status = asyncService.getJobStatus(jobExecutionId);
+        if (status == null) {
+            throw new GendoxException("JOB_NOT_FOUND", "Job Execution with ID " + jobExecutionId + " not found", HttpStatus.NOT_FOUND);
+        }
+        logger.info("Job Execution ID: {}, Status: {}", jobExecutionId, status);
+        return status.name(); // π.χ. "STARTED", "COMPLETED", "FAILED"
     }
 
 

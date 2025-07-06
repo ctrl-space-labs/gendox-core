@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { Box, Button, Typography, Stack, Modal } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
@@ -9,29 +10,27 @@ import QuestionsHeader from './table-components/QuestionsHeader'
 import AddEditQuestionDialog from './table-dialogs/AddEditQuestionDialog'
 import UploaderDocumentInsights from './table-dialogs/UploaderDocumentInsigths'
 import { toast } from 'react-hot-toast'
+import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
+import { useQuestionDialog } from 'src/utils/tasks/useQuestionDialog'
+import { saveQuestion, refreshAnswers } from 'src/utils/tasks/taskUtils'
+import { fetchTaskNodesByTaskId, fetchTaskEdgesByCriteria, executeTaskByType } from 'src/store/activeTask/activeTask'
 
-import {
-  fetchTaskNodesByTaskId,
-  fetchTaskEdgesByCriteria,
-  createTaskNode,
-  updateTaskNode,
-  executeTaskByType
-} from 'src/store/activeTask/activeTask'
-
-const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
+const DocumentInsightsTable = ({ selectedTask }) => {
+  const router = useRouter()
   const dispatch = useDispatch()
   const token = window.localStorage.getItem('accessToken')
-  const projectId = selectedTask?.projectId || null
-  const taskId = selectedTask?.id || null
+  const { organizationId, taskId, projectId } = router.query
 
   const { taskNodesList, taskEdgesList } = useSelector(state => state.activeTask)
 
   const [documents, setDocuments] = useState([])
   const [questions, setQuestions] = useState([])
   const [showUploader, setShowUploader] = useState(false)
-  const [showAddQuestionDialog, setShowAddQuestionDialog] = useState(false)
-  const [newQuestionText, setNewQuestionText] = useState('')
-  const [editingQuestion, setEditingQuestion] = useState(null)
+
+  const { showDialog, questionText, setQuestionText, editingQuestion, openAddDialog, openEditDialog, closeDialog } =
+    useQuestionDialog()
+
+  const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
   useEffect(() => {
     if (organizationId && projectId && taskId && token) {
@@ -40,7 +39,7 @@ const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
   }, [organizationId, projectId, taskId, token, dispatch])
 
   useEffect(() => {
-    if (taskNodesList && taskNodesList.content && taskNodesList.content.length > 0) {
+    if (taskNodesList?.content?.length) {
       const documentNodes = taskNodesList.content.filter(node => node.nodeType.name === 'DOCUMENT')
       const questionNodes = taskNodesList.content.filter(node => node.nodeType.name === 'QUESTION')
 
@@ -79,7 +78,7 @@ const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
       setDocuments([])
       setQuestions([])
     }
-  }, [taskNodesList, dispatch, organizationId, selectedTask, token])
+  }, [taskNodesList])
 
   const handleAddDocument = () => {
     setDocuments(prev => [
@@ -93,54 +92,19 @@ const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
     ])
   }
 
-  const openAddQuestionDialog = () => {
-    setEditingQuestion(null)
-    setNewQuestionText('')
-    setShowAddQuestionDialog(true)
-  }
-
   const openUploader = () => setShowUploader(true)
 
-  const openEditQuestionDialog = question => {
-    setEditingQuestion({ id: question.id, text: question.text })
-    setNewQuestionText(question.text)
-    setShowAddQuestionDialog(true)
-  }
-
-  const closeAddQuestionDialog = () => {
-    setShowAddQuestionDialog(false)
-    setNewQuestionText('')
-    setEditingQuestion(null)
-  }
-
-  const handleAddOrEditQuestionConfirm = async () => {
-    if (!newQuestionText.trim()) return
-
-    try {
-      const nodeValuePayload = {
-        message: newQuestionText.trim()
-      }
-      if (editingQuestion) {
-        const updatedPayload = {
-          id: editingQuestion.id,
-          taskId,
-          nodeType: 'QUESTION',
-          nodeValue: nodeValuePayload
-        }
-        await dispatch(updateTaskNode({ organizationId, projectId, taskNodePayload: updatedPayload, token })).unwrap()
-      } else {
-        const newPayload = {
-          taskId,
-          nodeType: 'QUESTION',
-          nodeValue: nodeValuePayload
-        }
-        await dispatch(createTaskNode({ organizationId, projectId, taskNodePayload: newPayload, token })).unwrap()
-      }
-      await dispatch(fetchTaskNodesByTaskId({ organizationId, projectId, taskId, token }))
-      closeAddQuestionDialog()
-    } catch (error) {
-      console.error('Failed to add/edit question node:', error)
-    }
+  const handleAddOrEditQuestionConfirm = () => {
+    saveQuestion({
+      dispatch,
+      organizationId,
+      projectId,
+      taskId,
+      token,
+      questionText,
+      editingQuestion,
+      closeDialog
+    })
   }
 
   const handleGenerateClick = async doc => {
@@ -152,13 +116,16 @@ const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
         questionNodeIds: questions.map(q => q.id) // all question node UUIDs
       }
 
-      // Call your async backend API via Redux thunk or direct fetch/axios
-      // For example, dispatch a thunk like executeTaskByType({ ... })
-
-      await dispatch(executeTaskByType({ organizationId, projectId, taskId, criteria, token })).unwrap()
+      const jobExecutionId = await dispatch(
+        executeTaskByType({ organizationId, projectId, taskId, criteria, token })
+      ).unwrap()
 
       // Optionally show success toast or update UI
       toast.success(`Started generation for document ${doc.name}`)
+      // Poll job status until complete or failed
+      await pollJobStatus(jobExecutionId)
+      await refreshAnswers({ dispatch, organizationId, projectId, documents, questions, token })
+      toast.success(`Generation completed for document ${doc.name}`)
     } catch (error) {
       console.error('Failed to execute task:', error)
       toast.error('Failed to start generation')
@@ -172,11 +139,15 @@ const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
         documentNodeIds: documents.map(d => d.id), // all document node UUIDs
         questionNodeIds: questions.map(q => q.id) // all question node UUIDs
       }
-      await dispatch(executeTaskByType({ organizationId, projectId, taskId, criteria, token })).unwrap()
+      const jobExecutionId = await dispatch(
+        executeTaskByType({ organizationId, projectId, taskId, criteria, token })
+      ).unwrap()
       toast.success('Started generation for all documents')
+      await pollJobStatus(jobExecutionId)
+      await refreshAnswers({ dispatch, organizationId, projectId, documents, questions, token })
+      toast.success('Generation completed for all documents')
     } catch (error) {
       console.error('Failed to start generation for all documents:', error)
-      toast.error('Failed to start generation for all documents')
     }
   }
 
@@ -214,8 +185,8 @@ const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
             <Button variant='outlined' startIcon={<AddIcon />} onClick={handleAddDocument}>
               Add Document
             </Button>
-            <Button variant='outlined' startIcon={<AddIcon />} onClick={openAddQuestionDialog}>
-              Add QUESTION
+            <Button variant='outlined' startIcon={<AddIcon />} onClick={openAddDialog}>
+              Add Question
             </Button>
           </Stack>
         </Box>
@@ -223,7 +194,7 @@ const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
         <Box sx={{ minWidth: 800 }}>
           <QuestionsHeader
             questions={questions}
-            openEditQuestionDialog={openEditQuestionDialog}
+            openEditQuestionDialog={openEditDialog}
             generateAnswers={handleGenerateAllClick}
           />
           <DocumentRows
@@ -254,10 +225,10 @@ const DocumentInsightsTable = ({ selectedTask, organizationId }) => {
       </Modal>
 
       <AddEditQuestionDialog
-        open={showAddQuestionDialog}
-        onClose={closeAddQuestionDialog}
-        questionText={newQuestionText}
-        setQuestionText={setNewQuestionText}
+        open={showDialog}
+        onClose={closeDialog}
+        questionText={questionText}
+        setQuestionText={setQuestionText}
         onConfirm={handleAddOrEditQuestionConfirm}
         editing={!!editingQuestion}
       />

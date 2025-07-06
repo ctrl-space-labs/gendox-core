@@ -130,7 +130,6 @@ export const fetchTaskEdgesByCriteria = createAsyncThunk(
   async ({ organizationId, projectId, criteria, token, page = 0, size = 20 }, thunkAPI) => {
     try {
       // We can add pagination params in criteria if needed or ignore here
-      console.log("PROJECT ID:", projectId)
       const response = await taskService.getTaskEdgesByCriteria(organizationId, projectId, criteria, token)
       return response.data
     } catch (error) {

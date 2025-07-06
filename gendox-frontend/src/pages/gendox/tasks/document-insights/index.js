@@ -99,7 +99,7 @@ const DocumentInsights = () => {
       <Box sx={{ height: 20 }} />
 
       {/* Main content area */}
-      <DocumentInsightsTable selectedTask={selectedTask} organizationId={organizationId} />
+      <DocumentInsightsTable selectedTask={selectedTask} />
 
       <Box
         sx={{
