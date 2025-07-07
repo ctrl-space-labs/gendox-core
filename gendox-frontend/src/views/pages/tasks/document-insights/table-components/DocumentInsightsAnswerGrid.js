@@ -87,7 +87,7 @@ const DocumentInsightsGrid = ({
       },
       {
         field: 'generate',
-        headerName: 'Generate',
+        headerName: '',
         width: 130,
         sortable: false,
         filterable: false,

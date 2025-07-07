@@ -63,6 +63,7 @@
     "draft-js": "^0.11.7",
     "highlight.js": "^11.11.1",
     "identicon.js": "^2.3.3",
+    "lodash": "^4.17.21",
     "mdi-material-ui": "^7.1.0",
     "next": "^15.1.7",
     "nprogress": "^0.2.0",
