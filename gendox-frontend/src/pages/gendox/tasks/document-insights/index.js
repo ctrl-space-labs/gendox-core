@@ -1,14 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useSelector, useDispatch } from 'react-redux'
 import Typography from '@mui/material/Typography'
-import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import Icon from 'src/views/custom-components/mui/icon/icon'
-import toast from 'react-hot-toast'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import { fetchTaskById } from 'src/store/activeTask/activeTask'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
@@ -22,7 +20,7 @@ const DocumentInsights = () => {
   const { organizationId, taskId, projectId } = router.query
 
   const { selectedTask, isLoading } = useSelector(state => state.activeTask)
-  
+
   const handleGoBack = () => {
     router.push(`/gendox/home/?organizationId=${organizationId}&projectId=${projectId}`)
   }
@@ -31,43 +29,7 @@ const DocumentInsights = () => {
     if (organizationId && projectId && taskId && token) {
       dispatch(fetchTaskById({ organizationId, projectId, taskId, token }))
     }
-  }, [organizationId, projectId, taskId, token, dispatch])
-
-  
-
-  const IconButtons = () => (
-    <Box sx={{ display: 'inline-flex', gap: 1 }}>
-      <Tooltip title='Back'>
-        <IconButton
-          onClick={handleGoBack}
-          sx={{
-            mb: 6,
-            width: 'auto',
-            height: 'auto',
-            color: 'primary.main'
-          }}
-        >
-          <Icon icon='mdi:arrow-left-bold' />
-        </IconButton>
-      </Tooltip>
-
-      <Tooltip title='Edit Document Insights'>
-        <IconButton
-          onClick={() => {
-            toast.error('Edit Document Insights feature is not implemented yet.')
-          }}
-          sx={{
-            mb: 6,
-            width: 'auto',
-            height: 'auto',
-            color: 'primary.main'
-          }}
-        >
-          <Icon icon='mdi:pencil-outline' />
-        </IconButton>
-      </Tooltip>
-    </Box>
-  )
+  }, [organizationId, projectId, taskId, token, dispatch])  
 
   return (
     <Card sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
@@ -93,23 +55,27 @@ const DocumentInsights = () => {
             </Tooltip>
           </Box>
 
-          <IconButtons />
+          <Box sx={{ display: 'inline-flex', gap: 1 }}>
+            <Tooltip title='Back'>
+              <IconButton
+                onClick={handleGoBack}
+                sx={{
+                  mb: 6,
+                  width: 'auto',
+                  height: 'auto',
+                  color: 'primary.main'
+                }}
+              >
+                <Icon icon='mdi:arrow-left-bold' />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
       </ResponsiveCardContent>
       <Box sx={{ height: 20 }} />
 
       {/* Main content area */}
       <DocumentInsightsTable selectedTask={selectedTask} />
-
-      <Box
-        sx={{
-          py: 2,
-          backgroundColor: 'action.hover',
-          textAlign: 'center'
-        }}
-      >
-        <IconButtons />
-      </Box>
     </Card>
   )
 }

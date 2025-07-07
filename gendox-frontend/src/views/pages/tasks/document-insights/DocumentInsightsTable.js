@@ -1,12 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
-import { Box, Button, Typography, Stack, Modal } from '@mui/material'
-import AddIcon from '@mui/icons-material/Add'
+import { Box, Modal } from '@mui/material'
 import Paper from '@mui/material/Paper'
-import Icon from 'src/views/custom-components/mui/icon/icon'
-import DocumentRows from './table-components/DocumentRows'
-import QuestionsHeader from './table-components/QuestionsHeader'
 import AddEditQuestionDialog from './table-dialogs/AddEditQuestionDialog'
 import UploaderDocumentInsights from './table-dialogs/UploaderDocumentInsigths'
 import { toast } from 'react-hot-toast'
@@ -14,6 +10,8 @@ import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
 import { useQuestionDialog } from 'src/utils/tasks/useQuestionDialog'
 import { saveQuestion, refreshAnswers } from 'src/utils/tasks/taskUtils'
 import { fetchTaskNodesByTaskId, fetchTaskEdgesByCriteria, executeTaskByType } from 'src/store/activeTask/activeTask'
+import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsAnswerGrid'
+import HeaderSection from './table-components/HeaderSection'
 
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
@@ -21,7 +19,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const token = window.localStorage.getItem('accessToken')
   const { organizationId, taskId, projectId } = router.query
 
-  const { taskNodesList, taskEdgesList } = useSelector(state => state.activeTask)
+  const { taskNodesList, taskEdgesList, isLoading } = useSelector(state => state.activeTask)
 
   const [documents, setDocuments] = useState([])
   const [questions, setQuestions] = useState([])
@@ -136,63 +134,31 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   return (
     <>
       <Paper sx={{ p: 3, overflowX: 'auto', backgroundColor: 'action.hover', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', flex: '0 0 auto', gap: 1 }}>
-            <Icon icon='mdi:clipboard-check-outline' fontSize='1.5rem' />
-            <Typography variant='h6' fontWeight={600}>
-              {selectedTask?.title || 'Document Insights'}
-            </Typography>
-          </Box>
-
-          <Box
-            sx={{
-              flex: 1,
-              bgcolor: 'background.paper',
-              borderRadius: 1,
-              px: 2,
-              py: 1,
-              boxShadow: 1,
-              fontSize: '1rem',
-              color: 'text.primary',
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-              textOverflow: 'ellipsis'
-            }}
-            title={selectedTask?.description || 'Analyze and manage your document insights'}
-          >
-            {selectedTask?.description || 'Analyze and manage your document insights'}
-          </Box>
-
-          <Stack direction='row' spacing={2} justifyContent='flex-end' sx={{ mb: 2 }}>
-            <Button variant='outlined' startIcon={<AddIcon />} onClick={handleAddDocument}>
-              Add Document
-            </Button>
-            <Button variant='outlined' startIcon={<AddIcon />} onClick={openAddDialog}>
-              Add Question
-            </Button>
-          </Stack>
-        </Box>
+        <HeaderSection
+          title={selectedTask?.title}
+          description={selectedTask?.description}
+          onAddDocument={handleAddDocument}
+          onAddQuestion={openAddDialog}
+          onGenerateAll={() => handleGenerate(documents)}
+          disableGenerateAll={documents.length === 0 || questions.length === 0}
+        />
 
         <Box sx={{ minWidth: 800 }}>
-          <QuestionsHeader
-            questions={questions}
-            openEditQuestionDialog={openEditDialog}
-            generateAnswers={() => handleGenerate(documents)}
-          />
-          <DocumentRows
+          <DocumentInsightsGrid
             documents={documents}
             questions={questions}
             onAnswerChange={(docIdx, qIdx, value) => {
               setDocuments(prev => {
                 const updated = [...prev]
                 updated[docIdx].answers[qIdx] = value
-                return updated
+                return updated  
               })
             }}
             openUploader={openUploader}
             taskEdgesList={taskEdgesList}
             onGenerate={handleGenerate}
-          />
+            isLoading={isLoading}
+          />          
         </Box>
       </Paper>
 
@@ -213,6 +179,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         setQuestionText={setQuestionText}
         onConfirm={handleAddOrEditQuestionConfirm}
         editing={!!editingQuestion}
+        
       />
     </>
   )
