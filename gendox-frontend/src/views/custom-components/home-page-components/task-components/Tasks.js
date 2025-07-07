@@ -2,17 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { useAuth } from 'src/authentication/useAuth'
-import {
-  Box,
-  Typography,
-  Button,
-  IconButton,
-  Tooltip,
-  CircularProgress,
-  Stack,
-  useTheme,
-  Paper
-} from '@mui/material'
+import { Box, Typography, Button, IconButton, Tooltip, CircularProgress, Stack, useTheme } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import { debounce } from 'lodash'
@@ -23,7 +13,8 @@ import CreateTaskDialog from './CreateTaskDialog'
 import { fetchTasks, createTask } from 'src/store/activeTask/activeTask'
 import { isValidOrganizationAndProject } from 'src/utils/validators'
 import { localStorageConstants } from 'src/utils/generalConstants'
-import SearchBar from 'src/utils/SearchBar'  
+import SearchBar from 'src/utils/SearchBar'
+import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 
 const Tasks = () => {
   const { user } = useAuth()
@@ -50,9 +41,10 @@ const Tasks = () => {
       }
       const lower = value.toLowerCase()
       setFilteredTasks(
-        projectTasks.filter(task =>
-          task.title.toLowerCase().includes(lower) ||
-          (task.description && task.description.toLowerCase().includes(lower))
+        projectTasks.filter(
+          task =>
+            task.title.toLowerCase().includes(lower) ||
+            (task.description && task.description.toLowerCase().includes(lower))
         )
       )
     }, 300),
@@ -100,68 +92,68 @@ const Tasks = () => {
   }
 
   return (
-    <Paper
-      elevation={3}
+    <ResponsiveCardContent
       sx={{
-        p: 3,
-        backgroundColor: theme.palette.action.hover,
-        display: 'flex',
-        flexDirection: 'column'
+        backgroundColor: 'action.hover',
+        filter: isLoading ? 'blur(6px)' : 'none',
+        transition: 'filter 0.3s ease'
       }}
       aria-busy={isLoading}
     >
       {/* Header */}
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        alignItems="center"
+        justifyContent='space-between'
+        alignItems='center'
         spacing={2}
         mb={3}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="h5" fontWeight={700}>
+          <Typography variant='h5' fontWeight={700}>
             Document Analytics Tasks
           </Typography>
-          <Tooltip title="Create and manage tasks for your project" arrow>
-            <IconButton color="primary" aria-label="info about tasks">
-              <Icon icon="mdi:information-outline" />
+          <Tooltip title='Create and manage tasks for your project' arrow>
+            <IconButton color='primary' aria-label='info about tasks'>
+              <Icon icon='mdi:information-outline' />
             </IconButton>
           </Tooltip>
         </Box>
 
         <Button
-          variant="contained"
+          variant='contained'
           startIcon={<AddIcon />}
           onClick={handleDialogOpen}
           disabled={isLoading}
-          aria-label="Create new task"
+          aria-label='Create new task'
         >
           Create New Task
         </Button>
       </Stack>
 
       {/* Search */}
-      <Box mb={3}>
-        <SearchBar
-          value={searchText}
-          onChange={e => setSearchText(e.target.value)}
-          placeholder="Search tasks"
-          clearable
-          sx={{ maxWidth: 400 }}
-        />
-      </Box>
+      {projectTasks.length > 0 && (
+        <Box mb={3}>
+          <SearchBar
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+            placeholder='Search tasks'
+            clearable
+            sx={{ maxWidth: 400 }}
+          />
+        </Box>
+      )}
 
       {/* Content */}
       {isLoading ? (
         <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <CircularProgress aria-label="Loading tasks" />
+          <CircularProgress aria-label='Loading tasks' />
         </Box>
       ) : filteredTasks.length === 0 ? (
         <Typography
-          variant="body1"
-          color="text.secondary"
+          variant='body1'
+          color='text.secondary'
           sx={{ textAlign: 'center', mt: 6, flexGrow: 1 }}
-          aria-live="polite"
+          aria-live='polite'
         >
           No tasks found. {projectTasks.length > 0 && 'Try adjusting your search criteria.'}
         </Typography>
@@ -176,9 +168,8 @@ const Tasks = () => {
         onSave={handleCreateTask}
         initialData={{ title: '', description: '', taskType: '' }}
       />
-    </Paper>
+    </ResponsiveCardContent>
   )
 }
 
 export default Tasks
-
