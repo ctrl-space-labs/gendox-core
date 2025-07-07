@@ -13,7 +13,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProvenAiMetadata;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
@@ -24,10 +26,15 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplate
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 
@@ -36,6 +43,11 @@ public class CompletionService {
 
 
     Logger logger = LoggerFactory.getLogger(CompletionService.class);
+
+
+    // "self" here will be the OAP proxy, to avoid self-invocation problem
+    private CompletionService self;
+
     private ProjectService projectService;
     private MessageAiMessageConverter messageAiMessageConverter;
     private EmbeddingService embeddingService;
@@ -54,7 +66,8 @@ public class CompletionService {
     private ObjectMapper objectMapper;
 
     @Autowired
-    public CompletionService(ProjectService projectService,
+    public CompletionService(@Lazy CompletionService self,
+                             ProjectService projectService,
                              MessageAiMessageConverter messageAiMessageConverter,
                              EmbeddingService embeddingService,
                              ProjectAgentRepository projectAgentRepository,
@@ -68,6 +81,7 @@ public class CompletionService {
                              AuditLogsService auditLogsService,
                              DocumentUtils documentUtils,
                              ObjectMapper objectMapper) {
+        this.self = self;
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
         this.embeddingService = embeddingService;
@@ -93,7 +107,103 @@ public class CompletionService {
     }
 
 
-    @Observed(name = "CompletionService.getCompletion",
+    /**
+     * This method is used to get the completion for the given message and project.
+     * It will search for the closest sections and return the completion response.
+     * This is mainly used by the /chat API where the user asks a question and the agent searching in the knowledge base before answering.
+     *
+     * @param message
+     * @param project
+     * @return CompletionMessageDTO
+     * @throws GendoxException
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     */
+    @Observed(name = "CompletionService.getCompletionSearch",
+            contextualName = "CompletionService#getCompletionSearch",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
+    public CompletionMessageDTO getCompletionSearch(Message message, Project project) throws GendoxException, IOException, NoSuchAlgorithmException {
+
+        List<DocumentInstanceSectionDTO> topSectionsForCompletion = new ArrayList<>();
+        List<DocumentInstanceSectionDTO> searchHistorySections = new ArrayList<>();
+
+        // search and rerank sections
+        List<DocumentInstanceSectionDTO> sectionDTOs = embeddingService.findClosestSections(
+                message,
+                project,
+                PageRequest.of(0, project.getProjectAgent().getMaxSearchLimit().intValue())
+        );
+
+
+
+        int maxCompletionLimit = project.getProjectAgent().getMaxCompletionLimit().intValue();
+
+        // Choose the sections that will be included in the completion response
+        for (int i = 0; i < sectionDTOs.size(); i++) {
+            DocumentInstanceSectionDTO section = sectionDTOs.get(i);
+            if (i < maxCompletionLimit) {
+                topSectionsForCompletion.add(section);
+            } else {
+                searchHistorySections.add(section);
+            }
+        }
+
+        // Get the actual completion
+        List<Message> completions = self.getCompletion(message, topSectionsForCompletion, project);
+
+        // Associate the sections with the completion messages
+        List<MessageSection> topCompletionMessageSections;
+        List<MessageSection> searchHistoryMessageSections;
+        for (Message m : completions) {
+            if (m.getRole().equals("assistant")) {
+                //each agent message connected with the sections
+                topCompletionMessageSections = messageService.createMessageSections(topSectionsForCompletion, m, true);
+                searchHistoryMessageSections = messageService.createMessageSections(searchHistorySections, m, false);
+                messageService.updateMessageWithSections(m, topCompletionMessageSections);
+            }
+        }
+
+        // Prepare the completion metadata
+        List<ProvenAiMetadata> sectionInfos = sectionDTOs.stream()
+                .map(section -> ProvenAiMetadata.builder()
+                        .sectionId(section.getId()) // Section ID
+                        .iscc(section.getDocumentSectionIsccCode())
+                        .title(section.getDocumentSectionMetadata().getTitle())
+                        .documentURL(section.getDocumentURL())
+                        .tokens(section.getTokenCount())
+                        .ownerName(section.getOwnerName())
+                        .signedPermissionOfUseVc(section.getSignedPermissionOfUseVc())
+                        .aiModelName(section.getAiModelName())
+                        .build())
+                .collect(Collectors.toList());
+
+        return CompletionMessageDTO.builder()
+                .messages(completions)
+                .threadId(message.getThreadId())
+                .provenAiMetadata(sectionInfos) // Populate with detailed section info
+                .build();
+
+
+    }
+
+
+    /**
+     * This method is used to get the completion for the given message and project.
+     * The completion context need to be given either in the message or in the nearestSections.
+     * Currently, if the agent wants to execute a tool, it will be marked as "done" and provided to the LLM for a final response.
+     *
+     * @param message the user message that contains the question
+     * @param nearestSections the nearest sections that will be used to provide context for the completion.
+     * @param project the project that contains the agent and its settings.
+     * @return the list of responses. Might be more than one if there are tool calls in the completion response.
+     * @throws GendoxException
+     */
+        @Observed(name = "CompletionService.getCompletion",
             contextualName = "CompletionService#getCompletion",
             lowCardinalityKeyValues = {
                     ObservabilityTags.LOGGABLE, "true",
@@ -101,9 +211,9 @@ public class CompletionService {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, UUID projectId) throws GendoxException {
-        String question = convertToAiModelTextQuestion(message, nearestSections, projectId);
-        Project project = projectService.getProjectById(projectId);
+    public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, Project project) throws GendoxException {
+        String question = convertToAiModelTextQuestion(message, nearestSections, project.getId());
+
         ProjectAgent agent = project.getProjectAgent();
         List<AiTools> availableTools = agent.getAiTools();
 
@@ -149,7 +259,7 @@ public class CompletionService {
         Type completionRequestType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
         AuditLogs requestAuditLogs = auditLogsService.createDefaultAuditLogs(completionRequestType);
         requestAuditLogs.setTokenCount((long) completionResponse.getUsage().getPromptTokens());
-        requestAuditLogs.setProjectId(projectId);
+        requestAuditLogs.setProjectId(project.getId());
         requestAuditLogs.setOrganizationId(project.getOrganizationId());
         auditLogsService.saveAuditLogs(requestAuditLogs);
 
@@ -157,13 +267,13 @@ public class CompletionService {
         Type completionResponseType = typeService.getAuditLogTypeByName("COMPLETION_RESPONSE");
         AuditLogs completionAuditLogs = auditLogsService.createDefaultAuditLogs(completionResponseType);
         completionAuditLogs.setTokenCount((long) completionResponse.getUsage().getCompletionTokens());
-        completionAuditLogs.setProjectId(projectId);
+        completionAuditLogs.setProjectId(project.getId());
         completionAuditLogs.setOrganizationId(project.getOrganizationId());
         auditLogsService.saveAuditLogs(completionAuditLogs);
 
         Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
 
-        completionResponseMessage.setProjectId(projectId);
+        completionResponseMessage.setProjectId(project.getId());
         completionResponseMessage.setThreadId(message.getThreadId());
         completionResponseMessage.setCreatedBy(agent.getUserId());
         completionResponseMessage.setUpdatedBy(agent.getUserId());
@@ -185,7 +295,7 @@ public class CompletionService {
             // Save tool response messages.
             toolResponseMessages.forEach(toolResponseMessage -> {
                 Message toolResponse = messageAiMessageConverter.toEntity(toolResponseMessage);
-                toolResponse.setProjectId(projectId);
+                toolResponse.setProjectId(project.getId());
                 toolResponse.setThreadId(message.getThreadId());
                 toolResponse.setCreatedBy(agent.getUserId());
                 toolResponse.setUpdatedBy(agent.getUserId());
@@ -209,7 +319,7 @@ public class CompletionService {
 
                 Message finalCompletionMessage = messageAiMessageConverter.toEntity(finalResponse.getChoices().get(0).getMessage());
 
-                finalCompletionMessage.setProjectId(projectId);
+                finalCompletionMessage.setProjectId(project.getId());
                 finalCompletionMessage.setThreadId(message.getThreadId());
                 finalCompletionMessage.setCreatedBy(agent.getUserId());
                 finalCompletionMessage.setUpdatedBy(agent.getUserId());

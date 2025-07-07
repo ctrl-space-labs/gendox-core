@@ -182,60 +182,7 @@ public class EmbeddingsController {
         savedMessage.setLocalContexts(message.getLocalContexts());
         message = savedMessage;
 
-        // search and rerank sections
-        List<DocumentInstanceSectionDTO> sectionDTOs = embeddingService.findClosestSections(
-                message,
-                project,
-                PageRequest.of(0, project.getProjectAgent().getMaxSearchLimit().intValue())
-        );
-
-
-
-        int maxCompletionLimit = project.getProjectAgent().getMaxCompletionLimit().intValue();
-
-        List<DocumentInstanceSectionDTO> topSectionsForCompletion = new ArrayList<>();
-        List<DocumentInstanceSectionDTO> searchHistorySections = new ArrayList<>();
-        for (int i = 0; i < sectionDTOs.size(); i++) {
-            DocumentInstanceSectionDTO section = sectionDTOs.get(i);
-            if (i < maxCompletionLimit) {
-                topSectionsForCompletion.add(section);
-            } else {
-                searchHistorySections.add(section);
-            }
-        }
-
-
-        List<Message> completions = completionService.getCompletion(message, topSectionsForCompletion, UUID.fromString(projectId));
-
-        List<MessageSection> topCompletionMessageSections;
-        List<MessageSection> searchHistoryMessageSections;
-        for (Message m : completions) {
-            if (m.getRole().equals("assistant")) {
-                //each agent message connected with the sections
-                topCompletionMessageSections = messageService.createMessageSections(topSectionsForCompletion, m, true);
-                searchHistoryMessageSections = messageService.createMessageSections(searchHistorySections, m, false);
-                messageService.updateMessageWithSections(m, topCompletionMessageSections);
-            }
-        }
-
-        List<ProvenAiMetadata> sectionInfos = sectionDTOs.stream()
-                .map(section -> ProvenAiMetadata.builder()
-                        .sectionId(section.getId()) // Section ID
-                        .iscc(section.getDocumentSectionIsccCode())
-                        .title(section.getDocumentSectionMetadata().getTitle())
-                        .documentURL(section.getDocumentURL())
-                        .tokens(section.getTokenCount())
-                        .ownerName(section.getOwnerName())
-                        .signedPermissionOfUseVc(section.getSignedPermissionOfUseVc())
-                        .aiModelName(section.getAiModelName())
-                        .build())
-                .collect(Collectors.toList());
-
-        return CompletionMessageDTO.builder()
-                .messages(completions)
-                .threadId(message.getThreadId())
-                .provenAiMetadata(sectionInfos) // Populate with detailed section info
-                .build();
+        return completionService.getCompletionSearch(message, project);
     }
 
 
