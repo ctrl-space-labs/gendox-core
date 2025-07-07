@@ -258,6 +258,8 @@ public class ProjectAgentService {
                     HttpStatus.FORBIDDEN);
         }
 
+        // TODO add validation if can enable advanced search based on subscription plan
+
 
         existingProjectAgent.setAgentName(projectAgent.getAgentName());
         existingProjectAgent.setCompletionModel(completionModel);

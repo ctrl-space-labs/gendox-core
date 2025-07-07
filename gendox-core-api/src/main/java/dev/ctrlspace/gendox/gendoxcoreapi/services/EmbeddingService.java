@@ -1,9 +1,11 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
@@ -15,17 +17,22 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SectionDistanceDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SearchResult;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.tools.AdvancedSearchArguments;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.tools.ToolFunctionCall;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.tools.AiToolUtils;
 import dev.ctrlspace.gendox.provenAi.utils.ProvenAiService;
 import io.micrometer.observation.annotation.Observed;
 import jakarta.transaction.Transactional;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -40,6 +47,7 @@ import java.util.stream.Collectors;
 public class EmbeddingService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmbeddingService.class);
+    private final CompletionService completionService;
 
     private EmbeddingRepository embeddingRepository;
     private AuditLogsRepository auditLogsRepository;
@@ -56,12 +64,15 @@ public class EmbeddingService {
     private OrganizationModelKeyService organizationModelKeyService;
     private AuditLogsService auditLogsService;
     private CryptographyUtils cryptographyUtils;
+    private AiToolUtils aiToolUtils;
+    private EncodingRegistry encodingRegistry;
 
     private RerankService rerankService;
 
     @Value("${proven-ai.enabled}")
     private Boolean provenAiEnabled;
 
+    // TODO update this value based on the selected embedding model
     private final int MAX_EMBEDDING_TOKENS = 8000; // Maximum tokens for an embedding request
 
     @Autowired
@@ -81,8 +92,10 @@ public class EmbeddingService {
             OrganizationModelKeyService organizationModelKeyService,
             AuditLogsService auditLogsService,
             CryptographyUtils cryptographyUtils,
-            RerankService rerankService
-    ) {
+            RerankService rerankService,
+            @Lazy CompletionService completionService,
+            AiToolUtils aiToolUtils,
+            EncodingRegistry encodingRegistry) {
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
@@ -99,6 +112,9 @@ public class EmbeddingService {
         this.auditLogsService = auditLogsService;
         this.cryptographyUtils = cryptographyUtils;
         this.rerankService = rerankService;
+        this.completionService = completionService;
+        this.aiToolUtils = aiToolUtils;
+        this.encodingRegistry = encodingRegistry;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -306,19 +322,6 @@ public class EmbeddingService {
     }
 
 
-    /**
-     * Implementa semantic search for sections based on the message content.
-     * If ProvenAI is enabled, it will also search for sections in other projects.
-     * If ReRank is enabled, it will rerank the sections based on the message content.
-     *
-     * @param message
-     * @param project
-     * @param pageable
-     * @return
-     * @throws GendoxException
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
-     */
     @Observed(name = "EmbeddingService.findClosestSections",
             contextualName = "EmbeddingService#findClosestSections",
             lowCardinalityKeyValues = {
@@ -331,28 +334,49 @@ public class EmbeddingService {
 
         UUID projectId = project.getId();
         ProjectAgent agent = project.getProjectAgent();
-        // this will become Agent property, and can be overridden by request
-        boolean hyDESearchEnabled = false;
 
-        EncodingRegistry registry = Encodings.newDefaultEncodingRegistry();
-        Encoding enc = registry.getEncodingForModel(ModelType.TEXT_EMBEDDING_3_SMALL);
-        int requestTokens = enc.encode(message.getValue()).size();
+        String embeddingSearchMessage = message.getValue();
+        if (agent.getAdvancedSearchEnable()) {
+            AiModelMessage hyDE = completionService.getAdvancedSearchCompletion(message, project);
 
-        Embedding messageEmbedding;
-        if (requestTokens < MAX_EMBEDDING_TOKENS) {
+            ObjectNode functionCallNode = getToolFunctionJsonNode(hyDE);
 
-            messageEmbedding = getAndPersistEmbedding(message, project, projectId);
+            ToolFunctionCall<AdvancedSearchArguments> searchArgs = aiToolUtils.deserializeToolFunctionCall(
+                    functionCallNode,
+                    AdvancedSearchArguments.class
+            );
+
+            embeddingSearchMessage = searchArgs.getArguments().getSearchQuery();
+            logger.debug("Advanced search message: {}", embeddingSearchMessage);
+
+            if (embeddingSearchMessage == null || embeddingSearchMessage.isEmpty()) {
+                logger.debug("Advanced search message is empty, no search will be applied.");
+                embeddingSearchMessage = message.getValue();
+            }
 
         }
-//        else if (requestTokens > MAX_EMBEDDING_TOKENS && agent.getSemanticSearchModel().getName().equals("text-embedding-3-small")) {
-//
-//
-//        }
-        else {
+
+        Encoding enc = encodingRegistry.getEncodingForModel(ModelType.TEXT_EMBEDDING_3_SMALL);
+        int requestTokens = enc.encode(embeddingSearchMessage).size();
+
+        if (requestTokens > MAX_EMBEDDING_TOKENS) {
             logger.warn("Message exceeds maximum embedding tokens. Request tokens: {}, Max tokens: {}", requestTokens, MAX_EMBEDDING_TOKENS);
-            throw new GendoxException("MESSAGE_TOO_LONG_FOR_EMBEDDING", "Message exceeds maximum embedding tokens", HttpStatus.BAD_REQUEST);
+            throw new GendoxException("MESSAGE_TOO_LONG_FOR_EMBEDDING", "Message too long to perform semantic search. Enable Advanced Search, or contact the administrator.", HttpStatus.BAD_REQUEST);
         }
 
+        EmbeddingResponse embeddingResponse = getEmbeddingForMessage(project.getProjectAgent(),
+                embeddingSearchMessage,
+                project.getProjectAgent().getSemanticSearchModel());
+
+        String searchTextSha256Hash = cryptographyUtils.calculateSHA256(embeddingSearchMessage);
+
+        Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse,
+                projectId,
+                message.getId(),
+                null,
+                project.getProjectAgent().getSemanticSearchModel().getId(),
+                project.getOrganizationId(),
+                searchTextSha256Hash);
 
         List<SectionDistanceDTO> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, pageable);
 
@@ -405,22 +429,25 @@ public class EmbeddingService {
         return allSectionsDTO;
     }
 
-    private Embedding getAndPersistEmbedding(Message message, Project project, UUID projectId) throws GendoxException, NoSuchAlgorithmException {
-        Embedding messageEmbedding;
-        EmbeddingResponse embeddingResponse = getEmbeddingForMessage(project.getProjectAgent(),
-                message.getValue(),
-                project.getProjectAgent().getSemanticSearchModel());
-
-        String sectionSha256Hash = cryptographyUtils.calculateSHA256(message.getValue());
-
-        messageEmbedding = upsertEmbeddingForText(embeddingResponse,
-                projectId,
-                message.getId(),
-                null,
-                project.getProjectAgent().getSemanticSearchModel().getId(),
-                project.getOrganizationId(),
-                sectionSha256Hash);
-        return messageEmbedding;
+    /**
+     * Helper, just to not have this java crap in the main method :)
+     *
+     * @param hyDE
+     * @return
+     * @throws GendoxException
+     */
+    private static @NotNull ObjectNode getToolFunctionJsonNode(AiModelMessage hyDE) throws GendoxException {
+        ObjectNode functionCallNode;
+        try {
+            functionCallNode = (ObjectNode) hyDE.getToolCalls().get(0).get("function");
+            if (functionCallNode == null) {
+                throw new GendoxException("ADVANCED_SEARCH_FAILED", "Advanced search failed to generate a valid message.", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+            // continue processing...
+        } catch (ClassCastException | IndexOutOfBoundsException | NullPointerException e) {
+            throw new GendoxException("ADVANCED_SEARCH_FAILED", "Advanced search failed to generate a valid message.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return functionCallNode;
     }
 
     public List<DocumentInstanceSectionDTO> findProvenAiClosestSections(Message message, Project project) throws GendoxException, IOException {

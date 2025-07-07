@@ -51,3 +51,9 @@ SET advanced_search_model_id = (
     WHERE name = 'GPT-4.1-NANO'
 )
 WHERE advanced_search_model_id IS NULL;
+
+
+
+COMMENT ON COLUMN gendox_core.embedding.message_id IS 'References the message associated with this embedding. The actual text of the EMBEDDING might be different that the one stored in `message` table due to advanced search.';
+COMMENT ON COLUMN gendox_core.embedding_group.message_id IS 'References the message associated with this embedding group. The actual text of the EMBEDDING might be different that the one stored in `message` table due to advanced search.';
+
