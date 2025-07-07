@@ -17,7 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -186,6 +188,41 @@ public class TaskService {
         }
         List<TaskEdge> edgesToDelete = taskEdgeRepository.findAllByFromNodeIdIn(fromNodeIds);
         taskEdgeRepository.deleteAll(edgesToDelete);
+    }
+
+    @Transactional
+    public void deleteTaskNodeAndConnectionNodes(UUID taskNodeId) throws GendoxException {
+        logger.info("Deleting task node and its connection nodes: {}", taskNodeId);
+
+        // Fetch the node to delete
+        TaskNode nodeToDelete = taskNodeRepository.findById(taskNodeId)
+                .orElseThrow(() -> new GendoxException("TASK_NODE_NOT_FOUND", "Task node not found for deletion", HttpStatus.NOT_FOUND));
+
+        // Find all edges connected to this node
+        List<TaskEdge> edgesToDelete = taskEdgeRepository.findAllByToNodeIdIn(List.of(nodeToDelete.getId()));
+
+        List<UUID> fromNodeIds = edgesToDelete.stream()
+                .map(edge -> edge.getFromNode().getId())
+                .toList();
+
+        List<TaskEdge> edgesToDeleteFrom = taskEdgeRepository.findAllByFromNodeIdIn(fromNodeIds);
+
+        // Delete edges first
+        if (!edgesToDelete.isEmpty()) {
+            taskEdgeRepository.deleteAll(edgesToDelete);
+        }
+
+        if(!edgesToDeleteFrom.isEmpty()) {
+            taskEdgeRepository.deleteAll(edgesToDeleteFrom);
+        }
+
+        // Delete all nodes that were connected to this node
+        if (!fromNodeIds.isEmpty()) {
+            deleteTaskNodesByIds(new ArrayList<>(fromNodeIds));
+        }
+
+        // Now delete the node itself
+        taskNodeRepository.delete(nodeToDelete);
     }
 
     public Page<TaskDocumentQuestionPairDTO> getDocumentQuestionPairs(TaskNodeCriteria criteria, Pageable pageable) {

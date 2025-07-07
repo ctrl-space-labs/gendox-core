@@ -11,6 +11,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskEdgeDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskEdgeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,8 +23,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+
 @RestController
 public class TaskController {
+    Logger logger = LoggerFactory.getLogger(TaskController.class);
     private final TaskService taskService;
     private final TaskNodeConverter taskNodeConverter;
     private final TaskEdgeConverter taskEdgeConverter;
@@ -64,10 +68,6 @@ public class TaskController {
     }
 
 
-
-
-
-
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @PostMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-nodes")
     @ResponseStatus(value = HttpStatus.CREATED)
@@ -92,8 +92,8 @@ public class TaskController {
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-nodes", produces = {"application/json"})
     @ResponseStatus(value = HttpStatus.OK)
     public TaskNode getTaskNodeById(@PathVariable UUID organizationId,
-                                          @PathVariable UUID projectId,
-                                          @RequestParam UUID id) {
+                                    @PathVariable UUID projectId,
+                                    @RequestParam UUID id) {
         return taskService.getTaskNodeById(id);
     }
 
@@ -103,7 +103,7 @@ public class TaskController {
     public Page<TaskNode> getTaskNodesByTaskId(@PathVariable UUID organizationId,
                                                @PathVariable UUID projectId,
                                                @PathVariable UUID taskId,
-                                               Pageable pageable){
+                                               Pageable pageable) {
 
         return taskService.getTaskNodesByTaskId(taskId, pageable);
     }
@@ -138,4 +138,15 @@ public class TaskController {
         return taskService.getTaskEdgesByCriteria(criteria, pageable);
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @DeleteMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-nodes/{taskNodeId}")
+    @ResponseStatus(value = HttpStatus.NO_CONTENT)
+    public void deleteTaskNodeAndConnectionNodes(@PathVariable UUID organizationId,
+                                                 @PathVariable UUID projectId,
+                                                 @PathVariable UUID taskNodeId) throws GendoxException {
+        taskService.deleteTaskNodeAndConnectionNodes(taskNodeId);
+        logger.info("Request to delete task node and connected nodes: taskNodeId={}", taskNodeId);
+
     }
+
+}

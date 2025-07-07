@@ -9,9 +9,15 @@ import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
 import { useQuestionDialog } from 'src/utils/tasks/useQuestionDialog'
 import { saveQuestion, refreshAnswers } from 'src/utils/tasks/taskUtils'
-import { fetchTaskNodesByTaskId, fetchTaskEdgesByCriteria, executeTaskByType } from 'src/store/activeTask/activeTask'
+import {
+  fetchTaskNodesByTaskId,
+  fetchTaskEdgesByCriteria,
+  executeTaskByType,
+  deleteTaskNode
+} from 'src/store/activeTask/activeTask'
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsAnswerGrid'
 import HeaderSection from './table-components/HeaderSection'
+import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
@@ -24,6 +30,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const [documents, setDocuments] = useState([])
   const [questions, setQuestions] = useState([])
   const [showUploader, setShowUploader] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteNodeId, setDeleteNodeId] = useState(null)
 
   const { showDialog, questionText, setQuestionText, editingQuestion, openAddDialog, openEditDialog, closeDialog } =
     useQuestionDialog()
@@ -131,6 +139,44 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     }
   }
 
+  const confirmDeleteQuestionOrDocumentNode = taskNodeId => {
+    setDeleteNodeId(taskNodeId)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirmed = async () => {
+    if (!deleteNodeId) return
+
+    try {
+      await dispatch(deleteTaskNode({ organizationId, projectId, taskNodeId: deleteNodeId, token })).unwrap()
+      toast.success('Deleted successfully.')
+
+      // Update local state
+      setQuestions(prev => prev.filter(q => q.id !== deleteNodeId))
+      setDocuments(prev => prev.filter(d => d.id !== deleteNodeId))
+
+      // Refetch updated data
+      dispatch(fetchTaskNodesByTaskId({ organizationId, projectId, taskId, token }))
+      dispatch(
+        fetchTaskEdgesByCriteria({
+          organizationId,
+          projectId,
+          criteria: {
+            relationType: 'ANSWERS',
+            toNodeIds: [...documents.map(d => d.id), ...questions.map(q => q.id)]
+          },
+          token
+        })
+      )
+    } catch (error) {
+      toast.error('Failed to delete the node.')
+      console.error('Delete node error:', error)
+    } finally {
+      setDeleteDialogOpen(false)
+      setDeleteNodeId(null)
+    }
+  }
+
   return (
     <>
       <Paper sx={{ p: 3, overflowX: 'auto', backgroundColor: 'action.hover', mb: 3 }}>
@@ -151,14 +197,15 @@ const DocumentInsightsTable = ({ selectedTask }) => {
               setDocuments(prev => {
                 const updated = [...prev]
                 updated[docIdx].answers[qIdx] = value
-                return updated  
+                return updated
               })
             }}
             openUploader={openUploader}
             taskEdgesList={taskEdgesList}
             onGenerate={handleGenerate}
+            onDeleteQuestionOrDocumentNode={confirmDeleteQuestionOrDocumentNode}
             isLoading={isLoading}
-          />          
+          />
         </Box>
       </Paper>
 
@@ -179,7 +226,15 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         setQuestionText={setQuestionText}
         onConfirm={handleAddOrEditQuestionConfirm}
         editing={!!editingQuestion}
-        
+      />
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirmed}
+        title='Confirm Deletion'
+        contentText='Are you sure you want to delete these generated answers? This action cannot be undone.'
+        confirmButtonText='Delete'
+        cancelButtonText='Cancel'
       />
     </>
   )

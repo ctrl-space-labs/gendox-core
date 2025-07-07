@@ -14,5 +14,6 @@ public interface TaskEdgeRepository extends JpaRepository<TaskEdge, UUID>, Query
 
     List<TaskEdge> findAllByRelationTypeAndToNodeIdIn(Type relationType, List<UUID> toNodeIds);
     List<TaskEdge> findAllByFromNodeIdIn(List<UUID> fromNodeIds);
+    List<TaskEdge> findAllByToNodeIdIn(List<UUID> toNodeIds);
 
 }

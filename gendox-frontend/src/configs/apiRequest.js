@@ -185,5 +185,8 @@ export default {
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/execute`,
 
   getJobStatus: (organizationId, projectId, jobExecutionId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/jobs/${jobExecutionId}/status`
+    `${url}organizations/${organizationId}/projects/${projectId}/jobs/${jobExecutionId}/status`,
+
+  deleteTaskNode: (organizationId, projectId, taskNodeId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/task-nodes/${taskNodeId}`
 }

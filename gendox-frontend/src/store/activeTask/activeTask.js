@@ -139,7 +139,6 @@ export const fetchTaskEdgesByCriteria = createAsyncThunk(
   }
 )
 
-
 export const executeTaskByType = createAsyncThunk(
   'task/executeTaskByType',
   async ({ organizationId, projectId, taskId, criteria, token }, thunkAPI) => {
@@ -153,6 +152,18 @@ export const executeTaskByType = createAsyncThunk(
   }
 )
 
+export const deleteTaskNode = createAsyncThunk(
+  'task/deleteTaskNode',
+  async ({ organizationId, projectId, taskNodeId, token }, thunkAPI) => {
+    try {
+      await taskService.deleteTaskNode(organizationId, projectId, taskNodeId, token)
+      return taskNodeId
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
 
 // Initial state for task slice
 const initialState = {
@@ -318,6 +329,25 @@ const taskSlice = createSlice({
         state.taskEdgesList = action.payload // store the list of edges
       })
       .addCase(fetchTaskEdgesByCriteria.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+
+      // Delete TaskNode and Conected Nodes and Edges
+      .addCase(deleteTaskNode.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(deleteTaskNode.fulfilled, (state, action) => {
+        state.isLoading = false
+        // Remove the deleted task node from taskNodesList.content (if exists)
+        if (state.taskNodesList?.content) {
+          state.taskNodesList.content = state.taskNodesList.content.filter(node => node.id !== action.payload)
+        }
+        // Also remove from taskNodes dictionary
+        delete state.taskNodes[action.payload]
+      })
+      .addCase(deleteTaskNode.rejected, (state, action) => {
         state.isLoading = false
         state.error = action.payload
       })

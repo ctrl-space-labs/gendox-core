@@ -10,7 +10,7 @@ const DocumentInsightsGrid = ({
   questions,
   onAnswerChange,
   openUploader,
-  onDelete,
+  onDeleteQuestionOrDocumentNode,
   onGenerate,
   taskEdgesList,
   isLoading
@@ -45,7 +45,7 @@ const DocumentInsightsGrid = ({
                   size='small'
                   onClick={e => {
                     e.stopPropagation() // prevent row click
-                    onDelete(params.row.id)
+                    onDeleteQuestionOrDocumentNode(params.row.id) // use correct handler
                   }}
                   aria-label='delete document'
                 >
@@ -92,7 +92,6 @@ const DocumentInsightsGrid = ({
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
-        pinned: 'right',
         renderCell: params => (
           <Button
             variant='contained'
@@ -147,12 +146,16 @@ const DocumentInsightsGrid = ({
                   color: 'error.main',
                   '&:hover': { color: 'error.dark' }
                 }}
+                // onClick={e => {
+                //   e.stopPropagation() // Prevent sorting on header click
+                //   // Call your question delete handler here, pass question id
+                //   if (typeof onDeleteQuestion === 'function') {
+                //     onDeleteQuestion(q.id)
+                //   }
+                // }}
                 onClick={e => {
-                  e.stopPropagation() // Prevent sorting on header click
-                  // Call your question delete handler here, pass question id
-                  if (typeof onDeleteQuestion === 'function') {
-                    onDeleteQuestion(q.id)
-                  }
+                  e.stopPropagation()
+                  onDeleteQuestionOrDocumentNode(q.id) // same handler used for questions
                 }}
                 aria-label={`Delete question ${q.text}`}
                 title={`Delete question: ${q.text}`}
@@ -183,7 +186,7 @@ const DocumentInsightsGrid = ({
         )
       }))
     ]
-  }, [questions, onDelete, openUploader, onGenerate])
+  }, [questions, onDeleteQuestionOrDocumentNode, openUploader, onGenerate])
 
   const rows = useMemo(() => {
     return documents.map(doc => {
