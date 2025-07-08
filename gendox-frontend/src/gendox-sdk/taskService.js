@@ -206,6 +206,23 @@ const deleteTaskNode = async (organizationId, projectId, taskNodeId, token) => {
   })
 }
 
+/**
+ * Delete a task
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<void>>}
+ */
+const deleteTask = async (organizationId, projectId, taskId, token) => {
+  return axios.delete(apiRequests.deleteTask(organizationId, projectId, taskId), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+}
+
 
 export default {
   createTask,
@@ -220,5 +237,6 @@ export default {
   getTaskEdgesByCriteria,
   executeTaskByType,
   getJobStatus,
-  deleteTaskNode
+  deleteTaskNode,
+  deleteTask
 }

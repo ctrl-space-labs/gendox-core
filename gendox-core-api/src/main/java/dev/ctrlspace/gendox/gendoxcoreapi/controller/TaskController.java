@@ -149,4 +149,16 @@ public class TaskController {
 
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @DeleteMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}")
+    @ResponseStatus(value = HttpStatus.NO_CONTENT)
+    public void deleteTask(@PathVariable UUID organizationId,
+                           @PathVariable UUID projectId,
+                           @PathVariable UUID taskId) throws GendoxException {
+        taskService.deleteTask(taskId);
+        logger.info("Request to delete task: taskId={}", taskId);
+    }
+
+
+
 }

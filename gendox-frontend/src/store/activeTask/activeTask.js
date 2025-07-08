@@ -165,6 +165,19 @@ export const deleteTaskNode = createAsyncThunk(
   }
 )
 
+export const deleteTask = createAsyncThunk(
+  'task/deleteTask',
+  async ({ organizationId, projectId, taskId, token }, thunkAPI) => {
+    try {
+      await taskService.deleteTask(organizationId, projectId, taskId, token)
+      return taskId // return the taskId to remove it from the state
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
 // Initial state for task slice
 const initialState = {
   projectTasks: [],
@@ -348,6 +361,25 @@ const taskSlice = createSlice({
         delete state.taskNodes[action.payload]
       })
       .addCase(deleteTaskNode.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+
+      // Delete Task
+      .addCase(deleteTask.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(deleteTask.fulfilled, (state, action) => {
+        state.isLoading = false
+        // Remove the deleted task from projectTasks
+        state.projectTasks = state.projectTasks.filter(task => task.id !== action.payload)
+        // Optionally clear selectedTask if it was the deleted one
+        if (state.selectedTask?.id === action.payload) {
+          state.selectedTask = null
+        }
+      })
+      .addCase(deleteTask.rejected, (state, action) => {
         state.isLoading = false
         state.error = action.payload
       })

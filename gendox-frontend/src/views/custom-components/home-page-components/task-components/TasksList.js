@@ -7,10 +7,9 @@ import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
-import documentService from 'src/gendox-sdk/documentService.js'
 import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/router'
-import { fetchProjectDocuments } from 'src/store/activeProject/activeProject'
+import { deleteTask } from 'src/store/activeTask/activeTask'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 import { localStorageConstants } from 'src/utils/generalConstants'
@@ -58,7 +57,7 @@ const TasksList = ({ projectTasks, page }) => {
 
   const handleMenuClose = () => {
     setAnchorEl(null)
-    setSelectedTask(null)
+    // setSelectedTask(null)
   }
 
   const openDeleteConfirm = () => {
@@ -71,14 +70,17 @@ const TasksList = ({ projectTasks, page }) => {
   }
 
   const handleDeleteTask = async () => {
+    console.log("Deleting task:", selectedTask)
     if (!selectedTask) return
     setIsDeleting(true)
 
     try {
-      await documentService.deleteDocument(organizationId, projectId, selectedTask.id, token)
+      await dispatch(
+      deleteTask({ organizationId, projectId, taskId: selectedTask.id, token })
+    ).unwrap()
       toast.success(`Task "${selectedTask.title}" deleted.`)
       closeDeleteConfirm()
-      dispatch(fetchProjectDocuments({ organizationId, projectId, token, page }))
+      // dispatch(fetchProjectDocuments({ organizationId, projectId, token, page }))
     } catch (error) {
       toast.error(`Failed to delete task: ${getErrorMessage(error)}`)
     } finally {
@@ -189,7 +191,7 @@ const TasksList = ({ projectTasks, page }) => {
           autoHeight
           rows={filteredTasks}
           columns={columns}
-          pageSizeOptions={[10, 25, 50]}
+          pageSizeOptions={[10, 20, 40]}
           paginationModel={paginationModel}
           onPaginationModelChange={setPaginationModel}
           disableRowSelectionOnClick

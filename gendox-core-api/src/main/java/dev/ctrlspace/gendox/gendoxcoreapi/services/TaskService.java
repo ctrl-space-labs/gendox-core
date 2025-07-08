@@ -263,6 +263,38 @@ public class TaskService {
         return new PageImpl<>(dtos, pageable, totalCount);
     }
 
+    @Transactional
+    public void deleteTask(UUID taskId) throws GendoxException {
+        logger.info("Deleting task: {}", taskId);
+
+        // Fetch the task to delete
+        Task taskToDelete = taskRepository.findById(taskId)
+                .orElseThrow(() -> new GendoxException("TASK_NOT_FOUND", "Task not found for deletion", HttpStatus.NOT_FOUND));
+
+        Page<TaskNode> nodesToDelete = taskNodeRepository.findAllByTaskId(taskId, Pageable.unpaged());
+
+
+        // Delete all task edges associated with this task
+        List<TaskEdge> fromNodeEdgesToDelete = taskEdgeRepository.findAllByFromNodeIdIn(
+                nodesToDelete.stream().map(TaskNode::getId).collect(Collectors.toList()));
+        List<TaskEdge> toNodeEdgesToDelete = taskEdgeRepository.findAllByToNodeIdIn(
+                nodesToDelete.stream().map(TaskNode::getId).collect(Collectors.toList()));
+        if (!fromNodeEdgesToDelete.isEmpty()) {
+            deleteTaskEdgesByIds(fromNodeEdgesToDelete.stream().map(TaskEdge::getId).collect(Collectors.toList()));
+        }
+        if (!toNodeEdgesToDelete.isEmpty()) {
+            deleteTaskEdgesByIds(toNodeEdgesToDelete.stream().map(TaskEdge::getId).collect(Collectors.toList()));
+        }
+
+        // Delete all task nodes associated with this task
+        if (!nodesToDelete.isEmpty()) {
+            taskNodeRepository.deleteAll(nodesToDelete);
+        }
+
+        // Finally, delete the task itself
+        taskRepository.delete(taskToDelete);
+    }
+
 }
 
 
