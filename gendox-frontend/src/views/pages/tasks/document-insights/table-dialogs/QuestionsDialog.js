@@ -1,7 +1,7 @@
 import React from 'react'
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material'
 
-const AddEditQuestionDialog = ({ open, onClose, questionText, setQuestionText, onConfirm, editing }) => {
+const QuestionsDialog = ({ open, onClose, questionText, setQuestionText, onConfirm, editing }) => {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth='xs'>
       <DialogTitle>{editing ? 'Edit Question' : 'Add New Question'}</DialogTitle>
@@ -27,4 +27,4 @@ const AddEditQuestionDialog = ({ open, onClose, questionText, setQuestionText, o
   )
 }
 
-export default AddEditQuestionDialog
+export default QuestionsDialog

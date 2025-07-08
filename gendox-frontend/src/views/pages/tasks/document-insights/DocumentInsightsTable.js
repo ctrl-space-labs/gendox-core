@@ -3,8 +3,8 @@ import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { Box, Modal } from '@mui/material'
 import Paper from '@mui/material/Paper'
-import AddEditQuestionDialog from './table-dialogs/AddEditQuestionDialog'
-import UploaderDocumentInsights from './table-dialogs/UploaderDocumentInsigths'
+import QuestionsDialog from './table-dialogs/QuestionsDialog'
+import DocumentsDialog from './table-dialogs/DocumentsDialog'
 import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
 import { useQuestionDialog } from 'src/utils/tasks/useQuestionDialog'
@@ -15,7 +15,7 @@ import {
   executeTaskByType,
   deleteTaskNode
 } from 'src/store/activeTask/activeTask'
-import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsAnswerGrid'
+import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
 import HeaderSection from './table-components/HeaderSection'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 
@@ -32,7 +32,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const [showUploader, setShowUploader] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteNodeId, setDeleteNodeId] = useState(null)
-
   const { showDialog, questionText, setQuestionText, editingQuestion, openAddDialog, openEditDialog, closeDialog } =
     useQuestionDialog()
 
@@ -215,11 +214,19 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
         <Box sx={{ outline: 'none', p: 2, bgcolor: 'background.paper' }}>
-          <UploaderDocumentInsights closeUploader={() => setShowUploader(false)} taskId={taskId} />
+          <DocumentsDialog
+            open={showUploader}
+            onClose={() => setShowUploader(false)}
+            taskId={taskId}
+            organizationId={organizationId}
+            projectId={projectId}
+            token={token}
+            existingDocuments={documents}
+          />
         </Box>
       </Modal>
 
-      <AddEditQuestionDialog
+      <QuestionsDialog
         open={showDialog}
         onClose={closeDialog}
         questionText={questionText}

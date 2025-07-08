@@ -36,7 +36,7 @@ const DocumentInsightsGrid = ({
               cursor: !params.row.documentId ? 'pointer' : 'default'
             }}
             onClick={() => !params.row.documentId && openUploader()}
-            title={params.value || (params.row.documentId ? 'Unknown Document' : 'Upload Document')}
+            title={params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
           >
             {params.row.documentId ? (
               <Tooltip title='Delete Document'>
@@ -53,7 +53,7 @@ const DocumentInsightsGrid = ({
                 </IconButton>
               </Tooltip>
             ) : (
-              <Tooltip title='Upload Document'>
+              <Tooltip title='Select Document'>
                 <IconButton
                   color='primary'
                   size='small'
@@ -61,7 +61,7 @@ const DocumentInsightsGrid = ({
                     e.stopPropagation() // prevent row click
                     openUploader()
                   }}
-                  aria-label='upload document'
+                  aria-label='select document'
                 >
                   <UploadFileIcon fontSize='small' />
                 </IconButton>
@@ -80,7 +80,7 @@ const DocumentInsightsGrid = ({
                 userSelect: 'none'
               }}
             >
-              {params.value || (params.row.documentId ? 'Unknown Documen2t' : 'Upload Document')}
+              {params.value || (params.row.documentId ? 'Unknown Documen2t' : 'Select Document')}
             </Box>
           </Box>
         )
@@ -146,19 +146,11 @@ const DocumentInsightsGrid = ({
                   color: 'error.main',
                   '&:hover': { color: 'error.dark' }
                 }}
-                // onClick={e => {
-                //   e.stopPropagation() // Prevent sorting on header click
-                //   // Call your question delete handler here, pass question id
-                //   if (typeof onDeleteQuestion === 'function') {
-                //     onDeleteQuestion(q.id)
-                //   }
-                // }}
                 onClick={e => {
                   e.stopPropagation()
                   onDeleteQuestionOrDocumentNode(q.id) // same handler used for questions
                 }}
                 aria-label={`Delete question ${q.text}`}
-                title={`Delete question: ${q.text}`}
               />
             </Tooltip>
           </Box>

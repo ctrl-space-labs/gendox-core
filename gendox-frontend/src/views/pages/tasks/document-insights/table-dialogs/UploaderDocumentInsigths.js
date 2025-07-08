@@ -112,7 +112,7 @@ const FileItem = ({ file, onDelete }) => {
   )
 }
 
-const UploaderDocumentInsights = ({ closeUploader, taskId }) => {
+const UploaderDocumentInsights = ({ closeUploader, taskId, onClose }) => {
   const router = useRouter()
   const dispatch = useDispatch()
   const { organizationId, projectId } = router.query
@@ -165,6 +165,7 @@ const UploaderDocumentInsights = ({ closeUploader, taskId }) => {
       setAlertVisible(true)
       setFile(null)
       closeUploader()
+      onClose()
     } catch (error) {
       console.error('Upload or TaskNode creation error:', error)
     } finally {
