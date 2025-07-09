@@ -86,9 +86,6 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQues
     protected Page<TaskDocumentQuestionsDTO> getPageFromRepository(Pageable pageable) throws GendoxException {
 
         Page<TaskDocumentQuestionsDTO> documentsPage = taskService.getDocumentsGroupedWithQuestions(criteria, pageable);
-
-        // TODO decide if we want to group the results per document
-
         return documentsPage;
     }
 

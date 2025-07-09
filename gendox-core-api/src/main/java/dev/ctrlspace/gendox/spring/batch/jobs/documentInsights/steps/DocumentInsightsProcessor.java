@@ -84,7 +84,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
         Task task = taskService.getTaskById(documentGroupWithQuestions.getTaskId());
         Project project = projectService.getProjectById(task.getProjectId());
-        // TODO create a new ChatThread for the document and use it to get the completion, with only the agent. IMPORTANT verify that this is not an issue
+
         ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()), project.getId());
 
 
@@ -128,7 +128,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 message.setCreatedBy(project.getProjectAgent().getUserId());
                 message.setUpdatedBy(project.getProjectAgent().getUserId());
                 message = messageService.createMessage(message);
-                // TODO
+
                 List<Message> response = completionService.getCompletion(message, new ArrayList<>(), project, responseJsonSchema);
 
 //                json string to object
