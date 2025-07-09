@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs;
 
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,11 +12,9 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class TaskNodeValueDTO {
-    private String organizationId;
+public class CompletionQuestionRequest {
+    @JsonPropertyDescription("UUID of the question to be answered")
     private UUID questionId;
-    private UUID documentId;
-    private String message;
-    private String answerValue;
-    private AnswerFlag answerFlagEnum;
+    @JsonPropertyDescription("Text of the question to be answered")
+    private String questionText;
 }

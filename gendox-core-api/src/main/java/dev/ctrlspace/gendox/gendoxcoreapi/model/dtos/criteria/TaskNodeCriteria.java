@@ -15,6 +15,8 @@ import java.util.UUID;
 public class TaskNodeCriteria {
 
     private UUID taskId;
+    private List<UUID> nodeIds;
+    private List<String> nodeTypeNames;
     private List<UUID> documentNodeIds;  // for DOCUMENT type nodes
     private List<UUID> questionNodeIds;  // for QUESTION type nodes
 }

@@ -56,7 +56,7 @@ public class MessageService {
         ProjectAgent agent = null;
         if (message.getThreadId() == null) {
             agent = projectAgentService.getAgentByProjectId(message.getProjectId());
-            ChatThread chatThread = createThreadForMessage(securityUtils.getUserId(), agent.getUserId(), message.getProjectId());
+            ChatThread chatThread = createThreadForMessage(List.of(securityUtils.getUserId(), agent.getUserId()), message.getProjectId());
             message.setThreadId(chatThread.getId());
         }
 
@@ -77,31 +77,19 @@ public class MessageService {
         return message;
     }
 
-    private ChatThread createThreadForMessage(UUID userId, UUID agentId, UUID projectId) {
-
-        // create the members
-        ChatThreadMember userMember = new ChatThreadMember();
-        userMember.setUserId(userId);
-        ChatThreadMember agentMember = new ChatThreadMember();
-        agentMember.setUserId(agentId);
-
-        // create the chat thread
+    public ChatThread createThreadForMessage(List<UUID> memberIds, UUID projectId) {
         ChatThread chatThread = new ChatThread();
         chatThread.setName("Chat Thread");
         chatThread.setProjectId(projectId);
-        // message from anonymous user
-        if (userId == null) {
-            chatThread.setPublicThread(true);
+
+        for (UUID memberId : memberIds) {
+            ChatThreadMember member = new ChatThreadMember();
+            member.setUserId(memberId);
+            member.setChatThread(chatThread);
+            chatThread.getChatThreadMembers().add(member);
         }
 
-        // connect the objects
-        chatThread.getChatThreadMembers().add(userMember);
-        chatThread.getChatThreadMembers().add(agentMember);
-        userMember.setChatThread(chatThread);
-        agentMember.setChatThread(chatThread);
-
         return chatThreadService.createChatThread(chatThread);
-
     }
 
     public Message updateMessageWithSections(Message message, List<MessageSection> messageSections) {

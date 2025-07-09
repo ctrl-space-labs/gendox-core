@@ -6,14 +6,15 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-public class TaskDocumentQuestionPairDTO {
+public class TaskDocumentQuestionsDTO {
     private UUID taskId;
-    private TaskNode questionNode;
     private TaskNode documentNode;
+    private List<TaskNode> questionNodes;
 }

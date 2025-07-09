@@ -244,42 +244,62 @@ public class TaskService {
         taskNodeRepository.delete(nodeToDelete);
     }
 
-    public Page<TaskDocumentQuestionPairDTO> getDocumentQuestionPairs(TaskNodeCriteria criteria, Pageable pageable) {
+    public Page<TaskDocumentQuestionsDTO> getDocumentsGroupedWithQuestions(TaskNodeCriteria criteria, Pageable pageable) {
         Type documentNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.DOCUMENT);
         Type questionNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.QUESTION);
+        Type answerNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.ANSWER);
+        Type answersRelationType = typeService.getTaskNodeRelationshipTypeByName(TaskNodeRelationshipTypeConstants.ANSWERS);
 
-        List<UUID> documentNodeIds = criteria.getDocumentNodeIds();
-        if (documentNodeIds != null && documentNodeIds.isEmpty()) {
-            documentNodeIds = null; // treat empty as null for query
+        List<UUID> documentNodeIdsFilter = criteria.getDocumentNodeIds();
+        if (documentNodeIdsFilter != null && documentNodeIdsFilter.isEmpty()) {
+            documentNodeIdsFilter = null; // treat empty as null for query
         }
 
-        List<UUID> questionNodeIds = criteria.getQuestionNodeIds();
-        if (questionNodeIds != null && questionNodeIds.isEmpty()) {
-            questionNodeIds = null;
+        List<UUID> questionNodeIdsFilter = criteria.getQuestionNodeIds();
+        if (questionNodeIdsFilter != null && questionNodeIdsFilter.isEmpty()) {
+            questionNodeIdsFilter = null;
         }
+
+        TaskNodeCriteria documentsCriteria = TaskNodeCriteria.builder()
+                .taskId(criteria.getTaskId())
+                .nodeTypeNames(List.of(TaskNodeTypeConstants.DOCUMENT))
+                .nodeIds(documentNodeIdsFilter)
+                .build();
+
+        Page<TaskNode> documents = taskNodeRepository.findAll(TaskNodePredicates.build(documentsCriteria), pageable);
+
+
+        TaskNodeCriteria questionsCriteria = TaskNodeCriteria.builder()
+                .taskId(criteria.getTaskId())
+                .nodeTypeNames(List.of(TaskNodeTypeConstants.QUESTION))
+                .nodeIds(questionNodeIdsFilter)
+                .build();
+
+        // bring all questions for the task
+        Page<TaskNode> questions = taskNodeRepository.findAll(TaskNodePredicates.build(questionsCriteria), Pageable.unpaged());
+
 
         List<Object[]> documentQuestionPairs = taskNodeRepository.findDocumentQuestionPairsByCriteria(
                 criteria.getTaskId(),
                 documentNodeType.getId(),
                 questionNodeType.getId(),
-                documentNodeIds,
-                questionNodeIds,
+                documentNodeIdsFilter,
+                questionNodeIdsFilter,
                 pageable);
 
-        List<TaskDocumentQuestionPairDTO> dtos = documentQuestionPairs.stream()
-                .map(arr -> {
-                    TaskNode docNode = (TaskNode) arr[0];
-                    TaskNode questionNode = (TaskNode) arr[1];
-                    return TaskDocumentQuestionPairDTO.builder()
-                            .taskId(criteria.getTaskId())
-                            .documentNode(docNode)
-                            .questionNode(questionNode)
-                            .build();
-                }).collect(Collectors.toList());
+        List<TaskDocumentQuestionsDTO> documentsGroupedWithQuestions = documents.stream()
+                .map(docNode -> TaskDocumentQuestionsDTO.builder()
+                        .taskId(criteria.getTaskId())
+                        .documentNode(docNode)
+                        .questionNodes(questions.getContent())
+                        .build())
+                .collect(Collectors.toList());
 
-        // You will need total count for correct Page implementation, so get that too:
-        long totalCount = dtos.size(); // or implement count query if needed
-        return new PageImpl<>(dtos, pageable, totalCount);
+
+        Page<TaskDocumentQuestionsDTO> documentsPage = new PageImpl<>(documentsGroupedWithQuestions, pageable, documents.getTotalElements());
+
+
+        return documentsPage;
     }
 
     @Transactional

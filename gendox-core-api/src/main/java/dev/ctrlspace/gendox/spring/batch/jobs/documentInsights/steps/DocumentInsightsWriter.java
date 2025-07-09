@@ -14,7 +14,9 @@ import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -38,8 +40,22 @@ public class DocumentInsightsWriter implements ItemWriter<TaskAnswerBatchDTO> {
     @Override
     public void write(Chunk<? extends TaskAnswerBatchDTO> chunk) throws Exception, GendoxException {
 
-        List<UUID> answerIdsToDelete = chunk.getItems().stream()
-                .flatMap(answer -> answer.getAnswersToDelete().stream())
+
+        // TODO Find Answer Ids to be deleted in a single query
+        List<TaskNode> answersToDelete = new ArrayList<>();
+        for (TaskAnswerBatchDTO documentGroupWithQuestions : chunk.getItems()) {
+            for (AnswerCreationDTO answer : documentGroupWithQuestions.getNewAnswers()) {
+
+                Optional<TaskNode> taskNodeOpt = taskService.findAnswerNodeByDocumentAndQuestionOptional(
+                        answer.getDocumentNode().getTaskId(),
+                        answer.getDocumentNode().getId(),
+                        answer.getQuestionNode().getId()
+                );
+                taskNodeOpt.ifPresent(answersToDelete::add);
+            }
+        }
+
+        List<UUID> answerIdsToDelete = answersToDelete.stream()
                 .map(TaskNode::getId)
                 .toList();
 

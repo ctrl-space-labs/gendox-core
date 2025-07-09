@@ -173,12 +173,17 @@ public class ProjectAgentService {
         if (projectAgent.getRerankModel() == null) {
             projectAgent.setRerankModel(aiModelService.getByName(AiModelConstants.VOYAGE_RERANK_2));
         }
-
+        if (projectAgent.getAdvancedSearchModel() == null) {
+            projectAgent.setAdvancedSearchModel(aiModelService.getByName(AiModelConstants.GEMINI_2_FLASH));
+        }
         if (projectAgent.getModerationCheck() == null) {
             projectAgent.setModerationCheck(true);
         }
         if (projectAgent.getRerankEnable() == null) {
             projectAgent.setRerankEnable(false);
+        }
+        if (projectAgent.getAdvancedSearchEnable() == null) {
+            projectAgent.setAdvancedSearchEnable(false);
         }
         if (projectAgent.getChatTemplateId() == null) {
             projectAgent.setChatTemplateId(templateRepository.findIdByIsDefaultTrueAndTemplateTypeName("CHAT_TEMPLATE"));

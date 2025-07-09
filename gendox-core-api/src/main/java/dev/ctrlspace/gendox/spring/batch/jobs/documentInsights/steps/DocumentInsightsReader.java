@@ -1,8 +1,8 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentQuestionPairDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentQuestionsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.GendoxJpaPageReader;
 import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
@@ -24,7 +24,7 @@ import java.util.UUID;
 
 @Component
 @StepScope
-public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQuestionPairDTO> {
+public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQuestionsDTO> {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentInsightsReader.class);
     private final TaskService taskService;
@@ -83,10 +83,13 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQues
 
 
     @Override
-    protected Page<TaskDocumentQuestionPairDTO> getPageFromRepository(Pageable pageable) throws GendoxException {
-        logger.trace("Is virtual thread? {}", Thread.currentThread().isVirtual());
-        Page<TaskDocumentQuestionPairDTO> dtosPage = taskService.getDocumentQuestionPairs(criteria, pageable);
-        return dtosPage;
+    protected Page<TaskDocumentQuestionsDTO> getPageFromRepository(Pageable pageable) throws GendoxException {
+
+        Page<TaskDocumentQuestionsDTO> documentsPage = taskService.getDocumentsGroupedWithQuestions(criteria, pageable);
+
+        // TODO decide if we want to group the results per document
+
+        return documentsPage;
     }
 
     @Override

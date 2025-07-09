@@ -4,41 +4,69 @@ import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QTaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
+
+import java.util.List;
 import java.util.UUID;
 
 public class TaskNodePredicates {
     private static final QTaskNode qTaskNode = QTaskNode.taskNode;
 
     public static Predicate build(TaskNodeCriteria criteria) {
-        Predicate documentPredicate = null;
-        Predicate questionPredicate = null;
+        return ExpressionUtils.allOf(
+                taskIdEq(criteria.getTaskId()),
+                nodeIds(criteria.getNodeIds()),
+                nodeTypes(criteria.getNodeTypeNames())
 
-        // Check if documentNodeIds is provided
-        if (criteria.getDocumentNodeIds() != null && !criteria.getDocumentNodeIds().isEmpty()) {
-            documentPredicate = ExpressionUtils.allOf(
-                    taskIdEq(criteria.getTaskId()),
-                    qTaskNode.nodeType.name.eq("DOCUMENT"),
-                    qTaskNode.id.in(criteria.getDocumentNodeIds())
-            );
-        }
+        );
+    }
 
-        // Check if questionNodeIds is provided
-        if (criteria.getQuestionNodeIds() != null && !criteria.getQuestionNodeIds().isEmpty()) {
-            questionPredicate = ExpressionUtils.allOf(
-                    taskIdEq(criteria.getTaskId()),
-                    qTaskNode.nodeType.name.eq("QUESTION"),
-                    qTaskNode.id.in(criteria.getQuestionNodeIds())
-            );
-        }
+    public static Predicate buildAnyNodeType(TaskNodeCriteria criteria) {
+        return ExpressionUtils.anyOf(
+                documentNodes(criteria.getTaskId(), criteria.getDocumentNodeIds()),
+                questionNodes(criteria.getTaskId(), criteria.getQuestionNodeIds())
+        );
+    }
 
-        // Combine predicates
-        if (documentPredicate != null && questionPredicate != null) {
-            return ExpressionUtils.anyOf(documentPredicate, questionPredicate);
-        } else if (documentPredicate != null) {
-            return documentPredicate;
-        } else {
-            return questionPredicate;  // if only questionPredicate is present
+
+
+
+    /* ---------- private helpers -------------------------------------------------------------- */
+
+    private static Predicate documentNodes(UUID taskId, List<UUID> documentNodeIds) {
+        if (documentNodeIds == null || documentNodeIds.isEmpty()) {
+            return null;
         }
+        return ExpressionUtils.allOf(
+                taskIdEq(taskId),
+                nodeTypes(List.of("DOCUMENT")),
+                qTaskNode.id.in(documentNodeIds)
+        );
+    }
+
+    private static Predicate questionNodes(UUID taskId, List<UUID> questionNodeIds) {
+        if (questionNodeIds == null || questionNodeIds.isEmpty()) {
+            return null;
+        }
+        return ExpressionUtils.allOf(
+                taskIdEq(taskId),
+                nodeTypes(List.of("QUESTION")),
+                qTaskNode.id.in(questionNodeIds)
+        );
+    }
+
+    private static Predicate nodeIds(List<UUID> nodeIds) {
+        if (nodeIds == null || nodeIds.isEmpty()) {
+            return null;
+        }
+        return qTaskNode.id.in(nodeIds);
+    }
+
+
+    private static Predicate nodeTypes(List<String> nodeTypes) {
+        if (nodeTypes == null || nodeTypes.isEmpty()) {
+            return null;
+        }
+        return qTaskNode.nodeType.name.in(nodeTypes);
     }
 
     private static Predicate taskIdEq(UUID taskId) {

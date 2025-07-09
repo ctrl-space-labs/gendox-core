@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.mistral.aiengine.aiengine;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.MistralModerationResponseConverter;
@@ -15,10 +16,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.MistralConfi
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import org.apache.logging.log4j.util.Strings;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -115,7 +116,7 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
     }
 
     @Override
-    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice) {
+    public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema) {
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
         }

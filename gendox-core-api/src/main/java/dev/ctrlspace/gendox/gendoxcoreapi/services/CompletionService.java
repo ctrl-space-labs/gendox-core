@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.CompletionResponse;
@@ -24,6 +25,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAuthor;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
 import io.micrometer.observation.annotation.Observed;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -98,11 +100,12 @@ public class CompletionService {
     }
 
     private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
-                                                        AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice) throws GendoxException {
+                                                        AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice,
+                                                        @Nullable ObjectNode responseJsonSchema) throws GendoxException {
 
         //choose the correct aiModel adapter
         AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
-        CompletionResponse completionResponse = aiModelApiAdapterService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice);
+        CompletionResponse completionResponse = aiModelApiAdapterService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema);
         return completionResponse;
     }
 
@@ -154,7 +157,7 @@ public class CompletionService {
         }
 
         // Get the actual completion
-        List<Message> completions = self.getCompletion(message, topSectionsForCompletion, project);
+        List<Message> completions = self.getCompletion(message, topSectionsForCompletion, project, null);
 
         // Associate the sections with the completion messages
         List<MessageSection> topCompletionMessageSections;
@@ -211,7 +214,7 @@ public class CompletionService {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, Project project) throws GendoxException {
+    public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, Project project, @Nullable ObjectNode responseJsonSchema) throws GendoxException {
         String question = convertToAiModelTextQuestion(message, nearestSections, project.getId());
 
         ProjectAgent agent = project.getProjectAgent();
@@ -226,6 +229,7 @@ public class CompletionService {
 
 
 
+        // TODO validate count of previous message tokens and drop messages if not enough space
         List<AiModelMessage> previousMessages = messageService.getPreviousMessages(message, 25);
 
         // clone message to avoid changing the original message text in DB
@@ -253,7 +257,8 @@ public class CompletionService {
                 aiModelRequestParams,
                 apiKey,
                 availableTools,
-                "auto");
+                "auto",
+                responseJsonSchema);
 
         //        completion request audits
         Type completionRequestType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
@@ -314,7 +319,8 @@ public class CompletionService {
                         aiModelRequestParams,
                         apiKey,
                         availableTools,
-                        "auto");
+                        "auto",
+                        null);
 
 
                 Message finalCompletionMessage = messageAiMessageConverter.toEntity(finalResponse.getChoices().get(0).getMessage());
@@ -395,7 +401,8 @@ public class CompletionService {
                 aiModelRequestParams,
                 apiKey,
                 advancedSearchTools,
-                "required");
+                "required",
+                null);
 
         return completionResponse.getChoices().get(0).getMessage();
     }

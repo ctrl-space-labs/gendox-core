@@ -1,7 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
@@ -22,7 +22,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ApiRateLimitService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DurationUtils;
 import io.github.bucket4j.Bucket;
+import lombok.SneakyThrows;
 import org.apache.logging.log4j.util.Strings;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +39,7 @@ import java.util.*;
 @Service
 public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
+    private final ObjectMapper objectMapper;
     protected Set<String> supportedApiType = Set.of("OPEN_AI_API");
     protected Logger logger = LoggerFactory.getLogger(OpenAiServiceAdapter.class);
     private AiModelRepository aiModelRepository;
@@ -55,7 +58,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                                 OpenAiEmbeddingResponseConverter openAiEmbeddingResponseConverter,
                                 DurationUtils durationUtils,
                                 OpenAiModerationResponseConverter openAiModerationResponseConverter,
-                                ToolDtoConverter toolDtoConverter) {
+                                ToolDtoConverter toolDtoConverter, ObjectMapper objectMapper) {
         this.aiModelRepository = aiModelRepository;
         this.apiRateLimitService = apiRateLimitService;
         this.openAiEmbeddingResponseConverter = openAiEmbeddingResponseConverter;
@@ -63,6 +66,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         this.durationUtils = durationUtils;
         this.openAiModerationResponseConverter = openAiModerationResponseConverter;
         this.toolDtoConverter = toolDtoConverter;
+        this.objectMapper = objectMapper;
     }
 
     private static final RestTemplate restTemplate = new RestTemplate();
@@ -230,13 +234,15 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
     }
 
+    @SneakyThrows
     @Override
     public CompletionResponse askCompletion(List<AiModelMessage> messages,
                                             String agentRole, AiModel aiModel,
                                             AiModelRequestParams aiModelRequestParams,
                                             String apiKey,
                                             List<AiTools> tools,
-                                            String toolChoice) {
+                                            String toolChoice,
+                                            @Nullable ObjectNode responseJsonSchema) {
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
 
@@ -255,6 +261,15 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
             openAiGptRequestBuilder
                     .toolChoice(toolChoice == null ? "auto" : toolChoice) // Default to "auto" if toolChoice is null
                     .tools(toolsDtos);
+
+        }
+
+        if (responseJsonSchema != null) {
+            openAiGptRequestBuilder
+                    .responseFormat(OpenAiCompletionRequest.ResponseFormat.builder()
+                            .type("json_schema")
+                            .jsonSchema(responseJsonSchema)
+                            .build());
 
         }
 

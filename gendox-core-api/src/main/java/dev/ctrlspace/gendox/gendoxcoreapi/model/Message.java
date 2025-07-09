@@ -20,6 +20,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -85,7 +86,7 @@ public class Message {
     // TODO save this to database, find better name
     @Transient
     @JsonProperty("localContexts")
-    private List<MessageLocalContext> localContexts;
+    private List<MessageLocalContext> localContexts = new ArrayList<>();
 
 
     public UUID getId() {

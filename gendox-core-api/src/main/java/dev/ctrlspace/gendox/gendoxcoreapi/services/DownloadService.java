@@ -13,6 +13,7 @@ import org.docx4j.openpackaging.exceptions.Docx4JException;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.WordprocessingML.BinaryPart;
 import org.docx4j.relationships.Relationship;
+import org.springframework.ai.document.MetadataMode;
 import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -124,10 +125,10 @@ public class DownloadService {
         // Concatenate all pages' content
         StringBuilder allPagesContent = new StringBuilder();
         pages.stream()
-                .filter(page -> page.getContent().length() > 10)
+                .filter(page -> page.getFormattedContent(MetadataMode.NONE).length() > 10)
                 .forEach(page -> allPagesContent
                         .append(String.format(pageSeparatorTemplate, page.getMetadata().get("page_number")))
-                        .append(page.getContent()));
+                        .append(page.getFormattedContent(MetadataMode.NONE)));
 
         return allPagesContent.toString().replace("\u0000", "");
     }
