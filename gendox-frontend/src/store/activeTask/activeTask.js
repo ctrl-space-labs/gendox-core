@@ -98,6 +98,19 @@ export const fetchTaskNodesByTaskId = createAsyncThunk(
   }
 )
 
+export const fetchTaskNodesByCriteria = createAsyncThunk(
+  'task/fetchTaskNodesByCriteria',
+  async ({ organizationId, projectId, taskId, criteria, token }, thunkAPI) => {
+    try {
+      const response = await taskService.getTaskNodesByCriteria(organizationId, projectId, taskId, criteria, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
 // Similarly for TaskEdge
 export const createTaskEdge = createAsyncThunk(
   'task/createTaskEdge',
@@ -127,7 +140,7 @@ export const fetchTaskEdgeById = createAsyncThunk(
 
 export const fetchTaskEdgesByCriteria = createAsyncThunk(
   'task/fetchTaskEdgesByCriteria',
-  async ({ organizationId, projectId, criteria, token, page = 0, size = 20 }, thunkAPI) => {
+  async ({ organizationId, projectId, criteria, token }, thunkAPI) => {
     try {
       // We can add pagination params in criteria if needed or ignore here
       const response = await taskService.getTaskEdgesByCriteria(organizationId, projectId, criteria, token)
@@ -185,8 +198,11 @@ const initialState = {
   taskNodes: {},
   taskNodesList: [],
   taskEdgesList: [],
+  taskNodesDocQuestionList: [],
+  taskNodesAnswerList: [],
   taskEdges: {},
   isLoading: false,
+  isLoadingAnswers: false, // specific loading state for answers
   error: null
 }
 
@@ -301,6 +317,36 @@ const taskSlice = createSlice({
       })
       .addCase(fetchTaskNodesByTaskId.rejected, (state, action) => {
         state.isLoading = false
+        state.error = action.payload
+      })
+
+      // Fetch TaskNodes by Criteria
+      .addCase(fetchTaskNodesByCriteria.pending, (state, action) => {
+        const { criteria } = action.meta.arg
+        if (criteria.nodeTypeNames.includes('ANSWER')) {
+          state.isLoadingAnswers = true
+        } else {
+          state.isLoading = true
+        }
+        state.error = null
+      })
+      .addCase(fetchTaskNodesByCriteria.fulfilled, (state, action) => {
+        const { criteria } = action.meta.arg
+        if (criteria.nodeTypeNames.includes('ANSWER')) {
+          state.isLoadingAnswers = false
+          state.taskNodesAnswerList = action.payload
+        } else {
+          state.isLoading = false
+          state.taskNodesDocQuestionList = action.payload
+        }
+      })
+      .addCase(fetchTaskNodesByCriteria.rejected, (state, action) => {
+        const { criteria } = action.meta.arg
+        if (criteria.nodeTypeNames.includes('ANSWER')) {
+          state.isLoadingAnswers = false
+        } else {
+          state.isLoading = false
+        }
         state.error = action.payload
       })
 

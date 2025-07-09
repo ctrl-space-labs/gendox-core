@@ -172,14 +172,17 @@ export default {
   getTaskNodesByTaskId: (organizationId, projectId, taskId, page = 0, size = 20) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes?page=${page}&size=${size}`,
 
+  getTaskNodesByCriteria: (organizationId, projectId, taskId, page = 0, size = 20) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/search?page=${page}&size=${size}`,
+
   createTaskEdge: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-edges`,
 
   getTaskEdgeById: (organizationId, projectId, id) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-edges?id=${id}`,
 
-  getTaskEdgesByCriteria: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/task-edges/search`,
+  getTaskEdgesByCriteria: (organizationId, projectId, page = 0, size = 20) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/task-edges/search?page=${page}&size=${size}`,
 
   executeTaskByType: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/execute`,

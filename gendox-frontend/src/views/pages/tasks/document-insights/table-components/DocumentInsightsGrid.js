@@ -3,19 +3,33 @@ import { DataGrid } from '@mui/x-data-grid'
 import { Box, Button, IconButton, Tooltip } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
-import { buildAnswerMap } from 'src/utils/tasks/buildAnswerMap'
+import CircularProgress from '@mui/material/CircularProgress'
+import Skeleton from '@mui/material/Skeleton'
 
 const DocumentInsightsGrid = ({
   documents,
   questions,
+  answers,
   onAnswerChange,
   openUploader,
   onDeleteQuestionOrDocumentNode,
   onGenerate,
-  taskEdgesList,
+  isLoadingAnswers,
   isLoading
 }) => {
-  const answerMap = useMemo(() => buildAnswerMap(taskEdgesList?.content || []), [taskEdgesList])
+  const loadingTextAnimation = {
+    '@keyframes pulseOpacity': {
+      '0%, 100%': { opacity: 1 },
+      '50%': { opacity: 0.3 }
+    },
+    pulseEffect: {
+      animation: 'pulseOpacity 1.5s ease-in-out infinite',
+      color: '#999',
+      fontStyle: 'italic',
+      userSelect: 'none',
+      pointerEvents: 'none'
+    }
+  }
 
   const columns = useMemo(() => {
     return [
@@ -26,64 +40,66 @@ const DocumentInsightsGrid = ({
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
-        renderCell: params => (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              width: '100%',
-              cursor: !params.row.documentId ? 'pointer' : 'default'
-            }}
-            onClick={() => !params.row.documentId && openUploader()}
-            title={params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
-          >
-            {params.row.documentId ? (
-              <Tooltip title='Delete Document'>
-                <IconButton
-                  color='error'
-                  size='small'
-                  onClick={e => {
-                    e.stopPropagation() // prevent row click
-                    onDeleteQuestionOrDocumentNode(params.row.id) // use correct handler
-                  }}
-                  aria-label='delete document'
-                >
-                  <DeleteOutlineIcon fontSize='small' />
-                </IconButton>
-              </Tooltip>
-            ) : (
-              <Tooltip title='Select Document'>
-                <IconButton
-                  color='primary'
-                  size='small'
-                  onClick={e => {
-                    e.stopPropagation() // prevent row click
-                    openUploader()
-                  }}
-                  aria-label='select document'
-                >
-                  <UploadFileIcon fontSize='small' />
-                </IconButton>
-              </Tooltip>
-            )}
-
+        renderCell: params => {
+          return (
             <Box
-              component='span'
               sx={{
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                flexGrow: 1,
-                color: params.row.documentId ? 'text.primary' : 'primary.main',
-                fontWeight: params.row.documentId ? 'normal' : '600',
-                userSelect: 'none'
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                width: '100%',
+                cursor: !params.row.documentId ? 'pointer' : 'default'
               }}
+              onClick={() => !params.row.documentId && openUploader()}
+              title={params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
             >
-              {params.value || (params.row.documentId ? 'Unknown Documen2t' : 'Select Document')}
+              {params.row.documentId ? (
+                <Tooltip title='Delete Document'>
+                  <IconButton
+                    color='error'
+                    size='small'
+                    onClick={e => {
+                      e.stopPropagation() // prevent row click
+                      onDeleteQuestionOrDocumentNode(params.row.id) // use correct handler
+                    }}
+                    aria-label='delete document'
+                  >
+                    <DeleteOutlineIcon fontSize='small' />
+                  </IconButton>
+                </Tooltip>
+              ) : (
+                <Tooltip title='Select Document'>
+                  <IconButton
+                    color='primary'
+                    size='small'
+                    onClick={e => {
+                      e.stopPropagation() // prevent row click
+                      openUploader()
+                    }}
+                    aria-label='select document'
+                  >
+                    <UploadFileIcon fontSize='small' />
+                  </IconButton>
+                </Tooltip>
+              )}
+
+              <Box
+                component='span'
+                sx={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  flexGrow: 1,
+                  color: params.row.documentId ? 'text.primary' : 'primary.main',
+                  fontWeight: params.row.documentId ? 'normal' : '600',
+                  userSelect: 'none'
+                }}
+              >
+                {params.value || (params.row.documentId ? 'Unknown Documen2t' : 'Select Document')}
+              </Box>
             </Box>
-          </Box>
-        )
+          )
+        }
       },
       {
         field: 'generate',
@@ -155,30 +171,44 @@ const DocumentInsightsGrid = ({
             </Tooltip>
           </Box>
         ),
-        renderCell: params => (
-          <Box sx={{ width: '100%' }}>
-            <input
-              type='text'
-              value={params.value || ''}
-              placeholder='Click generate'
-              onChange={e => {
-                params.api.setEditCellValue({ id: params.id, field: params.field, value: e.target.value })
-              }}
-              style={{
-                width: '100%',
-                border: 'none',
-                outline: 'none',
-                padding: '4px 8px',
-                fontSize: '0.875rem',
-                backgroundColor: 'transparent',
-                color: 'inherit'
-              }}
-            />
-          </Box>
-        )
+        renderCell: params => {
+          if (isLoadingAnswers) {
+            return (
+              <Box
+                sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
+              >
+                <span style={loadingTextAnimation.pulseEffect}>Loading…</span>
+              </Box>
+            )
+          }
+          return (
+            <Box sx={{ width: '100%' }}>
+              <input
+                type='text'
+                value={params.value || ''}
+                placeholder='Click generate'
+                onChange={e => {
+                  params.api.setEditCellValue({ id: params.id, field: params.field, value: e.target.value })
+                }}
+                style={{
+                  width: '100%',
+                  border: 'none',
+                  outline: 'none',
+                  padding: '4px 8px',
+                  fontSize: '0.875rem',
+                  backgroundColor: 'transparent',
+                  color: 'inherit',
+                  pointerEvents: isLoadingAnswers || isLoading ? 'none' : 'auto',
+                  opacity: isLoadingAnswers || isLoading ? 0.5 : 1,
+                  transition: 'opacity 0.3s ease'
+                }}
+              />
+            </Box>
+          )
+        }
       }))
     ]
-  }, [questions, onDeleteQuestionOrDocumentNode, openUploader, onGenerate])
+  }, [questions, onDeleteQuestionOrDocumentNode, openUploader, onGenerate, isLoadingAnswers, isLoading])
 
   const rows = useMemo(() => {
     return documents.map(doc => {
@@ -187,13 +217,15 @@ const DocumentInsightsGrid = ({
         name: doc.name || '',
         documentId: doc.documentId
       }
+
       questions.forEach(q => {
-        const key = `${doc.id}-${q.id}`
-        row[`q_${q.id}`] = answerMap.get(key) || ''
+        const answerObj = answers.find(a => a.documentNodeId === doc.id && a.questionNodeId === q.id)
+        row[`q_${q.id}`] = answerObj ? answerObj.message : ''
       })
+
       return row
     })
-  }, [documents, questions, answerMap])
+  }, [documents, questions, answers])
 
   const handleCellEditCommit = params => {
     const questionId = params.field.replace('q_', '')
@@ -216,13 +248,31 @@ const DocumentInsightsGrid = ({
   return (
     <Box
       sx={{
+        position: 'relative',
         height: 650,
         width: '100%',
         overflowX: 'auto',
-        filter: isLoading ? 'blur(6px)' : 'none', // Apply blur to SectionCard
-        transition: 'filter 0.3s ease'
+        filter: isLoading ? 'brightness(0.85)' : 'none',
+        transition: 'filter 0.3s ease',
+        borderRadius: 1
       }}
     >
+      {isLoading && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 10,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderRadius: 1
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      )}
+
       <DataGrid
         rows={rows}
         columns={columns}

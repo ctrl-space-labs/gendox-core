@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskEdgeDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeDTO;
@@ -109,6 +110,18 @@ public class TaskController {
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PostMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/task-nodes/search", produces = {"application/json"})
+    @ResponseStatus(value = HttpStatus.OK)
+    public Page<TaskNode> getTaskNodesByCriteria(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID taskId,
+            @RequestBody TaskNodeCriteria criteria,
+            Pageable pageable) {
+        return taskService.getTaskNodesByCriteria(criteria, pageable);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @PostMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-edges")
     @ResponseStatus(value = HttpStatus.CREATED)
     public TaskEdge createTaskEdge(@PathVariable UUID organizationId,
@@ -158,7 +171,6 @@ public class TaskController {
         taskService.deleteTask(taskId);
         logger.info("Request to delete task: taskId={}", taskId);
     }
-
 
 
 }

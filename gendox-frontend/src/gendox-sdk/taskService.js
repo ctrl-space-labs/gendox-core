@@ -121,6 +121,25 @@ const getTaskNodesByTaskId = async (organizationId, projectId, taskId, token, pa
 }
 
 /**
+ * Get Task Nodes by Criteria
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param token
+ * @param page
+ * @param size
+ * @returns {Promise<axios.AxiosResponse<TaskNode[]>>}
+ */
+const getTaskNodesByCriteria = async (organizationId, projectId, taskId, criteria, token, page = 0, size = 20) => {
+  return axios.post(apiRequests.getTaskNodesByCriteria(organizationId, projectId, taskId, page, size), criteria, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
  * Create Task Edge
  * @param organizationId
  * @param projectId
@@ -229,6 +248,7 @@ export default {
   getTasks,
   getTaskById,
   getTaskNodesByTaskId,
+  getTaskNodesByCriteria,
   createTaskNode,
   updateTaskNode,
   getTaskNodeById,

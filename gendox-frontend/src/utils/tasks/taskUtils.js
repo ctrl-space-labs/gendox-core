@@ -40,23 +40,3 @@ export const saveQuestion = async ({
   }
 }
 
-export const refreshAnswers = async ({
-  dispatch,
-  organizationId,
-  projectId,
-  documents,
-  questions,
-  token
-}) => {
-  const toNodeIds = [...documents.map(d => d.id), ...questions.map(q => q.id)]
-  if (toNodeIds.length > 0) {
-    await dispatch(
-      fetchTaskEdgesByCriteria({
-        organizationId,
-        projectId,
-        criteria: { relationType: 'ANSWERS', toNodeIds },
-        token
-      })
-    )
-  }
-}

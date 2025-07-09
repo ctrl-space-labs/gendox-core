@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { Box, Modal } from '@mui/material'
@@ -8,27 +8,27 @@ import DocumentsDialog from './table-dialogs/DocumentsDialog'
 import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
 import { useQuestionDialog } from 'src/utils/tasks/useQuestionDialog'
-import { saveQuestion, refreshAnswers } from 'src/utils/tasks/taskUtils'
+import { saveQuestion } from 'src/utils/tasks/taskUtils'
 import {
   fetchTaskNodesByTaskId,
-  fetchTaskEdgesByCriteria,
   executeTaskByType,
-  deleteTaskNode
+  deleteTaskNode,
+  fetchTaskNodesByCriteria
 } from 'src/store/activeTask/activeTask'
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
 import HeaderSection from './table-components/HeaderSection'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
+
 
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
   const dispatch = useDispatch()
   const token = window.localStorage.getItem('accessToken')
   const { organizationId, taskId, projectId } = router.query
-
-  const { taskNodesList, taskEdgesList, isLoading } = useSelector(state => state.activeTask)
-
+  const { taskNodesDocQuestionList, taskNodesAnswerList, isLoading, isLoadingAnswers } = useSelector(state => state.activeTask)
   const [documents, setDocuments] = useState([])
   const [questions, setQuestions] = useState([])
+  const [answers, setAnswers] = useState([])
   const [showUploader, setShowUploader] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteNodeId, setDeleteNodeId] = useState(null)
@@ -38,58 +38,96 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
   useEffect(() => {
-    if (organizationId && projectId && taskId && token) {
-      dispatch(fetchTaskNodesByTaskId({ organizationId, projectId, taskId, token }))
-    }
+    if (!(organizationId && projectId && taskId && token)) return
+
+    dispatch(
+      fetchTaskNodesByCriteria({
+        organizationId,
+        projectId,
+        taskId,
+        criteria: { taskId, nodeTypeNames: ['DOCUMENT', 'QUESTION'] },
+        token
+      })
+    )
+      .unwrap()
+      .catch(error => {
+        toast.error('Failed to load documents and questions')
+        console.error(error)
+      })
   }, [organizationId, projectId, taskId, token, dispatch])
 
+  
+
   useEffect(() => {
-    if (taskNodesList?.content?.length) {
-      const documentNodes = taskNodesList.content.filter(node => node.nodeType.name === 'DOCUMENT')
-      const questionNodes = taskNodesList.content.filter(node => node.nodeType.name === 'QUESTION')
+    if (!taskNodesDocQuestionList?.content) return
 
-      setDocuments(
-        documentNodes.map(node => ({
-          id: node.id,
-          documentId: node.document?.id,
-          name: node.document?.title || 'Unknown Document',
-          answers: []
-        }))
-      )
+    const documentNodes = taskNodesDocQuestionList.content.filter(node => node.nodeType.name === 'DOCUMENT')
+    const questionNodes = taskNodesDocQuestionList.content.filter(node => node.nodeType.name === 'QUESTION')
 
-      setQuestions(
-        questionNodes.map(node => ({
-          id: node.id,
-          text: node.nodeValue?.message || ''
-        }))
-      )
-      // Prepare toNodeIds = documentNodeIds + questionNodeIds
-      const toNodeIds = [...documentNodes.map(node => node.id), ...questionNodes.map(node => node.id)]
-      if (toNodeIds.length > 0) {
-        // Dispatch to fetch TaskEdges with relationType "ANSWERS" and these toNodeIds
-        dispatch(
-          fetchTaskEdgesByCriteria({
-            organizationId,
-            projectId,
-            criteria: {
-              relationType: 'ANSWERS',
-              toNodeIds
-            },
-            token
-          })
-        )
-      }
-    } else {
-      setDocuments([])
-      setQuestions([])
+    setDocuments(
+      documentNodes.map(node => ({
+        id: node.id,
+        documentId: node.document?.id,
+        name: node.document?.title || 'Unknown Document',
+        answers: []
+      }))
+    )
+    setQuestions(
+      questionNodes.map(node => ({
+        id: node.id,
+        text: node.nodeValue?.message || ''
+      }))
+    )
+  }, [taskNodesDocQuestionList])
+
+ 
+
+  useEffect(() => {
+    if (!documents.length || !questions.length) return
+    if (!(organizationId && projectId && taskId && token)) return
+
+    dispatch(
+      fetchTaskNodesByCriteria({
+        organizationId,
+        projectId,
+        taskId,
+        criteria: { taskId, nodeTypeNames: ['ANSWER'] },
+        token
+      })
+    )
+      .unwrap()
+      .catch(error => {
+        toast.error('Failed to load answers')
+        console.error(error)
+      })
+  }, [documents, questions, organizationId, projectId, taskId, token, dispatch])
+
+  useEffect(() => {
+    if (!taskNodesAnswerList?.content) {
+      setAnswers([])
+      return
     }
-  }, [taskNodesList])
+
+    const answerNodes = taskNodesAnswerList.content
+    setAnswers(
+      answerNodes.map(node => ({
+        id: node.id,
+        documentNodeId: node.nodeValue?.documentId || '',
+        questionNodeId: node.nodeValue?.questionId || '',
+        message: node.nodeValue?.message || '',
+        answerValue: node.nodeValue?.answerValue || '',
+        answerFlagEnum: node.nodeValue?.answerFlagEnum || ''
+      }))
+    )
+  }, [taskNodesAnswerList])
+
+  
 
   const handleAddDocument = () => {
     setDocuments(prev => [
       ...prev,
       {
-        id: Date.now(),
+        id: '',
         name: '',
         answers: questions.map(() => ''),
         documentId: null
@@ -99,7 +137,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
 
   const openUploader = () => setShowUploader(true)
 
-  const handleAddOrEditQuestionConfirm = () => {
+  const handleAddQuestion = () => {
     saveQuestion({
       dispatch,
       organizationId,
@@ -128,9 +166,15 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       toast.success(`Started generation for ${docIds.length === 1 ? 'document ' + docs.name : 'all documents'}`)
 
       await pollJobStatus(jobExecutionId)
-
-      await refreshAnswers({ dispatch, organizationId, projectId, documents, questions, token })
-
+      dispatch(
+        fetchTaskNodesByCriteria({
+          organizationId,
+          projectId,
+          taskId,
+          criteria: { taskId, nodeTypeNames: ['ANSWER'] },
+          token
+        })
+      )
       toast.success(`Generation completed for ${docIds.length === 1 ? 'document ' + docs.name : 'all documents'}`)
     } catch (error) {
       console.error('Failed to start generation:', error)
@@ -156,17 +200,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
 
       // Refetch updated data
       dispatch(fetchTaskNodesByTaskId({ organizationId, projectId, taskId, token }))
-      dispatch(
-        fetchTaskEdgesByCriteria({
-          organizationId,
-          projectId,
-          criteria: {
-            relationType: 'ANSWERS',
-            toNodeIds: [...documents.map(d => d.id), ...questions.map(q => q.id)]
-          },
-          token
-        })
-      )
     } catch (error) {
       toast.error('Failed to delete the node.')
       console.error('Delete node error:', error)
@@ -186,12 +219,14 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           onAddQuestion={openAddDialog}
           onGenerateAll={() => handleGenerate(documents)}
           disableGenerateAll={documents.length === 0 || questions.length === 0}
+          isLoading={isLoading}
         />
 
         <Box sx={{ minWidth: 800 }}>
           <DocumentInsightsGrid
             documents={documents}
             questions={questions}
+            answers={answers}
             onAnswerChange={(docIdx, qIdx, value) => {
               setDocuments(prev => {
                 const updated = [...prev]
@@ -200,10 +235,10 @@ const DocumentInsightsTable = ({ selectedTask }) => {
               })
             }}
             openUploader={openUploader}
-            taskEdgesList={taskEdgesList}
             onGenerate={handleGenerate}
             onDeleteQuestionOrDocumentNode={confirmDeleteQuestionOrDocumentNode}
-            isLoading={isLoading}
+            isLoadingAnswers={isLoadingAnswers}
+            isLoading={isLoading} 
           />
         </Box>
       </Paper>
@@ -231,7 +266,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         onClose={closeDialog}
         questionText={questionText}
         setQuestionText={setQuestionText}
-        onConfirm={handleAddOrEditQuestionConfirm}
+        onConfirm={handleAddQuestion}
         editing={!!editingQuestion}
       />
       <DeleteConfirmDialog

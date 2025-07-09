@@ -41,7 +41,7 @@ public class DocumentInsightsWriter implements ItemWriter<TaskAnswerBatchDTO> {
     public void write(Chunk<? extends TaskAnswerBatchDTO> chunk) throws Exception, GendoxException {
 
 
-        // TODO Find Answer Ids to be deleted in a single query
+//         TODO Find Answer Ids to be deleted in a single query
         List<TaskNode> answersToDelete = new ArrayList<>();
         for (TaskAnswerBatchDTO documentGroupWithQuestions : chunk.getItems()) {
             for (AnswerCreationDTO answer : documentGroupWithQuestions.getNewAnswers()) {
@@ -58,6 +58,16 @@ public class DocumentInsightsWriter implements ItemWriter<TaskAnswerBatchDTO> {
         List<UUID> answerIdsToDelete = answersToDelete.stream()
                 .map(TaskNode::getId)
                 .toList();
+
+
+//        List<UUID> answerIdsToDelete = chunk.getItems().stream()
+//                .flatMap(answer -> answer.getAnswersToDelete().stream())
+//                .map(TaskNode::getId)
+//                .toList();
+
+
+
+
 
         //Delete existing answer edges and nodes
         if (!answerIdsToDelete.isEmpty()) {

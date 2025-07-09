@@ -4,7 +4,7 @@ import taskService from 'src/gendox-sdk/taskService'
 
 export const useJobStatusPoller = ({ organizationId, projectId, token }) => {
   const pollJobStatus = useCallback(
-    async (jobExecutionId, interval = 3000, timeout = 180000) => {
+    async (jobExecutionId, interval = 3000, timeout = 800000) => {
       const startTime = Date.now()
 
       while (true) {

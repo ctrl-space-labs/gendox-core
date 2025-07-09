@@ -1,19 +1,11 @@
 import React from 'react'
 import { Box, Typography, Stack, Button, Tooltip, Divider } from '@mui/material'
-import AddIcon from '@mui/icons-material/Add'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import DescriptionIcon from '@mui/icons-material/Description'
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 
-const HeaderSection = ({
-  title,
-  description,
-  onAddDocument,
-  onAddQuestion,
-  onGenerateAll,
-  disableGenerateAll
-}) => {
+const HeaderSection = ({ title, description, onAddDocument, onAddQuestion, onGenerateAll, disableGenerateAll, isLoading }) => {
   return (
     <Box sx={{ mb: 4, px: 2 }}>
       {/* Title + Description stacked vertically */}
@@ -46,21 +38,23 @@ const HeaderSection = ({
         mb={3}
       >
         <Stack direction='row' spacing={2} flexWrap='wrap'>
-          <Tooltip title='Add a new document to your task'>
+          <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Add a new document to your task'}>
             <Button
               variant='outlined'
               startIcon={<DocumentScannerIcon />}
               onClick={onAddDocument}
+              disabled={isLoading}
               size='medium'
             >
               Add Document
             </Button>
           </Tooltip>
-          <Tooltip title='Add a new question to the list'>
+          <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Add a new question to the list'}>
             <Button
               variant='outlined'
               startIcon={<DescriptionIcon />}
               onClick={onAddQuestion}
+              disabled={isLoading}
               size='medium'
             >
               Add Question
@@ -69,7 +63,16 @@ const HeaderSection = ({
         </Stack>
 
         {/* Generate ALL button */}
-        <Tooltip title={disableGenerateAll ? 'Add documents and questions first' : 'Generate answers for all documents'}>
+
+        <Tooltip
+          title={
+            disableGenerateAll
+              ? 'Add documents and questions first'
+              : isLoading
+              ? 'Loading answers...'
+              : 'Generate answers for all documents'
+          }
+        >
           <span>
             <Button
               variant='contained'
@@ -77,7 +80,7 @@ const HeaderSection = ({
               size='large'
               startIcon={<RocketLaunchIcon />}
               onClick={onGenerateAll}
-              disabled={disableGenerateAll}
+              disabled={disableGenerateAll || isLoading}
               sx={{
                 fontWeight: 700,
                 textTransform: 'uppercase',

@@ -19,4 +19,5 @@ public class TaskNodeCriteria {
     private List<String> nodeTypeNames;
     private List<UUID> documentNodeIds;  // for DOCUMENT type nodes
     private List<UUID> questionNodeIds;  // for QUESTION type nodes
+    private List<UUID> answerNodeIds;    // for ANSWER type nodes
 }

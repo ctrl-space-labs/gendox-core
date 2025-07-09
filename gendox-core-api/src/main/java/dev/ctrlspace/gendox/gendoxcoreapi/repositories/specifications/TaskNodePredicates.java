@@ -4,6 +4,7 @@ import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QTaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,7 +24,8 @@ public class TaskNodePredicates {
     public static Predicate buildAnyNodeType(TaskNodeCriteria criteria) {
         return ExpressionUtils.anyOf(
                 documentNodes(criteria.getTaskId(), criteria.getDocumentNodeIds()),
-                questionNodes(criteria.getTaskId(), criteria.getQuestionNodeIds())
+                questionNodes(criteria.getTaskId(), criteria.getQuestionNodeIds()),
+                answerNodes(criteria.getTaskId(), criteria.getAnswerNodeIds())
         );
     }
 
@@ -38,7 +40,7 @@ public class TaskNodePredicates {
         }
         return ExpressionUtils.allOf(
                 taskIdEq(taskId),
-                nodeTypes(List.of("DOCUMENT")),
+                nodeTypes(List.of(TaskNodeTypeConstants.DOCUMENT)),
                 qTaskNode.id.in(documentNodeIds)
         );
     }
@@ -49,10 +51,23 @@ public class TaskNodePredicates {
         }
         return ExpressionUtils.allOf(
                 taskIdEq(taskId),
-                nodeTypes(List.of("QUESTION")),
+                nodeTypes(List.of(TaskNodeTypeConstants.QUESTION)),
                 qTaskNode.id.in(questionNodeIds)
         );
     }
+
+    public static Predicate answerNodes(UUID taskId, List<UUID> answerNodeIds) {
+        if ((answerNodeIds == null || answerNodeIds.isEmpty()) && taskId == null) {
+            return null;
+        }
+
+        return ExpressionUtils.allOf(
+                taskIdEq(taskId),
+                nodeTypes(List.of(TaskNodeTypeConstants.ANSWER)),
+                qTaskNode.id.in(answerNodeIds)
+        );
+    }
+
 
     private static Predicate nodeIds(List<UUID> nodeIds) {
         if (nodeIds == null || nodeIds.isEmpty()) {
