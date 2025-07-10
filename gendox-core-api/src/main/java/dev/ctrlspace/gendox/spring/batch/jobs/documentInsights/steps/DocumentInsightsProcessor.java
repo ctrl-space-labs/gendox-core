@@ -150,7 +150,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 GroupedQuestionAnswers answers = null;
                 try {
                     response = completionService.getCompletion(message, new ArrayList<>(), project, responseJsonSchema);
-                    answers = objectMapper.readValue(response.get(0).getValue(), GroupedQuestionAnswers.class);
+                    answers = objectMapper.readValue(response.getLast().getValue(), GroupedQuestionAnswers.class);
                 } catch (GendoxException e) {
                     logger.warn("Error getting completion for message: {}, error: {}", message.getId(), e.getMessage());
                     logger.warn("Skipping processing documentId: {} for the questions: {}.",
@@ -158,7 +158,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                             questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
                     continue;
 
-                } catch (JsonProcessingException e) {
+                } catch (JsonProcessingException | IllegalArgumentException e) {
                     logger.warn("Error converting Json completion to GroupedQuestionAnswers, message: {}, error: {}", message.getId(), e.getMessage());
                     logger.warn("Response Completion messages are: {}", response);
                     logger.warn("Skipping processing documentId: {} fpr the questions: {}.",

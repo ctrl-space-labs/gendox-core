@@ -222,9 +222,11 @@ public class CompletionService {
 
         // check moderation
         String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(agent, "MODERATION_MODEL");
-        ModerationResponse moderationResponse = trainingService.getModeration(question, moderationApiKey, agent.getModerationModel());
-        if (moderationResponse.getResults().get(0).isFlagged()) {
-            throw new GendoxException("MODERATION_CHECK_FAILED", "The question did not pass moderation.", HttpStatus.NOT_ACCEPTABLE);
+        if (agent.getModerationCheck()) {
+            ModerationResponse moderationResponse = trainingService.getModeration(question, moderationApiKey, agent.getModerationModel());
+            if (moderationResponse.getResults().get(0).isFlagged()) {
+                throw new GendoxException("MODERATION_CHECK_FAILED", "The question did not pass moderation.", HttpStatus.NOT_ACCEPTABLE);
+            }
         }
 
 
@@ -320,7 +322,7 @@ public class CompletionService {
                         apiKey,
                         availableTools,
                         "auto",
-                        null);
+                        responseJsonSchema);
 
 
                 Message finalCompletionMessage = messageAiMessageConverter.toEntity(finalResponse.getChoices().get(0).getMessage());
