@@ -13,8 +13,8 @@ import java.util.UUID;
 @Builder(toBuilder = true)
 public class TaskNodeValueDTO {
     private String organizationId;
-    private UUID questionId;
-    private UUID documentId;
+    private UUID nodeQuestionId;
+    private UUID nodeDocumentId;
     private String message;
     private String answerValue;
     private AnswerFlag answerFlagEnum;

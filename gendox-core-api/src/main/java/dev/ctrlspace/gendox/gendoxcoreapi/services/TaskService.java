@@ -291,7 +291,7 @@ public class TaskService {
                 .map(docNode -> TaskDocumentQuestionsDTO.builder()
                         .taskId(criteria.getTaskId())
                         .documentNode(docNode)
-                        .questionNodes(questions.getContent())
+                        .questionNodes(new ArrayList<>(questions.getContent()))
                         .build())
                 .collect(Collectors.toList());
 

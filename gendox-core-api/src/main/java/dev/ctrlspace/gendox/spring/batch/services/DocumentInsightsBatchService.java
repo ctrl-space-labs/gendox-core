@@ -70,6 +70,7 @@ public class DocumentInsightsBatchService {
 
         // Add a run.id param to force job rerun if needed
         paramsBuilder.addLong("run.id", System.currentTimeMillis());
+        paramsBuilder.addString("reGenerateExistingAnswers", criteria.getReGenerateExistingAnswers() != null ? criteria.getReGenerateExistingAnswers().toString() : "false");
 
         // Add jobName param for logging/debug
         paramsBuilder.addString("jobName", documentInsightsJobName);

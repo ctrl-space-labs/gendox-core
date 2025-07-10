@@ -108,7 +108,7 @@ public class DocumentSectionService {
         return documentInstanceSectionRepository.findByProjectId(projectId);
     }
 
-    public List<DocumentInstanceSection> getSectionsByDocument(UUID documentInstanceId) throws GendoxException {
+    public List<DocumentInstanceSection> getSectionsByDocument(UUID documentInstanceId) {
         return documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
     }
 

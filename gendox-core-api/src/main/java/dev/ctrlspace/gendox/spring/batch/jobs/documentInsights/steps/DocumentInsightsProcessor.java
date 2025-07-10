@@ -1,12 +1,14 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
@@ -14,11 +16,11 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.util.json.schema.JsonSchemaGenerator;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 
@@ -32,58 +34,71 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentInsightsProcessor.class);
 
-    // Sample messages from ChatGPT for demo
-    private final Random random = new Random();
-    private static final String[] SAMPLE_MESSAGES = {
-            "This is a response from ChatGPT.",
-            "Here's a helpful answer for your question.",
-            "Processing complete, here is the generated insight.",
-            "AI-generated response for the task node.",
-            "Answer created by DocumentInsightsProcessor."
-    };
+    @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
+    private Boolean reGenerateExistingAnswers;
+
+
     private final CompletionService completionService;
     private final ProjectService projectService;
     private final MessageService messageService;
+    private final DocumentSectionService documentSectionService;
 
     private TypeService typeService;
     private TaskService taskService;
     private ObjectMapper objectMapper;
-    private DocumentService documentService;
     private EncodingRegistry encodingRegistry;
+    private Project project;
 
     @Autowired
     public DocumentInsightsProcessor(TypeService typeService,
                                      TaskService taskService,
                                      ObjectMapper objectMapper,
-                                     DocumentService documentService,
                                      EncodingRegistry encodingRegistry,
                                      CompletionService completionService,
-                                     ProjectService projectService, MessageService messageService) {
+                                     ProjectService projectService,
+                                     MessageService messageService,
+                                     DocumentSectionService documentSectionService) {
         this.typeService = typeService;
         this.taskService = taskService;
         this.objectMapper = objectMapper;
-        this.documentService = documentService;
         this.encodingRegistry = encodingRegistry;
         this.completionService = completionService;
         this.projectService = projectService;
         this.messageService = messageService;
+        this.documentSectionService = documentSectionService;
     }
 
     @Override
     public TaskAnswerBatchDTO process(TaskDocumentQuestionsDTO documentGroupWithQuestions) throws Exception {
 
         List<AnswerCreationDTO> newAnswers = new ArrayList<>();
-        List<TaskNode> answersToDelete = new ArrayList<>();
+        List<TaskNode> existingAnswers = new ArrayList<>();
+        List<TaskNode> answeredQuestions = new ArrayList<>();
+        TaskAnswerBatchDTO taskAnswerBatchDTO = new TaskAnswerBatchDTO();
+
+        populateExistingAnswers(documentGroupWithQuestions, existingAnswers, answeredQuestions);
+        if (reGenerateExistingAnswers) {
+            // Delete the old once and create new
+            taskAnswerBatchDTO.setAnswersToDelete(existingAnswers);
+        } else {
+            // remove the questions, that already have been answered
+            documentGroupWithQuestions.getQuestionNodes().removeAll(answeredQuestions);
+            if (documentGroupWithQuestions.getQuestionNodes().isEmpty()) {
+                return null;
+            }
+        }
 
 
         Type nodeTypeAnswer = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.ANSWER);
 
         List<List<CompletionQuestionRequest>> groupedQuestions = groupQuestionsBy10(documentGroupWithQuestions);
-        List<List<DocumentInstanceSection>> groupedOrderedSections = groupSectionsBy100kTokens(documentGroupWithQuestions.getDocumentNode().getDocument());
+        List<List<DocumentInstanceSection>> groupedOrderedSections = groupSectionsBy100kTokens(documentGroupWithQuestions.getDocumentNode().getDocument().getId());
 
 
         Task task = taskService.getTaskById(documentGroupWithQuestions.getTaskId());
-        Project project = projectService.getProjectById(task.getProjectId());
+        if (project == null){
+            project = projectService.getProjectById(task.getProjectId());
+        }
 
         ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()), project.getId());
 
@@ -129,10 +144,28 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 message.setUpdatedBy(project.getProjectAgent().getUserId());
                 message = messageService.createMessage(message);
 
-                List<Message> response = completionService.getCompletion(message, new ArrayList<>(), project, responseJsonSchema);
 
 //                json string to object
-                GroupedQuestionAnswers answers = objectMapper.readValue(response.get(0).getValue(), GroupedQuestionAnswers.class);
+                List<Message> response = null;
+                GroupedQuestionAnswers answers = null;
+                try {
+                    response = completionService.getCompletion(message, new ArrayList<>(), project, responseJsonSchema);
+                    answers = objectMapper.readValue(response.get(0).getValue(), GroupedQuestionAnswers.class);
+                } catch (GendoxException e) {
+                    logger.warn("Error getting completion for message: {}, error: {}", message.getId(), e.getMessage());
+                    logger.warn("Skipping processing documentId: {} for the questions: {}.",
+                            documentGroupWithQuestions.getDocumentNode().getDocument().getId(),
+                            questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
+                    continue;
+
+                } catch (JsonProcessingException e) {
+                    logger.warn("Error converting Json completion to GroupedQuestionAnswers, message: {}, error: {}", message.getId(), e.getMessage());
+                    logger.warn("Response Completion messages are: {}", response);
+                    logger.warn("Skipping processing documentId: {} fpr the questions: {}.",
+                            documentGroupWithQuestions.getDocumentNode().getDocument().getId(),
+                            questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
+                    continue;
+                }
 
                 for (CompletionQuestionResponse answer : answers.getCompletionAnswers()) {
 
@@ -150,8 +183,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                             .message(answer.getAnswerText())
                             .answerValue(answer.getAnswerValue())
                             .answerFlagEnum(answer.getAnswerFlagEnum())
-                            .questionId(question.getId())
-                            .documentId(documentGroupWithQuestions.getDocumentNode().getId())
+                            .nodeQuestionId(question.getId())
+                            .nodeDocumentId(documentGroupWithQuestions.getDocumentNode().getId())
                             .build();
 
                     // Build TaskNodeDTO for the ANSWER node
@@ -168,6 +201,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                             .newAnswer(answerNodeDTO)
                             .build();
 
+                    // TODO a single answer need to be generated for the questions of each document
                     newAnswers.add(answerCreationDTO);
                 }
 
@@ -181,15 +215,31 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
             );
 
         }
-        TaskAnswerBatchDTO taskAnswerBatchDTO = TaskAnswerBatchDTO.builder()
-                .newAnswers(newAnswers)
-                .answersToDelete(answersToDelete)
-                .build();
 
-
-
-//        return null;
+        taskAnswerBatchDTO.setNewAnswers(newAnswers);
         return taskAnswerBatchDTO;
+    }
+
+    /**
+     * Scans all question nodes in the given document group and collects any existing
+     * answer nodes along with their corresponding questions.
+     *
+     * @param documentGroupWithQuestions the DTO containing the document and its questions
+     * @param existingAnswers           a list to be populated with found answer nodes
+     * @param answeredQuestions         a list to be populated with questions that already have answers
+     */
+    private void populateExistingAnswers(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<TaskNode> existingAnswers, List<TaskNode> answeredQuestions) {
+        for (TaskNode question : documentGroupWithQuestions.getQuestionNodes()) {
+            //TODO this can be done in one query, instead of a for loop
+            taskService.findAnswerNodeByDocumentAndQuestionOptional(
+                    documentGroupWithQuestions.getDocumentNode().getTaskId(),
+                    documentGroupWithQuestions.getDocumentNode().getId(),
+                    question.getId())
+                    .ifPresent(anser -> {
+                        existingAnswers.add(anser);
+                        answeredQuestions.add(question);
+                    });
+        }
     }
 
     private @NotNull List<List<CompletionQuestionRequest>> groupQuestionsBy10(TaskDocumentQuestionsDTO documentGroupWithQuestions) {
@@ -219,7 +269,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     }
 
     private @NotNull
-    List<List<DocumentInstanceSection>> groupSectionsBy100kTokens(DocumentInstance doc) {
+    List<List<DocumentInstanceSection>> groupSectionsBy100kTokens(UUID documentId) {
         Encoding enc = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
         final int MAX_TOKENS = 100_000;
 
@@ -228,7 +278,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         int currentTokens = 0;
 
         // 1) Extract & sort
-        List<DocumentInstanceSection> sections = new ArrayList<>(doc.getDocumentInstanceSections());
+        List<DocumentInstanceSection> sections = documentSectionService.getSectionsByDocument(documentId);
         sections.sort(Comparator.comparingInt(
                 s -> s.getDocumentSectionMetadata().getSectionOrder()
         ));
@@ -259,12 +309,6 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         }
 
         return groups;
-    }
-
-
-
-    private String randomSampleMessage() {
-        return SAMPLE_MESSAGES[random.nextInt(SAMPLE_MESSAGES.length)];
     }
 
 

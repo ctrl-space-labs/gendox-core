@@ -194,7 +194,7 @@ gendox:
     document-insights:
       job:
         name: documentInsightsJob
-        thread-pool-size: 50
+        thread-pool-size: 10
         steps:
           document-insights-step:
             name: documentInsightsStep

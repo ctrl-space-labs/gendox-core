@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -13,6 +14,6 @@ import java.util.List;
 @NoArgsConstructor
 @Builder(toBuilder = true)
 public class TaskAnswerBatchDTO {
-    List<AnswerCreationDTO> newAnswers;
-    List<TaskNode> answersToDelete;
+    List<AnswerCreationDTO> newAnswers = new ArrayList<>();
+    List<TaskNode> answersToDelete = new ArrayList<>();
 }
