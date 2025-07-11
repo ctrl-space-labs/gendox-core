@@ -22,7 +22,6 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 
 
@@ -37,6 +36,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private Boolean reGenerateExistingAnswers;
+    private static final int CHUNK_SIZE = 10;
+    private static final int MAX_TOKENS = 100_000;
 
 
     private final CompletionService completionService;
@@ -71,77 +72,74 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     @Override
     public TaskAnswerBatchDTO process(TaskDocumentQuestionsDTO documentGroupWithQuestions) throws Exception {
 
-        List<AnswerCreationDTO> newAnswers = new ArrayList<>();
-        List<TaskNode> existingAnswers = new ArrayList<>();
-        List<TaskNode> answeredQuestions = new ArrayList<>();
-        TaskAnswerBatchDTO taskAnswerBatchDTO = new TaskAnswerBatchDTO();
+        TaskAnswerBatchDTO batch = new TaskAnswerBatchDTO();
 
-        populateExistingAnswers(documentGroupWithQuestions, existingAnswers, answeredQuestions);
+        /* 1 – Filter questions that are already answered (optionally delete old) */
+        List<AnswerCreationDTO> newAnswers = new ArrayList<>();
+        List<TaskNode> answeredQuestions = new ArrayList<>();
+        List<TaskNode> answersToDelete = new ArrayList<>();
+
+        documentGroupWithQuestions.getQuestionNodes().forEach(q ->
+                taskService.findAnswerNodeByDocumentAndQuestionOptional(
+                                documentGroupWithQuestions.getDocumentNode().getTaskId(),
+                                documentGroupWithQuestions.getDocumentNode().getId(),
+                                q.getId())
+                        .ifPresent(a -> {
+                            answeredQuestions.add(q);
+                            answersToDelete.add(a);
+                        }));
+
         if (reGenerateExistingAnswers) {
-            // Delete the old once and create new
-            taskAnswerBatchDTO.setAnswersToDelete(existingAnswers);
+            batch.setAnswersToDelete(answersToDelete);
         } else {
-            // remove the questions, that already have been answered
             documentGroupWithQuestions.getQuestionNodes().removeAll(answeredQuestions);
             if (documentGroupWithQuestions.getQuestionNodes().isEmpty()) {
-                return null;
+                return null; // nothing left to process
             }
         }
 
 
-        Type nodeTypeAnswer = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.ANSWER);
-
-        List<List<CompletionQuestionRequest>> groupedQuestions = groupQuestionsBy10(documentGroupWithQuestions);
-        List<List<DocumentInstanceSection>> groupedDocumentPartsOrdered = groupSectionsBy100kTokens(documentGroupWithQuestions.getDocumentNode().getDocumentId());
-
-
+        Type answerNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.ANSWER);
         Task task = taskService.getTaskById(documentGroupWithQuestions.getTaskId());
         if (project == null){
             project = projectService.getProjectById(task.getProjectId());
         }
+        ObjectNode responseJsonSchema = buildResponseSchema();
 
-        String responseSchema = JsonSchemaGenerator.generateForType(new ParameterizedTypeReference<GroupedQuestionAnswers>() {}.getType());
-        JsonNode schemaNode = objectMapper.readTree(responseSchema);
-        ObjectNode responseJsonSchema = objectMapper.createObjectNode();
-        responseJsonSchema.put("name", "json_response_with_actions");
-        responseJsonSchema.set("schema", schemaNode);
+        List<List<CompletionQuestionRequest>> questionChunks = chunkQuestionsToGroups(documentGroupWithQuestions.getQuestionNodes());
+        List<List<DocumentInstanceSection>> sectionChunks = groupSectionsBy100kTokens(documentGroupWithQuestions.getDocumentNode().getDocument().getId());
 
         // For each question group
-        for (List<CompletionQuestionRequest> questionGroup : groupedQuestions) {
+        for (List<CompletionQuestionRequest> questionChunk : questionChunks) {
 
             ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()), project.getId());
 
-            String allQuestions = objectMapper.writeValueAsString(questionGroup);
-
+            String allQuestions = objectMapper.writeValueAsString(questionChunk);
             String questionsPrompt = """
                     Answer the following questions based on the provided document:
                     
                     """ + allQuestions;
 
-            List<GroupedQuestionAnswers> allAnswersFromDocumentParts = new ArrayList<>();
+            List<GroupedQuestionAnswers> partialAnswers = new ArrayList<>();
             // a group of sections, is called a document part, each document might be splitted in 1, 2 or more parts (like 100K tokens per part)
-            for (List<DocumentInstanceSection> groupedDocumentPart : groupedDocumentPartsOrdered) {
-
+            for (List<DocumentInstanceSection> groupedDocumentPart : sectionChunks) {
                 Message message = buildPromptMessageForSections(groupedDocumentPart, questionsPrompt, newThread);
-
-//                json string to object
-                GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionGroup);
-                // error occurred, skipping...
-                if (documentPartAnswers == null) continue;
-
-                allAnswersFromDocumentParts.add(documentPartAnswers);
+                GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionChunk);
+                if (documentPartAnswers != null) {
+                    partialAnswers.add(documentPartAnswers);
+                }
             }
 
-            if (allAnswersFromDocumentParts.size() == 1) {
+            if (partialAnswers.size() == 1) {
                 logger.debug("Creating answers from a single document.");
-                splitGroupAnswersToSeparateAnswerNodes(allAnswersFromDocumentParts.get(0), documentGroupWithQuestions, nodeTypeAnswer, newAnswers);
-            } else if (allAnswersFromDocumentParts.size() > 1) {
+                splitGroupAnswersToSeparateAnswerNodes(partialAnswers.get(0), documentGroupWithQuestions, answerNodeType, newAnswers);
+            } else if (partialAnswers.size() > 1) {
                 logger.debug("Creating answers from multiple document parts.");
-                GroupedQuestionAnswers consolidatedDocumentAnswers = consolidatePartsAnswersToASingleOne(documentGroupWithQuestions, questionGroup, allQuestions, allAnswersFromDocumentParts, newThread, responseJsonSchema);
+                GroupedQuestionAnswers consolidatedDocumentAnswers = consolidatePartsAnswersToASingleOne(documentGroupWithQuestions, questionChunk, allQuestions, partialAnswers, newThread, responseJsonSchema);
                 // error occurred, skipping...
                 if (consolidatedDocumentAnswers == null) continue;
 
-                splitGroupAnswersToSeparateAnswerNodes(consolidatedDocumentAnswers, documentGroupWithQuestions, nodeTypeAnswer, newAnswers);
+                splitGroupAnswersToSeparateAnswerNodes(consolidatedDocumentAnswers, documentGroupWithQuestions, answerNodeType, newAnswers);
             }
 
             logger.info("Processed TaskDocumentInsightsAnswerDTO: taskId={}, documentNodeId={}, questions # = {}",
@@ -152,37 +150,37 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
         }
 
-        taskAnswerBatchDTO.setNewAnswers(newAnswers);
-        return taskAnswerBatchDTO;
+        batch.setNewAnswers(newAnswers);
+        return batch;
     }
 
     private @Nullable GroupedQuestionAnswers consolidatePartsAnswersToASingleOne(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, String allQuestions, List<GroupedQuestionAnswers> allAnswersFromDocumentParts, ChatThread newThread, ObjectNode responseJsonSchema) throws JsonProcessingException {
-        String answerConsolidationPrompt = """
-            Big documents dont fit in the context window of the LLM. So documents are split in 2, 3 or more parts.
-            The same questions asked for all document parts, so the same question probably will have multiple answers.
-            Do your best to consolidate the answers *per questionId*. *Each questionId MUST have a single answer*.
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("""
+           Big documents don't fit in the LLM context window; the document was split into parts.
+           Each question may therefore have multiple partial answers. Consolidate them so that 
+           *each questionId* has a single definitive answer
             
-            This is the list of the original questions:
-            %s
-            
-            These are the answers per document part:
-            
-            """.formatted(allQuestions);
+           Original questions:
+           
+           """);
+
+        prompt.append(allQuestions).append("\n\n");
+
         for (int i = 0; i < allAnswersFromDocumentParts.size(); i++) {
             GroupedQuestionAnswers answers = allAnswersFromDocumentParts.get(i);
             if (answers.getCompletionAnswers().isEmpty()) {
                 continue;
             }
+            prompt.append("Answers for document part #").append(i + 1).append(":\n");
 
-            answerConsolidationPrompt += """
-                Answers for document part #%d:
-                %s
-                
-                """.formatted(i + 1, objectMapper.writeValueAsString(answers.getCompletionAnswers()));
+            try {
+                prompt.append(objectMapper.writeValueAsString(answers.getCompletionAnswers())).append("\n\n");
+            } catch (JsonProcessingException ignored) { }
         }
 
         Message message = new Message();
-        message.setValue(answerConsolidationPrompt);
+        message.setValue(prompt.toString());
         message.setThreadId(newThread.getId());
         message.setProjectId(project.getId());
         message.setCreatedBy(project.getProjectAgent().getUserId());
@@ -238,7 +236,6 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                     .filter(q -> q.getId().equals(answer.getQuestionId()))
                     .findFirst()
                     .orElse(null);
-
             if (question == null) {
                 continue;
             }
@@ -286,7 +283,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
         } catch (JsonProcessingException | IllegalArgumentException e) {
             logger.warn("Error converting Json completion to GroupedQuestionAnswers, message: {}, error: {}", message.getId(), e.getMessage());
-            logger.warn("Response Completion messages are: {}", response);
+            logger.warn("Response Completion message is: {}", response.getLast().getValue());
             logger.warn("Skipping processing documentId: {} fpr the questions: {}.",
                     documentGroupWithQuestions.getDocumentNode().getDocument().getId(),
                     questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
@@ -317,70 +314,68 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         }
     }
 
-    private @NotNull List<List<CompletionQuestionRequest>> groupQuestionsBy10(TaskDocumentQuestionsDTO documentGroupWithQuestions) {
+    /**
+     * Groups questions by N
+     * @param questions
+     * @return
+     */
+    private @NotNull List<List<CompletionQuestionRequest>> chunkQuestionsToGroups(List<TaskNode> questions) {
         // Process the questions 10-by-10
-        List<List<CompletionQuestionRequest>> groupedQuestions = new ArrayList<>();
-        int pageSize = 10;
-
-        for (int i = 0; i < documentGroupWithQuestions.getQuestionNodes().size(); i += pageSize) {
-            int end = Math.min(i + pageSize, documentGroupWithQuestions.getQuestionNodes().size());
-
-            // 1) take a subList of TaskNode
-            List<TaskNode> slice = documentGroupWithQuestions.getQuestionNodes().subList(i, end);
-
-            // 2) map each TaskNode → CompletionQuestionRequest
-            List<CompletionQuestionRequest> reqs = new ArrayList<>(slice.size());
-            for (TaskNode node : slice) {
-                CompletionQuestionRequest req = CompletionQuestionRequest.builder()
-                        .questionId(node.getId())
-                        .questionText(node.getNodeValue().getMessage())
-                        .build();
-                reqs.add(req);
+        List<List<CompletionQuestionRequest>> chunks = new ArrayList<>();
+        for (int i = 0; i < questions.size(); i += CHUNK_SIZE) {
+            int end = Math.min(i + CHUNK_SIZE, questions.size());
+            List<CompletionQuestionRequest> slice = new ArrayList<>();
+            for (TaskNode q : questions.subList(i, end)) {
+                slice.add(CompletionQuestionRequest.builder()
+                        .questionId(q.getId())
+                        .questionText(q.getNodeValue().getMessage())
+                        .build());
             }
-
-            groupedQuestions.add(reqs);
+            chunks.add(slice);
         }
-        return groupedQuestions;
+        return chunks;
     }
 
-    private @NotNull
-    List<List<DocumentInstanceSection>> groupSectionsBy100kTokens(UUID documentId) {
-        Encoding enc = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
-        final int MAX_TOKENS = 100_000;
+    private @NotNull List<List<DocumentInstanceSection>> groupSectionsBy100kTokens(UUID documentId) {
+        var enc = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
 
-        List<List<DocumentInstanceSection>> groups = new ArrayList<>();
-        List<DocumentInstanceSection> currentGroup = new ArrayList<>();
-        int currentTokens = 0;
-
-        // 1) Extract & sort
         List<DocumentInstanceSection> sections = documentSectionService.getSectionsByDocument(documentId);
         sections.sort(Comparator.comparingInt(
                 s -> s.getDocumentSectionMetadata().getSectionOrder()
         ));
 
+        List<List<DocumentInstanceSection>> groups = new ArrayList<>();
+        List<DocumentInstanceSection> currentGroup = new ArrayList<>();
+        int currentTokens = 0;
+
         for (DocumentInstanceSection section : sections) {
-            String text = section.getSectionValue();
-            int tokens = enc.encode(text).size();
+            int sectionTokens = enc.encode(section.getSectionValue()).size();
 
             // if adding this section would overflow the 100k-token budget, flush
-            if (currentTokens + tokens > MAX_TOKENS) {
-                if (!currentGroup.isEmpty()) {
-                    groups.add(currentGroup);
-                    currentGroup = new ArrayList<>();
-                    currentTokens = 0;
-                }
+            if (currentTokens + sectionTokens > MAX_TOKENS && !currentGroup.isEmpty()) {
+                groups.add(currentGroup);
+                currentGroup = new ArrayList<>();
+                currentTokens = 0;
             }
-
             currentGroup.add(section);
-            currentTokens += tokens;
+            currentTokens += sectionTokens;
         }
-
         // add the last group if non-empty
         if (!currentGroup.isEmpty()) {
             groups.add(currentGroup);
         }
 
         return groups;
+    }
+
+    private static ObjectNode buildResponseSchema() throws JsonProcessingException {
+        String raw = JsonSchemaGenerator.generateForType(new org.springframework.core.ParameterizedTypeReference<GroupedQuestionAnswers>() {}.getType());
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode schemaNode = mapper.readTree(raw);
+        ObjectNode wrapper = mapper.createObjectNode();
+        wrapper.put("name", "json_response_with_actions");
+        wrapper.set("schema", schemaNode);
+        return wrapper;
     }
 
 
