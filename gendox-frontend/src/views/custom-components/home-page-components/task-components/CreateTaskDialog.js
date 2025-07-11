@@ -24,11 +24,11 @@ const TASK_OPTIONS = [
     label: 'Digitize scanned documents page-by-page',
     description: 'Convert scanned documents into editable digital formats.'
   },
-  {
-    value: 'DEEP_RESEARCH',
-    label: 'Conduct deep research and analysis',
-    description: 'Perform thorough research to gather and process detailed information.'
-  }
+  // {
+  //   value: 'DEEP_RESEARCH',
+  //   label: 'Conduct deep research and analysis',
+  //   description: 'Perform thorough research to gather and process detailed information.'
+  // }
 ]
 
 const CreateTaskDialog = ({ open, onClose, onSave, initialData = {} }) => {

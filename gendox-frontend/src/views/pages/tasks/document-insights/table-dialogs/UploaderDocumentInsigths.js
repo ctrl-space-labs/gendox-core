@@ -1,6 +1,6 @@
-import React, { Fragment, useState } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/router'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 
 import Box from '@mui/material/Box'
 import List from '@mui/material/List'
@@ -62,6 +62,13 @@ const DropZoneArea = styled(
   marginBottom: '1rem'
 }))
 
+const FileListWrapper = styled(Box)(({ theme }) => ({
+  width: '100%',
+  maxHeight: '10rem',
+  overflowY: 'auto',
+  marginTop: '0.5rem'
+}))
+
 // Removed backgroundColor so the FileItem has no background.
 const FileEntry = styled(ListItem)(({ theme }) => ({
   display: 'flex',
@@ -69,7 +76,6 @@ const FileEntry = styled(ListItem)(({ theme }) => ({
   padding: '0.5rem',
   borderRadius: theme.shape.borderRadius,
   marginBottom: '0.5rem',
-  width: '100%'
 }))
 
 const FileDetails = styled(Box)(({ theme }) => ({
@@ -123,123 +129,159 @@ const UploaderDocumentInsights = ({ closeUploader, taskId, onClose }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
   // Local state to track file, the global upload counter, and upload state.
-  const [file, setFile] = useState(null)
+  const [fileQueue, setFileQueue] = useState([])
+  const [uploadedCount, setUploadedCount] = useState(0)
+  const [totalFiles, setTotalFiles] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
   const [alertVisible, setAlertVisible] = useState(false)
-  const [uploaded, setUploaded] = useState(false)
 
-  // Set up the dropzone – files dropped are appended to the fileQueue with a unique id.
   const {
     getRootProps,
     getInputProps,
     open: triggerFileSelect
   } = useDropzone({
-    multiple: false,
     onDrop: acceptedFiles => {
-      if (acceptedFiles.length === 0) return
-      setFile(acceptedFiles[0])
-      setUploaded(false)
+      const enrichedFiles = acceptedFiles.map(file => ({
+        id: `${Date.now()}-${file.name}`,
+        file,
+        name: file.name,
+        size: file.size
+      }))
+      setFileQueue(prev => [...prev, ...enrichedFiles])
     },
     noClick: true,
-    noKeyboard: true
+    noKeyboard: true,
+    multiple: true
   })
 
-  const handleUpload = async () => {
-    if (!file) return
-    setIsUploading(true)
-    try {
-      const uploadResponse = await documentService.uploadSingleDocument(organizationId, projectId, file, accessToken)
+  const uploadFilesBatch = async filesBatch => {
+    const tasks = filesBatch.map(async fileObj => {
+      const formPayload = new FormData()
+      formPayload.append('file', fileObj.file)
+      try {
+        const uploadResponse = await documentService.uploadSingleDocument(
+          organizationId,
+          projectId,
+          fileObj.file,
+          accessToken
+        )
 
-      // Now create TaskNode for this document
-      const taskNodePayload = {
-        taskId: taskId, // you need to pass this prop to the uploader component
-        nodeType: 'DOCUMENT',
-        documentId: uploadResponse.data.id
+        // Create task node for each uploaded document
+        const taskNodePayload = {
+          taskId,
+          nodeType: 'DOCUMENT',
+          documentId: uploadResponse.data.id
+        }
+        await taskService.createTaskNode(organizationId, projectId, taskNodePayload, accessToken)
+
+        setUploadedCount(prev => prev + 1)
+      } catch (error) {
+        console.error(`Error uploading ${fileObj.name}:`, error)
       }
+    })
+    await Promise.all(tasks)
+  }
 
-      await taskService.createTaskNode(organizationId, projectId, taskNodePayload, accessToken)
+  const handleUploadAll = async () => {
+    if (!fileQueue.length) return
+    setIsUploading(true)
+    setTotalFiles(fileQueue.length)
+    setUploadedCount(0)
 
-      // Dispatch reload of nodes/documents or just close uploader and refresh UI
-      dispatch(fetchTaskNodesByTaskId({ organizationId, projectId, taskId, token: accessToken }))
-
-      setAlertVisible(true)
-      setFile(null)
-      closeUploader()
-      onClose()
-    } catch (error) {
-      console.error('Upload or TaskNode creation error:', error)
-    } finally {
-      setIsUploading(false)
+    const batchSize = 5
+    for (let i = 0; i < fileQueue.length; i += batchSize) {
+      const batch = fileQueue.slice(i, i + batchSize)
+      await uploadFilesBatch(batch)
     }
+
+    setIsUploading(false)
+    setAlertVisible(true)
+    setFileQueue([])
+    closeUploader()
+    onClose()
+
+    dispatch(fetchTaskNodesByTaskId({ organizationId, projectId, taskId, token: accessToken }))
   }
 
-  const handleDelete = () => {
-    setFile(null)
-    setUploaded(false)
+  const deleteFile = fileId => {
+    setFileQueue(prev => prev.filter(file => file.id !== fileId))
   }
 
-  // Close the success alert.
+  const clearAllFiles = () => {
+    setFileQueue([])
+  }
+
   const dismissAlert = () => {
     setAlertVisible(false)
   }
+
+  const globalProgress = totalFiles > 0 ? (uploadedCount / totalFiles) * 100 : 0
 
   return (
     <ModalWrapper>
       <HeaderBar>
         <Typography variant='h5' sx={{ flexGrow: 1 }}>
-          Upload Document
+          Upload Documents
         </Typography>
         <IconButton onClick={closeUploader} aria-label='close' sx={{ color: 'primary.main' }}>
           <Icon icon='mdi:close' />
         </IconButton>
       </HeaderBar>
 
-      {/* Render drag-and-drop only on non-mobile devices */}
       {!isMobile && (
         <DropZoneArea {...getRootProps()} onClick={triggerFileSelect}>
-          {/* Always include the file input element */}
           <input {...getInputProps()} />
           <Box sx={{ color: 'primary.main', mb: '1rem', pointerEvents: 'none' }}>
-            <Icon icon='mdi:cloud-upload' width='12.5rem' /> {/* ~200px */}
+            <Icon icon='mdi:cloud-upload' width='12.5rem' />
           </Box>
           <Typography variant='h5' sx={{ mb: '0.5rem', pointerEvents: 'none' }}>
-            Drag and Drop
+            Drag and Drop files here
+          </Typography>
+          <Typography variant='body2' color='text.secondary'>
+            or click to select files
           </Typography>
         </DropZoneArea>
       )}
 
-      {/* On mobile, you can still include the hidden input if needed */}
       {isMobile && <input {...getInputProps()} style={{ display: 'none' }} />}
 
       <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', my: '1.5rem' }}>
         <Button
           variant='contained'
           onClick={triggerFileSelect}
-          disabled={!!file}
           sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.light' } }}
         >
-          CHOOSE FILE
+          CHOOSE FILES
         </Button>
       </Box>
 
       <Typography variant='body2' color='text.secondary' sx={{ mb: '1rem' }}>
-        Maximum file size 100MB
+        Maximum file size 100MB each
       </Typography>
 
-      {file && (
+      {fileQueue.length > 0 && (
         <>
-          {/* Global progress bar above the file list */}
           {isUploading && (
             <Box sx={{ width: '100%', mb: '1rem' }}>
-              <Typography variant='body2'>Uploading file...</Typography>
-              <LinearProgress />
+              <Typography variant='body2'>{`Uploaded ${uploadedCount} of ${totalFiles} files`}</Typography>
+              <LinearProgress variant='determinate' value={globalProgress} />
             </Box>
           )}
 
-          <FileItem file={file} onDelete={handleDelete} />
+          <FileListWrapper>
+            <List>
+              {fileQueue.map(file => (
+                <FileItem key={file.id} file={file} onDelete={deleteFile} />
+              ))}
+            </List>
+          </FileListWrapper>
+
           <Box sx={{ display: 'flex', justifyContent: 'center', gap: '1rem', mt: '1rem' }}>
-            <Button variant='contained' onClick={handleUpload} disabled={isUploading}>
-              Upload File
+            <Button variant='outlined' color='error' onClick={clearAllFiles} disabled={isUploading}>
+              Remove All
+            </Button>
+            <Button variant='contained' onClick={handleUploadAll} disabled={isUploading}>
+              Upload Files
             </Button>
           </Box>
         </>
@@ -247,7 +289,7 @@ const UploaderDocumentInsights = ({ closeUploader, taskId, onClose }) => {
 
       <Snackbar open={alertVisible} autoHideDuration={6000} onClose={dismissAlert}>
         <Alert onClose={dismissAlert} severity='success' sx={{ width: '100%' }}>
-          File uploaded successfully!
+          All files uploaded successfully!
         </Alert>
       </Snackbar>
     </ModalWrapper>

@@ -6,6 +6,7 @@ import {
   DialogActions,
   TextField,
   List,
+  ListItem,
   ListItemButton,
   ListItemText,
   Divider,
@@ -28,55 +29,82 @@ import { fetchTaskNodesByTaskId } from 'src/store/activeTask/activeTask'
 const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, taskId, existingDocuments }) => {
   const dispatch = useDispatch()
   const { projectDocuments, isBlurring } = useSelector(state => state.activeProject)
+  const [documents, setDocuments] = useState([])
+  const [page, setPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [showUploader, setShowUploader] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedDocId, setSelectedDocId] = useState(null)
+  const [selectedDocIds, setSelectedDocIds] = useState(new Set())
 
   const existingDocIds = useMemo(() => new Set(existingDocuments.map(doc => doc.documentId)), [existingDocuments])
 
   useEffect(() => {
     if (open && organizationId && projectId && token) {
-      dispatch(fetchProjectDocuments({ organizationId, projectId, token }))
+      dispatch(fetchProjectDocuments({ organizationId, projectId, token, page }))
     }
     if (!open) {
-      setSelectedDocId(null) // reset selection on close
+      setSelectedDocIds(new Set())
+      setDocuments([])
+      setPage(0)
       setSearchTerm('')
     }
-  }, [open, organizationId, projectId, token, dispatch])
+  }, [open, organizationId, projectId, token, page, dispatch])
+
+  useEffect(() => {
+    if (projectDocuments?.content) {
+      if (page === 0) {
+        setDocuments(projectDocuments.content)
+      } else {
+        setDocuments(prev => [...prev, ...projectDocuments.content])
+      }
+      setTotalPages(projectDocuments.totalPages || 1)
+    }
+  }, [projectDocuments, page])
 
   const filteredDocuments = useMemo(() => {
-    if (!searchTerm) return projectDocuments.content || []
-    return (projectDocuments.content || []).filter(doc => doc.title?.toLowerCase().includes(searchTerm.toLowerCase()))
-  }, [searchTerm, projectDocuments])
+    if (!searchTerm) return documents
+    return documents.filter(doc => doc.title?.toLowerCase().includes(searchTerm.toLowerCase()))
+  }, [searchTerm, documents])
 
-  const handleSelect = doc => {
-    setSelectedDocId(doc.id)
+  const handleToggleSelect = doc => {
+    if (existingDocIds.has(doc.id)) return
+    setSelectedDocIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(doc.id)) {
+        newSet.delete(doc.id)
+      } else {
+        newSet.add(doc.id)
+      }
+      return newSet
+    })
   }
 
   const handleConfirm = async () => {
-    const doc = (projectDocuments.content || []).find(d => d.id === selectedDocId)
-    // Now create TaskNode for this document
-    const taskNodePayload = {
-      taskId: taskId, // you need to pass this prop to the uploader component
-      nodeType: 'DOCUMENT',
-      documentId: doc.id
+    const selectedIdsArray = Array.from(selectedDocIds)
+    for (const docId of selectedIdsArray) {
+      const taskNodePayload = {
+        taskId,
+        nodeType: 'DOCUMENT',
+        documentId: docId
+      }
+      await taskService.createTaskNode(organizationId, projectId, taskNodePayload, token)
     }
-
-    await taskService.createTaskNode(organizationId, projectId, taskNodePayload, token)
-    // Dispatch reload of nodes/documents or just close uploader and refresh UI
     dispatch(fetchTaskNodesByTaskId({ organizationId, projectId, taskId, token }))
     onClose()
   }
 
-  // Get selected doc details for preview info
-  const selectedDoc = selectedDocId ? (projectDocuments.content || []).find(d => d.id === selectedDocId) : null
+  const handleLoadMore = () => {
+    if (page + 1 < totalPages) {
+      setPage(prev => prev + 1)
+    }
+  }
 
   return (
     <>
       <Dialog open={open} onClose={onClose} fullWidth maxWidth='sm'>
         <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant='h6' component='div'>
-            Select a Project Document
+            Select Project Documents
           </Typography>
           <IconButton onClick={onClose} size='small' aria-label='close'>
             <CloseIcon />
@@ -107,88 +135,88 @@ const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, task
               </Typography>
             </Box>
           ) : (
-            <List
-              disablePadding
-              sx={{
-                maxHeight: 300,
-                overflowY: 'auto',
-                borderRadius: 1,
-                mb: 2,
-                border: '1px solid',
-                borderColor: 'divider'
-              }}
-            >
-              {filteredDocuments.map((doc, index) => {
-                const isAlreadySelected = existingDocIds.has(doc.id)
-                const createdDate = doc.createAt
-                  ? new Date(doc.createAt).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
-                    })
-                  : 'Unknown date'
+            <>
+              <List
+                disablePadding
+                sx={{
+                  maxHeight: 300,
+                  overflowY: 'auto',
+                  borderRadius: 1,
+                  mb: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                {filteredDocuments.map((doc, index) => {
+                  const isAlreadySelected = existingDocIds.has(doc.id)
+                  const isSelected = selectedDocIds.has(doc.id)
 
-                const isSelected = doc.id === selectedDocId
+                  const createdDate = doc.createAt
+                    ? new Date(doc.createAt).toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })
+                    : 'Unknown date'
 
-                return (
-                  <React.Fragment key={doc.id}>
-                    <ListItemButton
-                      onClick={() => !isAlreadySelected && handleSelect(doc)}
-                      selected={isSelected}
-                      disabled={isAlreadySelected}
+                  return (
+                    <React.Fragment key={doc.id}>
+                      <ListItemButton
+                        onClick={() => handleToggleSelect(doc)}
+                        selected={isSelected}
+                        disabled={isAlreadySelected}
+                        sx={{
+                          transition: 'background-color 0.3s',
+                          opacity: isAlreadySelected ? 0.5 : 1,
+                          cursor: isAlreadySelected ? 'not-allowed' : 'pointer',
+                          '&.Mui-selected': {
+                            backgroundColor: 'primary.light',
+                            color: 'primary.contrastText',
+                            '& .MuiListItemText-primary': { fontWeight: 'bold' }
+                          }
+                        }}
+                      >
+                        <ListItemText
+                          primary={doc.title || 'Untitled Document'}
+                          secondary={`Created at: ${createdDate}`}
+                        />
+                        {isSelected && !isAlreadySelected && <CheckCircleIcon color='primary' />}
+                        {isAlreadySelected && (
+                          <Typography variant='caption' color='error' sx={{ ml: 2 }}>
+                            Already selected
+                          </Typography>
+                        )}
+                      </ListItemButton>
+                      {index < filteredDocuments.length - 1 && <Divider component='li' />}
+                    </React.Fragment>
+                  )
+                })}
+                {page + 1 < totalPages && (
+                  <>
+                    <Divider component='li' />
+                    <ListItem
                       sx={{
-                        transition: 'background-color 0.3s',
-                        opacity: isAlreadySelected ? 0.5 : 1, // visually show disabled
-                        cursor: isAlreadySelected ? 'not-allowed' : 'pointer',
-                        '&.Mui-selected': {
-                          backgroundColor: 'primary.light',
-                          color: 'primary.contrastText',
-                          '& .MuiListItemText-primary': { fontWeight: 'bold' }
-                        }
+                        justifyContent: 'center',
+                        py: 1.5,
+                        cursor: 'pointer',
+                        '&:hover': { backgroundColor: 'action.hover' }
                       }}
                     >
-                      <ListItemText
-                        primary={doc.title || 'Untitled Document'}
-                        secondary={`Created at: ${createdDate}`}
-                      />
-                      {doc.id === selectedDocId && !isAlreadySelected && <CheckCircleIcon color='primary' />}
-                      {isAlreadySelected && (
-                        <Typography variant='caption' color='error' sx={{ ml: 2 }}>
-                          Already selected
-                        </Typography>
-                      )}
-                    </ListItemButton>
-                    {index < filteredDocuments.length - 1 && <Divider component='li' />}
-                  </React.Fragment>
-                )
-              })}
-            </List>
-          )}
-
-          {/* Show selected document preview/info */}
-          {selectedDoc && (
-            <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-              <Typography variant='subtitle1' gutterBottom>
-                Document Preview
-              </Typography>
-              <Typography>
-                <strong>Title:</strong> {selectedDoc.title || 'Untitled Document'}
-              </Typography>
-              <Typography>
-                <strong>Created At:</strong>{' '}
-                {new Date(selectedDoc.createAt).toLocaleString(undefined, {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </Typography>
-              <Typography>
-                <strong>File Type:</strong> {selectedDoc.fileType?.description || 'N/A'}
-              </Typography>
-              {/* Add more preview details if you want */}
-            </Box>
+                      <Button
+                        variant='outlined'
+                        onClick={handleLoadMore}
+                        sx={{ width: '100%', maxWidth: 200, mx: 'auto', fontWeight: 'bold' }}
+                        startIcon={isBlurring ? <CircularProgress size={16} /> : null}
+                      >
+                        Load More
+                      </Button>
+                    </ListItem>
+                  </>
+                )}
+              </List>
+            </>
           )}
         </DialogContent>
 
@@ -196,7 +224,7 @@ const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, task
           <Button startIcon={<CloudUploadIcon />} variant='outlined' onClick={() => setShowUploader(true)}>
             Upload New Document
           </Button>
-          <Button onClick={handleConfirm} variant='contained' disabled={!selectedDocId}>
+          <Button onClick={handleConfirm} variant='contained' disabled={selectedDocIds.size === 0}>
             Confirm Selection
           </Button>
           <Button onClick={onClose}>Cancel</Button>

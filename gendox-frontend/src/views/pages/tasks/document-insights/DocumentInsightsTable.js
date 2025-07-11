@@ -39,6 +39,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
+  console.log("ANSWERS:", answers)
+
   useEffect(() => {
     if (!(organizationId && projectId && taskId && token)) return
 
@@ -58,7 +60,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       })
   }, [organizationId, projectId, taskId, token, dispatch])
 
-  // console.log('DOCUMENTS:', documents)
 
   useEffect(() => {
     if (!taskNodesDocQuestionList?.content) return
@@ -228,11 +229,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       documentInstanceIds
     }
 
-    console.log('Fetching documents by criteria:', criteria)
-
     try {
       const response = await documentService.findDocumentsByCriteria(organizationId, projectId, criteria, token)
-      console.log('Fetched documents:', response)
       return response.data.content || []
     } catch (error) {
       console.error('Failed to fetch documents by criteria:', error)
