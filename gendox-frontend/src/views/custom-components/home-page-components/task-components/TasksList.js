@@ -17,6 +17,9 @@ import toast from 'react-hot-toast'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import LinearProgress from '@mui/material/LinearProgress'
 import Box from '@mui/material/Box'
+import CreateTaskDialog from './CreateTaskDialog'
+import { updateTask, fetchTasks } from 'src/store/activeTask/activeTask'
+
 
 // Map your codes to user-friendly labels + colors
 const TASK_TYPE_MAP = {
@@ -31,6 +34,8 @@ const TasksList = ({ projectTasks, page }) => {
   const router = useRouter()
   const token = localStorage.getItem(localStorageConstants.accessTokenKey)
   const { id: projectId, organizationId } = projectDetails
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editTaskData, setEditTaskData] = useState(null)
 
   const [anchorEl, setAnchorEl] = useState(null)
   const [selectedTask, setSelectedTask] = useState(null)
@@ -73,6 +78,12 @@ const TasksList = ({ projectTasks, page }) => {
     setConfirmDeleteOpen(false)
   }
 
+  const openEditDialog = () => {
+    setEditTaskData(selectedTask)
+    setEditDialogOpen(true)
+    handleMenuClose()
+  }
+
   const handleDeleteTask = async () => {
     if (!selectedTask) return
     setIsDeleting(true)
@@ -86,6 +97,32 @@ const TasksList = ({ projectTasks, page }) => {
     } finally {
       setIsDeleting(false)
       setSelectedTask(null)
+    }
+  }
+
+  const handleSaveEdit = async updatedData => {
+    if (!editTaskData) return
+    try {
+      // Call your update task API here - replace with your real API call:
+      // Example:
+      await dispatch(
+        updateTask({
+          organizationId,
+          projectId,
+          taskId: editTaskData.id,
+          token,
+          updatePayload: { description: updatedData.description, title: updatedData.title }
+        })
+      ).unwrap()
+
+      toast.success('Task updated successfully.')
+      setEditDialogOpen(false)
+      setSelectedTask(null)
+
+      // Refresh tasks list
+      dispatch(fetchTasks({ organizationId, projectId, token }))
+    } catch (error) {
+      toast.error('Failed to update task.')
     }
   }
 
@@ -173,6 +210,16 @@ const TasksList = ({ projectTasks, page }) => {
             anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
             transformOrigin={{ vertical: 'top', horizontal: 'center' }}
           >
+            <MenuItem
+              onClick={() => {
+                setEditTaskData(selectedTask)
+                setEditDialogOpen(true)
+                handleMenuClose()
+              }}
+              disabled={isDeleting}
+            >
+              Edit Task
+            </MenuItem>
             <MenuItem onClick={openDeleteConfirm} disabled={isDeleting}>
               Delete Task
             </MenuItem>
@@ -241,6 +288,14 @@ const TasksList = ({ projectTasks, page }) => {
         confirmButtonText='Delete'
         cancelButtonText='Cancel'
         disableConfirm={isDeleting}
+      />
+      <CreateTaskDialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        initialData={editTaskData || {}}
+        editMode={true}
+        onSave={handleSaveEdit}
+        TASK_TYPE_MAP={TASK_TYPE_MAP}
       />
     </Card>
   )

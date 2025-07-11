@@ -68,6 +68,17 @@ public class TaskController {
         return taskService.getTaskById(taskId);
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PutMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}")
+    @ResponseStatus(value = HttpStatus.OK)
+    public Task updateTask(@PathVariable UUID organizationId,
+                           @PathVariable UUID projectId,
+                           @PathVariable UUID taskId,
+                           @RequestBody TaskDTO taskDTO) {
+        return taskService.updateTask(taskId, taskDTO);
+    }
+
+
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @PostMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-nodes")

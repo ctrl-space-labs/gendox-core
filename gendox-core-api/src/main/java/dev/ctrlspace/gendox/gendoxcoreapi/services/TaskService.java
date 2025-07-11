@@ -71,6 +71,16 @@ public class TaskService {
                 .orElseThrow(() -> new RuntimeException("Task not found"));
     }
 
+    public Task updateTask (UUID taskId, TaskDTO taskDTO) {
+        logger.info("Updating task: {}", taskId);
+        Task existingTask = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found for update"));
+
+        existingTask.setTitle(taskDTO.getTitle());
+        existingTask.setDescription(taskDTO.getDescription());
+        return taskRepository.save(existingTask);
+    }
+
 
     public TaskNode createTaskNode(TaskNode taskNode) throws GendoxException {
         logger.info("Creating new task node: {}", taskNode);

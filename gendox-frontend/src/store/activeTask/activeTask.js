@@ -31,6 +31,20 @@ export const fetchTasks = createAsyncThunk(
   }
 )
 
+// Async thunk to update a task
+export const updateTask = createAsyncThunk(
+  'task/updateTask',
+  async ({ organizationId, projectId, taskId, token, updatePayload }, thunkAPI) => {
+    try {
+      const response = await taskService.updateTask(organizationId, projectId, taskId, token, updatePayload)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
 // Async to get task by ID
 export const fetchTaskById = createAsyncThunk(
   'task/fetchTaskById',
@@ -239,6 +253,24 @@ const taskSlice = createSlice({
         state.projectTasks = action.payload
       })
       .addCase(fetchTasks.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+
+      // Update Task
+      .addCase(updateTask.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(updateTask.fulfilled, (state, action) => {
+        state.isLoading = false
+        // Update the task in projectTasks array by id
+        const idx = state.projectTasks.findIndex(task => task.id === action.payload.id)
+        if (idx !== -1) {
+          state.projectTasks[idx] = action.payload
+        }
+      })
+      .addCase(updateTask.rejected, (state, action) => {
         state.isLoading = false
         state.error = action.payload
       })

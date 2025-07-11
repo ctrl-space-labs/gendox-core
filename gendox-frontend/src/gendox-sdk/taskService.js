@@ -34,6 +34,25 @@ const getTasks = async (organizationId, projectId, token) => {
   })
 }
 
+/** 
+ * Update Task
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param token
+ * @param updatePayload
+ * @returns {Promise<axios.AxiosResponse<Task>>}
+ */
+const updateTask = async (organizationId, projectId, taskId, token, updatePayload) => {
+  return axios.put(apiRequests.taskRequest(organizationId, projectId, taskId), updatePayload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+} 
+
+
 /** Get Task by ID
  * @param organizationId
  * @param projectId
@@ -42,7 +61,7 @@ const getTasks = async (organizationId, projectId, token) => {
  * @returns {Promise<axios.AxiosResponse<Task>>}
  * */
 const getTaskById = async (organizationId, projectId, taskId, token) => {
-  return axios.get(apiRequests.getTaskById(organizationId, projectId, taskId), {
+  return axios.get(apiRequests.taskRequest(organizationId, projectId, taskId), {
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token
@@ -242,10 +261,10 @@ const deleteTask = async (organizationId, projectId, taskId, token) => {
   })
 }
 
-
 export default {
   createTask,
   getTasks,
+  updateTask,
   getTaskById,
   getTaskNodesByTaskId,
   getTaskNodesByCriteria,

@@ -160,7 +160,7 @@ export default {
 
   getTasks: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/tasks`,
 
-  getTaskById: (organizationId, projectId, taskId) =>
+  taskRequest: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`,
 
   createTaskNode: (organizationId, projectId) =>
