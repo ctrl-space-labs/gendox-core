@@ -118,22 +118,30 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                     
                     """ + allQuestions;
 
-            List<GroupedQuestionAnswers> allAnswersFromPartsOfDocument = new ArrayList<>();
+            List<GroupedQuestionAnswers> allAnswersFromDocumentParts = new ArrayList<>();
             // a group of sections, is called a document part, each document might be splitted in 1, 2 or more parts (like 100K tokens per part)
             for (List<DocumentInstanceSection> groupedDocumentPart : groupedDocumentPartsOrdered) {
 
                 Message message = buildPromptMessageForSections(groupedDocumentPart, questionsPrompt, newThread);
 
 //                json string to object
-                GroupedQuestionAnswers documentPartAnswers = getCompletion(documentGroupWithQuestions, questionGroup, message, responseJsonSchema);
+                GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionGroup);
                 // error occurred, skipping...
                 if (documentPartAnswers == null) continue;
 
-                allAnswersFromPartsOfDocument.add(documentPartAnswers);
+                allAnswersFromDocumentParts.add(documentPartAnswers);
+            }
 
-                splitGroupAnswersToSeparateAnswerNodes(documentPartAnswers, documentGroupWithQuestions, nodeTypeAnswer, newAnswers);
+            if (allAnswersFromDocumentParts.size() == 1) {
+                logger.debug("Creating answers from a single document.");
+                splitGroupAnswersToSeparateAnswerNodes(allAnswersFromDocumentParts.get(0), documentGroupWithQuestions, nodeTypeAnswer, newAnswers);
+            } else if (allAnswersFromDocumentParts.size() > 1) {
+                logger.debug("Creating answers from multiple document parts.");
+                GroupedQuestionAnswers consolidatedDocumentAnswers = consolidatePartsAnswersToASingleOne(documentGroupWithQuestions, questionGroup, allQuestions, allAnswersFromDocumentParts, newThread, responseJsonSchema);
+                // error occurred, skipping...
+                if (consolidatedDocumentAnswers == null) continue;
 
-
+                splitGroupAnswersToSeparateAnswerNodes(consolidatedDocumentAnswers, documentGroupWithQuestions, nodeTypeAnswer, newAnswers);
             }
 
             logger.info("Processed TaskDocumentInsightsAnswerDTO: taskId={}, documentNodeId={}, questions # = {}",
@@ -146,6 +154,43 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
         taskAnswerBatchDTO.setNewAnswers(newAnswers);
         return taskAnswerBatchDTO;
+    }
+
+    private @Nullable GroupedQuestionAnswers consolidatePartsAnswersToASingleOne(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, String allQuestions, List<GroupedQuestionAnswers> allAnswersFromDocumentParts, ChatThread newThread, ObjectNode responseJsonSchema) throws JsonProcessingException {
+        String answerConsolidationPrompt = """
+            Big documents dont fit in the context window of the LLM. So documents are split in 2, 3 or more parts.
+            The same questions asked for all document parts, so the same question probably will have multiple answers.
+            Do your best to consolidate the answers *per questionId*. *Each questionId MUST have a single answer*.
+            
+            This is the list of the original questions:
+            %s
+            
+            These are the answers per document part:
+            
+            """.formatted(allQuestions);
+        for (int i = 0; i < allAnswersFromDocumentParts.size(); i++) {
+            GroupedQuestionAnswers answers = allAnswersFromDocumentParts.get(i);
+            if (answers.getCompletionAnswers().isEmpty()) {
+                continue;
+            }
+
+            answerConsolidationPrompt += """
+                Answers for document part #%d:
+                %s
+                
+                """.formatted(i + 1, objectMapper.writeValueAsString(answers.getCompletionAnswers()));
+        }
+
+        Message message = new Message();
+        message.setValue(answerConsolidationPrompt);
+        message.setThreadId(newThread.getId());
+        message.setProjectId(project.getId());
+        message.setCreatedBy(project.getProjectAgent().getUserId());
+        message.setUpdatedBy(project.getProjectAgent().getUserId());
+        message = messageService.createMessage(message);
+
+        GroupedQuestionAnswers consolidatedDocumentAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionGroup);
+        return consolidatedDocumentAnswers;
     }
 
     private Message buildPromptMessageForSections(List<DocumentInstanceSection> sectionGroup, String questionsPrompt, ChatThread newThread) {
@@ -221,12 +266,12 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                     .newAnswer(answerNodeDTO)
                     .build();
 
-            // TODO a single answer need to be generated for the questions of each document
+
             newAnswers.add(answerCreationDTO);
         }
     }
 
-    private @Nullable GroupedQuestionAnswers getCompletion(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, Message message, ObjectNode responseJsonSchema) {
+    private @Nullable GroupedQuestionAnswers getCompletion(Message message, ObjectNode responseJsonSchema, Project project, TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup) {
         GroupedQuestionAnswers answers;
         List<Message> response = null;
         try {
@@ -325,9 +370,6 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                     currentTokens = 0;
                 }
             }
-
-            // (optional) if a single section is >100k on its own, you’ll need to chunk it
-            // here—e.g. split on sentences or paragraphs, or just allow an “oversized” group.
 
             currentGroup.add(section);
             currentTokens += tokens;
