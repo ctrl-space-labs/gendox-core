@@ -14,6 +14,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.util.json.schema.JsonSchemaGenerator;
@@ -91,16 +92,13 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         Type nodeTypeAnswer = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.ANSWER);
 
         List<List<CompletionQuestionRequest>> groupedQuestions = groupQuestionsBy10(documentGroupWithQuestions);
-        List<List<DocumentInstanceSection>> groupedOrderedSections = groupSectionsBy100kTokens(documentGroupWithQuestions.getDocumentNode().getDocumentId());
+        List<List<DocumentInstanceSection>> groupedDocumentPartsOrdered = groupSectionsBy100kTokens(documentGroupWithQuestions.getDocumentNode().getDocumentId());
 
 
         Task task = taskService.getTaskById(documentGroupWithQuestions.getTaskId());
         if (project == null){
             project = projectService.getProjectById(task.getProjectId());
         }
-
-        ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()), project.getId());
-
 
         String responseSchema = JsonSchemaGenerator.generateForType(new ParameterizedTypeReference<GroupedQuestionAnswers>() {}.getType());
         JsonNode schemaNode = objectMapper.readTree(responseSchema);
@@ -110,6 +108,9 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
         // For each question group
         for (List<CompletionQuestionRequest> questionGroup : groupedQuestions) {
+
+            ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()), project.getId());
+
             String allQuestions = objectMapper.writeValueAsString(questionGroup);
 
             String questionsPrompt = """
@@ -117,92 +118,20 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                     
                     """ + allQuestions;
 
-            // For each section group
-            for (List<DocumentInstanceSection> sectionGroup : groupedOrderedSections) {
+            List<GroupedQuestionAnswers> allAnswersFromPartsOfDocument = new ArrayList<>();
+            // a group of sections, is called a document part, each document might be splitted in 1, 2 or more parts (like 100K tokens per part)
+            for (List<DocumentInstanceSection> groupedDocumentPart : groupedDocumentPartsOrdered) {
 
-                String textSections = sectionGroup.stream()
-                        .map(DocumentInstanceSection::getSectionValue)
-                        .reduce("", (a, b) -> a + "\n\n" + b);
-
-                String prompt = """
-                    You are an AI assistant that answers questions based on provided text.
-                    The text is as follows:
-                    
-                    %s
-                    
-                    Please answer the following question:
-                    
-                    %s
-                    """.formatted(textSections, questionsPrompt);
-
-                Message message = new Message();
-                message.setValue(prompt);
-                message.setThreadId(newThread.getId());
-                message.setProjectId(project.getId());
-                message.setCreatedBy(project.getProjectAgent().getUserId());
-                message.setUpdatedBy(project.getProjectAgent().getUserId());
-                message = messageService.createMessage(message);
-
+                Message message = buildPromptMessageForSections(groupedDocumentPart, questionsPrompt, newThread);
 
 //                json string to object
-                List<Message> response = null;
-                GroupedQuestionAnswers answers = null;
-                try {
-                    response = completionService.getCompletion(message, new ArrayList<>(), project, responseJsonSchema);
-                    answers = objectMapper.readValue(response.getLast().getValue(), GroupedQuestionAnswers.class);
-                } catch (GendoxException e) {
-                    logger.warn("Error getting completion for message: {}, error: {}", message.getId(), e.getMessage());
-                    logger.warn("Skipping processing documentId: {} for the questions: {}.",
-                            documentGroupWithQuestions.getDocumentNode().getDocumentId(),
-                            questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
-                    continue;
+                GroupedQuestionAnswers documentPartAnswers = getCompletion(documentGroupWithQuestions, questionGroup, message, responseJsonSchema);
+                // error occurred, skipping...
+                if (documentPartAnswers == null) continue;
 
-                } catch (JsonProcessingException | IllegalArgumentException e) {
-                    logger.warn("Error converting Json completion to GroupedQuestionAnswers, message: {}, error: {}", message.getId(), e.getMessage());
-                    logger.warn("Response Completion messages are: {}", response);
-                    logger.warn("Skipping processing documentId: {} fpr the questions: {}.",
-                            documentGroupWithQuestions.getDocumentNode().getDocumentId(),
-                            questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
-                    continue;
-                }
+                allAnswersFromPartsOfDocument.add(documentPartAnswers);
 
-                for (CompletionQuestionResponse answer : answers.getCompletionAnswers()) {
-
-                    TaskNode question = documentGroupWithQuestions.getQuestionNodes().stream()
-                            .filter(q -> q.getId().equals(answer.getQuestionId()))
-                            .findFirst()
-                            .orElse(null);
-
-                    if (question == null) {
-                        continue;
-                    }
-
-                    // Create TaskNodeValueDTO with the answer message
-                    TaskNodeValueDTO valueDTO = TaskNodeValueDTO.builder()
-                            .message(answer.getAnswerText())
-                            .answerValue(answer.getAnswerValue())
-                            .answerFlagEnum(answer.getAnswerFlagEnum())
-                            .nodeQuestionId(question.getId())
-                            .nodeDocumentId(documentGroupWithQuestions.getDocumentNode().getId())
-                            .build();
-
-                    // Build TaskNodeDTO for the ANSWER node
-                    TaskNodeDTO answerNodeDTO = TaskNodeDTO.builder()
-                            .taskId(documentGroupWithQuestions.getTaskId())
-                            .nodeType(nodeTypeAnswer.getName())
-                            .nodeValue(valueDTO)
-                            .build();
-
-                    // Create AnswerCreationDTO
-                    AnswerCreationDTO answerCreationDTO = AnswerCreationDTO.builder()
-                            .documentNode(documentGroupWithQuestions.getDocumentNode())
-                            .questionNode(question)
-                            .newAnswer(answerNodeDTO)
-                            .build();
-
-                    // TODO a single answer need to be generated for the questions of each document
-                    newAnswers.add(answerCreationDTO);
-                }
+                splitGroupAnswersToSeparateAnswerNodes(documentPartAnswers, documentGroupWithQuestions, nodeTypeAnswer, newAnswers);
 
 
             }
@@ -217,6 +146,108 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
         taskAnswerBatchDTO.setNewAnswers(newAnswers);
         return taskAnswerBatchDTO;
+    }
+
+    private Message buildPromptMessageForSections(List<DocumentInstanceSection> sectionGroup, String questionsPrompt, ChatThread newThread) {
+        String textSections = sectionGroup.stream()
+                .map(DocumentInstanceSection::getSectionValue)
+                .reduce("", (a, b) -> a + "\n\n" + b);
+
+        String prompt = """
+            You are an AI assistant that answers questions based on provided text.
+            The text is as follows:
+            
+            %s
+            
+            Please answer the following question:
+            
+            %s
+            """.formatted(textSections, questionsPrompt);
+
+        Message message = new Message();
+        message.setValue(prompt);
+        message.setThreadId(newThread.getId());
+        message.setProjectId(project.getId());
+        message.setCreatedBy(project.getProjectAgent().getUserId());
+        message.setUpdatedBy(project.getProjectAgent().getUserId());
+        message = messageService.createMessage(message);
+        return message;
+    }
+
+    /**
+     * Splits the grouped answers into separate answer nodes for each question.
+     * LLM replies many questions in a single prompt, so from all the answers the LLM replied,
+     * the method finds which question each answer replies to,
+     * links the answer with the question
+     * and creates separate Answer nodes to be stored in the DB
+     *
+     * @param documentGroupWithQuestions the document group containing questions
+     * @param answers                    the grouped answers to be split
+     * @param nodeTypeAnswer             the type of the answer node
+     * @param newAnswers                 the list to which new answer nodes will be added
+     */
+    private static void splitGroupAnswersToSeparateAnswerNodes(GroupedQuestionAnswers answers, TaskDocumentQuestionsDTO documentGroupWithQuestions, Type nodeTypeAnswer, List<AnswerCreationDTO> newAnswers) {
+        for (CompletionQuestionResponse answer : answers.getCompletionAnswers()) {
+
+            TaskNode question = documentGroupWithQuestions.getQuestionNodes().stream()
+                    .filter(q -> q.getId().equals(answer.getQuestionId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (question == null) {
+                continue;
+            }
+
+            // Create TaskNodeValueDTO with the answer message
+            TaskNodeValueDTO valueDTO = TaskNodeValueDTO.builder()
+                    .message(answer.getAnswerText())
+                    .answerValue(answer.getAnswerValue())
+                    .answerFlagEnum(answer.getAnswerFlagEnum())
+                    .nodeQuestionId(question.getId())
+                    .nodeDocumentId(documentGroupWithQuestions.getDocumentNode().getId())
+                    .build();
+
+            // Build TaskNodeDTO for the ANSWER node
+            TaskNodeDTO answerNodeDTO = TaskNodeDTO.builder()
+                    .taskId(documentGroupWithQuestions.getTaskId())
+                    .nodeType(nodeTypeAnswer.getName())
+                    .nodeValue(valueDTO)
+                    .build();
+
+            // Create AnswerCreationDTO
+            AnswerCreationDTO answerCreationDTO = AnswerCreationDTO.builder()
+                    .documentNode(documentGroupWithQuestions.getDocumentNode())
+                    .questionNode(question)
+                    .newAnswer(answerNodeDTO)
+                    .build();
+
+            // TODO a single answer need to be generated for the questions of each document
+            newAnswers.add(answerCreationDTO);
+        }
+    }
+
+    private @Nullable GroupedQuestionAnswers getCompletion(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, Message message, ObjectNode responseJsonSchema) {
+        GroupedQuestionAnswers answers;
+        List<Message> response = null;
+        try {
+            response = completionService.getCompletion(message, new ArrayList<>(), project, responseJsonSchema);
+            answers = objectMapper.readValue(response.getLast().getValue(), GroupedQuestionAnswers.class);
+        } catch (GendoxException e) {
+            logger.warn("Error getting completion for message: {}, error: {}", message.getId(), e.getMessage());
+            logger.warn("Skipping processing documentId: {} for the questions: {}.",
+                    documentGroupWithQuestions.getDocumentNode().getDocument().getId(),
+                    questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
+            return null;
+
+        } catch (JsonProcessingException | IllegalArgumentException e) {
+            logger.warn("Error converting Json completion to GroupedQuestionAnswers, message: {}, error: {}", message.getId(), e.getMessage());
+            logger.warn("Response Completion messages are: {}", response);
+            logger.warn("Skipping processing documentId: {} fpr the questions: {}.",
+                    documentGroupWithQuestions.getDocumentNode().getDocument().getId(),
+                    questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
+            return null;
+        }
+        return answers;
     }
 
     /**
