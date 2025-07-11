@@ -5,7 +5,7 @@ import DescriptionIcon from '@mui/icons-material/Description'
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 
-const HeaderSection = ({ title, description, onAddDocument, onAddQuestion, onGenerateAll, disableGenerateAll, isLoading }) => {
+const HeaderSection = ({ title, description, openUploader, onAddQuestion, onGenerateAll, disableGenerateAll, isLoading }) => {
   return (
     <Box sx={{ mb: 4, px: 2 }}>
       {/* Title + Description stacked vertically */}
@@ -42,7 +42,7 @@ const HeaderSection = ({ title, description, onAddDocument, onAddQuestion, onGen
             <Button
               variant='outlined'
               startIcon={<DocumentScannerIcon />}
-              onClick={onAddDocument}
+              onClick={openUploader}
               disabled={isLoading}
               size='medium'
             >

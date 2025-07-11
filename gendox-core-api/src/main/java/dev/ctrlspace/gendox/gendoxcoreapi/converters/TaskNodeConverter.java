@@ -3,7 +3,6 @@ package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -11,13 +10,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class TaskNodeConverter implements GendoxConverter<TaskNode, TaskNodeDTO> {
     private TypeService typeService;
-    private DocumentService documentService;
+
 
     @Autowired
-    public TaskNodeConverter(TypeService typeService,
-                             DocumentService documentService) {
+    public TaskNodeConverter(TypeService typeService
+    ) {
         this.typeService = typeService;
-        this.documentService = documentService;
+
     }
 
 
@@ -29,7 +28,7 @@ public class TaskNodeConverter implements GendoxConverter<TaskNode, TaskNodeDTO>
                 .nodeType(taskNode.getNodeType() != null ? taskNode.getNodeType().getName() : null)
                 .nodeValue(taskNode.getNodeValue() != null ? taskNode.getNodeValue().toBuilder().build() : null)
                 .parentNodeId(taskNode.getParentNodeId())
-                .documentId(taskNode.getDocument() != null ? taskNode.getDocument().getId() : null)
+                .documentId(taskNode.getDocumentId() != null ? taskNode.getDocumentId() : null)
                 .pageNumber(taskNode.getPageNumber())
                 .userId(taskNode.getCreatedBy())
                 .build();
@@ -54,7 +53,7 @@ public class TaskNodeConverter implements GendoxConverter<TaskNode, TaskNodeDTO>
             taskNode.setParentNodeId(taskNodeDTO.getParentNodeId());
         }
         if (taskNodeDTO.getDocumentId() != null) {
-            taskNode.setDocument(documentService.getDocumentInstanceById(taskNodeDTO.getDocumentId()));
+            taskNode.setDocumentId(taskNodeDTO.getDocumentId());
         }
         if (taskNodeDTO.getUserId() != null) {
             taskNode.setCreatedBy(taskNodeDTO.getUserId());

@@ -149,14 +149,12 @@ const Tasks = () => {
           <CircularProgress aria-label='Loading tasks' />
         </Box>
       ) : filteredTasks.length === 0 ? (
-        <Typography
-          variant='body1'
-          color='text.secondary'
-          sx={{ textAlign: 'center', mt: 6, flexGrow: 1 }}
-          aria-live='polite'
-        >
-          No tasks found. {projectTasks.length > 0 && 'Try adjusting your search criteria.'}
-        </Typography>
+        <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
+          <Typography variant='body2' sx={{ mb: 2, fontStyle: 'italic' }}>
+            There are currently no tasks available. Consider creating a new task to begin organizing your work
+            efficiently.
+          </Typography>
+        </Box>
       ) : (
         <TasksList projectTasks={filteredTasks} page={currentPage} onPageChange={setCurrentPage} />
       )}

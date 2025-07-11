@@ -87,7 +87,7 @@ public class TaskService {
         existing.setNodeValue(taskNode.getNodeValue());
         existing.setNodeType(taskNode.getNodeType());
         existing.setParentNodeId(taskNode.getParentNodeId());
-        existing.setDocument(taskNode.getDocument());
+        existing.setDocumentId(taskNode.getDocumentId());
         existing.setPageNumber(taskNode.getPageNumber());
         existing.setUpdatedBy(taskNode.getUpdatedBy());
 

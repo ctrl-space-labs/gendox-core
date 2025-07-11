@@ -1,10 +1,9 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { DataGrid } from '@mui/x-data-grid'
-import { Box, Button, IconButton, Tooltip } from '@mui/material'
+import { Box, Button, IconButton, Tooltip, Popper, Paper, Typography } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import CircularProgress from '@mui/material/CircularProgress'
-import Skeleton from '@mui/material/Skeleton'
 
 const DocumentInsightsGrid = ({
   documents,
@@ -17,6 +16,19 @@ const DocumentInsightsGrid = ({
   isLoadingAnswers,
   isLoading
 }) => {
+  const [anchorEl, setAnchorEl] = useState(null)
+  const [hoveredQuestion, setHoveredQuestion] = useState(null)
+
+  const handleHeaderMouseEnter = (event, q) => {
+    setAnchorEl(event.currentTarget)
+    setHoveredQuestion(q)
+  }
+
+  const handleHeaderMouseLeave = () => {
+    setAnchorEl(null)
+    setHoveredQuestion(null)
+  }
+
   const loadingTextAnimation = {
     '@keyframes pulseOpacity': {
       '0%, 100%': { opacity: 1 },
@@ -55,6 +67,7 @@ const DocumentInsightsGrid = ({
             >
               {params.row.documentId ? (
                 <Tooltip title='Delete Document'>
+                  <span>
                   <IconButton
                     color='error'
                     size='small'
@@ -66,6 +79,7 @@ const DocumentInsightsGrid = ({
                   >
                     <DeleteOutlineIcon fontSize='small' />
                   </IconButton>
+                  </span>
                 </Tooltip>
               ) : (
                 <Tooltip title='Select Document'>
@@ -95,35 +109,36 @@ const DocumentInsightsGrid = ({
                   userSelect: 'none'
                 }}
               >
-                {params.value || (params.row.documentId ? 'Unknown Documen2t' : 'Select Document')}
+                {params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
               </Box>
+              <Tooltip title='Generate Document'>
+                <Button
+                  variant='contained'
+                  size='small'
+                  onClick={() => onGenerate(params.row)}
+                  sx={{ textTransform: 'none', fontWeight: '600' }}
+                  aria-label={`Generate answers for document ${params.row.name}`}
+                >
+                  Generate
+                </Button>
+              </Tooltip>
             </Box>
           )
         }
       },
-      {
-        field: 'generate',
-        headerName: '',
-        width: 130,
-        sortable: false,
-        filterable: false,
-        disableColumnMenu: true,
-        renderCell: params => (
-          <Button
-            variant='contained'
-            size='small'
-            onClick={() => onGenerate(params.row)}
-            sx={{ textTransform: 'none', fontWeight: '600' }}
-            aria-label={`Generate answers for document ${params.row.name}`}
-          >
-            Generate
-          </Button>
-        )
-      },
       ...questions.map(q => ({
         field: `q_${q.id}`,
-        headerName: q.text.length > 15 ? `${q.text.slice(0, 12)}...` : q.text,
-        width: 180,
+        headerName: (
+          <Box
+            sx={{ cursor: 'help', whiteSpace: 'normal', wordBreak: 'break-word', fontWeight: 600 }}
+            onMouseEnter={e => handleHeaderMouseEnter(e, q)}
+            onMouseLeave={handleHeaderMouseLeave}
+            title={q.text}
+          >
+            {q.text.length > 30 ? q.text.slice(0, 30) + '...' : q.text}
+          </Box>
+        ),
+        width: 240,
         editable: true,
         resizable: true,
         sortable: false,
@@ -220,7 +235,7 @@ const DocumentInsightsGrid = ({
 
       questions.forEach(q => {
         const answerObj = answers.find(a => a.documentNodeId === doc.id && a.questionNodeId === q.id)
-        row[`q_${q.id}`] = answerObj ? answerObj.message : ''
+        row[`q_${q.id}`] = answerObj ? answerObj.answerValue : ''
       })
 
       return row
@@ -280,8 +295,15 @@ const DocumentInsightsGrid = ({
         pagination
         pageSize={10}
         rowsPerPageOptions={[10, 25, 50]}
-        disableSelectionOnClick
+        disableRowSelectionOnClick
+        checkboxSelection={false}
+        disableSelectionOnClick={true}
         experimentalFeatures={{ newEditingApi: true }}
+        componentsProps={{
+          cell: {
+            title: '' // disables native tooltip on all cells
+          }
+        }}
         sx={{
           border: '1px solid',
           borderColor: 'divider',
@@ -290,14 +312,30 @@ const DocumentInsightsGrid = ({
             transition: 'background-color 0.15s ease',
             '&:focus-within': {
               backgroundColor: 'rgba(25,118,210,0.08)'
-            }
+            },
+            whiteSpace: 'normal',
+            lineHeight: 1.4,
+            py: 1
           },
           '& .MuiDataGrid-row:hover': {
             backgroundColor: 'action.hover'
           },
           '& .MuiDataGrid-columnHeaders': {
             backgroundColor: 'background.paper',
-            fontWeight: 600
+            fontWeight: 600,
+            position: 'sticky',
+            top: 0,
+            zIndex: 1,
+            whiteSpace: 'normal',
+            lineHeight: 1.3,
+            paddingBottom: 10,
+            maxHeight: 60
+          },
+          '& .MuiDataGrid-columnHeaderTitle': {
+            overflowWrap: 'break-word',
+            whiteSpace: 'normal',
+            lineHeight: 1.3,
+            fontSize: '0.875rem'
           },
           '&::-webkit-scrollbar': {
             height: 10
@@ -308,6 +346,20 @@ const DocumentInsightsGrid = ({
           }
         }}
       />
+      <Popper
+        open={Boolean(anchorEl)}
+        anchorEl={anchorEl}
+        placement='top'
+        modifiers={[{ name: 'offset', options: { offset: [0, 10] } }]}
+      >
+        {hoveredQuestion && (
+          <Paper sx={{ p: 1.5, maxWidth: 300, boxShadow: 3 }}>
+            <Typography variant='body2' sx={{ whiteSpace: 'normal', wordWrap: 'break-word' }}>
+              {hoveredQuestion.text}
+            </Typography>
+          </Paper>
+        )}
+      </Popper>
     </Box>
   )
 }

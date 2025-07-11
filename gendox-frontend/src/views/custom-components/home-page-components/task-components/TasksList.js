@@ -5,6 +5,8 @@ import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
+import Chip from '@mui/material/Chip'
+import Tooltip from '@mui/material/Tooltip'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import { useDispatch, useSelector } from 'react-redux'
@@ -15,6 +17,13 @@ import toast from 'react-hot-toast'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import LinearProgress from '@mui/material/LinearProgress'
 import Box from '@mui/material/Box'
+
+// Map your codes to user-friendly labels + colors
+const TASK_TYPE_MAP = {
+  DEEP_RESEARCH: { label: 'Deep Research', color: 'primary' },
+  DOCUMENT_INSIGHTS: { label: 'Document Insights', color: 'success' },
+  DOCUMENT_DIGITIZATION: { label: 'Document Digitization', color: 'warning' }
+}
 
 const TasksList = ({ projectTasks, page }) => {
   const dispatch = useDispatch()
@@ -35,16 +44,12 @@ const TasksList = ({ projectTasks, page }) => {
     setFilteredTasks(projectTasks || [])
   }, [projectTasks])
 
-  // Filter tasks by search
   useEffect(() => {
     if (!searchText.trim()) {
       setFilteredTasks(projectTasks)
     } else {
       const filtered = projectTasks.filter(task =>
-        Object.values(task).some(value =>
-          value &&
-          value.toString().toLowerCase().includes(searchText.toLowerCase())
-        )
+        Object.values(task).some(value => value && value.toString().toLowerCase().includes(searchText.toLowerCase()))
       )
       setFilteredTasks(filtered)
     }
@@ -57,7 +62,6 @@ const TasksList = ({ projectTasks, page }) => {
 
   const handleMenuClose = () => {
     setAnchorEl(null)
-    // setSelectedTask(null)
   }
 
   const openDeleteConfirm = () => {
@@ -70,17 +74,13 @@ const TasksList = ({ projectTasks, page }) => {
   }
 
   const handleDeleteTask = async () => {
-    console.log("Deleting task:", selectedTask)
     if (!selectedTask) return
     setIsDeleting(true)
 
     try {
-      await dispatch(
-      deleteTask({ organizationId, projectId, taskId: selectedTask.id, token })
-    ).unwrap()
+      await dispatch(deleteTask({ organizationId, projectId, taskId: selectedTask.id, token })).unwrap()
       toast.success(`Task "${selectedTask.title}" deleted.`)
       closeDeleteConfirm()
-      // dispatch(fetchProjectDocuments({ organizationId, projectId, token, page }))
     } catch (error) {
       toast.error(`Failed to delete task: ${getErrorMessage(error)}`)
     } finally {
@@ -90,7 +90,9 @@ const TasksList = ({ projectTasks, page }) => {
   }
 
   const handleRowClick = params => {
-    router.push(`/gendox/tasks/document-insights/?organizationId=${organizationId}&taskId=${params.row.id}&projectId=${projectId}`)
+    router.push(
+      `/gendox/tasks/document-insights/?organizationId=${organizationId}&taskId=${params.row.id}&projectId=${projectId}`
+    )
   }
 
   const columns = [
@@ -113,14 +115,24 @@ const TasksList = ({ projectTasks, page }) => {
     {
       field: 'type',
       headerName: 'Type',
-      flex: 0.2,
+      flex: 0.3,
       minWidth: 160,
       sortable: true,
-      renderCell: params => (
-        <Typography variant='body2' sx={{ color: 'text.secondary' }}>
-          {params.row.taskType?.name || '—'}
-        </Typography>
-      )
+      renderCell: params => {
+        const typeCode = params.row.taskType?.value || params.row.taskType?.name || ''
+        const typeInfo = TASK_TYPE_MAP[typeCode] || { label: 'Unknown', color: 'default' }
+        return (
+          <Tooltip title={typeInfo.label} arrow>
+            <Chip
+              label={typeInfo.label}
+              color={typeInfo.color}
+              variant='outlined'
+              size='small'
+              sx={{ cursor: 'default', userSelect: 'none' }}
+            />
+          </Tooltip>
+        )
+      }
     },
     {
       field: 'description',
@@ -150,6 +162,7 @@ const TasksList = ({ projectTasks, page }) => {
               event.stopPropagation()
               handleMenuClick(event, params.row)
             }}
+            disabled={isDeleting}
           >
             <Icon icon='mdi:dots-vertical' />
           </IconButton>
@@ -177,18 +190,22 @@ const TasksList = ({ projectTasks, page }) => {
         transition: 'filter 0.3s ease'
       }}
     >
-      {isDeleting && <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0 }} />}    
+      {isDeleting && <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0 }} />}
 
-      {!filteredTasks.length ? (
+      {!filteredTasks || filteredTasks.length === 0 ? (
         <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
-          <Typography variant='body1' sx={{ mb: 2 }}>
-            No tasks found.
+          <Box sx={{ fontSize: 48, mb: 2 }} role='img' aria-label='Empty inbox'>
+            📭
+          </Box>
+          <Typography variant='h6' sx={{ mb: 1, fontWeight: 'bold' }}>
+            No tasks here yet!
           </Typography>
-          <Typography variant='body2'>Try adjusting your search or create a new task.</Typography>
+          <Typography variant='body2'>
+            Looks like you don’t have any tasks yet. Why not create one and get started? 🚀
+          </Typography>
         </Box>
       ) : (
         <DataGrid
-          autoHeight
           rows={filteredTasks}
           columns={columns}
           pageSizeOptions={[10, 20, 40]}
@@ -209,12 +226,21 @@ const TasksList = ({ projectTasks, page }) => {
         onConfirm={handleDeleteTask}
         title='Confirm Task Deletion'
         contentText={
-          selectedTask
-            ? `Are you sure you want to delete the task "${selectedTask.title}"? This action cannot be undone.`
-            : 'Are you sure you want to delete this task? This action cannot be undone.'
+          selectedTask ? (
+            <Box>
+              Are you sure you want to delete the task{' '}
+              <Typography component='span' sx={{ fontWeight: 'bold' }}>
+                "{selectedTask.title}"
+              </Typography>
+              ? This action cannot be undone.
+            </Box>
+          ) : (
+            'Are you sure you want to delete this task? This action cannot be undone.'
+          )
         }
         confirmButtonText='Delete'
         cancelButtonText='Cancel'
+        disableConfirm={isDeleting}
       />
     </Card>
   )

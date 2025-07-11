@@ -41,9 +41,8 @@ public class TaskNode {
     private UUID parentNodeId;
 
     @Basic
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "document_id")
-    private DocumentInstance document;
+    private UUID documentId;
 
     @Basic
     @Column(name = "page_number")
@@ -106,12 +105,12 @@ public class TaskNode {
         this.parentNodeId = parentNodeId;
     }
 
-    public DocumentInstance getDocument() {
-        return document;
+    public UUID getDocumentId() {
+        return documentId;
     }
 
-    public void setDocument(DocumentInstance document) {
-        this.document = document;
+    public void setDocumentId(UUID documentId) {
+        this.documentId = documentId;
     }
 
     public Integer getPageNumber() {
@@ -159,11 +158,11 @@ public class TaskNode {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TaskNode taskNode = (TaskNode) o;
-        return Objects.equals(id, taskNode.id) && Objects.equals(taskId, taskNode.taskId) && Objects.equals(nodeType, taskNode.nodeType) && Objects.equals(nodeValue, taskNode.nodeValue) && Objects.equals(parentNodeId, taskNode.parentNodeId) && Objects.equals(document, taskNode.document) && Objects.equals(pageNumber, taskNode.pageNumber) && Objects.equals(createdAt, taskNode.createdAt) && Objects.equals(updatedAt, taskNode.updatedAt) && Objects.equals(createdBy, taskNode.createdBy) && Objects.equals(updatedBy, taskNode.updatedBy);
+        return Objects.equals(id, taskNode.id) && Objects.equals(taskId, taskNode.taskId) && Objects.equals(nodeType, taskNode.nodeType) && Objects.equals(nodeValue, taskNode.nodeValue) && Objects.equals(parentNodeId, taskNode.parentNodeId) && Objects.equals(documentId, taskNode.documentId) && Objects.equals(pageNumber, taskNode.pageNumber) && Objects.equals(createdAt, taskNode.createdAt) && Objects.equals(updatedAt, taskNode.updatedAt) && Objects.equals(createdBy, taskNode.createdBy) && Objects.equals(updatedBy, taskNode.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, taskId, nodeType, nodeValue, parentNodeId, document, pageNumber, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, taskId, nodeType, nodeValue, parentNodeId, documentId, pageNumber, createdAt, updatedAt, createdBy, updatedBy);
     }
 }

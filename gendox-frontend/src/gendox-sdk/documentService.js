@@ -10,13 +10,32 @@ import apiRequests from 'src/configs/apiRequest.js'
  * @returns {Promise<axios.AxiosResponse<DocumentInstances[]>>}
  */
 const getDocumentByProject = async (organizationId, projectId, token, page) => {
-  return axios.get(apiRequests.getDocumentsByProject(organizationId, projectId, page), {
+  return axios.get(apiRequests.getDocumentsByCriteriaProjectId(organizationId, projectId, page), {
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token
     },
     params: {
       projectId: projectId
+    }
+  })
+}
+
+/**
+ * Get all documents by criteria
+ * @param organizationId
+ * @param projectId
+ * @param criteria
+ * @param token
+ * @param page
+ * @param size
+ * @returns {Promise<axios.AxiosResponse<DocumentInstances[]>>}
+ */
+const findDocumentsByCriteria = async (organizationId, projectId, criteria, token) => {
+  return axios.post(apiRequests.findDocumentsByCriteria(organizationId, projectId), criteria, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
     }
   })
 }
@@ -200,5 +219,6 @@ export default {
   updateSectionsOrder,
   deleteDocument,
   deleteDocumentSection,
-  triggerJobs
+  triggerJobs,
+  findDocumentsByCriteria,
 }

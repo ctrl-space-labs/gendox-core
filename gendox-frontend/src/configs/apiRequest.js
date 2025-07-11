@@ -13,8 +13,11 @@ export default {
   getProjectById: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}`,
   getProjectsByOrganization: organizationId => `${url}organizations/${organizationId}/projects`,
 
-  getDocumentsByProject: (organizationId, projectId, page, sort = 'createdAt,desc') =>
+  getDocumentsByCriteriaProjectId: (organizationId, projectId, page, sort = 'createdAt,desc') =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents?page=${page}&sort=${sort}`,
+
+  findDocumentsByCriteria: (organizationId, projectId, page = 0, size = 20, sort = 'createdAt,desc') =>
+    `${url}organizations/${organizationId}/projects/${projectId}/documents/search?page=${page}&size=${size}&sort=${sort}`,
 
   getUsersInOrganizationByOrgId: organizationId => `${url}organizations/${organizationId}/users`,
 

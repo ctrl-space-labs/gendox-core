@@ -18,14 +18,16 @@ import {
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
 import HeaderSection from './table-components/HeaderSection'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
-
+import documentService from 'src/gendox-sdk/documentService'
 
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
   const dispatch = useDispatch()
   const token = window.localStorage.getItem('accessToken')
   const { organizationId, taskId, projectId } = router.query
-  const { taskNodesDocQuestionList, taskNodesAnswerList, isLoading, isLoadingAnswers } = useSelector(state => state.activeTask)
+  const { taskNodesDocQuestionList, taskNodesAnswerList, isLoading, isLoadingAnswers } = useSelector(
+    state => state.activeTask
+  )
   const [documents, setDocuments] = useState([])
   const [questions, setQuestions] = useState([])
   const [answers, setAnswers] = useState([])
@@ -56,7 +58,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       })
   }, [organizationId, projectId, taskId, token, dispatch])
 
-  
+  // console.log('DOCUMENTS:', documents)
 
   useEffect(() => {
     if (!taskNodesDocQuestionList?.content) return
@@ -64,14 +66,36 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     const documentNodes = taskNodesDocQuestionList.content.filter(node => node.nodeType.name === 'DOCUMENT')
     const questionNodes = taskNodesDocQuestionList.content.filter(node => node.nodeType.name === 'QUESTION')
 
-    setDocuments(
-      documentNodes.map(node => ({
-        id: node.id,
-        documentId: node.document?.id,
-        name: node.document?.title || 'Unknown Document',
-        answers: []
-      }))
-    )
+    const getDocumentIdsFromNodes = documentNodes => {
+      return documentNodes.map(node => node.documentId).filter(id => id !== undefined && id !== null)
+    }
+    const documentIds = getDocumentIdsFromNodes(documentNodes)
+
+    fetchDocumentsByCriteria(organizationId, projectId, documentIds, token).then(fullDocuments => {
+      if (!Array.isArray(fullDocuments)) {
+        console.error('Expected an array but got:', fullDocuments)
+        setDocuments(
+          documentNodes.map(node => ({
+            id: node.id,
+            documentId: node.documentId,
+            name: 'Unknown Document'
+          }))
+        )
+        return
+      }
+
+      setDocuments(
+        documentNodes.map(node => {
+          const fullDoc = fullDocuments.find(d => d.id === node.documentId)
+          return {
+            id: node.id,
+            documentId: node.documentId,
+            name: fullDoc?.title || 'Unknown Document'
+          }
+        })
+      )
+    })
+
     setQuestions(
       questionNodes.map(node => ({
         id: node.id,
@@ -79,8 +103,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       }))
     )
   }, [taskNodesDocQuestionList])
-
- 
 
   useEffect(() => {
     if (!documents.length || !questions.length) return
@@ -112,28 +134,14 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     setAnswers(
       answerNodes.map(node => ({
         id: node.id,
-        documentNodeId: node.nodeValue?.documentId || '',
-        questionNodeId: node.nodeValue?.questionId || '',
+        documentNodeId: node.nodeValue?.nodeDocumentId || '',
+        questionNodeId: node.nodeValue?.nodeQuestionId || '',
         message: node.nodeValue?.message || '',
         answerValue: node.nodeValue?.answerValue || '',
         answerFlagEnum: node.nodeValue?.answerFlagEnum || ''
       }))
     )
   }, [taskNodesAnswerList])
-
-  
-
-  const handleAddDocument = () => {
-    setDocuments(prev => [
-      ...prev,
-      {
-        id: '',
-        name: '',
-        answers: questions.map(() => ''),
-        documentId: null
-      }
-    ])
-  }
 
   const openUploader = () => setShowUploader(true)
 
@@ -209,14 +217,37 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     }
   }
 
+  const fetchDocumentsByCriteria = async (organizationId, projectId, documentIds, token) => {
+    if (!documentIds.length) return []
+
+    const documentInstanceIds = documentIds.map(id => id.toString())
+
+    const criteria = {
+      organizationId,
+      projectId,
+      documentInstanceIds
+    }
+
+    console.log('Fetching documents by criteria:', criteria)
+
+    try {
+      const response = await documentService.findDocumentsByCriteria(organizationId, projectId, criteria, token)
+      console.log('Fetched documents:', response)
+      return response.data.content || []
+    } catch (error) {
+      console.error('Failed to fetch documents by criteria:', error)
+      return []
+    }
+  }
+
   return (
     <>
       <Paper sx={{ p: 3, overflowX: 'auto', backgroundColor: 'action.hover', mb: 3 }}>
         <HeaderSection
           title={selectedTask?.title}
           description={selectedTask?.description}
-          onAddDocument={handleAddDocument}
           onAddQuestion={openAddDialog}
+          openUploader={openUploader}
           onGenerateAll={() => handleGenerate(documents)}
           disableGenerateAll={documents.length === 0 || questions.length === 0}
           isLoading={isLoading}
@@ -234,11 +265,10 @@ const DocumentInsightsTable = ({ selectedTask }) => {
                 return updated
               })
             }}
-            openUploader={openUploader}
             onGenerate={handleGenerate}
             onDeleteQuestionOrDocumentNode={confirmDeleteQuestionOrDocumentNode}
             isLoadingAnswers={isLoadingAnswers}
-            isLoading={isLoading} 
+            isLoading={isLoading}
           />
         </Box>
       </Paper>

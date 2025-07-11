@@ -42,7 +42,6 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     private final ProjectService projectService;
     private final MessageService messageService;
     private final DocumentSectionService documentSectionService;
-
     private TypeService typeService;
     private TaskService taskService;
     private ObjectMapper objectMapper;
@@ -92,7 +91,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         Type nodeTypeAnswer = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.ANSWER);
 
         List<List<CompletionQuestionRequest>> groupedQuestions = groupQuestionsBy10(documentGroupWithQuestions);
-        List<List<DocumentInstanceSection>> groupedOrderedSections = groupSectionsBy100kTokens(documentGroupWithQuestions.getDocumentNode().getDocument().getId());
+        List<List<DocumentInstanceSection>> groupedOrderedSections = groupSectionsBy100kTokens(documentGroupWithQuestions.getDocumentNode().getDocumentId());
 
 
         Task task = taskService.getTaskById(documentGroupWithQuestions.getTaskId());
@@ -154,7 +153,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 } catch (GendoxException e) {
                     logger.warn("Error getting completion for message: {}, error: {}", message.getId(), e.getMessage());
                     logger.warn("Skipping processing documentId: {} for the questions: {}.",
-                            documentGroupWithQuestions.getDocumentNode().getDocument().getId(),
+                            documentGroupWithQuestions.getDocumentNode().getDocumentId(),
                             questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
                     continue;
 
@@ -162,7 +161,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                     logger.warn("Error converting Json completion to GroupedQuestionAnswers, message: {}, error: {}", message.getId(), e.getMessage());
                     logger.warn("Response Completion messages are: {}", response);
                     logger.warn("Skipping processing documentId: {} fpr the questions: {}.",
-                            documentGroupWithQuestions.getDocumentNode().getDocument().getId(),
+                            documentGroupWithQuestions.getDocumentNode().getDocumentId(),
                             questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
                     continue;
                 }
