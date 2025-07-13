@@ -71,7 +71,7 @@ public class TaskService {
                 .orElseThrow(() -> new RuntimeException("Task not found"));
     }
 
-    public Task updateTask (UUID taskId, TaskDTO taskDTO) {
+    public Task updateTask(UUID taskId, TaskDTO taskDTO) {
         logger.info("Updating task: {}", taskId);
         Task existingTask = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found for update"));
@@ -84,6 +84,11 @@ public class TaskService {
 
     public TaskNode createTaskNode(TaskNode taskNode) throws GendoxException {
         logger.info("Creating new task node: {}", taskNode);
+        if (taskNode.getNodeType().equals(typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.QUESTION))) {
+            Integer maxOrder = findMaxOrderByTaskId(taskNode.getTaskId());
+            int nextOrder = (maxOrder != null ? maxOrder : 0) + 1;
+            taskNode.getNodeValue().setOrder(nextOrder);
+        }
         return taskNodeRepository.save(taskNode);
     }
 
@@ -332,6 +337,14 @@ public class TaskService {
 
         // Finally, delete the task itself
         taskRepository.delete(taskToDelete);
+    }
+
+    /**
+     * Returns the current maximum 'order' value among task nodes of a given taskId.
+     * Assumes 'order' is stored inside TaskNode.nodeValue (JSON).
+     */
+    public Integer findMaxOrderByTaskId(UUID taskId) {
+        return taskNodeRepository.findMaxOrderByTaskId(taskId);
     }
 
 }

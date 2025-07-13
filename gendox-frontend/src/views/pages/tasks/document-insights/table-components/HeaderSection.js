@@ -1,11 +1,46 @@
-import React from 'react'
-import { Box, Typography, Stack, Button, Tooltip, Divider } from '@mui/material'
+import React, { useState, useRef } from 'react'
+import {
+  Box,
+  Typography,
+  Stack,
+  Button,
+  Tooltip,
+  Divider,
+  ClickAwayListener,
+  IconButton,
+  Menu,
+  MenuItem
+} from '@mui/material'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
+
 import DescriptionIcon from '@mui/icons-material/Description'
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 
-const HeaderSection = ({ title, description, openUploader, onAddQuestion, onGenerateAll, disableGenerateAll, isLoading }) => {
+const HeaderSection = ({
+  title,
+  description,
+  openUploader,
+  onAddQuestion,
+  onGenerate,
+  disableGenerateAll,
+  isLoading
+}) => {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const anchorRef = useRef(null)
+
+  const handleToggle = () => {
+    setMenuOpen(prev => !prev)
+  }
+
+  const handleClose = event => {
+    if (anchorRef.current && anchorRef.current.contains(event.target)) {
+      return
+    }
+    setMenuOpen(false)
+  }
+
   return (
     <Box sx={{ mb: 4, px: 2 }}>
       {/* Title + Description stacked vertically */}
@@ -62,38 +97,72 @@ const HeaderSection = ({ title, description, openUploader, onAddQuestion, onGene
           </Tooltip>
         </Stack>
 
-        {/* Generate ALL button */}
+        <Stack direction='row' spacing={1} alignItems='center'>
+          <Tooltip title={isLoading ? 'Loading...' : 'Generate new answers'}>
+            <span>
+              <Button
+                variant='contained'
+                color='primary'
+                size='large'
+                startIcon={<RocketLaunchIcon />}
+                onClick={() => {
+                  if (!disableGenerateAll && !isLoading) {
+                    onGenerate(false)   
+                  }
+                }}
+                disabled={disableGenerateAll || isLoading}
+                ref={anchorRef}
+                aria-controls={menuOpen ? 'generate-menu' : undefined}
+                aria-haspopup='true'
+                aria-expanded={menuOpen ? 'true' : undefined}
+                sx={{ fontWeight: 700, textTransform: 'uppercase' }}
+              >
+                Generate New
+              </Button>
+            </span>
+          </Tooltip>
 
-        <Tooltip
-          title={
-            disableGenerateAll
-              ? 'Add documents and questions first'
-              : isLoading
-              ? 'Loading answers...'
-              : 'Generate answers for all documents'
-          }
-        >
-          <span>
-            <Button
-              variant='contained'
-              color='primary'
-              size='large'
-              startIcon={<RocketLaunchIcon />}
-              onClick={onGenerateAll}
-              disabled={disableGenerateAll || isLoading}
-              sx={{
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                boxShadow: '0 3px 10px rgb(0 0 0 / 0.15)',
-                ':hover': {
-                  boxShadow: '0 6px 15px rgb(0 0 0 / 0.3)'
-                }
-              }}
-            >
-              Generate ALL
-            </Button>
-          </span>
-        </Tooltip>
+          <ClickAwayListener onClickAway={handleClose}>
+            <Box>
+              <Tooltip title={menuOpen ? 'Close options' : 'More options'}>
+                <IconButton
+                  color='primary'
+                  size='large'
+                  onClick={handleToggle}
+                  aria-label='toggle generate options'
+                  aria-controls={menuOpen ? 'generate-menu' : undefined}
+                  aria-haspopup='true'
+                  aria-expanded={menuOpen ? 'true' : undefined}
+                  disabled={disableGenerateAll || isLoading}
+                  sx={{ ml: 1 }}
+                >
+                  <ArrowDropDownIcon />
+                </IconButton>
+              </Tooltip>
+
+              <Menu
+                id='generate-menu'
+                anchorEl={anchorRef.current}
+                open={menuOpen}
+                onClose={handleClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+              >
+                <MenuItem
+                  onClick={() => {
+                    setMenuOpen(false)
+                    if (!disableGenerateAll && !isLoading) {
+                      onGenerate(true)    
+                    }
+                  }}
+                  disabled={disableGenerateAll || isLoading}
+                >
+                  Generate ALL
+                </MenuItem>
+              </Menu>
+            </Box>
+          </ClickAwayListener>
+        </Stack>
       </Stack>
     </Box>
   )

@@ -212,7 +212,9 @@ const initialState = {
   taskNodes: {},
   taskNodesList: [],
   taskEdgesList: [],
-  taskNodesDocQuestionList: [],
+  taskNodesRestList: [],
+  taskNodesDocumentList: [],
+  taskNodesQuestionList: [],
   taskNodesAnswerList: [],
   taskEdges: {},
   isLoading: false,
@@ -367,9 +369,17 @@ const taskSlice = createSlice({
         if (criteria.nodeTypeNames.includes('ANSWER')) {
           state.isLoadingAnswers = false
           state.taskNodesAnswerList = action.payload
+        } 
+        if (criteria.nodeTypeNames.includes('DOCUMENT')) {
+          state.isLoading = false
+          state.taskNodesDocumentList = action.payload
+        }
+        if (criteria.nodeTypeNames.includes('QUESTION')) {
+          state.isLoading = false
+          state.taskNodesQuestionList = action.payload
         } else {
           state.isLoading = false
-          state.taskNodesDocQuestionList = action.payload
+          state.taskNodesRestList = action.payload
         }
       })
       .addCase(fetchTaskNodesByCriteria.rejected, (state, action) => {

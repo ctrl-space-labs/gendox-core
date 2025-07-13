@@ -76,4 +76,13 @@ public interface TaskNodeRepository extends JpaRepository<TaskNode, UUID>, Query
             @Param("questionNodeId") UUID questionNodeId);
 
 
+    @Query(value = """
+      SELECT COALESCE(MAX((node_value->>'order')::int), 0)
+      FROM gendox_core.task_nodes
+      WHERE task_id = :taskId
+      """, nativeQuery = true)
+    Integer findMaxOrderByTaskId(@Param("taskId") UUID taskId);
+
+
+
 }

@@ -24,7 +24,7 @@ import UploaderDocumentInsights from './UploaderDocumentInsigths'
 import { fetchProjectDocuments } from 'src/store/activeProject/activeProject'
 import { useDispatch, useSelector } from 'react-redux'
 import taskService from 'src/gendox-sdk/taskService'
-import { fetchTaskNodesByTaskId } from 'src/store/activeTask/activeTask'
+import { fetchTaskNodesByCriteria } from 'src/store/activeTask/activeTask'
 
 const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, taskId, existingDocuments }) => {
   const dispatch = useDispatch()
@@ -89,7 +89,15 @@ const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, task
       }
       await taskService.createTaskNode(organizationId, projectId, taskNodePayload, token)
     }
-    dispatch(fetchTaskNodesByTaskId({ organizationId, projectId, taskId, token }))
+    await dispatch(
+      fetchTaskNodesByCriteria({
+        organizationId,
+        projectId,
+        taskId,
+        criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
+        token
+      })
+    )
     onClose()
   }
 

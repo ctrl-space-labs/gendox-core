@@ -17,7 +17,7 @@ import { useDropzone } from 'react-dropzone'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import documentService from 'src/gendox-sdk/documentService'
 import useMediaQuery from '@mui/material/useMediaQuery'
-import { fetchTaskNodesByTaskId } from 'src/store/activeTask/activeTask'
+import { fetchTaskNodesByCriteria } from 'src/store/activeTask/activeTask'
 import taskService from 'src/gendox-sdk/taskService'
 
 // Styled containers using rem units
@@ -200,7 +200,15 @@ const UploaderDocumentInsights = ({ closeUploader, taskId, onClose }) => {
     closeUploader()
     onClose()
 
-    dispatch(fetchTaskNodesByTaskId({ organizationId, projectId, taskId, token: accessToken }))
+    dispatch(
+          fetchTaskNodesByCriteria({
+            organizationId,
+            projectId,
+            taskId,
+            criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
+            token: accessToken
+          })
+        )
   }
 
   const deleteFile = fileId => {

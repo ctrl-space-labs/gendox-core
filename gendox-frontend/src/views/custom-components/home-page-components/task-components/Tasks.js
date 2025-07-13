@@ -9,7 +9,7 @@ import { debounce } from 'lodash'
 import toast from 'react-hot-toast'
 
 import TasksList from './TasksList'
-import CreateTaskDialog from './CreateTaskDialog'
+import CreateTaskDialog from './CreateOrEditTaskDialog'
 import { fetchTasks, createTask } from 'src/store/activeTask/activeTask'
 import { isValidOrganizationAndProject } from 'src/utils/validators'
 import { localStorageConstants } from 'src/utils/generalConstants'

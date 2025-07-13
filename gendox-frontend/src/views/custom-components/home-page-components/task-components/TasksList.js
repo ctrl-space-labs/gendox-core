@@ -17,9 +17,8 @@ import toast from 'react-hot-toast'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import LinearProgress from '@mui/material/LinearProgress'
 import Box from '@mui/material/Box'
-import CreateTaskDialog from './CreateTaskDialog'
+import CreateTaskDialog from './CreateOrEditTaskDialog'
 import { updateTask, fetchTasks } from 'src/store/activeTask/activeTask'
-
 
 // Map your codes to user-friendly labels + colors
 const TASK_TYPE_MAP = {

@@ -1,6 +1,10 @@
 // src/utils/taskUtils.js
 import { toast } from 'react-hot-toast'
-import { createTaskNode, updateTaskNode, fetchTaskNodesByTaskId, fetchTaskEdgesByCriteria } from 'src/store/activeTask/activeTask'
+import {
+  createTaskNode,
+  updateTaskNode,
+  fetchTaskNodesByCriteria
+} from 'src/store/activeTask/activeTask'
 
 export const saveQuestion = async ({
   dispatch,
@@ -32,11 +36,18 @@ export const saveQuestion = async ({
       }
       await dispatch(createTaskNode({ organizationId, projectId, taskNodePayload: newPayload, token })).unwrap()
     }
-    await dispatch(fetchTaskNodesByTaskId({ organizationId, projectId, taskId, token }))
+    await dispatch(
+      fetchTaskNodesByCriteria({
+        organizationId,
+        projectId,
+        taskId,
+        criteria: { taskId, nodeTypeNames: ['QUESTION'] },
+        token
+      })
+    )
     closeDialog()
   } catch (error) {
     console.error('Failed to add/edit question node:', error)
     toast.error('Failed to save question')
   }
 }
-

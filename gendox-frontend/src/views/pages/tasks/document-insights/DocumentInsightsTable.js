@@ -25,9 +25,9 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const dispatch = useDispatch()
   const token = window.localStorage.getItem('accessToken')
   const { organizationId, taskId, projectId } = router.query
-  const { taskNodesDocQuestionList, taskNodesAnswerList, isLoading, isLoadingAnswers } = useSelector(
-    state => state.activeTask
-  )
+  const { taskNodesDocumentList, taskNodesQuestionList, taskNodesAnswerList, isLoading, isLoadingAnswers } =
+    useSelector(state => state.activeTask)
+
   const [documents, setDocuments] = useState([])
   const [questions, setQuestions] = useState([])
   const [answers, setAnswers] = useState([])
@@ -39,8 +39,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
-  console.log("ANSWERS:", answers)
-
   useEffect(() => {
     if (!(organizationId && projectId && taskId && token)) return
 
@@ -49,34 +47,45 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         organizationId,
         projectId,
         taskId,
-        criteria: { taskId, nodeTypeNames: ['DOCUMENT', 'QUESTION'] },
+        criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
         token
       })
     )
       .unwrap()
       .catch(error => {
-        toast.error('Failed to load documents and questions')
+        toast.error('Failed to load documents')
+        console.error(error)
+      })
+
+    dispatch(
+      fetchTaskNodesByCriteria({
+        organizationId,
+        projectId,
+        taskId,
+        criteria: { taskId, nodeTypeNames: ['QUESTION'] },
+        token
+      })
+    )
+      .unwrap()
+      .catch(error => {
+        toast.error('Failed to load questions')
         console.error(error)
       })
   }, [organizationId, projectId, taskId, token, dispatch])
 
-
   useEffect(() => {
-    if (!taskNodesDocQuestionList?.content) return
-
-    const documentNodes = taskNodesDocQuestionList.content.filter(node => node.nodeType.name === 'DOCUMENT')
-    const questionNodes = taskNodesDocQuestionList.content.filter(node => node.nodeType.name === 'QUESTION')
+    if (!taskNodesDocumentList?.content) return
 
     const getDocumentIdsFromNodes = documentNodes => {
       return documentNodes.map(node => node.documentId).filter(id => id !== undefined && id !== null)
     }
-    const documentIds = getDocumentIdsFromNodes(documentNodes)
+    const documentIds = getDocumentIdsFromNodes(taskNodesDocumentList.content)
 
     fetchDocumentsByCriteria(organizationId, projectId, documentIds, token).then(fullDocuments => {
       if (!Array.isArray(fullDocuments)) {
         console.error('Expected an array but got:', fullDocuments)
         setDocuments(
-          documentNodes.map(node => ({
+          taskNodesDocumentList.content.map(node => ({
             id: node.id,
             documentId: node.documentId,
             name: 'Unknown Document'
@@ -86,7 +95,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       }
 
       setDocuments(
-        documentNodes.map(node => {
+        taskNodesDocumentList.content.map(node => {
           const fullDoc = fullDocuments.find(d => d.id === node.documentId)
           return {
             id: node.id,
@@ -96,14 +105,18 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         })
       )
     })
+  }, [taskNodesDocumentList, organizationId, projectId, token, dispatch, taskId])
 
+  useEffect(() => {
+    if (!taskNodesQuestionList?.content) return
     setQuestions(
-      questionNodes.map(node => ({
+      taskNodesQuestionList.content.map(node => ({
         id: node.id,
-        text: node.nodeValue?.message || ''
+        text: node.nodeValue?.message || '',
+        order: node.nodeValue?.order || 0
       }))
     )
-  }, [taskNodesDocQuestionList])
+  }, [taskNodesQuestionList, taskId, organizationId, projectId, token, dispatch])
 
   useEffect(() => {
     if (!documents.length || !questions.length) return
@@ -159,15 +172,18 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     })
   }
 
-  const handleGenerate = async docs => {
+  const handleGenerate = async (docs, reGenerateExistingAnswers) => {
     try {
       const docIds = Array.isArray(docs) ? docs.map(d => d.id) : [docs.id]
 
       const criteria = {
         taskId,
         documentNodeIds: docIds,
-        questionNodeIds: questions.map(q => q.id)
+        questionNodeIds: questions.map(q => q.id),
+        reGenerateExistingAnswers
       }
+      console.log('Criteria for generation:', criteria)
+
       const jobExecutionId = await dispatch(
         executeTaskByType({ organizationId, projectId, taskId, criteria, token })
       ).unwrap()
@@ -246,24 +262,22 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           description={selectedTask?.description}
           onAddQuestion={openAddDialog}
           openUploader={openUploader}
-          onGenerateAll={() => handleGenerate(documents)}
+          onGenerate={reGenerateExistingAnswers => handleGenerate(documents, reGenerateExistingAnswers)}
           disableGenerateAll={documents.length === 0 || questions.length === 0}
           isLoading={isLoading}
         />
 
-        <Box sx={{ minWidth: 800 }}>
+        <Box
+          sx={{
+            minWidth: 800,            
+            filter: isLoading ? 'blur(6px)' : 'none',            
+          }}
+        >
           <DocumentInsightsGrid
             documents={documents}
             questions={questions}
             answers={answers}
-            onAnswerChange={(docIdx, qIdx, value) => {
-              setDocuments(prev => {
-                const updated = [...prev]
-                updated[docIdx].answers[qIdx] = value
-                return updated
-              })
-            }}
-            onGenerate={handleGenerate}
+            onGenerate={docs => handleGenerate(docs, true)}
             onDeleteQuestionOrDocumentNode={confirmDeleteQuestionOrDocumentNode}
             isLoadingAnswers={isLoadingAnswers}
             isLoading={isLoading}

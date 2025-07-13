@@ -18,4 +18,5 @@ public class TaskNodeValueDTO {
     private String message;
     private String answerValue;
     private AnswerFlag answerFlagEnum;
+    private Integer order;
 }

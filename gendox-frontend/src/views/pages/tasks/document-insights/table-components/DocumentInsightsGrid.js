@@ -1,33 +1,26 @@
 import React, { useMemo, useState } from 'react'
+import AnswerDialog from '../table-dialogs/AnswerDialog'
 import { DataGrid } from '@mui/x-data-grid'
-import { Box, Button, IconButton, Tooltip, Popper, Paper, Typography } from '@mui/material'
+import { Box, Button, IconButton, Tooltip } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import CircularProgress from '@mui/material/CircularProgress'
+import QuestionsDialog from '../table-dialogs/QuestionsDialog'
 
 const DocumentInsightsGrid = ({
   documents,
   questions,
   answers,
-  onAnswerChange,
   openUploader,
   onDeleteQuestionOrDocumentNode,
   onGenerate,
   isLoadingAnswers,
   isLoading
 }) => {
-  const [anchorEl, setAnchorEl] = useState(null)
-  const [hoveredQuestion, setHoveredQuestion] = useState(null)
-
-  const handleHeaderMouseEnter = (event, q) => {
-    setAnchorEl(event.currentTarget)
-    setHoveredQuestion(q)
-  }
-
-  const handleHeaderMouseLeave = () => {
-    setAnchorEl(null)
-    setHoveredQuestion(null)
-  }
+  const [answerDialogOpen, setAnswerDialogOpen] = useState(false)
+  const [selectedAnswer, setSelectedAnswer] = useState(null)
+  const [questionDialogOpen, setQuestionDialogOpen] = useState(false)
+  const [selectedQuestionText, setSelectedQuestionText] = useState('')
 
   const loadingTextAnimation = {
     '@keyframes pulseOpacity': {
@@ -42,6 +35,10 @@ const DocumentInsightsGrid = ({
       pointerEvents: 'none'
     }
   }
+
+  const sortedQuestions = useMemo(() => {
+  return [...questions].sort((a, b) => a.order - b.order)
+}, [questions])
 
   const columns = useMemo(() => {
     return [
@@ -68,17 +65,17 @@ const DocumentInsightsGrid = ({
               {params.row.documentId ? (
                 <Tooltip title='Delete Document'>
                   <span>
-                  <IconButton
-                    color='error'
-                    size='small'
-                    onClick={e => {
-                      e.stopPropagation() // prevent row click
-                      onDeleteQuestionOrDocumentNode(params.row.id) // use correct handler
-                    }}
-                    aria-label='delete document'
-                  >
-                    <DeleteOutlineIcon fontSize='small' />
-                  </IconButton>
+                    <IconButton
+                      color='error'
+                      size='small'
+                      onClick={e => {
+                        e.stopPropagation() // prevent row click
+                        onDeleteQuestionOrDocumentNode(params.row.id) // use correct handler
+                      }}
+                      aria-label='delete document'
+                    >
+                      <DeleteOutlineIcon fontSize='small' />
+                    </IconButton>
                   </span>
                 </Tooltip>
               ) : (
@@ -118,6 +115,7 @@ const DocumentInsightsGrid = ({
                   onClick={() => onGenerate(params.row)}
                   sx={{ textTransform: 'none', fontWeight: '600' }}
                   aria-label={`Generate answers for document ${params.row.name}`}
+                  disabled={sortedQuestions.length === 0}
                 >
                   Generate
                 </Button>
@@ -126,20 +124,11 @@ const DocumentInsightsGrid = ({
           )
         }
       },
-      ...questions.map(q => ({
+      ...sortedQuestions.map(q => ({
         field: `q_${q.id}`,
-        headerName: (
-          <Box
-            sx={{ cursor: 'help', whiteSpace: 'normal', wordBreak: 'break-word', fontWeight: 600 }}
-            onMouseEnter={e => handleHeaderMouseEnter(e, q)}
-            onMouseLeave={handleHeaderMouseLeave}
-            title={q.text}
-          >
-            {q.text.length > 30 ? q.text.slice(0, 30) + '...' : q.text}
-          </Box>
-        ),
+        headerName: q.text.length > 30 ? q.text.slice(0, 30) + '...' : q.text,
         width: 240,
-        editable: true,
+        editable: false,
         resizable: true,
         sortable: false,
         filterable: false,
@@ -148,44 +137,78 @@ const DocumentInsightsGrid = ({
         renderHeader: params => (
           <Box
             sx={{
+              position: 'relative',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              justifyContent: 'flex-start',
               gap: 1.5,
-              pr: 1
+              pr: 1,
+              userSelect: 'none',
+              cursor: 'default',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              fontWeight: 600,
+              flexGrow: 1,
+              '&:hover .delete-icon': {
+                opacity: 1,
+                pointerEvents: 'auto'
+              }
             }}
             title={q.text}
           >
             <Box
-              component='span'
+              component='button'
+              type='button'
+              onClick={() => {
+                setSelectedQuestionText(q.text)
+                setQuestionDialogOpen(true)
+              }}
+              aria-label={`View question details for ${q.text}`}
               sx={{
+                all: 'unset',
+                cursor: 'pointer',
+                flexGrow: 1,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                flexGrow: 1,
-                cursor: 'default',
-                fontWeight: 600
+                paddingRight: '28px', // space for delete icon
+                '&:hover, &:focus-visible': {
+                  textDecoration: 'underline',
+                  outline: 'none'
+                }
               }}
             >
               {params.colDef.headerName}
             </Box>
-            <Tooltip title='Delete question'>
-              <DeleteOutlineIcon
-                sx={{
-                  cursor: 'pointer',
-                  fontSize: '1.1rem',
-                  color: 'error.main',
-                  '&:hover': { color: 'error.dark' }
-                }}
-                onClick={e => {
-                  e.stopPropagation()
-                  onDeleteQuestionOrDocumentNode(q.id) // same handler used for questions
-                }}
-                aria-label={`Delete question ${q.text}`}
-              />
-            </Tooltip>
+
+            {/* Hover-reveal Delete Icon */}
+            <DeleteOutlineIcon
+              className='delete-icon'
+              sx={{
+                position: 'absolute',
+                right: 4,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                cursor: 'pointer',
+                color: 'error.main',
+                fontSize: '1.2rem',
+                opacity: 0,
+                pointerEvents: 'none',
+                transition: 'opacity 0.25s ease',
+                '&:hover': {
+                  color: 'error.dark'
+                }
+              }}
+              onClick={e => {
+                e.stopPropagation()
+                onDeleteQuestionOrDocumentNode(q.id)
+              }}
+              aria-label={`Delete question ${q.text}`}
+            />
           </Box>
         ),
+
         renderCell: params => {
           if (isLoadingAnswers) {
             return (
@@ -196,34 +219,41 @@ const DocumentInsightsGrid = ({
               </Box>
             )
           }
+          const docId = params.id
+          const questionId = q.id
+          const answerObj = answers.find(a => a.documentNodeId === docId && a.questionNodeId === questionId)
           return (
-            <Box sx={{ width: '100%' }}>
-              <input
-                type='text'
-                value={params.value || ''}
-                placeholder='Click generate'
-                onChange={e => {
-                  params.api.setEditCellValue({ id: params.id, field: params.field, value: e.target.value })
-                }}
-                style={{
-                  width: '100%',
-                  border: 'none',
-                  outline: 'none',
-                  padding: '4px 8px',
-                  fontSize: '0.875rem',
-                  backgroundColor: 'transparent',
-                  color: 'inherit',
-                  pointerEvents: isLoadingAnswers || isLoading ? 'none' : 'auto',
-                  opacity: isLoadingAnswers || isLoading ? 0.5 : 1,
-                  transition: 'opacity 0.3s ease'
-                }}
-              />
+            <Box
+              sx={{
+                width: '100%',
+                padding: '4px 8px',
+                fontSize: '0.875rem',
+                backgroundColor: 'transparent',
+                color: 'inherit',
+                cursor: isLoadingAnswers || isLoading ? 'default' : 'pointer',
+                opacity: isLoadingAnswers || isLoading ? 0.5 : 1,
+                userSelect: 'none',
+                borderRadius: 1,
+                border: '1px solid transparent',
+                '&:hover': {
+                  borderColor: isLoadingAnswers || isLoading ? 'transparent' : 'primary.main'
+                }
+              }}
+              onClick={() => {
+                if (!isLoadingAnswers && !isLoading) {
+                  setSelectedAnswer(answerObj)
+                  setAnswerDialogOpen(true)
+                }
+              }}
+              title='Click to see answer details'
+            >
+              {answerObj?.answerValue || <em>Click to generate</em>}{' '}
             </Box>
           )
         }
       }))
     ]
-  }, [questions, onDeleteQuestionOrDocumentNode, openUploader, onGenerate, isLoadingAnswers, isLoading])
+  }, [sortedQuestions, answers, onDeleteQuestionOrDocumentNode, openUploader, onGenerate, isLoadingAnswers, isLoading])
 
   const rows = useMemo(() => {
     return documents.map(doc => {
@@ -233,26 +263,16 @@ const DocumentInsightsGrid = ({
         documentId: doc.documentId
       }
 
-      questions.forEach(q => {
+      sortedQuestions.forEach(q => {
         const answerObj = answers.find(a => a.documentNodeId === doc.id && a.questionNodeId === q.id)
         row[`q_${q.id}`] = answerObj ? answerObj.answerValue : ''
       })
 
       return row
     })
-  }, [documents, questions, answers])
+  }, [documents, sortedQuestions, answers])
 
-  const handleCellEditCommit = params => {
-    const questionId = params.field.replace('q_', '')
-    const docIdx = documents.findIndex(d => d.id === params.id)
-    const qIdx = questions.findIndex(q => q.id.toString() === questionId)
-
-    if (docIdx >= 0 && qIdx >= 0) {
-      onAnswerChange(docIdx, qIdx, params.value)
-    }
-  }
-
-  if (!documents.length || !questions.length) {
+  if (!documents.length && !questions.length) {
     return (
       <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
         No documents or questions to display. Please add some above.
@@ -267,7 +287,7 @@ const DocumentInsightsGrid = ({
         height: 650,
         width: '100%',
         overflowX: 'auto',
-        filter: isLoading ? 'brightness(0.85)' : 'none',
+        filter: isLoading ? 'blur(6px)' : 'none', 
         transition: 'filter 0.3s ease',
         borderRadius: 1
       }}
@@ -291,7 +311,6 @@ const DocumentInsightsGrid = ({
       <DataGrid
         rows={rows}
         columns={columns}
-        onCellEditCommit={handleCellEditCommit}
         pagination
         pageSize={10}
         rowsPerPageOptions={[10, 25, 50]}
@@ -346,20 +365,14 @@ const DocumentInsightsGrid = ({
           }
         }}
       />
-      <Popper
-        open={Boolean(anchorEl)}
-        anchorEl={anchorEl}
-        placement='top'
-        modifiers={[{ name: 'offset', options: { offset: [0, 10] } }]}
-      >
-        {hoveredQuestion && (
-          <Paper sx={{ p: 1.5, maxWidth: 300, boxShadow: 3 }}>
-            <Typography variant='body2' sx={{ whiteSpace: 'normal', wordWrap: 'break-word' }}>
-              {hoveredQuestion.text}
-            </Typography>
-          </Paper>
-        )}
-      </Popper>
+
+      <AnswerDialog open={answerDialogOpen} onClose={() => setAnswerDialogOpen(false)} answer={selectedAnswer} />
+      <QuestionsDialog
+        open={questionDialogOpen}
+        onClose={() => setQuestionDialogOpen(false)}
+        questionText={selectedQuestionText}
+        readOnly={true}
+      />
     </Box>
   )
 }
