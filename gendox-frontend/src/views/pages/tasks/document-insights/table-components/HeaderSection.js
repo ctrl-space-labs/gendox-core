@@ -17,6 +17,9 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import DescriptionIcon from '@mui/icons-material/Description'
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
 import Icon from 'src/views/custom-components/mui/icon/icon'
+import DownloadIcon from '@mui/icons-material/Download'
+import CircularProgress from '@mui/material/CircularProgress'
+import { toast } from 'react-hot-toast'
 
 const HeaderSection = ({
   title,
@@ -25,7 +28,9 @@ const HeaderSection = ({
   onAddQuestion,
   onGenerate,
   disableGenerateAll,
-  isLoading
+  isLoading,
+  onExportCsv,       // new callback prop for CSV export
+  isExportingCsv     // new prop for loading state of export
 }) => {
   const [menuOpen, setMenuOpen] = useState(false)
   const anchorRef = useRef(null)
@@ -72,6 +77,7 @@ const HeaderSection = ({
         alignItems={{ xs: 'stretch', sm: 'center' }}
         mb={3}
       >
+        
         <Stack direction='row' spacing={2} flexWrap='wrap'>
           <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Add a new document to your task'}>
             <Button
@@ -95,9 +101,23 @@ const HeaderSection = ({
               Add Question
             </Button>
           </Tooltip>
+          
         </Stack>
 
         <Stack direction='row' spacing={1} alignItems='center'>
+           <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Export data as CSV'}>
+            <span>
+              <Button
+                variant='outlined'
+                startIcon={isExportingCsv ? <CircularProgress size={18} /> : <DownloadIcon />}
+                onClick={onExportCsv}
+                disabled={isLoading || isExportingCsv || disableGenerateAll}
+                size='medium'
+              >
+                {isExportingCsv ? 'Exporting...' : 'Export CSV'}
+              </Button>
+            </span>
+          </Tooltip>
           <Tooltip title={isLoading ? 'Loading...' : 'Generate new answers'}>
             <span>
               <Button
@@ -121,6 +141,7 @@ const HeaderSection = ({
               </Button>
             </span>
           </Tooltip>
+         
 
           <ClickAwayListener onClickAway={handleClose}>
             <Box>

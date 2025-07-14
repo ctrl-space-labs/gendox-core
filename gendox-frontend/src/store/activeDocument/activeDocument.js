@@ -22,6 +22,29 @@ export const fetchDocument = createAsyncThunk(
   }
 )
 
+export const fetchDocumentsByCriteria = createAsyncThunk(
+  'activeTask/fetchDocumentsByCriteria',
+  async ({ organizationId, projectId, documentIds, token }, thunkAPI) => {
+    if (!documentIds || documentIds.length === 0) return []
+
+    const documentInstanceIds = documentIds.map(id => id.toString())
+
+    const criteria = {
+      organizationId,
+      projectId,
+      documentInstanceIds
+    }
+
+    try {
+      const response = await documentService.findDocumentsByCriteria(organizationId, projectId, criteria, token)
+      return response.data.content || []
+    } catch (error) {
+      toast.error('Failed to fetch documents by criteria')
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
 // Thunk action for updating section order
 export const updateSectionsOrder = createAsyncThunk(
   'activeDocument/updateSectionsOrder',
@@ -39,6 +62,7 @@ export const updateSectionsOrder = createAsyncThunk(
 // Define the initial state
 const initialActiveDocumentState = {
   document: {},
+  documents: [],
   sections: [],
   isBlurring: false,
   error: null
@@ -88,6 +112,18 @@ const activeDocumentSlice = createSlice({
         state.sections = state.sections.map(section =>
           section.id === action.payload.sectionId ? { ...section, ...action.payload.updatedSection } : section
         )
+      })
+      .addCase(fetchDocumentsByCriteria.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchDocumentsByCriteria.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.documents = action.payload
+      })
+      .addCase(fetchDocumentsByCriteria.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
       })
   }
 })

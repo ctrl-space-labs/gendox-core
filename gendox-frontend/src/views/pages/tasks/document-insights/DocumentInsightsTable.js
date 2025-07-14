@@ -15,10 +15,10 @@ import {
   deleteTaskNode,
   fetchTaskNodesByCriteria
 } from 'src/store/activeTask/activeTask'
+import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocument'
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
 import HeaderSection from './table-components/HeaderSection'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
-import documentService from 'src/gendox-sdk/documentService'
 
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
@@ -27,6 +27,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const { organizationId, taskId, projectId } = router.query
   const { taskNodesDocumentList, taskNodesQuestionList, taskNodesAnswerList, isLoading, isLoadingAnswers } =
     useSelector(state => state.activeTask)
+  const isBlurring = useSelector(state => state.activeDocument.isBlurring)
 
   const [documents, setDocuments] = useState([])
   const [questions, setQuestions] = useState([])
@@ -34,6 +35,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const [showUploader, setShowUploader] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteNodeId, setDeleteNodeId] = useState(null)
+  const [isExportingCsv, setIsExportingCsv] = useState(false)
+
   const { showDialog, questionText, setQuestionText, editingQuestion, openAddDialog, openEditDialog, closeDialog } =
     useQuestionDialog()
 
@@ -76,36 +79,44 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   useEffect(() => {
     if (!taskNodesDocumentList?.content) return
 
-    const getDocumentIdsFromNodes = documentNodes => {
-      return documentNodes.map(node => node.documentId).filter(id => id !== undefined && id !== null)
-    }
-    const documentIds = getDocumentIdsFromNodes(taskNodesDocumentList.content)
+    const documentIds = taskNodesDocumentList.content
+      .map(node => node.documentId)
+      .filter(id => id !== undefined && id !== null)
 
-    fetchDocumentsByCriteria(organizationId, projectId, documentIds, token).then(fullDocuments => {
-      if (!Array.isArray(fullDocuments)) {
-        console.error('Expected an array but got:', fullDocuments)
+    console.log('Fetching documents for IDs:', documentIds)
+
+    dispatch(fetchDocumentsByCriteria({ organizationId, projectId, documentIds, token }))
+      .unwrap()
+      .then(fullDocuments => {
+        console.log('Fetched full documents:', fullDocuments)
+        if (!Array.isArray(fullDocuments)) {
+          console.error('Expected array but got:', fullDocuments)
+          setDocuments(
+            taskNodesDocumentList.content.map(node => ({
+              id: node.id,
+              documentId: node.documentId,
+              name: 'Unknown Document'
+            }))
+          )
+          return
+        }
+
         setDocuments(
-          taskNodesDocumentList.content.map(node => ({
-            id: node.id,
-            documentId: node.documentId,
-            name: 'Unknown Document'
-          }))
+          taskNodesDocumentList.content.map(node => {
+            const fullDoc = fullDocuments.find(d => d.id === node.documentId)
+            return {
+              id: node.id,
+              documentId: node.documentId,
+              name: fullDoc?.title || 'Unknown Document'
+            }
+          })
         )
-        return
-      }
-
-      setDocuments(
-        taskNodesDocumentList.content.map(node => {
-          const fullDoc = fullDocuments.find(d => d.id === node.documentId)
-          return {
-            id: node.id,
-            documentId: node.documentId,
-            name: fullDoc?.title || 'Unknown Document'
-          }
-        })
-      )
-    })
-  }, [taskNodesDocumentList, organizationId, projectId, token, dispatch, taskId])
+      })
+      .catch(error => {
+        toast.error('Failed to load full document details')
+        console.error(error)
+      })
+  }, [taskNodesDocumentList, organizationId, projectId, token, dispatch])
 
   useEffect(() => {
     if (!taskNodesQuestionList?.content) return
@@ -234,23 +245,55 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     }
   }
 
-  const fetchDocumentsByCriteria = async (organizationId, projectId, documentIds, token) => {
-    if (!documentIds.length) return []
-
-    const documentInstanceIds = documentIds.map(id => id.toString())
-
-    const criteria = {
-      organizationId,
-      projectId,
-      documentInstanceIds
+  const handleExportCsv = () => {
+    if (documents.length === 0 || questions.length === 0) {
+      toast.error('No documents or questions to export')
+      return
     }
 
+    setIsExportingCsv(true)
+
     try {
-      const response = await documentService.findDocumentsByCriteria(organizationId, projectId, criteria, token)
-      return response.data.content || []
+      // CSV header row: first column is "Document Name", then questions
+      const headerRow = ['Document Name', ...questions.map(q => `"${q.text.replace(/"/g, '""')}"`)]
+
+      // Each document forms a row
+      const rows = documents.map(doc => {
+        const row = [doc.name]
+
+        // For each question, find the answer for this document-question pair
+        questions.forEach(q => {
+          const answerObj = answers.find(a => a.documentNodeId === doc.id && a.questionNodeId === q.id)
+
+          const answerText = answerObj ? `${answerObj.answerValue || ''} - ${answerObj.message || ''}`.trim() : ''
+
+          // Escape quotes by doubling them and wrap field in quotes
+          row.push(`"${answerText.replace(/"/g, '""')}"`)
+        })
+
+        return row.join(',')
+      })
+
+      const csvContent = [headerRow.join(','), ...rows].join('\n')
+
+      // Create a blob and trigger download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      const fileName = `${selectedTask?.title?.replace(/\s+/g, '_') || 'document_insights'}.csv`
+      link.setAttribute('download', fileName)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success('CSV exported successfully!')
     } catch (error) {
-      console.error('Failed to fetch documents by criteria:', error)
-      return []
+      console.error('Failed to export CSV:', error)
+      toast.error('Failed to export CSV')
+    } finally {
+      setIsExportingCsv(false)
     }
   }
 
@@ -265,12 +308,14 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           onGenerate={reGenerateExistingAnswers => handleGenerate(documents, reGenerateExistingAnswers)}
           disableGenerateAll={documents.length === 0 || questions.length === 0}
           isLoading={isLoading}
+          isExportingCsv={isExportingCsv}
+          onExportCsv={handleExportCsv}
         />
 
         <Box
           sx={{
-            minWidth: 800,            
-            filter: isLoading ? 'blur(6px)' : 'none',            
+            minWidth: 800,
+            filter: isLoading || isBlurring? 'blur(6px)' : 'none'
           }}
         >
           <DocumentInsightsGrid
@@ -281,6 +326,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             onDeleteQuestionOrDocumentNode={confirmDeleteQuestionOrDocumentNode}
             isLoadingAnswers={isLoadingAnswers}
             isLoading={isLoading}
+            isBlurring={isBlurring}
           />
         </Box>
       </Paper>

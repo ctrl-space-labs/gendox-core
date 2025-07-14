@@ -15,7 +15,8 @@ const DocumentInsightsGrid = ({
   onDeleteQuestionOrDocumentNode,
   onGenerate,
   isLoadingAnswers,
-  isLoading
+  isLoading,
+  isBlurring
 }) => {
   const [answerDialogOpen, setAnswerDialogOpen] = useState(false)
   const [selectedAnswer, setSelectedAnswer] = useState(null)
@@ -230,13 +231,13 @@ const DocumentInsightsGrid = ({
                 fontSize: '0.875rem',
                 backgroundColor: 'transparent',
                 color: 'inherit',
-                cursor: isLoadingAnswers || isLoading ? 'default' : 'pointer',
-                opacity: isLoadingAnswers || isLoading ? 0.5 : 1,
+                cursor: isLoadingAnswers || isLoading || isBlurring? 'default' : 'pointer',
+                opacity: isLoadingAnswers || isLoading || isBlurring? 0.5 : 1,
                 userSelect: 'none',
                 borderRadius: 1,
                 border: '1px solid transparent',
                 '&:hover': {
-                  borderColor: isLoadingAnswers || isLoading ? 'transparent' : 'primary.main'
+                  borderColor: isLoadingAnswers || isLoading || isBlurring? 'transparent' : 'primary.main'
                 }
               }}
               onClick={() => {
@@ -287,7 +288,7 @@ const DocumentInsightsGrid = ({
         height: 650,
         width: '100%',
         overflowX: 'auto',
-        filter: isLoading ? 'blur(6px)' : 'none', 
+        filter: isLoading || isBlurring? 'blur(6px)' : 'none', 
         transition: 'filter 0.3s ease',
         borderRadius: 1
       }}
