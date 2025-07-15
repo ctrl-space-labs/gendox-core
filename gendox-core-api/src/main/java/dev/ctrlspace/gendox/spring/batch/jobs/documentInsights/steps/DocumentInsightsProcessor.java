@@ -107,7 +107,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         ObjectNode responseJsonSchema = buildResponseSchema();
 
         List<List<CompletionQuestionRequest>> questionChunks = chunkQuestionsToGroups(documentGroupWithQuestions.getQuestionNodes());
-        List<List<DocumentInstanceSection>> sectionChunks = groupSectionsBy100kTokens(documentGroupWithQuestions.getDocumentNode().getDocument().getId());
+        List<List<DocumentInstanceSection>> sectionChunks = groupSectionsBy100kTokens(documentGroupWithQuestions.getDocumentNode().getDocumentId());
 
         // For each question group
         for (List<CompletionQuestionRequest> questionChunk : questionChunks) {
@@ -277,7 +277,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         } catch (GendoxException e) {
             logger.warn("Error getting completion for message: {}, error: {}", message.getId(), e.getMessage());
             logger.warn("Skipping processing documentId: {} for the questions: {}.",
-                    documentGroupWithQuestions.getDocumentNode().getDocument().getId(),
+                    documentGroupWithQuestions.getDocumentNode().getDocumentId(),
                     questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
             return null;
 
@@ -285,7 +285,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
             logger.warn("Error converting Json completion to GroupedQuestionAnswers, message: {}, error: {}", message.getId(), e.getMessage());
             logger.warn("Response Completion message is: {}", response.getLast().getValue());
             logger.warn("Skipping processing documentId: {} fpr the questions: {}.",
-                    documentGroupWithQuestions.getDocumentNode().getDocument().getId(),
+                    documentGroupWithQuestions.getDocumentNode().getDocumentId(),
                     questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
             return null;
         }
