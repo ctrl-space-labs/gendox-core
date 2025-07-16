@@ -123,7 +123,7 @@ const HeaderSection = ({
               <Button
                 variant='contained'
                 color='primary'
-                size='large'
+                size='medium'
                 startIcon={<RocketLaunchIcon />}
                 onClick={() => {
                   if (!disableGenerateAll && !isLoading) {

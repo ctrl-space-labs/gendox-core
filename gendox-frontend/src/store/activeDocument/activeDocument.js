@@ -24,7 +24,7 @@ export const fetchDocument = createAsyncThunk(
 
 export const fetchDocumentsByCriteria = createAsyncThunk(
   'activeTask/fetchDocumentsByCriteria',
-  async ({ organizationId, projectId, documentIds, token }, thunkAPI) => {
+  async ({ organizationId, projectId, documentIds, token, page = 0, size = 20 }, thunkAPI) => {
     if (!documentIds || documentIds.length === 0) return []
 
     const documentInstanceIds = documentIds.map(id => id.toString())
@@ -36,7 +36,7 @@ export const fetchDocumentsByCriteria = createAsyncThunk(
     }
 
     try {
-      const response = await documentService.findDocumentsByCriteria(organizationId, projectId, criteria, token)
+      const response = await documentService.findDocumentsByCriteria(organizationId, projectId, criteria, token, page, size)
       return response.data.content || []
     } catch (error) {
       toast.error('Failed to fetch documents by criteria')

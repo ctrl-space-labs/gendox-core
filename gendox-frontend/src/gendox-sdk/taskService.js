@@ -149,7 +149,7 @@ const getTaskNodesByTaskId = async (organizationId, projectId, taskId, token, pa
  * @param size
  * @returns {Promise<axios.AxiosResponse<TaskNode[]>>}
  */
-const getTaskNodesByCriteria = async (organizationId, projectId, taskId, criteria, token, page = 0, size = 20) => {
+const getTaskNodesByCriteria = async (organizationId, projectId, taskId, criteria, token, page, size) => {
   return axios.post(apiRequests.getTaskNodesByCriteria(organizationId, projectId, taskId, page, size), criteria, {
     headers: {
       'Content-Type': 'application/json',

@@ -7,13 +7,12 @@ import QuestionsDialog from './table-dialogs/QuestionsDialog'
 import DocumentsDialog from './table-dialogs/DocumentsDialog'
 import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
-import { useQuestionDialog } from 'src/utils/tasks/useQuestionDialog'
-import { saveQuestion } from 'src/utils/tasks/taskUtils'
 import {
   fetchTaskNodesByTaskId,
   executeTaskByType,
   deleteTaskNode,
-  fetchTaskNodesByCriteria
+  fetchTaskNodesByCriteria,
+  createTaskNode
 } from 'src/store/activeTask/activeTask'
 import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocument'
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
@@ -36,11 +35,16 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteNodeId, setDeleteNodeId] = useState(null)
   const [isExportingCsv, setIsExportingCsv] = useState(false)
-
-  const { showDialog, questionText, setQuestionText, editingQuestion, openAddDialog, openEditDialog, closeDialog } =
-    useQuestionDialog()
+  const [page, setPage] = useState(0) // DataGrid page (0-based)
+  const [pageSize, setPageSize] = useState(10) // DataGrid page size
+  const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
+  const [showDialog, setShowDialog] = useState(false)
+  const [questionsDialogTexts, setQuestionsDialogTexts] = useState([''])
+  const [activeQuestion, setActiveQuestion] = useState(null)
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
+
+  console.log('TASkNodes Document List:', taskNodesDocumentList)
 
   useEffect(() => {
     if (!(organizationId && projectId && taskId && token)) return
@@ -51,7 +55,9 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         projectId,
         taskId,
         criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
-        token
+        token,
+        page,
+        size: pageSize
       })
     )
       .unwrap()
@@ -66,7 +72,9 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         projectId,
         taskId,
         criteria: { taskId, nodeTypeNames: ['QUESTION'] },
-        token
+        token,
+        page: 0,
+        size: Number.MAX_SAFE_INTEGER
       })
     )
       .unwrap()
@@ -74,10 +82,10 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         toast.error('Failed to load questions')
         console.error(error)
       })
-  }, [organizationId, projectId, taskId, token, dispatch])
+  }, [organizationId, projectId, taskId, token, dispatch, page, pageSize])
 
   useEffect(() => {
-    if (!taskNodesDocumentList?.content) return
+    if (!taskNodesDocumentList || !Array.isArray(taskNodesDocumentList.content)) return
 
     const documentIds = taskNodesDocumentList.content
       .map(node => node.documentId)
@@ -88,9 +96,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     dispatch(fetchDocumentsByCriteria({ organizationId, projectId, documentIds, token }))
       .unwrap()
       .then(fullDocuments => {
-        console.log('Fetched full documents:', fullDocuments)
         if (!Array.isArray(fullDocuments)) {
-          console.error('Expected array but got:', fullDocuments)
           setDocuments(
             taskNodesDocumentList.content.map(node => ({
               id: node.id,
@@ -168,20 +174,46 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     )
   }, [taskNodesAnswerList])
 
-  const openUploader = () => setShowUploader(true)
+  const openUploader = () => setShowUploader(true)  
+  const handleAddQuestions = async () => {
+  // Defensive: always treat as array, filter out bad values
+  const validQuestions = (Array.isArray(questionsDialogTexts) ? questionsDialogTexts : [questionsDialogTexts])
+    .filter(q => typeof q === 'string' && q.trim().length > 0);
 
-  const handleAddQuestion = () => {
-    saveQuestion({
-      dispatch,
-      organizationId,
-      projectId,
-      taskId,
-      token,
-      questionText,
-      editingQuestion,
-      closeDialog
-    })
+  if (validQuestions.length === 0) {
+    toast.error('No questions to save!');
+    return;
   }
+
+  try {
+    // Save each question in sequence (or use Promise.all if you prefer)
+    for (const questionText of validQuestions) {
+      const taskNodePayload = {
+        taskId,
+        nodeType: 'QUESTION',
+        nodeValue: { message: questionText.trim() }
+      };
+      await dispatch(createTaskNode({ organizationId, projectId, taskNodePayload, token })).unwrap();
+    }
+    // Refresh the question list after saving all
+    await dispatch(
+      fetchTaskNodesByCriteria({
+        organizationId,
+        projectId,
+        taskId,
+        criteria: { taskId, nodeTypeNames: ['QUESTION'] },
+        token,
+        page: 0,
+        size: Number.MAX_SAFE_INTEGER
+      })
+    );
+    closeDialog();
+    toast.success('Questions added!');
+  } catch (error) {
+    toast.error('Failed to save questions');
+    console.error(error);
+  }
+};
 
   const handleGenerate = async (docs, reGenerateExistingAnswers) => {
     try {
@@ -243,6 +275,24 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       setDeleteDialogOpen(false)
       setDeleteNodeId(null)
     }
+  }
+
+  const openAddDialog = () => {
+    setActiveQuestion(null)
+    setQuestionsDialogTexts([''])
+    setShowDialog(true)
+  }
+
+  const openEditDialog = question => {
+    setActiveQuestion(question)
+    setQuestionsDialogTexts([question.text])
+    setShowDialog(true)
+  }
+
+  const closeDialog = () => {
+    setShowDialog(false)
+    setQuestionsDialogTexts([''])
+    setActiveQuestion(null)
   }
 
   const handleExportCsv = () => {
@@ -315,7 +365,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         <Box
           sx={{
             minWidth: 800,
-            filter: isLoading || isBlurring? 'blur(6px)' : 'none'
+            filter: isLoading || isBlurring ? 'blur(6px)' : 'none'
           }}
         >
           <DocumentInsightsGrid
@@ -327,6 +377,11 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             isLoadingAnswers={isLoadingAnswers}
             isLoading={isLoading}
             isBlurring={isBlurring}
+            page={page}
+            pageSize={pageSize}
+            setPage={setPage}
+            setPageSize={setPageSize}
+            totalDocuments={totalDocuments}
           />
         </Box>
       </Paper>
@@ -352,10 +407,10 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       <QuestionsDialog
         open={showDialog}
         onClose={closeDialog}
-        questionText={questionText}
-        setQuestionText={setQuestionText}
-        onConfirm={handleAddQuestion}
-        editing={!!editingQuestion}
+        questions={questionsDialogTexts}
+        setQuestions={setQuestionsDialogTexts}
+        onConfirm={handleAddQuestions}
+        activeQuestion={activeQuestion}
       />
       <DeleteConfirmDialog
         open={deleteDialogOpen}

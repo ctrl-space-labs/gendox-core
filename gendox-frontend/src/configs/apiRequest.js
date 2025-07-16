@@ -16,7 +16,7 @@ export default {
   getDocumentsByCriteriaProjectId: (organizationId, projectId, page, sort = 'createdAt,desc') =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents?page=${page}&sort=${sort}`,
 
-  findDocumentsByCriteria: (organizationId, projectId, page = 0, size = 20, sort = 'createdAt,desc') =>
+  findDocumentsByCriteria: (organizationId, projectId, page, size, sort = 'createdAt,desc') =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/search?page=${page}&size=${size}&sort=${sort}`,
 
   getUsersInOrganizationByOrgId: organizationId => `${url}organizations/${organizationId}/users`,
@@ -175,7 +175,7 @@ export default {
   getTaskNodesByTaskId: (organizationId, projectId, taskId, page = 0, size = 20) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes?page=${page}&size=${size}`,
 
-  getTaskNodesByCriteria: (organizationId, projectId, taskId, page = 0, size = 20) =>
+  getTaskNodesByCriteria: (organizationId, projectId, taskId, page , size) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/search?page=${page}&size=${size}`,
 
   createTaskEdge: (organizationId, projectId) =>

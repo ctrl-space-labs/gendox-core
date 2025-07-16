@@ -31,8 +31,8 @@ const getDocumentByProject = async (organizationId, projectId, token, page) => {
  * @param size
  * @returns {Promise<axios.AxiosResponse<DocumentInstances[]>>}
  */
-const findDocumentsByCriteria = async (organizationId, projectId, criteria, token) => {
-  return axios.post(apiRequests.findDocumentsByCriteria(organizationId, projectId), criteria, {
+const findDocumentsByCriteria = async (organizationId, projectId, criteria, token, page, size) => {
+  return axios.post(apiRequests.findDocumentsByCriteria(organizationId, projectId, page, size), criteria, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token

@@ -127,7 +127,7 @@ const TasksList = ({ projectTasks, page }) => {
 
   const handleRowClick = params => {
     router.push(
-      `/gendox/tasks/document-insights/?organizationId=${organizationId}&taskId=${params.row.id}&projectId=${projectId}`
+      `/gendox/tasks/document-insights/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
     )
   }
 

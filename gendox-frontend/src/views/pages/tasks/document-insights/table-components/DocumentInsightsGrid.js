@@ -6,6 +6,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import CircularProgress from '@mui/material/CircularProgress'
 import QuestionsDialog from '../table-dialogs/QuestionsDialog'
+import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
 
 const DocumentInsightsGrid = ({
   documents,
@@ -16,7 +17,12 @@ const DocumentInsightsGrid = ({
   onGenerate,
   isLoadingAnswers,
   isLoading,
-  isBlurring
+  isBlurring,
+  page,
+  pageSize,
+  setPage,
+  setPageSize,
+  totalDocuments
 }) => {
   const [answerDialogOpen, setAnswerDialogOpen] = useState(false)
   const [selectedAnswer, setSelectedAnswer] = useState(null)
@@ -38,8 +44,8 @@ const DocumentInsightsGrid = ({
   }
 
   const sortedQuestions = useMemo(() => {
-  return [...questions].sort((a, b) => a.order - b.order)
-}, [questions])
+    return [...questions].sort((a, b) => a.order - b.order)
+  }, [questions])
 
   const columns = useMemo(() => {
     return [
@@ -231,13 +237,16 @@ const DocumentInsightsGrid = ({
                 fontSize: '0.875rem',
                 backgroundColor: 'transparent',
                 color: 'inherit',
-                cursor: isLoadingAnswers || isLoading || isBlurring? 'default' : 'pointer',
-                opacity: isLoadingAnswers || isLoading || isBlurring? 0.5 : 1,
+                cursor: isLoadingAnswers || isLoading || isBlurring ? 'default' : 'pointer',
+                opacity: isLoadingAnswers || isLoading || isBlurring ? 0.5 : 1,
                 userSelect: 'none',
                 borderRadius: 1,
                 border: '1px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
                 '&:hover': {
-                  borderColor: isLoadingAnswers || isLoading || isBlurring? 'transparent' : 'primary.main'
+                  borderColor: isLoadingAnswers || isLoading || isBlurring ? 'transparent' : 'primary.main'
                 }
               }}
               onClick={() => {
@@ -248,7 +257,8 @@ const DocumentInsightsGrid = ({
               }}
               title='Click to see answer details'
             >
-              {answerObj?.answerValue || <em>Click to generate</em>}{' '}
+              {answerFlagEnum(answerObj?.answerFlagEnum)}
+              <span>{answerObj?.answerValue || <em>Click to generate</em>}</span>
             </Box>
           )
         }
@@ -288,7 +298,7 @@ const DocumentInsightsGrid = ({
         height: 650,
         width: '100%',
         overflowX: 'auto',
-        filter: isLoading || isBlurring? 'blur(6px)' : 'none', 
+        filter: isLoading || isBlurring ? 'blur(6px)' : 'none',
         transition: 'filter 0.3s ease',
         borderRadius: 1
       }}
@@ -312,21 +322,18 @@ const DocumentInsightsGrid = ({
       <DataGrid
         rows={rows}
         columns={columns}
+        page={page}
+        pageSize={pageSize}
+        rowCount={totalDocuments}
         pagination
-        pageSize={10}
-        rowsPerPageOptions={[10, 25, 50]}
-        disableRowSelectionOnClick
-        checkboxSelection={false}
-        disableSelectionOnClick={true}
-        experimentalFeatures={{ newEditingApi: true }}
-        componentsProps={{
-          cell: {
-            title: '' // disables native tooltip on all cells
-          }
+        paginationMode='server'
+        onPageChange={setPage}
+        onPageSizeChange={newPageSize => {
+          setPageSize(newPageSize)
+          setPage(0)
         }}
+        disableRowSelectionOnClick
         sx={{
-          border: '1px solid',
-          borderColor: 'divider',
           '& .MuiDataGrid-cell': {
             outline: 'none',
             transition: 'background-color 0.15s ease',
@@ -337,32 +344,11 @@ const DocumentInsightsGrid = ({
             lineHeight: 1.4,
             py: 1
           },
-          '& .MuiDataGrid-row:hover': {
-            backgroundColor: 'action.hover'
-          },
-          '& .MuiDataGrid-columnHeaders': {
-            backgroundColor: 'background.paper',
-            fontWeight: 600,
-            position: 'sticky',
-            top: 0,
-            zIndex: 1,
-            whiteSpace: 'normal',
-            lineHeight: 1.3,
-            paddingBottom: 10,
-            maxHeight: 60
-          },
           '& .MuiDataGrid-columnHeaderTitle': {
             overflowWrap: 'break-word',
             whiteSpace: 'normal',
-            lineHeight: 1.3,
+            lineHeight: 1.4,
             fontSize: '0.875rem'
-          },
-          '&::-webkit-scrollbar': {
-            height: 10
-          },
-          '&::-webkit-scrollbar-thumb': {
-            backgroundColor: 'rgba(0,0,0,0.2)',
-            borderRadius: 5
           }
         }}
       />
@@ -371,7 +357,7 @@ const DocumentInsightsGrid = ({
       <QuestionsDialog
         open={questionDialogOpen}
         onClose={() => setQuestionDialogOpen(false)}
-        questionText={selectedQuestionText}
+        questions={[selectedQuestionText]}
         readOnly={true}
       />
     </Box>

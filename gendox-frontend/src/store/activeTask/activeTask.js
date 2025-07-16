@@ -114,10 +114,15 @@ export const fetchTaskNodesByTaskId = createAsyncThunk(
 
 export const fetchTaskNodesByCriteria = createAsyncThunk(
   'task/fetchTaskNodesByCriteria',
-  async ({ organizationId, projectId, taskId, criteria, token }, thunkAPI) => {
+  async ({ organizationId, projectId, taskId, criteria, token, page = 0, size = 20  }, thunkAPI) => {
     try {
-      const response = await taskService.getTaskNodesByCriteria(organizationId, projectId, taskId, criteria, token)
-      return response.data
+      const response = await taskService.getTaskNodesByCriteria(organizationId, projectId, taskId, criteria, token, page, size)
+      return {
+        content: response.data.content,
+        totalElements: response.data.totalElements,  // total items on backend (if your backend provides)
+        page: response.data.pageable.pageNumber || page,
+        size: response.data.pageable.pageSize || size
+      }
     } catch (error) {
       toast.error(getErrorMessage(error))
       return thunkAPI.rejectWithValue(error.response?.data || error.message)
