@@ -21,6 +21,14 @@ import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import taskService from 'src/gendox-sdk/taskService'
 import { downloadBlobForCSV } from 'src/utils/tasks/downloadBlobForCSV'
 
+function chunk(array, size) {
+  const result = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
+  }
+  return result;
+}
+
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
   const dispatch = useDispatch()
@@ -37,15 +45,25 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteNodeId, setDeleteNodeId] = useState(null)
   const [isExportingCsv, setIsExportingCsv] = useState(false)
-  const [page, setPage] = useState(0) 
-  const [pageSize, setPageSize] = useState(10) 
+  const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
   const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
   const [showDialog, setShowDialog] = useState(false)
   const [questionsDialogTexts, setQuestionsDialogTexts] = useState([''])
   const [activeQuestion, setActiveQuestion] = useState(null)
+  const [isSavingQuestions, setIsSavingQuestions] = useState(false)
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
+  // 1️⃣ **Reset all local state when switching tasks/orgs/projects**
+  useEffect(() => {
+    setDocuments([])
+    setQuestions([])
+    setAnswers([])
+    setPage(0)
+  }, [taskId, organizationId, projectId])
+
+  // 2️⃣ **Fetch task nodes (documents & questions) when dependencies change**
   useEffect(() => {
     if (!(organizationId && projectId && taskId && token)) return
 
@@ -61,10 +79,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       })
     )
       .unwrap()
-      .catch(error => {
-        toast.error('Failed to load documents')
-        console.error(error)
-      })
+      .catch(() => toast.error('Failed to load documents'))
 
     dispatch(
       fetchTaskNodesByCriteria({
@@ -78,38 +93,38 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       })
     )
       .unwrap()
-      .catch(error => {
-        toast.error('Failed to load questions')
-        console.error(error)
-      })
+      .catch(() => toast.error('Failed to load questions'))
   }, [organizationId, projectId, taskId, token, dispatch, page, pageSize])
 
+  // 3️⃣ **Sync questions to local state (combine reset and fill)**
   useEffect(() => {
-    if (!taskNodesDocumentList || !Array.isArray(taskNodesDocumentList.content)) return
+    setQuestions(
+      (taskNodesQuestionList?.content || []).map(node => ({
+        id: node.id,
+        text: node.nodeValue?.message || '',
+        order: node.nodeValue?.order || 0
+      }))
+    )
+  }, [taskNodesQuestionList])
 
-    const documentIds = taskNodesDocumentList.content
-      .map(node => node.documentId)
-      .filter(id => id !== undefined && id !== null)
+  // 4️⃣ **Documents: Fetch full details or clear immediately if none**
+  useEffect(() => {
+    let isCancelled = false
 
-    console.log('Fetching documents for IDs:', documentIds)
+    const nodes = taskNodesDocumentList?.content || []
+    const documentIds = nodes.map(n => n.documentId).filter(Boolean)
+    if (!documentIds.length) {
+      setDocuments([])
+      return
+    }
 
     dispatch(fetchDocumentsByCriteria({ organizationId, projectId, documentIds, token }))
       .unwrap()
       .then(fullDocuments => {
-        if (!Array.isArray(fullDocuments)) {
-          setDocuments(
-            taskNodesDocumentList.content.map(node => ({
-              id: node.id,
-              documentId: node.documentId,
-              name: 'Unknown Document'
-            }))
-          )
-          return
-        }
-
+        if (isCancelled) return
         setDocuments(
-          taskNodesDocumentList.content.map(node => {
-            const fullDoc = fullDocuments.find(d => d.id === node.documentId)
+          nodes.map(node => {
+            const fullDoc = (fullDocuments || []).find(d => d.id === node.documentId)
             return {
               id: node.id,
               documentId: node.documentId,
@@ -118,26 +133,20 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           })
         )
       })
-      .catch(error => {
-        toast.error('Failed to load full document details')
-        console.error(error)
+      .catch(() => {
+        if (!isCancelled) {
+          setDocuments([])
+          toast.error('Failed to load full document details')
+        }
       })
+    return () => {
+      isCancelled = true
+    }
   }, [taskNodesDocumentList, organizationId, projectId, token, dispatch])
 
+  // 5️⃣ **Answers: Fetch when you have docs & questions**
   useEffect(() => {
-    if (!taskNodesQuestionList?.content) return
-    setQuestions(
-      taskNodesQuestionList.content.map(node => ({
-        id: node.id,
-        text: node.nodeValue?.message || '',
-        order: node.nodeValue?.order || 0
-      }))
-    )
-  }, [taskNodesQuestionList, taskId, organizationId, projectId, token, dispatch])
-
-  useEffect(() => {
-    if (!documents.length || !questions.length) return
-    if (!(organizationId && projectId && taskId && token)) return
+    if (!documents.length || !questions.length || !(organizationId && projectId && taskId && token)) return
 
     dispatch(
       fetchTaskNodesByCriteria({
@@ -149,21 +158,13 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       })
     )
       .unwrap()
-      .catch(error => {
-        toast.error('Failed to load answers')
-        console.error(error)
-      })
+      .catch(() => toast.error('Failed to load answers'))
   }, [documents, questions, organizationId, projectId, taskId, token, dispatch])
 
+  // 6️⃣ **Sync answers to local state**
   useEffect(() => {
-    if (!taskNodesAnswerList?.content) {
-      setAnswers([])
-      return
-    }
-
-    const answerNodes = taskNodesAnswerList.content
     setAnswers(
-      answerNodes.map(node => ({
+      (taskNodesAnswerList?.content || []).map(node => ({
         id: node.id,
         documentNodeId: node.nodeValue?.nodeDocumentId || '',
         questionNodeId: node.nodeValue?.nodeQuestionId || '',
@@ -177,24 +178,37 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const openUploader = () => setShowUploader(true)
   const handleAddQuestions = async () => {
     // Defensive: always treat as array, filter out bad values
-    const validQuestions = (Array.isArray(questionsDialogTexts) ? questionsDialogTexts : [questionsDialogTexts]).filter(
-      q => typeof q === 'string' && q.trim().length > 0
-    )
+    // const validQuestions = (Array.isArray(questionsDialogTexts) ? questionsDialogTexts : [questionsDialogTexts]).filter(
+    //   q => typeof q === 'string' && q.trim().length > 0
+    // )
+
+    const validQuestions = (Array.isArray(questionsDialogTexts) ? questionsDialogTexts : [questionsDialogTexts])
+      .map(q => (typeof q === 'string' ? q.trim() : ''))
+      .filter(q => q.length > 0)
 
     if (validQuestions.length === 0) {
       toast.error('No questions to save!')
       return
     }
 
-    try {
-      // Save each question in sequence (or use Promise.all if you prefer)
-      for (const questionText of validQuestions) {
-        const taskNodePayload = {
-          taskId,
-          nodeType: 'QUESTION',
-          nodeValue: { message: questionText.trim() }
-        }
-        await dispatch(createTaskNode({ organizationId, projectId, taskNodePayload, token })).unwrap()
+    setIsSavingQuestions(true)
+
+    try {     
+      const payloads = validQuestions.map((questionText, idx) => ({
+        taskId,
+        nodeType: 'QUESTION',
+        nodeValue: { message: questionText, order: idx }
+      }))
+
+      // Send in batches of 10
+      const batches = chunk(payloads, 10)
+
+      for (const batch of batches) {
+        await Promise.all(
+          batch.map(taskNodePayload =>
+            dispatch(createTaskNode({ organizationId, projectId, taskNodePayload, token })).unwrap()
+          )
+        )
       }
       // Refresh the question list after saving all
       await dispatch(
@@ -208,6 +222,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           size: Number.MAX_SAFE_INTEGER
         })
       )
+      setIsSavingQuestions(false)
       closeDialog()
       toast.success('Questions added!')
     } catch (error) {
@@ -226,7 +241,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         questionNodeIds: questions.map(q => q.id),
         reGenerateExistingAnswers
       }
-      console.log('Criteria for generation:', criteria)
 
       const jobExecutionId = await dispatch(
         executeTaskByType({ organizationId, projectId, taskId, criteria, token })
@@ -295,7 +309,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     setQuestionsDialogTexts([''])
     setActiveQuestion(null)
   }
-
 
   const handleExportCsv = async () => {
     if (documents.length === 0 || questions.length === 0) {
@@ -379,6 +392,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         setQuestions={setQuestionsDialogTexts}
         onConfirm={handleAddQuestions}
         activeQuestion={activeQuestion}
+        isSaving={isSavingQuestions}
       />
       <DeleteConfirmDialog
         open={deleteDialogOpen}

@@ -7,13 +7,14 @@ import {
   Button,
   TextareaAutosize,
   IconButton,
-  Box
+  Box,
+  CircularProgress
 } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 
-const QuestionsDialog = ({ open, onClose, questions, setQuestions, onConfirm, readOnly = false }) => {
+const QuestionsDialog = ({ open, onClose, questions, setQuestions, onConfirm, readOnly = false, isSaving = false }) => {
   const theme = useTheme()
   const safeQuestions = Array.isArray(questions) ? questions : ['']
 
@@ -33,12 +34,44 @@ const QuestionsDialog = ({ open, onClose, questions, setQuestions, onConfirm, re
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth='xs'>
+      {isSaving && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(6px)',
+            pointerEvents: 'all'
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      )}
       <DialogTitle>{readOnly ? 'View Question' : 'Add New Question'}</DialogTitle>
-     
-      <DialogContent>
-       {safeQuestions.map((q, idx) => (
 
+      <DialogContent>
+        {safeQuestions.map((q, idx) => (
           <Box key={idx} sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
+            <Box
+              sx={{
+                minWidth: 30,
+                height: 30,
+                bgcolor: theme.palette.primary.light,
+                color: theme.palette.primary.contrastText,
+                fontWeight: 600,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mr: 2,
+                mt: '4px'
+              }}
+            >
+              {idx + 1}
+            </Box>
             <TextareaAutosize
               autoFocus={idx === safeQuestions.length - 1}
               style={{
@@ -79,13 +112,14 @@ const QuestionsDialog = ({ open, onClose, questions, setQuestions, onConfirm, re
           </Button>
         )}
       </DialogContent>
+
       <DialogActions>
-        <Button onClick={onClose} variant='outlined'>
+        <Button onClick={onClose} variant='contained' disabled={isSaving}>
           Close
         </Button>
         {!readOnly && (
-          <Button variant='outlined' onClick={onConfirm}>
-            {'Save'}
+          <Button variant='contained' onClick={onConfirm} disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save'}
           </Button>
         )}
       </DialogActions>

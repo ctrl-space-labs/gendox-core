@@ -29,7 +29,7 @@ const DocumentInsights = () => {
     if (organizationId && projectId && taskId && token) {
       dispatch(fetchTaskById({ organizationId, projectId, taskId, token }))
     }
-  }, [organizationId, projectId, taskId, token, dispatch])  
+  }, [organizationId, projectId, taskId, token, dispatch])
 
   return (
     <Card sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
@@ -49,9 +49,11 @@ const DocumentInsights = () => {
               Document Insights
             </Typography>
             <Tooltip title='View and manage insights for your document'>
-              <IconButton color='primary' sx={{ ml: 1, mb: 6, width: 'auto', height: 'auto' }}>
-                <Icon icon='mdi:information-outline' />
-              </IconButton>
+              <span>
+                <IconButton color='primary' sx={{ ml: 1, mb: 6, width: 'auto', height: 'auto' }}>
+                  <Icon icon='mdi:information-outline' />
+                </IconButton>
+              </span>
             </Tooltip>
           </Box>
 

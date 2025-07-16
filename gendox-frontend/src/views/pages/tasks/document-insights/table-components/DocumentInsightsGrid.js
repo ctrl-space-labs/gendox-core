@@ -87,6 +87,7 @@ const DocumentInsightsGrid = ({
                 </Tooltip>
               ) : (
                 <Tooltip title='Select Document'>
+                  <span>
                   <IconButton
                     color='primary'
                     size='small'
@@ -98,6 +99,7 @@ const DocumentInsightsGrid = ({
                   >
                     <UploadFileIcon fontSize='small' />
                   </IconButton>
+                  </span>
                 </Tooltip>
               )}
 
@@ -116,16 +118,18 @@ const DocumentInsightsGrid = ({
                 {params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
               </Box>
               <Tooltip title='Generate Document'>
-                <Button
-                  variant='contained'
-                  size='small'
-                  onClick={() => onGenerate(params.row)}
-                  sx={{ textTransform: 'none', fontWeight: '600' }}
-                  aria-label={`Generate answers for document ${params.row.name}`}
-                  disabled={sortedQuestions.length === 0}
-                >
-                  Generate
-                </Button>
+                <span>
+                  <Button
+                    variant='contained'
+                    size='small'
+                    onClick={() => onGenerate(params.row)}
+                    sx={{ textTransform: 'none', fontWeight: '600' }}
+                    aria-label={`Generate answers for document ${params.row.name}`}
+                    disabled={sortedQuestions.length === 0}
+                  >
+                    Generate
+                  </Button>
+                </span>
               </Tooltip>
             </Box>
           )

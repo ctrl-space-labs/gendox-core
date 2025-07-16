@@ -80,6 +80,7 @@ const HeaderSection = ({
         
         <Stack direction='row' spacing={2} flexWrap='wrap'>
           <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Add a new document to your task'}>
+            <span>
             <Button
               variant='outlined'
               startIcon={<DocumentScannerIcon />}
@@ -89,8 +90,10 @@ const HeaderSection = ({
             >
               Add Document
             </Button>
+            </span>
           </Tooltip>
           <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Add a new question to the list'}>
+            <span>
             <Button
               variant='outlined'
               startIcon={<DescriptionIcon />}
@@ -100,6 +103,7 @@ const HeaderSection = ({
             >
               Add Question
             </Button>
+            </span>
           </Tooltip>
           
         </Stack>
@@ -146,6 +150,7 @@ const HeaderSection = ({
           <ClickAwayListener onClickAway={handleClose}>
             <Box>
               <Tooltip title={menuOpen ? 'Close options' : 'More options'}>
+                <span>
                 <IconButton
                   color='primary'
                   size='large'
@@ -159,6 +164,7 @@ const HeaderSection = ({
                 >
                   <ArrowDropDownIcon />
                 </IconButton>
+                </span>
               </Tooltip>
 
               <Menu
