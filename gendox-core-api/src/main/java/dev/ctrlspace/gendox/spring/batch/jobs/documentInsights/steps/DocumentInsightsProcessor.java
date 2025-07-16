@@ -112,8 +112,6 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         // For each question group
         for (List<CompletionQuestionRequest> questionChunk : questionChunks) {
 
-            ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()), project.getId());
-
             String allQuestions = objectMapper.writeValueAsString(questionChunk);
             String questionsPrompt = """
                     Answer the following questions based on the provided document:
@@ -123,6 +121,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
             List<GroupedQuestionAnswers> partialAnswers = new ArrayList<>();
             // a group of sections, is called a document part, each document might be splitted in 1, 2 or more parts (like 100K tokens per part)
             for (List<DocumentInstanceSection> groupedDocumentPart : sectionChunks) {
+
+                ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()), project.getId());
                 Message message = buildPromptMessageForSections(groupedDocumentPart, questionsPrompt, newThread);
                 GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionChunk);
                 if (documentPartAnswers != null) {
@@ -135,7 +135,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 splitGroupAnswersToSeparateAnswerNodes(partialAnswers.get(0), documentGroupWithQuestions, answerNodeType, newAnswers);
             } else if (partialAnswers.size() > 1) {
                 logger.debug("Creating answers from multiple document parts.");
-                GroupedQuestionAnswers consolidatedDocumentAnswers = consolidatePartsAnswersToASingleOne(documentGroupWithQuestions, questionChunk, allQuestions, partialAnswers, newThread, responseJsonSchema);
+                GroupedQuestionAnswers consolidatedDocumentAnswers = consolidatePartsAnswersToASingleOne(documentGroupWithQuestions, questionChunk, allQuestions, partialAnswers, null, responseJsonSchema);
                 // error occurred, skipping...
                 if (consolidatedDocumentAnswers == null) continue;
 
@@ -177,6 +177,10 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
             try {
                 prompt.append(objectMapper.writeValueAsString(answers.getCompletionAnswers())).append("\n\n");
             } catch (JsonProcessingException ignored) { }
+        }
+
+        if (newThread == null) {
+            newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()), project.getId());
         }
 
         Message message = new Message();

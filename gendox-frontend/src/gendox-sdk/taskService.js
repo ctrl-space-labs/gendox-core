@@ -34,7 +34,7 @@ const getTasks = async (organizationId, projectId, token) => {
   })
 }
 
-/** 
+/**
  * Update Task
  * @param organizationId
  * @param projectId
@@ -50,7 +50,7 @@ const updateTask = async (organizationId, projectId, taskId, token, updatePayloa
       Authorization: 'Bearer ' + token
     }
   })
-} 
+}
 
 
 /** Get Task by ID
