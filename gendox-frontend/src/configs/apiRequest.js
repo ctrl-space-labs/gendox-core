@@ -197,5 +197,10 @@ export default {
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes/${taskNodeId}`,
 
   deleteTask: (organizationId, projectId, taskId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`, 
+  
+  exportTaskCsv: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/export-csv`,
+
+
 }

@@ -244,6 +244,7 @@ const deleteTaskNode = async (organizationId, projectId, taskNodeId, token) => {
   })
 }
 
+
 /**
  * Delete a task
  * @param organizationId
@@ -261,6 +262,28 @@ const deleteTask = async (organizationId, projectId, taskId, token) => {
   })
 }
 
+/**
+ * Download Task CSV
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param token
+ * @returns {Promise<Blob>}
+ */
+const exportTaskCsv = async (organizationId, projectId, taskId, token) => {
+  const response = await axios.get(
+    apiRequests.exportTaskCsv(organizationId, projectId, taskId),
+    {
+      headers: {
+        Authorization: 'Bearer ' + token,
+      },
+      responseType: 'blob', // Important for CSV files!
+    }
+  )
+  return response.data // This is the CSV blob
+}
+
+
 export default {
   createTask,
   getTasks,
@@ -277,5 +300,6 @@ export default {
   executeTaskByType,
   getJobStatus,
   deleteTaskNode,
-  deleteTask
+  deleteTask,
+  exportTaskCsv
 }

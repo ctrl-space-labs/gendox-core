@@ -18,6 +18,8 @@ import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocumen
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
 import HeaderSection from './table-components/HeaderSection'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
+import taskService from 'src/gendox-sdk/taskService'
+import { downloadBlobForCSV } from 'src/utils/tasks/downloadBlobForCSV'
 
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
@@ -35,16 +37,14 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteNodeId, setDeleteNodeId] = useState(null)
   const [isExportingCsv, setIsExportingCsv] = useState(false)
-  const [page, setPage] = useState(0) // DataGrid page (0-based)
-  const [pageSize, setPageSize] = useState(10) // DataGrid page size
+  const [page, setPage] = useState(0) 
+  const [pageSize, setPageSize] = useState(10) 
   const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
   const [showDialog, setShowDialog] = useState(false)
   const [questionsDialogTexts, setQuestionsDialogTexts] = useState([''])
   const [activeQuestion, setActiveQuestion] = useState(null)
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
-
-  console.log('TASkNodes Document List:', taskNodesDocumentList)
 
   useEffect(() => {
     if (!(organizationId && projectId && taskId && token)) return
@@ -174,46 +174,47 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     )
   }, [taskNodesAnswerList])
 
-  const openUploader = () => setShowUploader(true)  
+  const openUploader = () => setShowUploader(true)
   const handleAddQuestions = async () => {
-  // Defensive: always treat as array, filter out bad values
-  const validQuestions = (Array.isArray(questionsDialogTexts) ? questionsDialogTexts : [questionsDialogTexts])
-    .filter(q => typeof q === 'string' && q.trim().length > 0);
+    // Defensive: always treat as array, filter out bad values
+    const validQuestions = (Array.isArray(questionsDialogTexts) ? questionsDialogTexts : [questionsDialogTexts]).filter(
+      q => typeof q === 'string' && q.trim().length > 0
+    )
 
-  if (validQuestions.length === 0) {
-    toast.error('No questions to save!');
-    return;
-  }
-
-  try {
-    // Save each question in sequence (or use Promise.all if you prefer)
-    for (const questionText of validQuestions) {
-      const taskNodePayload = {
-        taskId,
-        nodeType: 'QUESTION',
-        nodeValue: { message: questionText.trim() }
-      };
-      await dispatch(createTaskNode({ organizationId, projectId, taskNodePayload, token })).unwrap();
+    if (validQuestions.length === 0) {
+      toast.error('No questions to save!')
+      return
     }
-    // Refresh the question list after saving all
-    await dispatch(
-      fetchTaskNodesByCriteria({
-        organizationId,
-        projectId,
-        taskId,
-        criteria: { taskId, nodeTypeNames: ['QUESTION'] },
-        token,
-        page: 0,
-        size: Number.MAX_SAFE_INTEGER
-      })
-    );
-    closeDialog();
-    toast.success('Questions added!');
-  } catch (error) {
-    toast.error('Failed to save questions');
-    console.error(error);
+
+    try {
+      // Save each question in sequence (or use Promise.all if you prefer)
+      for (const questionText of validQuestions) {
+        const taskNodePayload = {
+          taskId,
+          nodeType: 'QUESTION',
+          nodeValue: { message: questionText.trim() }
+        }
+        await dispatch(createTaskNode({ organizationId, projectId, taskNodePayload, token })).unwrap()
+      }
+      // Refresh the question list after saving all
+      await dispatch(
+        fetchTaskNodesByCriteria({
+          organizationId,
+          projectId,
+          taskId,
+          criteria: { taskId, nodeTypeNames: ['QUESTION'] },
+          token,
+          page: 0,
+          size: Number.MAX_SAFE_INTEGER
+        })
+      )
+      closeDialog()
+      toast.success('Questions added!')
+    } catch (error) {
+      toast.error('Failed to save questions')
+      console.error(error)
+    }
   }
-};
 
   const handleGenerate = async (docs, reGenerateExistingAnswers) => {
     try {
@@ -295,49 +296,16 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     setActiveQuestion(null)
   }
 
-  const handleExportCsv = () => {
+
+  const handleExportCsv = async () => {
     if (documents.length === 0 || questions.length === 0) {
       toast.error('No documents or questions to export')
       return
     }
-
     setIsExportingCsv(true)
-
     try {
-      // CSV header row: first column is "Document Name", then questions
-      const headerRow = ['Document Name', ...questions.map(q => `"${q.text.replace(/"/g, '""')}"`)]
-
-      // Each document forms a row
-      const rows = documents.map(doc => {
-        const row = [doc.name]
-
-        // For each question, find the answer for this document-question pair
-        questions.forEach(q => {
-          const answerObj = answers.find(a => a.documentNodeId === doc.id && a.questionNodeId === q.id)
-
-          const answerText = answerObj ? `${answerObj.answerValue || ''} - ${answerObj.message || ''}`.trim() : ''
-
-          // Escape quotes by doubling them and wrap field in quotes
-          row.push(`"${answerText.replace(/"/g, '""')}"`)
-        })
-
-        return row.join(',')
-      })
-
-      const csvContent = [headerRow.join(','), ...rows].join('\n')
-
-      // Create a blob and trigger download
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      const fileName = `${selectedTask?.title?.replace(/\s+/g, '_') || 'document_insights'}.csv`
-      link.setAttribute('download', fileName)
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-
+      const csvBlob = await taskService.exportTaskCsv(organizationId, projectId, taskId, token)
+      downloadBlobForCSV(csvBlob, `${selectedTask?.title?.replace(/\s+/g, '_') || 'document_insights'}.csv`)
       toast.success('CSV exported successfully!')
     } catch (error) {
       console.error('Failed to export CSV:', error)

@@ -21,10 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -146,6 +143,14 @@ public class TaskService {
         logger.info("Fetching task edges by criteria: {}", criteria);
         return taskEdgeRepository.findAll(TaskEdgePredicates.build(criteria), pageable);
     }
+
+    public Page<TaskNode> getTaskNodesByType(UUID taskId, String nodeTypeName) {
+        TaskNodeCriteria criteria = new TaskNodeCriteria();
+        criteria.setTaskId(taskId);
+        criteria.setNodeTypeNames(Collections.singletonList(nodeTypeName));
+        return getTaskNodesByCriteria(criteria, Pageable.unpaged());
+    }
+
 
     public List<TaskEdge> createAnswerEdges(List<AnswerCreationDTO> newAnswerDTOs) throws GendoxException {
         if (newAnswerDTOs == null || newAnswerDTOs.isEmpty()) {
@@ -346,6 +351,9 @@ public class TaskService {
     public Integer findMaxOrderByTaskId(UUID taskId) {
         return taskNodeRepository.findMaxOrderByTaskId(taskId);
     }
+
+
+
 
 }
 
