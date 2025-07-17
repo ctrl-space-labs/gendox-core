@@ -13,6 +13,7 @@ import {
 import { useTheme } from '@mui/material/styles'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
+import GendoxMarkdownRenderer from 'src/views/pages/markdown-renderer/GendoxMarkdownRenderer'
 
 const QuestionsDialog = ({ open, onClose, questions, setQuestions, onConfirm, readOnly = false, isSaving = false }) => {
   const theme = useTheme()
@@ -72,28 +73,35 @@ const QuestionsDialog = ({ open, onClose, questions, setQuestions, onConfirm, re
             >
               {idx + 1}
             </Box>
-            <TextareaAutosize
-              autoFocus={idx === safeQuestions.length - 1}
-              style={{
-                width: '100%',
-                minHeight: '60px',
-                padding: '12px 16px',
-                fontSize: '1rem',
-                fontFamily: 'Roboto, Helvetica, Arial, sans-serif',
-                borderRadius: 6,
-                border: `1px solid ${theme.palette.primary.main}`,
-                backgroundColor: 'transparent',
-                color: `${theme.palette.text.primary}`,
-                resize: 'vertical',
-                boxSizing: 'border-box',
-                outline: 'none',
-                cursor: readOnly ? 'default' : 'text'
-              }}
-              value={q}
-              onChange={e => !readOnly && handleQuestionChange(idx, e.target.value)}
-              aria-label={`Question ${idx + 1}`}
-              readOnly={readOnly}
-            />
+
+            {readOnly ? (
+              <Box sx={{ mt: 1 }}>
+                <GendoxMarkdownRenderer markdownText={q || '*No question text*'} />
+              </Box>
+            ) : (
+              <TextareaAutosize
+                autoFocus={idx === safeQuestions.length - 1}
+                style={{
+                  width: '100%',
+                  minHeight: '60px',
+                  padding: '12px 16px',
+                  fontSize: '1rem',
+                  fontFamily: 'Roboto, Helvetica, Arial, sans-serif',
+                  borderRadius: 6,
+                  border: `1px solid ${theme.palette.primary.main}`,
+                  backgroundColor: 'transparent',
+                  color: `${theme.palette.text.primary}`,
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                  cursor: readOnly ? 'default' : 'text'
+                }}
+                value={q}
+                onChange={e => !readOnly && handleQuestionChange(idx, e.target.value)}
+                aria-label={`Question ${idx + 1}`}
+                readOnly={readOnly}
+              />
+            )}
             {!readOnly && questions.length > 1 && (
               <IconButton
                 aria-label='Remove question'

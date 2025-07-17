@@ -9,6 +9,8 @@ import QuestionsDialog from '../table-dialogs/QuestionsDialog'
 import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
 import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
+import { useTheme } from '@mui/material/styles'
+import { getQuestionMessageById } from 'src/utils/tasks/taskUtils'
 
 const DocumentInsightsGrid = ({
   documents,
@@ -29,6 +31,7 @@ const DocumentInsightsGrid = ({
   onSelectDocument = () => {},
   onGenerateSingleAnswer = () => {}
 }) => {
+  const theme = useTheme()
   const [answerDialogOpen, setAnswerDialogOpen] = useState(false)
   const [selectedAnswer, setSelectedAnswer] = useState(null)
   const [questionDialogOpen, setQuestionDialogOpen] = useState(false)
@@ -272,7 +275,7 @@ const DocumentInsightsGrid = ({
                 }
               }}
             >
-              {answerFlagEnum(answerObj?.answerFlagEnum)}
+              {answerFlagEnum(answerObj?.answerFlagEnum, theme)}
               <Tooltip
                 title={!answerObj?.answerValue ? 'Click to generate this answer' : 'Click to see answer details'}
                 arrow
@@ -401,7 +404,12 @@ const DocumentInsightsGrid = ({
         }}
       />
 
-      <AnswerDialog open={answerDialogOpen} onClose={() => setAnswerDialogOpen(false)} answer={selectedAnswer} />
+      <AnswerDialog
+        open={answerDialogOpen}
+        onClose={() => setAnswerDialogOpen(false)}
+        answer={selectedAnswer}
+        questionText={selectedAnswer ? getQuestionMessageById(questions, selectedAnswer.questionNodeId) : ''}
+      />
       <QuestionsDialog
         open={questionDialogOpen}
         onClose={() => setQuestionDialogOpen(false)}

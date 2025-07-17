@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useRef, useLayoutEffect } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -7,15 +7,82 @@ import {
   Button,
   Typography,
   Divider,
-  Box,
-  Chip,
-  TextareaAutosize
+  Box
 } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
-// import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
 import { answerFlagEnum, getAnswerFlagProps } from 'src/utils/tasks/answerFlagEnum'
+import Chip from 'src/views/custom-components/mui/chip'
+import GendoxMarkdownRenderer from 'src/views/pages/markdown-renderer/GendoxMarkdownRenderer'
 
-const AnswerDialog = ({ open, onClose, answer }) => {
+const MAX_COLLAPSED_HEIGHT = 80 // px, about 3-4 lines
+
+function ExpandableMarkdownSection({ label, markdown, maxHeight = MAX_COLLAPSED_HEIGHT }) {
+  const theme = useTheme()
+  const [expanded, setExpanded] = useState(false)
+  const [showButton, setShowButton] = useState(false)
+  const contentRef = useRef(null)
+
+  // Check if overflow exists after render
+  useLayoutEffect(() => {
+    if (contentRef.current) {
+      setShowButton(contentRef.current.scrollHeight > maxHeight + 2) // Allow for rounding errors
+    }
+  }, [markdown, maxHeight])
+
+  return (
+    <Box sx={{ mb: 3 }}>
+      <Typography
+        variant='caption'
+        sx={{
+          fontWeight: 700,
+          color: theme.palette.primary.main,
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          mb: 1,
+          display: 'block'
+        }}
+      >
+        {label}
+      </Typography>
+      <Box
+        ref={contentRef}
+        sx={{
+          alignItems: 'center',
+          gap: 2,
+          p: 2,
+          borderRadius: 2,
+          minHeight: 54,
+          maxHeight: expanded ? 'none' : `${maxHeight}px`,
+          overflow: 'hidden',
+          position: 'relative',
+          transition: 'max-height 0.3s'
+        }}
+      >
+        <GendoxMarkdownRenderer markdownText={markdown} />
+      </Box>
+      {showButton && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 2, pt: 0.5 }}>
+          <Button
+            size='small'
+            variant='text'
+            sx={{
+              color: theme.palette.primary.main,
+              textTransform: 'none',
+              fontWeight: 600,
+              minWidth: 0,
+              p: 0
+            }}
+            onClick={() => setExpanded(e => !e)}
+          >
+            {expanded ? 'Show less' : 'Show more'}
+          </Button>
+        </Box>
+      )}
+    </Box>
+  )
+}
+
+const AnswerDialog = ({ open, onClose, answer, questionText }) => {
   const theme = useTheme()
   if (!answer) return null
   const flagProps = getAnswerFlagProps(answer.answerFlagEnum)
@@ -33,32 +100,31 @@ const AnswerDialog = ({ open, onClose, answer }) => {
       >
         <Typography variant='h6' sx={{ fontWeight: 600 }}>
           Answer Details
-        </Typography>        
+        </Typography>
         <Chip
-              label={flagProps.label}
-              color={flagProps.chipColor}
-              size='medium'
-              icon={answerFlagEnum(answer.answerFlagEnum)}
-              sx={{
-                fontWeight: 600,
-                textTransform: 'capitalize',
-                bgcolor: flagProps.chipBg || undefined,
-                color: flagProps.chipText || undefined,
-                fontSize: '1rem',
-                pr: 4
-              }}
-            />
+          label={flagProps.label}
+          color={flagProps.chipColor}
+          size='medium'
+          icon={answerFlagEnum(answer.answerFlagEnum, theme)}
+          variant='outlined'
+        />
       </DialogTitle>
 
       <Divider sx={{ borderColor: theme.palette.divider }} />
 
       <DialogContent sx={{ py: 3 }}>
+        {questionText && (
+          <ExpandableMarkdownSection label="Question" markdown={questionText} maxHeight={MAX_COLLAPSED_HEIGHT} />
+        )}
+
+        <Divider sx={{ borderColor: theme.palette.divider, mb: 3 }} />
+
         <Box sx={{ mb: 3 }}>
           <Typography
             variant='caption'
             sx={{
               fontWeight: 700,
-              color: theme.palette.text.secondary,
+              color: theme.palette.primary.main,
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
               mb: 1,
@@ -76,8 +142,7 @@ const AnswerDialog = ({ open, onClose, answer }) => {
               borderRadius: 2,
               minHeight: 54
             }}
-          >           
-            
+          >
             <Typography
               variant='h5'
               sx={{
@@ -96,51 +161,11 @@ const AnswerDialog = ({ open, onClose, answer }) => {
 
         <Divider sx={{ my: 2, borderColor: theme.palette.divider }} />
 
-        {/** Description */}
-        <Box>
-          <Typography
-            variant='caption'
-            sx={{
-              fontWeight: 700,
-              color: theme.palette.text.secondary,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              mb: 1,
-              display: 'block'
-            }}
-          >
-            Description
-          </Typography>
-
-          <TextareaAutosize
-            aria-label='Answer Message'
-            minRows={5}
-            value={answer.message || 'N/A'}
-            readOnly
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              fontSize: '1rem',
-              fontFamily: 'Roboto, Helvetica, Arial, sans-serif',
-              borderRadius: 6,
-              border: `1px solid ${theme.palette.primary.main}`,
-              backgroundColor: 'transparent',
-              color: `${theme.palette.text.primary}`,
-              resize: 'vertical',
-              boxSizing: 'border-box',
-              outline: 'none',
-              userSelect: 'text'
-            }}
-            onFocus={e => {
-              e.target.style.borderColor = theme.palette.primary.main
-              e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}33`
-            }}
-            onBlur={e => {
-              e.target.style.borderColor = theme.palette.divider
-              e.target.style.boxShadow = 'none'
-            }}
-          />
-        </Box>
+        <ExpandableMarkdownSection
+          label="Description"
+          markdown={answer.message || '*N/A*'}
+          maxHeight={MAX_COLLAPSED_HEIGHT}
+        />
       </DialogContent>
 
       <Divider sx={{ borderColor: theme.palette.divider }} />
