@@ -7,6 +7,8 @@ import UploadFileIcon from '@mui/icons-material/UploadFile'
 import CircularProgress from '@mui/material/CircularProgress'
 import QuestionsDialog from '../table-dialogs/QuestionsDialog'
 import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
+import Checkbox from '@mui/material/Checkbox'
+import ReplayIcon from '@mui/icons-material/Replay'
 
 const DocumentInsightsGrid = ({
   documents,
@@ -22,7 +24,10 @@ const DocumentInsightsGrid = ({
   pageSize,
   setPage,
   setPageSize,
-  totalDocuments
+  totalDocuments,
+  selectedDocuments = [],
+  onSelectDocument = () => {},
+  onGenerateSingleAnswer = () => {}
 }) => {
   const [answerDialogOpen, setAnswerDialogOpen] = useState(false)
   const [selectedAnswer, setSelectedAnswer] = useState(null)
@@ -88,17 +93,17 @@ const DocumentInsightsGrid = ({
               ) : (
                 <Tooltip title='Select Document'>
                   <span>
-                  <IconButton
-                    color='primary'
-                    size='small'
-                    onClick={e => {
-                      e.stopPropagation() // prevent row click
-                      openUploader()
-                    }}
-                    aria-label='select document'
-                  >
-                    <UploadFileIcon fontSize='small' />
-                  </IconButton>
+                    <IconButton
+                      color='primary'
+                      size='small'
+                      onClick={e => {
+                        e.stopPropagation() // prevent row click
+                        openUploader()
+                      }}
+                      aria-label='select document'
+                    >
+                      <UploadFileIcon fontSize='small' />
+                    </IconButton>
                   </span>
                 </Tooltip>
               )}
@@ -117,18 +122,17 @@ const DocumentInsightsGrid = ({
               >
                 {params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
               </Box>
-              <Tooltip title='Generate Document'>
+              <Tooltip title='Mark for Generation'>
                 <span>
-                  <Button
-                    variant='contained'
-                    size='small'
-                    onClick={() => onGenerate(params.row)}
-                    sx={{ textTransform: 'none', fontWeight: '600' }}
-                    aria-label={`Generate answers for document ${params.row.name}`}
+                  <Checkbox
+                    checked={selectedDocuments.includes(params.row.id)}
+                    onChange={e => onSelectDocument(params.row.id, e.target.checked)}
                     disabled={sortedQuestions.length === 0}
-                  >
-                    Generate
-                  </Button>
+                    inputProps={{
+                      'aria-label': `Mark document ${params.row.name} for generation`
+                    }}
+                    sx={{ p: 0.5 }}
+                  />
                 </span>
               </Tooltip>
             </Box>
@@ -249,20 +253,60 @@ const DocumentInsightsGrid = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,
-                '&:hover': {
-                  borderColor: isLoadingAnswers || isLoading || isBlurring ? 'transparent' : 'primary.main'
+                position: 'relative',
+                pr: 4,
+                '&:hover .regenerate-icon': {
+                  opacity: 1,
+                  pointerEvents: 'auto'
                 }
               }}
               onClick={() => {
                 if (!isLoadingAnswers && !isLoading) {
-                  setSelectedAnswer(answerObj)
-                  setAnswerDialogOpen(true)
+                  if (!answerObj?.answerValue) {
+                    // Trigger generate for this cell only
+                    onGenerateSingleAnswer(params.row, q)
+                  } else {
+                    setSelectedAnswer(answerObj)
+                    setAnswerDialogOpen(true)
+                  }
                 }
               }}
-              title='Click to see answer details'
             >
               {answerFlagEnum(answerObj?.answerFlagEnum)}
-              <span>{answerObj?.answerValue || <em>Click to generate</em>}</span>
+              <Tooltip
+                title={!answerObj?.answerValue ? 'Click to generate this answer' : 'Click to see answer details'}
+                arrow
+                placement='top'
+              >
+                <span>{answerObj?.answerValue || <em>Click to generate</em>}</span>
+              </Tooltip>
+              {answerObj?.answerValue && (
+                <Tooltip title='Regenerate answer'>
+                  <ReplayIcon
+                    className='regenerate-icon'
+                    sx={{
+                      position: 'absolute',
+                      right: 4,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      cursor: 'pointer',
+                      color: 'primary.main',
+                      fontSize: '1.2rem',
+                      opacity: 0,
+                      pointerEvents: 'none',
+                      transition: 'opacity 0.25s ease',
+                      '&:hover': {
+                        color: 'primary.dark'
+                      }
+                    }}
+                    onClick={e => {
+                      e.stopPropagation()
+                      onGenerateSingleAnswer(params.row, q)
+                    }}
+                    aria-label={`Regenerate answer for ${q.text}`}
+                  />
+                </Tooltip>
+              )}
             </Box>
           )
         }

@@ -22,11 +22,11 @@ import taskService from 'src/gendox-sdk/taskService'
 import { downloadBlobForCSV } from 'src/utils/tasks/downloadBlobForCSV'
 
 function chunk(array, size) {
-  const result = [];
+  const result = []
   for (let i = 0; i < array.length; i += size) {
-    result.push(array.slice(i, i + size));
+    result.push(array.slice(i, i + size))
   }
-  return result;
+  return result
 }
 
 const DocumentInsightsTable = ({ selectedTask }) => {
@@ -52,6 +52,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const [questionsDialogTexts, setQuestionsDialogTexts] = useState([''])
   const [activeQuestion, setActiveQuestion] = useState(null)
   const [isSavingQuestions, setIsSavingQuestions] = useState(false)
+  const [selectedDocuments, setSelectedDocuments] = useState([])
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
@@ -176,12 +177,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   }, [taskNodesAnswerList])
 
   const openUploader = () => setShowUploader(true)
-  const handleAddQuestions = async () => {
-    // Defensive: always treat as array, filter out bad values
-    // const validQuestions = (Array.isArray(questionsDialogTexts) ? questionsDialogTexts : [questionsDialogTexts]).filter(
-    //   q => typeof q === 'string' && q.trim().length > 0
-    // )
 
+  const handleAddQuestions = async () => {
     const validQuestions = (Array.isArray(questionsDialogTexts) ? questionsDialogTexts : [questionsDialogTexts])
       .map(q => (typeof q === 'string' ? q.trim() : ''))
       .filter(q => q.length > 0)
@@ -190,10 +187,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       toast.error('No questions to save!')
       return
     }
-
     setIsSavingQuestions(true)
-
-    try {     
+    try {
       const payloads = validQuestions.map((questionText, idx) => ({
         taskId,
         nodeType: 'QUESTION',
@@ -231,14 +226,42 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     }
   }
 
-  const handleGenerate = async (docs, reGenerateExistingAnswers) => {
+  const handleSelectDocument = (docId, checked) => {
+    setSelectedDocuments(prev => (checked ? [...prev, docId] : prev.filter(id => id !== docId)))
+  }
+
+  const handleGenerateSelected = () => {
+    const selectedDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
+    if (selectedDocs.length === 0) {
+      toast.error('No documents selected!')
+      return
+    }
+    handleGenerate({ docs: selectedDocs, reGenerateExistingAnswers: true })
+  }
+
+  const handleGenerateSingleAnswer = async (doc, question) => {
+    if (!doc || !question) {
+      toast.error('Document and question are required to generate an answer.')
+      return
+    }
+
+    handleGenerate({ docs: doc, questionsToGenerate: question, reGenerateExistingAnswers: true })
+  }
+
+  const handleGenerate = async ({ docs, questionsToGenerate, reGenerateExistingAnswers }) => {
     try {
       const docIds = Array.isArray(docs) ? docs.map(d => d.id) : [docs.id]
+
+      const questionIds = questionsToGenerate
+        ? Array.isArray(questionsToGenerate)
+          ? questionsToGenerate.map(q => q.id)
+          : [questionsToGenerate.id]
+        : questions.map(q => q.id)
 
       const criteria = {
         taskId,
         documentNodeIds: docIds,
-        questionNodeIds: questions.map(q => q.id),
+        questionNodeIds: questionIds,
         reGenerateExistingAnswers
       }
 
@@ -246,7 +269,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         executeTaskByType({ organizationId, projectId, taskId, criteria, token })
       ).unwrap()
 
-      toast.success(`Started generation for ${docIds.length === 1 ? 'document ' + docs.name : 'all documents'}`)
+      toast.success(`Started generation for ${docIds.length} document(s)`)
 
       await pollJobStatus(jobExecutionId)
       dispatch(
@@ -258,7 +281,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           token
         })
       )
-      toast.success(`Generation completed for ${docIds.length === 1 ? 'document ' + docs.name : 'all documents'}`)
+      toast.success(`Generation completed for ${docIds.length} document(s)`)
+      setSelectedDocuments([]) 
     } catch (error) {
       console.error('Failed to start generation:', error)
       toast.error('Failed to start generation')
@@ -336,11 +360,15 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           description={selectedTask?.description}
           onAddQuestion={openAddDialog}
           openUploader={openUploader}
-          onGenerate={reGenerateExistingAnswers => handleGenerate(documents, reGenerateExistingAnswers)}
+          onGenerate={reGenerateExistingAnswers =>
+            handleGenerate({ docs: documents, reGenerateExistingAnswers: reGenerateExistingAnswers })
+          }
           disableGenerateAll={documents.length === 0 || questions.length === 0}
           isLoading={isLoading}
           isExportingCsv={isExportingCsv}
           onExportCsv={handleExportCsv}
+          onGenerateSelected={handleGenerateSelected}
+          selectedDocuments={selectedDocuments}
         />
 
         <Box
@@ -353,7 +381,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             documents={documents}
             questions={questions}
             answers={answers}
-            onGenerate={docs => handleGenerate(docs, true)}
+            onGenerate={docs => handleGenerate({ docs: docs, reGenerateExistingAnswers: true })}
             onDeleteQuestionOrDocumentNode={confirmDeleteQuestionOrDocumentNode}
             isLoadingAnswers={isLoadingAnswers}
             isLoading={isLoading}
@@ -363,6 +391,9 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             setPage={setPage}
             setPageSize={setPageSize}
             totalDocuments={totalDocuments}
+            selectedDocuments={selectedDocuments}
+            onSelectDocument={handleSelectDocument}
+            onGenerateSingleAnswer={handleGenerateSingleAnswer}
           />
         </Box>
       </Paper>

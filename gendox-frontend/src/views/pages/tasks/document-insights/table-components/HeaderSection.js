@@ -19,7 +19,6 @@ import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import DownloadIcon from '@mui/icons-material/Download'
 import CircularProgress from '@mui/material/CircularProgress'
-import { toast } from 'react-hot-toast'
 
 const HeaderSection = ({
   title,
@@ -29,8 +28,10 @@ const HeaderSection = ({
   onGenerate,
   disableGenerateAll,
   isLoading,
-  onExportCsv,       // new callback prop for CSV export
-  isExportingCsv     // new prop for loading state of export
+  onExportCsv,
+  isExportingCsv,
+  onGenerateSelected = () => {},
+  selectedDocuments
 }) => {
   const [menuOpen, setMenuOpen] = useState(false)
   const anchorRef = useRef(null)
@@ -77,39 +78,37 @@ const HeaderSection = ({
         alignItems={{ xs: 'stretch', sm: 'center' }}
         mb={3}
       >
-        
         <Stack direction='row' spacing={2} flexWrap='wrap'>
           <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Add a new document to your task'}>
             <span>
-            <Button
-              variant='outlined'
-              startIcon={<DocumentScannerIcon />}
-              onClick={openUploader}
-              disabled={isLoading}
-              size='medium'
-            >
-              Add Document
-            </Button>
+              <Button
+                variant='outlined'
+                startIcon={<DocumentScannerIcon />}
+                onClick={openUploader}
+                disabled={isLoading}
+                size='medium'
+              >
+                Add Document
+              </Button>
             </span>
           </Tooltip>
           <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Add a new question to the list'}>
             <span>
-            <Button
-              variant='outlined'
-              startIcon={<DescriptionIcon />}
-              onClick={onAddQuestion}
-              disabled={isLoading}
-              size='medium'
-            >
-              Add Question
-            </Button>
+              <Button
+                variant='outlined'
+                startIcon={<DescriptionIcon />}
+                onClick={onAddQuestion}
+                disabled={isLoading}
+                size='medium'
+              >
+                Add Question
+              </Button>
             </span>
           </Tooltip>
-          
         </Stack>
 
         <Stack direction='row' spacing={1} alignItems='center'>
-           <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Export data as CSV'}>
+          <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Export data as CSV'}>
             <span>
               <Button
                 variant='outlined'
@@ -131,7 +130,7 @@ const HeaderSection = ({
                 startIcon={<RocketLaunchIcon />}
                 onClick={() => {
                   if (!disableGenerateAll && !isLoading) {
-                    onGenerate(false)   
+                    onGenerate(false)
                   }
                 }}
                 disabled={disableGenerateAll || isLoading}
@@ -145,27 +144,26 @@ const HeaderSection = ({
               </Button>
             </span>
           </Tooltip>
-         
 
           <ClickAwayListener onClickAway={handleClose}>
             <Box>
               <Tooltip title={menuOpen ? 'Close options' : 'More options'}>
                 <span>
-                <IconButton
-                  color='primary'
-                  size='large'
-                  onClick={handleToggle}
-                  aria-label='toggle generate options'
-                  aria-controls={menuOpen ? 'generate-menu' : undefined}
-                  aria-haspopup='true'
-                  aria-expanded={menuOpen ? 'true' : undefined}
-                  disabled={disableGenerateAll || isLoading}
-                  sx={{ ml: 1 }}
-                >
-                  <ArrowDropDownIcon />
-                </IconButton>
+                  <IconButton
+                    color='primary'
+                    size='large'
+                    onClick={handleToggle}
+                    aria-label='toggle generate options'
+                    aria-controls={menuOpen ? 'generate-menu' : undefined}
+                    aria-haspopup='true'
+                    aria-expanded={menuOpen ? 'true' : undefined}
+                    disabled={disableGenerateAll || isLoading}
+                    sx={{ ml: 1 }}
+                  >
+                    <ArrowDropDownIcon />
+                  </IconButton>
                 </span>
-              </Tooltip>
+              </Tooltip>              
 
               <Menu
                 id='generate-menu'
@@ -179,13 +177,49 @@ const HeaderSection = ({
                   onClick={() => {
                     setMenuOpen(false)
                     if (!disableGenerateAll && !isLoading) {
-                      onGenerate(true)    
+                      onGenerate(true)
                     }
                   }}
                   disabled={disableGenerateAll || isLoading}
                 >
-                  Generate ALL
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <RocketLaunchIcon fontSize='small' color='success' />
+                    Generate ALL
+                  </Box>
                 </MenuItem>
+                <Divider sx={{ my: 1 }} />
+                <MenuItem
+                  onClick={() => {
+                    setMenuOpen(false)
+                    onGenerateSelected()
+                  }}
+                  disabled={disableGenerateAll || isLoading || selectedDocuments.length === 0}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <RocketLaunchIcon fontSize='small' color={selectedDocuments.length > 0 ? 'primary' : 'disabled'} />
+                    Generate Selected
+                    <Box
+                      component='span'
+                      sx={{
+                        ml: 1,
+                        px: 1.5,
+                        py: 0.5,
+                        borderRadius: 1,
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        bgcolor: selectedDocuments.length > 0 ? 'primary.main' : 'grey.400',
+                        color: 'white'
+                      }}
+                    >
+                      {selectedDocuments.length}
+                    </Box>
+                  </Box>
+                </MenuItem>
+                {(disableGenerateAll || isLoading) && (
+                  <Box sx={{ px: 2, pb: 1, pt: 0.5, fontSize: '0.85rem', color: 'grey.600' }}>
+                    {isLoading ? 'Loading, please wait...' : 'Add documents and questions to enable generation.'}
+                  </Box>
+                )}
               </Menu>
             </Box>
           </ClickAwayListener>
