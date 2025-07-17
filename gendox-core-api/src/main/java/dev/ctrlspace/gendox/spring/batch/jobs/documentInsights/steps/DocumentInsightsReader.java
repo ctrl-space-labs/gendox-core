@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentQuestionsDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskNodeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.GendoxJpaPageReader;
 import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
@@ -27,16 +28,14 @@ import java.util.UUID;
 public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQuestionsDTO> {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentInsightsReader.class);
-    private final TaskService taskService;
     private TaskNodeCriteria criteria;
+    private final TaskNodeService taskNodeService;
 
     @Autowired
-    public DocumentInsightsReader(TaskService taskService
+    public DocumentInsightsReader(TaskNodeService taskNodeService
     ) {
-        this.taskService = taskService;
+        this.taskNodeService = taskNodeService;
     }
-
-
 
 
     @Override
@@ -54,7 +53,8 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQues
             try {
                 List<UUID> documentNodeIds = mapper.readValue(
                         documentNodeIdsJson,
-                        new TypeReference<List<UUID>>() {}
+                        new TypeReference<List<UUID>>() {
+                        }
                 );
                 criteria.setDocumentNodeIds(documentNodeIds);
             } catch (Exception e) {
@@ -68,7 +68,8 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQues
             try {
                 List<UUID> questionNodeIds = mapper.readValue(
                         questionNodeIdsJson,
-                        new TypeReference<List<UUID>>() {}
+                        new TypeReference<List<UUID>>() {
+                        }
                 );
                 criteria.setQuestionNodeIds(questionNodeIds);
             } catch (Exception e) {
@@ -85,7 +86,7 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQues
     @Override
     protected Page<TaskDocumentQuestionsDTO> getPageFromRepository(Pageable pageable) throws GendoxException {
 
-        Page<TaskDocumentQuestionsDTO> documentsPage = taskService.getDocumentsGroupedWithQuestions(criteria, pageable);
+        Page<TaskDocumentQuestionsDTO> documentsPage = taskNodeService.getDocumentsGroupedWithQuestions(criteria, pageable);
         return documentsPage;
     }
 

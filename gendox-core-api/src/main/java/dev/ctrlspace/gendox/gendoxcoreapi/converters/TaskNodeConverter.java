@@ -13,10 +13,8 @@ public class TaskNodeConverter implements GendoxConverter<TaskNode, TaskNodeDTO>
 
 
     @Autowired
-    public TaskNodeConverter(TypeService typeService
-    ) {
+    public TaskNodeConverter(TypeService typeService) {
         this.typeService = typeService;
-
     }
 
 

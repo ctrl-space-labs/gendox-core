@@ -12,7 +12,7 @@ import {
   executeTaskByType,
   deleteTaskNode,
   fetchTaskNodesByCriteria,
-  createTaskNode
+  createTaskNodesBatch
 } from 'src/store/activeTask/activeTask'
 import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocument'
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
@@ -197,13 +197,15 @@ const DocumentInsightsTable = ({ selectedTask }) => {
 
       // Send in batches of 10
       const batches = chunk(payloads, 10)
-
       for (const batch of batches) {
-        await Promise.all(
-          batch.map(taskNodePayload =>
-            dispatch(createTaskNode({ organizationId, projectId, taskNodePayload, token })).unwrap()
-          )
-        )
+        await dispatch(
+          createTaskNodesBatch({
+            organizationId,
+            projectId,
+            taskNodesPayload: batch, // <-- array of up to 10
+            token
+          })
+        ).unwrap()
       }
       // Refresh the question list after saving all
       await dispatch(
@@ -282,7 +284,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         })
       )
       toast.success(`Generation completed for ${docIds.length} document(s)`)
-      setSelectedDocuments([]) 
+      setSelectedDocuments([])
     } catch (error) {
       console.error('Failed to start generation:', error)
       toast.error('Failed to start generation')

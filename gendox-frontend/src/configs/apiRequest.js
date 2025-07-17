@@ -166,6 +166,9 @@ export default {
   createTaskNode: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes`,
 
+  createTaskNodesBatch: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/task-nodes/batch`,
+
   updateTaskNode: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes`,
 

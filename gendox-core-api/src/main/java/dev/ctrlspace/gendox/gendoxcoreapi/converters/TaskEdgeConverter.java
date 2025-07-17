@@ -4,19 +4,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskEdgeDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskNodeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
 import org.springframework.stereotype.Component;
 
 @Component
 public class TaskEdgeConverter implements GendoxConverter<TaskEdge, TaskEdgeDTO> {
-    private TypeService typeService;
-    private TaskService taskService;
+    private final TypeService typeService;
+    private final TaskNodeService taskNodeService;
 
     public TaskEdgeConverter(TypeService typeService,
-                             TaskService taskService) {
+                             TaskNodeService taskNodeService) {
         this.typeService = typeService;
-        this.taskService = taskService;
+        this.taskNodeService = taskNodeService;
     }
 
     @Override
@@ -31,10 +31,10 @@ public class TaskEdgeConverter implements GendoxConverter<TaskEdge, TaskEdgeDTO>
             taskEdge.setId(taskEdgeDTO.getId());
         }
         if (taskEdgeDTO.getFromNodeId() != null) {
-            taskEdge.setFromNode(taskService.getTaskNodeById(taskEdgeDTO.getFromNodeId()));
+            taskEdge.setFromNode(taskNodeService.getTaskNodeById(taskEdgeDTO.getFromNodeId()));
         }
         if (taskEdgeDTO.getToNodeId() != null) {
-            taskEdge.setToNode(taskService.getTaskNodeById(taskEdgeDTO.getToNodeId()));
+            taskEdge.setToNode(taskNodeService.getTaskNodeById(taskEdgeDTO.getToNodeId()));
         }
         if (taskEdgeDTO.getRelationType() != null) {
             taskEdge.setRelationType(typeService.getTaskNodeRelationshipTypeByName(taskEdgeDTO.getRelationType()));

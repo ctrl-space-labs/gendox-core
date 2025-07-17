@@ -5,7 +5,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -46,6 +45,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     private final DocumentSectionService documentSectionService;
     private TypeService typeService;
     private TaskService taskService;
+    private TaskNodeService taskNodeService;
     private ObjectMapper objectMapper;
     private EncodingRegistry encodingRegistry;
     private Project project;
@@ -58,7 +58,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                                      CompletionService completionService,
                                      ProjectService projectService,
                                      MessageService messageService,
-                                     DocumentSectionService documentSectionService) {
+                                     DocumentSectionService documentSectionService,
+                                     TaskNodeService taskNodeService) {
         this.typeService = typeService;
         this.taskService = taskService;
         this.objectMapper = objectMapper;
@@ -67,6 +68,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         this.projectService = projectService;
         this.messageService = messageService;
         this.documentSectionService = documentSectionService;
+        this.taskNodeService = taskNodeService;
     }
 
     @Override
@@ -80,7 +82,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         List<TaskNode> answersToDelete = new ArrayList<>();
 
         documentGroupWithQuestions.getQuestionNodes().forEach(q ->
-                taskService.findAnswerNodeByDocumentAndQuestionOptional(
+                taskNodeService.findAnswerNodeByDocumentAndQuestionOptional(
                                 documentGroupWithQuestions.getDocumentNode().getTaskId(),
                                 documentGroupWithQuestions.getDocumentNode().getId(),
                                 q.getId())
@@ -307,7 +309,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     private void populateExistingAnswers(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<TaskNode> existingAnswers, List<TaskNode> answeredQuestions) {
         for (TaskNode question : documentGroupWithQuestions.getQuestionNodes()) {
             //TODO this can be done in one query, instead of a for loop
-            taskService.findAnswerNodeByDocumentAndQuestionOptional(
+            taskNodeService.findAnswerNodeByDocumentAndQuestionOptional(
                     documentGroupWithQuestions.getDocumentNode().getTaskId(),
                     documentGroupWithQuestions.getDocumentNode().getId(),
                     question.getId())

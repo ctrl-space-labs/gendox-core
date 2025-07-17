@@ -1,24 +1,21 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentOnlyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.TaskEdgeConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.TaskNodeConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskEdgeDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskEdgeCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeValueDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskCsvExportService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskEdgeService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskNodeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
+import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,15 +28,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 
 @RestController
@@ -48,21 +40,24 @@ public class TaskController {
     private final TaskService taskService;
     private final TaskNodeConverter taskNodeConverter;
     private final TaskEdgeConverter taskEdgeConverter;
-    private final DocumentService documentService;
-    private final DocumentOnlyConverter documentOnlyConverter;
+    private final TaskCsvExportService taskCsvExportService;
+    private final TaskNodeService taskNodeService;
+    private final TaskEdgeService taskEdgeService;
 
 
     @Autowired
     public TaskController(TaskService taskService,
                           TaskNodeConverter taskNodeConverter,
                           TaskEdgeConverter taskEdgeConverter,
-                          DocumentService documentService,
-                          DocumentOnlyConverter documentOnlyConverter) {
+                          TaskCsvExportService taskCsvExportService,
+                          TaskNodeService taskNodeService,
+                          TaskEdgeService taskEdgeService) {
         this.taskService = taskService;
         this.taskNodeConverter = taskNodeConverter;
         this.taskEdgeConverter = taskEdgeConverter;
-        this.documentService = documentService;
-        this.documentOnlyConverter = documentOnlyConverter;
+        this.taskCsvExportService = taskCsvExportService;
+        this.taskNodeService = taskNodeService;
+        this.taskEdgeService = taskEdgeService;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -102,7 +97,6 @@ public class TaskController {
     }
 
 
-
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @PostMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-nodes")
     @ResponseStatus(value = HttpStatus.CREATED)
@@ -110,8 +104,30 @@ public class TaskController {
                                    @PathVariable UUID projectId,
                                    @RequestBody TaskNodeDTO taskNodeDTO) throws GendoxException {
         TaskNode taskNode = taskNodeConverter.toEntity(taskNodeDTO);
-        return taskService.createTaskNode(taskNode);
+        return taskNodeService.createTaskNode(taskNode);
     }
+
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PostMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-nodes/batch")
+    @ResponseStatus(value = HttpStatus.CREATED)
+    public List<TaskNode> createTaskNodesBatch(@PathVariable UUID organizationId,
+                                               @PathVariable UUID projectId,
+                                               @RequestBody List<TaskNodeDTO> taskNodeDTOs) throws GendoxException {
+
+        try {
+            List<TaskNode> nodes = new ArrayList<>();
+            for (TaskNodeDTO dto : taskNodeDTOs) {
+                TaskNode node = taskNodeConverter.toEntity(dto);
+                nodes.add(node);
+            }
+            return taskNodeService.createTaskNodesBatch(nodes);
+        } catch (Exception e) {
+            logger.error("Error creating task nodes batch: {}", e.getMessage(), e);
+            throw new GendoxException("BATCH_CREATION_FAILED", "Failed to create task nodes batch", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @PutMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-nodes")
@@ -120,7 +136,7 @@ public class TaskController {
                                    @PathVariable UUID projectId,
                                    @RequestBody TaskNodeDTO taskNodeDTO) throws GendoxException {
         TaskNode taskNode = taskNodeConverter.toEntity(taskNodeDTO);
-        return taskService.updateTaskNode(taskNode);
+        return taskNodeService.updateTaskNode(taskNode);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -129,7 +145,7 @@ public class TaskController {
     public TaskNode getTaskNodeById(@PathVariable UUID organizationId,
                                     @PathVariable UUID projectId,
                                     @RequestParam UUID id) {
-        return taskService.getTaskNodeById(id);
+        return taskNodeService.getTaskNodeById(id);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -140,7 +156,7 @@ public class TaskController {
                                                @PathVariable UUID taskId,
                                                Pageable pageable) {
 
-        return taskService.getTaskNodesByTaskId(taskId, pageable);
+        return taskNodeService.getTaskNodesByTaskId(taskId, pageable);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -152,7 +168,7 @@ public class TaskController {
             @PathVariable UUID taskId,
             @RequestBody TaskNodeCriteria criteria,
             Pageable pageable) {
-        return taskService.getTaskNodesByCriteria(criteria, pageable);
+        return taskNodeService.getTaskNodesByCriteria(criteria, pageable);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -162,7 +178,7 @@ public class TaskController {
                                    @PathVariable UUID projectId,
                                    @RequestBody TaskEdgeDTO taskEdgeDTO) throws GendoxException {
         TaskEdge taskEdge = taskEdgeConverter.toEntity(taskEdgeDTO);
-        return taskService.createTaskEdge(taskEdge);
+        return taskEdgeService.createTaskEdge(taskEdge);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -171,7 +187,7 @@ public class TaskController {
     public TaskEdge getTaskEdgeById(@PathVariable UUID organizationId,
                                     @PathVariable UUID projectId,
                                     @RequestParam UUID id) {
-        return taskService.getTaskEdgeById(id);
+        return taskEdgeService.getTaskEdgeById(id);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -182,7 +198,7 @@ public class TaskController {
             @PathVariable UUID projectId,
             @RequestBody TaskEdgeCriteria criteria,
             Pageable pageable) {
-        return taskService.getTaskEdgesByCriteria(criteria, pageable);
+        return taskEdgeService.getTaskEdgesByCriteria(criteria, pageable);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -191,7 +207,7 @@ public class TaskController {
     public void deleteTaskNodeAndConnectionNodes(@PathVariable UUID organizationId,
                                                  @PathVariable UUID projectId,
                                                  @PathVariable UUID taskNodeId) throws GendoxException {
-        taskService.deleteTaskNodeAndConnectionNodes(taskNodeId);
+        taskNodeService.deleteTaskNodeAndConnectionNodes(taskNodeId);
         logger.info("Request to delete task node and connected nodes: taskNodeId={}", taskNodeId);
 
     }
@@ -212,117 +228,12 @@ public class TaskController {
             @PathVariable UUID projectId,
             @PathVariable UUID taskId
     ) throws GendoxException {
-        //  Validate task exists
-        Page<TaskNode> documentNodes = taskService.getTaskNodesByType(taskId, TaskNodeTypeConstants.DOCUMENT);
-        Page<TaskNode> questionNodes = taskService.getTaskNodesByType(taskId, TaskNodeTypeConstants.QUESTION);
-        Page<TaskNode> answerNodes = taskService.getTaskNodesByType(taskId, TaskNodeTypeConstants.ANSWER);
-
-        logger.info(
-                "Exporting task CSV: taskId={}, documents={} ({} pages), questions={} ({} pages), answers={} ({} pages)",
-                taskId,
-                documentNodes.getTotalElements(), documentNodes.getTotalPages(),
-                questionNodes.getTotalElements(), questionNodes.getTotalPages(),
-                answerNodes.getTotalElements(), answerNodes.getTotalPages()
-        );
-
-        List<UUID> documentNodeIds = documentNodes.stream()
-                .map(TaskNode::getDocumentId)
-                .filter(Objects::nonNull)
-                .toList();
-
-        DocumentCriteria criteria = new DocumentCriteria();
-        criteria.setDocumentInstanceIds(documentNodeIds.stream().map(UUID::toString).toList());
-        Page<DocumentInstanceDTO> docsPage = documentService.getAllDocuments(criteria, Pageable.unpaged())
-                .map(documentOnlyConverter::toDTO);
-        List<DocumentInstanceDTO> documentDTOs = docsPage.getContent();
-
-        Map<UUID, String> docIdToTitle = documentDTOs.stream()
-                .collect(Collectors.toMap(
-                        DocumentInstanceDTO::getId,
-                        DocumentInstanceDTO::getTitle
-                ));
-
-        //  Build CSV
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
-
-
-        try {
-            // --- First row: Question texts (each 3 times) ---
-            writer.write("Document/Question");
-            for (TaskNode question : questionNodes) {
-                String qTitle = question.getNodeValue() != null && question.getNodeValue().getMessage() != null
-                        ? question.getNodeValue().getMessage().replaceAll("[\r\n]+", " ")
-                        : question.getId().toString();
-                // Each question repeats 3 times: Answer, Flag, Message
-                writer.write("," + escapeCsv(qTitle));
-                writer.write(","); // blank for 2nd column of group
-                writer.write(","); // blank for 3rd column of group
-            }
-            writer.write("\n");
-
-            // --- Second row: Sub-headers ---
-            writer.write("");
-            for (int i = 0; i < questionNodes.getContent().size(); i++) {
-                writer.write(",Answer,Flag,Message");
-            }
-            writer.write("\n");
-
-            // --- Build a Map for fast lookup: ---
-            Map<String, TaskNodeValueDTO> answerMatrix = new HashMap<>();
-            for (TaskNode answerNode : answerNodes) {
-                TaskNodeValueDTO value = answerNode.getNodeValue();
-                if (value != null && value.getNodeDocumentId() != null && value.getNodeQuestionId() != null) {
-                    String key = value.getNodeDocumentId() + "|" + value.getNodeQuestionId();
-                    answerMatrix.put(key, value);
-                }
-            }
-
-            // --- From third row: one row per document ---
-            for (TaskNode document : documentNodes) {
-                String docTitle = docIdToTitle.getOrDefault(document.getDocumentId(), document.getId().toString());
-                writer.write(escapeCsv(docTitle));
-                writer.write(escapeCsv(docTitle));
-                for (TaskNode question : questionNodes) {
-                    String key = document.getId() + "|" + question.getId();
-                    TaskNodeValueDTO value = answerMatrix.get(key);
-                    String answerValue = value != null && value.getAnswerValue() != null ? value.getAnswerValue() : "";
-                    String flagEnum = value != null && value.getAnswerFlagEnum() != null ? value.getAnswerFlagEnum().toString() : "";
-                    String message = value != null && value.getMessage() != null ? value.getMessage() : "";
-
-                    writer.write("," + escapeCsv(answerValue));
-                    writer.write("," + escapeCsv(flagEnum));
-                    writer.write("," + escapeCsv(message));
-                }
-                writer.write("\n");
-            }
-            writer.flush();
-
-            // Build response
-            String filename = "task_" + taskId + "_answers.csv";
-            InputStreamResource fileResource = new InputStreamResource(new ByteArrayInputStream(out.toByteArray()));
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                    .contentType(MediaType.parseMediaType("text/csv"))
-                    .body(fileResource);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to export CSV", e);
-        }
-
-
-    }
-
-    // Simple CSV escaping for values (double quotes, commas)
-    private String escapeCsv(String value) {
-        if (value == null) return "";
-        boolean mustQuote = value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r");
-        if (mustQuote) {
-            value = value.replace("\"", "\"\"");
-            return "\"" + value + "\"";
-        }
-        return value;
+        InputStreamResource fileResource = taskCsvExportService.exportTaskCsv(taskId);
+        String filename = "task_" + taskId + "_answers.csv";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(fileResource);
     }
 
 

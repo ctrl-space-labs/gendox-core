@@ -73,6 +73,20 @@ export const createTaskNode = createAsyncThunk(
   }
 )
 
+export const createTaskNodesBatch = createAsyncThunk(
+  'task/createTaskNodesBatch',
+  async ({ organizationId, projectId, taskNodesPayload, token }, thunkAPI) => {
+    try {
+      const response = await taskService.createTaskNodesBatch(organizationId, projectId, taskNodesPayload, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+
 export const updateTaskNode = createAsyncThunk(
   'task/updateTaskNode',
   async ({ organizationId, projectId, taskNodePayload, token }, thunkAPI) => {
@@ -307,6 +321,22 @@ const taskSlice = createSlice({
         state.taskNodes[action.payload.id] = action.payload
       })
       .addCase(createTaskNode.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+
+      // Create TaskNodes in Batch
+      .addCase(createTaskNodesBatch.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(createTaskNodesBatch.fulfilled, (state, action) => {
+        state.isLoading = false
+        action.payload.forEach(node => {
+          state.taskNodes[node.id] = node
+        })
+      })
+      .addCase(createTaskNodesBatch.rejected, (state, action) => {
         state.isLoading = false
         state.error = action.payload
       })

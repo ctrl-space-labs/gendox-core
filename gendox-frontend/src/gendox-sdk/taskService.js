@@ -87,6 +87,24 @@ const createTaskNode = async (organizationId, projectId, taskNodePayload, token)
 }
 
 /**
+ * Create task nodes in batch
+ * @param organizationId
+ * @param projectId
+ * @param taskNodesPayload
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<TaskNode[]>>}
+ * */
+const createTaskNodesBatch = async (organizationId, projectId, taskNodesPayload, token) => {
+  return axios.post(apiRequests.createTaskNodesBatch(organizationId, projectId), taskNodesPayload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+
+/**
  * Update Task Node
  * @param organizationId
  * @param projectId
@@ -292,6 +310,7 @@ export default {
   getTaskNodesByTaskId,
   getTaskNodesByCriteria,
   createTaskNode,
+  createTaskNodesBatch,
   updateTaskNode,
   getTaskNodeById,
   createTaskEdge,
