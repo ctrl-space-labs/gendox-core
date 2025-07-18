@@ -83,6 +83,7 @@ public class TaskController {
     public Task getTaskById(@PathVariable UUID organizationId,
                             @PathVariable UUID projectId,
                             @PathVariable UUID taskId) {
+
         return taskService.getTaskById(taskId);
     }
 
@@ -103,6 +104,10 @@ public class TaskController {
     public TaskNode createTaskNode(@PathVariable UUID organizationId,
                                    @PathVariable UUID projectId,
                                    @RequestBody TaskNodeDTO taskNodeDTO) throws GendoxException {
+        Task task = taskService.getTaskById(taskNodeDTO.getTaskId());
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
         TaskNode taskNode = taskNodeConverter.toEntity(taskNodeDTO);
         return taskNodeService.createTaskNode(taskNode);
     }
@@ -114,6 +119,11 @@ public class TaskController {
     public List<TaskNode> createTaskNodesBatch(@PathVariable UUID organizationId,
                                                @PathVariable UUID projectId,
                                                @RequestBody List<TaskNodeDTO> taskNodeDTOs) throws GendoxException {
+
+        Task task = taskService.getTaskById(taskNodeDTOs.getFirst().getTaskId());
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
 
         try {
             List<TaskNode> nodes = new ArrayList<>();
@@ -135,6 +145,10 @@ public class TaskController {
     public TaskNode updateTaskNode(@PathVariable UUID organizationId,
                                    @PathVariable UUID projectId,
                                    @RequestBody TaskNodeDTO taskNodeDTO) throws GendoxException {
+        Task task = taskService.getTaskById(taskNodeDTO.getTaskId());
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
         TaskNode taskNode = taskNodeConverter.toEntity(taskNodeDTO);
         return taskNodeService.updateTaskNode(taskNode);
     }
@@ -154,7 +168,12 @@ public class TaskController {
     public Page<TaskNode> getTaskNodesByTaskId(@PathVariable UUID organizationId,
                                                @PathVariable UUID projectId,
                                                @PathVariable UUID taskId,
-                                               Pageable pageable) {
+                                               Pageable pageable) throws GendoxException {
+
+        Task task = taskService.getTaskById(taskId);
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
 
         return taskNodeService.getTaskNodesByTaskId(taskId, pageable);
     }
@@ -166,7 +185,12 @@ public class TaskController {
                                                  @PathVariable UUID projectId,
                                                  @PathVariable UUID taskId,
                                                  @RequestBody TaskNodeCriteria criteria,
-                                                 Pageable pageable) {
+                                                 Pageable pageable) throws GendoxException {
+
+        Task task = taskService.getTaskById(taskId);
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
         return taskNodeService.getTaskNodesByCriteria(criteria, pageable);
     }
 
@@ -227,10 +251,20 @@ public class TaskController {
     public void deleteTaskNodeAndConnectionNodes(@PathVariable UUID organizationId,
                                                  @PathVariable UUID projectId,
                                                  @PathVariable UUID taskNodeId) throws GendoxException {
+        TaskNode taskNode = taskNodeService.getTaskNodeById(taskNodeId);
+        if (taskNode == null) {
+            throw new GendoxException("TASK_NODE_NOT_FOUND", "Task node not found", HttpStatus.NOT_FOUND);
+        }
+        Task task = taskService.getTaskById(taskNode.getTaskId());
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
+
         taskNodeService.deleteTaskNodeAndConnectionNodes(taskNodeId);
         logger.info("Request to delete task node and connected nodes: taskNodeId={}", taskNodeId);
 
     }
+
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @DeleteMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}")
@@ -238,6 +272,13 @@ public class TaskController {
     public void deleteTask(@PathVariable UUID organizationId,
                            @PathVariable UUID projectId,
                            @PathVariable UUID taskId) throws GendoxException {
+        Task task = taskService.getTaskById(taskId);
+        if (task == null) {
+            throw new GendoxException("TASK_NOT_FOUND", "Task not found", HttpStatus.NOT_FOUND);
+        }
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
         taskService.deleteTask(taskId);
         logger.info("Request to delete task: taskId={}", taskId);
     }
@@ -247,6 +288,13 @@ public class TaskController {
                                                              @PathVariable UUID projectId,
                                                              @PathVariable UUID taskId
     ) throws GendoxException {
+        Task task = taskService.getTaskById(taskId);
+        if (task == null) {
+            throw new GendoxException("TASK_NOT_FOUND", "Task not found", HttpStatus.NOT_FOUND);
+        }
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
         InputStreamResource fileResource = taskCsvExportService.exportTaskCsv(taskId);
         String filename = "task_" + taskId + "_answers.csv";
         return ResponseEntity.ok()
