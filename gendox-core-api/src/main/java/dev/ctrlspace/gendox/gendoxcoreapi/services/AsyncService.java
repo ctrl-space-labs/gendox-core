@@ -82,7 +82,6 @@ public class AsyncService {
         try {
             logger.info("Starting Document Insights async batch for task {}", taskId);
             JobExecution jobExecution = documentInsightsBatchService.runDocumentInsights(taskId, criteria);
-            logger.info("Document Insights Job Execution ID: {}", jobExecution.getId());
             logger.info("Document Insights Job Execution Status: {}", jobExecution.getStatus());
             return CompletableFuture.completedFuture(jobExecution);
         } catch (Exception e) {

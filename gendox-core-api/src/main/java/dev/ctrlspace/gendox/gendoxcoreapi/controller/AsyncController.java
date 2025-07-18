@@ -103,7 +103,7 @@ public class AsyncController {
             "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/execute")
     @Operation(summary = "Execute a Task asynchronously")
-    public Long executeTaskByType(
+    public CompletableFuture<Long> executeTaskByType(
             @PathVariable UUID organizationId,
             @PathVariable UUID projectId,
             @PathVariable UUID taskId,
@@ -113,12 +113,12 @@ public class AsyncController {
         String taskType = task.getTaskType().getName();
 
         if (TaskTypeConstants.DOCUMENT_INSIGHTS.equalsIgnoreCase(taskType)) {
-            CompletableFuture<JobExecution> future = asyncService.executeDocumentInsightsTask(taskId, criteria);
-            JobExecution jobExecution = future.join(); // wait for the async task to complete
-            if (jobExecution == null) {
-                throw new GendoxException("JOB_EXECUTION_FAILED", "Failed to start job for task " + taskId, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-            return jobExecution.getId();
+            CompletableFuture<JobExecution> futureJob = asyncService
+                    .executeDocumentInsightsTask(taskId, criteria);
+            return futureJob
+                    .thenApply(JobExecution::getId);
+
+
         } else if (TaskTypeConstants.DOCUMENT_DIGITIZATION.equalsIgnoreCase(taskType)) {
             // TODO: Implement Document Digitization task execution
             throw new GendoxException("NOT_IMPLEMENTED", "Document Digitization task execution not implemented yet", HttpStatus.NOT_IMPLEMENTED);
