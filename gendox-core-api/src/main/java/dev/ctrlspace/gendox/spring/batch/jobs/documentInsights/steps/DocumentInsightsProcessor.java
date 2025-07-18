@@ -35,8 +35,9 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private Boolean reGenerateExistingAnswers;
-    private static final int CHUNK_SIZE = 10;
-    private static final int MAX_TOKENS = 100_000;
+    // package private for testing
+    static final int CHUNK_SIZE = 10;
+    static final int MAX_TOKENS = 100_000;
 
 
     private final CompletionService completionService;
@@ -325,7 +326,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
      * @param questions
      * @return
      */
-    private @NotNull List<List<CompletionQuestionRequest>> chunkQuestionsToGroups(List<TaskNode> questions) {
+    public @NotNull List<List<CompletionQuestionRequest>> chunkQuestionsToGroups(List<TaskNode> questions) {
         // Process the questions 10-by-10
         List<List<CompletionQuestionRequest>> chunks = new ArrayList<>();
         for (int i = 0; i < questions.size(); i += CHUNK_SIZE) {
