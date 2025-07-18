@@ -44,7 +44,6 @@ public class ChatThreadController {
         this.messageService = messageService;
     }
 
-    //    TODO add authorization checks
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable')")
     @GetMapping("threads/{threadId}")
     @Operation(summary = "Get Chat Thread by ID",
