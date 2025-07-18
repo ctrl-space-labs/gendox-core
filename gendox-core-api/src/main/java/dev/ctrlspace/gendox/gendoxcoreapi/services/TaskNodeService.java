@@ -11,6 +11,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskNodeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.TaskNodePredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeRelationshipTypeConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
+import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.swing.text.html.parser.Entity;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -31,15 +33,18 @@ public class TaskNodeService {
     private final TaskNodeRepository taskNodeRepository;
     private final TaskEdgeRepository taskEdgeRepository;
     private final TypeService typeService;
+    private final EntityManager entityManager;
 
 
     @Autowired
     public TaskNodeService(TaskNodeRepository taskNodeRepository,
                            TaskEdgeRepository taskEdgeRepository,
-                           TypeService typeService) {
+                           TypeService typeService,
+                           EntityManager entityManager) {
         this.taskNodeRepository = taskNodeRepository;
         this.taskEdgeRepository = taskEdgeRepository;
         this.typeService = typeService;
+        this.entityManager = entityManager;
     }
 
 
@@ -151,18 +156,21 @@ public class TaskNodeService {
 
         List<TaskEdge> edgesToDeleteFrom = taskEdgeRepository.findAllByFromNodeIdIn(fromNodeIds);
 
-        // Delete edges first
         if (!edgesToDeleteTo.isEmpty()) {
-            taskEdgeRepository.deleteAll(edgesToDeleteTo);
+            List<UUID> edgeIdsTo = edgesToDeleteTo.stream().map(TaskEdge::getId).toList();
+            taskEdgeRepository.deleteAllByIds(edgeIdsTo);
+            entityManager.clear();
         }
 
         if (!edgesToDeleteFrom.isEmpty()) {
-            taskEdgeRepository.deleteAll(edgesToDeleteFrom);
+            List<UUID> edgeIdsFrom = edgesToDeleteFrom.stream().map(TaskEdge::getId).toList();
+            taskEdgeRepository.deleteAllByIds(edgeIdsFrom);
+            entityManager.clear();
         }
 
-        // Delete all nodes that were connected to this node
         if (!fromNodeIds.isEmpty()) {
-            deleteTaskNodesByIds(new ArrayList<>(fromNodeIds));
+            taskNodeRepository.deleteAllByIds(new ArrayList<>(fromNodeIds));
+            entityManager.clear();
         }
 
         // Now delete the node itself
