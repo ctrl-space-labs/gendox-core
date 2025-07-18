@@ -1,16 +1,17 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 
+import com.knuddels.jtokkit.Encodings;
+import com.knuddels.jtokkit.api.EncodingRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.CompletionQuestionRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeValueDTO;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mockito;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -19,11 +20,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class DocumentInsightsProcessorTest {
+public class DocumentInsightsProcessorQuestionsCountSplitTest {
 
+    @Spy
+    private EncodingRegistry encodingRegistry =
+            Encodings.newDefaultEncodingRegistry();
 
     @InjectMocks
-    private DocumentInsightsProcessor documentInsightsProcessor;     // class under test
+    private DocumentInsightsProcessor documentInsightsProcessor;
 
 
     /* -----------------------------------------------------------------------
@@ -61,7 +65,7 @@ public class DocumentInsightsProcessorTest {
     /** 2) Fewer than CHUNK_SIZE questions → single bucket */
     @Test
     void chunkQuestions_lessThanChunkSize_singleBucket() {
-        int chunk = DocumentInsightsProcessor.CHUNK_SIZE;       // ← dynamic size
+        int chunk = DocumentInsightsProcessor.MAX_QUESTIONS_PER_BUCKET;       // ← dynamic size
         List<TaskNode> input = makeTaskNodes(chunk - 1);         // e.g. 9 if chunk=10
 
         List<List<CompletionQuestionRequest>> buckets =
@@ -75,7 +79,7 @@ public class DocumentInsightsProcessorTest {
     /** 3) Exactly CHUNK_SIZE questions → single full bucket */
     @Test
     void chunkQuestions_exactChunkSize_singleFullBucket() {
-        int chunk = DocumentInsightsProcessor.CHUNK_SIZE;
+        int chunk = DocumentInsightsProcessor.MAX_QUESTIONS_PER_BUCKET;
         List<TaskNode> input = makeTaskNodes(chunk);
 
         List<List<CompletionQuestionRequest>> buckets =
@@ -88,7 +92,7 @@ public class DocumentInsightsProcessorTest {
     /** 4) count = 2·chunk + chunk/2 → three buckets */
     @Test
     void chunkQuestions_twoAndHalfChunks_threeBuckets() {
-        int chunk = DocumentInsightsProcessor.CHUNK_SIZE;
+        int chunk = DocumentInsightsProcessor.MAX_QUESTIONS_PER_BUCKET;
         int total = (int)(2.5 * chunk);          // 2½ chunks (e.g. 25 when chunk = 10)
         List<TaskNode> input = makeTaskNodes(total);
 

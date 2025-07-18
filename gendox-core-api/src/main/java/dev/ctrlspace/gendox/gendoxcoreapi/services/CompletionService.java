@@ -231,7 +231,8 @@ public class CompletionService {
 
 
 
-        // TODO validate count of previous message tokens and drop messages if not enough space
+        // TODO rethink the logic, validate count of previous message tokens and drop messages if not enough space
+        // TODO maybe add a similar logic to the embedding service to limit the number of messages
         List<AiModelMessage> previousMessages = messageService.getPreviousMessages(message, 25);
 
         // clone message to avoid changing the original message text in DB
