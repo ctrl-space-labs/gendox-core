@@ -110,6 +110,15 @@ public class TaskNodeService {
         return taskNodeRepository.findAnswerNodeByDocumentAndQuestion(taskId, documentNodeId, questionNodeId);
     }
 
+    public Page<TaskNode> findAnswerNodesBatch(UUID taskId,
+                                               List<UUID> documentNodeIds,
+                                               List<UUID> questionNodeIds,
+                                               Pageable pageable) {
+        return taskNodeRepository
+                .findAnswerNodesByDocumentIdsAndQuestionIds(taskId, documentNodeIds, questionNodeIds, pageable);
+    }
+
+
     public Page<TaskNode> getTaskNodesByType(UUID taskId, String nodeTypeName) {
         TaskNodeCriteria criteria = new TaskNodeCriteria();
         criteria.setTaskId(taskId);

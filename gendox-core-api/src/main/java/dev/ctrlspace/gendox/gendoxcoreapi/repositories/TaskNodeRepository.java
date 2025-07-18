@@ -77,12 +77,31 @@ public interface TaskNodeRepository extends JpaRepository<TaskNode, UUID>, Query
 
 
     @Query(value = """
-      SELECT COALESCE(MAX((node_value->>'order')::int), 0)
-      FROM gendox_core.task_nodes
-      WHERE task_id = :taskId
-      """, nativeQuery = true)
+            SELECT COALESCE(MAX((node_value->>'order')::int), 0)
+            FROM gendox_core.task_nodes
+            WHERE task_id = :taskId
+            """, nativeQuery = true)
     Integer findMaxOrderByTaskId(@Param("taskId") UUID taskId);
 
 
+    @Query("""
+              select answerNode
+                from TaskEdge edgeDoc
+                join edgeDoc.fromNode answerNode
+                join edgeDoc.toNode docNode
+                join TaskEdge edgeQues on edgeQues.fromNode = answerNode
+                join edgeQues.toNode quesNode
+               where edgeDoc.relationType.name = 'ANSWERS'
+                 and edgeQues.relationType.name = 'ANSWERS'
+                 and answerNode.taskId = :taskId
+                 and docNode.id in :documentNodeIds
+                 and quesNode.id in :questionNodeIds
+            """)
+    Page<TaskNode> findAnswerNodesByDocumentIdsAndQuestionIds(
+            @Param("taskId") UUID taskId,
+            @Param("documentNodeIds") List<UUID> documentNodeIds,
+            @Param("questionNodeIds") List<UUID> questionNodeIds,
+            Pageable pageable
+    );
 
 }

@@ -181,6 +181,9 @@ export default {
   getTaskNodesByCriteria: (organizationId, projectId, taskId, page , size) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/search?page=${page}&size=${size}`,
 
+  getAnswerTaskNodes: (organizationId, projectId, taskId, page , size ) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/answers/batch?page=${page}&size=${size}`,
+
   createTaskEdge: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-edges`,
 

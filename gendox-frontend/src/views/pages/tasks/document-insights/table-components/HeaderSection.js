@@ -1,14 +1,5 @@
 import React, { useState, useRef } from 'react'
-import {
-  Box,
-  Typography,
-  Stack,
-  Button,
-  Tooltip,
-  Divider,
-  Menu,
-  MenuItem
-} from '@mui/material'
+import { Box, Typography, Stack, Button, Tooltip, Divider, Menu, MenuItem } from '@mui/material'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 
@@ -29,11 +20,12 @@ const HeaderSection = ({
   onExportCsv,
   isExportingCsv,
   onGenerateSelected = () => {},
-  selectedDocuments
+  selectedDocuments,
+  isGeneratingAll
 }) => {
   const [anchorEl, setAnchorEl] = useState(null)
 
-  const handleToggle = (event) => {
+  const handleToggle = event => {
     setAnchorEl(prev => (prev ? null : event.currentTarget.parentElement))
   }
 
@@ -68,10 +60,7 @@ const HeaderSection = ({
         alignItems={{ xs: 'stretch', sm: 'center' }}
         mb={3}
       >
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={2}
-          flexWrap='100%'>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap='100%'>
           <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Add a new document to your task'}>
             <span>
               <Button
@@ -102,11 +91,7 @@ const HeaderSection = ({
           </Tooltip>
         </Stack>
 
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={2}
-          flexWrap='100%'
-          >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap='100%'>
           <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Export data as CSV'}>
             <span>
               <Button
@@ -126,35 +111,34 @@ const HeaderSection = ({
               <Box
                 sx={{
                   display: 'flex',
-                  width: '100%', // keeps it full width on mobile
+                  width: '100%' // keeps it full width on mobile
                 }}
               >
-
                 <Button
-                  variant="contained"
-                  color="primary"
+                  variant='contained'
+                  color='primary'
                   fullWidth
                   startIcon={<RocketLaunchIcon />}
                   onClick={() => {
                     if (!disableGenerateAll && !isLoading) onGenerate(false)
                   }}
-                  disabled={disableGenerateAll || isLoading}
+                  disabled={disableGenerateAll || isLoading || isGeneratingAll}
                   sx={{
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     borderTopRightRadius: 0,
                     borderBottomRightRadius: 0
-                }}
+                  }}
                 >
                   Generate New
                 </Button>
 
                 <Button
-                  variant="outlined"
-                  color="primary"
-                  size="small"
+                  variant='outlined'
+                  color='primary'
+                  size='small'
                   onClick={handleToggle}
-                  disabled={disableGenerateAll || isLoading}
+                  disabled={disableGenerateAll || isLoading || isGeneratingAll}
                   sx={{
                     minWidth: '40px',
                     px: 0,
@@ -163,76 +147,75 @@ const HeaderSection = ({
                     ml: '-1px'
                   }}
                 >
-                  <ArrowDropDownIcon fontSize="small" />
+                  <ArrowDropDownIcon fontSize='small' />
                 </Button>
               </Box>
             </span>
           </Tooltip>
 
-            <Box>
-
-              <Menu
-                id="generate-menu"
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={() => setAnchorEl(null)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                PaperProps={{
-                  sx: {
-                    width: anchorEl?.offsetWidth ?? 'auto'
+          <Box>
+            <Menu
+              id='generate-menu'
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={() => setAnchorEl(null)}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+              PaperProps={{
+                sx: {
+                  width: anchorEl?.offsetWidth ?? 'auto'
+                }
+              }}
+            >
+              <MenuItem
+                onClick={() => {
+                  setAnchorEl(null)
+                  if (!disableGenerateAll && !isLoading) {
+                    onGenerate(true)
                   }
                 }}
+                disabled={disableGenerateAll || isLoading}
               >
-                <MenuItem
-                  onClick={() => {
-                    setAnchorEl(null)
-                    if (!disableGenerateAll && !isLoading) {
-                      onGenerate(true)
-                    }
-                  }}
-                  disabled={disableGenerateAll || isLoading}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <RocketLaunchIcon fontSize='small' color='success' />
-                    Generate ALL
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <RocketLaunchIcon fontSize='small' color='success' />
+                  Generate ALL
+                </Box>
+              </MenuItem>
+              <Divider sx={{ my: 1 }} />
+              <MenuItem
+                onClick={() => {
+                  setAnchorEl(null)
+                  onGenerateSelected()
+                }}
+                disabled={disableGenerateAll || isLoading || selectedDocuments.length === 0}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <RocketLaunchIcon fontSize='small' color={selectedDocuments.length > 0 ? 'primary' : 'disabled'} />
+                  Generate Selected
+                  <Box
+                    component='span'
+                    sx={{
+                      ml: 1,
+                      px: 1.5,
+                      py: 0.5,
+                      borderRadius: 1,
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      bgcolor: selectedDocuments.length > 0 ? 'primary.main' : 'grey.400',
+                      color: 'white'
+                    }}
+                  >
+                    {selectedDocuments.length}
                   </Box>
-                </MenuItem>
-                <Divider sx={{ my: 1 }} />
-                <MenuItem
-                  onClick={() => {
-                    setAnchorEl(null)
-                    onGenerateSelected()
-                  }}
-                  disabled={disableGenerateAll || isLoading || selectedDocuments.length === 0}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <RocketLaunchIcon fontSize='small' color={selectedDocuments.length > 0 ? 'primary' : 'disabled'} />
-                    Generate Selected
-                    <Box
-                      component='span'
-                      sx={{
-                        ml: 1,
-                        px: 1.5,
-                        py: 0.5,
-                        borderRadius: 1,
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        bgcolor: selectedDocuments.length > 0 ? 'primary.main' : 'grey.400',
-                        color: 'white'
-                      }}
-                    >
-                      {selectedDocuments.length}
-                    </Box>
-                  </Box>
-                </MenuItem>
-                {(disableGenerateAll || isLoading) && (
-                  <Box sx={{ px: 2, pb: 1, pt: 0.5, fontSize: '0.85rem', color: 'grey.600' }}>
-                    {isLoading ? 'Loading, please wait...' : 'Add documents and questions to enable generation.'}
-                  </Box>
-                )}
-              </Menu>
-            </Box>
+                </Box>
+              </MenuItem>
+              {(disableGenerateAll || isLoading) && (
+                <Box sx={{ px: 2, pb: 1, pt: 0.5, fontSize: '0.85rem', color: 'grey.600' }}>
+                  {isLoading ? 'Loading, please wait...' : 'Add documents and questions to enable generation.'}
+                </Box>
+              )}
+            </Menu>
+          </Box>
         </Stack>
       </Stack>
     </Box>

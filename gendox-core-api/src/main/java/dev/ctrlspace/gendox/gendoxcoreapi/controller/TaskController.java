@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.AnswerBatchDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskEdgeDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeDTO;
@@ -20,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.data.domain.Page;
@@ -29,9 +31,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 
 @RestController
@@ -162,14 +162,35 @@ public class TaskController {
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @PostMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/task-nodes/search", produces = {"application/json"})
     @ResponseStatus(value = HttpStatus.OK)
-    public Page<TaskNode> getTaskNodesByCriteria(
-            @PathVariable UUID organizationId,
-            @PathVariable UUID projectId,
-            @PathVariable UUID taskId,
-            @RequestBody TaskNodeCriteria criteria,
-            Pageable pageable) {
+    public Page<TaskNode> getTaskNodesByCriteria(@PathVariable UUID organizationId,
+                                                 @PathVariable UUID projectId,
+                                                 @PathVariable UUID taskId,
+                                                 @RequestBody TaskNodeCriteria criteria,
+                                                 Pageable pageable) {
         return taskNodeService.getTaskNodesByCriteria(criteria, pageable);
     }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PostMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/answers/batch", produces = {"application/json"})
+    @ResponseStatus(value = HttpStatus.OK)
+    public Page<TaskNode> getAnswerNodesByDocumentAndQuestion(
+            @PathVariable UUID taskId,
+            @PathVariable UUID organizationId,
+            @PathVariable UUID projectId,
+            @RequestBody AnswerBatchDTO answerBatchDTO,
+            Pageable pageable
+    ) throws GendoxException {
+        List<TaskNode> answers = new ArrayList<>();
+
+        Task task = taskService.getTaskById(taskId);
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
+        List<UUID> docs = Optional.ofNullable(answerBatchDTO.getDocumentNodeIds()).orElse(List.of());
+        List<UUID> ques = Optional.ofNullable(answerBatchDTO.getQuestionNodeIds()).orElse(List.of());
+        return taskNodeService.findAnswerNodesBatch(taskId, docs, ques, pageable);
+    }
+
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @PostMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-edges")
@@ -193,11 +214,10 @@ public class TaskController {
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @PostMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-edges/search", produces = {"application/json"})
     @ResponseStatus(value = HttpStatus.OK)
-    public Page<TaskEdge> getTaskEdgesByCriteria(
-            @PathVariable UUID organizationId,
-            @PathVariable UUID projectId,
-            @RequestBody TaskEdgeCriteria criteria,
-            Pageable pageable) {
+    public Page<TaskEdge> getTaskEdgesByCriteria(@PathVariable UUID organizationId,
+                                                 @PathVariable UUID projectId,
+                                                 @RequestBody TaskEdgeCriteria criteria,
+                                                 Pageable pageable) {
         return taskEdgeService.getTaskEdgesByCriteria(criteria, pageable);
     }
 
@@ -223,10 +243,9 @@ public class TaskController {
     }
 
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/export-csv")
-    public ResponseEntity<InputStreamResource> exportTaskCsv(
-            @PathVariable UUID organizationId,
-            @PathVariable UUID projectId,
-            @PathVariable UUID taskId
+    public ResponseEntity<InputStreamResource> exportTaskCsv(@PathVariable UUID organizationId,
+                                                             @PathVariable UUID projectId,
+                                                             @PathVariable UUID taskId
     ) throws GendoxException {
         InputStreamResource fileResource = taskCsvExportService.exportTaskCsv(taskId);
         String filename = "task_" + taskId + "_answers.csv";

@@ -234,8 +234,10 @@ const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, task
           </Button>
           <Button onClick={handleConfirm} variant='contained' disabled={selectedDocIds.size === 0}>
             Confirm Selection
-          </Button >
-          <Button variant='outlined' onClick={onClose}>Cancel</Button>
+          </Button>
+          <Button variant='outlined' onClick={onClose}>
+            Cancel
+          </Button>
         </DialogActions>
       </Dialog>
 

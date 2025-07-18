@@ -29,7 +29,9 @@ const DocumentInsightsGrid = ({
   totalDocuments,
   selectedDocuments = [],
   onSelectDocument = () => {},
-  onGenerateSingleAnswer = () => {}
+  onGenerateSingleAnswer = () => {},
+  isGeneratingAll,
+  isGeneratingCells
 }) => {
   const theme = useTheme()
   const [answerDialogOpen, setAnswerDialogOpen] = useState(false)
@@ -228,18 +230,31 @@ const DocumentInsightsGrid = ({
         ),
 
         renderCell: params => {
+          const docId = params.id
+          const questionId = q.id
+          const answerObj = answers.find(a => a.documentNodeId === docId && a.questionNodeId === questionId)
+          const cellKey = `${docId}_${questionId}`
+          const isGenerating = !!isGeneratingCells[cellKey]
+
           if (isLoadingAnswers) {
             return (
               <Box
                 sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
               >
-                <span style={loadingTextAnimation.pulseEffect}>Loading…</span>
+                <CircularProgress size={20} />
               </Box>
             )
           }
-          const docId = params.id
-          const questionId = q.id
-          const answerObj = answers.find(a => a.documentNodeId === docId && a.questionNodeId === questionId)
+          if (isGenerating || isGeneratingAll) {
+            return (
+              <Box
+                sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
+              >
+                <CircularProgress size={20} />
+              </Box>
+            )
+          }
+
           return (
             <Box
               sx={{
@@ -373,17 +388,19 @@ const DocumentInsightsGrid = ({
       <DataGrid
         rows={rows}
         columns={columns}
-        page={page}
-        pageSize={pageSize}
-        rowCount={totalDocuments}
         pagination
         paginationMode='server'
-        onPageChange={setPage}
-        onPageSizeChange={newPageSize => {
-          setPageSize(newPageSize)
-          setPage(0)
+        rowCount={totalDocuments}
+        estimatedRowCount={totalDocuments}
+        paginationModel={{ page, pageSize }}
+        onPaginationModelChange={({ page: newPage }) => {
+          setPage(newPage)
         }}
         disableRowSelectionOnClick
+        componentsProps={{
+          pagination: { showFirstButton: true, showLastButton: true }
+        }}
+        loading={isLoading || isBlurring}
         sx={{
           '& .MuiDataGrid-cell': {
             outline: 'none',

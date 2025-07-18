@@ -168,6 +168,8 @@ const getTaskNodesByTaskId = async (organizationId, projectId, taskId, token, pa
  * @returns {Promise<axios.AxiosResponse<TaskNode[]>>}
  */
 const getTaskNodesByCriteria = async (organizationId, projectId, taskId, criteria, token, page, size) => {
+      console.log("PAGE", page, "SIZE", size)
+
   return axios.post(apiRequests.getTaskNodesByCriteria(organizationId, projectId, taskId, page, size), criteria, {
     headers: {
       'Content-Type': 'application/json',
@@ -220,6 +222,25 @@ const getTaskEdgeById = async (organizationId, projectId, id, token) => {
  */
 const getTaskEdgesByCriteria = async (organizationId, projectId, criteria, token) => {
   return axios.post(apiRequests.getTaskEdgesByCriteria(organizationId, projectId), criteria, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/** Get Answer Task Nodes
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param answerTaskNodePayload
+ * @param token
+ * @param page
+ * @param size
+ * @returns {Promise<axios.AxiosResponse<TaskNode[]>>}
+ */
+const getAnswerTaskNodes = async (organizationId, projectId, taskId, answerTaskNodePayload, token, page, size) => {
+  return axios.post(apiRequests.getAnswerTaskNodes(organizationId, projectId, taskId, page, size), answerTaskNodePayload,{
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token
@@ -309,6 +330,7 @@ export default {
   getTaskById,
   getTaskNodesByTaskId,
   getTaskNodesByCriteria,
+  getAnswerTaskNodes,
   createTaskNode,
   createTaskNodesBatch,
   updateTaskNode,

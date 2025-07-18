@@ -12,6 +12,7 @@ import {
   executeTaskByType,
   deleteTaskNode,
   fetchTaskNodesByCriteria,
+  fetchAnswerTaskNodes,
   createTaskNodesBatch
 } from 'src/store/activeTask/activeTask'
 import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocument'
@@ -28,6 +29,8 @@ function chunk(array, size) {
   }
   return result
 }
+
+const MAX_PAGE_SIZE = 2147483647
 
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
@@ -46,13 +49,15 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const [deleteNodeId, setDeleteNodeId] = useState(null)
   const [isExportingCsv, setIsExportingCsv] = useState(false)
   const [page, setPage] = useState(0)
-  const [pageSize, setPageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(20)
   const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
   const [showDialog, setShowDialog] = useState(false)
   const [questionsDialogTexts, setQuestionsDialogTexts] = useState([''])
   const [activeQuestion, setActiveQuestion] = useState(null)
   const [isSavingQuestions, setIsSavingQuestions] = useState(false)
   const [selectedDocuments, setSelectedDocuments] = useState([])
+  const [isGeneratingAll, setIsGeneratingAll] = useState(false)
+  const [isGeneratingCells, setIsGeneratingCells] = useState({})
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
@@ -61,6 +66,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     setDocuments([])
     setQuestions([])
     setAnswers([])
+    setSelectedDocuments([])
     setPage(0)
   }, [taskId, organizationId, projectId])
 
@@ -90,7 +96,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         criteria: { taskId, nodeTypeNames: ['QUESTION'] },
         token,
         page: 0,
-        size: Number.MAX_SAFE_INTEGER
+        size: MAX_PAGE_SIZE
       })
     )
       .unwrap()
@@ -149,13 +155,20 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   useEffect(() => {
     if (!documents.length || !questions.length || !(organizationId && projectId && taskId && token)) return
 
+    const answerTaskNodePayload = {
+      documentNodeIds: documents.map(d => d.id),
+      questionNodeIds: questions.map(q => q.id)
+    }
+
     dispatch(
-      fetchTaskNodesByCriteria({
+      fetchAnswerTaskNodes({
         organizationId,
         projectId,
         taskId,
-        criteria: { taskId, nodeTypeNames: ['ANSWER'] },
-        token
+        answerTaskNodePayload,
+        token,
+        page: 0,
+        size: MAX_PAGE_SIZE
       })
     )
       .unwrap()
@@ -175,6 +188,23 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       }))
     )
   }, [taskNodesAnswerList])
+
+  // 7️⃣ **Update URL query params when page or pageSize changes**
+  useEffect(() => {
+    router.replace(
+      {
+        pathname: router.pathname,
+        query: {
+          ...router.query,
+          page: String(page),
+          size: String(pageSize)
+        }
+      },
+      undefined,
+      { shallow: true }
+    )
+    setSelectedDocuments([])
+  }, [page, pageSize])
 
   const openUploader = () => setShowUploader(true)
 
@@ -216,7 +246,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           criteria: { taskId, nodeTypeNames: ['QUESTION'] },
           token,
           page: 0,
-          size: Number.MAX_SAFE_INTEGER
+          size: MAX_PAGE_SIZE
         })
       )
       setIsSavingQuestions(false)
@@ -232,13 +262,34 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     setSelectedDocuments(prev => (checked ? [...prev, docId] : prev.filter(id => id !== docId)))
   }
 
-  const handleGenerateSelected = () => {
+  const handleGenerateSelected = async () => {
     const selectedDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
     if (selectedDocs.length === 0) {
       toast.error('No documents selected!')
       return
     }
-    handleGenerate({ docs: selectedDocs, reGenerateExistingAnswers: true })
+    const newCells = {}
+    selectedDocs.forEach(doc => {
+      questions.forEach(q => {
+        newCells[`${doc.id}_${q.id}`] = true
+      })
+    })
+    setIsGeneratingCells(cells => ({ ...cells, ...newCells }))
+
+    try {
+      await handleGenerate({ docs: selectedDocs, reGenerateExistingAnswers: true })
+    } finally {
+      // Clean up just those cells
+      setIsGeneratingCells(cells => {
+        const copy = { ...cells }
+        selectedDocs.forEach(doc => {
+          questions.forEach(q => {
+            delete copy[`${doc.id}_${q.id}`]
+          })
+        })
+        return copy
+      })
+    }
   }
 
   const handleGenerateSingleAnswer = async (doc, question) => {
@@ -246,11 +297,21 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       toast.error('Document and question are required to generate an answer.')
       return
     }
-
-    handleGenerate({ docs: doc, questionsToGenerate: question, reGenerateExistingAnswers: true })
+    const key = `${doc.id}_${question.id}`
+    setIsGeneratingCells(cells => ({ ...cells, [key]: true }))
+    try {
+      await handleGenerate({ docs: doc, questionsToGenerate: question, reGenerateExistingAnswers: true })
+    } finally {
+      setIsGeneratingCells(cells => {
+        const { [key]: _, ...rest } = cells
+        return rest
+      })
+    }
   }
 
-  const handleGenerate = async ({ docs, questionsToGenerate, reGenerateExistingAnswers }) => {
+  const handleGenerate = async ({ docs, questionsToGenerate, reGenerateExistingAnswers, isAll = false }) => {
+    if (isAll) setIsGeneratingAll(true)
+
     try {
       const docIds = Array.isArray(docs) ? docs.map(d => d.id) : [docs.id]
 
@@ -274,15 +335,24 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       toast.success(`Started generation for ${docIds.length} document(s)`)
 
       await pollJobStatus(jobExecutionId)
+
+      const answerTaskNodePayload = {
+        documentNodeIds: documents.map(d => d.id),
+        questionNodeIds: questions.map(q => q.id)
+      }
+
       dispatch(
-        fetchTaskNodesByCriteria({
+        fetchAnswerTaskNodes({
           organizationId,
           projectId,
           taskId,
-          criteria: { taskId, nodeTypeNames: ['ANSWER'] },
-          token
+          answerTaskNodePayload,
+          token,
+          page: 0,
+          size: MAX_PAGE_SIZE
         })
       )
+      setIsGeneratingAll(false)
       toast.success(`Generation completed for ${docIds.length} document(s)`)
       setSelectedDocuments([])
     } catch (error) {
@@ -363,7 +433,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           onAddQuestion={openAddDialog}
           openUploader={openUploader}
           onGenerate={reGenerateExistingAnswers =>
-            handleGenerate({ docs: documents, reGenerateExistingAnswers: reGenerateExistingAnswers })
+            handleGenerate({ docs: documents, reGenerateExistingAnswers: reGenerateExistingAnswers, isAll: true })
           }
           disableGenerateAll={documents.length === 0 || questions.length === 0}
           isLoading={isLoading}
@@ -371,6 +441,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           onExportCsv={handleExportCsv}
           onGenerateSelected={handleGenerateSelected}
           selectedDocuments={selectedDocuments}
+          isGeneratingAll={isGeneratingAll}
         />
 
         <Box
@@ -396,6 +467,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             selectedDocuments={selectedDocuments}
             onSelectDocument={handleSelectDocument}
             onGenerateSingleAnswer={handleGenerateSingleAnswer}
+            isGeneratingAll={isGeneratingAll}
+            isGeneratingCells={isGeneratingCells}
           />
         </Box>
       </Paper>

@@ -144,6 +144,24 @@ export const fetchTaskNodesByCriteria = createAsyncThunk(
   }
 )
 
+export const fetchAnswerTaskNodes = createAsyncThunk(
+  'task/fetchAnswerTaskNodes',
+  async ({ organizationId, projectId, taskId, answerTaskNodePayload, token, page = 0, size = 20 }, thunkAPI) => {
+    try {
+      const response = await taskService.getAnswerTaskNodes(organizationId, projectId, taskId, answerTaskNodePayload, token, page, size)
+      return {
+        content: response.data.content,
+        totalElements: response.data.totalElements,
+        page: response.data.pageable.pageNumber || page,
+        size: response.data.pageable.pageSize || size
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
 // Similarly for TaskEdge
 export const createTaskEdge = createAsyncThunk(
   'task/createTaskEdge',
@@ -424,6 +442,20 @@ const taskSlice = createSlice({
         } else {
           state.isLoading = false
         }
+        state.error = action.payload
+      })
+
+      // Fetch Answer TaskNodes
+      .addCase(fetchAnswerTaskNodes.pending, state => {
+        state.isLoadingAnswers = true
+        state.error = null
+      })
+      .addCase(fetchAnswerTaskNodes.fulfilled, (state, action) => {
+        state.isLoadingAnswers = false
+        state.taskNodesAnswerList = action.payload
+      })
+      .addCase(fetchAnswerTaskNodes.rejected, (state, action) => {
+        state.isLoadingAnswers = false
         state.error = action.payload
       })
 
