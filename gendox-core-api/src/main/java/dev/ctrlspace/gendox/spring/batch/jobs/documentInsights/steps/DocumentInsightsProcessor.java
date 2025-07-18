@@ -36,7 +36,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private Boolean reGenerateExistingAnswers;
     // package private for testing
-    static final int CHUNK_SIZE = 10;
+    static final int MAX_QUESTIONS_PER_BUCKET = 10;
+    static final int MAX_QUESTION_TOKENS_PER_BUCKET = 5_000;
     static final int MAX_TOKENS = 100_000;
 
 
@@ -322,25 +323,60 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     }
 
     /**
-     * Groups questions by N
-     * @param questions
-     * @return
+     * Packs questions into buckets of ≤10 items and ≤10_000 tokens,
+     * back‑filling any earlier bucket that still has room.
      */
     public @NotNull List<List<CompletionQuestionRequest>> chunkQuestionsToGroups(List<TaskNode> questions) {
-        // Process the questions 10-by-10
-        List<List<CompletionQuestionRequest>> chunks = new ArrayList<>();
-        for (int i = 0; i < questions.size(); i += CHUNK_SIZE) {
-            int end = Math.min(i + CHUNK_SIZE, questions.size());
-            List<CompletionQuestionRequest> slice = new ArrayList<>();
-            for (TaskNode q : questions.subList(i, end)) {
-                slice.add(CompletionQuestionRequest.builder()
-                        .questionId(q.getId())
-                        .questionText(q.getNodeValue().getMessage())
-                        .build());
+        var enc = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
+
+        List<List<CompletionQuestionRequest>> buckets = new ArrayList<>();
+        // Parallel list to track the token sum of each bucket:
+        List<Integer> bucketTokenSums           = new ArrayList<>();
+        List<CompletionQuestionRequest> single; // temp for >limit questions
+
+        for (TaskNode q : questions) {
+            String text = q.getNodeValue().getMessage();
+            int    qTokens = enc.countTokens(text);
+
+            CompletionQuestionRequest req = CompletionQuestionRequest.builder()
+                    .questionId(q.getId())
+                    .questionText(text)
+                    .build();
+
+            // 1) If this question alone exceeds the token limit → its own bucket
+            if (qTokens > MAX_QUESTION_TOKENS_PER_BUCKET) {
+                single = Collections.singletonList(req);
+                buckets.add(single);
+                bucketTokenSums.add(qTokens);
+                continue;
             }
-            chunks.add(slice);
+
+            // 2) Try to first‑fit into an existing bucket
+            boolean placed = false;
+            for (int i = 0; i < buckets.size(); i++) {
+                List<CompletionQuestionRequest> bucket = buckets.get(i);
+                int currentSum = bucketTokenSums.get(i);
+
+                if (bucket.size() < MAX_QUESTIONS_PER_BUCKET
+                        && currentSum + qTokens <= MAX_QUESTION_TOKENS_PER_BUCKET)
+                {
+                    bucket.add(req);
+                    bucketTokenSums.set(i, currentSum + qTokens);
+                    placed = true;
+                    break;
+                }
+            }
+
+            // 3) If it didn’t fit anywhere, start a fresh bucket
+            if (!placed) {
+                List<CompletionQuestionRequest> newBucket = new ArrayList<>();
+                newBucket.add(req);
+                buckets.add(newBucket);
+                bucketTokenSums.add(qTokens);
+            }
         }
-        return chunks;
+
+        return buckets;
     }
 
     private @NotNull List<List<DocumentInstanceSection>> groupSectionsBy100kTokens(UUID documentId) {
