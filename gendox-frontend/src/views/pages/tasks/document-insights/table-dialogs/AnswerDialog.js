@@ -1,14 +1,5 @@
 import React, { useState, useRef, useLayoutEffect } from 'react'
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Typography,
-  Divider,
-  Box
-} from '@mui/material'
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Divider, Box } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import { answerFlagEnum, getAnswerFlagProps } from 'src/utils/tasks/answerFlagEnum'
 import Chip from 'src/views/custom-components/mui/chip'
@@ -95,12 +86,11 @@ const AnswerDialog = ({ open, onClose, answer, questionText }) => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          pr: 2 // space for chip, if needed
+          pr: 2, // space for chip, if needed
+          fontWeight: 600
         }}
       >
-        <Typography variant='h6' sx={{ fontWeight: 600 }}>
-          Answer Details
-        </Typography>
+        Answer Details
         <Chip
           label={flagProps.label}
           color={flagProps.chipColor}
@@ -114,7 +104,7 @@ const AnswerDialog = ({ open, onClose, answer, questionText }) => {
 
       <DialogContent sx={{ py: 3 }}>
         {questionText && (
-          <ExpandableMarkdownSection label="Question" markdown={questionText} maxHeight={MAX_COLLAPSED_HEIGHT} />
+          <ExpandableMarkdownSection label='Question' markdown={questionText} maxHeight={MAX_COLLAPSED_HEIGHT} />
         )}
 
         <Divider sx={{ borderColor: theme.palette.divider, mb: 3 }} />
@@ -162,7 +152,7 @@ const AnswerDialog = ({ open, onClose, answer, questionText }) => {
         <Divider sx={{ my: 2, borderColor: theme.palette.divider }} />
 
         <ExpandableMarkdownSection
-          label="Description"
+          label='Description'
           markdown={answer.message || '*N/A*'}
           maxHeight={MAX_COLLAPSED_HEIGHT}
         />

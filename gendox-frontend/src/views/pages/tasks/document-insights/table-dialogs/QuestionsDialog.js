@@ -34,7 +34,7 @@ const QuestionsDialog = ({ open, onClose, questions, setQuestions, onConfirm, re
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth='xs'>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth='xs' disableEnforceFocus disableRestoreFocus>
       {isSaving && (
         <Box
           sx={{

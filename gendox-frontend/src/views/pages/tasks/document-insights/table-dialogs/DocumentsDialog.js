@@ -110,10 +110,10 @@ const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, task
   return (
     <>
       <Dialog open={open} onClose={onClose} fullWidth maxWidth='sm'>
-        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant='h6' component='div'>
-            Select Project Documents
-          </Typography>
+        <DialogTitle
+          sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600 }}
+        >
+          Select Project Documents
           <IconButton onClick={onClose} size='small' aria-label='close'>
             <CloseIcon />
           </IconButton>
