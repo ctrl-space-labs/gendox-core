@@ -445,7 +445,7 @@ public class EmbeddingService {
             }
             // continue processing...
         } catch (ClassCastException | IndexOutOfBoundsException | NullPointerException e) {
-            throw new GendoxException("ADVANCED_SEARCH_FAILED", "Advanced search failed to generate a valid message.", HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new GendoxException("ADVANCED_SEARCH_FAILED", "Advanced search failed to generate a valid message.", HttpStatus.INTERNAL_SERVER_ERROR, e);
         }
         return functionCallNode;
     }
