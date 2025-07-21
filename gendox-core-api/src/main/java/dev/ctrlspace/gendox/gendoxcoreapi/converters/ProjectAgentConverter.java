@@ -40,6 +40,14 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
             projectAgentDTO.setRerankModel(projectAgent.getRerankModel());
         }
 
+        if(projectAgent.getAdvancedSearchEnable() != null) {
+            projectAgentDTO.setAdvancedSearchEnable(projectAgent.getAdvancedSearchEnable());
+        }
+
+        if(projectAgent.getAdvancedSearchModel() != null) {
+            projectAgentDTO.setAdvancedSearchModel(projectAgent.getAdvancedSearchModel());
+        }
+
         projectAgentDTO.setAiTools(projectAgent.getAiTools());
 
 
@@ -78,6 +86,14 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
 
         if (projectAgentDTO.getRerankModel() != null) {
             projectAgent.setRerankModel(projectAgentDTO.getRerankModel());
+        }
+
+        if (projectAgentDTO.getAdvancedSearchEnable() != null) {
+            projectAgent.setAdvancedSearchEnable(projectAgentDTO.getAdvancedSearchEnable());
+        }
+
+        if (projectAgentDTO.getAdvancedSearchModel() != null) {
+            projectAgent.setAdvancedSearchModel(projectAgentDTO.getAdvancedSearchModel());
         }
 
         projectAgent.setAiTools(projectAgentDTO.getAiTools());

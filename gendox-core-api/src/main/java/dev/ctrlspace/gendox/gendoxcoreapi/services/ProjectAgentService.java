@@ -225,6 +225,7 @@ public class ProjectAgentService {
         AiModel semanticSearchModel = aiModelService.getByName(projectAgent.getSemanticSearchModel().getName());
         AiModel moderationModel = aiModelService.getByName(projectAgent.getModerationModel().getName());
         AiModel rerankModel = aiModelService.getByName(projectAgent.getRerankModel().getName());
+        AiModel advancedSearchModel = aiModelService.getByName(projectAgent.getAdvancedSearchModel().getName());
 
         UUID subscriptionPlanId = organizationPlanService
                 .getActiveOrganizationPlan(existingProjectAgent.getProject().getOrganizationId())
@@ -263,6 +264,12 @@ public class ProjectAgentService {
                     HttpStatus.FORBIDDEN);
         }
 
+        if (projectAgent.getAdvancedSearchEnable() && !subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, advancedSearchModel.getModelTierType().getId())) {
+            throw new GendoxException("NO_ACCESS_TO_ADVANCED_SEARCH_MODEL",
+                    "No access to the advanced search model. Basic or Pro subscription is required",
+                    HttpStatus.FORBIDDEN);
+        }
+
         // TODO add validation if can enable advanced search based on subscription plan
 
 
@@ -287,6 +294,10 @@ public class ProjectAgentService {
         existingProjectAgent.setRerankEnable(projectAgent.getRerankEnable());
         if (projectAgent.getRerankModel() != null && projectAgent.getRerankEnable()) {
             existingProjectAgent.setRerankModel(aiModelService.getByName(projectAgent.getRerankModel().getName()));
+        }
+        existingProjectAgent.setAdvancedSearchEnable(projectAgent.getAdvancedSearchEnable());
+        if (projectAgent.getAdvancedSearchModel() != null && projectAgent.getAdvancedSearchEnable()) {
+            existingProjectAgent.setAdvancedSearchModel(aiModelService.getByName(projectAgent.getAdvancedSearchModel().getName()));
         }
         existingProjectAgent.setOrganizationDid(projectAgent.getOrganizationDid());
 
