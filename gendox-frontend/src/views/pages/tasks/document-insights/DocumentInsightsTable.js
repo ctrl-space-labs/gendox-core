@@ -352,12 +352,14 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           size: MAX_PAGE_SIZE
         })
       )
-      setIsGeneratingAll(false)
+      
       toast.success(`Generation completed for ${docIds.length} document(s)`)
       setSelectedDocuments([])
     } catch (error) {
       console.error('Failed to start generation:', error)
       toast.error('Failed to start generation')
+    } finally {
+      if (isAll) setIsGeneratingAll(false)
     }
   }
 

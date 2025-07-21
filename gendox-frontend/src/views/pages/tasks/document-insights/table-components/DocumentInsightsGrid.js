@@ -393,6 +393,7 @@ const DocumentInsightsGrid = ({
         rowCount={totalDocuments}
         estimatedRowCount={totalDocuments}
         paginationModel={{ page, pageSize }}
+        pageSizeOptions={[20]}
         onPaginationModelChange={({ page: newPage }) => {
           setPage(newPage)
         }}

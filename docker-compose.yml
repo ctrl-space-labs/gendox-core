@@ -126,4 +126,4 @@ networks:
 
 volumes:
   postgres-data:
-#  keycloak-data:
+  keycloak-data:
