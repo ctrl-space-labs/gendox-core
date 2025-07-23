@@ -32,8 +32,7 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQues
     private final TaskNodeService taskNodeService;
 
     @Autowired
-    public DocumentInsightsReader(TaskNodeService taskNodeService
-    ) {
+    public DocumentInsightsReader(TaskNodeService taskNodeService) {
         this.taskNodeService = taskNodeService;
     }
 

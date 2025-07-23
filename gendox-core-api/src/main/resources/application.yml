@@ -200,6 +200,15 @@ gendox:
             name: documentInsightsStep
             chunk-size: 10
             pageable-size: 1000
+    document-digitization:
+      job:
+        name: documentDigitizationJob
+        thread-pool-size: 10
+        steps:
+          document-digitization-step:
+            name: documentDigitizationStep
+            chunk-size: 10
+            pageable-size: 1000
   user-invitation:
     accept-url-template: /accept-invitation/?email=%s&token=%s
     ttl: 86400  # in seconds

@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentQuestionsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskEdgeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskNodeRepository;
@@ -188,8 +189,6 @@ public class TaskNodeService {
     public Page<TaskDocumentQuestionsDTO> getDocumentsGroupedWithQuestions(TaskNodeCriteria criteria, Pageable pageable) {
         Type documentNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.DOCUMENT);
         Type questionNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.QUESTION);
-        Type answerNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.ANSWER);
-        Type answersRelationType = typeService.getTaskNodeRelationshipTypeByName(TaskNodeRelationshipTypeConstants.ANSWERS);
 
         List<UUID> documentNodeIdsFilter = criteria.getDocumentNodeIds();
         if (documentNodeIdsFilter != null && documentNodeIdsFilter.isEmpty()) {
@@ -242,5 +241,29 @@ public class TaskNodeService {
 
         return documentsPage;
     }
+
+    public Page<TaskDocumentMetadataDTO> getTaskDocumentMetadataByCriteria(TaskNodeCriteria criteria, Pageable pageable) {
+        logger.info("Fetching task document metadata by criteria: {}", criteria);
+
+        Page<TaskNode> nodesPage = taskNodeRepository.findAll(TaskNodePredicates.build(criteria), pageable);
+
+        List<TaskDocumentMetadataDTO> metadataList = nodesPage.stream()
+                .map(node -> {
+                    TaskDocumentMetadataDTO.TaskDocumentMetadataDTOBuilder builder = TaskDocumentMetadataDTO.builder()
+                            .taskNodeId(node.getId());
+                    if (node.getNodeValue() != null) {
+                        if (node.getNodeValue().getDocumentMetadata() != null) {
+                            builder.prompt(node.getNodeValue().getDocumentMetadata().getPrompt());       // might be null, that's fine
+                            builder.structure(node.getNodeValue().getDocumentMetadata().getStructure()); // might be null, that's fine
+                        }
+                    }
+                    return builder.build();
+                })
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(metadataList, pageable, nodesPage.getTotalElements());
+    }
+
+
 
 }

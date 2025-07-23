@@ -120,8 +120,10 @@ public class AsyncController {
 
 
         } else if (TaskTypeConstants.DOCUMENT_DIGITIZATION.equalsIgnoreCase(taskType)) {
-            // TODO: Implement Document Digitization task execution
-            throw new GendoxException("NOT_IMPLEMENTED", "Document Digitization task execution not implemented yet", HttpStatus.NOT_IMPLEMENTED);
+            CompletableFuture<JobExecution> futureJob = asyncService
+                    .executeDocumentDigitizationTask(taskId, criteria);
+            return futureJob
+                    .thenApply(JobExecution::getId);
 
         } else if (TaskTypeConstants.DEEP_RESEARCH.equalsIgnoreCase(taskType)) {
             // TODO: Implement Deep Research task execution
@@ -130,6 +132,8 @@ public class AsyncController {
 
         throw new GendoxException("INVALID_TASK_TYPE", "Task type not supported: " + taskType, HttpStatus.BAD_REQUEST);
     }
+
+
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
             "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")

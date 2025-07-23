@@ -26,6 +26,7 @@ public class AsyncService {
     private TrainingBatchService trainingBatchService;
     private SplitterAndTrainingBatchService splitterAndTrainingBatchService;
     private DocumentInsightsBatchService documentInsightsBatchService;
+    private DocumentDigitizationBatchService documentDigitizationBatchService;
     private final JobExplorer jobExplorer;
 
     @Autowired
@@ -33,11 +34,13 @@ public class AsyncService {
                         TrainingBatchService trainingBatchService,
                         SplitterAndTrainingBatchService splitterAndTrainingBatchService,
                         DocumentInsightsBatchService documentInsightsBatchService,
+                        DocumentDigitizationBatchService documentDigitizationBatchService,
                         JobExplorer jobExplorer) {
         this.splitterBatchService = splitterBatchService;
         this.trainingBatchService = trainingBatchService;
         this.splitterAndTrainingBatchService = splitterAndTrainingBatchService;
         this.documentInsightsBatchService = documentInsightsBatchService;
+        this.documentDigitizationBatchService = documentDigitizationBatchService;
         this.jobExplorer = jobExplorer;
     }
 
@@ -82,6 +85,19 @@ public class AsyncService {
         try {
             logger.info("Starting Document Insights async batch for task {}", taskId);
             JobExecution jobExecution = documentInsightsBatchService.runDocumentInsights(taskId, criteria);
+            logger.info("Document Insights Job Execution Status: {}", jobExecution.getStatus());
+            return CompletableFuture.completedFuture(jobExecution);
+        } catch (Exception e) {
+            logger.error("Error executing Document Insights task {}", taskId, e);
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    @Async
+    public CompletableFuture<JobExecution> executeDocumentDigitizationTask(UUID taskId, TaskNodeCriteria criteria) {
+        try {
+            logger.info("Starting Document Insights async batch for task {}", taskId);
+            JobExecution jobExecution = documentDigitizationBatchService.runDocumentDigitization(taskId, criteria);
             logger.info("Document Insights Job Execution Status: {}", jobExecution.getStatus());
             return CompletableFuture.completedFuture(jobExecution);
         } catch (Exception e) {

@@ -62,7 +62,7 @@ public class TaskEdgeService {
     }
 
 
-    public List<TaskEdge> createAnswerEdges(List<AnswerCreationDTO> newAnswerDTOs) throws GendoxException {
+    public List<TaskEdge> createAnswerNodesAndEdges(List<AnswerCreationDTO> newAnswerDTOs) throws GendoxException {
         if (newAnswerDTOs == null || newAnswerDTOs.isEmpty()) {
             logger.warn("No new answers provided for creating edges");
             return new ArrayList<>(); // Return empty list if no answers
@@ -85,11 +85,13 @@ public class TaskEdgeService {
             edgesToSave.add(docEdge);
 
             // Create edge to question node
-            TaskEdge questionEdge = new TaskEdge();
-            questionEdge.setFromNode(savedAnswerNode);
-            questionEdge.setToNode(dto.getQuestionNode());
-            questionEdge.setRelationType(answersRelationType);
-            edgesToSave.add(questionEdge);
+            if (!(dto.getQuestionNode() == null)) {
+                TaskEdge questionEdge = new TaskEdge();
+                questionEdge.setFromNode(savedAnswerNode);
+                questionEdge.setToNode(dto.getQuestionNode());
+                questionEdge.setRelationType(answersRelationType);
+                edgesToSave.add(questionEdge);
+            }
         }
 
         return taskEdgeRepository.saveAll(edgesToSave);

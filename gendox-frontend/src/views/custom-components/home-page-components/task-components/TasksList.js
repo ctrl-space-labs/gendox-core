@@ -125,11 +125,24 @@ const TasksList = ({ projectTasks, page }) => {
     }
   }
 
+  
   const handleRowClick = params => {
-    router.push(
-      `/gendox/tasks/document-insights/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
-    )
+  const typeCode =
+    params.row.taskType?.value || params.row.taskType?.name || params.row.type || ''
+
+  let route = ''
+  if (typeCode === 'DOCUMENT_INSIGHTS') {
+    route = `/gendox/tasks/document-insights/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
+  } else if (typeCode === 'DOCUMENT_DIGITIZATION') {
+    route = `/gendox/tasks/document-digitization/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
+  } else {
+    // fallback, e.g. stay on page or show error/toast
+    return
   }
+
+  router.push(route)
+}
+
 
   const columns = [
     {

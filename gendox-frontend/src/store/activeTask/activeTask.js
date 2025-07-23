@@ -86,7 +86,6 @@ export const createTaskNodesBatch = createAsyncThunk(
   }
 )
 
-
 export const updateTaskNode = createAsyncThunk(
   'task/updateTaskNode',
   async ({ organizationId, projectId, taskNodePayload, token }, thunkAPI) => {
@@ -128,12 +127,20 @@ export const fetchTaskNodesByTaskId = createAsyncThunk(
 
 export const fetchTaskNodesByCriteria = createAsyncThunk(
   'task/fetchTaskNodesByCriteria',
-  async ({ organizationId, projectId, taskId, criteria, token, page = 0, size = 20  }, thunkAPI) => {
+  async ({ organizationId, projectId, taskId, criteria, token, page = 0, size = 20 }, thunkAPI) => {
     try {
-      const response = await taskService.getTaskNodesByCriteria(organizationId, projectId, taskId, criteria, token, page, size)
+      const response = await taskService.getTaskNodesByCriteria(
+        organizationId,
+        projectId,
+        taskId,
+        criteria,
+        token,
+        page,
+        size
+      )
       return {
         content: response.data.content,
-        totalElements: response.data.totalElements,  // total items on backend (if your backend provides)
+        totalElements: response.data.totalElements, // total items on backend (if your backend provides)
         page: response.data.pageable.pageNumber || page,
         size: response.data.pageable.pageSize || size
       }
@@ -148,7 +155,15 @@ export const fetchAnswerTaskNodes = createAsyncThunk(
   'task/fetchAnswerTaskNodes',
   async ({ organizationId, projectId, taskId, answerTaskNodePayload, token, page = 0, size = 20 }, thunkAPI) => {
     try {
-      const response = await taskService.getAnswerTaskNodes(organizationId, projectId, taskId, answerTaskNodePayload, token, page, size)
+      const response = await taskService.getAnswerTaskNodes(
+        organizationId,
+        projectId,
+        taskId,
+        answerTaskNodePayload,
+        token,
+        page,
+        size
+      )
       return {
         content: response.data.content,
         totalElements: response.data.totalElements,
@@ -252,7 +267,7 @@ const initialState = {
   taskNodesRestList: [],
   taskNodesDocumentList: [],
   taskNodesQuestionList: [],
-  taskNodesAnswerList: [],
+  taskNodesAnswerList: [],  
   taskEdges: {},
   isLoading: false,
   isLoadingAnswers: false, // specific loading state for answers
@@ -422,14 +437,14 @@ const taskSlice = createSlice({
         if (criteria.nodeTypeNames.includes('ANSWER')) {
           state.isLoadingAnswers = false
           state.taskNodesAnswerList = action.payload
-        } 
+        }
         if (criteria.nodeTypeNames.includes('DOCUMENT')) {
           state.isLoading = false
           state.taskNodesDocumentList = action.payload
         }
         if (criteria.nodeTypeNames.includes('QUESTION')) {
           state.isLoading = false
-          state.taskNodesQuestionList = action.payload
+          state.taskNodesQuestionList = action.payload                   
         } else {
           state.isLoading = false
           state.taskNodesRestList = action.payload

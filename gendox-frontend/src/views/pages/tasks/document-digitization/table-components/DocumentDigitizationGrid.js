@@ -5,16 +5,18 @@ import { Box, Button, IconButton, Tooltip } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import CircularProgress from '@mui/material/CircularProgress'
-import QuestionsDialog from '../table-dialogs/QuestionsDialog'
 import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
 import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
 import { getQuestionMessageById } from 'src/utils/tasks/taskUtils'
+import DescriptionIcon from '@mui/icons-material/Description'
+import SchemaIcon from '@mui/icons-material/Schema'
+import EditIcon from '@mui/icons-material/Edit'
+import DocumentDialog from '../table-dialogs/DocumentDialog'
 
-const DocumentInsightsGrid = ({
+const DocumentDigitizationGrid = ({
   documents,
-  questions,
   answers,
   openUploader,
   onDeleteQuestionOrDocumentNode,
@@ -36,191 +38,190 @@ const DocumentInsightsGrid = ({
   const theme = useTheme()
   const [answerDialogOpen, setAnswerDialogOpen] = useState(false)
   const [selectedAnswer, setSelectedAnswer] = useState(null)
-  const [questionDialogOpen, setQuestionDialogOpen] = useState(false)
-  const [selectedQuestionText, setSelectedQuestionText] = useState('')
 
-  const sortedQuestions = useMemo(() => {
-    return [...questions].sort((a, b) => a.order - b.order)
-  }, [questions])
+  const [openDocDialog, setOpenDocDialog] = useState(false)
+  const [activeDoc, setActiveDoc] = useState(null)
+  const [editMode, setEditMode] = useState(false)
 
-  const columns = useMemo(() => {
-    return [
+  const handleOpenDialog = (doc, editable = false) => {
+    setActiveDoc(doc)
+    setEditMode(editable)
+    setOpenDocDialog(true)
+  }
+
+  // Save changes (replace this with your Redux or API logic as needed)
+  const handleSaveDoc = updatedDoc => {
+    // Ideally, update the document in your Redux state or backend
+    // This is a local update for demo:
+    // setDocuments(docs => docs.map(d => d.id === updatedDoc.id ? updatedDoc : d))
+    setOpenDocDialog(false)
+  }
+
+  console.log('DOCUMENTS', documents)
+  console.log('ANSWERS', answers)
+
+  const pageNumbers = useMemo(() => {
+    // Unique page numbers present in answers
+    return Array.from(new Set(answers.map(a => a.pageNumber))).sort((a, b) => a - b)
+  }, [answers])
+
+  const columns = useMemo(
+    () => [
       {
-        field: 'name',
-        headerName: 'Document',
-        width: 350,
+        field: 'pageNumber',
+        headerName: 'Pages',
+        width: 100,
+        renderCell: params => <b>Page {params.value}</b>,
+        renderHeader: () => <b>Pages</b>
+      },
+      ...documents.map(doc => ({
+        field: doc.id,
+        width: 280,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
-        renderCell: params => {
-          return (
+        // Full-featured header
+        renderHeader: () => (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'stretch',
+              justifyContent: 'flex-start',
+              height: '100%',
+              borderRadius: 2,
+              boxShadow: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+              overflow: 'hidden',
+              position: 'relative',
+              cursor: 'pointer', // clickable for dialog
+              transition: 'box-shadow 0.2s'
+            }}
+            onClick={() => handleOpenDialog(doc)} // open in view mode
+            title='Click to view details'
+          >
+            {/* Title */}
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 1,
-                width: '100%',
-                cursor: !params.row.documentId ? 'pointer' : 'default'
+                fontWeight: 700,
+                fontSize: 16,
+                color: 'primary.main',
+                p: 1,
+                pl: 1.5,
+                pb: 0.5,
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                minHeight: 32
               }}
-              onClick={() => !params.row.documentId && openUploader()}
-              title={params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
+              title={doc.name}
             >
-              {params.row.documentId ? (
-                <Tooltip title='Delete Document'>
-                  <span>
-                    <IconButton
-                      color='error'
-                      size='small'
-                      onClick={e => {
-                        e.stopPropagation() // prevent row click
-                        onDeleteQuestionOrDocumentNode(params.row.id) // use correct handler
-                      }}
-                      aria-label='delete document'
-                    >
-                      <DeleteOutlineIcon fontSize='small' />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              ) : (
-                <Tooltip title='Select Document'>
-                  <span>
-                    <IconButton
-                      color='primary'
-                      size='small'
-                      onClick={e => {
-                        e.stopPropagation() // prevent row click
-                        openUploader()
-                      }}
-                      aria-label='select document'
-                    >
-                      <UploadFileIcon fontSize='small' />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              )}
-
-              <Box
-                component='span'
-                sx={{
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  flexGrow: 1,
-                  color: params.row.documentId ? 'text.primary' : 'primary.main',
-                  fontWeight: params.row.documentId ? 'normal' : '600',
-                  userSelect: 'none'
-                }}
-              >
-                {params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
-              </Box>
+              <DescriptionIcon fontSize='small' sx={{ mr: 1, color: 'primary.light' }} />
+              {doc.name || 'Unknown Document'}
+            </Box>
+            {/* Info Section */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                flex: 1,
+                px: 1.5,
+                py: 0.5,
+                gap: 0.5,
+                minHeight: 44,
+                justifyContent: 'center'
+              }}
+            >
+              <Tooltip title={doc.prompt || 'No prompt'} placement='top'>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    fontSize: 13,
+                    color: 'text.secondary',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    mb: 0.2
+                  }}
+                >
+                  <ReplayIcon fontSize='small' sx={{ mr: 0.7, opacity: 0.5 }} />
+                  <span>{doc.prompt || <em>No prompt</em>}</span>
+                </Box>
+              </Tooltip>
+              <Tooltip title={doc.structure || 'No structure'} placement='top'>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    fontSize: 13,
+                    color: 'text.secondary',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}
+                >
+                  <SchemaIcon fontSize='small' sx={{ mr: 0.7, opacity: 0.5 }} />
+                  <span>{doc.structure || <em>No structure</em>}</span>
+                </Box>
+              </Tooltip>
+            </Box>
+            {/* Footer actions */}
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                p: 1,
+                pt: 0.5,
+                borderTop: '1px solid',
+                borderColor: 'divider'
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <Tooltip title='Delete Document'>
+                <span>
+                  <IconButton
+                    color='error'
+                    size='small'
+                    onClick={() => onDeleteQuestionOrDocumentNode(doc.id)}
+                    aria-label='delete document'
+                    sx={{ mx: 0.2 }}
+                  >
+                    <DeleteOutlineIcon fontSize='small' />
+                  </IconButton>
+                </span>
+              </Tooltip>
               <Tooltip title='Mark for Generation'>
                 <span>
                   <Checkbox
-                    checked={selectedDocuments.includes(params.row.id)}
-                    onChange={e => onSelectDocument(params.row.id, e.target.checked)}
-                    disabled={sortedQuestions.length === 0}
+                    checked={selectedDocuments.includes(doc.id)}
+                    onChange={e => onSelectDocument(doc.id, e.target.checked)}
                     inputProps={{
-                      'aria-label': `Mark document ${params.row.name} for generation`
+                      'aria-label': `Mark document ${doc.name} for generation`
                     }}
-                    sx={{ p: 0.5 }}
+                    sx={{ p: 0, mx: 0.2 }}
                   />
                 </span>
               </Tooltip>
             </Box>
-          )
-        }
-      },
-      ...sortedQuestions.map(q => ({
-        field: `q_${q.id}`,
-        headerName: q.text.length > 30 ? q.text.slice(0, 30) + '...' : q.text,
-        width: 240,
-        editable: false,
-        resizable: true,
-        sortable: false,
-        filterable: false,
-        disableColumnMenu: true,
-        cellClassName: 'answer-cell',
-        renderHeader: params => (
-          <Box
-            sx={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              gap: 1.5,
-              pr: 1,
-              userSelect: 'none',
-              cursor: 'default',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              fontWeight: 600,
-              flexGrow: 1,
-              '&:hover .delete-icon': {
-                opacity: 1,
-                pointerEvents: 'auto'
-              }
-            }}
-            title={q.text}
-          >
-            <Box
-              component='button'
-              type='button'
-              onClick={() => {
-                setSelectedQuestionText(q.text)
-                setQuestionDialogOpen(true)
-              }}
-              aria-label={`View question details for ${q.text}`}
-              sx={{
-                all: 'unset',
-                cursor: 'pointer',
-                flexGrow: 1,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                paddingRight: '28px', // space for delete icon
-                '&:hover, &:focus-visible': {
-                  textDecoration: 'underline',
-                  outline: 'none'
-                }
-              }}
-            >
-              {params.colDef.headerName}
-            </Box>
-
-            {/* Hover-reveal Delete Icon */}
-            <DeleteOutlineIcon
-              className='delete-icon'
-              sx={{
-                position: 'absolute',
-                right: 4,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                cursor: 'pointer',
-                color: 'error.main',
-                fontSize: '1.2rem',
-                opacity: 0,
-                pointerEvents: 'none',
-                transition: 'opacity 0.25s ease',
-                '&:hover': {
-                  color: 'error.dark'
-                }
-              }}
-              onClick={e => {
-                e.stopPropagation()
-                onDeleteQuestionOrDocumentNode(q.id)
-              }}
-              aria-label={`Delete question ${q.text}`}
-            />
           </Box>
         ),
 
         renderCell: params => {
-          const docId = params.id
-          const questionId = q.id
-          const answerObj = answers.find(a => a.documentNodeId === docId && a.questionNodeId === questionId)
-          const cellKey = `${docId}_${questionId}`
-          const isGenerating = !!isGeneratingCells[cellKey]
+          // Get doc for this column (field)
+  const doc = documents.find(d => d.id === params.field)
+  // Get the pageNumber for this row
+  const pageNumber = params.row.pageNumber
+  // Find the answer for this doc and this page
+  const answerObj = answers.find(
+    a => a.documentId === doc?.documentId && a.pageNumber === pageNumber
+  )
 
           if (isLoadingAnswers) {
             return (
@@ -231,7 +232,7 @@ const DocumentInsightsGrid = ({
               </Box>
             )
           }
-          if (isGenerating || isGeneratingAll) {
+          if (isGeneratingAll) {
             return (
               <Box
                 sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
@@ -240,7 +241,6 @@ const DocumentInsightsGrid = ({
               </Box>
             )
           }
-
           return (
             <Box
               sx={{
@@ -307,7 +307,7 @@ const DocumentInsightsGrid = ({
                       e.stopPropagation()
                       onGenerateSingleAnswer(params.row, q)
                     }}
-                    aria-label={`Regenerate answer for ${q.text}`}
+                    aria-label={`Regenerate answer for `}
                   />
                 </Tooltip>
               )}
@@ -315,27 +315,22 @@ const DocumentInsightsGrid = ({
           )
         }
       }))
-    ]
-  }, [sortedQuestions, answers, onDeleteQuestionOrDocumentNode, openUploader, onGenerate, isLoadingAnswers, isLoading])
+    ],
+    [documents, selectedDocuments, onSelectDocument, onDeleteQuestionOrDocumentNode]
+  )
 
   const rows = useMemo(() => {
-    return documents.map(doc => {
-      const row = {
-        id: doc.id,
-        name: doc.name || '',
-        documentId: doc.documentId
-      }
-
-      sortedQuestions.forEach(q => {
-        const answerObj = answers.find(a => a.documentNodeId === doc.id && a.questionNodeId === q.id)
-        row[`q_${q.id}`] = answerObj ? answerObj.answerValue : ''
+    return pageNumbers.map(page => {
+      const row = { id: `page-${page}`, pageNumber: page }
+      documents.forEach(doc => {
+        const answer = answers.find(a => a.documentId === doc.documentId && a.pageNumber === page)
+        row[doc.id] = answer ? answer.message : ''
       })
-
       return row
     })
-  }, [documents, sortedQuestions, answers])
+  }, [pageNumbers, documents, answers])
 
-  if (!documents.length && !questions.length) {
+  if (!documents.length) {
     return (
       <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
         No documents or questions to display. Please add some above.
@@ -375,6 +370,7 @@ const DocumentInsightsGrid = ({
         rows={rows}
         columns={columns}
         pagination
+        columnHeaderHeight={108}
         paginationMode='server'
         rowCount={totalDocuments}
         estimatedRowCount={totalDocuments}
@@ -412,16 +408,17 @@ const DocumentInsightsGrid = ({
         open={answerDialogOpen}
         onClose={() => setAnswerDialogOpen(false)}
         answer={selectedAnswer}
-        questionText={selectedAnswer ? getQuestionMessageById(questions, selectedAnswer.questionNodeId) : ''}
+        // questionText={selectedAnswer ? getQuestionMessageById(questions, selectedAnswer.questionNodeId) : ''}
       />
-      <QuestionsDialog
-        open={questionDialogOpen}
-        onClose={() => setQuestionDialogOpen(false)}
-        questions={[selectedQuestionText]}
-        readOnly={true}
+
+      <DocumentDialog
+        open={openDocDialog}
+        onClose={() => setOpenDocDialog(false)}
+        document={activeDoc}
+        onSave={handleSaveDoc}
       />
     </Box>
   )
 }
 
-export default DocumentInsightsGrid
+export default DocumentDigitizationGrid
