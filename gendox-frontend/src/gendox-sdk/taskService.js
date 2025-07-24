@@ -122,6 +122,24 @@ const updateTaskNode = async (organizationId, projectId, taskNodePayload, token)
 }
 
 /**
+ * Update Task Node for Document Digitization
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param token
+ * @param updatePayload
+ * @returns {Promise<axios.AxiosResponse<TaskNode>>}
+ */
+const updateTaskNodeForDocumentDigitization = async (organizationId, projectId, taskId, updatePayload, token) => {
+  return axios.put(apiRequests.updateTaskNodeForDocumentDigitization(organizationId, projectId, taskId), updatePayload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
  * Get Task Node by ID
  * @param organizationId
  * @param projectId
@@ -332,6 +350,7 @@ export default {
   createTaskNode,
   createTaskNodesBatch,
   updateTaskNode,
+  updateTaskNodeForDocumentDigitization,
   getTaskNodeById,
   createTaskEdge,
   getTaskEdgeById,

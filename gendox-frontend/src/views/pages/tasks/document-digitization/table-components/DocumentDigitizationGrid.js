@@ -1,25 +1,74 @@
 import React, { useMemo, useState } from 'react'
+import { useDispatch } from 'react-redux'
 import AnswerDialog from '../table-dialogs/AnswerDialog'
 import { DataGrid } from '@mui/x-data-grid'
-import { Box, Button, IconButton, Tooltip } from '@mui/material'
+import { Box, Button, IconButton, Tooltip, Menu, MenuItem } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import UploadFileIcon from '@mui/icons-material/UploadFile'
 import CircularProgress from '@mui/material/CircularProgress'
 import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
 import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
-import { getQuestionMessageById } from 'src/utils/tasks/taskUtils'
 import DescriptionIcon from '@mui/icons-material/Description'
 import SchemaIcon from '@mui/icons-material/Schema'
-import EditIcon from '@mui/icons-material/Edit'
 import DocumentDialog from '../table-dialogs/DocumentDialog'
+import Icon from 'src/views/custom-components/mui/icon/icon'
+import taskService from 'src/gendox-sdk/taskService'
+import { fetchTaskNodesByCriteria } from 'src/store/activeTask/activeTask'
+
+const DocumentHeaderMenu = ({ doc, onDelete, onEdit }) => {
+  const [anchorEl, setAnchorEl] = useState(null)
+  const open = Boolean(anchorEl)
+
+  const handleMenuOpen = e => {
+    e.stopPropagation()
+    setAnchorEl(e.currentTarget)
+  }
+  const handleMenuClose = e => {
+    if (e) e.stopPropagation()
+    setAnchorEl(null)
+  }
+  const handleDelete = e => {
+    e.stopPropagation()
+    onDelete(doc)
+    handleMenuClose(e)
+  }
+  const handleEdit = e => {
+    e.stopPropagation()
+    onEdit(doc)
+    handleMenuClose(e)
+  }
+
+  return (
+    <>
+      <IconButton size='small' onClick={handleMenuOpen} sx={{ ml: 1, color: 'primary.main' }} aria-label='Actions'>
+        <Icon icon='mdi:dots-vertical' />
+      </IconButton>
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleMenuClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <MenuItem onClick={handleEdit}>Edit</MenuItem>
+        <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
+          Delete
+        </MenuItem>
+      </Menu>
+    </>
+  )
+}
 
 const DocumentDigitizationGrid = ({
+  organizationId,
+  projectId,
+  taskId,
+  token,
   documents,
   answers,
-  openUploader,
-  onDeleteQuestionOrDocumentNode,
+  onDeleteDocumentNode,
   onGenerate,
   isLoadingAnswers,
   isLoading,
@@ -36,6 +85,7 @@ const DocumentDigitizationGrid = ({
   isGeneratingCells
 }) => {
   const theme = useTheme()
+  const dispatch = useDispatch()
   const [answerDialogOpen, setAnswerDialogOpen] = useState(false)
   const [selectedAnswer, setSelectedAnswer] = useState(null)
 
@@ -49,28 +99,45 @@ const DocumentDigitizationGrid = ({
     setOpenDocDialog(true)
   }
 
-  // Save changes (replace this with your Redux or API logic as needed)
-  const handleSaveDoc = updatedDoc => {
-    // Ideally, update the document in your Redux state or backend
-    // This is a local update for demo:
-    // setDocuments(docs => docs.map(d => d.id === updatedDoc.id ? updatedDoc : d))
-    setOpenDocDialog(false)
-  }
+  const handleSaveDoc = async updatedDoc => {
+    const taskNodePayload = {
+      taskNodeId: updatedDoc.id || activeDoc.id,
+      prompt: updatedDoc.prompt,
+      structure: updatedDoc.structure
+    }
 
-  console.log('DOCUMENTS', documents)
-  console.log('ANSWERS', answers)
+    await taskService.updateTaskNodeForDocumentDigitization(organizationId, projectId, taskId, taskNodePayload, token)
+    setOpenDocDialog(false)
+    await dispatch(
+      fetchTaskNodesByCriteria({
+        organizationId,
+        projectId,
+        taskId,
+        criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
+        token
+      })
+    )
+  }
 
   const pageNumbers = useMemo(() => {
     // Unique page numbers present in answers
     return Array.from(new Set(answers.map(a => a.pageNumber))).sort((a, b) => a - b)
   }, [answers])
 
+  function truncateText(text, maxLength = 60) {
+    if (!text) return ''
+    return text.length > maxLength ? text.slice(0, maxLength) + '…' : text
+  }
+  
   const columns = useMemo(
     () => [
       {
         field: 'pageNumber',
         headerName: 'Pages',
         width: 100,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
         renderCell: params => <b>Page {params.value}</b>,
         renderHeader: () => <b>Pages</b>
       },
@@ -80,6 +147,7 @@ const DocumentDigitizationGrid = ({
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
+
         // Full-featured header
         renderHeader: () => (
           <Box
@@ -89,16 +157,15 @@ const DocumentDigitizationGrid = ({
               alignItems: 'stretch',
               justifyContent: 'flex-start',
               height: '100%',
-              borderRadius: 2,
-              boxShadow: 2,
-              border: '1px solid',
               borderColor: 'divider',
               overflow: 'hidden',
               position: 'relative',
               cursor: 'pointer', // clickable for dialog
-              transition: 'box-shadow 0.2s'
+              transition: 'box-shadow 0.2s',
+              pt: 3,
+              pb: 2
             }}
-            onClick={() => handleOpenDialog(doc)} // open in view mode
+            onClick={() => handleOpenDialog(doc)}
             title='Click to view details'
           >
             {/* Title */}
@@ -108,120 +175,50 @@ const DocumentDigitizationGrid = ({
                 alignItems: 'center',
                 fontWeight: 700,
                 fontSize: 16,
-                color: 'primary.main',
+                // color: 'primary.main',
                 p: 1,
                 pl: 1.5,
                 pb: 0.5,
-                borderBottom: '1px solid',
-                borderColor: 'divider',
-                whiteSpace: 'nowrap',
-                textOverflow: 'ellipsis',
-                overflow: 'hidden',
                 minHeight: 32
               }}
               title={doc.name}
             >
-              <DescriptionIcon fontSize='small' sx={{ mr: 1, color: 'primary.light' }} />
-              {doc.name || 'Unknown Document'}
+              <span>{doc.name || 'Unknown Document'}</span>
+              <DocumentHeaderMenu
+                doc={doc}
+                onDelete={() => onDeleteDocumentNode(doc.id)}
+                onEdit={() => handleOpenDialog(doc, true) /* true = editMode */}
+              />
             </Box>
-            {/* Info Section */}
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                flex: 1,
-                px: 1.5,
-                py: 0.5,
-                gap: 0.5,
-                minHeight: 44,
-                justifyContent: 'center'
-              }}
-            >
-              <Tooltip title={doc.prompt || 'No prompt'} placement='top'>
+
+            {/* Prompt Section */}            
+              <Tooltip title={truncateText(doc.prompt, 200) || 'No prompt, Please add one'} placement='bottom'>
                 <Box
+                  component='span'
                   sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: 13,
-                    color: 'text.secondary',
-                    whiteSpace: 'nowrap',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2, // Change to 1 if you want only 1 line
+                    WebkitBoxOrient: 'vertical',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    mb: 0.2
-                  }}
-                >
-                  <ReplayIcon fontSize='small' sx={{ mr: 0.7, opacity: 0.5 }} />
-                  <span>{doc.prompt || <em>No prompt</em>}</span>
-                </Box>
-              </Tooltip>
-              <Tooltip title={doc.structure || 'No structure'} placement='top'>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
+                    whiteSpace: 'normal',
                     fontSize: 13,
                     color: 'text.secondary',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
+                    minHeight: 36, // or minHeight: 18 for 1 line (tweak for your font)
+                    maxHeight: 36, // or remove for 1 line
+                    lineHeight: 1.2
                   }}
                 >
-                  <SchemaIcon fontSize='small' sx={{ mr: 0.7, opacity: 0.5 }} />
-                  <span>{doc.structure || <em>No structure</em>}</span>
+                  {truncateText(doc.prompt, 60) || <em>No prompt, Please add one</em>}
                 </Box>
               </Tooltip>
             </Box>
-            {/* Footer actions */}
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                p: 1,
-                pt: 0.5,
-                borderTop: '1px solid',
-                borderColor: 'divider'
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              <Tooltip title='Delete Document'>
-                <span>
-                  <IconButton
-                    color='error'
-                    size='small'
-                    onClick={() => onDeleteQuestionOrDocumentNode(doc.id)}
-                    aria-label='delete document'
-                    sx={{ mx: 0.2 }}
-                  >
-                    <DeleteOutlineIcon fontSize='small' />
-                  </IconButton>
-                </span>
-              </Tooltip>
-              <Tooltip title='Mark for Generation'>
-                <span>
-                  <Checkbox
-                    checked={selectedDocuments.includes(doc.id)}
-                    onChange={e => onSelectDocument(doc.id, e.target.checked)}
-                    inputProps={{
-                      'aria-label': `Mark document ${doc.name} for generation`
-                    }}
-                    sx={{ p: 0, mx: 0.2 }}
-                  />
-                </span>
-              </Tooltip>
-            </Box>
-          </Box>
         ),
 
         renderCell: params => {
-          // Get doc for this column (field)
-  const doc = documents.find(d => d.id === params.field)
-  // Get the pageNumber for this row
-  const pageNumber = params.row.pageNumber
-  // Find the answer for this doc and this page
-  const answerObj = answers.find(
-    a => a.documentId === doc?.documentId && a.pageNumber === pageNumber
-  )
+          const doc = documents.find(d => d.id === params.field)
+          const pageNumber = params.row.pageNumber
+          const answerObj = answers.find(a => a.documentId === doc?.documentId && a.pageNumber === pageNumber)
 
           if (isLoadingAnswers) {
             return (
@@ -316,7 +313,7 @@ const DocumentDigitizationGrid = ({
         }
       }))
     ],
-    [documents, selectedDocuments, onSelectDocument, onDeleteQuestionOrDocumentNode]
+    [documents, selectedDocuments, onSelectDocument, onDeleteDocumentNode]
   )
 
   const rows = useMemo(() => {
@@ -333,7 +330,7 @@ const DocumentDigitizationGrid = ({
   if (!documents.length) {
     return (
       <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
-        No documents or questions to display. Please add some above.
+        No documents to display. Please add some above.
       </Box>
     )
   }
@@ -408,7 +405,6 @@ const DocumentDigitizationGrid = ({
         open={answerDialogOpen}
         onClose={() => setAnswerDialogOpen(false)}
         answer={selectedAnswer}
-        // questionText={selectedAnswer ? getQuestionMessageById(questions, selectedAnswer.questionNodeId) : ''}
       />
 
       <DocumentDialog

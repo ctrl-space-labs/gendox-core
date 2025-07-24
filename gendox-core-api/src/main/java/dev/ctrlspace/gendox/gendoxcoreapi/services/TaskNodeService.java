@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentQuestionsDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeValueDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskEdgeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskNodeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.TaskNodePredicates;
@@ -90,6 +91,29 @@ public class TaskNodeService {
         existing.setDocumentId(taskNode.getDocumentId());
         existing.setPageNumber(taskNode.getPageNumber());
         existing.setUpdatedBy(taskNode.getUpdatedBy());
+
+        return taskNodeRepository.save(existing);
+    }
+
+    public TaskNode updateTaskNodeForDocumentDigitization (TaskDocumentMetadataDTO taskDocumentMetadataDTO) throws GendoxException {
+        logger.info("Updating task node for document digitization: {}", taskDocumentMetadataDTO);
+
+        TaskNode existing = taskNodeRepository.findById(taskDocumentMetadataDTO.getTaskNodeId())
+                .orElseThrow(() -> new RuntimeException("TaskNode not found for update"));
+
+        if (existing.getNodeValue() == null) {
+            existing.setNodeValue(new TaskNodeValueDTO());
+        }
+        if (existing.getNodeValue().getDocumentMetadata() == null) {
+            existing.getNodeValue().setDocumentMetadata(new TaskDocumentMetadataDTO());
+        }
+
+        if (taskDocumentMetadataDTO.getPrompt() != null) {
+            existing.getNodeValue().getDocumentMetadata().setPrompt(taskDocumentMetadataDTO.getPrompt());
+        }
+        if (taskDocumentMetadataDTO.getStructure() != null) {
+            existing.getNodeValue().getDocumentMetadata().setStructure(taskDocumentMetadataDTO.getStructure());
+        }
 
         return taskNodeRepository.save(existing);
     }

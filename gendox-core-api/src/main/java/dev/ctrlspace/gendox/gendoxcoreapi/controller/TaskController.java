@@ -7,15 +7,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.AnswerBatchDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskEdgeDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskEdgeCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskCsvExportService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskEdgeService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskNodeService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +38,7 @@ public class TaskController {
     private final TaskCsvExportService taskCsvExportService;
     private final TaskNodeService taskNodeService;
     private final TaskEdgeService taskEdgeService;
+    private final TypeService typeService;
 
 
     @Autowired
@@ -51,13 +47,15 @@ public class TaskController {
                           TaskEdgeConverter taskEdgeConverter,
                           TaskCsvExportService taskCsvExportService,
                           TaskNodeService taskNodeService,
-                          TaskEdgeService taskEdgeService) {
+                          TaskEdgeService taskEdgeService,
+                          TypeService typeService) {
         this.taskService = taskService;
         this.taskNodeConverter = taskNodeConverter;
         this.taskEdgeConverter = taskEdgeConverter;
         this.taskCsvExportService = taskCsvExportService;
         this.taskNodeService = taskNodeService;
         this.taskEdgeService = taskEdgeService;
+        this.typeService = typeService;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -151,6 +149,20 @@ public class TaskController {
         }
         TaskNode taskNode = taskNodeConverter.toEntity(taskNodeDTO);
         return taskNodeService.updateTaskNode(taskNode);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PutMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/task-nodes/document-digitization")
+    @ResponseStatus(value = HttpStatus.OK)
+    public TaskNode updateTaskNodeForDocumentDigitization(@PathVariable UUID organizationId,
+                                                          @PathVariable UUID projectId,
+                                                          @PathVariable UUID taskId,
+                                                          @RequestBody TaskDocumentMetadataDTO taskDocumentMetadataDTO) throws GendoxException {
+        Task task = taskService.getTaskById(taskId);
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
+        return taskNodeService.updateTaskNodeForDocumentDigitization(taskDocumentMetadataDTO);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")

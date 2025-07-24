@@ -172,6 +172,9 @@ export default {
   updateTaskNode: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes`,
 
+  updateTaskNodeForDocumentDigitization: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/document-digitization`,
+
   getTaskNodeById: (organizationId, projectId, id) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes?id=${id}`,
 

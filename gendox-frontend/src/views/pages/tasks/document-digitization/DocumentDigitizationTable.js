@@ -21,14 +21,6 @@ import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import taskService from 'src/gendox-sdk/taskService'
 import { downloadBlobForCSV } from 'src/utils/tasks/downloadBlobForCSV'
 
-function chunk(array, size) {
-  const result = []
-  for (let i = 0; i < array.length; i += size) {
-    result.push(array.slice(i, i + size))
-  }
-  return result
-}
-
 const MAX_PAGE_SIZE = 2147483647
 
 const DocumentDigitizationTable = ({ selectedTask }) => {
@@ -50,17 +42,13 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
   const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
-  const [showDialog, setShowDialog] = useState(false)
-  const [questionsDialogTexts, setQuestionsDialogTexts] = useState([''])
-  const [activeQuestion, setActiveQuestion] = useState(null)
-  const [isSavingQuestions, setIsSavingQuestions] = useState(false)
   const [selectedDocuments, setSelectedDocuments] = useState([])
   const [isGeneratingAll, setIsGeneratingAll] = useState(false)
   const [isGeneratingCells, setIsGeneratingCells] = useState({})
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
-  console.log('taskNodesDocumentList', taskNodesDocumentList)
+  console.log('ANSWERS', answers)
 
   // 1️⃣ **Reset all local state when switching tasks/orgs/projects**
   useEffect(() => {
@@ -89,7 +77,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       .catch(() => toast.error('Failed to load documents'))
   }, [organizationId, projectId, taskId, token, dispatch, page, pageSize])
 
-  // 4️⃣ **Fetch task nodes answers when task nodes document list changes**
+  // 3️⃣ **Fetch answers when taskId changes**
   useEffect(() => {
     if (!(organizationId && projectId && taskId && token)) return
     dispatch(
@@ -107,7 +95,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       .catch(() => toast.error('Failed to load answers'))
   }, [organizationId, projectId, taskId, token, dispatch])
 
-  // 3️⃣ **Sync documents to local state**
+  // 4️⃣ **Fetch project documents and Sync with taskNodesDocumentList**
   useEffect(() => {
     let isCancelled = false
 
@@ -130,7 +118,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
               documentId: node.documentId,
               name: fullDoc?.title || 'Unknown Document',
               prompt: node.nodeValue?.documentMetadata?.prompt || '',
-              structure: node.nodeValue?.documentMetadata?.structure || '',
+              structure: node.nodeValue?.documentMetadata?.structure || ''
             }
           })
         )
@@ -146,9 +134,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     }
   }, [taskNodesDocumentList, organizationId, projectId, token, dispatch])
 
- 
-
-  // 6️⃣ **Sync answers to local state**
+  // 5️⃣ **Sync answers with taskNodesAnswerList**
   useEffect(() => {
     setAnswers(
       (taskNodesAnswerList?.content || []).map(node => ({
@@ -158,12 +144,12 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         answerValue: node.nodeValue?.answerValue || '',
         answerFlagEnum: node.nodeValue?.answerFlagEnum || '',
         pageNumber: node.pageNumber || 0,
-        documentId: node.documentId || '',
+        documentId: node.documentId || ''
       }))
     )
   }, [taskNodesAnswerList])
 
-  // 7️⃣ **Update URL query params when page or pageSize changes**
+  // 6️⃣ **Update URL query params when page or pageSize changes**
   useEffect(() => {
     router.replace(
       {
@@ -182,99 +168,50 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
 
   const openUploader = () => setShowUploader(true)
 
-  const handleAddQuestions = async () => {
-    const validQuestions = (Array.isArray(questionsDialogTexts) ? questionsDialogTexts : [questionsDialogTexts])
-      .map(q => (typeof q === 'string' ? q.trim() : ''))
-      .filter(q => q.length > 0)
-
-    if (validQuestions.length === 0) {
-      toast.error('No questions to save!')
-      return
-    }
-    setIsSavingQuestions(true)
-    try {
-      const payloads = validQuestions.map((questionText, idx) => ({
-        taskId,
-        nodeType: 'QUESTION',
-        nodeValue: { message: questionText, order: idx }
-      }))
-
-      // Send in batches of 10
-      const batches = chunk(payloads, 10)
-      for (const batch of batches) {
-        await dispatch(
-          createTaskNodesBatch({
-            organizationId,
-            projectId,
-            taskNodesPayload: batch, // <-- array of up to 10
-            token
-          })
-        ).unwrap()
-      }
-      // Refresh the question list after saving all
-      await dispatch(
-        fetchTaskNodesByCriteria({
-          organizationId,
-          projectId,
-          taskId,
-          criteria: { taskId, nodeTypeNames: ['QUESTION'] },
-          token,
-          page: 0,
-          size: MAX_PAGE_SIZE
-        })
-      )
-      setIsSavingQuestions(false)
-      closeDialog()
-      toast.success('Questions added!')
-    } catch (error) {
-      toast.error('Failed to save questions')
-      console.error(error)
-    }
-  }
-
   const handleSelectDocument = (docId, checked) => {
     setSelectedDocuments(prev => (checked ? [...prev, docId] : prev.filter(id => id !== docId)))
   }
 
   const handleGenerateSelected = async () => {
-    const selectedDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
-    if (selectedDocs.length === 0) {
-      toast.error('No documents selected!')
-      return
-    }
-    const newCells = {}
-    selectedDocs.forEach(doc => {
-      questions.forEach(q => {
-        newCells[`${doc.id}_${q.id}`] = true
-      })
-    })
-    setIsGeneratingCells(cells => ({ ...cells, ...newCells }))
+    console.log('handleGenerateSelected called with selectedDocuments:', selectedDocuments)
+    // const selectedDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
+    // if (selectedDocs.length === 0) {
+    //   toast.error('No documents selected!')
+    //   return
+    // }
+    // const newCells = {}
+    // selectedDocs.forEach(doc => {
+    //   questions.forEach(q => {
+    //     newCells[`${doc.id}_${q.id}`] = true
+    //   })
+    // })
+    // setIsGeneratingCells(cells => ({ ...cells, ...newCells }))
 
-    try {
-      await handleGenerate({ docs: selectedDocs, reGenerateExistingAnswers: true })
-    } finally {
-      // Clean up just those cells
-      setIsGeneratingCells(cells => {
-        const copy = { ...cells }
-        selectedDocs.forEach(doc => {
-          questions.forEach(q => {
-            delete copy[`${doc.id}_${q.id}`]
-          })
-        })
-        return copy
-      })
-    }
+    // try {
+    //   await handleGenerate({ docs: selectedDocs, reGenerateExistingAnswers: true })
+    // } finally {
+    //   // Clean up just those cells
+    //   setIsGeneratingCells(cells => {
+    //     const copy = { ...cells }
+    //     selectedDocs.forEach(doc => {
+    //       questions.forEach(q => {
+    //         delete copy[`${doc.id}_${q.id}`]
+    //       })
+    //     })
+    //     return copy
+    //   })
+    // }
   }
 
-  const handleGenerateSingleAnswer = async (doc, question) => {
-    if (!doc || !question) {
-      toast.error('Document and question are required to generate an answer.')
+  const handleGenerateSingleAnswer = async (doc, docPage) => {
+    if (!doc || !docPage) {
+      toast.error('Documents page is required to generate an answer.')
       return
     }
-    const key = `${doc.id}_${question.id}`
+    const key = `${doc.id}_${docPage.id}`
     setIsGeneratingCells(cells => ({ ...cells, [key]: true }))
     try {
-      await handleGenerate({ docs: doc, questionsToGenerate: question, reGenerateExistingAnswers: true })
+      await handleGenerate({ docs: doc, pageToGenerate: docPage, reGenerateExistingAnswers: true })
     } finally {
       setIsGeneratingCells(cells => {
         const { [key]: _, ...rest } = cells
@@ -283,15 +220,15 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     }
   }
 
-  const handleGenerate = async ({ docs, questionsToGenerate, reGenerateExistingAnswers, isAll = false }) => {
+  const handleGenerate = async ({ docs, pageToGenerate, reGenerateExistingAnswers, isAll = false }) => {
     if (isAll) setIsGeneratingAll(true)
 
     try {
-      const docIds = Array.isArray(docs) ? docs.map(d => d.id) : [docs.id]      
+      const docIds = Array.isArray(docs) ? docs.map(d => d.id) : [docs.id]
 
       const criteria = {
         taskId,
-        documentNodeIds: docIds,        
+        documentNodeIds: docIds,
         reGenerateExistingAnswers
       }
 
@@ -304,7 +241,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       await pollJobStatus(jobExecutionId)
 
       const answerTaskNodePayload = {
-        documentNodeIds: documents.map(d => d.id)        
+        documentNodeIds: documents.map(d => d.id)
       }
 
       dispatch(
@@ -329,7 +266,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     }
   }
 
-  const confirmDeleteQuestionOrDocumentNode = taskNodeId => {
+  const confirmDeleteDocumentNode = taskNodeId => {
     setDeleteNodeId(taskNodeId)
     setDeleteDialogOpen(true)
   }
@@ -342,7 +279,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       toast.success('Deleted successfully.')
 
       // Update local state
-      setQuestions(prev => prev.filter(q => q.id !== deleteNodeId))
       setDocuments(prev => prev.filter(d => d.id !== deleteNodeId))
 
       // Refetch updated data
@@ -356,27 +292,9 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     }
   }
 
-  const openAddDialog = () => {
-    setActiveQuestion(null)
-    setQuestionsDialogTexts([''])
-    setShowDialog(true)
-  }
-
-  const openEditDialog = question => {
-    setActiveQuestion(question)
-    setQuestionsDialogTexts([question.text])
-    setShowDialog(true)
-  }
-
-  const closeDialog = () => {
-    setShowDialog(false)
-    setQuestionsDialogTexts([''])
-    setActiveQuestion(null)
-  }
-
   const handleExportCsv = async () => {
-    if (documents.length === 0 || questions.length === 0) {
-      toast.error('No documents or questions to export')
+    if (documents.length === 0) {
+      toast.error('No documents to export')
       return
     }
     setIsExportingCsv(true)
@@ -398,7 +316,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         <HeaderSection
           title={selectedTask?.title}
           description={selectedTask?.description}
-          onAddQuestion={openAddDialog}
           openUploader={openUploader}
           onGenerate={reGenerateExistingAnswers =>
             handleGenerate({ docs: documents, reGenerateExistingAnswers: reGenerateExistingAnswers, isAll: true })
@@ -419,10 +336,14 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
           }}
         >
           <DocumentDigitizationGrid
+            organizationId={organizationId}
+            projectId={projectId}
+            token={token}
+            taskId={taskId}
             documents={documents}
             answers={answers}
             onGenerate={docs => handleGenerate({ docs: docs, reGenerateExistingAnswers: true })}
-            onDeleteQuestionOrDocumentNode={confirmDeleteQuestionOrDocumentNode}
+            onDeleteDocumentNode={confirmDeleteDocumentNode}
             isLoadingAnswers={isLoadingAnswers}
             isLoading={isLoading}
             isBlurring={isBlurring}
@@ -458,7 +379,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         </Box>
       </Modal>
 
-      
       <DeleteConfirmDialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}

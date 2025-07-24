@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef } from 'react'
+import React, { useState, useEffect, useRef, forwardRef, useLayoutEffect } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -8,11 +8,13 @@ import {
   IconButton,
   Box,
   Divider,
-  Typography
+  Typography,
+  CircularProgress
 } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import EditIcon from '@mui/icons-material/Edit'
 import GendoxMarkdownRenderer from 'src/views/pages/markdown-renderer/GendoxMarkdownRenderer'
+import { is } from 'date-fns/locale'
 
 const TextareaAutosizeStyled = forwardRef((props, ref) => {
   const theme = useTheme()
@@ -38,6 +40,73 @@ const TextareaAutosizeStyled = forwardRef((props, ref) => {
   )
 })
 
+const MAX_COLLAPSED_HEIGHT = 80 // px, about 3-4 lines
+
+function ExpandableMarkdownSection({ label, markdown, maxHeight = MAX_COLLAPSED_HEIGHT }) {
+  const theme = useTheme()
+  const [expanded, setExpanded] = useState(false)
+  const [showButton, setShowButton] = useState(false)
+  const contentRef = useRef(null)
+
+  useLayoutEffect(() => {
+    if (contentRef.current) {
+      setShowButton(contentRef.current.scrollHeight > maxHeight + 2)
+    }
+  }, [markdown, maxHeight])
+
+  return (
+    <Box sx={{ mb: 3 }}>
+      <Typography
+        variant='caption'
+        sx={{
+          fontWeight: 700,
+          color: theme.palette.primary.main,
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          mb: 1,
+          display: 'block'
+        }}
+      >
+        {label}
+      </Typography>
+      <Box
+        ref={contentRef}
+        sx={{
+          alignItems: 'center',
+          gap: 2,
+          p: 2,
+          borderRadius: 2,
+          minHeight: 54,
+          maxHeight: expanded ? 'none' : `${maxHeight}px`,
+          overflow: 'hidden',
+          position: 'relative',
+          transition: 'max-height 0.3s'
+        }}
+      >
+        <GendoxMarkdownRenderer markdownText={markdown} />
+      </Box>
+      {showButton && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 2, pt: 0.5 }}>
+          <Button
+            size='small'
+            variant='text'
+            sx={{
+              color: theme.palette.primary.main,
+              textTransform: 'none',
+              fontWeight: 600,
+              minWidth: 0,
+              p: 0
+            }}
+            onClick={() => setExpanded(e => !e)}
+          >
+            {expanded ? 'Show less' : 'Show more'}
+          </Button>
+        </Box>
+      )}
+    </Box>
+  )
+}
+
 const DocumentDialog = ({
   open,
   onClose,
@@ -47,17 +116,21 @@ const DocumentDialog = ({
   const [editMode, setEditMode] = useState(false)
   const [prompt, setPrompt] = useState(document?.prompt || '')
   const [structure, setStructure] = useState(document?.structure || '')
+  const [isBlurring, setIsBlurring] = useState(false)
 
   // Reset fields when dialog/document changes
   useEffect(() => {
     if (open) {
+      setIsBlurring(true)
       setPrompt(document?.prompt || '')
       setStructure(document?.structure || '')
       setEditMode(false)
+      setTimeout(() => setIsBlurring(false), 300) // Simulate loading delay
     }
   }, [open, document])
 
   const handleSave = () => {
+    isBlurring(true)
     if (onSave) {
       onSave({
         ...document,
@@ -66,6 +139,7 @@ const DocumentDialog = ({
       })
     }
     setEditMode(false)
+    setIsBlurring(false)
   }
 
   if (!document) return null
@@ -84,7 +158,7 @@ const DocumentDialog = ({
       >
         Document Details
         {!editMode && (
-          <IconButton aria-label="Edit document" onClick={() => setEditMode(true)}>
+          <IconButton aria-label='Edit document' onClick={() => setEditMode(true)} sx={{ color: 'primary.main' }}>
             <EditIcon />
           </IconButton>
         )}
@@ -93,6 +167,12 @@ const DocumentDialog = ({
       <Divider />
 
       <DialogContent sx={{ py: 3 }}>
+         {isBlurring && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        )}
+        
         <Box sx={{ mb: 3 }}>
           <Typography
             variant='caption'
@@ -113,48 +193,40 @@ const DocumentDialog = ({
 
         <Divider sx={{ mb: 2 }} />
 
-        <Box sx={{ mb: 3 }}>
-          <Typography
-            variant='caption'
-            sx={{
-              fontWeight: 700,
-              color: 'primary.main',
-              textTransform: 'uppercase',
-              mb: 1,
-              display: 'block'
-            }}
-          >
-            Prompt
-          </Typography>
-          {editMode ? (
+        {editMode ? (
+          <>
+            <Typography
+              variant='caption'
+              sx={{
+                fontWeight: 700,
+                color: 'primary.main',
+                textTransform: 'uppercase',
+                mb: 1,
+                display: 'block'
+              }}
+            >
+              Prompt
+            </Typography>
             <TextareaAutosizeStyled
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
               placeholder='Enter prompt in markdown...'
-              minRows={3}              
+              minRows={3}
               autoFocus
             />
-          ) : (
-            <Box sx={{ p: 2,  minHeight: 54 }}>
-              <GendoxMarkdownRenderer markdownText={document.prompt || '*No prompt*'} />
-            </Box>
-          )}
-        </Box>
 
-        <Box sx={{ mb: 3 }}>
-          <Typography
-            variant='caption'
-            sx={{
-              fontWeight: 700,
-              color: 'primary.main',
-              textTransform: 'uppercase',
-              mb: 1,
-              display: 'block'
-            }}
-          >
-            Structure
-          </Typography>
-          {editMode ? (
+            <Typography
+              variant='caption'
+              sx={{
+                fontWeight: 700,
+                color: 'primary.main',
+                textTransform: 'uppercase',
+                mb: 1,
+                display: 'block'
+              }}
+            >
+              Structure
+            </Typography>
             <TextareaAutosizeStyled
               value={structure}
               onChange={e => setStructure(e.target.value)}
@@ -162,12 +234,21 @@ const DocumentDialog = ({
               minRows={2}
               maxRows={6}
             />
-          ) : (
-            <Box sx={{ p: 2,  minHeight: 54 }}>
-              <GendoxMarkdownRenderer markdownText={document.structure || '*No structure*'} />
-            </Box>
-          )}
-        </Box>
+          </>
+        ) : (
+          <>
+            <ExpandableMarkdownSection
+              label='Prompt'
+              markdown={document.prompt || '*No prompt*'}
+              maxHeight={MAX_COLLAPSED_HEIGHT}
+            />
+            <ExpandableMarkdownSection
+              label='Structure'
+              markdown={document.structure || '*No structure*'}
+              maxHeight={MAX_COLLAPSED_HEIGHT}
+            />
+          </>
+        )}
       </DialogContent>
 
       <Divider />

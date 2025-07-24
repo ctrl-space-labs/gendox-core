@@ -3,7 +3,6 @@ import { Box, Typography, Stack, Button, Tooltip, Divider, Menu, MenuItem } from
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 
-import DescriptionIcon from '@mui/icons-material/Description'
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import DownloadIcon from '@mui/icons-material/Download'
@@ -13,7 +12,6 @@ const HeaderSection = ({
   title,
   description,
   openUploader,
-  onAddQuestion,
   onGenerate,
   disableGenerateAll,
   isLoading,
@@ -52,7 +50,7 @@ const HeaderSection = ({
 
       <Divider sx={{ mb: 3 }} />
 
-      {/* Action buttons: Add Document, Add Question */}
+      {/* Action buttons: Add Document */}
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         spacing={2}
@@ -75,20 +73,7 @@ const HeaderSection = ({
               </Button>
             </span>
           </Tooltip>
-          {/* <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Add a new question to the list'}>
-            <span>
-              <Button
-                variant='outlined'
-                startIcon={<DescriptionIcon />}
-                onClick={onAddQuestion}
-                disabled={isLoading}
-                size='medium'
-                fullWidth
-              >
-                Add Questions
-              </Button>
-            </span>
-          </Tooltip> */}
+          
         </Stack>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap='100%'>
@@ -211,7 +196,7 @@ const HeaderSection = ({
               </MenuItem>
               {(disableGenerateAll || isLoading) && (
                 <Box sx={{ px: 2, pb: 1, pt: 0.5, fontSize: '0.85rem', color: 'grey.600' }}>
-                  {isLoading ? 'Loading, please wait...' : 'Add documents and questions to enable generation.'}
+                  {isLoading ? 'Loading, please wait...' : 'Add documents to enable generation.'}
                 </Box>
               )}
             </Menu>
