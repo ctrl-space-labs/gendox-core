@@ -2,8 +2,14 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import com.vladsch.flexmark.html2md.converter.FlexmarkHtmlConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.ImageUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
+import jakarta.annotation.Nullable;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.ImageType;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.docx4j.Docx4J;
 import org.docx4j.convert.out.HTMLSettings;
 import org.docx4j.fonts.PhysicalFonts;
@@ -22,8 +28,10 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
@@ -35,15 +43,17 @@ public class DownloadService {
 
 
     private String pageSeparatorTemplate;
-
+    private ImageUtils imageUtils;
 
 
 
     @Autowired
     public DownloadService(ResourceLoader resourceLoader,
+                           ImageUtils imageUtils,
                            @Value("${gendox.documents.page-separator-template}") String pageSeparatorTemplate
                             ) {
         this.resourceLoader = resourceLoader;
+        this.imageUtils = imageUtils;
         this.pageSeparatorTemplate = pageSeparatorTemplate;
 
     }
@@ -175,6 +185,50 @@ public class DownloadService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public List<String> pdfToBase64Pages(Resource fileResource, @Nullable Integer pageFrom, @Nullable Integer pageTo) throws GendoxException, IOException {
+        List<String> allPagesContent = new ArrayList<>();
+
+        try (PDDocument doc = Loader.loadPDF(fileResource.getContentAsByteArray())) {
+
+            if (pageFrom == null) {
+                pageFrom = 0;
+            }
+            if (pageTo == null) {
+                pageTo = doc.getNumberOfPages();
+            }
+
+            if (pageFrom > 0 && pageTo > 0 && pageFrom <= pageTo) {
+                throw new GendoxException("ERROR_INVALID_PAGE_RANGE", "Invalid page range: " + pageFrom + " to " + pageTo, HttpStatus.BAD_REQUEST);
+            }
+
+            PDFRenderer renderer = new PDFRenderer(doc);
+            float renderDPI = 300f;
+            int   minSide   = 768;
+            float jpegQ     = 0.85f;
+
+            for (int i = pageFrom; i < pageTo ; i++) {
+                BufferedImage img = renderer.renderImageWithDPI(i, renderDPI, ImageType.RGB);
+                BufferedImage scaled = imageUtils.scaleToMinSide(img, minSide);
+                BufferedImage enhanced = imageUtils.enhanceForOCR(scaled, 1.15f, -10f);
+                String dataUri = imageUtils.toBase64Jpeg(enhanced, jpegQ);
+
+                System.out.println("Page " + (i + 1) + ": " + dataUri.length() + " bytes");
+                allPagesContent.add(dataUri);
+            }
+
+        }
+
+        return allPagesContent;
+    }
+
+
+
+    public List<String> readDocumentAdvancedOCR(List<String> docBase64Pages) throws GendoxException{
+
+        return null;
+
     }
 
 

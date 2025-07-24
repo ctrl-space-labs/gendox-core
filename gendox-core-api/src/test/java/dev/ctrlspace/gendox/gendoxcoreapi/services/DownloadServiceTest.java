@@ -1,14 +1,24 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import com.knuddels.jtokkit.Encodings;
+import com.knuddels.jtokkit.api.EncodingRegistry;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.ImageUtils;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.net.URL;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
@@ -20,7 +30,10 @@ public class DownloadServiceTest {
 
 
     @InjectMocks
-    private DownloadService downloadService;     // class under test
+    private DownloadService downloadService;
+
+    @Spy
+    private ImageUtils imageUtils = new ImageUtils();
 
     @Test
     void readDocxContent_SampleDocx() throws Exception {
@@ -74,4 +87,35 @@ public class DownloadServiceTest {
         assertTrue(false, "Not implemented yet");
 
     }
+
+
+
+    @Test
+    void pdfToBase64Pages_readAll() throws Exception {
+
+        // Use the classloader to get the resource
+        ClassLoader classLoader = DownloadService.class.getClassLoader();
+        URL resourceUrl = classLoader.getResource("HECROS1764.pdf");
+
+        if (resourceUrl == null) {
+            throw new FileNotFoundException("Resource not found");
+        }
+
+        // Get the file path (works only if running from IDE or unpacked classes)
+        File file = new File(resourceUrl.toURI());
+
+        Resource resource = new FileSystemResource(file);
+
+
+
+        List<String> printedPages = downloadService.pdfToBase64Pages(resource, 0, 10);
+
+        assertEquals(printedPages.size(),  10, "Expected 10 pages in the PDF document");
+
+
+    }
+
+
+
+
 }
