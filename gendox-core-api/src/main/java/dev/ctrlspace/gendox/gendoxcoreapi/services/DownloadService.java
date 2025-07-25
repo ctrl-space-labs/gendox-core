@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import com.vladsch.flexmark.html2md.converter.FlexmarkHtmlConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.DocPageToImageOptions;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.ImageUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
@@ -19,6 +20,8 @@ import org.docx4j.openpackaging.exceptions.Docx4JException;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.WordprocessingML.BinaryPart;
 import org.docx4j.relationships.Relationship;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.MetadataMode;
 import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +40,8 @@ import java.util.List;
 
 @Service
 public class DownloadService {
+
+    Logger logger = LoggerFactory.getLogger(DownloadService.class);
 
 
     private ResourceLoader resourceLoader;
@@ -187,34 +192,57 @@ public class DownloadService {
         }
     }
 
-    public List<String> pdfToBase64Pages(Resource fileResource, @Nullable Integer pageFrom, @Nullable Integer pageTo) throws GendoxException, IOException {
+    /**
+     * Converts PDF pages to Base64-encoded JPEG images.
+     * WARNING: Processing more than 10 pages may cause Out-Of-Memory issues.
+     *
+     * @param fileResource
+     * @param options
+     * @return
+     * @throws GendoxException
+     * @throws IOException
+     */
+    public List<String> pdfToBase64Pages(Resource fileResource, DocPageToImageOptions options) throws GendoxException, IOException {
         List<String> allPagesContent = new ArrayList<>();
 
         try (PDDocument doc = Loader.loadPDF(fileResource.getContentAsByteArray())) {
 
-            if (pageFrom == null) {
-                pageFrom = 0;
-            }
-            if (pageTo == null) {
-                pageTo = doc.getNumberOfPages();
-            }
-
-            if (pageFrom > 0 && pageTo > 0 && pageFrom <= pageTo) {
-                throw new GendoxException("ERROR_INVALID_PAGE_RANGE", "Invalid page range: " + pageFrom + " to " + pageTo, HttpStatus.BAD_REQUEST);
-            }
+            options = options.applyDefaults(doc.getNumberOfPages());
 
             PDFRenderer renderer = new PDFRenderer(doc);
-            float renderDPI = 300f;
-            int   minSide   = 768;
-            float jpegQ     = 0.85f;
 
-            for (int i = pageFrom; i < pageTo ; i++) {
-                BufferedImage img = renderer.renderImageWithDPI(i, renderDPI, ImageType.RGB);
-                BufferedImage scaled = imageUtils.scaleToMinSide(img, minSide);
-                BufferedImage enhanced = imageUtils.enhanceForOCR(scaled, 1.15f, -10f);
-                String dataUri = imageUtils.toBase64Jpeg(enhanced, jpegQ);
+            for (int i = options.getPageFrom(); i < options.getPageTo() ; i++) {
 
-                System.out.println("Page " + (i + 1) + ": " + dataUri.length() + " bytes");
+                BufferedImage img;
+
+                if (options.getRenderDPI() != null) {
+                    // legacy path (bigger memory): render with DPI
+                    img = renderer.renderImageWithDPI(i, options.getRenderDPI(), ImageType.RGB);
+                    // then optionally scale down
+                    img = imageUtils.scaleToMinSide(img, options.getMinSide());
+                } else {
+                    // new path (preferred): render directly at the pixel size you need
+                    float scale = imageUtils.computeScaleForMinSide(doc.getPage(i), options.getMinSide());
+                    img = renderer.renderImage(i, scale, ImageType.RGB);
+                    int w = img.getWidth();
+                    int h = img.getHeight();
+                    int minSide = Math.min(w, h);
+
+                    if (minSide > 768) {
+                        logger.warn(
+                                "Page {}: shortest side is {}px (> 768). You may want to lower the render scale.",
+                                i, minSide
+                        );
+                    }
+                }
+
+                BufferedImage enhanced = imageUtils.enhanceForOCR(img, options.getImageContrast(), options.getImageBrightness());
+                String dataUri = imageUtils.toBase64Jpeg(enhanced, options.getJpegQ());
+                img.flush();
+                enhanced.flush();
+
+
+                logger.debug("Page " + (i + 1) + ": " + dataUri.length() + " bytes");
                 allPagesContent.add(dataUri);
             }
 

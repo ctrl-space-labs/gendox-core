@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.EncodingRegistry;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.DocPageToImageOptions;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.ImageUtils;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -106,9 +107,11 @@ public class DownloadServiceTest {
 
         Resource resource = new FileSystemResource(file);
 
+        DocPageToImageOptions options = DocPageToImageOptions.builder()
+                .build();
 
 
-        List<String> printedPages = downloadService.pdfToBase64Pages(resource, 0, 10);
+        List<String> printedPages = downloadService.pdfToBase64Pages(resource, options);
 
         assertEquals(printedPages.size(),  10, "Expected 10 pages in the PDF document");
 

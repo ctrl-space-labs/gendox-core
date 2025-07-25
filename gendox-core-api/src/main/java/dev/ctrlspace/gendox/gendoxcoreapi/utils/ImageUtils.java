@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
 
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.springframework.stereotype.Component;
 
 import javax.imageio.IIOImage;
@@ -82,6 +83,13 @@ public class ImageUtils {
         g.dispose();
 
         return dst;
+    }
+
+    public float computeScaleForMinSide(PDPage page, int minSidePx) {
+        float wPt = page.getMediaBox().getWidth();   // points (1 pt = 1/72")
+        float hPt = page.getMediaBox().getHeight();
+        float shortestPt = Math.min(wPt, hPt);
+        return (float) minSidePx / shortestPt;
     }
 
     public BufferedImage enhanceForOCR(BufferedImage src, float contrast, float brightness) {
