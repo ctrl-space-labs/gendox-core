@@ -194,7 +194,7 @@ public class DownloadService {
 
     /**
      * Converts PDF pages to Base64-encoded JPEG images.
-     * WARNING: Processing more than 10 pages may cause Out-Of-Memory issues.
+     * WARNING: Processing more than 100 pages may cause Out-Of-Memory issues.
      *
      * @param fileResource
      * @param options
@@ -230,8 +230,8 @@ public class DownloadService {
 
                     if (minSide > 768) {
                         logger.warn(
-                                "Page {}: shortest side is {}px (> 768). You may want to lower the render scale.",
-                                i, minSide
+                                "Doc: {} | Page {}: shortest side is {}px (> 768). You may want to lower the render scale.",
+                                fileResource.getFilename(),  i, minSide
                         );
                     }
                 }
@@ -245,7 +245,6 @@ public class DownloadService {
                 logger.debug("Page " + (i + 1) + ": " + dataUri.length() + " bytes");
                 allPagesContent.add(dataUri);
             }
-
         }
 
         return allPagesContent;
