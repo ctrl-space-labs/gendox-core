@@ -1,25 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { Box, Modal } from '@mui/material'
 import Paper from '@mui/material/Paper'
-import DocumentsAddNewDialog from './table-dialogs/DocumentsAddNewDialog'
 import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
 import {
   fetchTaskNodesByTaskId,
   executeTaskByType,
-  deleteTaskNode,
   fetchTaskNodesByCriteria,
-  fetchAnswerTaskNodes,
-  createTaskNodesBatch
+  fetchAnswerTaskNodes
 } from 'src/store/activeTask/activeTask'
 import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocument'
 import DocumentDigitizationGrid from './table-components/DocumentDigitizationGrid'
 import HeaderSection from './table-components/HeaderSection'
-import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import taskService from 'src/gendox-sdk/taskService'
 import { downloadBlobForCSV } from 'src/utils/tasks/downloadBlobForCSV'
+import DialogManager from './table-components/DocumentDigitizationDialogs'
 
 const MAX_PAGE_SIZE = 2147483647
 
@@ -35,34 +32,20 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
 
   const [documents, setDocuments] = useState([])
   const [answers, setAnswers] = useState([])
-  const [showUploader, setShowUploader] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [deleteNodeId, setDeleteNodeId] = useState(null)
-  const [isExportingCsv, setIsExportingCsv] = useState(false)
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
   const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
   const [selectedDocuments, setSelectedDocuments] = useState([])
   const [isGeneratingAll, setIsGeneratingAll] = useState(false)
   const [isGeneratingCells, setIsGeneratingCells] = useState({})
+  const [dialogs, setDialogs] = useState({ newDoc: false, delete: false, docDetail: false, answerDetail: false })
+  const [activeNode, setActiveNode] = useState(null)
+  const [isExportingCsv, setIsExportingCsv] = useState(false)
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
-  console.log('ANSWERS', answers)
-
-  // 1️⃣ **Reset all local state when switching tasks/orgs/projects**
-  useEffect(() => {
-    setDocuments([])
-    setAnswers([])
-    setSelectedDocuments([])
-    setPage(0)
-  }, [taskId, organizationId, projectId])
-
-  // 2️⃣ **Fetch task nodes documents when taskId changes**
-  useEffect(() => {
-    if (!(organizationId && projectId && taskId && token)) return
-
-    dispatch(
+  const fetchDocuments = useCallback(() => {
+    return dispatch(
       fetchTaskNodesByCriteria({
         organizationId,
         projectId,
@@ -73,14 +56,10 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         size: pageSize
       })
     )
-      .unwrap()
-      .catch(() => toast.error('Failed to load documents'))
-  }, [organizationId, projectId, taskId, token, dispatch, page, pageSize])
+  }, [organizationId, projectId, taskId, token, page, pageSize, dispatch])
 
-  // 3️⃣ **Fetch answers when taskId changes**
-  useEffect(() => {
-    if (!(organizationId && projectId && taskId && token)) return
-    dispatch(
+  const fetchAnswers = useCallback(() => {
+   return dispatch(
       fetchTaskNodesByCriteria({
         organizationId,
         projectId,
@@ -91,9 +70,31 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         size: MAX_PAGE_SIZE
       })
     )
+  }, [organizationId, projectId, taskId, token, dispatch])
+
+  // 1️⃣ **Reset all local state when switching tasks/orgs/projects**
+  useEffect(() => {
+    setDocuments([])
+    setAnswers([])
+    setSelectedDocuments([])
+    setPage(0)
+  }, [taskId, organizationId, projectId])
+
+  // 2️⃣ **Fetch task nodes documents **
+  useEffect(() => {
+    if (!(organizationId && projectId && taskId && token)) return
+    fetchDocuments()
+      .unwrap()
+      .catch(() => toast.error('Failed to load documents'))
+  }, [fetchDocuments])
+
+  // 3️⃣ **Fetch answers when taskId changes**
+  useEffect(() => {
+    if (!(organizationId && projectId && taskId && token)) return
+    fetchAnswers()
       .unwrap()
       .catch(() => toast.error('Failed to load answers'))
-  }, [organizationId, projectId, taskId, token, dispatch])
+  }, [fetchAnswers])
 
   // 4️⃣ **Fetch project documents and Sync with taskNodesDocumentList**
   useEffect(() => {
@@ -166,7 +167,15 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     setSelectedDocuments([])
   }, [page, pageSize])
 
-  const openUploader = () => setShowUploader(true)
+  // DIALOG HANDLERS
+  const openDialog = (dialogType, node = null) => {
+    setDialogs(prev => ({ ...prev, [dialogType]: true }))
+    setActiveNode(node)
+  }
+  const closeDialog = dialogType => {
+    setDialogs(prev => ({ ...prev, [dialogType]: false }))
+    setActiveNode(null)
+  }
 
   const handleSelectDocument = (docId, checked) => {
     setSelectedDocuments(prev => (checked ? [...prev, docId] : prev.filter(id => id !== docId)))
@@ -266,32 +275,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     }
   }
 
-  const confirmDeleteDocumentNode = taskNodeId => {
-    setDeleteNodeId(taskNodeId)
-    setDeleteDialogOpen(true)
-  }
-
-  const handleDeleteConfirmed = async () => {
-    if (!deleteNodeId) return
-
-    try {
-      await dispatch(deleteTaskNode({ organizationId, projectId, taskNodeId: deleteNodeId, token })).unwrap()
-      toast.success('Deleted successfully.')
-
-      // Update local state
-      setDocuments(prev => prev.filter(d => d.id !== deleteNodeId))
-
-      // Refetch updated data
-      dispatch(fetchTaskNodesByTaskId({ organizationId, projectId, taskId, token }))
-    } catch (error) {
-      toast.error('Failed to delete the node.')
-      console.error('Delete node error:', error)
-    } finally {
-      setDeleteDialogOpen(false)
-      setDeleteNodeId(null)
-    }
-  }
-
   const handleExportCsv = async () => {
     if (documents.length === 0) {
       toast.error('No documents to export')
@@ -308,7 +291,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     } finally {
       setIsExportingCsv(false)
     }
-  }
+  }  
 
   return (
     <>
@@ -316,7 +299,8 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         <HeaderSection
           title={selectedTask?.title}
           description={selectedTask?.description}
-          openUploader={openUploader}
+          //   openUploader={openUploader}
+          openUploader={() => openDialog('newDoc')}
           onGenerate={reGenerateExistingAnswers =>
             handleGenerate({ docs: documents, reGenerateExistingAnswers: reGenerateExistingAnswers, isAll: true })
           }
@@ -336,6 +320,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
           }}
         >
           <DocumentDigitizationGrid
+            openDialog={openDialog}
             organizationId={organizationId}
             projectId={projectId}
             token={token}
@@ -343,7 +328,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
             documents={documents}
             answers={answers}
             onGenerate={docs => handleGenerate({ docs: docs, reGenerateExistingAnswers: true })}
-            onDeleteDocumentNode={confirmDeleteDocumentNode}
+            onDeleteDocumentNode={nodeId => openDialog('delete', nodeId)}
             isLoadingAnswers={isLoadingAnswers}
             isLoading={isLoading}
             isBlurring={isBlurring}
@@ -361,32 +346,17 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         </Box>
       </Paper>
 
-      <Modal
-        open={showUploader}
-        onClose={() => setShowUploader(false)}
-        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      >
-        <Box sx={{ outline: 'none', p: 2, bgcolor: 'background.paper' }}>
-          <DocumentsAddNewDialog
-            open={showUploader}
-            onClose={() => setShowUploader(false)}
-            taskId={taskId}
-            organizationId={organizationId}
-            projectId={projectId}
-            token={token}
-            existingDocuments={documents}
-          />
-        </Box>
-      </Modal>
-
-      <DeleteConfirmDialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={handleDeleteConfirmed}
-        title='Confirm Deletion'
-        contentText='Are you sure you want to delete these generated answers? This action cannot be undone.'
-        confirmButtonText='Delete'
-        cancelButtonText='Cancel'
+      <DialogManager
+        dialogs={dialogs}
+        activeNode={activeNode}
+        onClose={closeDialog}
+        refreshDocuments={fetchDocuments}
+        refreshAnswers={fetchAnswers}
+        taskId={taskId}
+        organizationId={organizationId}
+        projectId={projectId}
+        token={token}
+        existingDocuments={documents}
       />
     </>
   )

@@ -61,13 +61,10 @@ const DocumentHeaderMenu = ({ doc, onDelete, onEdit }) => {
   )
 }
 
-const DocumentDigitizationGrid = ({
-  organizationId,
-  projectId,
-  taskId,
-  token,
+const DocumentDigitizationGrid = ({  
   documents,
   answers,
+  openDialog,
   onDeleteDocumentNode,
   onGenerate,
   isLoadingAnswers,
@@ -97,26 +94,6 @@ const DocumentDigitizationGrid = ({
     setActiveDoc(doc)
     setEditMode(editable)
     setOpenDocDialog(true)
-  }
-
-  const handleSaveDoc = async updatedDoc => {
-    const taskNodePayload = {
-      taskNodeId: updatedDoc.id || activeDoc.id,
-      prompt: updatedDoc.prompt,
-      structure: updatedDoc.structure
-    }
-
-    await taskService.updateTaskNodeForDocumentDigitization(organizationId, projectId, taskId, taskNodePayload, token)
-    setOpenDocDialog(false)
-    await dispatch(
-      fetchTaskNodesByCriteria({
-        organizationId,
-        projectId,
-        taskId,
-        criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
-        token
-      })
-    )
   }
 
   const pageNumbers = useMemo(() => {
@@ -165,7 +142,7 @@ const DocumentDigitizationGrid = ({
               pt: 3,
               pb: 2
             }}
-            onClick={() => handleOpenDialog(doc)}
+            onClick={() => openDialog('docDetail', doc)}
             title='Click to view details'
           >
             {/* Title */}
@@ -186,8 +163,8 @@ const DocumentDigitizationGrid = ({
               <span>{doc.name || 'Unknown Document'}</span>
               <DocumentHeaderMenu
                 doc={doc}
-                onDelete={() => onDeleteDocumentNode(doc.id)}
-                onEdit={() => handleOpenDialog(doc, true) /* true = editMode */}
+                onDelete={() => onDeleteDocumentNode(doc)}
+                onEdit={() => openDialog('docDetail', doc)}
               />
             </Box>
 
@@ -268,7 +245,7 @@ const DocumentDigitizationGrid = ({
                     onGenerateSingleAnswer(params.row, q)
                   } else {
                     setSelectedAnswer(answerObj)
-                    setAnswerDialogOpen(true)
+                    openDialog('answerDetail', answerObj)
                   }
                 }
               }}
@@ -411,7 +388,6 @@ const DocumentDigitizationGrid = ({
         open={openDocDialog}
         onClose={() => setOpenDocDialog(false)}
         document={activeDoc}
-        onSave={handleSaveDoc}
       />
     </Box>
   )

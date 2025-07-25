@@ -14,7 +14,6 @@ import {
 import { useTheme } from '@mui/material/styles'
 import EditIcon from '@mui/icons-material/Edit'
 import GendoxMarkdownRenderer from 'src/views/pages/markdown-renderer/GendoxMarkdownRenderer'
-import { is } from 'date-fns/locale'
 
 const TextareaAutosizeStyled = forwardRef((props, ref) => {
   const theme = useTheme()
@@ -40,7 +39,7 @@ const TextareaAutosizeStyled = forwardRef((props, ref) => {
   )
 })
 
-const MAX_COLLAPSED_HEIGHT = 80 // px, about 3-4 lines
+const MAX_COLLAPSED_HEIGHT = 80
 
 function ExpandableMarkdownSection({ label, markdown, maxHeight = MAX_COLLAPSED_HEIGHT }) {
   const theme = useTheme()
@@ -110,37 +109,21 @@ function ExpandableMarkdownSection({ label, markdown, maxHeight = MAX_COLLAPSED_
 const DocumentDialog = ({
   open,
   onClose,
-  document, // { name, prompt, structure }
-  onSave
+  document, // { id, name, prompt, structure }
+  onSave,
+  loading,
 }) => {
   const [editMode, setEditMode] = useState(false)
   const [prompt, setPrompt] = useState(document?.prompt || '')
   const [structure, setStructure] = useState(document?.structure || '')
-  const [isBlurring, setIsBlurring] = useState(false)
 
-  // Reset fields when dialog/document changes
+  
+
   useEffect(() => {
-    if (open) {
-      setIsBlurring(true)
-      setPrompt(document?.prompt || '')
-      setStructure(document?.structure || '')
-      setEditMode(false)
-      setTimeout(() => setIsBlurring(false), 300) // Simulate loading delay
-    }
-  }, [open, document])
+    if (!open) setEditMode(false)
+  }, [open])
 
-  const handleSave = () => {
-    isBlurring(true)
-    if (onSave) {
-      onSave({
-        ...document,
-        prompt,
-        structure
-      })
-    }
-    setEditMode(false)
-    setIsBlurring(false)
-  }
+  
 
   if (!document) return null
 
@@ -167,12 +150,12 @@ const DocumentDialog = ({
       <Divider />
 
       <DialogContent sx={{ py: 3 }}>
-         {isBlurring && (
+        {loading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
           </Box>
         )}
-        
+
         <Box sx={{ mb: 3 }}>
           <Typography
             variant='caption'
@@ -259,7 +242,7 @@ const DocumentDialog = ({
             <Button onClick={() => setEditMode(false)} variant='outlined'>
               Cancel
             </Button>
-            <Button onClick={handleSave} variant='contained'>
+        <Button onClick={() => onSave({ ...document, prompt, structure })} disabled={loading}>
               Save
             </Button>
           </>
@@ -269,6 +252,7 @@ const DocumentDialog = ({
           </Button>
         )}
       </DialogActions>
+      {loading && <CircularProgress size={24} />}
     </Dialog>
   )
 }
