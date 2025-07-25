@@ -1,13 +1,10 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.AnswerCreationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskAnswerBatchDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentMetadataDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskNodeService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import org.slf4j.Logger;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
@@ -23,6 +20,10 @@ import java.util.List;
 public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocumentMetadataDTO, TaskAnswerBatchDTO> {
 
     private static final Logger logger = org.slf4j.LoggerFactory.getLogger(DocumentDigitizationProcessor.class);
+    private final DownloadService downloadService;
+    private final MessageService messageService;
+    private final CompletionService completionService;
+    private final ProjectService projectService;
 
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private boolean reGenerateExistingAnswers;
@@ -35,13 +36,22 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
     private TaskNodeService taskNodeService;
     private DocumentService documentService;
 
+    private Project project;
+    private Task task;
+
     @Autowired
     public DocumentDigitizationProcessor(TaskService taskService,
                                          TaskNodeService taskNodeService,
-                                         DocumentService documentService) {
+                                         CompletionService completionService,
+                                         ProjectService projectService,
+                                         DocumentService documentService, DownloadService downloadService, MessageService messageService) {
         this.taskService = taskService;
         this.taskNodeService = taskNodeService;
         this.documentService = documentService;
+        this.downloadService = downloadService;
+        this.completionService = completionService;
+        this.projectService = projectService;
+        this.messageService = messageService;
     }
 
 
@@ -54,18 +64,56 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
         TaskAnswerBatchDTO batch = new TaskAnswerBatchDTO();
 
+        TaskNode documentNode = taskNodeService.getTaskNodeById(documentMetadata.getTaskNodeId());
+        if (documentNode.getDocumentId() == null) {
+            return null;
+        }
+
+        DocumentInstance documentInstance = documentService.getDocumentInstanceById(documentNode.getDocumentId());
+
+        // each job run for a single task and project
+        if (task == null) {
+            task = taskService.getTaskById(documentNode.getTaskId());
+        }
+        if (project == null){
+            project = projectService.getProjectById(task.getProjectId());
+        }
+
         List<AnswerCreationDTO> newAnswers = new ArrayList<>();
         List<TaskNode> answersToDelete = new ArrayList<>();
 
         String prompt = documentMetadata.getPrompt();
         String structure = documentMetadata.getStructure();
-        TaskNode documentNode = taskNodeService.getTaskNodeById(documentMetadata.getTaskNodeId());
-        if (documentNode.getDocumentId() != null) {
-            DocumentInstance documentInstance = documentService.getDocumentInstanceById(documentNode.getDocumentId());
+        List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl());
+
+        for (int i = 0 ; i < printedPagesBase64.size(); i++) {
+            String pageImage = printedPagesBase64.get(i);
+
+            ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()), project.getId());
+            StringBuilder promptBuilder = new StringBuilder();
+            promptBuilder.append(prompt);
+            promptBuilder.append("\n\n");
+            promptBuilder.append("Document Page: ").append(i).append("out of ").append(printedPagesBase64.size()).append("\n\n");
+            promptBuilder.append("Page Image: ").append(pageImage).append("\n\n");
+
+            Message message = new Message();
+            message.setValue(promptBuilder.toString());
+            message.setThreadId(newThread.getId());
+            message.setProjectId(project.getId());
+            message.setCreatedBy(project.getProjectAgent().getUserId());
+            message.setUpdatedBy(project.getProjectAgent().getUserId());
+            message = messageService.createMessage(message);
+
+            List<Message> response = completionService.getCompletion(message, new ArrayList<>(), project, null);
+
+
         }
+
 
         logger.info("Processing document node: {}, prompt: {}, structure: {}",
                     documentNode.getId(), prompt, structure);
+
+
 
         return batch;
     }

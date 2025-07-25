@@ -20,6 +20,7 @@ import org.docx4j.openpackaging.exceptions.Docx4JException;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.WordprocessingML.BinaryPart;
 import org.docx4j.relationships.Relationship;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.MetadataMode;
@@ -49,16 +50,19 @@ public class DownloadService {
 
     private String pageSeparatorTemplate;
     private ImageUtils imageUtils;
+    private CompletionService completionService;
 
 
 
     @Autowired
     public DownloadService(ResourceLoader resourceLoader,
                            ImageUtils imageUtils,
+                           CompletionService completionService,
                            @Value("${gendox.documents.page-separator-template}") String pageSeparatorTemplate
                             ) {
         this.resourceLoader = resourceLoader;
         this.imageUtils = imageUtils;
+        this.completionService = completionService;
         this.pageSeparatorTemplate = pageSeparatorTemplate;
 
     }
@@ -67,32 +71,62 @@ public class DownloadService {
         // Get the Resource from openResource
         Resource resource = openResource(documentUrl);
 
-        // Try-with-resources to ensure InputStream is closed after use
-        try (InputStream inputStream = resource.getInputStream()) {
-            // Determine file extension from Resource
-            // TODO Double check this get login
-            //  get extension from documentUrl, and if null, try the resource.getFilename()
-            String fileExtension = getFileExtension(documentUrl);
-            if (fileExtension == null) {
-                fileExtension = getFileExtension(resource.getFilename());
-            }
-            if (fileExtension == null) {
-                throw new GendoxException("ERROR_UNKNOWN_FILE_TYPE", "Unknown file type: " + fileExtension, HttpStatus.BAD_REQUEST);
-            }
+        String fileExtension = getFileExtension(documentUrl, resource);
 
-            // TODO @Giannis check if the API Integrations remote url, breaks the logic of file extentions
-            if (isTextFile(fileExtension)) {
-                // Handle text files
-                return readTxtFileContent(inputStream);
-            } else if (isPdfFile(fileExtension)) {
-                // Handle PDF files
-                return readPdfContent(resource);
-            } else if (isDocxFile(fileExtension)) {
-                return readDocxContent(resource);
-            } else {
-                throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Unsupported file type: " + fileExtension, HttpStatus.BAD_REQUEST);
-            }
+        // TODO @Giannis check if the API Integrations remote url, breaks the logic of file extentions
+        if (isTextFile(fileExtension)) {
+            // Handle text files
+            return readTxtFileContent(resource);
+        } else if (isPdfFile(fileExtension)) {
+            // Handle PDF files
+            return readPdfContent(resource);
+        } else if (isDocxFile(fileExtension)) {
+            return readDocxContent(resource);
+        } else {
+            throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Unsupported file type: " + fileExtension, HttpStatus.BAD_REQUEST);
         }
+
+    }
+
+    /**
+     * It "prints" the document pages to Base64-encoded JPEG images.
+     *
+     * TODO: If images exist in page, get bounding boxes extract images (see {@link https://ai.google.dev/gemini-api/docs/image-understanding#object-detection})
+     * @param documentUrl
+     * @return
+     * @throws GendoxException
+     * @throws IOException
+     */
+    public List<String> printDocumentPages(String documentUrl) throws GendoxException, IOException {
+        // Get the Resource from openResource
+        Resource resource = openResource(documentUrl);
+
+        String fileExtension = getFileExtension(documentUrl, resource);
+        DocPageToImageOptions imageOptions = DocPageToImageOptions.builder().build();
+
+        // TODO @Giannis check if the API Integrations remote url, breaks the logic of file extentions
+        if (isTextFile(fileExtension)) {
+            throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Document is already in text format. Unsupported file type: " + fileExtension, HttpStatus.BAD_REQUEST);
+        } else if (isPdfFile(fileExtension)) {
+            List <String> printedPages = pdfToBase64Pages(resource, imageOptions);
+            return printedPages;
+        } else if (isDocxFile(fileExtension)) {
+            throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Not Supported yet, file type: " + fileExtension, HttpStatus.BAD_REQUEST);
+        } else {
+            throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Unsupported file type: " + fileExtension, HttpStatus.BAD_REQUEST);
+        }
+
+    }
+
+    private @NotNull String getFileExtension(String documentUrl, Resource resource) throws GendoxException {
+        String fileExtension = getFileExtension(documentUrl);
+        if (fileExtension == null) {
+            fileExtension = getFileExtension(resource.getFilename());
+        }
+        if (fileExtension == null) {
+            throw new GendoxException("ERROR_UNKNOWN_FILE_TYPE", "Unknown file type: " + fileExtension, HttpStatus.BAD_REQUEST);
+        }
+        return fileExtension;
     }
 
     @Observed(name = "DownloadService.readTxtFileContent",
@@ -103,10 +137,14 @@ public class DownloadService {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    private String readTxtFileContent(InputStream inputStream) throws IOException {
-        StringBuilder fileContent = new StringBuilder();
+    private String readTxtFileContent(Resource fileResource) throws IOException {
 
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+        StringBuilder fileContent = new StringBuilder();
+        // Try-with-resources to ensure InputStream is closed after use
+        try (
+                InputStream inputStream = fileResource.getInputStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))
+        ) {
             String line;
             while ((line = reader.readLine()) != null) {
                 fileContent.append(line).append("\n");
