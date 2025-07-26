@@ -93,6 +93,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         // increase print quality
         printOptions.setMinSide(1024);
         List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), printOptions);
+        List<String> ocrTextPerPage = new ArrayList<>(printedPagesBase64.size());
 
         for (int i = 0 ; i < printedPagesBase64.size(); i++) {
             String pageImage = printedPagesBase64.get(i);
@@ -126,7 +127,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
             List<Message> response = completionService.getCompletion(message, new ArrayList<>(), project, null);
 
-            int x = 5;
+            ocrTextPerPage.add(response.getLast().getValue());
 
         }
 
