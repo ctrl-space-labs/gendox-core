@@ -1,20 +1,17 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContext;
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -87,6 +84,12 @@ public class Message {
     @Transient
     @JsonProperty("localContexts")
     private List<MessageLocalContext> localContexts = new ArrayList<>();
+
+    // TODO save this to database, find better name
+    // List of additional files like images, documents, etc. that are associated with this message
+    @Transient
+    @JsonProperty("additionalResources")
+    private List<ContentPart> additionalResources = new ArrayList<>();
 
 
     public UUID getId() {
@@ -169,6 +172,16 @@ public class Message {
         this.localContexts = localContexts;
     }
 
+    @Transient
+    public List<ContentPart> getAdditionalResources() {
+        return additionalResources;
+    }
+
+    @Transient
+    public void setAdditionalResources(List<ContentPart> additionalResources) {
+        this.additionalResources = additionalResources;
+    }
+
     public String getRole() {
         return role;
     }
@@ -204,14 +217,13 @@ public class Message {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Message message = (Message) o;
-        return Objects.equals(id, message.id) && Objects.equals(value, message.value) && Objects.equals(projectId, message.projectId) && Objects.equals(threadId, message.threadId) && Objects.equals(createdAt, message.createdAt) && Objects.equals(updatedAt, message.updatedAt) && Objects.equals(createdBy, message.createdBy) && Objects.equals(updatedBy, message.updatedBy) && Objects.equals(role, message.role) && Objects.equals(name, message.name) && Objects.equals(toolCallId, message.toolCallId) && Objects.equals(toolCalls, message.toolCalls) && Objects.equals(messageSections, message.messageSections) && Objects.equals(localContexts, message.localContexts);
+        return Objects.equals(id, message.id) && Objects.equals(value, message.value) && Objects.equals(projectId, message.projectId) && Objects.equals(threadId, message.threadId) && Objects.equals(createdAt, message.createdAt) && Objects.equals(updatedAt, message.updatedAt) && Objects.equals(createdBy, message.createdBy) && Objects.equals(updatedBy, message.updatedBy) && Objects.equals(role, message.role) && Objects.equals(name, message.name) && Objects.equals(toolCallId, message.toolCallId) && Objects.equals(toolCalls, message.toolCalls) && Objects.equals(messageSections, message.messageSections) && Objects.equals(localContexts, message.localContexts) && Objects.equals(additionalResources, message.additionalResources);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, value, projectId, threadId, createdAt, updatedAt, createdBy, updatedBy, role, name, toolCallId, toolCalls, messageSections, localContexts);
+        return Objects.hash(id, value, projectId, threadId, createdAt, updatedAt, createdBy, updatedBy, role, name, toolCallId, toolCalls, messageSections, localContexts, additionalResources);
     }
 }
