@@ -15,6 +15,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProvenAiMetadata;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
@@ -235,9 +236,15 @@ public class CompletionService {
         // TODO maybe add a similar logic to the embedding service to limit the number of messages
         List<AiModelMessage> previousMessages = messageService.getPreviousMessages(message, 25);
 
+        //get contentParts without type "text"
+        List<ContentPart> contentParts = message.getAdditionalResources().stream()
+                .filter(part -> !"text".equals(part.getType()))
+                .toList();
+
         // clone message to avoid changing the original message text in DB
         AiModelMessage promptMessage = AiModelMessage.builder()
                 .content(question)
+                .contentParts(contentParts)
                 .role(message.getRole() != null ? message.getRole() : "user")
                 .build();
 

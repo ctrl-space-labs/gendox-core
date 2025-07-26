@@ -1,6 +1,8 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.DocPageToImageOptions;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.AnswerCreationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskAnswerBatchDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentMetadataDTO;
@@ -84,7 +86,13 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
         String prompt = documentMetadata.getPrompt();
         String structure = documentMetadata.getStructure();
-        List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl());
+        DocPageToImageOptions printOptions = DocPageToImageOptions.builder().build();
+        // this doubles the input tokens, compaire to the default 768
+        // as of 2025-07-26 Gemini has a bug and doesnt calculate the tokens correctly 2.0 -> 1800 tokens, 2.5 -> charges 256 tokens
+
+        // increase print quality
+        printOptions.setMinSide(1024);
+        List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), printOptions);
 
         for (int i = 0 ; i < printedPagesBase64.size(); i++) {
             String pageImage = printedPagesBase64.get(i);
@@ -93,8 +101,8 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
             StringBuilder promptBuilder = new StringBuilder();
             promptBuilder.append(prompt);
             promptBuilder.append("\n\n");
-            promptBuilder.append("Document Page: ").append(i).append("out of ").append(printedPagesBase64.size()).append("\n\n");
-            promptBuilder.append("Page Image: ").append(pageImage).append("\n\n");
+            promptBuilder.append("Document Page: ").append(i).append(" out of ").append(printedPagesBase64.size()).append("\n\n");
+
 
             Message message = new Message();
             message.setValue(promptBuilder.toString());
@@ -104,8 +112,19 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
             message.setUpdatedBy(project.getProjectAgent().getUserId());
             message = messageService.createMessage(message);
 
+            // TODO save additional resources,
+            //  set additional resource after the save, as it is not stored yet in the DB
+            message.setAdditionalResources(List.of(
+                    ContentPart.builder()
+                            .type("image_url")
+                            .imageUrl(ContentPart.ImageInput.builder()
+                                    .url(pageImage)
+                                    .build())
+                            .build()));
+
             List<Message> response = completionService.getCompletion(message, new ArrayList<>(), project, null);
 
+            int x = 5;
 
         }
 
