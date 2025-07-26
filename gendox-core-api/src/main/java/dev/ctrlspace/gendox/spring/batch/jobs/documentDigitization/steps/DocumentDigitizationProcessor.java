@@ -97,7 +97,9 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         for (int i = 0 ; i < printedPagesBase64.size(); i++) {
             String pageImage = printedPagesBase64.get(i);
 
-            ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()), project.getId());
+            ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()),
+                    project.getId(),
+                    "DOCUMENT_DIGITIZATION - Task:" + task.getId());
             StringBuilder promptBuilder = new StringBuilder();
             promptBuilder.append(prompt);
             promptBuilder.append("\n\n");

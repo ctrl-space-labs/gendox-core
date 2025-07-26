@@ -10,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.MessagePredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import jakarta.annotation.Nullable;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -78,8 +79,17 @@ public class MessageService {
     }
 
     public ChatThread createThreadForMessage(List<UUID> memberIds, UUID projectId) {
+        return this.createThreadForMessage(memberIds, projectId, null);
+    }
+
+    public ChatThread createThreadForMessage(List<UUID> memberIds, UUID projectId, @Nullable String threadName) {
         ChatThread chatThread = new ChatThread();
+
         chatThread.setName("Chat Thread");
+        if (threadName != null) {
+            chatThread.setName(threadName);
+        }
+
         chatThread.setProjectId(projectId);
 
         for (UUID memberId : memberIds) {

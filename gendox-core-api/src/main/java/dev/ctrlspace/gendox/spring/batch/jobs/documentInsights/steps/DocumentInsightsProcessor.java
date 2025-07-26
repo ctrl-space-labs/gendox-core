@@ -126,7 +126,9 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
             // a group of sections, is called a document part, each document might be splitted in 1, 2 or more parts (like 100K tokens per part)
             for (List<DocumentInstanceSection> groupedDocumentPart : sectionChunks) {
 
-                ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()), project.getId());
+                ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()),
+                        project.getId(),
+                        "DOCUMENT_INSIGHTS - Task:" + task.getId());
                 Message message = buildPromptMessageForSections(groupedDocumentPart, questionsPrompt, newThread);
                 GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionChunk);
                 if (documentPartAnswers != null) {
@@ -139,7 +141,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 splitGroupAnswersToSeparateAnswerNodes(partialAnswers.get(0), documentGroupWithQuestions, answerNodeType, newAnswers);
             } else if (partialAnswers.size() > 1) {
                 logger.debug("Creating answers from multiple document parts.");
-                GroupedQuestionAnswers consolidatedDocumentAnswers = consolidatePartsAnswersToASingleOne(documentGroupWithQuestions, questionChunk, allQuestions, partialAnswers, null, responseJsonSchema);
+                GroupedQuestionAnswers consolidatedDocumentAnswers = consolidatePartsAnswersToASingleOne(documentGroupWithQuestions, questionChunk, allQuestions, partialAnswers, null, responseJsonSchema, task);
                 // error occurred, skipping...
                 if (consolidatedDocumentAnswers == null) continue;
 
@@ -158,7 +160,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         return batch;
     }
 
-    private @Nullable GroupedQuestionAnswers consolidatePartsAnswersToASingleOne(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, String allQuestions, List<GroupedQuestionAnswers> allAnswersFromDocumentParts, ChatThread newThread, ObjectNode responseJsonSchema) throws JsonProcessingException {
+    private @Nullable GroupedQuestionAnswers consolidatePartsAnswersToASingleOne(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, String allQuestions, List<GroupedQuestionAnswers> allAnswersFromDocumentParts, ChatThread newThread, ObjectNode responseJsonSchema, Task task) throws JsonProcessingException {
         StringBuilder prompt = new StringBuilder();
         prompt.append("""
            Big documents don't fit in the LLM context window; the document was split into parts.
@@ -184,7 +186,9 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         }
 
         if (newThread == null) {
-            newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()), project.getId());
+            newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()),
+                    project.getId(),
+                    "DOCUMENT_INSIGHTS - Task:" + task.getId());
         }
 
         Message message = new Message();
