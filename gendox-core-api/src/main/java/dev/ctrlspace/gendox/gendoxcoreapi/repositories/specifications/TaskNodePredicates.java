@@ -2,6 +2,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications;
 
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Predicate;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.SimpleExpression;
+import com.querydsl.core.types.dsl.StringExpression;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QTaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
@@ -16,7 +19,8 @@ public class TaskNodePredicates {
         return ExpressionUtils.allOf(
                 taskIdEq(criteria.getTaskId()),
                 nodeIds(criteria.getNodeIds()),
-                nodeTypes(criteria.getNodeTypeNames())
+                nodeTypes(criteria.getNodeTypeNames()),
+                nodeValueNodeDocumentId(criteria.getNodeValueNodeDocumentId())
 
         );
     }
@@ -82,6 +86,22 @@ public class TaskNodePredicates {
             return null;
         }
         return qTaskNode.nodeType.name.in(nodeTypes);
+    }
+
+    private static Predicate nodeValueNodeDocumentId(UUID nodeDocumentId) {
+        if (nodeDocumentId == null) return null;
+
+        //  ((node_value ->> 'nodeDocumentId')::uuid)
+        SimpleExpression<UUID> docIdUuid =
+                Expressions.template(
+                        UUID.class,                                        // Java type
+                        "cast(function('jsonb_extract_path_text', {0}, {1}) as uuid)",
+                        qTaskNode.nodeValue,
+                        Expressions.constant("nodeDocumentId")
+                );
+
+        // Now eq(UUID) is available
+        return docIdUuid.eq(nodeDocumentId);
     }
 
     private static Predicate taskIdEq(UUID taskId) {

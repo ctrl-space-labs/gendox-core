@@ -1,17 +1,20 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.DocPageToImageOptions;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.AnswerCreationDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskAnswerBatchDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentMetadataDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import org.slf4j.Logger;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -73,6 +76,28 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
         DocumentInstance documentInstance = documentService.getDocumentInstanceById(documentNode.getDocumentId());
 
+        List<AnswerCreationDTO> newAnswers = new ArrayList<>();
+
+        //TODO select ansers for the specific document
+        TaskNodeCriteria existingAnswersCriteria = TaskNodeCriteria.builder()
+                .taskId(documentNode.getTaskId())
+                .nodeTypeNames(List.of("ANSWER"))
+                .nodeValueNodeDocumentId(documentNode.getId())
+                .build();
+        Page<TaskNode> existingNodes = taskNodeService.getTaskNodesByCriteria(existingAnswersCriteria, Pageable.unpaged());
+
+
+        if (reGenerateExistingAnswers) {
+            batch.setAnswersToDelete(existingNodes.getContent());
+        } else {
+            throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "NOT_SUPPORTED_YET", "Generate only the new answers not supported yet");
+            //TODO find a way to OCR the pages that dont have answers yet
+//            documentGroupWithQuestions.getQuestionNodes().removeAll(answeredQuestions);
+//            if (documentGroupWithQuestions.getQuestionNodes().isEmpty()) {
+//                return null; // nothing left to process
+//            }
+        }
+
         // each job run for a single task and project
         if (task == null) {
             task = taskService.getTaskById(documentNode.getTaskId());
@@ -80,9 +105,6 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         if (project == null){
             project = projectService.getProjectById(task.getProjectId());
         }
-
-        List<AnswerCreationDTO> newAnswers = new ArrayList<>();
-        List<TaskNode> answersToDelete = new ArrayList<>();
 
         String prompt = documentMetadata.getPrompt();
         String structure = documentMetadata.getStructure();
@@ -127,10 +149,26 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
             List<Message> response = completionService.getCompletion(message, new ArrayList<>(), project, null);
 
-            ocrTextPerPage.add(response.getLast().getValue());
+            AnswerCreationDTO newPage = AnswerCreationDTO.builder()
+                    .documentNode(documentNode)
+                    .newAnswer(TaskNodeDTO.builder()
+                            .nodeType("ANSWER")
+                            .taskId(task.getId())
+                            .nodeValue(TaskNodeValueDTO.builder()
+                                    .message(response.getLast().getValue())
+                                    .order(i)
+                                    .nodeDocumentId(documentNode.getId())
+                                    .build())
+                            .documentId(documentNode.getDocumentId())
+                            .pageNumber(i)
+                            .build())
+                    .build();
+
+            newAnswers.add(newPage);
 
         }
 
+        batch.setNewAnswers(newAnswers);
 
         logger.info("Processing document node: {}, prompt: {}, structure: {}",
                     documentNode.getId(), prompt, structure);

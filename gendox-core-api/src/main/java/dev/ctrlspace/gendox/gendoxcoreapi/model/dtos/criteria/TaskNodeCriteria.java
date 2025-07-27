@@ -20,6 +20,8 @@ public class TaskNodeCriteria {
     private List<UUID> documentNodeIds;  // for DOCUMENT type nodes
     private List<UUID> questionNodeIds;  // for QUESTION type nodes
     private List<UUID> answerNodeIds;    // for ANSWER type nodes
+    private UUID nodeValueNodeDocumentId; // the node document ID for the node_value
+
     // if true, the Job will re-generate answers for existing nodes. Otherwise, it will only generate answers for new nodes
     private Boolean reGenerateExistingAnswers;
 }
