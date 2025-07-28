@@ -1,6 +1,4 @@
 import React, { useMemo, useState } from 'react'
-import { useDispatch } from 'react-redux'
-import AnswerDialog from '../table-dialogs/AnswerDialog'
 import { DataGrid } from '@mui/x-data-grid'
 import { Box, Button, IconButton, Tooltip, Menu, MenuItem } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
@@ -13,59 +11,58 @@ import DescriptionIcon from '@mui/icons-material/Description'
 import SchemaIcon from '@mui/icons-material/Schema'
 import DocumentDialog from '../table-dialogs/DocumentDialog'
 import Icon from 'src/views/custom-components/mui/icon/icon'
-import taskService from 'src/gendox-sdk/taskService'
-import { fetchTaskNodesByCriteria } from 'src/store/activeTask/activeTask'
+import EditIcon from '@mui/icons-material/Edit'
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 
-const DocumentHeaderMenu = ({ doc, onDelete, onEdit }) => {
-  const [anchorEl, setAnchorEl] = useState(null)
-  const open = Boolean(anchorEl)
+// const DocumentHeaderMenu = ({ doc, onDelete, onEdit }) => {
+//   const [anchorEl, setAnchorEl] = useState(null)
+//   const open = Boolean(anchorEl)
 
-  const handleMenuOpen = e => {
-    e.stopPropagation()
-    setAnchorEl(e.currentTarget)
-  }
-  const handleMenuClose = e => {
-    if (e) e.stopPropagation()
-    setAnchorEl(null)
-  }
-  const handleDelete = e => {
-    e.stopPropagation()
-    onDelete(doc)
-    handleMenuClose(e)
-  }
-  const handleEdit = e => {
-    e.stopPropagation()
-    onEdit(doc)
-    handleMenuClose(e)
-  }
+//   const handleMenuOpen = e => {
+//     e.stopPropagation()
+//     setAnchorEl(e.currentTarget)
+//   }
+//   const handleMenuClose = e => {
+//     if (e) e.stopPropagation()
+//     setAnchorEl(null)
+//   }
+//   const handleDelete = e => {
+//     e.stopPropagation()
+//     onDelete(doc)
+//     handleMenuClose(e)
+//   }
+//   const handleEdit = e => {
+//     e.stopPropagation()
+//     onEdit(doc)
+//     handleMenuClose(e)
+//   }
 
-  return (
-    <>
-      <IconButton size='small' onClick={handleMenuOpen} sx={{ ml: 1, color: 'primary.main' }} aria-label='Actions'>
-        <Icon icon='mdi:dots-vertical' />
-      </IconButton>
-      <Menu
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleMenuClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        onClick={e => e.stopPropagation()}
-      >
-        <MenuItem onClick={handleEdit}>Edit</MenuItem>
-        <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
-          Delete
-        </MenuItem>
-      </Menu>
-    </>
-  )
-}
+//   return (
+//     <>
+//       <IconButton size='small' onClick={handleMenuOpen} sx={{ ml: 1, color: 'primary.main' }} aria-label='Actions'>
+//         <Icon icon='mdi:dots-vertical' />
+//       </IconButton>
+//       <Menu
+//         anchorEl={anchorEl}
+//         open={open}
+//         onClose={handleMenuClose}
+//         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+//         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+//         onClick={e => e.stopPropagation()}
+//       >
+//         <MenuItem onClick={handleEdit}>Edit</MenuItem>
+//         <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
+//           Delete
+//         </MenuItem>
+//       </Menu>
+//     </>
+//   )
+// }
 
-const DocumentDigitizationGrid = ({  
+const DocumentDigitizationGrid = ({
+  openDialog,
   documents,
   answers,
-  openDialog,
-  onDeleteDocumentNode,
   onGenerate,
   isLoadingAnswers,
   isLoading,
@@ -75,42 +72,50 @@ const DocumentDigitizationGrid = ({
   setPage,
   setPageSize,
   totalDocuments,
+  isSelectingDocuments = false,
   selectedDocuments = [],
   onSelectDocument = () => {},
   onGenerateSingleAnswer = () => {},
   isGeneratingAll,
-  isGeneratingCells
+  editMode = false,
+  setEditMode = () => {},
 }) => {
   const theme = useTheme()
-  const dispatch = useDispatch()
-  const [answerDialogOpen, setAnswerDialogOpen] = useState(false)
-  const [selectedAnswer, setSelectedAnswer] = useState(null)
 
-  const [openDocDialog, setOpenDocDialog] = useState(false)
-  const [activeDoc, setActiveDoc] = useState(null)
-  const [editMode, setEditMode] = useState(false)
+  const [generateMenuAnchor, setGenerateMenuAnchor] = useState(null)
+  const [generateMenuDoc, setGenerateMenuDoc] = useState(null)
 
-  const handleOpenDialog = (doc, editable = false) => {
-    setActiveDoc(doc)
-    setEditMode(editable)
-    setOpenDocDialog(true)
-  }
+  const docMaxPages = useMemo(() => {
+    const map = {}
+    documents.forEach(doc => {
+      const docAnswers = answers.filter(a => a.nodeDocumentId === doc.id)
+      map[doc.id] = docAnswers.length ? Math.max(...docAnswers.map(a => a.order ?? 0)) : 0
+    })
+    return map // { [docId]: maxPage }
+  }, [documents, answers])
+
+  const maxPageOverall = useMemo(() => {
+    return Math.max(0, ...Object.values(docMaxPages))
+  }, [docMaxPages])
 
   const pageNumbers = useMemo(() => {
-    // Unique page numbers present in answers
-    return Array.from(new Set(answers.map(a => a.pageNumber))).sort((a, b) => a - b)
-  }, [answers])
+    return Array.from({ length: maxPageOverall }, (_, i) => i + 1)
+  }, [maxPageOverall])
 
   function truncateText(text, maxLength = 60) {
     if (!text) return ''
     return text.length > maxLength ? text.slice(0, maxLength) + '…' : text
   }
-  
+
+  const sortedDocuments = useMemo(() => {
+    return [...documents].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  }, [documents])
+
   const columns = useMemo(
     () => [
       {
-        field: 'pageNumber',
-        headerName: 'Pages',
+        field: 'order',
+        headerName: 'Order',
         width: 100,
         sortable: false,
         filterable: false,
@@ -118,65 +123,75 @@ const DocumentDigitizationGrid = ({
         renderCell: params => <b>Page {params.value}</b>,
         renderHeader: () => <b>Pages</b>
       },
-      ...documents.map(doc => ({
+      ...sortedDocuments.map(doc => ({
         field: doc.id,
         width: 280,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
 
-        // Full-featured header
         renderHeader: () => (
           <Box
             sx={{
               display: 'flex',
-              flexDirection: 'column',
+              flexDirection: 'row',
               alignItems: 'stretch',
-              justifyContent: 'flex-start',
-              height: '100%',
-              borderColor: 'divider',
-              overflow: 'hidden',
-              position: 'relative',
-              cursor: 'pointer', // clickable for dialog
-              transition: 'box-shadow 0.2s',
-              pt: 3,
-              pb: 2
+              justifyContent: 'space-between',
+              width: '100%',
+              minHeight: 68,
+              px: 0.5,
+              py: 1,
+              background: 'transparent'
             }}
-            onClick={() => openDialog('docDetail', doc)}
-            title='Click to view details'
           >
-            {/* Title */}
+            {/* Left: Checkbox */}
+            {isSelectingDocuments && (
+              <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 38, pr: 1 }}>
+                <Checkbox
+                  checked={selectedDocuments.includes(doc.id)}
+                  onChange={e => onSelectDocument(doc.id, e.target.checked)}
+                  size='small'
+                  sx={{ p: 0.5 }}
+                />
+              </Box>
+            )}
+
+            {/* Center: Title and Prompt */}
             <Box
               sx={{
                 display: 'flex',
-                alignItems: 'center',
-                fontWeight: 700,
-                fontSize: 16,
-                // color: 'primary.main',
-                p: 1,
-                pl: 1.5,
-                pb: 0.5,
-                minHeight: 32
+                flexDirection: 'column',
+                flex: 1,
+                minWidth: 0,
+                justifyContent: 'center',
+                alignItems: 'flex-start',
+                gap: 0.5,
+                overflow: 'hidden',
+                cursor: 'pointer'
               }}
-              title={doc.name}
+              onClick={() => openDialog('docDetail', doc, false)}
+              title='Click to view details'
             >
-              <span>{doc.name || 'Unknown Document'}</span>
-              <DocumentHeaderMenu
-                doc={doc}
-                onDelete={() => onDeleteDocumentNode(doc)}
-                onEdit={() => openDialog('docDetail', doc)}
-              />
-            </Box>
-
-            {/* Prompt Section */}            
+              <Box
+                sx={{
+                  fontWeight: 700,
+                  fontSize: 16,
+                  lineHeight: 1.25,
+                  mb: 1,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+                title={doc.name}
+              >
+                {doc.name || 'Unknown Document'}
+              </Box>
               <Tooltip title={truncateText(doc.prompt, 200) || 'No prompt, Please add one'} placement='bottom'>
                 <Box
                   component='span'
                   sx={{
                     display: '-webkit-box',
-                    WebkitLineClamp: 2, // Change to 1 if you want only 1 line
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
+                    WebkitLineClamp: 2,
                     textOverflow: 'ellipsis',
                     whiteSpace: 'normal',
                     fontSize: 13,
@@ -190,12 +205,69 @@ const DocumentDigitizationGrid = ({
                 </Box>
               </Tooltip>
             </Box>
+
+            {/* Right: Icon buttons vertically */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                gap: 0.5,
+                minWidth: 38,
+                ml: 1
+              }}
+            >
+              <Tooltip title='Edit'>
+                <IconButton
+                  aria-label='Edit document'
+                  onClick={e => {
+                    e.stopPropagation()
+                    openDialog('docDetail', doc, true)
+                  }}
+                  size='small'
+                  sx={{ p: 0.5 }}
+                >
+                  <EditIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title='Generate'>
+                <IconButton
+                  size='small'
+                  sx={{ color: 'primary.main', p: 0.5 }}
+                  onClick={e => {
+                    e.stopPropagation()
+                    setGenerateMenuAnchor(e.currentTarget)
+                    setGenerateMenuDoc(doc)
+                  }}
+                >
+                  <RocketLaunchIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title='Delete'>
+                <IconButton
+                  size='small'
+                  sx={{ p: 0.5 }}
+                  onClick={e => {
+                    e.stopPropagation()
+                    openDialog('delete', doc)
+                  }}
+                  color='error'
+                >
+                  <DeleteOutlineIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
         ),
 
         renderCell: params => {
-          const doc = documents.find(d => d.id === params.field)
-          const pageNumber = params.row.pageNumber
-          const answerObj = answers.find(a => a.documentId === doc?.documentId && a.pageNumber === pageNumber)
+          const doc = sortedDocuments.find(d => d.id === params.field)
+          const order = params.row.order
+
+          if (order > docMaxPages[doc.id]) {
+            return null
+          }
+          const answerObj = answers.find(a => a.nodeDocumentId === doc?.id && (a.order ?? 0) === order)
 
           if (isLoadingAnswers) {
             return (
@@ -244,7 +316,6 @@ const DocumentDigitizationGrid = ({
                     // Trigger generate for this cell only
                     onGenerateSingleAnswer(params.row, q)
                   } else {
-                    setSelectedAnswer(answerObj)
                     openDialog('answerDetail', answerObj)
                   }
                 }
@@ -290,21 +361,21 @@ const DocumentDigitizationGrid = ({
         }
       }))
     ],
-    [documents, selectedDocuments, onSelectDocument, onDeleteDocumentNode]
+    [documents, selectedDocuments, onSelectDocument]
   )
 
   const rows = useMemo(() => {
-    return pageNumbers.map(page => {
-      const row = { id: `page-${page}`, pageNumber: page }
-      documents.forEach(doc => {
-        const answer = answers.find(a => a.documentId === doc.documentId && a.pageNumber === page)
+    return pageNumbers.map(order => {
+      const row = { id: `order-${order}`, order }
+      sortedDocuments.forEach(doc => {
+        const answer = answers.find(a => a.documentId === doc.documentId && (a.nodeValue?.order ?? 0) === order)
         row[doc.id] = answer ? answer.message : ''
       })
       return row
     })
-  }, [pageNumbers, documents, answers])
+  }, [pageNumbers, sortedDocuments, answers])
 
-  if (!documents.length) {
+  if (!sortedDocuments.length) {
     return (
       <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
         No documents to display. Please add some above.
@@ -378,17 +449,41 @@ const DocumentDigitizationGrid = ({
         }}
       />
 
-      <AnswerDialog
-        open={answerDialogOpen}
-        onClose={() => setAnswerDialogOpen(false)}
-        answer={selectedAnswer}
-      />
-
-      <DocumentDialog
-        open={openDocDialog}
-        onClose={() => setOpenDocDialog(false)}
-        document={activeDoc}
-      />
+      <Menu
+        anchorEl={generateMenuAnchor}
+        open={Boolean(generateMenuAnchor)}
+        onClose={() => {
+          setGenerateMenuAnchor(null)
+          setGenerateMenuDoc(null)
+        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <MenuItem
+          onClick={() => {
+            setGenerateMenuAnchor(null)
+            if (generateMenuDoc) onGenerate([generateMenuDoc]) // whole document
+          }}
+        >
+          Generate Document
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setGenerateMenuAnchor(null)
+            if (generateMenuDoc) {
+              // Here you should trigger your page generation logic, e.g. open another dialog
+              // or set some "select page(s)" UI
+              // For example:
+              // setPageGenerationDialogOpen(true)
+              // setPageGenerationDoc(generateMenuDoc)
+              // or call a prop: onGeneratePages(generateMenuDoc)
+              onGenerateSingleAnswer(generateMenuDoc)
+            }
+          }}
+        >
+          Generate Pages
+        </MenuItem>
+      </Menu>
     </Box>
   )
 }

@@ -78,11 +78,13 @@ public class TaskEdgeService {
             TaskNode savedAnswerNode = taskNodeRepository.save(answerNode);
 
             // Create edge to document node
-            TaskEdge docEdge = new TaskEdge();
-            docEdge.setFromNode(savedAnswerNode);
-            docEdge.setToNode(dto.getDocumentNode());
-            docEdge.setRelationType(answersRelationType);
-            edgesToSave.add(docEdge);
+            if (!(dto.getDocumentNode() == null)) {
+                TaskEdge docEdge = new TaskEdge();
+                docEdge.setFromNode(savedAnswerNode);
+                docEdge.setToNode(dto.getDocumentNode());
+                docEdge.setRelationType(answersRelationType);
+                edgesToSave.add(docEdge);
+            }
 
             // Create edge to question node
             if (!(dto.getQuestionNode() == null)) {

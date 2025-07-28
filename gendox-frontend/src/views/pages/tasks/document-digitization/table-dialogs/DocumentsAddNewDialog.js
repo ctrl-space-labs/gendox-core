@@ -59,7 +59,6 @@ const DocumentsAddNewDialog = ({
     if (open && organizationId && projectId && token) {
       dispatch(fetchProjectDocuments({ organizationId, projectId, token, page }))
     }
-    console.log('Fetching project documents:', { organizationId, projectId, token, page })
   }, [open, organizationId, projectId, token, page, dispatch])
 
   useEffect(() => {

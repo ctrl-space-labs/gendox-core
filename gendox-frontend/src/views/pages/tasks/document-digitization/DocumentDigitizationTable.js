@@ -17,6 +17,8 @@ import HeaderSection from './table-components/HeaderSection'
 import taskService from 'src/gendox-sdk/taskService'
 import { downloadBlobForCSV } from 'src/utils/tasks/downloadBlobForCSV'
 import DialogManager from './table-components/DocumentDigitizationDialogs'
+import useDocumentGeneration from 'src/views/pages/tasks/task-hooks/useGeneration'
+import useExportFile from 'src/views/pages/tasks/task-hooks/useExportFile'
 
 const MAX_PAGE_SIZE = 2147483647
 
@@ -36,11 +38,10 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const [pageSize, setPageSize] = useState(20)
   const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
   const [selectedDocuments, setSelectedDocuments] = useState([])
-  const [isGeneratingAll, setIsGeneratingAll] = useState(false)
-  const [isGeneratingCells, setIsGeneratingCells] = useState({})
   const [dialogs, setDialogs] = useState({ newDoc: false, delete: false, docDetail: false, answerDetail: false })
   const [activeNode, setActiveNode] = useState(null)
-  const [isExportingCsv, setIsExportingCsv] = useState(false)
+  const [isSelectingDocuments, setIsSelectingDocuments] = useState(false)
+  const [editMode, setEditMode] = useState(false)
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
@@ -59,7 +60,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   }, [organizationId, projectId, taskId, token, page, pageSize, dispatch])
 
   const fetchAnswers = useCallback(() => {
-   return dispatch(
+    return dispatch(
       fetchTaskNodesByCriteria({
         organizationId,
         projectId,
@@ -119,7 +120,8 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
               documentId: node.documentId,
               name: fullDoc?.title || 'Unknown Document',
               prompt: node.nodeValue?.documentMetadata?.prompt || '',
-              structure: node.nodeValue?.documentMetadata?.structure || ''
+              structure: node.nodeValue?.documentMetadata?.structure || '',
+              createdAt: node.createdAt || new Date().toISOString()
             }
           })
         )
@@ -140,12 +142,13 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     setAnswers(
       (taskNodesAnswerList?.content || []).map(node => ({
         id: node.id,
-        documentNodeId: node.nodeValue?.documentNodeId || '',
+        nodeDocumentId: node.nodeValue?.nodeDocumentId || '',
         message: node.nodeValue?.message || '',
         answerValue: node.nodeValue?.answerValue || '',
         answerFlagEnum: node.nodeValue?.answerFlagEnum || '',
         pageNumber: node.pageNumber || 0,
-        documentId: node.documentId || ''
+        documentId: node.documentId || '',
+        order: node.nodeValue?.order || 0 // Assuming order is stored in nodeValue
       }))
     )
   }, [taskNodesAnswerList])
@@ -168,9 +171,12 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   }, [page, pageSize])
 
   // DIALOG HANDLERS
-  const openDialog = (dialogType, node = null) => {
+  const openDialog = (dialogType, node = null, forceEditMode = false) => {
     setDialogs(prev => ({ ...prev, [dialogType]: true }))
     setActiveNode(node)
+    if (dialogType === 'docDetail' && typeof setEditMode === 'function') {
+    setEditMode(forceEditMode)
+  }
   }
   const closeDialog = dialogType => {
     setDialogs(prev => ({ ...prev, [dialogType]: false }))
@@ -181,117 +187,26 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     setSelectedDocuments(prev => (checked ? [...prev, docId] : prev.filter(id => id !== docId)))
   }
 
-  const handleGenerateSelected = async () => {
-    console.log('handleGenerateSelected called with selectedDocuments:', selectedDocuments)
-    // const selectedDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
-    // if (selectedDocs.length === 0) {
-    //   toast.error('No documents selected!')
-    //   return
-    // }
-    // const newCells = {}
-    // selectedDocs.forEach(doc => {
-    //   questions.forEach(q => {
-    //     newCells[`${doc.id}_${q.id}`] = true
-    //   })
-    // })
-    // setIsGeneratingCells(cells => ({ ...cells, ...newCells }))
+  // Handle Generate Documents
+  const { generateDocumentAnswers, generateAnswerForCell, generatingAll, generateSelectedDocuments } =
+    useDocumentGeneration({
+      organizationId,
+      projectId,
+      taskId,
+      documents,
+      setSelectedDocuments,
+      pollJobStatus,
+      token
+    })
 
-    // try {
-    //   await handleGenerate({ docs: selectedDocs, reGenerateExistingAnswers: true })
-    // } finally {
-    //   // Clean up just those cells
-    //   setIsGeneratingCells(cells => {
-    //     const copy = { ...cells }
-    //     selectedDocs.forEach(doc => {
-    //       questions.forEach(q => {
-    //         delete copy[`${doc.id}_${q.id}`]
-    //       })
-    //     })
-    //     return copy
-    //   })
-    // }
-  }
-
-  const handleGenerateSingleAnswer = async (doc, docPage) => {
-    if (!doc || !docPage) {
-      toast.error('Documents page is required to generate an answer.')
-      return
-    }
-    const key = `${doc.id}_${docPage.id}`
-    setIsGeneratingCells(cells => ({ ...cells, [key]: true }))
-    try {
-      await handleGenerate({ docs: doc, pageToGenerate: docPage, reGenerateExistingAnswers: true })
-    } finally {
-      setIsGeneratingCells(cells => {
-        const { [key]: _, ...rest } = cells
-        return rest
-      })
-    }
-  }
-
-  const handleGenerate = async ({ docs, pageToGenerate, reGenerateExistingAnswers, isAll = false }) => {
-    if (isAll) setIsGeneratingAll(true)
-
-    try {
-      const docIds = Array.isArray(docs) ? docs.map(d => d.id) : [docs.id]
-
-      const criteria = {
-        taskId,
-        documentNodeIds: docIds,
-        reGenerateExistingAnswers
-      }
-
-      const jobExecutionId = await dispatch(
-        executeTaskByType({ organizationId, projectId, taskId, criteria, token })
-      ).unwrap()
-
-      toast.success(`Started generation for ${docIds.length} document(s)`)
-
-      await pollJobStatus(jobExecutionId)
-
-      const answerTaskNodePayload = {
-        documentNodeIds: documents.map(d => d.id)
-      }
-
-      dispatch(
-        fetchAnswerTaskNodes({
-          organizationId,
-          projectId,
-          taskId,
-          answerTaskNodePayload,
-          token,
-          page: 0,
-          size: MAX_PAGE_SIZE
-        })
-      )
-
-      toast.success(`Generation completed for ${docIds.length} document(s)`)
-      setSelectedDocuments([])
-    } catch (error) {
-      console.error('Failed to start generation:', error)
-      toast.error('Failed to start generation')
-    } finally {
-      if (isAll) setIsGeneratingAll(false)
-    }
-  }
-
-  const handleExportCsv = async () => {
-    if (documents.length === 0) {
-      toast.error('No documents to export')
-      return
-    }
-    setIsExportingCsv(true)
-    try {
-      const csvBlob = await taskService.exportTaskCsv(organizationId, projectId, taskId, token)
-      downloadBlobForCSV(csvBlob, `${selectedTask?.title?.replace(/\s+/g, '_') || 'document_insights'}.csv`)
-      toast.success('CSV exported successfully!')
-    } catch (error) {
-      console.error('Failed to export CSV:', error)
-      toast.error('Failed to export CSV')
-    } finally {
-      setIsExportingCsv(false)
-    }
-  }  
+  const { exportCsv, isExportingCsv } = useExportFile({
+    organizationId,
+    projectId,
+    taskId,
+    token,
+    selectedTask,
+    documents
+  })
 
   return (
     <>
@@ -299,18 +214,19 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         <HeaderSection
           title={selectedTask?.title}
           description={selectedTask?.description}
-          //   openUploader={openUploader}
-          openUploader={() => openDialog('newDoc')}
+          openAddDocument={() => openDialog('newDoc')}
           onGenerate={reGenerateExistingAnswers =>
-            handleGenerate({ docs: documents, reGenerateExistingAnswers: reGenerateExistingAnswers, isAll: true })
+            generateDocumentAnswers({ docs: documents, reGenerateExistingAnswers: reGenerateExistingAnswers, isAll: true })
           }
           disableGenerateAll={documents.length === 0}
           isLoading={isLoading}
           isExportingCsv={isExportingCsv}
-          onExportCsv={handleExportCsv}
-          onGenerateSelected={handleGenerateSelected}
+          onExportCsv={exportCsv}
+          onGenerateSelected={generateSelectedDocuments}
+          isSelectingDocuments={isSelectingDocuments}
+          setIsSelectingDocuments={setIsSelectingDocuments}
           selectedDocuments={selectedDocuments}
-          isGeneratingAll={isGeneratingAll}
+          setSelectedDocuments={setSelectedDocuments}
         />
 
         <Box
@@ -321,14 +237,9 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         >
           <DocumentDigitizationGrid
             openDialog={openDialog}
-            organizationId={organizationId}
-            projectId={projectId}
-            token={token}
-            taskId={taskId}
             documents={documents}
             answers={answers}
             onGenerate={docs => handleGenerate({ docs: docs, reGenerateExistingAnswers: true })}
-            onDeleteDocumentNode={nodeId => openDialog('delete', nodeId)}
             isLoadingAnswers={isLoadingAnswers}
             isLoading={isLoading}
             isBlurring={isBlurring}
@@ -337,11 +248,13 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
             setPage={setPage}
             setPageSize={setPageSize}
             totalDocuments={totalDocuments}
+            isSelectingDocuments={isSelectingDocuments}
             selectedDocuments={selectedDocuments}
             onSelectDocument={handleSelectDocument}
-            onGenerateSingleAnswer={handleGenerateSingleAnswer}
-            isGeneratingAll={isGeneratingAll}
-            isGeneratingCells={isGeneratingCells}
+            onGenerateSingleAnswer={generateAnswerForCell}
+            isGeneratingAll={generatingAll}
+            editMode={editMode}
+            setEditMode={setEditMode}
           />
         </Box>
       </Paper>
@@ -357,6 +270,8 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         projectId={projectId}
         token={token}
         existingDocuments={documents}
+        editMode={editMode}
+        setEditMode={setEditMode}
       />
     </>
   )

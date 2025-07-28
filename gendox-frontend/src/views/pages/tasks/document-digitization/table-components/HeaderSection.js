@@ -7,19 +7,22 @@ import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import DownloadIcon from '@mui/icons-material/Download'
 import CircularProgress from '@mui/material/CircularProgress'
+import { set } from 'nprogress'
 
 const HeaderSection = ({
   title,
   description,
-  openUploader,
+  openAddDocument,
   onGenerate,
   disableGenerateAll,
   isLoading,
   onExportCsv,
   isExportingCsv,
   onGenerateSelected = () => {},
+  isSelectingDocuments,
+  setIsSelectingDocuments,
   selectedDocuments,
-  isGeneratingAll
+  setSelectedDocuments,
 }) => {
   const [anchorEl, setAnchorEl] = useState(null)
 
@@ -64,7 +67,7 @@ const HeaderSection = ({
               <Button
                 variant='outlined'
                 startIcon={<DocumentScannerIcon />}
-                onClick={openUploader}
+                onClick={openAddDocument}
                 disabled={isLoading}
                 size='medium'
                 fullWidth
@@ -73,7 +76,6 @@ const HeaderSection = ({
               </Button>
             </span>
           </Tooltip>
-          
         </Stack>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap='100%'>
@@ -107,7 +109,7 @@ const HeaderSection = ({
                   onClick={() => {
                     if (!disableGenerateAll && !isLoading) onGenerate(false)
                   }}
-                  disabled={disableGenerateAll || isLoading || isGeneratingAll}
+                  disabled={disableGenerateAll || isLoading }
                   sx={{
                     fontWeight: 700,
                     textTransform: 'uppercase',
@@ -123,7 +125,7 @@ const HeaderSection = ({
                   color='primary'
                   size='small'
                   onClick={handleToggle}
-                  disabled={disableGenerateAll || isLoading || isGeneratingAll}
+                  disabled={disableGenerateAll || isLoading }
                   sx={{
                     minWidth: '40px',
                     px: 0,
@@ -167,6 +169,33 @@ const HeaderSection = ({
                 </Box>
               </MenuItem>
               <Divider sx={{ my: 1 }} />
+
+              {!isSelectingDocuments ? (
+                <MenuItem
+                  onClick={() => {
+                    setAnchorEl(null)
+                    setIsSelectingDocuments(true)
+                  }}
+                  disabled={disableGenerateAll || isLoading}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <RocketLaunchIcon fontSize='small' color='primary' />
+                    Select documents 
+                  </Box>
+                </MenuItem>
+              ) : (
+                <MenuItem
+                  onClick={() => {
+                    setAnchorEl(null)
+                    setIsSelectingDocuments(false)
+                    setSelectedDocuments([])
+                  }}
+                  sx={{ color: 'error.main' }}
+                >
+                  Cancel selection
+                </MenuItem>
+              )}
+
               <MenuItem
                 onClick={() => {
                   setAnchorEl(null)
@@ -194,6 +223,7 @@ const HeaderSection = ({
                   </Box>
                 </Box>
               </MenuItem>
+
               {(disableGenerateAll || isLoading) && (
                 <Box sx={{ px: 2, pb: 1, pt: 0.5, fontSize: '0.85rem', color: 'grey.600' }}>
                   {isLoading ? 'Loading, please wait...' : 'Add documents to enable generation.'}

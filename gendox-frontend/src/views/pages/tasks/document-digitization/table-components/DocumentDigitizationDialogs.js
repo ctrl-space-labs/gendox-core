@@ -19,10 +19,13 @@ const DocumentDigitizationDialogs = ({
   organizationId,
   projectId,
   token,
-  existingDocuments
+  existingDocuments,
+  setEditMode,
+  editMode
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
+  
 
   // SAVE document handler for DocumentDialog
   const handleSaveDocument = async (updatedDoc) => {
@@ -90,6 +93,7 @@ const DocumentDigitizationDialogs = ({
         projectId={projectId}
         token={token}
         taskId={taskId}
+
       />
 
       {/* Document Details Dialog */}
@@ -99,6 +103,8 @@ const DocumentDigitizationDialogs = ({
         onClose={() => onClose('docDetail')}
         onSave={handleSaveDocument}
         loading={loading}
+        editMode={editMode}
+        setEditMode={setEditMode}
       />
 
       {/* Answer Details Dialog */}

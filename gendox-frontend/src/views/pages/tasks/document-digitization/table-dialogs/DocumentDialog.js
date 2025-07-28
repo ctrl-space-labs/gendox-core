@@ -112,18 +112,22 @@ const DocumentDialog = ({
   document, // { id, name, prompt, structure }
   onSave,
   loading,
+  editMode,
+  setEditMode
 }) => {
-  const [editMode, setEditMode] = useState(false)
   const [prompt, setPrompt] = useState(document?.prompt || '')
   const [structure, setStructure] = useState(document?.structure || '')
-
-  
 
   useEffect(() => {
     if (!open) setEditMode(false)
   }, [open])
 
-  
+  useEffect(() => {
+    if (document) {
+      setPrompt(document.prompt || '')
+      setStructure(document.structure || '')
+    }
+  }, [document, open])
 
   if (!document) return null
 
@@ -242,7 +246,7 @@ const DocumentDialog = ({
             <Button onClick={() => setEditMode(false)} variant='outlined'>
               Cancel
             </Button>
-        <Button onClick={() => onSave({ ...document, prompt, structure })} disabled={loading}>
+            <Button onClick={() => onSave({ ...document, prompt, structure })} disabled={loading}>
               Save
             </Button>
           </>
