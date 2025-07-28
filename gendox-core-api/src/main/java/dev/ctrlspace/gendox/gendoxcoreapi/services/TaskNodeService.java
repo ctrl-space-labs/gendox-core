@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
@@ -95,7 +96,7 @@ public class TaskNodeService {
         return taskNodeRepository.save(existing);
     }
 
-    public TaskNode updateTaskNodeForDocumentDigitization (TaskDocumentMetadataDTO taskDocumentMetadataDTO) throws GendoxException {
+    public TaskNode updateTaskNodeForDocumentDigitization(TaskDocumentMetadataDTO taskDocumentMetadataDTO) throws GendoxException {
         logger.info("Updating task node for document digitization: {}", taskDocumentMetadataDTO);
 
         TaskNode existing = taskNodeRepository.findById(taskDocumentMetadataDTO.getTaskNodeId())
@@ -164,7 +165,22 @@ public class TaskNodeService {
         taskNodeRepository.deleteAll(nodesToDelete);
     }
 
-    @Transactional
+    public void deleteDocumentNodeAndConnectionNodesByDocumentId(UUID documentId) throws GendoxException {
+        logger.info("Deleting document node and its connection nodes for document: {}", documentId);
+
+        // Fetch all task nodes that are of type DOCUMENT and have the given documentId
+        List<TaskNode> documentNodes = taskNodeRepository.findAllByDocumentIdAndNodeTypeName(documentId, TaskNodeTypeConstants.DOCUMENT);
+        if (documentNodes == null || documentNodes.isEmpty()) {
+            return;
+        }
+
+        for (TaskNode documentNode : documentNodes) {
+            // Delete the document node and its connected edges
+            deleteTaskNodeAndConnectionNodes(documentNode.getId());
+        }
+    }
+
+    //    @Transactional
     public void deleteTaskNodeAndConnectionNodes(UUID taskNodeId) throws GendoxException {
         logger.info("Deleting task node and its connection nodes: {}", taskNodeId);
 
@@ -287,7 +303,6 @@ public class TaskNodeService {
 
         return new PageImpl<>(metadataList, pageable, nodesPage.getTotalElements());
     }
-
 
 
 }

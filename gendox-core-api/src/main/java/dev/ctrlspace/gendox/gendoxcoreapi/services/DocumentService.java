@@ -35,6 +35,7 @@ public class DocumentService {
     private TypeService typeService;
     private AuditLogsService auditLogsService;
     private SubscriptionValidationService subscriptionValidationService;
+    private TaskNodeService taskNodeService;
 
     private EntityManager entityManager;
 
@@ -46,7 +47,8 @@ public class DocumentService {
                            TypeService typeService,
                            AuditLogsService auditLogsService,
                            SubscriptionValidationService subscriptionValidationService,
-                           EntityManager entityManager) {
+                           EntityManager entityManager,
+                           TaskNodeService taskNodeService) {
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentSectionService = documentSectionService;
         this.projectDocumentService = projectDocumentService;
@@ -54,6 +56,7 @@ public class DocumentService {
         this.auditLogsService = auditLogsService;
         this.subscriptionValidationService = subscriptionValidationService;
         this.entityManager = entityManager;
+        this.taskNodeService = taskNodeService;
     }
 
 
@@ -213,8 +216,11 @@ public class DocumentService {
 
     @Transactional
     public void deleteDocument(DocumentInstance documentInstance, UUID projectId) throws GendoxException {
-        // Use the new bulk deletion method
-        documentSectionService.deleteSections(documentInstance.getDocumentInstanceSections());
+
+        List<DocumentInstanceSection> managedSections = documentSectionService.getSectionsByDocument(documentInstance.getId());
+        // Delete task nodes associated with this document
+        taskNodeService.deleteDocumentNodeAndConnectionNodesByDocumentId(documentInstance.getId());
+        documentSectionService.deleteSections(managedSections);
 
         // Delete any project-specific associations (make sure these are done in bulk too)
         projectDocumentService.deleteProjectDocument(documentInstance.getId(), projectId);
@@ -228,6 +234,8 @@ public class DocumentService {
 
         auditLogsService.saveAuditLogs(deleteDocumentAuditLogs);
         documentInstanceRepository.delete(documentInstance);
+
+
     }
 
 

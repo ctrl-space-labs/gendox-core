@@ -12,6 +12,7 @@ import dev.ctrlspace.gendox.provenAi.utils.MockUniqueIdentifierServiceAdapter;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
 import dev.ctrlspace.provenai.iscc.IsccCodeResponse;
 import dev.ctrlspace.provenai.iscc.IsccCodeService;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,7 @@ public class DocumentSectionService {
     private MessageService messageService;
     private IsccCodeService isccCodeService;
     private DocumentUtils documentUtils;
+    private EntityManager entityManager;
 
     @Value("${proven-ai.sdk.iscc.enabled}")
     private Boolean isccEnabled;
@@ -57,7 +59,8 @@ public class DocumentSectionService {
                                   MockUniqueIdentifierServiceAdapter mockUniqueIdentifierServiceAdapter,
                                   MessageService messageService,
                                   IsccCodeService isccCodeService,
-                                  DocumentUtils documentUtils
+                                  DocumentUtils documentUtils,
+                                  EntityManager entityManager
     ) {
         this.typeService = typeService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
@@ -66,6 +69,7 @@ public class DocumentSectionService {
         this.messageService = messageService;
         this.isccCodeService = isccCodeService;
         this.documentUtils = documentUtils;
+        this.entityManager = entityManager;
     }
 
 
@@ -355,14 +359,16 @@ public class DocumentSectionService {
         // delete EmbeddingGroups and embeddings associated with these sections
         embeddingService.deleteEmbeddingGroupsBySectionIds(sectionIds);
 
-        // delete the sections
-        documentInstanceSectionRepository.deleteAllByIdsInBulk(sectionIds);
-
-        // delete the metadata
         List<UUID> metadataIds = sections.stream()
                 .map(section -> section.getDocumentSectionMetadata().getId())
                 .distinct()
                 .collect(Collectors.toList());
+
+        // delete the sections
+        documentInstanceSectionRepository.deleteAll(sections);
+        // flush the entity manager to ensure the sections are deleted
+        entityManager.flush();
+        // delete the metadata
         documentSectionMetadataRepository.bulkDeleteByIds(metadataIds);
     }
 
