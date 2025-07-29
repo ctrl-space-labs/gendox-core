@@ -180,7 +180,7 @@ public class TaskNodeService {
         }
     }
 
-    //    @Transactional
+    @Transactional
     public void deleteTaskNodeAndConnectionNodes(UUID taskNodeId) throws GendoxException {
         logger.info("Deleting task node and its connection nodes: {}", taskNodeId);
 
@@ -197,15 +197,12 @@ public class TaskNodeService {
 
         List<TaskEdge> edgesToDeleteFrom = taskEdgeRepository.findAllByFromNodeIdIn(fromNodeIds);
 
-        if (!edgesToDeleteTo.isEmpty()) {
-            List<UUID> edgeIdsTo = edgesToDeleteTo.stream().map(TaskEdge::getId).toList();
-            taskEdgeRepository.deleteAllByIds(edgeIdsTo);
-            entityManager.clear();
-        }
+        Set<UUID> allEdgeIdsToDelete = new HashSet<>();
+        allEdgeIdsToDelete.addAll(edgesToDeleteTo.stream().map(TaskEdge::getId).toList());
+        allEdgeIdsToDelete.addAll(edgesToDeleteFrom.stream().map(TaskEdge::getId).toList());
 
-        if (!edgesToDeleteFrom.isEmpty()) {
-            List<UUID> edgeIdsFrom = edgesToDeleteFrom.stream().map(TaskEdge::getId).toList();
-            taskEdgeRepository.deleteAllByIds(edgeIdsFrom);
+        if (!allEdgeIdsToDelete.isEmpty()) {
+            taskEdgeRepository.deleteAllByIds(new ArrayList<>(allEdgeIdsToDelete));
             entityManager.clear();
         }
 

@@ -365,11 +365,11 @@ public class DocumentSectionService {
                 .collect(Collectors.toList());
 
         // delete the sections
-        documentInstanceSectionRepository.deleteAll(sections);
-        // flush the entity manager to ensure the sections are deleted
-        entityManager.flush();
+        documentInstanceSectionRepository.deleteAllByIdsInBulk(sectionIds);
         // delete the metadata
         documentSectionMetadataRepository.bulkDeleteByIds(metadataIds);
+        entityManager.flush();
+        entityManager.clear();
     }
 
 
