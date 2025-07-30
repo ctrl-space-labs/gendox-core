@@ -114,6 +114,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         List<List<DocumentInstanceSection>> sectionChunks = groupSectionsBy100kTokens(documentGroupWithQuestions.getDocumentNode().getDocumentId());
 
         // For each question group
+        questionLoop:
         for (List<CompletionQuestionRequest> questionChunk : questionChunks) {
 
             String allQuestions = objectMapper.writeValueAsString(questionChunk);
@@ -124,6 +125,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
             List<GroupedQuestionAnswers> partialAnswers = new ArrayList<>();
             // a group of sections, is called a document part, each document might be splitted in 1, 2 or more parts (like 100K tokens per part)
+            sectionsLoop:
             for (List<DocumentInstanceSection> groupedDocumentPart : sectionChunks) {
 
                 ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()),
@@ -131,9 +133,14 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                         "DOCUMENT_INSIGHTS - Task:" + task.getId());
                 Message message = buildPromptMessageForSections(groupedDocumentPart, questionsPrompt, newThread);
                 GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionChunk);
-                if (documentPartAnswers != null) {
-                    partialAnswers.add(documentPartAnswers);
+                if (documentPartAnswers == null) {
+                    // ignore all partialAnswers, since there is an error, we cant trust any of those
+                    logger.warn("Skipping whole question group, because of some error, and doc has multiple section chunks");
+                    continue questionLoop;
                 }
+
+                partialAnswers.add(documentPartAnswers);
+
             }
 
             if (partialAnswers.size() == 1) {
