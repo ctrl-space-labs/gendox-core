@@ -28,6 +28,8 @@ public class OpenAiCompletionRequest {
     private Long maxTokens;
     @JsonProperty("max_completion_tokens")
     private Long maxCompletionTokens;
+    @JsonProperty("reasoning_effort")
+    private String reasoningEffort;
     @JsonProperty("tool_choice")
     private String toolChoice;
     @JsonProperty("tools")

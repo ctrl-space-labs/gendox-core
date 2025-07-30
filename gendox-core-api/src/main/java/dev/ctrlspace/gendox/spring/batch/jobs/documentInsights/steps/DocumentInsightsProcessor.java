@@ -38,7 +38,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     // package private for testing
     static final int MAX_QUESTIONS_PER_BUCKET = 10;
     static final int MAX_QUESTION_TOKENS_PER_BUCKET = 5_000;
-    static final int MAX_TOKENS = 100_000;
+    static final int MAX_SECTIONS_CHUNK_TOKENS = 100_000;
 
 
     private final CompletionService completionService;
@@ -406,7 +406,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
             int sectionTokens = enc.encode(section.getSectionValue()).size();
 
             // if adding this section would overflow the 100k-token budget, flush
-            if (currentTokens + sectionTokens > MAX_TOKENS && !currentGroup.isEmpty()) {
+            if (currentTokens + sectionTokens > MAX_SECTIONS_CHUNK_TOKENS && !currentGroup.isEmpty()) {
                 groups.add(currentGroup);
                 currentGroup = new ArrayList<>();
                 currentTokens = 0;

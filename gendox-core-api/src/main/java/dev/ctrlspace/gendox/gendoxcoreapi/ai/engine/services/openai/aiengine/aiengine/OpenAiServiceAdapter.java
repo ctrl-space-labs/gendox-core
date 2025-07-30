@@ -285,11 +285,12 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                     .maxCompletionTokens(null);
         }
         // Special case for o1, o3, o4 models
-        else if (List.of("o1", "o3", "o4").stream()
+        else if (List.of("o1", "o3", "o4", "gemini-2.5").stream()
                 .anyMatch(aiModel.getModel()::contains)) {
             openAiGptRequestBuilder
                     .temperature(1.0)
                     .topP(1.0)
+                    .reasoningEffort(computeReasoningEffort(aiModelRequestParams.getMaxTokens()))
                     .maxCompletionTokens(2 * aiModelRequestParams.getMaxTokens())
                     .maxTokens(null);
 
@@ -310,6 +311,13 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         return completionResponse;
     }
 
+    // TODO Change this. The reassoning budget should be stored as an extra property n the Agent
+    private static String computeReasoningEffort(Long maxTokens) {
+        if (maxTokens >= 32_768) return "high";
+        if (maxTokens >= 8_192)  return "medium";
+        if (maxTokens >= 1_024)  return "low";
+        return "none";
+    }
 
 
     @Override
