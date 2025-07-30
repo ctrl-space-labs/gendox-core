@@ -182,7 +182,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         id: node.id,
         documentNodeId: node.nodeValue?.nodeDocumentId || '',
         questionNodeId: node.nodeValue?.nodeQuestionId || '',
-        message: node.nodeValue?.ç || '',
+        message: node.nodeValue?.message || '',
         answerValue: node.nodeValue?.answerValue || '',
         answerFlagEnum: node.nodeValue?.answerFlagEnum || ''
       }))
@@ -352,7 +352,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           size: MAX_PAGE_SIZE
         })
       )
-      
+
       toast.success(`Generation completed for ${docIds.length} document(s)`)
       setSelectedDocuments([])
     } catch (error) {
