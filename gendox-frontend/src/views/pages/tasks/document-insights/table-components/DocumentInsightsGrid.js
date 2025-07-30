@@ -1,23 +1,19 @@
 import React, { useMemo, useState } from 'react'
-import AnswerDialog from '../table-dialogs/AnswerDialog'
 import { DataGrid } from '@mui/x-data-grid'
-import { Box, Button, IconButton, Tooltip } from '@mui/material'
+import { Box,IconButton, Tooltip } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import UploadFileIcon from '@mui/icons-material/UploadFile'
 import CircularProgress from '@mui/material/CircularProgress'
-import QuestionsDialog from '../table-dialogs/QuestionsDialog'
 import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
 import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
-import { getQuestionMessageById } from 'src/utils/tasks/taskUtils'
 
 const DocumentInsightsGrid = ({
+  openDialog,
   documents,
   questions,
   answers,
   openUploader,
-  onDeleteQuestionOrDocumentNode,
   onGenerate,
   isLoadingAnswers,
   isLoading,
@@ -31,13 +27,10 @@ const DocumentInsightsGrid = ({
   onSelectDocument = () => {},
   onGenerateSingleAnswer = () => {},
   isGeneratingAll,
-  isGeneratingCells
+  isGeneratingCells = {},
+  isSelectingDocuments = false
 }) => {
   const theme = useTheme()
-  const [answerDialogOpen, setAnswerDialogOpen] = useState(false)
-  const [selectedAnswer, setSelectedAnswer] = useState(null)
-  const [questionDialogOpen, setQuestionDialogOpen] = useState(false)
-  const [selectedQuestionText, setSelectedQuestionText] = useState('')
 
   const sortedQuestions = useMemo(() => {
     return [...questions].sort((a, b) => a.order - b.order)
@@ -65,40 +58,21 @@ const DocumentInsightsGrid = ({
               onClick={() => !params.row.documentId && openUploader()}
               title={params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
             >
-              {params.row.documentId ? (
-                <Tooltip title='Delete Document'>
+              {isSelectingDocuments && (
+                <Tooltip title='Mark for Generation'>
                   <span>
-                    <IconButton
-                      color='error'
-                      size='small'
-                      onClick={e => {
-                        e.stopPropagation() // prevent row click
-                        onDeleteQuestionOrDocumentNode(params.row.id) // use correct handler
+                    <Checkbox
+                      checked={selectedDocuments.includes(params.row.id)}
+                      onChange={e => onSelectDocument(params.row.id, e.target.checked)}
+                      disabled={sortedQuestions.length === 0}
+                      inputProps={{
+                        'aria-label': `Mark document ${params.row.name} for generation`
                       }}
-                      aria-label='delete document'
-                    >
-                      <DeleteOutlineIcon fontSize='small' />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              ) : (
-                <Tooltip title='Select Document'>
-                  <span>
-                    <IconButton
-                      color='primary'
-                      size='small'
-                      onClick={e => {
-                        e.stopPropagation() // prevent row click
-                        openUploader()
-                      }}
-                      aria-label='select document'
-                    >
-                      <UploadFileIcon fontSize='small' />
-                    </IconButton>
+                      sx={{ p: 0.5 }}
+                    />
                   </span>
                 </Tooltip>
               )}
-
               <Box
                 component='span'
                 sx={{
@@ -113,17 +87,20 @@ const DocumentInsightsGrid = ({
               >
                 {params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
               </Box>
-              <Tooltip title='Mark for Generation'>
+
+              <Tooltip title='Delete Document'>
                 <span>
-                  <Checkbox
-                    checked={selectedDocuments.includes(params.row.id)}
-                    onChange={e => onSelectDocument(params.row.id, e.target.checked)}
-                    disabled={sortedQuestions.length === 0}
-                    inputProps={{
-                      'aria-label': `Mark document ${params.row.name} for generation`
+                  <IconButton
+                    color='error'
+                    size='small'
+                    onClick={e => {
+                      e.stopPropagation() // prevent row click
+                      openDialog('delete', params.row)
                     }}
-                    sx={{ p: 0.5 }}
-                  />
+                    aria-label='delete document'
+                  >
+                    <DeleteOutlineIcon fontSize='small' />
+                  </IconButton>
                 </span>
               </Tooltip>
             </Box>
@@ -167,8 +144,7 @@ const DocumentInsightsGrid = ({
               component='button'
               type='button'
               onClick={() => {
-                setSelectedQuestionText(q.text)
-                setQuestionDialogOpen(true)
+                openDialog('questionDetail', q)
               }}
               aria-label={`View question details for ${q.text}`}
               sx={{
@@ -208,7 +184,7 @@ const DocumentInsightsGrid = ({
               }}
               onClick={e => {
                 e.stopPropagation()
-                onDeleteQuestionOrDocumentNode(q.id)
+                openDialog('delete', q)
               }}
               aria-label={`Delete question ${q.text}`}
             />
@@ -270,8 +246,7 @@ const DocumentInsightsGrid = ({
                     // Trigger generate for this cell only
                     onGenerateSingleAnswer(params.row, q)
                   } else {
-                    setSelectedAnswer(answerObj)
-                    setAnswerDialogOpen(true)
+                    openDialog('answerDetail', answerObj)
                   }
                 }
               }}
@@ -316,7 +291,7 @@ const DocumentInsightsGrid = ({
         }
       }))
     ]
-  }, [sortedQuestions, answers, onDeleteQuestionOrDocumentNode, openUploader, onGenerate, isLoadingAnswers, isLoading])
+  }, [sortedQuestions, answers, openUploader, onGenerate, isLoadingAnswers, isLoading])
 
   const rows = useMemo(() => {
     return documents.map(doc => {
@@ -406,19 +381,6 @@ const DocumentInsightsGrid = ({
             fontSize: '0.875rem'
           }
         }}
-      />
-
-      <AnswerDialog
-        open={answerDialogOpen}
-        onClose={() => setAnswerDialogOpen(false)}
-        answer={selectedAnswer}
-        questionText={selectedAnswer ? getQuestionMessageById(questions, selectedAnswer.questionNodeId) : ''}
-      />
-      <QuestionsDialog
-        open={questionDialogOpen}
-        onClose={() => setQuestionDialogOpen(false)}
-        questions={[selectedQuestionText]}
-        readOnly={true}
       />
     </Box>
   )

@@ -1,12 +1,10 @@
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
 import taskService from 'src/gendox-sdk/taskService'
-import {
-  deleteTaskNode,
-} from 'src/store/activeTask/activeTask'
-import DocumentDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDialog'
-import DocumentsAddNewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentsAddNewDialog'
-import AnswerDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/AnswerDialog'
+import { deleteTaskNode } from 'src/store/activeTask/activeTask'
+import DocumentDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentDialog'
+import DocumentsAddNewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentsAddNewDialog'
+import AnswerDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationAnswerDialog'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 
 const DocumentDigitizationDialogs = ({
@@ -25,10 +23,9 @@ const DocumentDigitizationDialogs = ({
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
-  
 
   // SAVE document handler for DocumentDialog
-  const handleSaveDocument = async (updatedDoc) => {
+  const handleUpdateDocument = async updatedDoc => {
     setLoading(true)
     try {
       await taskService.updateTaskNodeForDocumentDigitization(
@@ -50,7 +47,7 @@ const DocumentDigitizationDialogs = ({
   }
 
   // ADD NEW documents handler for DocumentsAddNewDialog
-  const handleAddNewDocuments = async (selectedDocIds) => {
+  const handleAddNewDocuments = async selectedDocIds => {
     setLoading(true)
     try {
       for (const docId of selectedDocIds) {
@@ -60,7 +57,7 @@ const DocumentDigitizationDialogs = ({
           documentId: docId
         }
         await taskService.createTaskNode(organizationId, projectId, taskNodePayload, token)
-      }      
+      }
       if (refreshDocuments) await refreshDocuments()
       onClose('newDoc')
     } finally {
@@ -69,11 +66,11 @@ const DocumentDigitizationDialogs = ({
   }
 
   // DELETE handler for DeleteConfirmDialog
-  const handleConfirmDelete = async (nodeId) => {
+  const handleConfirmDelete = async nodeId => {
     setLoading(true)
     try {
       await dispatch(deleteTaskNode({ organizationId, projectId, taskNodeId: nodeId, token })).unwrap()
-    if (refreshDocuments) await refreshDocuments()
+      if (refreshDocuments) await refreshDocuments()
       onClose('delete')
     } finally {
       setLoading(false)
@@ -86,14 +83,13 @@ const DocumentDigitizationDialogs = ({
       <DocumentsAddNewDialog
         open={dialogs.newDoc}
         onClose={() => onClose('newDoc')}
-       existingDocuments={existingDocuments}
+        existingDocuments={existingDocuments}
         loading={loading}
         onConfirm={handleAddNewDocuments}
         organizationId={organizationId}
         projectId={projectId}
         token={token}
         taskId={taskId}
-
       />
 
       {/* Document Details Dialog */}
@@ -101,7 +97,7 @@ const DocumentDigitizationDialogs = ({
         open={dialogs.docDetail}
         document={activeNode}
         onClose={() => onClose('docDetail')}
-        onSave={handleSaveDocument}
+        onSave={handleUpdateDocument}
         loading={loading}
         editMode={editMode}
         setEditMode={setEditMode}

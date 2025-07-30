@@ -5,20 +5,13 @@ import { Box, Modal } from '@mui/material'
 import Paper from '@mui/material/Paper'
 import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
-import {
-  fetchTaskNodesByTaskId,
-  executeTaskByType,
-  fetchTaskNodesByCriteria,
-  fetchAnswerTaskNodes
-} from 'src/store/activeTask/activeTask'
+import { fetchTaskNodesByCriteria } from 'src/store/activeTask/activeTask'
 import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocument'
 import DocumentDigitizationGrid from './table-components/DocumentDigitizationGrid'
-import HeaderSection from './table-components/HeaderSection'
-import taskService from 'src/gendox-sdk/taskService'
-import { downloadBlobForCSV } from 'src/utils/tasks/downloadBlobForCSV'
+import HeaderSection from './table-components/DocumentDigitizationHeaderSection'
 import DialogManager from './table-components/DocumentDigitizationDialogs'
-import useDocumentGeneration from 'src/views/pages/tasks/task-hooks/useGeneration'
-import useExportFile from 'src/views/pages/tasks/task-hooks/useExportFile'
+import useDocumentGeneration from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationGeneration'
+import useExportFile from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationExportFile'
 
 const MAX_PAGE_SIZE = 2147483647
 
@@ -175,8 +168,8 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     setDialogs(prev => ({ ...prev, [dialogType]: true }))
     setActiveNode(node)
     if (dialogType === 'docDetail' && typeof setEditMode === 'function') {
-    setEditMode(forceEditMode)
-  }
+      setEditMode(forceEditMode)
+    }
   }
   const closeDialog = dialogType => {
     setDialogs(prev => ({ ...prev, [dialogType]: false }))
@@ -216,7 +209,11 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
           description={selectedTask?.description}
           openAddDocument={() => openDialog('newDoc')}
           onGenerate={reGenerateExistingAnswers =>
-            generateDocumentAnswers({ docs: documents, reGenerateExistingAnswers: reGenerateExistingAnswers, isAll: true })
+            generateDocumentAnswers({
+              docs: documents,
+              reGenerateExistingAnswers: reGenerateExistingAnswers,
+              isAll: true
+            })
           }
           disableGenerateAll={documents.length === 0}
           isLoading={isLoading}
@@ -253,8 +250,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
             onSelectDocument={handleSelectDocument}
             onGenerateSingleAnswer={generateAnswerForCell}
             isGeneratingAll={generatingAll}
-            editMode={editMode}
-            setEditMode={setEditMode}
           />
         </Box>
       </Paper>

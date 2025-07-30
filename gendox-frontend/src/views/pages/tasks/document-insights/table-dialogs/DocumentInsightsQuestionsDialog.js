@@ -15,7 +15,17 @@ import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import GendoxMarkdownRenderer from 'src/views/pages/markdown-renderer/GendoxMarkdownRenderer'
 
-const QuestionsDialog = ({ open, onClose, questions, setQuestions, onConfirm, readOnly = false, isSaving = false }) => {
+const QuestionsDialog = ({
+  open,
+  onClose,
+  questions,
+  setQuestions,
+  onConfirm,
+  activeQuestion,
+  editMode = false,
+  isSaving = false
+}) => {
+  const questionText = activeQuestion?.text || ''
   const theme = useTheme()
   const safeQuestions = Array.isArray(questions) ? questions : ['']
 
@@ -51,7 +61,7 @@ const QuestionsDialog = ({ open, onClose, questions, setQuestions, onConfirm, re
           <CircularProgress />
         </Box>
       )}
-      <DialogTitle>{readOnly ? 'View Question' : 'Add New Question'}</DialogTitle>
+      <DialogTitle>{!editMode ? 'View Question' : 'Add New Question'}</DialogTitle>
 
       <DialogContent>
         {safeQuestions.map((q, idx) => (
@@ -74,9 +84,9 @@ const QuestionsDialog = ({ open, onClose, questions, setQuestions, onConfirm, re
               {idx + 1}
             </Box>
 
-            {readOnly ? (
+            {!editMode ? (
               <Box sx={{ mt: 1 }}>
-                <GendoxMarkdownRenderer markdownText={q || '*No question text*'} />
+                <GendoxMarkdownRenderer markdownText={questionText || '*No question text*'} />
               </Box>
             ) : (
               <TextareaAutosize
@@ -94,15 +104,15 @@ const QuestionsDialog = ({ open, onClose, questions, setQuestions, onConfirm, re
                   resize: 'vertical',
                   boxSizing: 'border-box',
                   outline: 'none',
-                  cursor: readOnly ? 'default' : 'text'
+                  cursor: !editMode ? 'default' : 'text'
                 }}
                 value={q}
-                onChange={e => !readOnly && handleQuestionChange(idx, e.target.value)}
+                onChange={e => editMode && handleQuestionChange(idx, e.target.value)}
                 aria-label={`Question ${idx + 1}`}
-                readOnly={readOnly}
+                readOnly={!editMode}
               />
             )}
-            {!readOnly && questions.length > 1 && (
+            {editMode && questions.length > 1 && (
               <IconButton
                 aria-label='Remove question'
                 onClick={() => handleRemoveQuestion(idx)}
@@ -114,7 +124,7 @@ const QuestionsDialog = ({ open, onClose, questions, setQuestions, onConfirm, re
             )}
           </Box>
         ))}
-        {!readOnly && (
+        {editMode && (
           <Button startIcon={<AddIcon />} onClick={handleAddQuestion} sx={{ mb: 1 }} variant='outlined' fullWidth>
             Add New
           </Button>
@@ -125,7 +135,7 @@ const QuestionsDialog = ({ open, onClose, questions, setQuestions, onConfirm, re
         <Button onClick={onClose} variant='contained' disabled={isSaving}>
           Close
         </Button>
-        {!readOnly && (
+        {editMode && (
           <Button variant='contained' onClick={onConfirm} disabled={isSaving}>
             {isSaving ? 'Saving...' : 'Save'}
           </Button>

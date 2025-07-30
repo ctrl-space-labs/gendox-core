@@ -1,28 +1,30 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import { Box, Typography, Stack, Button, Tooltip, Divider, Menu, MenuItem } from '@mui/material'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 
+import DescriptionIcon from '@mui/icons-material/Description'
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import DownloadIcon from '@mui/icons-material/Download'
 import CircularProgress from '@mui/material/CircularProgress'
-import { set } from 'nprogress'
 
 const HeaderSection = ({
   title,
   description,
   openAddDocument,
+  onAddQuestion,
   onGenerate,
   disableGenerateAll,
   isLoading,
   onExportCsv,
   isExportingCsv,
   onGenerateSelected = () => {},
-  isSelectingDocuments,
-  setIsSelectingDocuments,
   selectedDocuments,
   setSelectedDocuments,
+  isGeneratingAll,
+  isSelectingDocuments,
+  setIsSelectingDocuments,
 }) => {
   const [anchorEl, setAnchorEl] = useState(null)
 
@@ -53,7 +55,7 @@ const HeaderSection = ({
 
       <Divider sx={{ mb: 3 }} />
 
-      {/* Action buttons: Add Document */}
+      {/* Action buttons: Add Document, Add Question */}
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         spacing={2}
@@ -73,6 +75,20 @@ const HeaderSection = ({
                 fullWidth
               >
                 Add Document
+              </Button>
+            </span>
+          </Tooltip>
+          <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Add a new question to the list'}>
+            <span>
+              <Button
+                variant='outlined'
+                startIcon={<DescriptionIcon />}
+                onClick={onAddQuestion}
+                disabled={isLoading}
+                size='medium'
+                fullWidth
+              >
+                Add Questions
               </Button>
             </span>
           </Tooltip>
@@ -109,7 +125,7 @@ const HeaderSection = ({
                   onClick={() => {
                     if (!disableGenerateAll && !isLoading) onGenerate(false)
                   }}
-                  disabled={disableGenerateAll || isLoading }
+                  disabled={disableGenerateAll || isLoading || isGeneratingAll}
                   sx={{
                     fontWeight: 700,
                     textTransform: 'uppercase',
@@ -125,7 +141,7 @@ const HeaderSection = ({
                   color='primary'
                   size='small'
                   onClick={handleToggle}
-                  disabled={disableGenerateAll || isLoading }
+                  disabled={disableGenerateAll || isLoading || isGeneratingAll}
                   sx={{
                     minWidth: '40px',
                     px: 0,
@@ -169,8 +185,7 @@ const HeaderSection = ({
                 </Box>
               </MenuItem>
               <Divider sx={{ my: 1 }} />
-
-              {!isSelectingDocuments ? (
+               {!isSelectingDocuments ? (
                 <MenuItem
                   onClick={() => {
                     setAnchorEl(null)
@@ -195,11 +210,12 @@ const HeaderSection = ({
                   Cancel selection
                 </MenuItem>
               )}
-
               <MenuItem
                 onClick={() => {
-                  setAnchorEl(null)
+                  setAnchorEl(null)                 
                   onGenerateSelected()
+                  setIsSelectingDocuments(false)
+                  setSelectedDocuments([])
                 }}
                 disabled={disableGenerateAll || isLoading || selectedDocuments.length === 0}
               >
@@ -223,10 +239,9 @@ const HeaderSection = ({
                   </Box>
                 </Box>
               </MenuItem>
-
               {(disableGenerateAll || isLoading) && (
                 <Box sx={{ px: 2, pb: 1, pt: 0.5, fontSize: '0.85rem', color: 'grey.600' }}>
-                  {isLoading ? 'Loading, please wait...' : 'Add documents to enable generation.'}
+                  {isLoading ? 'Loading, please wait...' : 'Add documents and questions to enable generation.'}
                 </Box>
               )}
             </Menu>

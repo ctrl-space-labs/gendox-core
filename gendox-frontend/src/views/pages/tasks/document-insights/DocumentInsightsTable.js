@@ -1,34 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
-import { Box, Modal } from '@mui/material'
+import { Box } from '@mui/material'
 import Paper from '@mui/material/Paper'
-import QuestionsDialog from './table-dialogs/QuestionsDialog'
-import DocumentsDialog from './table-dialogs/DocumentsDialog'
 import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
-import {
-  fetchTaskNodesByTaskId,
-  executeTaskByType,
-  deleteTaskNode,
-  fetchTaskNodesByCriteria,
-  fetchAnswerTaskNodes,
-  createTaskNodesBatch
-} from 'src/store/activeTask/activeTask'
+import { fetchTaskNodesByCriteria, fetchAnswerTaskNodes } from 'src/store/activeTask/activeTask'
 import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocument'
+import useGeneration from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsGeneration'
+import useExportFile from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsExportFile'
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
-import HeaderSection from './table-components/HeaderSection'
-import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
-import taskService from 'src/gendox-sdk/taskService'
-import { downloadBlobForCSV } from 'src/utils/tasks/downloadBlobForCSV'
-
-function chunk(array, size) {
-  const result = []
-  for (let i = 0; i < array.length; i += size) {
-    result.push(array.slice(i, i + size))
-  }
-  return result
-}
+import HeaderSection from './table-components/DocumentInsightsHeaderSection'
+import DialogManager from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsDialogs'
 
 const MAX_PAGE_SIZE = 2147483647
 
@@ -44,22 +27,68 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const [documents, setDocuments] = useState([])
   const [questions, setQuestions] = useState([])
   const [answers, setAnswers] = useState([])
-  const [showUploader, setShowUploader] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [deleteNodeId, setDeleteNodeId] = useState(null)
-  const [isExportingCsv, setIsExportingCsv] = useState(false)
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
   const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
-  const [showDialog, setShowDialog] = useState(false)
-  const [questionsDialogTexts, setQuestionsDialogTexts] = useState([''])
-  const [activeQuestion, setActiveQuestion] = useState(null)
-  const [isSavingQuestions, setIsSavingQuestions] = useState(false)
   const [selectedDocuments, setSelectedDocuments] = useState([])
-  const [isGeneratingAll, setIsGeneratingAll] = useState(false)
-  const [isGeneratingCells, setIsGeneratingCells] = useState({})
+
+  const [isSelectingDocuments, setIsSelectingDocuments] = useState(false)
+  const [dialogs, setDialogs] = useState({
+    newDoc: false,
+    delete: false,
+    answerDetail: false,
+    questionDetail: false
+  })
+  const [activeNode, setActiveNode] = useState(null)
+  const [editMode, setEditMode] = useState(false)
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
+
+  const fetchDocuments = useCallback(() => {
+    return dispatch(
+      fetchTaskNodesByCriteria({
+        organizationId,
+        projectId,
+        taskId,
+        criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
+        token,
+        page,
+        size: pageSize
+      })
+    )
+  }, [organizationId, projectId, taskId, token, page, pageSize, dispatch])
+
+  const fetchQuestions = useCallback(() => {
+    return dispatch(
+      fetchTaskNodesByCriteria({
+        organizationId,
+        projectId,
+        taskId,
+        criteria: { taskId, nodeTypeNames: ['QUESTION'] },
+        token,
+        page: 0,
+        size: MAX_PAGE_SIZE
+      })
+    )
+  }, [organizationId, projectId, taskId, token, dispatch, page, pageSize])
+
+  const fetchAnswers = useCallback(() => {
+    const answerTaskNodePayload = {
+      documentNodeIds: documents.map(d => d.id),
+      questionNodeIds: questions.map(q => q.id)
+    }
+    return dispatch(
+      fetchAnswerTaskNodes({
+        organizationId,
+        projectId,
+        taskId,
+        answerTaskNodePayload,
+        token,
+        page: 0,
+        size: MAX_PAGE_SIZE
+      })
+    )
+  }, [documents, questions])
 
   // 1️⃣ **Reset all local state when switching tasks/orgs/projects**
   useEffect(() => {
@@ -73,35 +102,17 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   // 2️⃣ **Fetch task nodes (documents & questions) when dependencies change**
   useEffect(() => {
     if (!(organizationId && projectId && taskId && token)) return
-
-    dispatch(
-      fetchTaskNodesByCriteria({
-        organizationId,
-        projectId,
-        taskId,
-        criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
-        token,
-        page,
-        size: pageSize
-      })
-    )
+    fetchDocuments()
       .unwrap()
       .catch(() => toast.error('Failed to load documents'))
+  }, [fetchDocuments])
 
-    dispatch(
-      fetchTaskNodesByCriteria({
-        organizationId,
-        projectId,
-        taskId,
-        criteria: { taskId, nodeTypeNames: ['QUESTION'] },
-        token,
-        page: 0,
-        size: MAX_PAGE_SIZE
-      })
-    )
+  useEffect(() => {
+    if (!(organizationId && projectId && taskId && token)) return
+    fetchQuestions()
       .unwrap()
       .catch(() => toast.error('Failed to load questions'))
-  }, [organizationId, projectId, taskId, token, dispatch, page, pageSize])
+  }, [fetchQuestions])
 
   // 3️⃣ **Sync questions to local state (combine reset and fill)**
   useEffect(() => {
@@ -153,27 +164,12 @@ const DocumentInsightsTable = ({ selectedTask }) => {
 
   // 5️⃣ **Answers: Fetch when you have docs & questions**
   useEffect(() => {
-    if (!documents.length || !questions.length || !(organizationId && projectId && taskId && token)) return
+    if (!(organizationId && projectId && taskId && token)) return
 
-    const answerTaskNodePayload = {
-      documentNodeIds: documents.map(d => d.id),
-      questionNodeIds: questions.map(q => q.id)
-    }
-
-    dispatch(
-      fetchAnswerTaskNodes({
-        organizationId,
-        projectId,
-        taskId,
-        answerTaskNodePayload,
-        token,
-        page: 0,
-        size: MAX_PAGE_SIZE
-      })
-    )
+    fetchAnswers()
       .unwrap()
       .catch(() => toast.error('Failed to load answers'))
-  }, [documents, questions, organizationId, projectId, taskId, token, dispatch])
+  }, [fetchAnswers])
 
   // 6️⃣ **Sync answers to local state**
   useEffect(() => {
@@ -206,225 +202,45 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     setSelectedDocuments([])
   }, [page, pageSize])
 
-  const openUploader = () => setShowUploader(true)
-
-  const handleAddQuestions = async () => {
-    const validQuestions = (Array.isArray(questionsDialogTexts) ? questionsDialogTexts : [questionsDialogTexts])
-      .map(q => (typeof q === 'string' ? q.trim() : ''))
-      .filter(q => q.length > 0)
-
-    if (validQuestions.length === 0) {
-      toast.error('No questions to save!')
-      return
-    }
-    setIsSavingQuestions(true)
-    try {
-      const payloads = validQuestions.map((questionText, idx) => ({
-        taskId,
-        nodeType: 'QUESTION',
-        nodeValue: { message: questionText, order: idx }
-      }))
-
-      // Send in batches of 10
-      const batches = chunk(payloads, 10)
-      for (const batch of batches) {
-        await dispatch(
-          createTaskNodesBatch({
-            organizationId,
-            projectId,
-            taskNodesPayload: batch, // <-- array of up to 10
-            token
-          })
-        ).unwrap()
-      }
-      // Refresh the question list after saving all
-      await dispatch(
-        fetchTaskNodesByCriteria({
-          organizationId,
-          projectId,
-          taskId,
-          criteria: { taskId, nodeTypeNames: ['QUESTION'] },
-          token,
-          page: 0,
-          size: MAX_PAGE_SIZE
-        })
-      )
-      setIsSavingQuestions(false)
-      closeDialog()
-      toast.success('Questions added!')
-    } catch (error) {
-      toast.error('Failed to save questions')
-      console.error(error)
-    }
-  }
-
   const handleSelectDocument = (docId, checked) => {
     setSelectedDocuments(prev => (checked ? [...prev, docId] : prev.filter(id => id !== docId)))
   }
 
-  const handleGenerateSelected = async () => {
-    const selectedDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
-    if (selectedDocs.length === 0) {
-      toast.error('No documents selected!')
-      return
-    }
-    const newCells = {}
-    selectedDocs.forEach(doc => {
-      questions.forEach(q => {
-        newCells[`${doc.id}_${q.id}`] = true
-      })
+  // DIALOG HANDLERS
+  const openDialog = (dialogType, node = null, forceEditMode = false) => {
+    setDialogs(prev => ({ ...prev, [dialogType]: true }))
+    setActiveNode(node)
+    if (dialogType === 'questionDetail') setEditMode(forceEditMode)
+  }
+  const closeDialog = dialogType => {
+    setDialogs(prev => ({ ...prev, [dialogType]: false }))
+    setActiveNode(null)
+    if (dialogType === 'questionDetail') setEditMode(false)
+  }
+
+  // Handle Generate Documents
+  const { handleGenerateSelected, handleGenerateSingleAnswer, handleGenerate, isGeneratingAll, isGeneratingCells } =
+    useGeneration({
+      organizationId,
+      projectId,
+      taskId,
+      documents,
+      questions,
+      selectedDocuments,
+      setSelectedDocuments,
+      pollJobStatus,
+      token,
+      fetchAnswers
     })
-    setIsGeneratingCells(cells => ({ ...cells, ...newCells }))
 
-    try {
-      await handleGenerate({ docs: selectedDocs, reGenerateExistingAnswers: true })
-    } finally {
-      // Clean up just those cells
-      setIsGeneratingCells(cells => {
-        const copy = { ...cells }
-        selectedDocs.forEach(doc => {
-          questions.forEach(q => {
-            delete copy[`${doc.id}_${q.id}`]
-          })
-        })
-        return copy
-      })
-    }
-  }
-
-  const handleGenerateSingleAnswer = async (doc, question) => {
-    if (!doc || !question) {
-      toast.error('Document and question are required to generate an answer.')
-      return
-    }
-    const key = `${doc.id}_${question.id}`
-    setIsGeneratingCells(cells => ({ ...cells, [key]: true }))
-    try {
-      await handleGenerate({ docs: doc, questionsToGenerate: question, reGenerateExistingAnswers: true })
-    } finally {
-      setIsGeneratingCells(cells => {
-        const { [key]: _, ...rest } = cells
-        return rest
-      })
-    }
-  }
-
-  const handleGenerate = async ({ docs, questionsToGenerate, reGenerateExistingAnswers, isAll = false }) => {
-    if (isAll) setIsGeneratingAll(true)
-
-    try {
-      const docIds = Array.isArray(docs) ? docs.map(d => d.id) : [docs.id]
-
-      const questionIds = questionsToGenerate
-        ? Array.isArray(questionsToGenerate)
-          ? questionsToGenerate.map(q => q.id)
-          : [questionsToGenerate.id]
-        : questions.map(q => q.id)
-
-      const criteria = {
-        taskId,
-        documentNodeIds: docIds,
-        questionNodeIds: questionIds,
-        reGenerateExistingAnswers
-      }
-
-      const jobExecutionId = await dispatch(
-        executeTaskByType({ organizationId, projectId, taskId, criteria, token })
-      ).unwrap()
-
-      toast.success(`Started generation for ${docIds.length} document(s)`)
-
-      await pollJobStatus(jobExecutionId)
-
-      const answerTaskNodePayload = {
-        documentNodeIds: documents.map(d => d.id),
-        questionNodeIds: questions.map(q => q.id)
-      }
-
-      dispatch(
-        fetchAnswerTaskNodes({
-          organizationId,
-          projectId,
-          taskId,
-          answerTaskNodePayload,
-          token,
-          page: 0,
-          size: MAX_PAGE_SIZE
-        })
-      )
-
-      toast.success(`Generation completed for ${docIds.length} document(s)`)
-      setSelectedDocuments([])
-    } catch (error) {
-      console.error('Failed to start generation:', error)
-      toast.error('Failed to start generation')
-    } finally {
-      if (isAll) setIsGeneratingAll(false)
-    }
-  }
-
-  const confirmDeleteQuestionOrDocumentNode = taskNodeId => {
-    setDeleteNodeId(taskNodeId)
-    setDeleteDialogOpen(true)
-  }
-
-  const handleDeleteConfirmed = async () => {
-    if (!deleteNodeId) return
-
-    try {
-      await dispatch(deleteTaskNode({ organizationId, projectId, taskNodeId: deleteNodeId, token })).unwrap()
-      toast.success('Deleted successfully.')
-
-      // Update local state
-      setQuestions(prev => prev.filter(q => q.id !== deleteNodeId))
-      setDocuments(prev => prev.filter(d => d.id !== deleteNodeId))
-
-      // Refetch updated data
-      dispatch(fetchTaskNodesByTaskId({ organizationId, projectId, taskId, token }))
-    } catch (error) {
-      toast.error('Failed to delete the node.')
-      console.error('Delete node error:', error)
-    } finally {
-      setDeleteDialogOpen(false)
-      setDeleteNodeId(null)
-    }
-  }
-
-  const openAddDialog = () => {
-    setActiveQuestion(null)
-    setQuestionsDialogTexts([''])
-    setShowDialog(true)
-  }
-
-  const openEditDialog = question => {
-    setActiveQuestion(question)
-    setQuestionsDialogTexts([question.text])
-    setShowDialog(true)
-  }
-
-  const closeDialog = () => {
-    setShowDialog(false)
-    setQuestionsDialogTexts([''])
-    setActiveQuestion(null)
-  }
-
-  const handleExportCsv = async () => {
-    if (documents.length === 0 || questions.length === 0) {
-      toast.error('No documents or questions to export')
-      return
-    }
-    setIsExportingCsv(true)
-    try {
-      const csvBlob = await taskService.exportTaskCsv(organizationId, projectId, taskId, token)
-      downloadBlobForCSV(csvBlob, `${selectedTask?.title?.replace(/\s+/g, '_') || 'document_insights'}.csv`)
-      toast.success('CSV exported successfully!')
-    } catch (error) {
-      console.error('Failed to export CSV:', error)
-      toast.error('Failed to export CSV')
-    } finally {
-      setIsExportingCsv(false)
-    }
-  }
+  const { exportCsv, isExportingCsv } = useExportFile({
+    organizationId,
+    projectId,
+    taskId,
+    token,
+    selectedTask,
+    documents
+  })
 
   return (
     <>
@@ -432,18 +248,21 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         <HeaderSection
           title={selectedTask?.title}
           description={selectedTask?.description}
-          onAddQuestion={openAddDialog}
-          openUploader={openUploader}
+          onAddQuestion={() => openDialog('questionDetail', null, true)}
+          openAddDocument={() => openDialog('newDoc')}
           onGenerate={reGenerateExistingAnswers =>
-            handleGenerate({ docs: documents, reGenerateExistingAnswers: reGenerateExistingAnswers, isAll: true })
+            handleGenerate({ docs: documents, reGenerateExistingAnswers, isAll: true })
           }
           disableGenerateAll={documents.length === 0 || questions.length === 0}
           isLoading={isLoading}
           isExportingCsv={isExportingCsv}
-          onExportCsv={handleExportCsv}
+          onExportCsv={exportCsv}
           onGenerateSelected={handleGenerateSelected}
           selectedDocuments={selectedDocuments}
+          setSelectedDocuments={setSelectedDocuments}
           isGeneratingAll={isGeneratingAll}
+          isSelectingDocuments={isSelectingDocuments}
+          setIsSelectingDocuments={setIsSelectingDocuments}
         />
 
         <Box
@@ -453,11 +272,11 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           }}
         >
           <DocumentInsightsGrid
+            openDialog={openDialog}
             documents={documents}
             questions={questions}
             answers={answers}
             onGenerate={docs => handleGenerate({ docs: docs, reGenerateExistingAnswers: true })}
-            onDeleteQuestionOrDocumentNode={confirmDeleteQuestionOrDocumentNode}
             isLoadingAnswers={isLoadingAnswers}
             isLoading={isLoading}
             isBlurring={isBlurring}
@@ -471,45 +290,25 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             onGenerateSingleAnswer={handleGenerateSingleAnswer}
             isGeneratingAll={isGeneratingAll}
             isGeneratingCells={isGeneratingCells}
+            isSelectingDocuments={isSelectingDocuments}
           />
         </Box>
       </Paper>
 
-      <Modal
-        open={showUploader}
-        onClose={() => setShowUploader(false)}
-        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      >
-        <Box sx={{ outline: 'none', p: 2, bgcolor: 'background.paper' }}>
-          <DocumentsDialog
-            open={showUploader}
-            onClose={() => setShowUploader(false)}
-            taskId={taskId}
-            organizationId={organizationId}
-            projectId={projectId}
-            token={token}
-            existingDocuments={documents}
-          />
-        </Box>
-      </Modal>
-
-      <QuestionsDialog
-        open={showDialog}
+      <DialogManager
+        dialogs={dialogs}
+        activeNode={activeNode}
         onClose={closeDialog}
-        questions={questionsDialogTexts}
-        setQuestions={setQuestionsDialogTexts}
-        onConfirm={handleAddQuestions}
-        activeQuestion={activeQuestion}
-        isSaving={isSavingQuestions}
-      />
-      <DeleteConfirmDialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={handleDeleteConfirmed}
-        title='Confirm Deletion'
-        contentText='Are you sure you want to delete these generated answers? This action cannot be undone.'
-        confirmButtonText='Delete'
-        cancelButtonText='Cancel'
+        refreshDocuments={fetchDocuments}
+        refreshQuestions={fetchQuestions}
+        refreshAnswers={fetchAnswers}
+        taskId={taskId}
+        organizationId={organizationId}
+        projectId={projectId}
+        token={token}
+        documents={documents}
+        questions={questions}
+        editMode={editMode}
       />
     </>
   )

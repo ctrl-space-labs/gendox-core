@@ -9,55 +9,10 @@ import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
 import DescriptionIcon from '@mui/icons-material/Description'
 import SchemaIcon from '@mui/icons-material/Schema'
-import DocumentDialog from '../table-dialogs/DocumentDialog'
+import DocumentDialog from '../table-dialogs/DocumentDigitizationDocumentDialog'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import EditIcon from '@mui/icons-material/Edit'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
-
-// const DocumentHeaderMenu = ({ doc, onDelete, onEdit }) => {
-//   const [anchorEl, setAnchorEl] = useState(null)
-//   const open = Boolean(anchorEl)
-
-//   const handleMenuOpen = e => {
-//     e.stopPropagation()
-//     setAnchorEl(e.currentTarget)
-//   }
-//   const handleMenuClose = e => {
-//     if (e) e.stopPropagation()
-//     setAnchorEl(null)
-//   }
-//   const handleDelete = e => {
-//     e.stopPropagation()
-//     onDelete(doc)
-//     handleMenuClose(e)
-//   }
-//   const handleEdit = e => {
-//     e.stopPropagation()
-//     onEdit(doc)
-//     handleMenuClose(e)
-//   }
-
-//   return (
-//     <>
-//       <IconButton size='small' onClick={handleMenuOpen} sx={{ ml: 1, color: 'primary.main' }} aria-label='Actions'>
-//         <Icon icon='mdi:dots-vertical' />
-//       </IconButton>
-//       <Menu
-//         anchorEl={anchorEl}
-//         open={open}
-//         onClose={handleMenuClose}
-//         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-//         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-//         onClick={e => e.stopPropagation()}
-//       >
-//         <MenuItem onClick={handleEdit}>Edit</MenuItem>
-//         <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
-//           Delete
-//         </MenuItem>
-//       </Menu>
-//     </>
-//   )
-// }
 
 const DocumentDigitizationGrid = ({
   openDialog,
@@ -76,9 +31,7 @@ const DocumentDigitizationGrid = ({
   selectedDocuments = [],
   onSelectDocument = () => {},
   onGenerateSingleAnswer = () => {},
-  isGeneratingAll,
-  editMode = false,
-  setEditMode = () => {},
+  isGeneratingAll
 }) => {
   const theme = useTheme()
 

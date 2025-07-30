@@ -4,6 +4,7 @@ import { useTheme } from '@mui/material/styles'
 import { answerFlagEnum, getAnswerFlagProps } from 'src/utils/tasks/answerFlagEnum'
 import Chip from 'src/views/custom-components/mui/chip'
 import GendoxMarkdownRenderer from 'src/views/pages/markdown-renderer/GendoxMarkdownRenderer'
+import { getQuestionMessageById } from 'src/utils/tasks/taskUtils'
 
 const MAX_COLLAPSED_HEIGHT = 80 // px, about 3-4 lines
 
@@ -73,13 +74,14 @@ function ExpandableMarkdownSection({ label, markdown, maxHeight = MAX_COLLAPSED_
   )
 }
 
-const AnswerDialog = ({ open, onClose, answer }) => {
+const AnswerDialog = ({ open, onClose, answer, questions }) => {
   const theme = useTheme()
   if (!answer) return null
   const flagProps = getAnswerFlagProps(answer.answerFlagEnum)
+  const questionText = answer ? getQuestionMessageById(questions, answer.questionNodeId) : ''
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth='xl' aria-labelledby='answer-dialog-title'>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth='sm' aria-labelledby='answer-dialog-title'>
       <DialogTitle
         id='answer-dialog-title'
         sx={{
@@ -103,9 +105,9 @@ const AnswerDialog = ({ open, onClose, answer }) => {
       <Divider sx={{ borderColor: theme.palette.divider }} />
 
       <DialogContent sx={{ py: 3 }}>
-        {/* {questionText && (
+        {questionText && (
           <ExpandableMarkdownSection label='Question' markdown={questionText} maxHeight={MAX_COLLAPSED_HEIGHT} />
-        )} */}
+        )}
 
         <Divider sx={{ borderColor: theme.palette.divider, mb: 3 }} />
 
