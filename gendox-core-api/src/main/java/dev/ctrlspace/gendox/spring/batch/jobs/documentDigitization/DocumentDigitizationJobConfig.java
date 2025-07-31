@@ -92,5 +92,17 @@ public class DocumentDigitizationJobConfig {
         return executor;
     }
 
+    @Bean
+    public TaskExecutor asyncLlmCompletionsExecutor(ObservationRegistry observationRegistry) {
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("llm-completion-");
+        // switch to Loom’s virtual threads (each task → its own VT)
+        executor.setVirtualThreads(true);
+
+        executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
+        // Throttle concurrency
+        executor.setConcurrencyLimit(threadPoolSize);
+        return executor;
+    }
+
 
 }

@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
@@ -12,13 +13,16 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Component
 @StepScope
@@ -29,13 +33,10 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
     private final MessageService messageService;
     private final CompletionService completionService;
     private final ProjectService projectService;
+    private final TaskExecutor asyncLlmCompletionsExecutor;
 
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private boolean reGenerateExistingAnswers;
-    // package private for testing
-    static final int MAX_QUESTIONS_PER_BUCKET = 10;
-    static final int MAX_QUESTION_TOKENS_PER_BUCKET = 5_000;
-    static final int MAX_TOKENS = 100_000;
 
     private TaskService taskService;
     private TaskNodeService taskNodeService;
@@ -49,7 +50,10 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
                                          TaskNodeService taskNodeService,
                                          CompletionService completionService,
                                          ProjectService projectService,
-                                         DocumentService documentService, DownloadService downloadService, MessageService messageService) {
+                                         DocumentService documentService,
+                                         DownloadService downloadService,
+                                         MessageService messageService,
+                                         TaskExecutor asyncLlmCompletionsExecutor) {
         this.taskService = taskService;
         this.taskNodeService = taskNodeService;
         this.documentService = documentService;
@@ -57,9 +61,8 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         this.completionService = completionService;
         this.projectService = projectService;
         this.messageService = messageService;
+        this.asyncLlmCompletionsExecutor = asyncLlmCompletionsExecutor;
     }
-
-
 
 
     @Override
@@ -74,11 +77,17 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
             return null;
         }
 
+        // each job run for a single task and project
+        if (task == null) {
+            task = taskService.getTaskById(documentNode.getTaskId());
+        }
+        if (project == null) {
+            project = projectService.getProjectById(task.getProjectId());
+        }
+
         DocumentInstance documentInstance = documentService.getDocumentInstanceById(documentNode.getDocumentId());
 
-        List<AnswerCreationDTO> newAnswers = new ArrayList<>();
 
-        //TODO select ansers for the specific document
         TaskNodeCriteria existingAnswersCriteria = TaskNodeCriteria.builder()
                 .taskId(documentNode.getTaskId())
                 .nodeTypeNames(List.of("ANSWER"))
@@ -87,94 +96,124 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         Page<TaskNode> existingNodes = taskNodeService.getTaskNodesByCriteria(existingAnswersCriteria, Pageable.unpaged());
 
 
+        Set<Integer> existingPageNums = existingNodes.getContent().stream()
+                .map(n -> n.getNodeValue().getOrder() - 1)
+                .collect(Collectors.toSet());
+
+        Integer totalPages = downloadService.countDocumentPages(documentInstance.getRemoteUrl());
+
+        List<Integer> pagesToProcess;
         if (reGenerateExistingAnswers) {
             batch.setAnswersToDelete(existingNodes.getContent());
+            pagesToProcess = IntStream.range(0, totalPages).boxed().toList();
         } else {
-            throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "NOT_SUPPORTED_YET", "Generate only the new answers not supported yet");
-            //TODO find a way to OCR the pages that dont have answers yet
-//            documentGroupWithQuestions.getQuestionNodes().removeAll(answeredQuestions);
-//            if (documentGroupWithQuestions.getQuestionNodes().isEmpty()) {
-//                return null; // nothing left to process
-//            }
-        }
+            pagesToProcess = IntStream.range(0, totalPages)
+                    .filter(i -> !existingPageNums.contains(i))
+                    .boxed()
+                    .collect(Collectors.toList());
 
-        // each job run for a single task and project
-        if (task == null) {
-            task = taskService.getTaskById(documentNode.getTaskId());
-        }
-        if (project == null){
-            project = projectService.getProjectById(task.getProjectId());
+            if (pagesToProcess.isEmpty()) {
+                logger.info("Nothing to generate for documentNode {}: all {} pages already have answers.",
+                        documentNode.getId(), totalPages);
+                return null; // ← early exit; no rendering done
+            }
         }
 
         String prompt = documentMetadata.getPrompt();
         String structure = documentMetadata.getStructure();
         DocPageToImageOptions printOptions = DocPageToImageOptions.builder().build();
-        // this doubles the input tokens, compaire to the default 768
-        // as of 2025-07-26 Gemini has a bug and doesnt calculate the tokens correctly 2.0 -> 1800 tokens, 2.5 -> charges 256 tokens
-
-        // increase print quality
+        // increase print quality, this doubles the input tokens, compare to the default 768
         printOptions.setMinSide(1024);
+
+        // TODO change this to optionally get a list of page numbers to print
         List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), printOptions);
-        List<String> ocrTextPerPage = new ArrayList<>(printedPagesBase64.size());
+        Map<Integer, String> pageImages = pagesToProcess.stream()
+                .collect(Collectors.toMap(i -> i, i -> printedPagesBase64.get(i)));
 
-        for (int i = 0 ; i < printedPagesBase64.size(); i++) {
-            String pageImage = printedPagesBase64.get(i);
-
-            ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()),
-                    project.getId(),
-                    "DOCUMENT_DIGITIZATION - Task:" + task.getId());
-            StringBuilder promptBuilder = new StringBuilder();
-            promptBuilder.append(prompt);
-            promptBuilder.append("\n\n");
-            promptBuilder.append("Document Page: ").append(i).append(" out of ").append(printedPagesBase64.size()).append("\n\n");
+        // CORE PROCESSING:
+        // There are 2 thread pools: 1 for the docs, 1 for the LLM completions
+        // This runs 10 files in parallel, then these 10 files are competing against each other for LLM completions
+        // 1. When there are multiple files, they progress all together, 2. When there is a single file, it will run all the pages in parallel
+        List<CompletableFuture<AnswerCreationDTO>> completionFutures = pagesToProcess.stream()
+                .map(i -> getCompletionAnswerFuture(prompt, pageImages.get(i), totalPages, documentNode, i))
+                .toList();
 
 
-            Message message = new Message();
-            message.setValue(promptBuilder.toString());
-            message.setThreadId(newThread.getId());
-            message.setProjectId(project.getId());
-            message.setCreatedBy(project.getProjectAgent().getUserId());
-            message.setUpdatedBy(project.getProjectAgent().getUserId());
-            message = messageService.createMessage(message);
+        List<AnswerCreationDTO> newAnswers = completionFutures.stream()
+                .map(CompletableFuture::join)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
 
-            // TODO save additional resources,
-            //  set additional resource after the save, as it is not stored yet in the DB
-            message.setAdditionalResources(List.of(
-                    ContentPart.builder()
-                            .type("image_url")
-                            .imageUrl(ContentPart.ImageInput.builder()
-                                    .url(pageImage)
-                                    .build())
-                            .build()));
-
-            List<Message> response = completionService.getCompletion(message, new ArrayList<>(), project, null);
-
-            AnswerCreationDTO newPage = AnswerCreationDTO.builder()
-                    .documentNode(documentNode)
-                    .newAnswer(TaskNodeDTO.builder()
-                            .nodeType("ANSWER")
-                            .taskId(task.getId())
-                            .nodeValue(TaskNodeValueDTO.builder()
-                                    .message(response.getLast().getValue())
-                                    .order(i)
-                                    .nodeDocumentId(documentNode.getId())
-                                    .build())
-                            .documentId(documentNode.getDocumentId())
-                            .pageNumber(i)
-                            .build())
-                    .build();
-
-            newAnswers.add(newPage);
-
-        }
 
         batch.setNewAnswers(newAnswers);
 
         logger.info("Processing document node: {}, prompt: {}, structure: {}",
-                    documentNode.getId(), prompt, structure);
-
+                documentNode.getId(), prompt, structure);
 
 
         return batch;
     }
+
+    private CompletableFuture<AnswerCreationDTO> getCompletionAnswerFuture(String prompt, String pageImageBase64, int totalPages, TaskNode documentNode, int pageIndex) {
+        return CompletableFuture.supplyAsync(() -> {
+                    ChatThread newThread = messageService.createThreadForMessage(
+                            List.of(project.getProjectAgent().getUserId()),
+                            project.getId(),
+                            "DOCUMENT_DIGITIZATION - Task:" + task.getId()
+                    );
+
+                    StringBuilder promptBuilder = new StringBuilder()
+                            .append(prompt).append("\n\n")
+                            .append("Document Page: ").append(pageIndex).append(" out of ").append(totalPages).append("\n\n");
+
+                    Message message = new Message();
+                    message.setValue(promptBuilder.toString());
+                    message.setThreadId(newThread.getId());
+                    message.setProjectId(project.getId());
+                    message.setCreatedBy(project.getProjectAgent().getUserId());
+                    message.setUpdatedBy(project.getProjectAgent().getUserId());
+                    message = messageService.createMessage(message);
+
+                    message.setAdditionalResources(List.of(
+                            ContentPart.builder()
+                                    .type("image_url")
+                                    .imageUrl(ContentPart.ImageInput.builder()
+                                            .url(pageImageBase64)
+                                            .build())
+                                    .build()
+                    ));
+
+                    List<Message> response;
+                    try {
+                        response = completionService.getCompletion(message, new ArrayList<>(), project, null);
+                    } catch (GendoxException e) {
+                        throw new GendoxRuntimeException(e.getHttpStatus(), e.getErrorCode(), e.getMessage(), e);
+                    }
+
+                    return AnswerCreationDTO.builder()
+                            .documentNode(documentNode)
+                            .newAnswer(TaskNodeDTO.builder()
+                                    .nodeType("ANSWER")
+                                    .taskId(task.getId())
+                                    .nodeValue(TaskNodeValueDTO.builder()
+                                            .message(response.getLast().getValue())
+                                            .order(pageIndex + 1)
+                                            .nodeDocumentId(documentNode.getId())
+                                            .build())
+                                    .documentId(documentNode.getDocumentId())
+                                    .pageNumber(pageIndex)
+                                    .build())
+                            .build();
+                }, asyncLlmCompletionsExecutor)
+                .handle((newPage, throwable) -> {
+                    if (throwable != null) {
+                        logger.error("Failed to get completion for docNode {}, page {}: ",
+                                documentNode.getId(), pageIndex + 1, throwable);
+                        return null;
+                    }
+                    return newPage;
+                });
+    }
+
+
 }

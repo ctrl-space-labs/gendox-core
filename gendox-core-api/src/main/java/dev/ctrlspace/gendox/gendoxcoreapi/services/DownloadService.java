@@ -121,6 +121,31 @@ public class DownloadService {
 
     }
 
+    public Integer countDocumentPages(String documentUrl) throws GendoxException, IOException {
+        Resource resource = openResource(documentUrl);
+
+        String fileExtension = getFileExtension(documentUrl, resource);
+        if (isTextFile(fileExtension)) {
+            throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Document is already in text format. Unsupported file type: " + fileExtension, HttpStatus.BAD_REQUEST);
+        } else if (isPdfFile(fileExtension)) {
+
+            try (PDDocument doc = Loader.loadPDF(resource.getContentAsByteArray())) {
+                return doc.getNumberOfPages();
+            }
+
+        } else if (isDocxFile(fileExtension)) {
+            try (InputStream in = resource.getInputStream()) {
+                WordprocessingMLPackage pkg = WordprocessingMLPackage.load(in);
+                return pkg.getMainDocumentPart().getContent().size();
+            } catch (Docx4JException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Unsupported file type: " + fileExtension, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+
     private @NotNull String getFileExtension(String documentUrl, Resource resource) throws GendoxException {
         String fileExtension = getFileExtension(documentUrl);
         if (fileExtension == null) {
