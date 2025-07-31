@@ -10,13 +10,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskEdgeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
-import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.data.domain.Page;
@@ -188,6 +185,20 @@ public class TaskController {
         }
 
         return taskNodeService.getTaskNodesByTaskId(taskId, pageable);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/document-pages", produces = {"application/json"})
+    @ResponseStatus(value = HttpStatus.OK)
+    public Page<DocumentNodeAnswerPagesDTO> getDocumentNodeAnswerPages(@PathVariable UUID organizationId,
+                                                                       @PathVariable UUID projectId,
+                                                                       @PathVariable UUID taskId,
+                                                                       Pageable pageable) throws GendoxException {
+        Task task = taskService.getTaskById(taskId);
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
+        return taskNodeService.getDocumentNodeAnswerPages(taskId, pageable);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")

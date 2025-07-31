@@ -194,6 +194,22 @@ const getTaskNodesByCriteria = async (organizationId, projectId, taskId, criteri
   })
 }
 
+/** * Get Document Pages for a Task
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<DocumentPage[]>>}
+ */
+const getDocumentPages = async (organizationId, projectId, taskId, token, page, size) => {
+  return axios.get(apiRequests.getDocumentPages(organizationId, projectId, taskId, page, size), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
 /**
  * Create Task Edge
  * @param organizationId
@@ -346,6 +362,7 @@ export default {
   getTaskById,
   getTaskNodesByTaskId,
   getTaskNodesByCriteria,
+  getDocumentPages,
   getAnswerTaskNodes,
   createTaskNode,
   createTaskNodesBatch,

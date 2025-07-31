@@ -5,7 +5,7 @@ import { Box, Modal } from '@mui/material'
 import Paper from '@mui/material/Paper'
 import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
-import { fetchTaskNodesByCriteria } from 'src/store/activeTask/activeTask'
+import { fetchTaskNodesByCriteria, fetchDocumentPages } from 'src/store/activeTask/activeTask'
 import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocument'
 import DocumentDigitizationGrid from './table-components/DocumentDigitizationGrid'
 import HeaderSection from './table-components/DocumentDigitizationHeaderSection'
@@ -20,13 +20,13 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const dispatch = useDispatch()
   const token = window.localStorage.getItem('accessToken')
   const { organizationId, taskId, projectId } = router.query
-  const { taskNodesDocumentList, taskNodesAnswerList, isLoading, isLoadingAnswers } = useSelector(
+  const { taskNodesDocumentList, isLoading } = useSelector(
     state => state.activeTask
   )
   const isBlurring = useSelector(state => state.activeDocument.isBlurring)
 
   const [documents, setDocuments] = useState([])
-  const [answers, setAnswers] = useState([])
+  const [documentPages, setDocumentPages] = useState([])
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
   const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
@@ -37,6 +37,8 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const [editMode, setEditMode] = useState(false)
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
+
+  console.log('DOCUMENT PAGES', documentPages)
 
   const fetchDocuments = useCallback(() => {
     return dispatch(
@@ -52,13 +54,12 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     )
   }, [organizationId, projectId, taskId, token, page, pageSize, dispatch])
 
-  const fetchAnswers = useCallback(() => {
+  const loadDocumentPages = useCallback(() => {
     return dispatch(
-      fetchTaskNodesByCriteria({
+      fetchDocumentPages({
         organizationId,
         projectId,
         taskId,
-        criteria: { taskId, nodeTypeNames: ['ANSWER'] },
         token,
         page: 0,
         size: MAX_PAGE_SIZE
@@ -69,7 +70,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   // 1️⃣ **Reset all local state when switching tasks/orgs/projects**
   useEffect(() => {
     setDocuments([])
-    setAnswers([])
+    setDocumentPages([])
     setSelectedDocuments([])
     setPage(0)
   }, [taskId, organizationId, projectId])
@@ -82,13 +83,16 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       .catch(() => toast.error('Failed to load documents'))
   }, [fetchDocuments])
 
-  // 3️⃣ **Fetch answers when taskId changes**
+  // 3️⃣ **Fetch document pages when taskId changes**
   useEffect(() => {
     if (!(organizationId && projectId && taskId && token)) return
-    fetchAnswers()
+    loadDocumentPages()
       .unwrap()
-      .catch(() => toast.error('Failed to load answers'))
-  }, [fetchAnswers])
+      .then(pages => setDocumentPages(pages || []))
+      .catch(() => toast.error('Failed to load document pages'))
+  }, [loadDocumentPages])
+
+
 
   // 4️⃣ **Fetch project documents and Sync with taskNodesDocumentList**
   useEffect(() => {
@@ -129,22 +133,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       isCancelled = true
     }
   }, [taskNodesDocumentList, organizationId, projectId, token, dispatch])
-
-  // 5️⃣ **Sync answers with taskNodesAnswerList**
-  useEffect(() => {
-    setAnswers(
-      (taskNodesAnswerList?.content || []).map(node => ({
-        id: node.id,
-        nodeDocumentId: node.nodeValue?.nodeDocumentId || '',
-        message: node.nodeValue?.message || '',
-        answerValue: node.nodeValue?.answerValue || '',
-        answerFlagEnum: node.nodeValue?.answerFlagEnum || '',
-        pageNumber: node.pageNumber || 0,
-        documentId: node.documentId || '',
-        order: node.nodeValue?.order || 0 // Assuming order is stored in nodeValue
-      }))
-    )
-  }, [taskNodesAnswerList])
 
   // 6️⃣ **Update URL query params when page or pageSize changes**
   useEffect(() => {
@@ -235,9 +223,8 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
           <DocumentDigitizationGrid
             openDialog={openDialog}
             documents={documents}
-            answers={answers}
+            documentPages={documentPages}
             onGenerate={docs => handleGenerate({ docs: docs, reGenerateExistingAnswers: true })}
-            isLoadingAnswers={isLoadingAnswers}
             isLoading={isLoading}
             isBlurring={isBlurring}
             page={page}
@@ -259,7 +246,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         activeNode={activeNode}
         onClose={closeDialog}
         refreshDocuments={fetchDocuments}
-        refreshAnswers={fetchAnswers}
         taskId={taskId}
         organizationId={organizationId}
         projectId={projectId}

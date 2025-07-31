@@ -125,6 +125,19 @@ export const fetchTaskNodesByTaskId = createAsyncThunk(
   }
 )
 
+export const fetchDocumentPages = createAsyncThunk(
+  'task/fetchDocumentPages',
+  async ({ organizationId, projectId, taskId, token, page = 0, size = 20 }, thunkAPI) => {
+    try {
+      const response = await taskService.getDocumentPages(organizationId, projectId, taskId, token, page, size)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
 export const fetchTaskNodesByCriteria = createAsyncThunk(
   'task/fetchTaskNodesByCriteria',
   async ({ organizationId, projectId, taskId, criteria, token, page = 0, size = 20 }, thunkAPI) => {
@@ -267,7 +280,8 @@ const initialState = {
   taskNodesRestList: [],
   taskNodesDocumentList: [],
   taskNodesQuestionList: [],
-  taskNodesAnswerList: [],  
+  taskNodesAnswerList: [],
+  taskDocumentPages: [],
   taskEdges: {},
   isLoading: false,
   isLoadingAnswers: false, // specific loading state for answers
@@ -422,6 +436,20 @@ const taskSlice = createSlice({
         state.error = action.payload
       })
 
+      // Fetch Document Pages
+      .addCase(fetchDocumentPages.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(fetchDocumentPages.fulfilled, (state, action) => {
+        state.isLoading = false
+        state.taskDocumentPages = action.payload // set the document pages
+      })
+      .addCase(fetchDocumentPages.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+
       // Fetch TaskNodes by Criteria
       .addCase(fetchTaskNodesByCriteria.pending, (state, action) => {
         const { criteria } = action.meta.arg
@@ -444,7 +472,7 @@ const taskSlice = createSlice({
         }
         if (criteria.nodeTypeNames.includes('QUESTION')) {
           state.isLoading = false
-          state.taskNodesQuestionList = action.payload                   
+          state.taskNodesQuestionList = action.payload
         } else {
           state.isLoading = false
           state.taskNodesRestList = action.payload

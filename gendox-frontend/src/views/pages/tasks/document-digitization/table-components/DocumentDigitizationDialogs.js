@@ -12,7 +12,6 @@ const DocumentDigitizationDialogs = ({
   activeNode,
   onClose,
   refreshDocuments,
-  refreshAnswers,
   taskId,
   organizationId,
   projectId,
@@ -104,12 +103,12 @@ const DocumentDigitizationDialogs = ({
       />
 
       {/* Answer Details Dialog */}
-      <AnswerDialog
+      {/* <AnswerDialog
         open={dialogs.answerDetail}
         answer={activeNode}
         onClose={() => onClose('answerDetail')}
         refreshAnswers={refreshAnswers}
-      />
+      /> */}
 
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog

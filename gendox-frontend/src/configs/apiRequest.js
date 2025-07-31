@@ -181,6 +181,9 @@ export default {
   getTaskNodesByTaskId: (organizationId, projectId, taskId, page = 0, size = 20) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes?page=${page}&size=${size}`,
 
+  getDocumentPages: (organizationId, projectId, taskId, page, size) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/document-pages?page=${page}&size=${size}`,
+
   getTaskNodesByCriteria: (organizationId, projectId, taskId, page , size) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/search?page=${page}&size=${size}`,
 
@@ -206,8 +209,8 @@ export default {
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes/${taskNodeId}`,
 
   deleteTask: (organizationId, projectId, taskId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`, 
-  
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`,
+
   exportTaskCsv: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/export-csv`,
 

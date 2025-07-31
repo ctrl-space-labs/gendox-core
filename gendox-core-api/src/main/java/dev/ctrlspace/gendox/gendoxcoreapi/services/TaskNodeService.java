@@ -1,18 +1,17 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.DocumentNodeAnswerPagesDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentQuestionsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeValueDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskEdgeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskNodeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.TaskNodePredicates;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeRelationshipTypeConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
@@ -25,7 +24,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.swing.text.html.parser.Entity;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -133,6 +131,40 @@ public class TaskNodeService {
     public Page<TaskNode> getTaskNodesByCriteria(TaskNodeCriteria criteria, Pageable pageable) {
         logger.info("Fetching task nodes by criteria: {}", criteria);
         return taskNodeRepository.findAll(TaskNodePredicates.build(criteria), pageable);
+    }
+
+
+    public Page<DocumentNodeAnswerPagesDTO> getDocumentNodeAnswerPages(UUID taskId, Pageable pageable) {
+        // Fetch all document nodes and answer nodes for the task
+        List<TaskNode> documentNodes = taskNodeRepository.findAllByTaskIdAndNodeTypeName(taskId, TaskNodeTypeConstants.DOCUMENT);
+        List<TaskNode> answerNodes = taskNodeRepository.findAllByTaskIdAndNodeTypeName(taskId, TaskNodeTypeConstants.ANSWER);
+
+        Map<UUID, List<TaskNode>> answersByDocId = answerNodes.stream()
+                .filter(a -> a.getNodeValue() != null && a.getNodeValue().getNodeDocumentId() != null)
+                .collect(Collectors.groupingBy(a -> a.getNodeValue().getNodeDocumentId()));
+
+        List<DocumentNodeAnswerPagesDTO> results = new ArrayList<>();
+
+        for (TaskNode docNode : documentNodes) {
+            UUID docNodeId = docNode.getId();
+            List<TaskNode> answersForDoc = answersByDocId.getOrDefault(docNodeId, List.of());
+
+            int numberOfPages = answersForDoc.size();
+            int maxPage = answersForDoc.stream()
+                    .map(a -> a.getNodeValue().getOrder())
+                    .filter(Objects::nonNull)
+                    .max(Integer::compare)
+                    .orElse(0);
+
+            results.add(DocumentNodeAnswerPagesDTO.builder()
+                    .taskDocumentNodeId(docNodeId)
+                    .numberOfPages(numberOfPages)
+                    .maxPage(maxPage)
+                    .build()
+            );
+        }
+
+        return new PageImpl<>(results, pageable, results.size());
     }
 
 
