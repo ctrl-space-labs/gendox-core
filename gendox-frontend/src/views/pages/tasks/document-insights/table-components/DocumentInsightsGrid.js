@@ -253,13 +253,21 @@ const DocumentInsightsGrid = ({
             >
               {answerFlagEnum(answerObj?.answerFlagEnum, theme)}
               <Tooltip
-                title={!answerObj?.answerValue ? 'Click to generate this answer' : 'Click to see answer details'}
+                title={!answerObj ? 'Click to generate this answer' : 'Click to see answer details'}
                 arrow
                 placement='top'
               >
-                <span>{answerObj?.answerValue || <em>Click to generate</em>}</span>
+                <span>
+                  {!answerObj ? (
+                    <em>Click to generate</em>
+                  ) : answerObj.answerValue === '' ? (
+                    <em>Click to see answer details</em>
+                  ) : (
+                    answerObj.answerValue
+                  )}
+                </span>
               </Tooltip>
-              {answerObj?.answerValue && (
+              {answerObj && (
                 <Tooltip title='Regenerate answer'>
                   <ReplayIcon
                     className='regenerate-icon'

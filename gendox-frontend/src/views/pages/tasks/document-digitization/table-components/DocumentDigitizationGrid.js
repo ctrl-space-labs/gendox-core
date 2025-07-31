@@ -1,16 +1,12 @@
 import React, { useMemo, useState } from 'react'
 import { DataGrid } from '@mui/x-data-grid'
-import { Box, Button, IconButton, Tooltip, Menu, MenuItem } from '@mui/material'
+import { Box, IconButton, Tooltip, Menu, MenuItem } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import CircularProgress from '@mui/material/CircularProgress'
 import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
 import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
-import DescriptionIcon from '@mui/icons-material/Description'
-import SchemaIcon from '@mui/icons-material/Schema'
-import DocumentDialog from '../table-dialogs/DocumentDigitizationDocumentDialog'
-import Icon from 'src/views/custom-components/mui/icon/icon'
 import EditIcon from '@mui/icons-material/Edit'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 
@@ -221,6 +217,7 @@ const DocumentDigitizationGrid = ({
             return null
           }
           const answerObj = answers.find(a => a.nodeDocumentId === doc?.id && (a.order ?? 0) === order)
+          console.log('Answer Object:', answerObj)
 
           if (isLoadingAnswers) {
             return (
@@ -265,7 +262,7 @@ const DocumentDigitizationGrid = ({
               }}
               onClick={() => {
                 if (!isLoadingAnswers && !isLoading) {
-                  if (!answerObj?.answerValue) {
+                  if (!answerObj) {
                     // Trigger generate for this cell only
                     onGenerateSingleAnswer(params.row, q)
                   } else {
@@ -276,13 +273,21 @@ const DocumentDigitizationGrid = ({
             >
               {answerFlagEnum(answerObj?.answerFlagEnum, theme)}
               <Tooltip
-                title={!answerObj?.answerValue ? 'Click to generate this answer' : 'Click to see answer details'}
+                title={!answerObj ? 'Click to generate this answer' : 'Click to see answer details'}
                 arrow
                 placement='top'
               >
-                <span>{answerObj?.answerValue || <em>Click to generate</em>}</span>
+                <span>
+                  {!answerObj ? (
+                    <em>Click to generate</em>
+                  ) : answerObj.answerValue === '' ? (
+                    <em>Click to see answer details</em>
+                  ) : (
+                    answerObj.answerValue
+                  )}
+                </span>
               </Tooltip>
-              {answerObj?.answerValue && (
+              {answerObj && (
                 <Tooltip title='Regenerate answer'>
                   <ReplayIcon
                     className='regenerate-icon'

@@ -20,6 +20,8 @@ export const answerFlagEnum = (flag, theme) => {
       return <ErrorOutlineIcon fontSize='small' sx={{ color: theme.palette.error.main }} titleAccess='Critical Issue' />
     case 'NA':
       return <HelpOutlineIcon fontSize='small' sx={{ color: theme.palette.text.disabled }} titleAccess='N/A' />
+    case '': 
+      return <InfoOutlinedIcon fontSize='small' sx={{ color: theme.palette.info.main }} titleAccess='See details' />
     default:
       return (
         <PlayCircleOutlineIcon
@@ -45,6 +47,8 @@ export const getAnswerFlagProps = flag => {
       return { label: 'Critical', chipColor: 'error' }
     case 'NA':
       return { label: 'N/A', chipColor: 'primary' } // or 'info', 'warning', etc.
+    case '': 
+      return { label: 'See details', chipColor: 'info' }
     default:
       return { label: 'Not generated', chipColor: 'primary' }
   }
