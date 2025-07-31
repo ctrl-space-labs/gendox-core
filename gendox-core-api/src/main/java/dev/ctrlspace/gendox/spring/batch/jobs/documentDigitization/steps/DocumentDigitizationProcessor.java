@@ -100,6 +100,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
                 .map(n -> n.getNodeValue().getOrder() - 1)
                 .collect(Collectors.toSet());
 
+        // TODO Change this to use the DocumentInstance total_pages field if available
         Integer totalPages = downloadService.countDocumentPages(documentInstance.getRemoteUrl());
 
         List<Integer> pagesToProcess;
