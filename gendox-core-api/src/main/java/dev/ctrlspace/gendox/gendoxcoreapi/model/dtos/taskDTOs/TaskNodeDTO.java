@@ -18,7 +18,6 @@ public class TaskNodeDTO {
     private TaskNodeValueDTO nodeValue;
     private UUID parentNodeId;
     private UUID documentId;
-    private Integer pageNumber;
     private UUID userId;
 
 }

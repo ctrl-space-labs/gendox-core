@@ -45,10 +45,6 @@ public class TaskNode {
     private UUID documentId;
 
     @Basic
-    @Column(name = "page_number")
-    private Integer pageNumber;
-
-    @Basic
     @Column(name = "created_at", nullable = false)
     @CreatedDate
     private Instant createdAt;
@@ -113,14 +109,6 @@ public class TaskNode {
         this.documentId = documentId;
     }
 
-    public Integer getPageNumber() {
-        return pageNumber;
-    }
-
-    public void setPageNumber(Integer pageNumber) {
-        this.pageNumber = pageNumber;
-    }
-
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -158,11 +146,11 @@ public class TaskNode {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TaskNode taskNode = (TaskNode) o;
-        return Objects.equals(id, taskNode.id) && Objects.equals(taskId, taskNode.taskId) && Objects.equals(nodeType, taskNode.nodeType) && Objects.equals(nodeValue, taskNode.nodeValue) && Objects.equals(parentNodeId, taskNode.parentNodeId) && Objects.equals(documentId, taskNode.documentId) && Objects.equals(pageNumber, taskNode.pageNumber) && Objects.equals(createdAt, taskNode.createdAt) && Objects.equals(updatedAt, taskNode.updatedAt) && Objects.equals(createdBy, taskNode.createdBy) && Objects.equals(updatedBy, taskNode.updatedBy);
+        return Objects.equals(id, taskNode.id) && Objects.equals(taskId, taskNode.taskId) && Objects.equals(nodeType, taskNode.nodeType) && Objects.equals(nodeValue, taskNode.nodeValue) && Objects.equals(parentNodeId, taskNode.parentNodeId) && Objects.equals(documentId, taskNode.documentId) && Objects.equals(createdAt, taskNode.createdAt) && Objects.equals(updatedAt, taskNode.updatedAt) && Objects.equals(createdBy, taskNode.createdBy) && Objects.equals(updatedBy, taskNode.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, taskId, nodeType, nodeValue, parentNodeId, documentId, pageNumber, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, taskId, nodeType, nodeValue, parentNodeId, documentId, createdAt, updatedAt, createdBy, updatedBy);
     }
 }

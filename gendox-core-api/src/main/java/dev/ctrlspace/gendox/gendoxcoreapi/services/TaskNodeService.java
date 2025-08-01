@@ -88,7 +88,6 @@ public class TaskNodeService {
         existing.setNodeType(taskNode.getNodeType());
         existing.setParentNodeId(taskNode.getParentNodeId());
         existing.setDocumentId(taskNode.getDocumentId());
-        existing.setPageNumber(taskNode.getPageNumber());
         existing.setUpdatedBy(taskNode.getUpdatedBy());
 
         return taskNodeRepository.save(existing);
@@ -133,40 +132,33 @@ public class TaskNodeService {
         return taskNodeRepository.findAll(TaskNodePredicates.build(criteria), pageable);
     }
 
-
     public Page<DocumentNodeAnswerPagesDTO> getDocumentNodeAnswerPages(UUID taskId, Pageable pageable) {
-        // Fetch all document nodes and answer nodes for the task
-        List<TaskNode> documentNodes = taskNodeRepository.findAllByTaskIdAndNodeTypeName(taskId, TaskNodeTypeConstants.DOCUMENT);
-        List<TaskNode> answerNodes = taskNodeRepository.findAllByTaskIdAndNodeTypeName(taskId, TaskNodeTypeConstants.ANSWER);
+        Type documentNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.DOCUMENT);
+        Type answerNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.ANSWER);
 
-        Map<UUID, List<TaskNode>> answersByDocId = answerNodes.stream()
-                .filter(a -> a.getNodeValue() != null && a.getNodeValue().getNodeDocumentId() != null)
-                .collect(Collectors.groupingBy(a -> a.getNodeValue().getNodeDocumentId()));
+        List<Object[]> rawRows = taskNodeRepository.findDocumentNodeAnswerPagesByTaskId(
+                taskId,
+                documentNodeType.getId(),
+                answerNodeType.getId()
+        );
 
-        List<DocumentNodeAnswerPagesDTO> results = new ArrayList<>();
+        List<DocumentNodeAnswerPagesDTO> results = rawRows.stream().map(row ->
+                DocumentNodeAnswerPagesDTO.builder()
+                        .taskDocumentNodeId((UUID) row[0])
+                        .documentPages(row[1] == null ? null : ((Number) row[1]).intValue())
+                        .numberOfNodePages(row[2] == null ? 0 : ((Number) row[2]).intValue())
+                        .maxNodePage(row[3] == null ? 0 : ((Number) row[3]).intValue())
+                        .build()
+        ).toList();
 
-        for (TaskNode docNode : documentNodes) {
-            UUID docNodeId = docNode.getId();
-            List<TaskNode> answersForDoc = answersByDocId.getOrDefault(docNodeId, List.of());
+        // Pagination manually
+        int total = results.size();
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), total);
+        List<DocumentNodeAnswerPagesDTO> pageList = start < end ? results.subList(start, end) : Collections.emptyList();
 
-            int numberOfPages = answersForDoc.size();
-            int maxPage = answersForDoc.stream()
-                    .map(a -> a.getNodeValue().getOrder())
-                    .filter(Objects::nonNull)
-                    .max(Integer::compare)
-                    .orElse(0);
-
-            results.add(DocumentNodeAnswerPagesDTO.builder()
-                    .taskDocumentNodeId(docNodeId)
-                    .numberOfPages(numberOfPages)
-                    .maxPage(maxPage)
-                    .build()
-            );
-        }
-
-        return new PageImpl<>(results, pageable, results.size());
+        return new PageImpl<>(pageList, pageable, total);
     }
-
 
     public Optional<TaskNode> findAnswerNodeByDocumentAndQuestionOptional(UUID taskId, UUID documentNodeId, UUID questionNodeId) {
         logger.info("Fetching answer node for task: {}, document: {}, question: {}", taskId, documentNodeId, questionNodeId);

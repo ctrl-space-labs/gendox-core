@@ -38,7 +38,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
-  console.log('DOCUMENT PAGES', documentPages)
 
   const fetchDocuments = useCallback(() => {
     return dispatch(

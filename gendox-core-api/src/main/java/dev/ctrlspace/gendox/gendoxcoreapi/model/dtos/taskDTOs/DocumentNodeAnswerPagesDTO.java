@@ -13,6 +13,7 @@ import java.util.UUID;
 @Builder(toBuilder = true)
 public class DocumentNodeAnswerPagesDTO {
     private UUID taskDocumentNodeId;
-    private Integer numberOfPages;
-    private Integer maxPage;
+    private Integer numberOfNodePages;
+    private Integer maxNodePage;
+    private Integer documentPages;
 }

@@ -46,23 +46,18 @@ public class DownloadService {
 
 
     private ResourceLoader resourceLoader;
-
-
     private String pageSeparatorTemplate;
     private ImageUtils imageUtils;
-    private CompletionService completionService;
 
 
 
     @Autowired
     public DownloadService(ResourceLoader resourceLoader,
                            ImageUtils imageUtils,
-                           CompletionService completionService,
                            @Value("${gendox.documents.page-separator-template}") String pageSeparatorTemplate
                             ) {
         this.resourceLoader = resourceLoader;
         this.imageUtils = imageUtils;
-        this.completionService = completionService;
         this.pageSeparatorTemplate = pageSeparatorTemplate;
 
     }
@@ -143,6 +138,15 @@ public class DownloadService {
         } else {
             throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Unsupported file type: " + fileExtension, HttpStatus.BAD_REQUEST);
         }
+    }
+
+    public boolean isPdfUrl(String documentUrl) throws GendoxException {
+        String extension = getFileExtension(documentUrl);
+        if (extension == null) {
+            Resource resource = openResource(documentUrl);
+            extension = getFileExtension(resource.getFilename());
+        }
+        return isPdfFile(extension);
     }
 
 

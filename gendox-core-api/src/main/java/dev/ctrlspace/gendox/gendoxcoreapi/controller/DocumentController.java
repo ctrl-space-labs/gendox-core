@@ -155,7 +155,7 @@ public class DocumentController {
             description = "Create a new document based on the provided document details. " +
                     "This operation creates a new document instance with associated sections and metadata, " +
                     "incorporating the provided document information.")
-    public DocumentInstance create(@RequestBody DocumentInstanceDTO documentInstanceDTO, @PathVariable UUID organizationId) throws GendoxException {
+    public DocumentInstance create(@RequestBody DocumentInstanceDTO documentInstanceDTO, @PathVariable UUID organizationId) throws GendoxException, IOException {
 
         if (documentInstanceDTO.getId() != null) {
             throw new GendoxException("DOCUMENT_INSTANCE_ID_MUST_BE_NULL", "Document instant id is not null", HttpStatus.BAD_REQUEST);

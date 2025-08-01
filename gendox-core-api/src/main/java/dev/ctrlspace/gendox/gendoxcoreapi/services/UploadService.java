@@ -88,7 +88,7 @@ public class UploadService {
     }
 
 
-    public DocumentInstance upsertDocumentInstance(UUID projectId, DocumentInstanceDTO documentInstanceDTO) throws GendoxException {
+    public DocumentInstance upsertDocumentInstance(UUID projectId, DocumentInstanceDTO documentInstanceDTO) throws GendoxException, IOException {
         String documentNameByRemoteUrl = documentUtils.extractDocumentNameFromUrl(documentInstanceDTO.getRemoteUrl());
         DocumentInstance existingInstance =
                 documentService.getDocumentByFileName(projectId, documentInstanceDTO.getOrganizationId(), documentNameByRemoteUrl);
@@ -102,7 +102,7 @@ public class UploadService {
     }
 
 
-    private DocumentInstance createNewDocumentInstance(UUID projectId, DocumentInstanceDTO documentInstanceDTO) throws GendoxException {
+    private DocumentInstance createNewDocumentInstance(UUID projectId, DocumentInstanceDTO documentInstanceDTO) throws GendoxException, IOException {
         UUID documentInstanceId = UUID.randomUUID();
         documentInstanceDTO.setId(documentInstanceId);
         DocumentInstance newInstance = documentInstanceConverter.toEntity(documentInstanceDTO);

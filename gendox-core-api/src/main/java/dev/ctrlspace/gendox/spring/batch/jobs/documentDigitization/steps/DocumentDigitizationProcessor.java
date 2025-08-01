@@ -100,8 +100,12 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
                 .map(n -> n.getNodeValue().getOrder() - 1)
                 .collect(Collectors.toSet());
 
-        // TODO Change this to use the DocumentInstance total_pages field if available
-        Integer totalPages = downloadService.countDocumentPages(documentInstance.getRemoteUrl());
+
+        Integer totalPages = documentInstance.getNumberOfPages();
+        if (totalPages == null || totalPages <= 0) {
+            logger.warn("Document instance {} has no totalPages, skipping.", documentInstance.getId());
+            return null;
+        }
 
         List<Integer> pagesToProcess;
         if (reGenerateExistingAnswers) {
@@ -202,7 +206,6 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
                                             .nodeDocumentId(documentNode.getId())
                                             .build())
                                     .documentId(documentNode.getDocumentId())
-                                    .pageNumber(pageIndex)
                                     .build())
                             .build();
                 }, asyncLlmCompletionsExecutor)

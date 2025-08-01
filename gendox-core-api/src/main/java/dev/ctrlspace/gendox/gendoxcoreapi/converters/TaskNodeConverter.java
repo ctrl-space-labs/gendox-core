@@ -27,7 +27,6 @@ public class TaskNodeConverter implements GendoxConverter<TaskNode, TaskNodeDTO>
                 .nodeValue(taskNode.getNodeValue() != null ? taskNode.getNodeValue().toBuilder().build() : null)
                 .parentNodeId(taskNode.getParentNodeId())
                 .documentId(taskNode.getDocumentId() != null ? taskNode.getDocumentId() : null)
-                .pageNumber(taskNode.getPageNumber())
                 .userId(taskNode.getCreatedBy())
                 .build();
     }

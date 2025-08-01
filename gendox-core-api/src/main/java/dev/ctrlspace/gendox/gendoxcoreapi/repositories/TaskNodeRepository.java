@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.DocumentNodeAnswerPagesDTO;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -114,5 +115,27 @@ public interface TaskNodeRepository extends JpaRepository<TaskNode, UUID>, Query
             @Param("questionNodeIds") List<UUID> questionNodeIds,
             Pageable pageable
     );
+
+    @Query(value = """
+            SELECT
+                tnd.id AS taskDocumentNodeId,
+                di.number_of_pages AS documentPages,
+                COUNT(tna.id) AS numberOfNodePages,
+                COALESCE(MAX((tna.node_value ->> 'order')::int), 0) AS maxNodePage
+            FROM gendox_core.task_nodes tnd
+                INNER JOIN gendox_core.document_instance di ON tnd.document_id = di.id
+                LEFT JOIN gendox_core.task_nodes tna
+                    ON (tna.node_value ->> 'nodeDocumentId')::uuid = tnd.id
+                   AND tna.task_id = tnd.task_id
+                   AND tna.node_type_id = :answerNodeTypeId
+            WHERE tnd.task_id = :taskId
+            AND tnd.node_type_id = :documentNodeTypeId
+            GROUP BY tnd.id, di.number_of_pages
+            """, nativeQuery = true)
+    List<Object[]> findDocumentNodeAnswerPagesByTaskId(
+            @Param("taskId") UUID taskId,
+            @Param("documentNodeTypeId") Long documentNodeTypeId,
+            @Param("answerNodeTypeId") Long answerNodeTypeId);
+
 
 }

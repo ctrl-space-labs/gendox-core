@@ -33,17 +33,15 @@ const DocumentDigitizationGrid = ({
   const [generateMenuAnchor, setGenerateMenuAnchor] = useState(null)
   const [generateMenuDoc, setGenerateMenuDoc] = useState(null)
 
-
   const docMaxPages = 12
 
   const docPagesMap = useMemo(() => {
-  const map = {}
-  ;(documentPages.content || []).forEach(page => {
-    map[page.taskDocumentNodeId] = page
-  })
-  return map
-}, [documentPages])
-
+    const map = {}
+    ;(documentPages.content || []).forEach(page => {
+      map[page.taskDocumentNodeId] = page
+    })
+    return map
+  }, [documentPages])
 
   const maxPageOverall = useMemo(() => {
     return Math.max(0, ...Object.values(docMaxPages))
@@ -81,8 +79,24 @@ const DocumentDigitizationGrid = ({
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
-        renderCell: params => <Box>{params?.value? params.value === 1 ? '1 page' : `${params.value} pages` : 'not0 generated' }</Box>
-      },
+        renderCell: params => {
+          const docPage = docPagesMap[params.row.id]
+          if (!docPage) return <Box>not generated</Box>
+          const { numberOfNodePages, documentPages } = docPage
+          if (!numberOfNodePages || numberOfNodePages === 0) return <Box>not generated</Box>
+          const missingPages = (documentPages ?? 0) - (numberOfNodePages ?? 0)
+          return (
+            <Box>
+              {numberOfNodePages === 1 ? '1 page' : `${numberOfNodePages} pages`}
+              {missingPages > 0 && (
+                <Box component='span' sx={{ ml: 1, color: 'warning.main', fontSize: '0.8em' }}>
+                  ({missingPages} missing)
+                </Box>
+              )}
+            </Box>
+          )
+        }
+      }
     ],
     [documents, selectedDocuments, onSelectDocument]
   )
@@ -192,7 +206,6 @@ const DocumentDigitizationGrid = ({
           onClick={() => {
             setGenerateMenuAnchor(null)
             if (generateMenuDoc) {
-
               onGenerateSingleAnswer(generateMenuDoc)
             }
           }}
