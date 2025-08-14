@@ -5,6 +5,7 @@ import { deleteTaskNode } from 'src/store/activeTask/activeTask'
 import DocumentDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentDialog'
 import DocumentsAddNewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentsAddNewDialog'
 import AnswerDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationAnswerDialog'
+import DocumentPagePreviewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentPagePreviewDialog'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 
 const DocumentDigitizationDialogs = ({
@@ -18,7 +19,8 @@ const DocumentDigitizationDialogs = ({
   token,
   existingDocuments,
   setEditMode,
-  editMode
+  editMode,
+  documentPages = []
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
@@ -109,6 +111,18 @@ const DocumentDigitizationDialogs = ({
         onClose={() => onClose('answerDetail')}
         refreshAnswers={refreshAnswers}
       /> */}
+
+      {/* Document Page Preview Dialog */}
+      <DocumentPagePreviewDialog
+        open={dialogs.pagePreview || false}
+        onClose={() => onClose('pagePreview')}
+        document={activeNode}
+        documentPages={documentPages}
+        onDocumentUpdate={(updatedDoc) => {
+          // Refresh documents to show updated data
+          if (refreshDocuments) refreshDocuments()
+        }}
+      />
 
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog

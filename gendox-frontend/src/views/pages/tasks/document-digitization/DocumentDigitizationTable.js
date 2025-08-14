@@ -31,7 +31,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const [pageSize, setPageSize] = useState(20)
   const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
   const [selectedDocuments, setSelectedDocuments] = useState([])
-  const [dialogs, setDialogs] = useState({ newDoc: false, delete: false, docDetail: false, answerDetail: false })
+  const [dialogs, setDialogs] = useState({ newDoc: false, delete: false, docDetail: false, answerDetail: false, pagePreview: false })
   const [activeNode, setActiveNode] = useState(null)
   const [isSelectingDocuments, setIsSelectingDocuments] = useState(false)
   const [editMode, setEditMode] = useState(false)
@@ -164,7 +164,13 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   }
 
   const handleSelectDocument = (docId, checked) => {
-    setSelectedDocuments(prev => (checked ? [...prev, docId] : prev.filter(id => id !== docId)))
+    if (docId === 'all') {
+      setSelectedDocuments(checked) // checked will be the array of document IDs
+    } else if (docId === 'none') {
+      setSelectedDocuments([])
+    } else {
+      setSelectedDocuments(prev => (checked ? [...prev, docId] : prev.filter(id => id !== docId)))
+    }
   }
 
   // Handle Generate Documents
@@ -252,6 +258,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         existingDocuments={documents}
         editMode={editMode}
         setEditMode={setEditMode}
+        documentPages={documentPages}
       />
     </>
   )

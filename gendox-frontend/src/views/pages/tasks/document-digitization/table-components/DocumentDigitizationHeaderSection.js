@@ -106,7 +106,12 @@ const HeaderSection = ({
                   fullWidth
                   startIcon={<RocketLaunchIcon />}
                   onClick={() => {
-                    if (!disableGenerateAll && !isLoading) onGenerate(false)
+                    if (selectedDocuments.length > 0) {
+                      onGenerateSelected()
+                      setSelectedDocuments([])
+                    } else {
+                      if (!disableGenerateAll && !isLoading) onGenerate(false)
+                    }
                   }}
                   disabled={disableGenerateAll || isLoading }
                   sx={{
@@ -116,7 +121,7 @@ const HeaderSection = ({
                     borderBottomRightRadius: 0
                   }}
                 >
-                  Generate New
+                  {selectedDocuments.length > 0 ? `Generate Selected (${selectedDocuments.length})` : 'Generate New'}
                 </Button>
 
                 <Button
@@ -153,6 +158,22 @@ const HeaderSection = ({
                 }
               }}
             >
+              {selectedDocuments.length > 0 ? (
+                <MenuItem
+                  onClick={() => {
+                    setAnchorEl(null)
+                    if (!disableGenerateAll && !isLoading) {
+                      onGenerate(false)
+                    }
+                  }}
+                  disabled={disableGenerateAll || isLoading}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <RocketLaunchIcon fontSize='small' color='primary' />
+                    Generate New
+                  </Box>
+                </MenuItem>
+              ) : null}
               <MenuItem
                 onClick={() => {
                   setAnchorEl(null)
@@ -167,63 +188,7 @@ const HeaderSection = ({
                   Generate ALL
                 </Box>
               </MenuItem>
-              <Divider sx={{ my: 1 }} />
-
-              {!isSelectingDocuments ? (
-                <MenuItem
-                  onClick={() => {
-                    setAnchorEl(null)
-                    setIsSelectingDocuments(true)
-                  }}
-                  disabled={disableGenerateAll || isLoading}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <RocketLaunchIcon fontSize='small' color='primary' />
-                    Select documents 
-                  </Box>
-                </MenuItem>
-              ) : (
-                <MenuItem
-                  onClick={() => {
-                    setAnchorEl(null)
-                    setIsSelectingDocuments(false)
-                    setSelectedDocuments([])
-                  }}
-                  sx={{ color: 'error.main' }}
-                >
-                  Cancel selection
-                </MenuItem>
-              )}
-
-              <MenuItem
-                onClick={() => {
-                  setAnchorEl(null)
-                  setIsSelectingDocuments(false)
-                  onGenerateSelected()                  
-                  setSelectedDocuments([])
-                }}
-                disabled={disableGenerateAll || isLoading || selectedDocuments.length === 0}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <RocketLaunchIcon fontSize='small' color={selectedDocuments.length > 0 ? 'primary' : 'disabled'} />
-                  Generate Selected
-                  <Box
-                    component='span'
-                    sx={{
-                      ml: 1,
-                      px: 1.5,
-                      py: 0.5,
-                      borderRadius: 1,
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      bgcolor: selectedDocuments.length > 0 ? 'primary.main' : 'grey.400',
-                      color: 'white'
-                    }}
-                  >
-                    {selectedDocuments.length}
-                  </Box>
-                </Box>
-              </MenuItem>
+             
 
               {(disableGenerateAll || isLoading) && (
                 <Box sx={{ px: 2, pb: 1, pt: 0.5, fontSize: '0.85rem', color: 'grey.600' }}>
@@ -234,6 +199,15 @@ const HeaderSection = ({
           </Box>
         </Stack>
       </Stack>
+      
+      {/* Status indicator for selection mode */}
+      {isSelectingDocuments && (
+        <Box sx={{ mt: 2, p: 2, backgroundColor: 'info.50', borderRadius: 1, border: '1px solid', borderColor: 'info.200' }}>
+          <Typography variant="body2" color="info.main" sx={{ fontWeight: 600 }}>
+            📋 Selection Mode Active - {selectedDocuments.length} document(s) selected
+          </Typography>
+        </Box>
+      )}
     </Box>
   )
 }
