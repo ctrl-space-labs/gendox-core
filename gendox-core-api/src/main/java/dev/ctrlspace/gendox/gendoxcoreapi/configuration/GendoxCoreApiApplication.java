@@ -13,6 +13,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMe
 import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeService;
 import dev.ctrlspace.gendox.spring.batch.jobs.SpringBatchConfiguration;
+import dev.ctrlspace.gendox.spring.batch.backfill.FlywayAfterMigrateConfig;
+import dev.ctrlspace.gendox.spring.batch.backfill.BackfillController;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.controller.UserController;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.UserProfileConverter;
@@ -52,7 +54,9 @@ import java.util.StringJoiner;
         GendoxAuthenticationToken.class,
         GendoxAPIIntegrationService.class,
         UniqueIdentifierCodeService.class,
-        VoyageEmbeddingResponseConverter.class
+        VoyageEmbeddingResponseConverter.class,
+        FlywayAfterMigrateConfig.class,
+        BackfillController.class
         })
 @EnableCaching
 @EnableJpaRepositories(basePackageClasses = {UserRepository.class})

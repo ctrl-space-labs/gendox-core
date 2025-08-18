@@ -1,5 +1,4 @@
 
-
 server:
   port: 8080
   servlet:
@@ -21,7 +20,7 @@ gendox:
   domains:
     frontend: https://dev.gendox.ctrlspace.dev
   documents:
-    upload-dir: file:${user.home}/gendox/documents
+#    upload-dir: file:${user.home}/gendox/documents
     wordCount: 300
     allowed:
       extensions: .txt,.md,.rst,.pdf
@@ -37,6 +36,13 @@ gendox:
       sqs:
         wait-time-seconds: 1 #not in use
         visibility-timeout-seconds: 300
+
+  batch-jobs:
+    backfill:
+      pages:
+        auto-after-migrate: true   # run the backfill right after application starts
+        batch-size: 200            # tune as needed
+        file-types: ".pdf,.docx,.doc,.ppt,.pptx"  # only process files with these extensions
 
 
 proven-ai:
