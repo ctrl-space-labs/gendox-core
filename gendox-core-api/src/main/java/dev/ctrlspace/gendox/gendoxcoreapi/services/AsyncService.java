@@ -96,9 +96,9 @@ public class AsyncService {
     @Async
     public CompletableFuture<JobExecution> executeDocumentDigitizationTask(UUID taskId, TaskNodeCriteria criteria) {
         try {
-            logger.info("Starting Document Insights async batch for task {}", taskId);
+            logger.info("Starting Document Digitization async batch for task {}", taskId);
             JobExecution jobExecution = documentDigitizationBatchService.runDocumentDigitization(taskId, criteria);
-            logger.info("Document Insights Job Execution Status: {}", jobExecution.getStatus());
+            logger.info("Document Digitization Job Execution Status: {}", jobExecution.getStatus());
             return CompletableFuture.completedFuture(jobExecution);
         } catch (Exception e) {
             logger.error("Error executing Document Insights task {}", taskId, e);

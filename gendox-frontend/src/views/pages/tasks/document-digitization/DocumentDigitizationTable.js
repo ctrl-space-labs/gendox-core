@@ -10,7 +10,7 @@ import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocumen
 import DocumentDigitizationGrid from './table-components/DocumentDigitizationGrid'
 import HeaderSection from './table-components/DocumentDigitizationHeaderSection'
 import DialogManager from './table-components/DocumentDigitizationDialogs'
-import useDocumentGeneration from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationGeneration'
+import useDocumentDigitizationGeneration from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationGeneration'
 import useExportFile from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationExportFile'
 
 const MAX_PAGE_SIZE = 2147483647
@@ -33,10 +33,10 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const [selectedDocuments, setSelectedDocuments] = useState([])
   const [dialogs, setDialogs] = useState({ newDoc: false, delete: false, docDetail: false, answerDetail: false, pagePreview: false })
   const [activeNode, setActiveNode] = useState(null)
-  const [isSelectingDocuments, setIsSelectingDocuments] = useState(false)
   const [editMode, setEditMode] = useState(false)
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
+
 
 
   const fetchDocuments = useCallback(() => {
@@ -73,6 +73,11 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     setSelectedDocuments([])
     setPage(0)
   }, [taskId, organizationId, projectId])
+
+  // ✅ **Always reset selected documents on component mount (page refresh)**
+  useEffect(() => {
+    setSelectedDocuments([])
+  }, [])
 
   // 2️⃣ **Fetch task nodes documents **
   useEffect(() => {
@@ -117,6 +122,8 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
               name: fullDoc?.title || 'Unknown Document',
               prompt: node.nodeValue?.documentMetadata?.prompt || '',
               structure: node.nodeValue?.documentMetadata?.structure || '',
+              pageFrom: node.nodeValue?.documentMetadata?.pageFrom || null,
+              pageTo: node.nodeValue?.documentMetadata?.pageTo || null,
               createdAt: node.createdAt || new Date().toISOString()
             }
           })
@@ -174,15 +181,40 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   }
 
   // Handle Generate Documents
-  const { generateDocumentAnswers, generateAnswerForCell, generatingAll, generateSelectedDocuments } =
-    useDocumentGeneration({
+  const { 
+    generateNew, 
+    generateAll, 
+    generateSelected, 
+    generateSingleDocument,
+    generatingAll, 
+    generatingNew, 
+    generatingSelected: generatingSelectedState,
+    generatingDocuments,
+    hasGeneratedContent,
+    isDocumentGenerating
+  } = useDocumentDigitizationGeneration({
       organizationId,
       projectId,
       taskId,
       documents,
       setSelectedDocuments,
       pollJobStatus,
-      token
+      token,
+      documentPages,
+      onGenerationComplete: async () => {
+        // Refresh both documents and document pages data
+        console.log('🔄 Refreshing data after generation completion...')
+        try {
+          await fetchDocuments()
+          const pages = await loadDocumentPages().unwrap()
+          console.log('📄 Updated document pages:', pages)
+          setDocumentPages(pages || [])
+          toast.success('Data refreshed successfully!')
+        } catch (error) {
+          console.error('Failed to refresh data after generation:', error)
+          toast.error('Failed to refresh data after generation')
+        }
+      }
     })
 
   const { exportCsv, isExportingCsv } = useExportFile({
@@ -201,22 +233,19 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
           title={selectedTask?.title}
           description={selectedTask?.description}
           openAddDocument={() => openDialog('newDoc')}
-          onGenerate={reGenerateExistingAnswers =>
-            generateDocumentAnswers({
-              docs: documents,
-              reGenerateExistingAnswers: reGenerateExistingAnswers,
-              isAll: true
-            })
-          }
-          disableGenerateAll={documents.length === 0}
+          onGenerateNew={generateNew}
+          onGenerateAll={generateAll}
+          onGenerateSelected={() => generateSelected(selectedDocuments)}
+          disableGenerate={documents.length === 0}
           isLoading={isLoading}
           isExportingCsv={isExportingCsv}
           onExportCsv={exportCsv}
-          onGenerateSelected={generateSelectedDocuments}
-          isSelectingDocuments={isSelectingDocuments}
-          setIsSelectingDocuments={setIsSelectingDocuments}
-          selectedDocuments={selectedDocuments}
-          setSelectedDocuments={setSelectedDocuments}
+          selectedDocuments={selectedDocuments}          
+          generatingAll={generatingAll}
+          generatingNew={generatingNew}
+          generatingSelected={generatingSelectedState}
+          documents={documents}
+          hasGeneratedContent={hasGeneratedContent}
         />
 
         <Box
@@ -229,7 +258,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
             openDialog={openDialog}
             documents={documents}
             documentPages={documentPages}
-            onGenerate={docs => handleGenerate({ docs: docs, reGenerateExistingAnswers: true })}
             isLoading={isLoading}
             isBlurring={isBlurring}
             page={page}
@@ -237,11 +265,14 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
             setPage={setPage}
             setPageSize={setPageSize}
             totalDocuments={totalDocuments}
-            isSelectingDocuments={isSelectingDocuments}
             selectedDocuments={selectedDocuments}
             onSelectDocument={handleSelectDocument}
-            onGenerateSingleAnswer={generateAnswerForCell}
-            isGeneratingAll={generatingAll}
+            generatingAll={generatingAll}
+            generatingNew={generatingNew}
+            generatingSelected={generatingSelectedState}
+            generatingDocuments={generatingDocuments}
+            hasGeneratedContent={hasGeneratedContent}
+            isDocumentGenerating={isDocumentGenerating}
           />
         </Box>
       </Paper>
@@ -259,6 +290,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         editMode={editMode}
         setEditMode={setEditMode}
         documentPages={documentPages}
+        generateSingleDocument={generateSingleDocument}
       />
     </>
   )

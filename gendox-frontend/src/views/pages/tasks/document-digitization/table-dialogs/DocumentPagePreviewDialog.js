@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -40,7 +40,7 @@ import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/router'
 
-const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onDocumentUpdate }) => {
+const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onDocumentUpdate, generateSingleDocument }) => {
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -55,6 +55,10 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
   const [structureValue, setStructureValue] = useState('')
   const [confirmRegenerate, setConfirmRegenerate] = useState(false)
   const [currentDocument, setCurrentDocument] = useState(document || null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [pageFrom, setPageFrom] = useState('')
+  const [pageTo, setPageTo] = useState('')
+  const [pageRangeError, setPageRangeError] = useState('')
   const sectionRefs = useRef([])
   const router = useRouter()
 
@@ -63,7 +67,46 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
   const docPage = Array.isArray(documentPages)
     ? documentPages.find(page => page.taskDocumentNodeId === document?.id)
     : (documentPages?.content || []).find(page => page.taskDocumentNodeId === document?.id)
-  const totalPages = docPage?.numberOfNodePages || 0
+  const totalPages = docPage?.documentPages || 0
+
+  // Validation function for page range
+  const validatePageRange = (fromPage, toPage, updateState = true) => {
+    // If both are empty, it's valid (means all pages)
+    if ((!fromPage || fromPage.trim() === '') && (!toPage || toPage.trim() === '')) {
+      if (updateState) setPageRangeError('')
+      return true
+    }
+    
+    const from = fromPage && fromPage.trim() !== '' ? parseInt(fromPage, 10) : null
+    const to = toPage && toPage.trim() !== '' ? parseInt(toPage, 10) : null
+    
+    // Validate individual values
+    if (from !== null && (isNaN(from) || from < 1 || from > totalPages)) {
+      if (updateState) setPageRangeError(`From page must be between 1 and ${totalPages}`)
+      return false
+    }
+    
+    if (to !== null && (isNaN(to) || to < 1 || to > totalPages)) {
+      if (updateState) setPageRangeError(`To page must be between 1 and ${totalPages}`)
+      return false
+    }
+    
+    // If both are set, validate range
+    if (from !== null && to !== null && from > to) {
+      if (updateState) setPageRangeError('From page cannot be greater than To page')
+      return false
+    }
+    
+    if (updateState) setPageRangeError('')
+    return true
+  }
+  
+  // Check if current page range is valid (without calling validate to avoid infinite loop)
+  const isPageRangeValid = useMemo(() => {
+    // Don't call validatePageRange here as it updates state
+    // Just check if there are no errors
+    return pageRangeError === ''
+  }, [pageRangeError])
 
   // Initialize prompt and structure values from document
   useEffect(() => {
@@ -72,6 +115,8 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
       if (open) {
         setPromptValue(document.prompt || '')
         setStructureValue(document.structure || '')
+        setPageFrom(document.pageFrom ? document.pageFrom.toString() : '')
+        setPageTo(document.pageTo ? document.pageTo.toString() : '')
       }
     }
   }, [open, document])
@@ -180,6 +225,8 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
       setEditMode(false)
       setPromptValue(currentDocument?.prompt || '')
       setStructureValue(currentDocument?.structure || '')
+      setPageFrom(currentDocument?.pageFrom ? currentDocument.pageFrom.toString() : '')
+      setPageTo(currentDocument?.pageTo ? currentDocument.pageTo.toString() : '')
     }
     setFullscreen(false)
     setPageNodes([])
@@ -189,13 +236,31 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
     onClose()
   }
 
+  const handlePageFromChange = (value) => {
+    setPageFrom(value)
+    validatePageRange(value, pageTo)
+  }
+
+  const handlePageToChange = (value) => {
+    setPageTo(value)
+    validatePageRange(pageFrom, value)
+  }
+
   const handleSave = async () => {
     if (!document) return
+
+    // Validate page range before saving
+    const isValid = validatePageRange(pageFrom, pageTo)
+    if (!isValid) {
+      toast.error('Please fix page range errors before saving')
+      return
+    }
 
     setSaving(true)
     try {
       const token = window.localStorage.getItem('accessToken')
       const { organizationId, projectId, taskId } = router.query
+
 
       await taskService.updateTaskNodeForDocumentDigitization(
         organizationId,
@@ -204,7 +269,9 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
         {
           taskNodeId: document.id,
           prompt: promptValue,
-          structure: structureValue
+          structure: structureValue,
+          pageFrom: pageFrom && pageFrom.trim() ? parseInt(pageFrom, 10) : null,
+          pageTo: pageTo && pageTo.trim() ? parseInt(pageTo, 10) : null
         },
         token
       )
@@ -213,7 +280,9 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
       const updatedDocument = {
         ...document,
         prompt: promptValue,
-        structure: structureValue
+        structure: structureValue,
+        pageFrom: pageFrom && pageFrom.trim() ? parseInt(pageFrom, 10) : null,
+        pageTo: pageTo && pageTo.trim() ? parseInt(pageTo, 10) : null
       }
 
       // Update local state to reflect changes immediately
@@ -240,6 +309,9 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
     setEditMode(false)
     setPromptValue(currentDocument?.prompt || '')
     setStructureValue(currentDocument?.structure || '')
+    setPageFrom(currentDocument?.pageFrom ? currentDocument.pageFrom.toString() : '')
+    setPageTo(currentDocument?.pageTo ? currentDocument.pageTo.toString() : '')
+    setPageRangeError('')
   }
 
   const handleGenerateClick = () => {
@@ -254,12 +326,38 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
     }
   }
 
-  const handleGenerate = () => {
-    // TODO: Implement actual generation logic
-    console.log('Generating document answers for:', document.id)
-    toast.success('Document generation started!')
-    setConfirmRegenerate(false)
-    // Here you would call the actual generation function passed as prop
+  const handleGenerate = async () => {
+    if (generateSingleDocument && currentDocument) {
+      // Validate page range before generating
+      const isValid = validatePageRange(pageFrom, pageTo)
+      if (!isValid) {
+        toast.error('Please fix page range errors before generating')
+        return
+      }
+
+      try {
+        setIsGenerating(true)
+        setConfirmRegenerate(false)
+        setShowPromptStructure(false) // Close the config section
+        
+        // Pass page range if specified
+        const pageFromValue = pageFrom && pageFrom.trim() ? pageFrom : null
+        const pageToValue = pageTo && pageTo.trim() ? pageTo : null
+        
+        await generateSingleDocument(currentDocument, pageFromValue, pageToValue)
+        
+        // Refresh the page nodes after generation
+        await fetchAnswerNodes(0, false)
+      } catch (error) {
+        console.error('Generation failed:', error)
+        // Error is already handled in the generation hook
+      } finally {
+        setIsGenerating(false)
+      }
+    } else {
+      console.warn('generateSingleDocument function not provided')
+      toast.error('Generation function not available')
+    }
   }
 
   const handleConfirmRegenerate = () => {
@@ -487,7 +585,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                   startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
                   onClick={handleSave}
                   sx={{ mr: 2 }}
-                  disabled={saving}
+                  disabled={saving || pageRangeError !== ''}
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </Button>
@@ -504,8 +602,12 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                 </IconButton>
                 <Tooltip 
                 title={
-                  !currentDocument.prompt?.trim() 
-                    ? 'Add a prompt first to generate answers' 
+                  isGenerating
+                    ? 'Generation in progress...'
+                    : !currentDocument.prompt?.trim() 
+                    ? 'Add a prompt first to generate answers'
+                    : pageRangeError !== ''
+                    ? `Fix page range error: ${pageRangeError}`
                     : pageNodes.length > 0 
                     ? 'Regenerate document answers' 
                     : 'Generate document answers'
@@ -516,9 +618,13 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                     size='small'
                     onClick={handleGenerateClick}
                     sx={{ mr: 1 }}
-                    disabled={!currentDocument.prompt?.trim()}
+                    disabled={!currentDocument.prompt?.trim() || isGenerating || pageRangeError !== ''}
                   >
-                    <RocketLaunchIcon />
+                    {isGenerating ? (
+                      <CircularProgress size={20} />
+                    ) : (
+                      <RocketLaunchIcon />
+                    )}
                   </IconButton>
                 </span>
               </Tooltip>
@@ -704,12 +810,66 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                     </Typography>
                   )}
                 </Box>
+
+                {/* Page Range Selection */}
+                <Box>
+                  <Typography variant='body2' color='text.secondary' sx={{ mb: 1, fontWeight: 500 }}>
+                    Page Range (optional)
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <TextField
+                      size='small'
+                      variant='outlined'
+                      label='From Page'
+                      type='number'
+                      value={pageFrom}
+                      onChange={e => handlePageFromChange(e.target.value)}
+                      onBlur={() => validatePageRange(pageFrom, pageTo)}
+                      placeholder='1'
+                      inputProps={{ min: 1, max: totalPages }}
+                      error={pageRangeError !== '' && pageFrom && pageFrom.trim() !== ''}
+                      sx={{ 
+                        width: 120,
+                        backgroundColor: editMode ? 'background.default' : 'action.hover' 
+                      }}
+                      disabled={!editMode}
+                    />
+                    <Typography variant='body2' color='text.secondary'>
+                      to
+                    </Typography>
+                    <TextField
+                      size='small'
+                      variant='outlined'
+                      label='To Page'
+                      type='number'
+                      value={pageTo}
+                      onChange={e => handlePageToChange(e.target.value)}
+                      onBlur={() => validatePageRange(pageFrom, pageTo)}
+                      placeholder={totalPages.toString()}
+                      inputProps={{ min: 1, max: totalPages }}
+                      error={pageRangeError !== '' && pageTo && pageTo.trim() !== ''}
+                      sx={{ 
+                        width: 120,
+                        backgroundColor: editMode ? 'background.default' : 'action.hover' 
+                      }}
+                      disabled={!editMode}
+                    />
+                    <Typography variant='body2' color='text.secondary' sx={{ fontSize: '0.75rem' }}>
+                      (Total: {totalPages} pages)
+                    </Typography>
+                  </Box>
+                  {pageRangeError && (
+                    <Typography variant='body2' color='error.main' sx={{ mt: 1, fontSize: '0.75rem' }}>
+                      {pageRangeError}
+                    </Typography>
+                  )}
+                </Box>
               </Box>
             </Collapse>
           </Box>
         </Paper>
 
-        <Box sx={{ flex: 1, overflow: 'auto' }}>
+        <Box sx={{ flex: 1, overflow: 'auto', position: 'relative' }}>
           <ResponsiveCardContent
             sx={{
               backgroundColor: 'action.hover',
@@ -720,6 +880,34 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
           >
             <SectionCardContent />
           </ResponsiveCardContent>
+          
+          {/* Generation Loading Overlay */}
+          {isGenerating && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                gap: 3,
+                zIndex: 10
+              }}
+            >
+              <CircularProgress size={60} color="primary" />
+              <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                Generating Document Answers...
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', maxWidth: 400 }}>
+                Please wait while we process your document and generate the answer nodes based on your prompt configuration.
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {/* Footer info */}

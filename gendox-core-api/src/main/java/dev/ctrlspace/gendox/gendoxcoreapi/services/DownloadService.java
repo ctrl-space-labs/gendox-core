@@ -86,7 +86,7 @@ public class DownloadService {
     /**
      * It "prints" the document pages to Base64-encoded JPEG images.
      *
-     * TODO: If images exist in page, get bounding boxes extract images (see {@link https://ai.google.dev/gemini-api/docs/image-understanding#object-detection})
+     * TODO: If images exist in page, get bounding boxes extract images (see {@link <a href="https://ai.google.dev/gemini-api/docs/image-understanding#object-detection">...</a>})
      * @param documentUrl
      * @return
      * @throws GendoxException

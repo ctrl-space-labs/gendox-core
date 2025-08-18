@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react'
 import { DataGrid } from '@mui/x-data-grid'
-import { useRouter } from 'next/router'
 import { Box, IconButton, Tooltip, Menu, MenuItem, Chip, Typography, Badge, Checkbox } from '@mui/material'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
@@ -14,19 +13,20 @@ const DocumentDigitizationGrid = ({
   openDialog,
   documents,
   documentPages,
-  onGenerate,
   isLoading,
   isBlurring,
   page,
   pageSize,
   setPage,
-  setPageSize,
   totalDocuments,
-  isSelectingDocuments = false,
   selectedDocuments = [],
   onSelectDocument = () => {},
-  onGenerateSingleAnswer = () => {},
-  isGeneratingAll
+  generatingAll = false,
+  generatingNew = false,
+  generatingSelected = false,
+  generatingDocuments = new Set(),
+  hasGeneratedContent = () => false,
+  isDocumentGenerating = () => false
 }) => {
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null)
   const [actionMenuDoc, setActionMenuDoc] = useState(null)
@@ -43,6 +43,7 @@ const DocumentDigitizationGrid = ({
     const docPage = docPagesMap[params.row.id]
     const hasPages = docPage && docPage.numberOfNodePages > 0
     const hasPrompt = params.row.prompt && params.row.prompt.trim()
+    const isGenerating = isDocumentGenerating(params.row.id)
     
     return (
       <Box sx={{ 
@@ -52,7 +53,21 @@ const DocumentDigitizationGrid = ({
         alignItems: 'center',
         flexWrap: 'wrap'
       }}>
-        {hasPages ? (
+        {isGenerating ? (
+          <Chip
+            icon={<CircularProgress size={12} sx={{ color: 'white' }} />}
+            label="Generating..."
+            size="small"
+            color="info"
+            variant="filled"
+            sx={{ 
+              fontSize: '0.75rem',
+              height: 24,
+              fontWeight: 500,
+              '& .MuiChip-label': { px: 1.5 }
+            }}
+          />
+        ) : hasPages ? (
           <Chip
             icon={<CheckCircleIcon sx={{ fontSize: '0.875rem' }} />}
             label="Digitized"
@@ -81,7 +96,8 @@ const DocumentDigitizationGrid = ({
             }}
           />
         )}
-        {hasPrompt ? (
+        
+        {!isGenerating && (hasPrompt ? (
           <Chip
             label="✓ Prompt"
             size="small"
@@ -125,7 +141,7 @@ const DocumentDigitizationGrid = ({
               }
             }}
           />
-        )}
+        ))}
       </Box>
     )
   }
@@ -225,23 +241,29 @@ const DocumentDigitizationGrid = ({
         disableColumnMenu: true,
         renderCell: params => {
           const isSelected = selectedDocuments.includes(params.row.id)
+          const isGenerating = isDocumentGenerating(params.row.id)
+          
           return (
             <Box 
               sx={{ 
                 fontWeight: 700,
-                color: isSelected ? 'primary.main' : 'text.primary',
+                color: isSelected ? 'primary.main' : isGenerating ? 'info.main' : 'text.primary',
                 cursor: 'pointer',
                 width: '100%',
                 height: '100%',
                 display: 'flex',
                 alignItems: 'center',
-                py: 1
+                py: 1,
+                gap: 1
               }}
               onClick={(e) => {
                 e.stopPropagation()
                 openDialog('pagePreview', params.row._doc)
               }}
             >
+              {isGenerating && (
+                <CircularProgress size={16} color="info" />
+              )}
               {params.value}
             </Box>
           )

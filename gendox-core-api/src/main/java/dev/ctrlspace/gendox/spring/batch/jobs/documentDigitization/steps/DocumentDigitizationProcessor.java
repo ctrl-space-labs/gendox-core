@@ -37,6 +37,12 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private boolean reGenerateExistingAnswers;
+    
+    @Value("#{jobParameters['pageFrom']}")
+    private String pageFromParam;
+    
+    @Value("#{jobParameters['pageTo']}")
+    private String pageToParam;
 
     private TaskService taskService;
     private TaskNodeService taskNodeService;
@@ -107,19 +113,37 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
             return null;
         }
 
+        // Determine page range to process
+        int startPage = 0; // 0-based indexing for internal processing
+        int endPage = totalPages - 1;
+        
+        if (pageFromParam != null && !pageFromParam.isBlank()) {
+            startPage = Math.max(0, Integer.parseInt(pageFromParam) - 1); // Convert from 1-based to 0-based
+        }
+        
+        if (pageToParam != null && !pageToParam.isBlank()) {
+            endPage = Math.min(totalPages - 1, Integer.parseInt(pageToParam) - 1); // Convert from 1-based to 0-based
+        }
+        
+        if (startPage > endPage) {
+            logger.warn("Invalid page range: pageFrom {} is greater than pageTo {} for document {}", 
+                       startPage + 1, endPage + 1, documentInstance.getId());
+            return null;
+        }
+
         List<Integer> pagesToProcess;
         if (reGenerateExistingAnswers) {
             batch.setAnswersToDelete(existingNodes.getContent());
-            pagesToProcess = IntStream.range(0, totalPages).boxed().toList();
+            pagesToProcess = IntStream.rangeClosed(startPage, endPage).boxed().toList();
         } else {
-            pagesToProcess = IntStream.range(0, totalPages)
+            pagesToProcess = IntStream.rangeClosed(startPage, endPage)
                     .filter(i -> !existingPageNums.contains(i))
                     .boxed()
                     .collect(Collectors.toList());
 
             if (pagesToProcess.isEmpty()) {
-                logger.info("Nothing to generate for documentNode {}: all {} pages already have answers.",
-                        documentNode.getId(), totalPages);
+                logger.info("Nothing to generate for documentNode {}: all pages in range [{}, {}] already have answers.",
+                        documentNode.getId(), startPage + 1, endPage + 1);
                 return null; // ← early exit; no rendering done
             }
         }
@@ -169,7 +193,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
                     StringBuilder promptBuilder = new StringBuilder()
                             .append(prompt).append("\n\n")
-                            .append("Document Page: ").append(pageIndex).append(" out of ").append(totalPages).append("\n\n");
+                            .append("Document Page: ").append(pageIndex + 1).append(" out of ").append(totalPages).append("\n\n");
 
                     Message message = new Message();
                     message.setValue(promptBuilder.toString());

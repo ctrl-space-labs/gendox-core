@@ -20,7 +20,8 @@ const DocumentDigitizationDialogs = ({
   existingDocuments,
   setEditMode,
   editMode,
-  documentPages = []
+  documentPages = [],
+  generateSingleDocument
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
@@ -118,6 +119,7 @@ const DocumentDigitizationDialogs = ({
         onClose={() => onClose('pagePreview')}
         document={activeNode}
         documentPages={documentPages}
+        generateSingleDocument={generateSingleDocument}
         onDocumentUpdate={(updatedDoc) => {
           // Refresh documents to show updated data
           if (refreshDocuments) refreshDocuments()

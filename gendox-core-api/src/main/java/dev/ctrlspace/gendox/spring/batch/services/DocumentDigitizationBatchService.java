@@ -56,6 +56,13 @@ public class DocumentDigitizationBatchService {
         paramsBuilder.addLong("run.id", System.currentTimeMillis());
         paramsBuilder.addString("reGenerateExistingAnswers", criteria.getReGenerateExistingAnswers() != null ? criteria.getReGenerateExistingAnswers().toString() : "false");
         paramsBuilder.addString("jobName", documentDigitizationJobName);
+        
+        if (criteria.getPageFrom() != null) {
+            paramsBuilder.addString("pageFrom", criteria.getPageFrom().toString());
+        }
+        if (criteria.getPageTo() != null) {
+            paramsBuilder.addString("pageTo", criteria.getPageTo().toString());
+        }
 
         JobParameters jobParameters = paramsBuilder.toJobParameters();
 

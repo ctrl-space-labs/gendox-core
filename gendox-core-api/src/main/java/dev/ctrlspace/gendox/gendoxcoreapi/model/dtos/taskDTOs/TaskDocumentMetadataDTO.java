@@ -15,4 +15,6 @@ public class TaskDocumentMetadataDTO {
     private UUID taskNodeId;
     private String prompt;
     private String structure;
+    private Integer pageFrom;
+    private Integer pageTo;
 }
