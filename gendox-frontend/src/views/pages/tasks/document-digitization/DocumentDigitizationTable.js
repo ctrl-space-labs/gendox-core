@@ -120,6 +120,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
               id: node.id,
               documentId: node.documentId,
               name: fullDoc?.title || 'Unknown Document',
+              url: fullDoc?.remoteUrl || '',
               prompt: node.nodeValue?.documentMetadata?.prompt || '',
               structure: node.nodeValue?.documentMetadata?.structure || '',
               pageFrom: node.nodeValue?.documentMetadata?.pageFrom || null,

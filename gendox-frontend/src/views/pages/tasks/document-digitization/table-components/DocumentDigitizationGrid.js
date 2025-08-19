@@ -8,6 +8,8 @@ import EditIcon from '@mui/icons-material/Edit'
 import DescriptionIcon from '@mui/icons-material/Description'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorIcon from '@mui/icons-material/Error'
+import BlockIcon from '@mui/icons-material/Block'
+import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 
 const DocumentDigitizationGrid = ({
   openDialog,
@@ -44,6 +46,7 @@ const DocumentDigitizationGrid = ({
     const hasPages = docPage && docPage.numberOfNodePages > 0
     const hasPrompt = params.row.prompt && params.row.prompt.trim()
     const isGenerating = isDocumentGenerating(params.row.id)
+    const isSupported = isFileTypeSupported(params.row.url)
     
     return (
       <Box sx={{ 
@@ -53,7 +56,23 @@ const DocumentDigitizationGrid = ({
         alignItems: 'center',
         flexWrap: 'wrap'
       }}>
-        {isGenerating ? (
+        {!isSupported ? (
+          <Chip
+            icon={<BlockIcon sx={{ fontSize: '0.875rem' }} />}
+            label="Unsupported Format"
+            size="small"
+            color="default"
+            variant="filled"
+            sx={{ 
+              fontSize: '0.75rem',
+              height: 24,
+              fontWeight: 500,
+              backgroundColor: 'grey.400',
+              color: 'white',
+              '& .MuiChip-label': { px: 1.5 }
+            }}
+          />
+        ) : isGenerating ? (
           <Chip
             icon={<CircularProgress size={12} sx={{ color: 'white' }} />}
             label="Generating..."
@@ -97,7 +116,7 @@ const DocumentDigitizationGrid = ({
           />
         )}
         
-        {!isGenerating && (hasPrompt ? (
+        {!isGenerating && isSupported && (hasPrompt ? (
           <Chip
             label="✓ Prompt"
             size="small"
@@ -190,14 +209,16 @@ const DocumentDigitizationGrid = ({
         filterable: false,
         disableColumnMenu: true,
         renderHeader: () => {
-          const docsWithPrompts = documents.filter(doc => doc.prompt && doc.prompt.trim())
+          const docsWithPrompts = documents.filter(doc => 
+            doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url)
+          )
           const selectedDocsWithPrompts = selectedDocuments.filter(id => {
             const doc = documents.find(d => d.id === id)
-            return doc?.prompt?.trim()
+            return doc?.prompt?.trim() && isFileTypeSupported(doc.url)
           })
           
           return (
-            <Tooltip title="Select all documents with prompts">
+            <Tooltip title="Select all supported documents with prompts">
               <Checkbox
                 checked={docsWithPrompts.length > 0 && selectedDocsWithPrompts.length === docsWithPrompts.length}
                 indeterminate={selectedDocsWithPrompts.length > 0 && selectedDocsWithPrompts.length < docsWithPrompts.length}
@@ -216,14 +237,22 @@ const DocumentDigitizationGrid = ({
         renderCell: (params) => {
           const isSelected = selectedDocuments.includes(params.row.id)
           const hasPrompt = params.row.prompt && params.row.prompt.trim()
+          const isSupported = isFileTypeSupported(params.row.url)
+          const canSelect = hasPrompt && isSupported
+          
+          const tooltipTitle = !isSupported 
+            ? "This file format is not supported for generation"
+            : !hasPrompt 
+            ? "Please add a prompt to enable selection for generation" 
+            : ""
           
           return (
-            <Tooltip title={!hasPrompt ? "Please add a prompt to enable selection for generation" : ""}>
+            <Tooltip title={tooltipTitle}>
               <span>
                 <Checkbox
                   checked={isSelected}
                   onChange={(e) => onSelectDocument(params.row.id, e.target.checked)}
-                  disabled={!hasPrompt}
+                  disabled={!canSelect}
                   size="small"
                 />
               </span>
@@ -329,6 +358,7 @@ const DocumentDigitizationGrid = ({
     return sortedDocuments.map(doc => ({
       id: doc.id,
       name: doc.name || 'Unknown Document',
+      url: doc.url || '', // Use the correct URL field
       prompt: doc.prompt || '',
       pages: '', // will be rendered by renderPageCount
       status: '', // will be rendered by renderDigitizationStatus

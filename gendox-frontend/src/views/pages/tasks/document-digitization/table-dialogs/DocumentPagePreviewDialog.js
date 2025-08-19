@@ -38,11 +38,14 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import AccountTreeIcon from '@mui/icons-material/AccountTree'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import DownloadIcon from '@mui/icons-material/Download'
+import BlockIcon from '@mui/icons-material/Block'
+import ErrorIcon from '@mui/icons-material/Error'
 import GendoxMarkdownRenderer from 'src/views/pages/markdown-renderer/GendoxMarkdownRenderer'
 import taskService from 'src/gendox-sdk/taskService'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/router'
+import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 
 const TextareaAutosizeStyled = forwardRef((props, ref) => {
   const theme = useTheme()
@@ -453,6 +456,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
 
     if (!pageNodes || pageNodes.length === 0) {
       const hasPrompt = currentDocument?.prompt && currentDocument.prompt.trim()
+      const isSupported = isFileTypeSupported(currentDocument?.url)
 
       return (
         <Box
@@ -467,9 +471,26 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
             px: 4
           }}
         >
-          <DescriptionIcon sx={{ fontSize: 80, color: 'text.disabled' }} />
+          {!isSupported ? (
+            <BlockIcon sx={{ fontSize: 80, color: 'grey.400' }} />
+          ) : (
+            <DescriptionIcon sx={{ fontSize: 80, color: 'text.disabled' }} />
+          )}
 
-          {!hasPrompt ? (
+          {!isSupported ? (
+            <>
+              <Typography variant='h5' color='text.primary' sx={{ fontWeight: 600 }}>
+                Unsupported File Format
+              </Typography>
+              <Typography variant='body1' color='text.secondary' sx={{ maxWidth: 600 }}>
+                This file format ({currentDocument?.name?.split('.').pop()?.toUpperCase()}) is not supported for document digitization. 
+                Supported formats include PDF, Word documents, PowerPoint presentations, and Excel files.
+              </Typography>
+              <Typography variant='body2' color='grey.600' sx={{ fontWeight: 500 }}>
+                📄 Supported formats: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, ODT, RTF
+              </Typography>
+            </>
+          ) : !hasPrompt ? (
             <>
               <Typography variant='h5' color='text.primary' sx={{ fontWeight: 600 }}>
                 No Prompt Configured
@@ -650,18 +671,24 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
               </>
             ) : (
               <>
-              <IconButton
-                  onClick={() => setEditMode(true)}
-                  size='small'
-                  title='Edit prompt and structure'
-                  sx={{ mr: 1 }}
-                >
-                  <EditIcon />
-                </IconButton>
+              <Tooltip title={!isFileTypeSupported(currentDocument?.url) ? 'This file format is not supported for configuration' : 'Edit prompt and structure'}>
+                <span>
+                  <IconButton
+                    onClick={() => setEditMode(true)}
+                    size='small'
+                    sx={{ mr: 1 }}
+                    disabled={!isFileTypeSupported(currentDocument?.url)}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                </span>
+              </Tooltip>
                 <Tooltip 
                 title={
                   isGenerating
                     ? 'Generation in progress...'
+                    : !isFileTypeSupported(currentDocument?.url)
+                    ? 'This file format is not supported for generation'
                     : !currentDocument.prompt?.trim() 
                     ? 'Add a prompt first to generate answers'
                     : pageRangeError !== ''
@@ -676,7 +703,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                     size='small'
                     onClick={handleGenerateClick}
                     sx={{ mr: 1 }}
-                    disabled={!currentDocument.prompt?.trim() || isGenerating || pageRangeError !== ''}
+                    disabled={!isFileTypeSupported(currentDocument?.url) || !currentDocument.prompt?.trim() || isGenerating || pageRangeError !== ''}
                   >
                     {isGenerating ? (
                       <CircularProgress size={20} />
@@ -769,62 +796,114 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                 </Typography>
                 
                 {/* Status chips */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  {currentDocument?.prompt && currentDocument.prompt.trim() ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                  {/* File Type Status Chip - Always show if unsupported */}
+                  {!isFileTypeSupported(currentDocument?.url) && (
                     <Chip
-                      icon={<AutoAwesomeIcon sx={{ fontSize: '0.875rem' }} />}
-                      label="Prompt"
+                      icon={<BlockIcon sx={{ fontSize: '0.875rem' }} />}
+                      label="Unsupported Format"
                       size="small"
-                      color="primary"
+                      color="default"
                       variant="filled"
                       sx={{ 
                         fontSize: '0.75rem',
                         height: 24,
-                        fontWeight: 500
-                      }}
-                    />
-                  ) : (
-                    <Chip
-                      label="No Prompt"
-                      size="small"
-                      color="warning"
-                      variant="outlined"
-                      sx={{ 
-                        fontSize: '0.75rem',
-                        height: 24,
-                        fontWeight: 500
+                        fontWeight: 500,
+                        backgroundColor: 'grey.400',
+                        color: 'white'
                       }}
                     />
                   )}
 
-                  {pageNodes.length > 0 && (
-                    <Chip
-                      icon={<CheckCircleIcon sx={{ fontSize: '0.875rem' }} />}
-                      label="Generated"
-                      size="small"
-                      color="success"
-                      variant="filled"
-                      sx={{ 
-                        fontSize: '0.75rem',
-                        height: 24,
-                        fontWeight: 500
-                      }}
-                    />
+                  {/* Prompt Status Chip - Always show for supported files */}
+                  {isFileTypeSupported(currentDocument?.url) && (
+                    currentDocument?.prompt && currentDocument.prompt.trim() ? (
+                      <Chip
+                        icon={<AutoAwesomeIcon sx={{ fontSize: '0.875rem' }} />}
+                        label="Prompt"
+                        size="small"
+                        color="primary"
+                        variant="filled"
+                        sx={{ 
+                          fontSize: '0.75rem',
+                          height: 24,
+                          fontWeight: 500
+                        }}
+                      />
+                    ) : (
+                      <Chip
+                        label="No Prompt"
+                        size="small"
+                        color="warning"
+                        variant="outlined"
+                        sx={{ 
+                          fontSize: '0.75rem',
+                          height: 24,
+                          fontWeight: 500
+                        }}
+                      />
+                    )
                   )}
 
-                  {currentDocument?.structure && currentDocument.structure.trim() && (
-                    <Chip
-                      icon={<AccountTreeIcon sx={{ fontSize: '0.875rem' }} />}
-                      label="Structure"
-                      size="small"
-                      color="info"
-                      variant="filled"
-                      sx={{ 
-                        fontSize: '0.75rem',
-                        height: 24,
-                        fontWeight: 500
-                      }}
-                    />
+                  {/* Generation Status Chip - Always show generation status for supported files */}
+                  {isFileTypeSupported(currentDocument?.url) && (
+                    pageNodes.length > 0 ? (
+                      <Chip
+                        icon={<CheckCircleIcon sx={{ fontSize: '0.875rem' }} />}
+                        label="Generated"
+                        size="small"
+                        color="success"
+                        variant="filled"
+                        sx={{ 
+                          fontSize: '0.75rem',
+                          height: 24,
+                          fontWeight: 500
+                        }}
+                      />
+                    ) : (
+                      <Chip
+                        icon={<ErrorIcon sx={{ fontSize: '0.875rem' }} />}
+                        label="Not Generated"
+                        size="small"
+                        color="error"
+                        variant="filled"
+                        sx={{ 
+                          fontSize: '0.75rem',
+                          height: 24,
+                          fontWeight: 500
+                        }}
+                      />
+                    )
+                  )}
+
+                  {/* Structure Status Chip - Always show structure status for supported files */}
+                  {isFileTypeSupported(currentDocument?.url) && (
+                    currentDocument?.structure && currentDocument.structure.trim() ? (
+                      <Chip
+                        icon={<AccountTreeIcon sx={{ fontSize: '0.875rem' }} />}
+                        label="Structure"
+                        size="small"
+                        color="info"
+                        variant="filled"
+                        sx={{ 
+                          fontSize: '0.75rem',
+                          height: 24,
+                          fontWeight: 500
+                        }}
+                      />
+                    ) : (
+                      <Chip
+                        label="No Structure"
+                        size="small"
+                        color="default"
+                        variant="outlined"
+                        sx={{ 
+                          fontSize: '0.75rem',
+                          height: 24,
+                          fontWeight: 500
+                        }}
+                      />
+                    )
                   )}
                 </Box>
               </Box>
