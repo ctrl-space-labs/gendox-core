@@ -21,7 +21,9 @@ const DocumentDigitizationDialogs = ({
   setEditMode,
   editMode,
   documentPages = [],
-  generateSingleDocument
+  generateSingleDocument,
+  onExportCsv,
+  isExportingCsv
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
@@ -124,6 +126,8 @@ const DocumentDigitizationDialogs = ({
           // Refresh documents to show updated data
           if (refreshDocuments) refreshDocuments()
         }}
+        onExportCsv={onExportCsv}
+        isExportingCsv={isExportingCsv}
       />
 
       {/* Delete Confirmation Dialog */}

@@ -5,8 +5,6 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
 import Icon from 'src/views/custom-components/mui/icon/icon'
-import DownloadIcon from '@mui/icons-material/Download'
-import CircularProgress from '@mui/material/CircularProgress'
 
 const HeaderSection = ({
   title,
@@ -17,8 +15,6 @@ const HeaderSection = ({
   onGenerateSelected,
   disableGenerate,
   isLoading,
-  onExportCsv,
-  isExportingCsv,
   selectedDocuments,
   generatingAll = false,
   generatingNew = false,
@@ -66,6 +62,22 @@ const HeaderSection = ({
   }
 
   const buttonConfig = getMainButtonConfig()
+
+  // Check if dropdown menu has any items
+  const hasMenuItems = () => {
+    // When main button is "Generate Selected" - show Generate New and Generate All
+    if (selectedDocuments.length > 0) {
+      return true
+    }
+    
+    // When main button is "Generate New" - show only Generate All
+    if (selectedDocuments.length === 0 && buttonConfig.text.includes('Generate New')) {
+      return true
+    }
+    
+    // When main button is "Generate All" - no menu items needed
+    return false
+  }
 
   return (
     <Box sx={{ mb: 4, px: 2 }}>
@@ -116,20 +128,6 @@ const HeaderSection = ({
         </Stack>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap='100%'>
-          <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Export data as CSV'}>
-            <span>
-              <Button
-                variant='outlined'
-                startIcon={isExportingCsv ? <CircularProgress size={18} /> : <DownloadIcon />}
-                onClick={onExportCsv}
-                disabled={isLoading || isExportingCsv || disableGenerate}
-                size='medium'
-                fullWidth
-              >
-                {isExportingCsv ? 'Exporting...' : 'Export CSV'}
-              </Button>
-            </span>
-          </Tooltip>
           <Tooltip title={isLoading ? 'Loading...' : buttonConfig.text}>
             <span>
               <Box
@@ -164,7 +162,7 @@ const HeaderSection = ({
                   color='primary'
                   size='small'
                   onClick={handleToggle}
-                  disabled={buttonConfig.disabled || isLoading || disableGenerate}
+                  disabled={buttonConfig.disabled || isLoading || disableGenerate || !hasMenuItems()}
                   sx={{
                     minWidth: '40px',
                     px: 0,

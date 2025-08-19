@@ -156,8 +156,20 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
         // TODO change this to optionally get a list of page numbers to print
         List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), printOptions);
+        
+        // Validate that we have enough pages and create safe mapping
         Map<Integer, String> pageImages = pagesToProcess.stream()
+                .filter(i -> i >= 0 && i < printedPagesBase64.size())
                 .collect(Collectors.toMap(i -> i, i -> printedPagesBase64.get(i)));
+        
+        // Log warning if some pages were filtered out due to bounds issues
+        if (pageImages.size() != pagesToProcess.size()) {
+            logger.warn("Some pages were skipped due to bounds issues. Expected {} pages, got {} page images, processing {} pages", 
+                       pagesToProcess.size(), printedPagesBase64.size(), pageImages.size());
+        }
+        
+        // Update pagesToProcess to only include valid pages
+        pagesToProcess = new ArrayList<>(pageImages.keySet());
 
         // CORE PROCESSING:
         // There are 2 thread pools: 1 for the docs, 1 for the LLM completions

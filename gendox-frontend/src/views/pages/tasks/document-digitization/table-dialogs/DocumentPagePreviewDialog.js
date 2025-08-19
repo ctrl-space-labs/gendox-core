@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, forwardRef } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -18,8 +18,11 @@ import {
   Button,
   Collapse,
   Paper,
-  Tooltip
+  Tooltip,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
 import CloseIcon from '@mui/icons-material/Close'
 import FullscreenIcon from '@mui/icons-material/Fullscreen'
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
@@ -34,13 +37,38 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import AccountTreeIcon from '@mui/icons-material/AccountTree'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import DownloadIcon from '@mui/icons-material/Download'
 import GendoxMarkdownRenderer from 'src/views/pages/markdown-renderer/GendoxMarkdownRenderer'
 import taskService from 'src/gendox-sdk/taskService'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/router'
 
-const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onDocumentUpdate, generateSingleDocument }) => {
+const TextareaAutosizeStyled = forwardRef((props, ref) => {
+  const theme = useTheme()
+  return (
+    <textarea
+      ref={ref}
+      {...props}
+      style={{
+        width: '100%',
+        minHeight: 80,
+        padding: '12px 16px',
+        fontSize: '1rem',
+        borderRadius: 8,
+        border: `1px solid ${theme.palette.divider}`,
+        backgroundColor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
+        resize: 'vertical',
+        marginBottom: 16,
+        outline: 'none',
+        ...props.style
+      }}
+    />
+  )
+})
+
+const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onDocumentUpdate, generateSingleDocument, onExportCsv, isExportingCsv }) => {
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -59,6 +87,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
   const [pageFrom, setPageFrom] = useState('')
   const [pageTo, setPageTo] = useState('')
   const [pageRangeError, setPageRangeError] = useState('')
+  const [selectAllPages, setSelectAllPages] = useState(false)
   const sectionRefs = useRef([])
   const router = useRouter()
 
@@ -115,8 +144,12 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
       if (open) {
         setPromptValue(document.prompt || '')
         setStructureValue(document.structure || '')
-        setPageFrom(document.pageFrom ? document.pageFrom.toString() : '')
-        setPageTo(document.pageTo ? document.pageTo.toString() : '')
+        const fromPage = document.pageFrom ? document.pageFrom.toString() : ''
+        const toPage = document.pageTo ? document.pageTo.toString() : ''
+        setPageFrom(fromPage)
+        setPageTo(toPage)
+        // Set selectAllPages to true if both pageFrom and pageTo are empty
+        setSelectAllPages(!fromPage && !toPage)
       }
     }
   }, [open, document])
@@ -142,7 +175,8 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
         taskId,
         {
           taskId,
-          nodeTypeNames: ['ANSWER']
+          nodeTypeNames: ['ANSWER'],
+          nodeValueNodeDocumentId: document.id
         },
         token,
         page,
@@ -225,8 +259,11 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
       setEditMode(false)
       setPromptValue(currentDocument?.prompt || '')
       setStructureValue(currentDocument?.structure || '')
-      setPageFrom(currentDocument?.pageFrom ? currentDocument.pageFrom.toString() : '')
-      setPageTo(currentDocument?.pageTo ? currentDocument.pageTo.toString() : '')
+      const fromPage = currentDocument?.pageFrom ? currentDocument.pageFrom.toString() : ''
+      const toPage = currentDocument?.pageTo ? currentDocument.pageTo.toString() : ''
+      setPageFrom(fromPage)
+      setPageTo(toPage)
+      setSelectAllPages(!fromPage && !toPage)
     }
     setFullscreen(false)
     setPageNodes([])
@@ -239,11 +276,29 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
   const handlePageFromChange = (value) => {
     setPageFrom(value)
     validatePageRange(value, pageTo)
+    // If user types in page range, uncheck "select all"
+    if (value || pageTo) {
+      setSelectAllPages(false)
+    }
   }
 
   const handlePageToChange = (value) => {
     setPageTo(value)
     validatePageRange(pageFrom, value)
+    // If user types in page range, uncheck "select all"
+    if (pageFrom || value) {
+      setSelectAllPages(false)
+    }
+  }
+
+  const handleSelectAllPagesChange = (checked) => {
+    setSelectAllPages(checked)
+    if (checked) {
+      // Clear page range when "select all" is checked
+      setPageFrom('')
+      setPageTo('')
+      setPageRangeError('')
+    }
   }
 
   const handleSave = async () => {
@@ -309,8 +364,11 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
     setEditMode(false)
     setPromptValue(currentDocument?.prompt || '')
     setStructureValue(currentDocument?.structure || '')
-    setPageFrom(currentDocument?.pageFrom ? currentDocument.pageFrom.toString() : '')
-    setPageTo(currentDocument?.pageTo ? currentDocument.pageTo.toString() : '')
+    const fromPage = currentDocument?.pageFrom ? currentDocument.pageFrom.toString() : ''
+    const toPage = currentDocument?.pageTo ? currentDocument.pageTo.toString() : ''
+    setPageFrom(fromPage)
+    setPageTo(toPage)
+    setSelectAllPages(!fromPage && !toPage)
     setPageRangeError('')
   }
 
@@ -636,6 +694,19 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                   <DeleteOutlineIcon />
                 </IconButton>
                 
+                <Tooltip title={isExportingCsv ? 'Exporting...' : 'Export data as CSV'}>
+                  <span>
+                    <IconButton
+                      size='small'
+                      onClick={onExportCsv}
+                      disabled={isExportingCsv}
+                      sx={{ mr: 1 }}
+                    >
+                      {isExportingCsv ? <CircularProgress size={20} /> : <DownloadIcon />}
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                
               </>
             )}
 
@@ -653,6 +724,32 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
           </Box>
         </Toolbar>
       </AppBar>
+
+      {/* Generation Progress Banner */}
+      {isGenerating && (
+        <Box
+          sx={{
+            backgroundColor: 'primary.main',
+            color: 'primary.contrastText',
+            p: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            borderBottom: 1,
+            borderColor: 'divider'
+          }}
+        >
+          <CircularProgress size={24} sx={{ color: 'inherit' }} />
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="body1" sx={{ fontWeight: 600 }}>
+              Generating Document Answers...
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
+              Processing your document - you can continue viewing the content below
+            </Typography>
+          </Box>
+        </Box>
+      )}
 
       <DialogContent sx={{ p: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {/* Prompt and Structure Section */}
@@ -744,16 +841,12 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                     Prompt
                   </Typography>
                   {editMode ? (
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={3}
-                      variant='outlined'
-                      size='small'
+                    <TextareaAutosizeStyled
                       value={promptValue}
                       onChange={e => setPromptValue(e.target.value)}
                       placeholder='Enter the prompt for document processing...'
-                      sx={{ backgroundColor: 'background.default' }}
+                      minRows={3}
+                      autoFocus
                     />
                   ) : (
                     <Typography
@@ -780,16 +873,12 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                     Structure
                   </Typography>
                   {editMode ? (
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={3}
-                      variant='outlined'
-                      size='small'
+                    <TextareaAutosizeStyled
                       value={structureValue}
                       onChange={e => setStructureValue(e.target.value)}
                       placeholder='Enter the structure for document processing...'
-                      sx={{ backgroundColor: 'background.default' }}
+                      minRows={2}
+                      maxRows={6}
                     />
                   ) : (
                     <Typography
@@ -816,6 +905,22 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                   <Typography variant='body2' color='text.secondary' sx={{ mb: 1, fontWeight: 500 }}>
                     Page Range (optional)
                   </Typography>
+                  
+                  {/* Select All Pages Checkbox */}
+                  {editMode && (
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={selectAllPages}
+                          onChange={(e) => handleSelectAllPagesChange(e.target.checked)}
+                          size="small"
+                        />
+                      }
+                      label="Select all pages"
+                      sx={{ mb: 2 }}
+                    />
+                  )}
+                  
                   <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                     <TextField
                       size='small'
@@ -832,7 +937,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                         width: 120,
                         backgroundColor: editMode ? 'background.default' : 'action.hover' 
                       }}
-                      disabled={!editMode}
+                      disabled={!editMode || selectAllPages}
                     />
                     <Typography variant='body2' color='text.secondary'>
                       to
@@ -852,7 +957,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                         width: 120,
                         backgroundColor: editMode ? 'background.default' : 'action.hover' 
                       }}
-                      disabled={!editMode}
+                      disabled={!editMode || selectAllPages}
                     />
                     <Typography variant='body2' color='text.secondary' sx={{ fontSize: '0.75rem' }}>
                       (Total: {totalPages} pages)
@@ -875,13 +980,16 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
               backgroundColor: 'action.hover',
               pt: 4,
               pb: 4,
-              minHeight: fullscreen ? 'calc(100vh - 200px)' : '50vh'
+              minHeight: fullscreen ? 'calc(100vh - 200px)' : '50vh',
+              opacity: isGenerating ? 0.6 : 1,
+              transition: 'opacity 0.3s ease',
+              pointerEvents: isGenerating ? 'none' : 'auto'
             }}
           >
             <SectionCardContent />
           </ResponsiveCardContent>
           
-          {/* Generation Loading Overlay */}
+          {/* Subtle loading overlay for content area */}
           {isGenerating && (
             <Box
               sx={{
@@ -890,22 +998,31 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                 left: 0,
                 right: 0,
                 bottom: 0,
-                backgroundColor: 'transparent',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                flexDirection: 'column',
-                gap: 3,
                 zIndex: 10
               }}
             >
-              <CircularProgress size={60} color="primary" />
-              <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                Generating Document Answers...
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', maxWidth: 400 }}>
-                Please wait while we process your document and generate the answer nodes based on your prompt configuration.
-              </Typography>
+              <Box
+                sx={{
+                  backgroundColor: 'background.paper',
+                  borderRadius: 2,
+                  p: 3,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  boxShadow: 2,
+                  border: '1px solid',
+                  borderColor: 'divider'
+                }}
+              >
+                <CircularProgress size={32} color="primary" />
+                <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 500 }}>
+                  Content will refresh when generation completes
+                </Typography>
+              </Box>
             </Box>
           )}
         </Box>
@@ -965,6 +1082,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
           </Button>
         </DialogActions>
       </Dialog>
+      
     </Dialog>
   )
 }
