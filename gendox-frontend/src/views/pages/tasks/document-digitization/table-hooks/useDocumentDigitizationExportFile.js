@@ -34,5 +34,24 @@ export default function useExportFile({
     }
   }, [organizationId, projectId, taskId, token, selectedTask, documents])
 
-  return { exportCsv, isExportingCsv }
+  const exportDocumentDigitizationCsv = useCallback(async (documentNodeId, documentName) => {
+    if (!documentNodeId) {
+      toast.error('No document selected for export')
+      return
+    }
+    setIsExportingCsv(true)
+    try {
+      const csvBlob = await taskService.documentDigitizationExportCSV(organizationId, projectId, taskId, documentNodeId, token)
+      const filename = `${documentName?.replace(/\s+/g, '_') || 'document_digitization'}.csv`
+      downloadBlobForCSV(csvBlob, filename)
+      toast.success('Document CSV exported successfully!')
+    } catch (error) {
+      console.error('Failed to export document CSV:', error)
+      toast.error('Failed to export document CSV')
+    } finally {
+      setIsExportingCsv(false)
+    }
+  }, [organizationId, projectId, taskId, token])
+
+  return { exportCsv, exportDocumentDigitizationCsv, isExportingCsv }
 }

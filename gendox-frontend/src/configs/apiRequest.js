@@ -214,5 +214,8 @@ export default {
   exportTaskCsv: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/export-csv`,
 
+  documentDigitizationExportCSV: (organizationId, projectId, taskId, documentNodeId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/export-csv`,
+
 
 }

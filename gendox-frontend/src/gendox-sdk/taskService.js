@@ -354,6 +354,28 @@ const exportTaskCsv = async (organizationId, projectId, taskId, token) => {
   return response.data // This is the CSV blob
 }
 
+/**
+ * Export Document Digitization CSV
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param documentNodeId
+ * @param token
+ * @returns {Promise<Blob>}
+ */
+const documentDigitizationExportCSV = async (organizationId, projectId, taskId, documentNodeId, token) => {
+  const response = await axios.get(
+    apiRequests.documentDigitizationExportCSV(organizationId, projectId, taskId, documentNodeId),
+    {
+      headers: {
+        Authorization: 'Bearer ' + token,
+      },
+      responseType: 'blob', // Important for CSV files!
+    }
+  )
+  return response.data // This is the CSV blob
+}
+
 
 export default {
   createTask,
@@ -376,5 +398,6 @@ export default {
   getJobStatus,
   deleteTaskNode,
   deleteTask,
-  exportTaskCsv
+  exportTaskCsv,
+  documentDigitizationExportCSV
 }

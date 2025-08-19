@@ -698,8 +698,8 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                   <span>
                     <IconButton
                       size='small'
-                      onClick={onExportCsv}
-                      disabled={isExportingCsv}
+                      onClick={() => onExportCsv && onExportCsv(document?.id, document?.name)}
+                      disabled={isExportingCsv || !onExportCsv}
                       sx={{ mr: 1 }}
                     >
                       {isExportingCsv ? <CircularProgress size={20} /> : <DownloadIcon />}

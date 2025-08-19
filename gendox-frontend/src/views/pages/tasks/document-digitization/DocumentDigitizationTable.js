@@ -217,7 +217,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       }
     })
 
-  const { exportCsv, isExportingCsv } = useExportFile({
+  const { exportCsv, exportDocumentDigitizationCsv, isExportingCsv } = useExportFile({
     organizationId,
     projectId,
     taskId,
@@ -291,6 +291,8 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         setEditMode={setEditMode}
         documentPages={documentPages}
         generateSingleDocument={generateSingleDocument}
+        onExportCsv={exportDocumentDigitizationCsv}
+        isExportingCsv={isExportingCsv}
       />
     </>
   )
