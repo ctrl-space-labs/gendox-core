@@ -34,6 +34,9 @@ import RouteHandler from '../authentication/components/RouteHandler'
 import OrganizationProjectGuard from 'src/authentication/components/OrganizationProjectGuard'
 import { AuthProvider } from '../authentication/context/AuthContext'
 import { IFrameMessageManagerProvider } from '../authentication/context/IFrameMessageManagerContext'
+import { GenerationProvider } from 'src/contexts/GenerationContext'
+import GlobalGenerationStatus from 'src/components/GlobalGenerationStatus'
+import GenerationFAB from 'src/components/GenerationFAB'
 
 const clientSideEmotionCache = createEmotionCache()
 
@@ -76,21 +79,25 @@ const App = props => {
 
         <IFrameMessageManagerProvider>
           <AuthProvider option={authProviderOption}>
-            <SettingsProvider pageConfig={pageConfig ? pageConfig : undefined}>
-              <SettingsConsumer>
-                {({ settings }) => {
-                  return (
-                    <ThemeComponent settings={settings}>
-                      <OrganizationProjectGuard authProviderOption={authProviderOption} pageConfig={pageConfig}>
-                        <RouteHandler routeType={routeType}>{getLayout(<Component {...pageProps} />)}</RouteHandler>
+            <GenerationProvider>
+              <SettingsProvider pageConfig={pageConfig ? pageConfig : undefined}>
+                <SettingsConsumer>
+                  {({ settings }) => {
+                    return (
+                      <ThemeComponent settings={settings}>
+                        <GlobalGenerationStatus />
+                        <OrganizationProjectGuard authProviderOption={authProviderOption} pageConfig={pageConfig}>
+                          <RouteHandler routeType={routeType}>{getLayout(<Component {...pageProps} />)}</RouteHandler>
 
-                      </OrganizationProjectGuard>
-                      <CustomToast />
-                    </ThemeComponent>
-                  )
-                }}
-              </SettingsConsumer>
-            </SettingsProvider>
+                        </OrganizationProjectGuard>
+                        <CustomToast />
+                        <GenerationFAB />
+                      </ThemeComponent>
+                    )
+                  }}
+                </SettingsConsumer>
+              </SettingsProvider>
+            </GenerationProvider>
           </AuthProvider>
         </IFrameMessageManagerProvider>
       </CacheProvider>

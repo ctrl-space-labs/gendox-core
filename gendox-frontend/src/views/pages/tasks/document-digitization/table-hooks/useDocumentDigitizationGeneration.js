@@ -4,6 +4,7 @@ import {
   executeTaskByType,
 } from 'src/store/activeTask/activeTask'
 import { toast } from 'react-hot-toast'
+import { useGeneration } from 'src/contexts/GenerationContext'
 
 
 export default function useDocumentDigitizationGeneration({
@@ -18,6 +19,7 @@ export default function useDocumentDigitizationGeneration({
   onGenerationComplete = () => {}
 }) {
   const dispatch = useDispatch()
+  const { startGeneration, updateProgress, completeGeneration, failGeneration } = useGeneration()
   const [generatingAll, setGeneratingAll] = useState(false)
   const [generatingNew, setGeneratingNew] = useState(false)
   const [generatingSelected, setGeneratingSelected] = useState(false)
@@ -49,6 +51,10 @@ export default function useDocumentDigitizationGeneration({
     }
 
     const docIds = Array.isArray(docs) ? docs.map(d => d.id) : [docs.id]
+    const documentId = docIds.length === 1 ? docIds[0] : null
+    
+    // Start global generation tracking
+    startGeneration(taskId, documentId, generationType, null)
     
     // Set individual document loading states
     setGeneratingDocuments(prev => new Set([...prev, ...docIds]))
@@ -69,10 +75,19 @@ export default function useDocumentDigitizationGeneration({
         executeTaskByType({ organizationId, projectId, taskId, criteria, token })
       ).unwrap()
 
-      const typeText = generationType === 'all' ? 'all' : generationType === 'new' ? 'new' : 'selected'
+      const typeText = generationType === 'all' ? 'all' : generationType === 'new' ? 'new' : generationType === 'selected' ? 'selected' : 'single'
       toast.success(`Started ${typeText} generation for ${docIds.length} document(s)`)
       
-      await pollJobStatus(jobExecutionId)
+      // Poll job status with progress updates
+      await pollJobStatus(jobExecutionId, (status) => {
+        // Update progress if available from job status
+        if (status?.completedItems !== undefined) {
+          updateProgress(taskId, documentId, status.completedItems)
+        }
+      })
+      
+      // Mark as completed in global context
+      completeGeneration(taskId, documentId)
       
       toast.success(`${typeText.charAt(0).toUpperCase() + typeText.slice(1)} generation completed for ${docIds.length} document(s)`)
       
@@ -87,7 +102,12 @@ export default function useDocumentDigitizationGeneration({
       }
     } catch (error) {
       console.error('Failed to start generation:', error)
-      toast.error('Failed to start generation')
+      const errorMessage = error.message || 'Failed to start generation'
+      
+      // Mark as failed in global context
+      failGeneration(taskId, documentId, errorMessage)
+      
+      toast.error(errorMessage)
     } finally {
       // Remove individual document loading states
       setGeneratingDocuments(prev => {
@@ -97,7 +117,7 @@ export default function useDocumentDigitizationGeneration({
       })
       setLoading(false)
     }
-  }, [organizationId, projectId, taskId, pollJobStatus, token, dispatch, setSelectedDocuments])
+  }, [organizationId, projectId, taskId, pollJobStatus, token, dispatch, setSelectedDocuments, startGeneration, updateProgress, completeGeneration, failGeneration])
 
   // Generate New: Only documents that haven't been generated yet
   const generateNew = useCallback(async () => {
@@ -162,7 +182,7 @@ export default function useDocumentDigitizationGeneration({
     }
 
     const hasContent = hasGeneratedContent(document.id)
-    await executeGeneration([document], 'selected', hasContent, pageFrom, pageTo)
+    await executeGeneration([document], 'single', hasContent, pageFrom, pageTo)
   }, [hasGeneratedContent, executeGeneration])
 
   // Helper function to check if a specific document is being generated
