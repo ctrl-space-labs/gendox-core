@@ -4,7 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.AsyncService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.JobService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AsyncExecutionTypes;
@@ -28,19 +28,19 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
-public class AsyncController {
+public class JobController {
 
-    Logger logger = LoggerFactory.getLogger(AsyncController.class);
+    Logger logger = LoggerFactory.getLogger(JobController.class);
 
-    private final AsyncService asyncService;
+    private final JobService jobService;
     private final SecurityUtils securityUtils;
     private final TaskService taskService;
 
     @Autowired
-    public AsyncController(AsyncService asyncService,
-                           SecurityUtils securityUtils,
-                           TaskService taskService) {
-        this.asyncService = asyncService;
+    public JobController(JobService jobService,
+                         SecurityUtils securityUtils,
+                         TaskService taskService) {
+        this.jobService = jobService;
         this.securityUtils = securityUtils;
         this.taskService = taskService;
     }
@@ -81,13 +81,13 @@ public class AsyncController {
 
         switch (jobName.toUpperCase()) {
             case AsyncExecutionTypes.SPLITTER:
-                asyncService.executeSplitter(projectIdFromRequest, timePeriodDTO);
+                jobService.executeSplitter(projectIdFromRequest, timePeriodDTO);
                 break;
             case AsyncExecutionTypes.TRAINING:
-                asyncService.executeTraining(projectIdFromRequest, timePeriodDTO);
+                jobService.executeTraining(projectIdFromRequest, timePeriodDTO);
                 break;
             case AsyncExecutionTypes.SPLITTER_AND_TRAINING:
-                asyncService.executeSplitterAndTraining(projectIdFromRequest, timePeriodDTO);
+                jobService.executeSplitterAndTraining(projectIdFromRequest, timePeriodDTO);
                 break;
             default:
                 throw new GendoxException(
@@ -113,14 +113,14 @@ public class AsyncController {
         String taskType = task.getTaskType().getName();
 
         if (TaskTypeConstants.DOCUMENT_INSIGHTS.equalsIgnoreCase(taskType)) {
-            CompletableFuture<JobExecution> futureJob = asyncService
+            CompletableFuture<JobExecution> futureJob = jobService
                     .executeDocumentInsightsTask(taskId, criteria);
             return futureJob
                     .thenApply(JobExecution::getId);
 
 
         } else if (TaskTypeConstants.DOCUMENT_DIGITIZATION.equalsIgnoreCase(taskType)) {
-            CompletableFuture<JobExecution> futureJob = asyncService
+            CompletableFuture<JobExecution> futureJob = jobService
                     .executeDocumentDigitizationTask(taskId, criteria);
             return futureJob
                     .thenApply(JobExecution::getId);
@@ -142,7 +142,7 @@ public class AsyncController {
     public String getJobStatus(@PathVariable UUID organizationId,
                                @PathVariable UUID projectId,
                                @PathVariable Long jobExecutionId) throws GendoxException {
-        BatchStatus status = asyncService.getJobStatus(jobExecutionId);
+        BatchStatus status = jobService.getJobStatus(jobExecutionId);
         if (status == null) {
             throw new GendoxException("JOB_NOT_FOUND", "Job Execution with ID " + jobExecutionId + " not found", HttpStatus.NOT_FOUND);
         }

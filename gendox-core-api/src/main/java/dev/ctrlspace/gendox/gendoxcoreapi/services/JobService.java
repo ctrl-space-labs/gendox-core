@@ -18,7 +18,7 @@ import java.util.concurrent.CompletableFuture;
 
 
 @Service
-public class AsyncService {
+public class JobService {
 
     Logger logger = org.slf4j.LoggerFactory.getLogger(this.getClass());
 
@@ -30,12 +30,12 @@ public class AsyncService {
     private final JobExplorer jobExplorer;
 
     @Autowired
-    public AsyncService(SplitterBatchService splitterBatchService,
-                        TrainingBatchService trainingBatchService,
-                        SplitterAndTrainingBatchService splitterAndTrainingBatchService,
-                        DocumentInsightsBatchService documentInsightsBatchService,
-                        DocumentDigitizationBatchService documentDigitizationBatchService,
-                        JobExplorer jobExplorer) {
+    public JobService(SplitterBatchService splitterBatchService,
+                      TrainingBatchService trainingBatchService,
+                      SplitterAndTrainingBatchService splitterAndTrainingBatchService,
+                      DocumentInsightsBatchService documentInsightsBatchService,
+                      DocumentDigitizationBatchService documentDigitizationBatchService,
+                      JobExplorer jobExplorer) {
         this.splitterBatchService = splitterBatchService;
         this.trainingBatchService = trainingBatchService;
         this.splitterAndTrainingBatchService = splitterAndTrainingBatchService;
