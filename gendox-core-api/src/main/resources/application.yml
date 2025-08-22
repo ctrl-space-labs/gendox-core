@@ -109,8 +109,8 @@ gendox:
   emails:
     contact-email: contact@ctrlspace.dev
   documents:
-    upload-dir: s3://gendox.organization.documents.dev
-#    upload-dir: file:${user.home}/gendox/documents
+#    upload-dir: s3://gendox.organization.documents.dev
+    upload-dir: file:${user.home}/gendox/documents
 #    Word count per document section, used in static word count Splitter
     wordCount: 500
 #    Token count per document section, used in Page or Markdown Splitters
@@ -209,11 +209,6 @@ gendox:
             name: documentDigitizationStep
             chunk-size: 10
             pageable-size: 1000
-    backfill:
-      pages:
-        auto-after-migrate: true   # run the backfill right after Flyway migrates
-        batch-size: 200            # tune as needed
-        file-types: ".pdf,.docx,.doc,.ppt,.pptx"  # only process files with these extensions
   user-invitation:
     accept-url-template: /accept-invitation/?email=%s&token=%s
     ttl: 86400  # in seconds
