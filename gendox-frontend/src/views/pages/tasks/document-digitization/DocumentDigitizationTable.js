@@ -282,6 +282,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         dialogs={dialogs}
         activeNode={activeNode}
         onClose={closeDialog}
+        onOpen={openDialog}
         refreshDocuments={fetchDocuments}
         taskId={taskId}
         organizationId={organizationId}

@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef, useMemo, forwardRef } from 'react'
 import {
   Dialog,
   DialogContent,
-  DialogTitle,
-  DialogActions,
   Box,
   Typography,
   CircularProgress,
@@ -46,6 +44,7 @@ import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/router'
 import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
+import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
 
 const TextareaAutosizeStyled = forwardRef((props, ref) => {
   const theme = useTheme()
@@ -71,7 +70,7 @@ const TextareaAutosizeStyled = forwardRef((props, ref) => {
   )
 })
 
-const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onDocumentUpdate, generateSingleDocument, onExportCsv, isExportingCsv }) => {
+const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onDocumentUpdate, generateSingleDocument, onExportCsv, isExportingCsv, onDelete }) => {
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -133,12 +132,6 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
     return true
   }
   
-  // Check if current page range is valid (without calling validate to avoid infinite loop)
-  const isPageRangeValid = useMemo(() => {
-    // Don't call validatePageRange here as it updates state
-    // Just check if there are no errors
-    return pageRangeError === ''
-  }, [pageRangeError])
 
   // Initialize prompt and structure values from document
   useEffect(() => {
@@ -713,13 +706,18 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                   </IconButton>
                 </span>
               </Tooltip>
-                <IconButton
-                  size='small'
-                  title='Delete document'
-                  sx={{ mr: 1, color: 'error.main' }}
-                >
-                  <DeleteOutlineIcon />
-                </IconButton>
+                <Tooltip title="Delete document">
+                  <span>
+                    <IconButton
+                      size='small'
+                      onClick={() => onDelete && onDelete()}
+                      disabled={!onDelete}
+                      sx={{ mr: 1, color: 'error.main' }}
+                    >
+                      <DeleteOutlineIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
                 
                 <Tooltip title={isExportingCsv ? 'Exporting...' : 'Export data as CSV'}>
                   <span>
@@ -788,15 +786,15 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
             backgroundColor: 'background.paper'
           }}
         >
-          <Box sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ py: 3, px: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Typography variant='h6' color='text.primary' sx={{ fontWeight: 600 }}>
                   Document Configuration
                 </Typography>
                 
                 {/* Status chips */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   {/* File Type Status Chip - Always show if unsupported */}
                   {!isFileTypeSupported(currentDocument?.url) && (
                     <Chip
@@ -914,9 +912,9 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
             </Box>
 
             <Collapse in={showPromptStructure}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <Box>
-                  <Typography variant='body2' color='text.secondary' sx={{ mb: 1, fontWeight: 500 }}>
+                  <Typography variant='body2' color='text.secondary' sx={{ mb: 2, fontWeight: 500 }}>
                     Prompt
                   </Typography>
                   {editMode ? (
@@ -948,7 +946,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                 </Box>
 
                 <Box>
-                  <Typography variant='body2' color='text.secondary' sx={{ mb: 1, fontWeight: 500 }}>
+                  <Typography variant='body2' color='text.secondary' sx={{ mb: 2, fontWeight: 500 }}>
                     Structure
                   </Typography>
                   {editMode ? (
@@ -981,7 +979,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
 
                 {/* Page Range Selection */}
                 <Box>
-                  <Typography variant='body2' color='text.secondary' sx={{ mb: 1, fontWeight: 500 }}>
+                  <Typography variant='body2' color='text.secondary' sx={{ mb: 2, fontWeight: 500 }}>
                     Page Range (optional)
                   </Typography>
                   
@@ -996,11 +994,11 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                         />
                       }
                       label="Select all pages"
-                      sx={{ mb: 2 }}
+                      sx={{ mb: 3 }}
                     />
                   )}
                   
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
                     <TextField
                       size='small'
                       variant='outlined'
@@ -1043,7 +1041,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                     </Typography>
                   </Box>
                   {pageRangeError && (
-                    <Typography variant='body2' color='error.main' sx={{ mt: 1, fontSize: '0.75rem' }}>
+                    <Typography variant='body2' color='error.main' sx={{ mt: 2, fontSize: '0.75rem' }}>
                       {pageRangeError}
                     </Typography>
                   )}
@@ -1057,8 +1055,8 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
           <ResponsiveCardContent
             sx={{
               backgroundColor: 'action.hover',
-              pt: 4,
-              pb: 4,
+              py: 6,
+              px: 4,
               minHeight: fullscreen ? 'calc(100vh - 200px)' : '50vh',
               opacity: isGenerating ? 0.6 : 1,
               transition: 'opacity 0.3s ease',
@@ -1106,61 +1104,16 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
           )}
         </Box>
 
-        {/* Footer info */}
-        {/* <Box
-          sx={{
-            py: 2,
-            px: 3,
-            backgroundColor: 'action.hover',
-            borderTop: 1,
-            borderColor: 'divider'
-          }}
-        >
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center' }}>
-            💡 This preview shows the answer nodes with processed document content ordered by page. {hasMore ? `Showing ${pageNodes.length} of ${totalElements} total answers. ` : ''}{editMode ? 'Edit the prompt and structure above, then save your changes.' : 'Click the edit button to modify prompt and structure settings.'}
-          </Typography>
-        </Box> */}
+        
       </DialogContent>
       
       {/* Regenerate Confirmation Dialog */}
-      <Dialog
+      <GenerateConfirmDialog
         open={confirmRegenerate}
         onClose={handleCancelRegenerate}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Regenerate Document Answers
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-            This document already has generated answers. Regenerating will replace all existing answers with new ones.
-          </Typography>
-          <Typography variant="body2" color="warning.main" sx={{ fontWeight: 500 }}>
-            ⚠️ This action cannot be undone. All current answers will be lost.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button 
-            onClick={handleCancelRegenerate}
-            variant="outlined"
-            size="medium"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleConfirmRegenerate}
-            variant="contained"
-            color="warning"
-            size="medium"
-            startIcon={<RocketLaunchIcon />}
-          >
-            Regenerate Answers
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleConfirmRegenerate}
+        type="document"
+      />
       
     </Dialog>
   )

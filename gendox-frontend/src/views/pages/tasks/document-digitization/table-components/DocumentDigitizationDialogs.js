@@ -12,6 +12,7 @@ const DocumentDigitizationDialogs = ({
   dialogs,
   activeNode,
   onClose,
+  onOpen,
   refreshDocuments,
   taskId,
   organizationId,
@@ -128,6 +129,7 @@ const DocumentDigitizationDialogs = ({
         }}
         onExportCsv={onExportCsv}
         isExportingCsv={isExportingCsv}
+        onDelete={() => onOpen && onOpen('delete', activeNode)}
       />
 
       {/* Delete Confirmation Dialog */}
