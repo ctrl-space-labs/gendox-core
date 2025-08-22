@@ -19,6 +19,7 @@ import documentService from 'src/gendox-sdk/documentService'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { fetchTaskNodesByCriteria } from 'src/store/activeTask/activeTask'
 import taskService from 'src/gendox-sdk/taskService'
+import { isDocumentDigitizationFileTypeSupported, DOCUMENT_DIGITIZATION_SUPPORTED_MIME_TYPES, getDocumentDigitizationUnsupportedFormatMessage } from 'src/utils/fileFormats'
 
 // Styled containers using rem units
 const ModalWrapper = styled(Box)(({ theme }) => ({
@@ -134,21 +135,33 @@ const UploaderDocumentInsights = ({ closeUploader, taskId, onClose }) => {
   const [totalFiles, setTotalFiles] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
   const [alertVisible, setAlertVisible] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
   const {
     getRootProps,
     getInputProps,
     open: triggerFileSelect
   } = useDropzone({
-    onDrop: acceptedFiles => {
-      const enrichedFiles = acceptedFiles.map(file => ({
-        id: `${Date.now()}-${file.name}`,
-        file,
-        name: file.name,
-        size: file.size
-      }))
-      setFileQueue(prev => [...prev, ...enrichedFiles])
+    onDrop: (acceptedFiles, rejectedFiles) => {
+      const supportedFiles = acceptedFiles.filter(file => isDocumentDigitizationFileTypeSupported(file.name))
+      const unsupportedFiles = acceptedFiles.filter(file => !isDocumentDigitizationFileTypeSupported(file.name))
+      
+      if (unsupportedFiles.length > 0) {
+        setErrorMessage(getDocumentDigitizationUnsupportedFormatMessage(unsupportedFiles))
+      }
+      
+      if (supportedFiles.length > 0) {
+        const enrichedFiles = supportedFiles.map(file => ({
+          id: `${Date.now()}-${file.name}`,
+          file,
+          name: file.name,
+          size: file.size
+        }))
+        setFileQueue(prev => [...prev, ...enrichedFiles])
+        setErrorMessage('') // Clear any previous error
+      }
     },
+    accept: DOCUMENT_DIGITIZATION_SUPPORTED_MIME_TYPES,
     noClick: true,
     noKeyboard: true,
     multiple: true
@@ -221,6 +234,10 @@ const UploaderDocumentInsights = ({ closeUploader, taskId, onClose }) => {
 
   const dismissAlert = () => {
     setAlertVisible(false)
+  }
+
+  const dismissError = () => {
+    setErrorMessage('')
   }
 
   const globalProgress = totalFiles > 0 ? (uploadedCount / totalFiles) * 100 : 0
@@ -298,6 +315,12 @@ const UploaderDocumentInsights = ({ closeUploader, taskId, onClose }) => {
       <Snackbar open={alertVisible} autoHideDuration={6000} onClose={dismissAlert}>
         <Alert onClose={dismissAlert} severity='success' sx={{ width: '100%' }}>
           All files uploaded successfully!
+        </Alert>
+      </Snackbar>
+      
+      <Snackbar open={!!errorMessage} autoHideDuration={8000} onClose={dismissError}>
+        <Alert onClose={dismissError} severity='error' sx={{ width: '100%' }}>
+          {errorMessage}
         </Alert>
       </Snackbar>
     </ModalWrapper>
