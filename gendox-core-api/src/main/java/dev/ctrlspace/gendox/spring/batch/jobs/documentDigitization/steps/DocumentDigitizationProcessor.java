@@ -37,12 +37,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private boolean reGenerateExistingAnswers;
-    
-    @Value("#{jobParameters['pageFrom']}")
-    private String pageFromParam;
-    
-    @Value("#{jobParameters['pageTo']}")
-    private String pageToParam;
+
 
     private TaskService taskService;
     private TaskNodeService taskNodeService;
@@ -116,13 +111,15 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         // Determine page range to process
         int startPage = 0; // 0-based indexing for internal processing
         int endPage = totalPages - 1;
+        Integer pageFromParam = documentMetadata.getPageFrom();
+        Integer pageToParam = documentMetadata.getPageTo();
         
-        if (pageFromParam != null && !pageFromParam.isBlank()) {
-            startPage = Math.max(0, Integer.parseInt(pageFromParam) - 1); // Convert from 1-based to 0-based
+        if (pageFromParam != null) {
+            startPage = Math.max(0, pageFromParam - 1); // Convert from 1-based to 0-based
         }
         
-        if (pageToParam != null && !pageToParam.isBlank()) {
-            endPage = Math.min(totalPages - 1, Integer.parseInt(pageToParam) - 1); // Convert from 1-based to 0-based
+        if (pageToParam != null) {
+            endPage = Math.min(totalPages - 1, pageToParam - 1); // Convert from 1-based to 0-based
         }
         
         if (startPage > endPage) {

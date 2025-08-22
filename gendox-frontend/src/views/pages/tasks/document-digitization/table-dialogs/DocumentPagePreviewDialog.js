@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, forwardRef } from 'react'
+import React, { useState, useEffect, useRef, forwardRef } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -273,8 +273,13 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
     setPageFrom(value)
     validatePageRange(value, pageTo)
     // If user types in page range, uncheck "select all"
-    if (value || pageTo) {
+    // Only uncheck if user is actually entering a value (not clearing)
+    if (value && value.trim()) {
       setSelectAllPages(false)
+    }
+    // If both fields become empty, check "select all"
+    else if ((!value || !value.trim()) && (!pageTo || !pageTo.trim())) {
+      setSelectAllPages(true)
     }
   }
 
@@ -282,8 +287,13 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
     setPageTo(value)
     validatePageRange(pageFrom, value)
     // If user types in page range, uncheck "select all"
-    if (pageFrom || value) {
+    // Only uncheck if user is actually entering a value (not clearing)
+    if (value && value.trim()) {
       setSelectAllPages(false)
+    }
+    // If both fields become empty, check "select all"
+    else if ((!pageFrom || !pageFrom.trim()) && (!value || !value.trim())) {
+      setSelectAllPages(true)
     }
   }
 
@@ -312,18 +322,21 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
       const token = window.localStorage.getItem('accessToken')
       const { organizationId, projectId, taskId } = router.query
 
+      const updateData = {
+        taskNodeId: document.id,
+        prompt: promptValue,
+        structure: structureValue,
+        pageFrom: pageFrom && pageFrom.trim() ? parseInt(pageFrom, 10) : null,
+        pageTo: pageTo && pageTo.trim() ? parseInt(pageTo, 10) : null,
+        allPages: selectAllPages || (!pageFrom || !pageFrom.trim()) && (!pageTo || !pageTo.trim())
+      }
+      
 
       await taskService.updateTaskNodeForDocumentDigitization(
         organizationId,
         projectId,
         taskId,
-        {
-          taskNodeId: document.id,
-          prompt: promptValue,
-          structure: structureValue,
-          pageFrom: pageFrom && pageFrom.trim() ? parseInt(pageFrom, 10) : null,
-          pageTo: pageTo && pageTo.trim() ? parseInt(pageTo, 10) : null
-        },
+        updateData,
         token
       )
 
@@ -991,6 +1004,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                           checked={selectAllPages}
                           onChange={(e) => handleSelectAllPagesChange(e.target.checked)}
                           size="small"
+                          disabled={false}
                         />
                       }
                       label="Select all pages"

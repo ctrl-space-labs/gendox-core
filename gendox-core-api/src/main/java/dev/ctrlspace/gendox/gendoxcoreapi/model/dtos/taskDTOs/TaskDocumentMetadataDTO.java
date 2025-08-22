@@ -17,4 +17,5 @@ public class TaskDocumentMetadataDTO {
     private String structure;
     private Integer pageFrom;
     private Integer pageTo;
+    private Boolean allPages; // true when user wants to process all pages (clear page range)
 }

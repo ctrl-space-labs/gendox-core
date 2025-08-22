@@ -112,11 +112,19 @@ public class TaskNodeService {
         if (taskDocumentMetadataDTO.getStructure() != null) {
             existing.getNodeValue().getDocumentMetadata().setStructure(taskDocumentMetadataDTO.getStructure());
         }
-        if (taskDocumentMetadataDTO.getPageFrom() != null) {
-            existing.getNodeValue().getDocumentMetadata().setPageFrom(taskDocumentMetadataDTO.getPageFrom());
-        }
-        if (taskDocumentMetadataDTO.getPageTo() != null) {
-            existing.getNodeValue().getDocumentMetadata().setPageTo(taskDocumentMetadataDTO.getPageTo());
+        // Handle page range: if allPages is true, clear page range; otherwise update only if not null
+        if (taskDocumentMetadataDTO.getAllPages() != null && taskDocumentMetadataDTO.getAllPages()) {
+            // User explicitly wants to process all pages - clear page range
+            existing.getNodeValue().getDocumentMetadata().setPageFrom(null);
+            existing.getNodeValue().getDocumentMetadata().setPageTo(null);
+        } else {
+            // Normal update logic - only update if not null
+            if (taskDocumentMetadataDTO.getPageFrom() != null) {
+                existing.getNodeValue().getDocumentMetadata().setPageFrom(taskDocumentMetadataDTO.getPageFrom());
+            }
+            if (taskDocumentMetadataDTO.getPageTo() != null) {
+                existing.getNodeValue().getDocumentMetadata().setPageTo(taskDocumentMetadataDTO.getPageTo());
+            }
         }
 
         return taskNodeRepository.save(existing);
