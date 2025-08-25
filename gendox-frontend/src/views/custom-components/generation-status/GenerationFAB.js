@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Fab,
   Badge,
@@ -23,11 +23,18 @@ import CloseIcon from '@mui/icons-material/Close'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import ErrorIcon from '@mui/icons-material/Error'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import { useGeneration } from 'src/contexts/GenerationContext'
+import { useGeneration } from 'src/views/pages/tasks/document-digitization/table-hooks/GenerationContext'
 
 const GenerationFAB = () => {
   const { hasActiveGenerations, activeGenerations, completeGeneration, retryGeneration } = useGeneration()
   const [open, setOpen] = useState(false)
+
+  // Auto-close dialog when all generations are complete
+  useEffect(() => {
+    if (!hasActiveGenerations && open) {
+      setOpen(false)
+    }
+  }, [hasActiveGenerations, open])
 
   if (!hasActiveGenerations) return null
 
@@ -41,16 +48,42 @@ const GenerationFAB = () => {
       case 'all': return 'All Documents'
       case 'new': return 'New Documents'
       case 'selected': return 'Selected Documents'
-      default: return 'Documents'
+      case 'resumed': return 'Document Processing'
+      case 'unknown': return 'Document Processing'
+      default: return 'Document Processing'
     }
   }
 
-  const formatTime = (seconds) => {
-    if (seconds < 60) return `${seconds}s`
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = seconds % 60
-    return `${minutes}m ${remainingSeconds}s`
+  const getDocumentInfo = (generation) => {
+    if (generation.documentNames) {
+      // Format document names with better spacing
+      return generation.documentNames.split(', ').join(' • ')
+    }
+    
+    // Fallback descriptions when we don't have document names
+    switch (generation.type) {
+      case 'single':
+        return 'Single document'
+      case 'all':
+        return 'All documents'
+      case 'new':
+        return 'New documents'
+      case 'selected':
+        return 'Selected documents'
+      case 'resumed':
+        return generation.documentNames || 'Background processing'
+      default:
+        return 'Documents'
+    }
   }
+
+  const getStatusDescription = (generation) => {
+    if (generation.status === 'failed') {
+      return 'Processing failed'
+    }
+    return 'Processing...'
+  }
+
 
   return (
     <>
@@ -63,7 +96,7 @@ const GenerationFAB = () => {
             position: 'fixed',
             bottom: 80,
             right: 24,
-            zIndex: 999,
+            zIndex: 9999, // Higher z-index to appear above other dialogs
             animation: runningCount > 0 ? 'pulse 2s infinite' : 'none',
             opacity: 0.9,
             '&:hover': {
@@ -101,8 +134,11 @@ const GenerationFAB = () => {
       >
         <DialogTitle sx={{ pb: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="h6">
-              Generation Status ({activeGenerations.size})
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              {(() => {
+                const totalDocuments = generations.reduce((sum, gen) => sum + (gen.totalDocuments || 1), 0)
+                return `Digitizing ${totalDocuments} Document${totalDocuments !== 1 ? 's' : ''}`
+              })()}
             </Typography>
             <IconButton onClick={() => setOpen(false)} size="small">
               <CloseIcon />
@@ -116,7 +152,6 @@ const GenerationFAB = () => {
               const progress = generation.totalItems 
                 ? (generation.completedItems / generation.totalItems) * 100 
                 : undefined
-              const elapsedTime = Math.floor((Date.now() - generation.startTime) / 1000)
 
               return (
                 <ListItem 
@@ -149,8 +184,20 @@ const GenerationFAB = () => {
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           {getTypeLabel(generation.type)}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Task: {generation.taskId}
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary"
+                          sx={{ 
+                            lineHeight: 1.3,
+                            maxWidth: '300px',
+                            wordBreak: 'break-word',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          {getDocumentInfo(generation)}
                         </Typography>
                       </Box>
                     </Box>
@@ -158,7 +205,7 @@ const GenerationFAB = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Chip
                         size="small"
-                        label={generation.status === 'failed' ? 'Failed' : 'Running'}
+                        label={generation.status === 'failed' ? 'Failed' : 'Processing'}
                         color={generation.status === 'failed' ? 'error' : 'primary'}
                         variant={generation.status === 'failed' ? 'filled' : 'outlined'}
                       />
@@ -187,7 +234,7 @@ const GenerationFAB = () => {
 
                   {generation.status === 'failed' && generation.error && (
                     <Typography variant="caption" color="error.main" sx={{ mb: 1, px: 1 }}>
-                      Error: {generation.error}
+                      {generation.error}
                     </Typography>
                   )}
 
@@ -198,24 +245,18 @@ const GenerationFAB = () => {
                         value={progress}
                         sx={{ mb: 0.5 }}
                       />
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                         <Typography variant="caption">
-                          {generation.completedItems}/{generation.totalItems} pages
-                        </Typography>
-                        <Typography variant="caption">
-                          {formatTime(elapsedTime)} elapsed
+                          {generation.completedItems} of {generation.totalItems} pages processed
                         </Typography>
                       </Box>
                     </Box>
                   )}
 
                   {progress === undefined && generation.status === 'running' && (
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       <Typography variant="caption">
-                        Processing...
-                      </Typography>
-                      <Typography variant="caption">
-                        {formatTime(elapsedTime)} elapsed
+                        {getStatusDescription(generation)}
                       </Typography>
                     </Box>
                   )}

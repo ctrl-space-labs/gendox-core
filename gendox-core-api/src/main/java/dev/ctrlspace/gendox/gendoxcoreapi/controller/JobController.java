@@ -150,6 +150,18 @@ public class JobController {
         return status.name(); // π.χ. "STARTED", "COMPLETED", "FAILED"
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @GetMapping("organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/jobs/running")
+    @Operation(summary = "Check if there are running jobs for a specific task")
+    public boolean isJobRunningForTask(@PathVariable UUID organizationId,
+                                       @PathVariable UUID projectId,
+                                       @PathVariable UUID taskId) {
+        boolean isRunning = jobService.isJobRunningForTask(taskId);
+        logger.info("Checking running jobs for task ID: {}, Result: {}", taskId, isRunning);
+        return isRunning;
+    }
+
 
 }
 

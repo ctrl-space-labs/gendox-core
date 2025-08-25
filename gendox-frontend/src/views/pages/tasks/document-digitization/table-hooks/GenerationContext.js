@@ -13,16 +13,18 @@ export const useGeneration = () => {
 export const GenerationProvider = ({ children }) => {
   const [activeGenerations, setActiveGenerations] = useState(new Map())
 
-  const startGeneration = (taskId, documentId, type, totalItems = null) => {
+  const startGeneration = (taskId, documentId, type, metadata = null) => {
     const key = `${taskId}-${documentId || 'all'}`
     setActiveGenerations(prev => new Map(prev.set(key, {
       taskId,
       documentId,
       type, // 'all', 'new', 'selected', 'single'
       startTime: Date.now(),
-      totalItems,
+      totalItems: metadata?.totalItems || null,
       completedItems: 0,
-      status: 'running'
+      status: 'running',
+      documentNames: metadata?.documentNames || null,
+      totalDocuments: metadata?.totalDocuments || null
     })))
   }
 

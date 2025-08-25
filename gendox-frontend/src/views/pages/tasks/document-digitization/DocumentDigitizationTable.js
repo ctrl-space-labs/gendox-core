@@ -12,6 +12,8 @@ import HeaderSection from './table-components/DocumentDigitizationHeaderSection'
 import DialogManager from './table-components/DocumentDigitizationDialogs'
 import useDocumentDigitizationGeneration from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationGeneration'
 import useExportFile from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationExportFile'
+import taskService from 'src/gendox-sdk/taskService'
+import { useGeneration } from './table-hooks/GenerationContext'
 
 const MAX_PAGE_SIZE = 2147483647
 
@@ -20,9 +22,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const dispatch = useDispatch()
   const token = window.localStorage.getItem('accessToken')
   const { organizationId, taskId, projectId } = router.query
-  const { taskNodesDocumentList, isLoading } = useSelector(
-    state => state.activeTask
-  )
+  const { taskNodesDocumentList, isLoading } = useSelector(state => state.activeTask)
   const isBlurring = useSelector(state => state.activeDocument.isBlurring)
 
   const [documents, setDocuments] = useState([])
@@ -31,13 +31,19 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const [pageSize, setPageSize] = useState(20)
   const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
   const [selectedDocuments, setSelectedDocuments] = useState([])
-  const [dialogs, setDialogs] = useState({ newDoc: false, delete: false, docDetail: false, answerDetail: false, pagePreview: false })
+  const [dialogs, setDialogs] = useState({
+    newDoc: false,
+    delete: false,
+    docDetail: false,
+    answerDetail: false,
+    pagePreview: false
+  })
   const [activeNode, setActiveNode] = useState(null)
   const [editMode, setEditMode] = useState(false)
+  const [pollCleanup, setPollCleanup] = useState(null)
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
-
-
+  const { startGeneration, completeGeneration } = useGeneration()
 
   const fetchDocuments = useCallback(() => {
     return dispatch(
@@ -66,8 +72,74 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     )
   }, [organizationId, projectId, taskId, token, dispatch])
 
+  // Check for running jobs when task loads (for UI state only, not to block operations)
+  const checkRunningJobs = useCallback(async () => {
+    if (!organizationId || !projectId || !taskId || !token) return
+
+    try {
+      const response = await taskService.isJobRunningForTask(organizationId, projectId, taskId, token)
+      const isRunning = response.data
+
+      if (isRunning) {
+        // Start generation tracking for running job (UI state only)
+        startGeneration(taskId, null, 'resumed', { documentNames: 'Background processing...', totalDocuments: 0 })
+
+        // Start polling to detect when the job completes
+        const cleanup = startJobCompletionPolling()
+        setPollCleanup(() => cleanup)
+      }
+    } catch (error) {
+      console.error('Failed to check running jobs:', error)
+    }
+  }, [organizationId, projectId, taskId, token, startGeneration])
+
+  // Poll for job completion when we detect an existing running job after page refresh
+  const startJobCompletionPolling = useCallback(() => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await taskService.isJobRunningForTask(organizationId, projectId, taskId, token)
+        const isStillRunning = response.data
+
+        if (!isStillRunning) {
+          // Job has completed, mark as completed in context
+          completeGeneration(taskId, null)
+          clearInterval(pollInterval)
+
+          // Refresh data to show results
+          fetchDocuments().unwrap()
+          loadDocumentPages()
+            .unwrap()
+            .then(pages => {
+              const pagesData = pages?.content || pages || []
+              setDocumentPages(pagesData)
+            })
+            .catch(error => console.error('Failed to refresh document pages after polling:', error))
+
+          toast.success('Generation completed successfully!')
+        } else {
+          console.log('⏳ Job still running, continuing to poll...')
+        }
+      } catch (error) {
+        console.error('Error polling job completion:', error)
+        // Stop polling on error
+        clearInterval(pollInterval)
+      }
+    }, 3000) // Poll every 3 seconds
+
+    // Clean up interval on unmount or task change
+    return () => {
+      clearInterval(pollInterval)
+    }
+  }, [organizationId, projectId, taskId, token, completeGeneration, fetchDocuments, loadDocumentPages])
+
   // 1️⃣ **Reset all local state when switching tasks/orgs/projects**
   useEffect(() => {
+    // Clean up any existing polling
+    if (pollCleanup) {
+      pollCleanup()
+      setPollCleanup(null)
+    }
+
     setDocuments([])
     setDocumentPages([])
     setSelectedDocuments([])
@@ -96,7 +168,20 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       .catch(() => toast.error('Failed to load document pages'))
   }, [loadDocumentPages])
 
+  // 4️⃣ **Check for running jobs when task loads**
+  useEffect(() => {
+    if (!(organizationId && projectId && taskId && token)) return
+    checkRunningJobs()
+  }, [organizationId, projectId, taskId, token])
 
+  // 5️⃣ **Cleanup polling on unmount**
+  useEffect(() => {
+    return () => {
+      if (pollCleanup) {
+        pollCleanup()
+      }
+    }
+  }, [pollCleanup])
 
   // 4️⃣ **Fetch project documents and Sync with taskNodesDocumentList**
   useEffect(() => {
@@ -182,41 +267,48 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   }
 
   // Handle Generate Documents
-  const { 
-    generateNew, 
-    generateAll, 
-    generateSelected, 
+  const {
+    generateNew,
+    generateAll,
+    generateSelected,
     generateSingleDocument,
-    generatingAll, 
-    generatingNew, 
+    generatingAll,
+    generatingNew,
     generatingSelected: generatingSelectedState,
     generatingDocuments,
     hasGeneratedContent,
     isDocumentGenerating
   } = useDocumentDigitizationGeneration({
-      organizationId,
-      projectId,
-      taskId,
-      documents,
-      setSelectedDocuments,
-      pollJobStatus,
-      token,
-      documentPages,
-      onGenerationComplete: async () => {
-        // Refresh both documents and document pages data
-        console.log('🔄 Refreshing data after generation completion...')
-        try {
-          await fetchDocuments()
-          const pages = await loadDocumentPages().unwrap()
-          console.log('📄 Updated document pages:', pages)
-          setDocumentPages(pages || [])
-          toast.success('Data refreshed successfully!')
-        } catch (error) {
-          console.error('Failed to refresh data after generation:', error)
-          toast.error('Failed to refresh data after generation')
-        }
-      }
-    })
+    organizationId,
+    projectId,
+    taskId,
+    documents,
+    setSelectedDocuments,
+    pollJobStatus,
+    token,
+    documentPages,
+    onGenerationComplete: () => {
+      // Refresh task nodes (documents list)
+      fetchDocuments()
+        .unwrap()
+        .catch(error => {
+          console.error('Failed to refresh documents:', error)
+        })
+
+      // Refresh document pages and update local state immediately
+      loadDocumentPages()
+        .unwrap()
+        .then(pages => {
+          const pagesData = pages?.content || pages || []
+          setDocumentPages(pagesData)
+        })
+        .catch(error => {
+          console.error('Failed to refresh document pages:', error)
+        })
+
+      toast.success('Data refreshed successfully!')
+    }
+  })
 
   const { exportCsv, exportDocumentDigitizationCsv, isExportingCsv } = useExportFile({
     organizationId,
@@ -241,7 +333,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
           isLoading={isLoading}
           isExportingCsv={isExportingCsv}
           onExportCsv={exportCsv}
-          selectedDocuments={selectedDocuments}          
+          selectedDocuments={selectedDocuments}
           generatingAll={generatingAll}
           generatingNew={generatingNew}
           generatingSelected={generatingSelectedState}
@@ -268,11 +360,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
             totalDocuments={totalDocuments}
             selectedDocuments={selectedDocuments}
             onSelectDocument={handleSelectDocument}
-            generatingAll={generatingAll}
-            generatingNew={generatingNew}
-            generatingSelected={generatingSelectedState}
-            generatingDocuments={generatingDocuments}
-            hasGeneratedContent={hasGeneratedContent}
             isDocumentGenerating={isDocumentGenerating}
           />
         </Box>

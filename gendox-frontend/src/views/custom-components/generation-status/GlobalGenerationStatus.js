@@ -19,7 +19,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorIcon from '@mui/icons-material/Error'
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
-import { useGeneration } from 'src/contexts/GenerationContext'
+import { useGeneration } from 'src/views/pages/tasks/document-digitization/table-hooks/GenerationContext'
 
 const GlobalGenerationStatus = () => {
   const { activeGenerations, completeGeneration, retryGeneration } = useGeneration()

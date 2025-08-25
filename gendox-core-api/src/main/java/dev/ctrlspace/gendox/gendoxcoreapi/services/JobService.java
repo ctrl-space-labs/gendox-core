@@ -1,18 +1,21 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
 import dev.ctrlspace.gendox.spring.batch.services.*;
 import org.slf4j.Logger;
 import org.springframework.batch.core.BatchStatus;
+import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.batch.core.JobExecution;
 
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -28,6 +31,7 @@ public class JobService {
     private DocumentInsightsBatchService documentInsightsBatchService;
     private DocumentDigitizationBatchService documentDigitizationBatchService;
     private final JobExplorer jobExplorer;
+    private final TaskService taskService;
 
     @Autowired
     public JobService(SplitterBatchService splitterBatchService,
@@ -35,13 +39,15 @@ public class JobService {
                       SplitterAndTrainingBatchService splitterAndTrainingBatchService,
                       DocumentInsightsBatchService documentInsightsBatchService,
                       DocumentDigitizationBatchService documentDigitizationBatchService,
-                      JobExplorer jobExplorer) {
+                      JobExplorer jobExplorer,
+                      TaskService taskService) {
         this.splitterBatchService = splitterBatchService;
         this.trainingBatchService = trainingBatchService;
         this.splitterAndTrainingBatchService = splitterAndTrainingBatchService;
         this.documentInsightsBatchService = documentInsightsBatchService;
         this.documentDigitizationBatchService = documentDigitizationBatchService;
         this.jobExplorer = jobExplorer;
+        this.taskService = taskService;
     }
 
     @Async
@@ -113,6 +119,73 @@ public class JobService {
             return null;
         }
         return jobExecution.getStatus();
+    }
+
+    /**
+     * Checks if there are any running jobs for the specified taskId
+     * @param taskId The task ID to check for running jobs
+     * @return true if there are running jobs for the taskId, false otherwise
+     */
+    public boolean isJobRunningForTask(UUID taskId) {
+        try {
+            logger.debug("Checking for running jobs for task ID: {}", taskId);
+            
+            // Get the task to determine its type
+            Task task = taskService.getTaskById(taskId);
+            String taskTypeName = task.getTaskType().getName();
+            
+            // Map task type to job name
+            String jobName = getJobNameFromTaskType(taskTypeName);
+            if (jobName == null) {
+                logger.warn("No job mapping found for task type: {} (task ID: {})", taskTypeName, taskId);
+                return false;
+            }
+            
+            String taskIdString = taskId.toString();
+            
+            // Get only RUNNING job executions for the specific job type
+            Set<JobExecution> runningExecutions = jobExplorer.findRunningJobExecutions(jobName);
+            
+            boolean hasRunningJob = runningExecutions.stream()
+                .anyMatch(jobExecution -> {
+                    String jobTaskId = jobExecution.getJobParameters().getString("taskId");
+                    return jobTaskId != null && taskIdString.equals(jobTaskId);
+                });
+            
+            if (hasRunningJob) {
+                logger.info("Found running {} job for task ID: {}", jobName, taskId);
+            } else {
+                logger.debug("No running {} jobs found for task ID: {}", jobName, taskId);
+            }
+            
+            return hasRunningJob;
+            
+        } catch (Exception e) {
+            logger.error("Error checking for running jobs for task ID: {}", taskId, e);
+            return false;
+        }
+    }
+
+    /**
+     * Maps task type to corresponding Spring Batch job name
+     * @param taskTypeName The task type name
+     * @return The corresponding job name, or null if no mapping exists
+     */
+    private String getJobNameFromTaskType(String taskTypeName) {
+        if (taskTypeName == null) {
+            return null;
+        }
+        
+        switch (taskTypeName.toUpperCase()) {
+            case TaskTypeConstants.DOCUMENT_DIGITIZATION:
+                return "documentDigitizationJob";
+            case TaskTypeConstants.DOCUMENT_INSIGHTS:
+                return "documentInsightsJob";
+            case TaskTypeConstants.DEEP_RESEARCH:
+                return "deepResearchJob"; // For future implementation
+            default:
+                return null;
+        }
     }
 
 

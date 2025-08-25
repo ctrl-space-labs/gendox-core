@@ -299,6 +299,23 @@ const getJobStatus = async (organizationId, projectId, jobExecutionId, token) =>
 }
 
 /**
+ * Check if there are running jobs for a specific task
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<boolean>>}
+ */
+const isJobRunningForTask = async (organizationId, projectId, taskId, token) => {
+  return axios.get(apiRequests.isJobRunningForTask(organizationId, projectId, taskId), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+}
+
+/**
  * Delete a task node and its connected nodes
  * @param organizationId
  * @param projectId
@@ -396,6 +413,7 @@ export default {
   getTaskEdgesByCriteria,
   executeTaskByType,
   getJobStatus,
+  isJobRunningForTask,
   deleteTaskNode,
   deleteTask,
   exportTaskCsv,

@@ -22,24 +22,25 @@ const DocumentDigitizationGrid = ({
   setPage,
   totalDocuments,
   selectedDocuments = [],
-  onSelectDocument = () => {},
-  generatingAll = false,
-  generatingNew = false,
-  generatingSelected = false,
-  generatingDocuments = new Set(),
-  hasGeneratedContent = () => false,
+  onSelectDocument = () => {}, 
   isDocumentGenerating = () => false
 }) => {
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null)
   const [actionMenuDoc, setActionMenuDoc] = useState(null)
 
+
   const docPagesMap = useMemo(() => {
     const map = {}
-    ;(documentPages.content || []).forEach(page => {
-      map[page.taskDocumentNodeId] = page
+    // documentPages can be either an array directly or an object with content property
+    const pages = Array.isArray(documentPages) ? documentPages : (documentPages?.content || [])
+    pages.forEach(page => {
+      if (page && page.taskDocumentNodeId) {
+        map[page.taskDocumentNodeId] = page
+      }
     })
     return map
   }, [documentPages])
+
 
   const renderDigitizationStatus = (params) => {
     const docPage = docPagesMap[params.row.id]
@@ -47,7 +48,7 @@ const DocumentDigitizationGrid = ({
     const hasPrompt = params.row.prompt && params.row.prompt.trim()
     const isGenerating = isDocumentGenerating(params.row.id)
     const isSupported = isFileTypeSupported(params.row.url)
-    
+
     return (
       <Box sx={{ 
         display: 'flex', 
