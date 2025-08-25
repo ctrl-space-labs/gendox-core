@@ -2,16 +2,17 @@ package dev.ctrlspace.gendox.spring.batch.model;
 
 import jakarta.persistence.*;
 
+@IdClass(BatchJobExecutionParamsId.class)
 @Entity
 @Table(name = "batch_job_execution_params", schema = "gendox_jobs")
 public class BatchJobExecutionParams {
     @Id
     @Column(name = "job_execution_id", nullable = false)
     private Long jobExecutionId;
-    @Basic
+    @Id
     @Column(name = "parameter_name", nullable = false, length = 100)
     private String parameterName;
-    @Basic
+    @Id
     @Column(name = "parameter_type", nullable = false, length = 100)
     private String parameterType;
     @Basic

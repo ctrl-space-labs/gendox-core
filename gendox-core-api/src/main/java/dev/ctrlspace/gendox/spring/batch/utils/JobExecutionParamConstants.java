@@ -25,5 +25,6 @@ public class JobExecutionParamConstants {
 
     // Document Insights Job Parameters
     public static final String TASK_ID = "taskId";
+    public static final String RE_GENERATE_EXISTING_ANSWERS = "reGenerateExistingAnswers";
 
 }

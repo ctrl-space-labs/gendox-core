@@ -10,12 +10,19 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AsyncExecutionTypes;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
+import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
+import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionCriteria;
+import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionParamCriteria;
+import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
+import dev.ctrlspace.gendox.spring.batch.utils.JobUtils;
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +37,7 @@ import java.util.concurrent.CompletableFuture;
 @RestController
 public class JobController {
 
+    private final JobUtils jobUtils;
     Logger logger = LoggerFactory.getLogger(JobController.class);
 
     private final JobService jobService;
@@ -39,10 +47,11 @@ public class JobController {
     @Autowired
     public JobController(JobService jobService,
                          SecurityUtils securityUtils,
-                         TaskService taskService) {
+                         TaskService taskService, JobUtils jobUtils) {
         this.jobService = jobService;
         this.securityUtils = securityUtils;
         this.taskService = taskService;
+        this.jobUtils = jobUtils;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
@@ -112,16 +121,21 @@ public class JobController {
         Task task = taskService.getTaskById(taskId);
         String taskType = task.getTaskType().getName();
 
+
+        if (!task.getProjectId().equals(projectId)) {
+            throw new GendoxException("TASK_PROJECT_MISMATCH", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
+
         if (TaskTypeConstants.DOCUMENT_INSIGHTS.equalsIgnoreCase(taskType)) {
             CompletableFuture<JobExecution> futureJob = jobService
-                    .executeDocumentInsightsTask(taskId, criteria);
+                    .executeDocumentInsightsTask(task, criteria);
             return futureJob
                     .thenApply(JobExecution::getId);
 
 
         } else if (TaskTypeConstants.DOCUMENT_DIGITIZATION.equalsIgnoreCase(taskType)) {
             CompletableFuture<JobExecution> futureJob = jobService
-                    .executeDocumentDigitizationTask(taskId, criteria);
+                    .executeDocumentDigitizationTask(task, criteria);
             return futureJob
                     .thenApply(JobExecution::getId);
 
@@ -160,6 +174,22 @@ public class JobController {
         boolean isRunning = jobService.isJobRunningForTask(taskId);
         logger.info("Checking running jobs for task ID: {}, Result: {}", taskId, isRunning);
         return isRunning;
+    }
+
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @GetMapping("organizations/{organizationId}/projects/{projectId}/jobs")
+    @Operation(summary = "Get Job Execution Status")
+    public Page<BatchJobExecution> getJobsByCriteria(@PathVariable UUID projectId, BatchExecutionCriteria jobCriteria, Pageable pageable) throws GendoxException {
+
+        if (!securityUtils.isSuperAdmin()) {
+            jobCriteria.getMatchAllParams().add(new BatchExecutionParamCriteria(JobExecutionParamConstants.PROJECT_ID, projectId.toString()));
+        }
+
+
+
+        return jobUtils.getJobsByCriteria(jobCriteria, pageable);
     }
 
 

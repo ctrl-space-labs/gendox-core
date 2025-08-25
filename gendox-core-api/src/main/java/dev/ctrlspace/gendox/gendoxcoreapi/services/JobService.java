@@ -87,27 +87,27 @@ public class JobService {
     }
 
     @Async
-    public CompletableFuture<JobExecution> executeDocumentInsightsTask(UUID taskId, TaskNodeCriteria criteria) {
+    public CompletableFuture<JobExecution> executeDocumentInsightsTask(Task task, TaskNodeCriteria criteria) {
         try {
-            logger.info("Starting Document Insights async batch for task {}", taskId);
-            JobExecution jobExecution = documentInsightsBatchService.runDocumentInsights(taskId, criteria);
+            logger.info("Starting Document Insights async batch for task {}", task.getId());
+            JobExecution jobExecution = documentInsightsBatchService.runDocumentInsights(task, criteria);
             logger.info("Document Insights Job Execution Status: {}", jobExecution.getStatus());
             return CompletableFuture.completedFuture(jobExecution);
         } catch (Exception e) {
-            logger.error("Error executing Document Insights task {}", taskId, e);
+            logger.error("Error executing Document Insights task {}", task.getId(), e);
             return CompletableFuture.completedFuture(null);
         }
     }
 
     @Async
-    public CompletableFuture<JobExecution> executeDocumentDigitizationTask(UUID taskId, TaskNodeCriteria criteria) {
+    public CompletableFuture<JobExecution> executeDocumentDigitizationTask(Task task, TaskNodeCriteria criteria) {
         try {
-            logger.info("Starting Document Digitization async batch for task {}", taskId);
-            JobExecution jobExecution = documentDigitizationBatchService.runDocumentDigitization(taskId, criteria);
+            logger.info("Starting Document Digitization async batch for task {}", task.getId());
+            JobExecution jobExecution = documentDigitizationBatchService.runDocumentDigitization(task, criteria);
             logger.info("Document Digitization Job Execution Status: {}", jobExecution.getStatus());
             return CompletableFuture.completedFuture(jobExecution);
         } catch (Exception e) {
-            logger.error("Error executing Document Insights task {}", taskId, e);
+            logger.error("Error executing Document Insights task {}", task.getId(), e);
             return CompletableFuture.completedFuture(null);
         }
     }
