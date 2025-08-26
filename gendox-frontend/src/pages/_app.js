@@ -34,9 +34,6 @@ import RouteHandler from '../authentication/components/RouteHandler'
 import OrganizationProjectGuard from 'src/authentication/components/OrganizationProjectGuard'
 import { AuthProvider } from '../authentication/context/AuthContext'
 import { IFrameMessageManagerProvider } from '../authentication/context/IFrameMessageManagerContext'
-import { GenerationProvider } from 'src/views/pages/tasks/document-digitization/table-hooks/GenerationContext'
-import GlobalGenerationStatus from 'src/views/custom-components/generation-status/GlobalGenerationStatus'
-import GenerationFAB from 'src/views/custom-components/generation-status/GenerationFAB'
 
 const clientSideEmotionCache = createEmotionCache()
 
@@ -79,25 +76,20 @@ const App = props => {
 
         <IFrameMessageManagerProvider>
           <AuthProvider option={authProviderOption}>
-            <GenerationProvider>
-              <SettingsProvider pageConfig={pageConfig ? pageConfig : undefined}>
-                <SettingsConsumer>
-                  {({ settings }) => {
-                    return (
-                      <ThemeComponent settings={settings}>
-                        <GlobalGenerationStatus />
-                        <OrganizationProjectGuard authProviderOption={authProviderOption} pageConfig={pageConfig}>
-                          <RouteHandler routeType={routeType}>{getLayout(<Component {...pageProps} />)}</RouteHandler>
-
-                        </OrganizationProjectGuard>
-                        <CustomToast />
-                        <GenerationFAB />
-                      </ThemeComponent>
-                    )
-                  }}
-                </SettingsConsumer>
-              </SettingsProvider>
-            </GenerationProvider>
+            <SettingsProvider pageConfig={pageConfig ? pageConfig : undefined}>
+              <SettingsConsumer>
+                {({ settings }) => {
+                  return (
+                    <ThemeComponent settings={settings}>
+                      <OrganizationProjectGuard authProviderOption={authProviderOption} pageConfig={pageConfig}>
+                        <RouteHandler routeType={routeType}>{getLayout(<Component {...pageProps} />)}</RouteHandler>
+                      </OrganizationProjectGuard>
+                      <CustomToast />
+                    </ThemeComponent>
+                  )
+                }}
+              </SettingsConsumer>
+            </SettingsProvider>
           </AuthProvider>
         </IFrameMessageManagerProvider>
       </CacheProvider>

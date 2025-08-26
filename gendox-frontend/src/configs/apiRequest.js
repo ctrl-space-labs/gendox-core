@@ -202,11 +202,8 @@ export default {
   executeTaskByType: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/execute`,
 
-  getJobStatus: (organizationId, projectId, jobExecutionId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/jobs/${jobExecutionId}/status`,
-
-  isJobRunningForTask: (organizationId, projectId, taskId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/jobs/running`,
+  getJobsByCriteria: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/jobs`,
 
   deleteTaskNode: (organizationId, projectId, taskNodeId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes/${taskNodeId}`,
