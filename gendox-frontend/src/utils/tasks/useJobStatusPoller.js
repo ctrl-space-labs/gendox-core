@@ -12,9 +12,13 @@ export const useJobStatusPoller = ({ organizationId, projectId, token }) => {
           throw new Error('Job polling timeout')
         }
 
-        const response = await taskService.getJobStatus(organizationId, projectId, jobExecutionId, token)
+        const criteria = {
+          jobExecutionIdsIn: [jobExecutionId]
+        }
 
-        let status = response.data
+        const response = await taskService.getJobsByCriteria(organizationId, projectId, criteria, token)
+
+        let status = response.data?.content[0]?.status
         if (typeof status === 'string') {
           status = status.trim().toUpperCase()
         }

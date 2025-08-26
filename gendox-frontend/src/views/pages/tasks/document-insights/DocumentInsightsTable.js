@@ -9,6 +9,8 @@ import { fetchTaskNodesByCriteria, fetchAnswerTaskNodes } from 'src/store/active
 import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocument'
 import useGeneration from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsGeneration'
 import useExportFile from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsExportFile'
+import taskService from 'src/gendox-sdk/taskService'
+import { useGeneration as useGenerationContext } from '../generation/GenerationContext'
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
 import HeaderSection from './table-components/DocumentInsightsHeaderSection'
 import DialogManager from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsDialogs'
@@ -31,8 +33,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const [pageSize, setPageSize] = useState(20)
   const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
   const [selectedDocuments, setSelectedDocuments] = useState([])
-
-  const [isSelectingDocuments, setIsSelectingDocuments] = useState(false)
   const [dialogs, setDialogs] = useState({
     newDoc: false,
     delete: false,
@@ -43,6 +43,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const [editMode, setEditMode] = useState(false)
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
+  const { startGeneration, completeGeneration } = useGenerationContext()
+  const [pollCleanup, setPollCleanup] = useState(null)
 
   const fetchDocuments = useCallback(() => {
     return dispatch(
@@ -89,6 +91,76 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       })
     )
   }, [documents, questions])
+
+  // Check for running jobs when task loads (for UI state only, not to block operations)
+  const checkRunningJobs = useCallback(async () => {
+    if (!organizationId || !projectId || !taskId || !token) return
+
+    try {
+      const criteria = {
+        status: 'STARTED',
+        matchAllParams: [
+          { paramName: 'projectId', paramValue: projectId },
+          { paramName: 'taskId', paramValue: taskId }
+        ]
+      }
+
+      const response = await taskService.getJobsByCriteria(organizationId, projectId, criteria, token)
+      const isRunning = response.data?.content?.length > 0
+
+      if (isRunning) {
+        // Start generation tracking for running job (UI state only)
+        startGeneration(taskId, null, 'resumed', { documentNames: 'Background processing...', totalDocuments: 0 })
+
+        // Start polling to detect when the job completes
+        const cleanup = startJobCompletionPolling()
+        setPollCleanup(() => cleanup)
+      }
+    } catch (error) {
+      console.error('Failed to check running jobs:', error)
+    }
+  }, [organizationId, projectId, taskId, token, startGeneration])
+
+  // Poll for job completion when we detect an existing running job after page refresh
+  const startJobCompletionPolling = useCallback(() => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const criteria = {
+          status: 'STARTED',
+          matchAllParams: [
+            { paramName: 'projectId', paramValue: projectId },
+            { paramName: 'taskId', paramValue: taskId }
+          ]
+        }
+
+        const response = await taskService.getJobsByCriteria(organizationId, projectId, criteria, token)
+        const isStillRunning = response.data?.content?.length > 0
+
+        if (!isStillRunning) {
+          // Job has completed, mark as completed in context
+          completeGeneration(taskId, null)
+          clearInterval(pollInterval)
+
+          // Refresh data to show results
+          fetchDocuments().unwrap()
+          fetchQuestions().unwrap()
+          fetchAnswers().unwrap().catch(error => console.error('Failed to refresh answers after polling:', error))
+
+          toast.success('Generation completed successfully!')
+        }
+      } catch (error) {
+        console.error('Error polling job completion:', error)
+        // Stop polling on error
+        clearInterval(pollInterval)
+      }
+    }, 3000) // Poll every 3 seconds
+
+    // Clean up interval on unmount or task change
+    return () => {
+      clearInterval(pollInterval)
+    }
+  }, [organizationId, projectId, taskId, token, completeGeneration, fetchDocuments, fetchQuestions, fetchAnswers])
+
 
   // 1️⃣ **Reset all local state when switching tasks/orgs/projects**
   useEffect(() => {
@@ -202,8 +274,29 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     setSelectedDocuments([])
   }, [page, pageSize])
 
+  // 8️⃣ **Check for running jobs when task loads**
+  useEffect(() => {
+    if (!(organizationId && projectId && taskId && token)) return
+    checkRunningJobs()
+  }, [organizationId, projectId, taskId, token])
+
+  // 9️⃣ **Cleanup polling on unmount**
+  useEffect(() => {
+    return () => {
+      if (pollCleanup) {
+        pollCleanup()
+      }
+    }
+  }, [pollCleanup])
+
   const handleSelectDocument = (docId, checked) => {
-    setSelectedDocuments(prev => (checked ? [...prev, docId] : prev.filter(id => id !== docId)))
+    if (docId === 'all') {
+      setSelectedDocuments(checked) // checked will be the array of document IDs
+    } else if (docId === 'none') {
+      setSelectedDocuments([])
+    } else {
+      setSelectedDocuments(prev => (checked ? [...prev, docId] : prev.filter(id => id !== docId)))
+    }
   }
 
   // DIALOG HANDLERS
@@ -250,19 +343,20 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           description={selectedTask?.description}
           onAddQuestion={() => openDialog('questionDetail', null, true)}
           openAddDocument={() => openDialog('newDoc')}
-          onGenerate={reGenerateExistingAnswers =>
-            handleGenerate({ docs: documents, reGenerateExistingAnswers, isAll: true })
-          }
-          disableGenerateAll={documents.length === 0 || questions.length === 0}
+          onGenerateNew={() => handleGenerate({ docs: documents.filter(doc => !answers.some(a => a.documentNodeId === doc.id)), reGenerateExistingAnswers: false, isAll: false })}
+          onGenerateAll={() => handleGenerate({ docs: documents, reGenerateExistingAnswers: true, isAll: true })}
+          onGenerateSelected={handleGenerateSelected}
+          disableGenerate={documents.length === 0 || questions.length === 0}
           isLoading={isLoading}
           isExportingCsv={isExportingCsv}
           onExportCsv={exportCsv}
-          onGenerateSelected={handleGenerateSelected}
           selectedDocuments={selectedDocuments}
-          setSelectedDocuments={setSelectedDocuments}
-          isGeneratingAll={isGeneratingAll}
-          isSelectingDocuments={isSelectingDocuments}
-          setIsSelectingDocuments={setIsSelectingDocuments}
+          generatingAll={isGeneratingAll}
+          generatingNew={false}
+          generatingSelected={false}
+          documents={documents}
+          questions={questions}
+          hasGeneratedContent={(docId) => answers.some(answer => answer.documentNodeId === docId)}
         />
 
         <Box
@@ -290,7 +384,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             onGenerateSingleAnswer={handleGenerateSingleAnswer}
             isGeneratingAll={isGeneratingAll}
             isGeneratingCells={isGeneratingCells}
-            isSelectingDocuments={isSelectingDocuments}
           />
         </Box>
       </Paper>

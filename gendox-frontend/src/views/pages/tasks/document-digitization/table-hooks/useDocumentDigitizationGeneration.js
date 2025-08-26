@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { executeTaskByType } from 'src/store/activeTask/activeTask'
 import { toast } from 'react-hot-toast'
-import { useGeneration } from './GenerationContext'
+import { useGeneration } from '../../generation/GenerationContext'
 import taskService from 'src/gendox-sdk/taskService'
 
 export default function useDocumentDigitizationGeneration({
@@ -67,7 +67,6 @@ export default function useDocumentDigitizationGeneration({
       setLoading(true)
 
       try {
-
         const criteria = { taskId, documentNodeIds: docIds, reGenerateExistingAnswers }
 
         // Add page range if provided
@@ -81,7 +80,6 @@ export default function useDocumentDigitizationGeneration({
         const jobExecutionId = await dispatch(
           executeTaskByType({ organizationId, projectId, taskId, criteria, token })
         ).unwrap()
-
 
         const typeText =
           generationType === 'all'

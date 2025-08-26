@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskNodeService;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.GendoxJpaPageReader;
+import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.ExitStatus;
@@ -38,7 +39,7 @@ public class DocumentDigitizationReader extends GendoxJpaPageReader<TaskDocument
 
     @Override
     protected ExitStatus initializeJpaPredicate(JobParameters jobParameters) {
-        String taskId = jobParameters.getString("taskId");
+        String taskId = jobParameters.getString(JobExecutionParamConstants.TASK_ID);
         assert taskId != null;
         criteria = new TaskNodeCriteria();
         criteria.setTaskId(UUID.fromString(taskId));
@@ -46,7 +47,7 @@ public class DocumentDigitizationReader extends GendoxJpaPageReader<TaskDocument
         ObjectMapper mapper = new ObjectMapper();
 
         // Deserialize documentNodeIds list from JSON string
-        String documentNodeIdsJson = jobParameters.getString("documentNodeIds");
+        String documentNodeIdsJson = jobParameters.getString(JobExecutionParamConstants.DOCUMENT_NODE_IDS);
         if (documentNodeIdsJson != null && !documentNodeIdsJson.isBlank()) {
             try {
                 List<UUID>  documentNodeIds = mapper.readValue(

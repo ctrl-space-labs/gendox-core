@@ -19,7 +19,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorIcon from '@mui/icons-material/Error'
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
-import { useGeneration } from 'src/views/pages/tasks/document-digitization/table-hooks/GenerationContext'
+import { useGeneration } from 'src/views/pages/tasks/generation/GenerationContext'
 
 const GlobalGenerationStatus = () => {
   const { activeGenerations, completeGeneration, retryGeneration } = useGeneration()
@@ -55,7 +55,9 @@ const GlobalGenerationStatus = () => {
       return totalActive === 1 ? 'Document generation failed' : `${failedGenerations.length} generation(s) failed`
     }
     if (runningGenerations.length > 0) {
-      return totalActive === 1 ? 'Document generation in progress...' : `${runningGenerations.length} generation(s) in progress...`
+      return totalActive === 1
+        ? 'Document generation in progress...'
+        : `${runningGenerations.length} generation(s) in progress...`
     }
     return 'Generation status'
   }
@@ -72,7 +74,7 @@ const GlobalGenerationStatus = () => {
   }
 
   // Drag functionality
-  const handleMouseDown = (e) => {
+  const handleMouseDown = e => {
     if (e.target.closest('.drag-handle')) {
       setIsDragging(true)
       setDragStart({
@@ -82,11 +84,11 @@ const GlobalGenerationStatus = () => {
     }
   }
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = e => {
     if (isDragging) {
       const newX = e.clientX - dragStart.x
       const newY = Math.max(0, e.clientY - dragStart.y) // Prevent going above viewport
-      
+
       const newPosition = { x: newX, y: newY }
       setPosition(newPosition)
     }
@@ -159,7 +161,7 @@ const GlobalGenerationStatus = () => {
 
   return (
     <Portal>
-      <Slide direction="down" in={true} timeout={300}>
+      <Slide direction='down' in={true} timeout={300}>
         <Paper
           ref={containerRef}
           elevation={4}
@@ -182,19 +184,19 @@ const GlobalGenerationStatus = () => {
           }}
         >
           <Box sx={{ px: 2, py: 1.5 }}>
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
                 cursor: totalActive > 1 ? 'pointer' : 'default'
               }}
               onClick={() => totalActive > 1 && setExpanded(!expanded)}
             >
               {/* Drag handle */}
-              <Tooltip title="Drag to reposition">
-                <Box 
-                  className="drag-handle"
-                  sx={{ 
+              <Tooltip title='Drag to reposition'>
+                <Box
+                  className='drag-handle'
+                  sx={{
                     cursor: 'grab',
                     mr: 1,
                     display: 'flex',
@@ -208,29 +210,27 @@ const GlobalGenerationStatus = () => {
                 </Box>
               </Tooltip>
 
-              {runningGenerations.length > 0 && (
-                <CircularProgress size={16} sx={{ color: 'inherit', mr: 1.5 }} />
-              )}
+              {runningGenerations.length > 0 && <CircularProgress size={16} sx={{ color: 'inherit', mr: 1.5 }} />}
               {failedGenerations.length > 0 && runningGenerations.length === 0 && (
                 <ErrorIcon sx={{ mr: 1.5, fontSize: '1rem' }} />
               )}
-              
-              <Typography variant="body2" sx={{ flex: 1, fontWeight: 600, fontSize: '0.875rem' }}>
+
+              <Typography variant='body2' sx={{ flex: 1, fontWeight: 600, fontSize: '0.875rem' }}>
                 {getStatusText()}
               </Typography>
 
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 {totalActive > 1 && (
-                  <Tooltip title={expanded ? "Collapse details" : "Show details"}>
-                    <IconButton size="small" sx={{ color: 'inherit', p: 0.5 }}>
-                      {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                  <Tooltip title={expanded ? 'Collapse details' : 'Show details'}>
+                    <IconButton size='small' sx={{ color: 'inherit', p: 0.5 }}>
+                      {expanded ? <ExpandLessIcon fontSize='small' /> : <ExpandMoreIcon fontSize='small' />}
                     </IconButton>
                   </Tooltip>
                 )}
-                
-                <Tooltip title="Dismiss">
-                  <IconButton size="small" sx={{ color: 'inherit', p: 0.5 }} onClick={handleDismiss}>
-                    <CloseIcon fontSize="small" />
+
+                <Tooltip title='Dismiss'>
+                  <IconButton size='small' sx={{ color: 'inherit', p: 0.5 }} onClick={handleDismiss}>
+                    <CloseIcon fontSize='small' />
                   </IconButton>
                 </Tooltip>
               </Box>
@@ -238,9 +238,9 @@ const GlobalGenerationStatus = () => {
 
             <Collapse in={expanded && totalActive > 1} timeout={300}>
               <Box sx={{ mt: 1.5, pb: 0.5 }}>
-                {generations.map((gen) => (
-                  <GenerationItem 
-                    key={`${gen.taskId}-${gen.documentId || 'all'}`} 
+                {generations.map(gen => (
+                  <GenerationItem
+                    key={`${gen.taskId}-${gen.documentId || 'all'}`}
                     generation={gen}
                     onRetry={() => retryGeneration(gen.taskId, gen.documentId)}
                     onDismiss={() => completeGeneration(gen.taskId, gen.documentId)}
@@ -256,23 +256,26 @@ const GlobalGenerationStatus = () => {
 }
 
 const GenerationItem = ({ generation, onRetry, onDismiss }) => {
-  const progress = generation.totalItems 
-    ? (generation.completedItems / generation.totalItems) * 100 
-    : undefined
-  
+  const progress = generation.totalItems ? (generation.completedItems / generation.totalItems) * 100 : undefined
+
   const elapsedTime = Math.floor((Date.now() - generation.startTime) / 1000)
 
   const getTypeLabel = () => {
     switch (generation.type) {
-      case 'single': return 'Single Document'
-      case 'all': return 'All Documents'
-      case 'new': return 'New Documents'
-      case 'selected': return 'Selected Documents'
-      default: return 'Documents'
+      case 'single':
+        return 'Single Document'
+      case 'all':
+        return 'All Documents'
+      case 'new':
+        return 'New Documents'
+      case 'selected':
+        return 'Selected Documents'
+      default:
+        return 'Documents'
     }
   }
 
-  const formatTime = (seconds) => {
+  const formatTime = seconds => {
     if (seconds < 60) return `${seconds}s`
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = seconds % 60
@@ -280,49 +283,37 @@ const GenerationItem = ({ generation, onRetry, onDismiss }) => {
   }
 
   return (
-    <Box sx={{ 
-      mb: 1, 
-      p: 1.5, 
-      backgroundColor: generation.status === 'failed' 
-        ? 'rgba(255,255,255,0.15)' 
-        : 'rgba(255,255,255,0.1)', 
-      borderRadius: 1,
-      border: generation.status === 'failed' ? '1px solid rgba(255,255,255,0.3)' : 'none'
-    }}>
+    <Box
+      sx={{
+        mb: 1,
+        p: 1.5,
+        backgroundColor: generation.status === 'failed' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.1)',
+        borderRadius: 1,
+        border: generation.status === 'failed' ? '1px solid rgba(255,255,255,0.3)' : 'none'
+      }}
+    >
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
+        <Typography variant='caption' sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
           {getTypeLabel()}
         </Typography>
-        
+
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           {generation.status === 'failed' && (
             <>
-              <IconButton 
-                size="small" 
-                sx={{ color: 'inherit', p: 0.25 }} 
-                onClick={onRetry}
-                title="Retry"
-              >
+              <IconButton size='small' sx={{ color: 'inherit', p: 0.25 }} onClick={onRetry} title='Retry'>
                 <RefreshIcon sx={{ fontSize: '0.875rem' }} />
               </IconButton>
-              <IconButton 
-                size="small" 
-                sx={{ color: 'inherit', p: 0.25 }} 
-                onClick={onDismiss}
-                title="Dismiss"
-              >
+              <IconButton size='small' sx={{ color: 'inherit', p: 0.25 }} onClick={onDismiss} title='Dismiss'>
                 <CloseIcon sx={{ fontSize: '0.875rem' }} />
               </IconButton>
             </>
           )}
-          
+
           <Chip
-            size="small"
+            size='small'
             label={generation.status === 'failed' ? 'Failed' : 'Running'}
             sx={{
-              backgroundColor: generation.status === 'failed' 
-                ? 'error.dark' 
-                : 'rgba(255,255,255,0.2)',
+              backgroundColor: generation.status === 'failed' ? 'error.dark' : 'rgba(255,255,255,0.2)',
               color: 'inherit',
               fontSize: '0.65rem',
               height: 18,
@@ -331,19 +322,19 @@ const GenerationItem = ({ generation, onRetry, onDismiss }) => {
           />
         </Box>
       </Box>
-      
+
       {generation.status === 'failed' && generation.error && (
-        <Typography variant="caption" sx={{ display: 'block', mb: 0.5, opacity: 0.8, fontSize: '0.7rem' }}>
+        <Typography variant='caption' sx={{ display: 'block', mb: 0.5, opacity: 0.8, fontSize: '0.7rem' }}>
           Error: {generation.error}
         </Typography>
       )}
-      
+
       {progress !== undefined && generation.status === 'running' && (
-        <LinearProgress 
-          variant="determinate" 
+        <LinearProgress
+          variant='determinate'
           value={progress}
-          sx={{ 
-            mb: 0.5, 
+          sx={{
+            mb: 0.5,
             height: 3,
             backgroundColor: 'rgba(255,255,255,0.2)',
             '& .MuiLinearProgress-bar': {
@@ -352,16 +343,16 @@ const GenerationItem = ({ generation, onRetry, onDismiss }) => {
           }}
         />
       )}
-      
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-          {progress !== undefined 
+        <Typography variant='caption' sx={{ fontSize: '0.7rem' }}>
+          {progress !== undefined
             ? `${generation.completedItems}/${generation.totalItems} pages`
-            : generation.status === 'running' 
-            ? 'Processing...' 
+            : generation.status === 'running'
+            ? 'Processing...'
             : 'Failed'}
         </Typography>
-        <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+        <Typography variant='caption' sx={{ fontSize: '0.7rem' }}>
           {formatTime(elapsedTime)}
         </Typography>
       </Box>

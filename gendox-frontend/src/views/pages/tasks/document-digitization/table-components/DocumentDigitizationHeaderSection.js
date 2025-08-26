@@ -1,15 +1,5 @@
-import React, { useState, useRef } from 'react'
-import { 
-  Box, 
-  Typography, 
-  Stack, 
-  Button, 
-  Tooltip, 
-  Divider, 
-  Menu, 
-  MenuItem, 
-  CircularProgress
-} from '@mui/material'
+import React, { useState } from 'react'
+import { Box, Typography, Stack, Button, Tooltip, Divider, Menu, MenuItem, CircularProgress } from '@mui/material'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 
@@ -37,33 +27,28 @@ const HeaderSection = ({
   const [anchorEl, setAnchorEl] = useState(null)
   const [confirmGeneration, setConfirmGeneration] = useState(null) // 'all', 'new', 'selected', or null
 
-
   const handleToggle = event => {
     setAnchorEl(prev => (prev ? null : event.currentTarget.parentElement))
   }
 
   // Helper function to check if documents have existing generated content
-  const hasExistingContent = (docs) => {
+  const hasExistingContent = docs => {
     return docs.some(doc => hasGeneratedContent(doc.id))
   }
 
   // Handle generation with confirmation check
-  const handleGenerateClick = (type) => {
+  const handleGenerateClick = type => {
     let targetDocs = []
-    
+
     switch (type) {
       case 'all':
-        targetDocs = documents.filter(doc => 
-          doc.prompt && 
-          doc.prompt.trim() && 
-          isFileTypeSupported(doc.url || doc.name)
+        targetDocs = documents.filter(
+          doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
         )
         break
       case 'new':
-        const docsWithPrompts = documents.filter(doc => 
-          doc.prompt && 
-          doc.prompt.trim() && 
-          isFileTypeSupported(doc.url || doc.name)
+        const docsWithPrompts = documents.filter(
+          doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
         )
         targetDocs = docsWithPrompts.filter(doc => !hasGeneratedContent(doc.id))
         break
@@ -77,10 +62,10 @@ const HeaderSection = ({
   }
 
   // Execute the actual generation
-  const executeGeneration = (type) => {
+  const executeGeneration = type => {
     setConfirmGeneration(null)
     setAnchorEl(null)
-    
+
     switch (type) {
       case 'all':
         if (onGenerateAll) onGenerateAll()
@@ -117,13 +102,11 @@ const HeaderSection = ({
     }
 
     // Check if there are new (ungenerated) documents WITH prompts AND supported file types
-    const docsWithPrompts = documents.filter(doc => 
-      doc.prompt && 
-      doc.prompt.trim() && 
-      isFileTypeSupported(doc.url || doc.name)
+    const docsWithPrompts = documents.filter(
+      doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
     )
     const newDocsWithPrompts = docsWithPrompts.filter(doc => !hasGeneratedContent(doc.id))
-    
+
     // Always default to "Generate New" as main button
     return {
       text: `Generate New`,
@@ -134,12 +117,6 @@ const HeaderSection = ({
   }
 
   const buttonConfig = getMainButtonConfig()
-
-  // Check if dropdown menu has any items
-  const hasMenuItems = () => {
-    // Always show menu items since Generate All is always available in menu
-    return true
-  }
 
   return (
     <Box sx={{ mb: 4, px: 2 }}>
@@ -202,7 +179,9 @@ const HeaderSection = ({
                   variant='contained'
                   color='primary'
                   fullWidth
-                  startIcon={buttonConfig.loading ? <CircularProgress size={20} color="inherit" /> : <RocketLaunchIcon />}
+                  startIcon={
+                    buttonConfig.loading ? <CircularProgress size={20} color='inherit' /> : <RocketLaunchIcon />
+                  }
                   onClick={() => handleGenerateClick(buttonConfig.type)}
                   disabled={buttonConfig.disabled || isLoading || disableGenerate}
                   sx={{
@@ -250,71 +229,83 @@ const HeaderSection = ({
               }}
             >
               {/* Menu items based on main button state */}
-              
+
               {/* When main button is "Generate Selected" - show Generate New and Generate All */}
-              {selectedDocuments.length > 0 && (
-                <>
-                  <MenuItem
-                    onClick={() => handleGenerateClick('new')}
-                    disabled={generatingAll || generatingNew || generatingSelected || isLoading || (() => {
-                      const docsWithPrompts = documents.filter(doc => 
-                        doc.prompt && 
-                        doc.prompt.trim() && 
-                        isFileTypeSupported(doc.url || doc.name)
+              {selectedDocuments.length > 0 && [
+                <MenuItem
+                  key='generate-new'
+                  onClick={() => handleGenerateClick('new')}
+                  disabled={
+                    generatingAll ||
+                    generatingNew ||
+                    generatingSelected ||
+                    isLoading ||
+                    (() => {
+                      const docsWithPrompts = documents.filter(
+                        doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
                       )
                       const newDocsWithPrompts = docsWithPrompts.filter(doc => !hasGeneratedContent(doc.id))
                       return newDocsWithPrompts.length === 0
-                    })()}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {generatingNew ? (
-                        <CircularProgress size={16} color="primary" />
-                      ) : (
-                        <RocketLaunchIcon fontSize='small' color='primary' />
-                      )}
-                      Generate New
-                    </Box>
-                  </MenuItem>
-                  
-                  <MenuItem
-                    onClick={() => handleGenerateClick('all')}
-                    disabled={generatingAll || generatingNew || generatingSelected || isLoading || (() => {
-                      const docsWithPrompts = documents.filter(doc => 
-                        doc.prompt && 
-                        doc.prompt.trim() && 
-                        isFileTypeSupported(doc.url || doc.name)
+                    })()
+                  }
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {generatingNew ? (
+                      <CircularProgress size={16} color='primary' />
+                    ) : (
+                      <RocketLaunchIcon fontSize='small' color='primary' />
+                    )}
+                    Generate New
+                  </Box>
+                </MenuItem>,
+
+                <MenuItem
+                  key='generate-all'
+                  onClick={() => handleGenerateClick('all')}
+                  disabled={
+                    generatingAll ||
+                    generatingNew ||
+                    generatingSelected ||
+                    isLoading ||
+                    (() => {
+                      const docsWithPrompts = documents.filter(
+                        doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
                       )
                       return docsWithPrompts.length === 0
-                    })()}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {generatingAll ? (
-                        <CircularProgress size={16} color="success" />
-                      ) : (
-                        <RocketLaunchIcon fontSize='small' color='success' />
-                      )}
-                      Generate All
-                    </Box>
-                  </MenuItem>
-                </>
-              )}
+                    })()
+                  }
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {generatingAll ? (
+                      <CircularProgress size={16} color='success' />
+                    ) : (
+                      <RocketLaunchIcon fontSize='small' color='success' />
+                    )}
+                    Generate All
+                  </Box>
+                </MenuItem>
+              ]}
 
               {/* When main button is "Generate New" - show only Generate All */}
               {selectedDocuments.length === 0 && (
                 <MenuItem
                   onClick={() => handleGenerateClick('all')}
-                  disabled={generatingAll || generatingNew || generatingSelected || isLoading || (() => {
-                    const docsWithPrompts = documents.filter(doc => 
-                      doc.prompt && 
-                      doc.prompt.trim() && 
-                      isFileTypeSupported(doc.url || doc.name)
-                    )
-                    return docsWithPrompts.length === 0
-                  })()}
+                  disabled={
+                    generatingAll ||
+                    generatingNew ||
+                    generatingSelected ||
+                    isLoading ||
+                    (() => {
+                      const docsWithPrompts = documents.filter(
+                        doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
+                      )
+                      return docsWithPrompts.length === 0
+                    })()
+                  }
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {generatingAll ? (
-                      <CircularProgress size={16} color="success" />
+                      <CircularProgress size={16} color='success' />
                     ) : (
                       <RocketLaunchIcon fontSize='small' color='success' />
                     )}

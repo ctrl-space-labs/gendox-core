@@ -795,6 +795,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
           elevation={0}
           sx={{
             borderBottom: 1,
+            p:2,
             borderColor: 'divider',
             backgroundColor: 'background.paper'
           }}

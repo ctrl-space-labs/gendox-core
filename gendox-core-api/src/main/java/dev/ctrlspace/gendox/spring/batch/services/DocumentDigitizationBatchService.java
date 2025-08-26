@@ -56,7 +56,7 @@ public class DocumentDigitizationBatchService {
         }
 
 
-        paramsBuilder.addString("taskId", task.getId().toString());
+        paramsBuilder.addString(JobExecutionParamConstants.TASK_ID, task.getId().toString());
         paramsBuilder.addString(JobExecutionParamConstants.NOW, Instant.now().toString());
         paramsBuilder.addString(JobExecutionParamConstants.PROJECT_ID, task.getProjectId().toString());
         paramsBuilder.addString(JobExecutionParamConstants.RE_GENERATE_EXISTING_ANSWERS, criteria.getReGenerateExistingAnswers() != null ? criteria.getReGenerateExistingAnswers().toString() : "false");

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
-import { Box, Modal } from '@mui/material'
+import { Box } from '@mui/material'
 import Paper from '@mui/material/Paper'
 import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
@@ -13,7 +13,7 @@ import DialogManager from './table-components/DocumentDigitizationDialogs'
 import useDocumentDigitizationGeneration from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationGeneration'
 import useExportFile from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationExportFile'
 import taskService from 'src/gendox-sdk/taskService'
-import { useGeneration } from './table-hooks/GenerationContext'
+import { useGeneration } from '../generation/GenerationContext'
 
 const MAX_PAGE_SIZE = 2147483647
 
@@ -77,8 +77,16 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     if (!organizationId || !projectId || !taskId || !token) return
 
     try {
-      const response = await taskService.isJobRunningForTask(organizationId, projectId, taskId, token)
-      const isRunning = response.data
+      const criteria = {
+        status: 'STARTED',
+        matchAllParams: [
+          { paramName: 'projectId', paramValue: projectId },
+          { paramName: 'taskId', paramValue: taskId }
+        ]
+      }
+
+      const response = await taskService.getJobsByCriteria(organizationId, projectId, criteria, token)
+      const isRunning = response.data?.content?.length > 0
 
       if (isRunning) {
         // Start generation tracking for running job (UI state only)
@@ -97,8 +105,16 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const startJobCompletionPolling = useCallback(() => {
     const pollInterval = setInterval(async () => {
       try {
-        const response = await taskService.isJobRunningForTask(organizationId, projectId, taskId, token)
-        const isStillRunning = response.data
+        const criteria = {
+          status: 'STARTED',
+          matchAllParams: [
+            { paramName: 'projectId', paramValue: projectId },
+            { paramName: 'taskId', paramValue: taskId }
+          ]
+        }
+
+        const response = await taskService.getJobsByCriteria(organizationId, projectId, criteria, token)
+        const isStillRunning = response.data?.content?.length > 0
 
         if (!isStillRunning) {
           // Job has completed, mark as completed in context
@@ -116,8 +132,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
             .catch(error => console.error('Failed to refresh document pages after polling:', error))
 
           toast.success('Generation completed successfully!')
-        } else {
-          console.log('⏳ Job still running, continuing to poll...')
         }
       } catch (error) {
         console.error('Error polling job completion:', error)
@@ -131,6 +145,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       clearInterval(pollInterval)
     }
   }, [organizationId, projectId, taskId, token, completeGeneration, fetchDocuments, loadDocumentPages])
+
 
   // 1️⃣ **Reset all local state when switching tasks/orgs/projects**
   useEffect(() => {

@@ -101,11 +101,12 @@ export const GenerateConfirmDialog = ({
       maxWidth="sm"
       fullWidth
       aria-labelledby="generate-confirmation-dialog-title"
+      disableAutoFocus
+      disableEnforceFocus
+      disableRestoreFocus
     >
-      <DialogTitle id="generate-confirmation-dialog-title">
-        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-          {title}
-        </Typography>
+      <DialogTitle id="generate-confirmation-dialog-title" sx={{ fontWeight: 600 }}>
+        {title}
       </DialogTitle>
       
       <DialogContent>
@@ -140,6 +141,7 @@ export const GenerateConfirmDialog = ({
           color={buttonColor}
           size="medium"
           startIcon={<RocketLaunchIcon />}
+          autoFocus
         >
           {buttonText}
         </Button>

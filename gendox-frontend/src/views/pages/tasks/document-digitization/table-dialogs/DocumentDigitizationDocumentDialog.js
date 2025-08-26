@@ -153,7 +153,7 @@ const DocumentDialog = ({
 
       <Divider />
 
-      <DialogContent sx={{ py: 3 }}>
+      <DialogContent sx={{ py: 2 }}>
         {loading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />

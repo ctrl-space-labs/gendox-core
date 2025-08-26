@@ -148,35 +148,6 @@ public class JobController {
     }
 
 
-
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
-            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
-    @GetMapping("organizations/{organizationId}/projects/{projectId}/jobs/{jobExecutionId}/status")
-    @Operation(summary = "Get Job Execution Status")
-    public String getJobStatus(@PathVariable UUID organizationId,
-                               @PathVariable UUID projectId,
-                               @PathVariable Long jobExecutionId) throws GendoxException {
-        BatchStatus status = jobService.getJobStatus(jobExecutionId);
-        if (status == null) {
-            throw new GendoxException("JOB_NOT_FOUND", "Job Execution with ID " + jobExecutionId + " not found", HttpStatus.NOT_FOUND);
-        }
-        logger.info("Job Execution ID: {}, Status: {}", jobExecutionId, status);
-        return status.name(); // π.χ. "STARTED", "COMPLETED", "FAILED"
-    }
-
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
-            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
-    @GetMapping("organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/jobs/running")
-    @Operation(summary = "Check if there are running jobs for a specific task")
-    public boolean isJobRunningForTask(@PathVariable UUID organizationId,
-                                       @PathVariable UUID projectId,
-                                       @PathVariable UUID taskId) {
-        boolean isRunning = jobService.isJobRunningForTask(taskId);
-        logger.info("Checking running jobs for task ID: {}, Result: {}", taskId, isRunning);
-        return isRunning;
-    }
-
-
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
             "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
     @GetMapping("organizations/{organizationId}/projects/{projectId}/jobs")
@@ -186,8 +157,6 @@ public class JobController {
         if (!securityUtils.isSuperAdmin()) {
             jobCriteria.getMatchAllParams().add(new BatchExecutionParamCriteria(JobExecutionParamConstants.PROJECT_ID, projectId.toString()));
         }
-
-
 
         return jobUtils.getJobsByCriteria(jobCriteria, pageable);
     }

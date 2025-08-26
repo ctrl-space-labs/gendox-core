@@ -23,8 +23,10 @@ public class JobExecutionParamConstants {
     public static final String UPDATED_BETWEEN_FROM = "updatedBetween.from";
     public static final String UPDATED_BETWEEN_TO = "updatedBetween.to";
 
-    // Document Insights Job Parameters
+    // Document Insights - Digitization Job Parameters
     public static final String TASK_ID = "taskId";
     public static final String RE_GENERATE_EXISTING_ANSWERS = "reGenerateExistingAnswers";
+    public static final String DOCUMENT_NODE_IDS = "documentNodeIds";
+    public static final String QUESTION_NODE_IDS = "questionNodeIds";
 
 }

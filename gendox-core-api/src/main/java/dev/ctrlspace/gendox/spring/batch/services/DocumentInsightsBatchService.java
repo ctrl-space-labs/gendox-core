@@ -74,8 +74,6 @@ public class DocumentInsightsBatchService {
         paramsBuilder.addString(JobExecutionParamConstants.NOW, Instant.now().toString());
         paramsBuilder.addString(JobExecutionParamConstants.PROJECT_ID, task.getProjectId().toString());
         paramsBuilder.addString(JobExecutionParamConstants.RE_GENERATE_EXISTING_ANSWERS, criteria.getReGenerateExistingAnswers() != null ? criteria.getReGenerateExistingAnswers().toString() : "false");
-
-        // Add jobName param for logging/debug
         paramsBuilder.addString(JobExecutionParamConstants.JOB_NAME, documentInsightsJobName);
 
         JobParameters jobParameters = paramsBuilder.toJobParameters();
