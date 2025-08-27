@@ -110,6 +110,10 @@ public class DownloadServiceTest {
         DocPageToImageOptions options = DocPageToImageOptions.builder()
                 .build();
 
+        options.setMinSide(1024);
+        options.setPageFrom(10);
+        options.setPageTo(20);
+
 
         List<String> printedPages = downloadService.pdfToBase64Pages(resource, options);
 
