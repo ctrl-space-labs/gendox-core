@@ -306,6 +306,7 @@ public class TaskController {
         logger.info("Request to delete task: taskId={}", taskId);
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/export-csv")
     public ResponseEntity<InputStreamResource> exportTaskCsv(@PathVariable UUID organizationId,
                                                              @PathVariable UUID projectId,
@@ -326,6 +327,7 @@ public class TaskController {
                 .body(fileResource);
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/documents/{documentNodeId}/export-csv")
     public ResponseEntity<InputStreamResource> documentDigitizationExportCSV(@PathVariable UUID organizationId,
                                                                                @PathVariable UUID projectId,
