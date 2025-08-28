@@ -38,6 +38,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private boolean reGenerateExistingAnswers;
 
+
     private TaskService taskService;
     private TaskNodeService taskNodeService;
     private DocumentService documentService;
@@ -107,19 +108,39 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
             return null;
         }
 
+        // Determine page range to process
+        int startPage = 0; // 0-based indexing for internal processing
+        int endPage = totalPages - 1;
+        Integer pageFromParam = documentMetadata.getPageFrom();
+        Integer pageToParam = documentMetadata.getPageTo();
+        
+        if (pageFromParam != null) {
+            startPage = Math.max(0, pageFromParam - 1); // Convert from 1-based to 0-based
+        }
+        
+        if (pageToParam != null) {
+            endPage = Math.min(totalPages - 1, pageToParam - 1); // Convert from 1-based to 0-based
+        }
+        
+        if (startPage > endPage) {
+            logger.warn("Invalid page range: pageFrom {} is greater than pageTo {} for document {}", 
+                       startPage + 1, endPage + 1, documentInstance.getId());
+            return null;
+        }
+
         List<Integer> pagesToProcess;
         if (reGenerateExistingAnswers) {
             batch.setAnswersToDelete(existingNodes.getContent());
-            pagesToProcess = IntStream.range(0, totalPages).boxed().toList();
+            pagesToProcess = IntStream.rangeClosed(startPage, endPage).boxed().toList();
         } else {
-            pagesToProcess = IntStream.range(0, totalPages)
+            pagesToProcess = IntStream.rangeClosed(startPage, endPage)
                     .filter(i -> !existingPageNums.contains(i))
                     .boxed()
                     .collect(Collectors.toList());
 
             if (pagesToProcess.isEmpty()) {
-                logger.info("Nothing to generate for documentNode {}: all {} pages already have answers.",
-                        documentNode.getId(), totalPages);
+                logger.info("Nothing to generate for documentNode {}: all pages in range [{}, {}] already have answers.",
+                        documentNode.getId(), startPage + 1, endPage + 1);
                 return null; // ← early exit; no rendering done
             }
         }
@@ -129,18 +150,22 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         DocPageToImageOptions printOptions = DocPageToImageOptions.builder().build();
         // increase print quality, this doubles the input tokens, compare to the default 768
         printOptions.setMinSide(1024);
+        printOptions.setPageFrom(Collections.min(pagesToProcess));
+        printOptions.setPageTo(Collections.max(pagesToProcess));
 
         // TODO change this to optionally get a list of page numbers to print
         List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), printOptions);
+        
+        // Validate that we have enough pages and create safe mapping
         Map<Integer, String> pageImages = pagesToProcess.stream()
-                .collect(Collectors.toMap(i -> i, i -> printedPagesBase64.get(i)));
+                .collect(Collectors.toMap(i -> i, i -> printedPagesBase64.get(i - printOptions.getPageFrom())));
 
         // CORE PROCESSING:
         // There are 2 thread pools: 1 for the docs, 1 for the LLM completions
         // This runs 10 files in parallel, then these 10 files are competing against each other for LLM completions
         // 1. When there are multiple files, they progress all together, 2. When there is a single file, it will run all the pages in parallel
         List<CompletableFuture<AnswerCreationDTO>> completionFutures = pagesToProcess.stream()
-                .map(i -> getCompletionAnswerFuture(prompt, pageImages.get(i), totalPages, documentNode, i))
+                .map(pageNumber -> getCompletionAnswerFuture(prompt, pageImages.get(pageNumber), totalPages, documentNode, pageNumber))
                 .toList();
 
 
@@ -169,7 +194,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
                     StringBuilder promptBuilder = new StringBuilder()
                             .append(prompt).append("\n\n")
-                            .append("Document Page: ").append(pageIndex).append(" out of ").append(totalPages).append("\n\n");
+                            .append("Document Page: ").append(pageIndex + 1).append(" out of ").append(totalPages).append("\n\n");
 
                     Message message = new Message();
                     message.setValue(promptBuilder.toString());

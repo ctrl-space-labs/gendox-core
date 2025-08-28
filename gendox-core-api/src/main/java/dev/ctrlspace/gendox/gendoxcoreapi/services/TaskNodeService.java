@@ -112,6 +112,20 @@ public class TaskNodeService {
         if (taskDocumentMetadataDTO.getStructure() != null) {
             existing.getNodeValue().getDocumentMetadata().setStructure(taskDocumentMetadataDTO.getStructure());
         }
+        // Handle page range: if allPages is true, clear page range; otherwise update only if not null
+        if (taskDocumentMetadataDTO.getAllPages() != null && taskDocumentMetadataDTO.getAllPages()) {
+            // User explicitly wants to process all pages - clear page range
+            existing.getNodeValue().getDocumentMetadata().setPageFrom(null);
+            existing.getNodeValue().getDocumentMetadata().setPageTo(null);
+        } else {
+            // Normal update logic - only update if not null
+            if (taskDocumentMetadataDTO.getPageFrom() != null) {
+                existing.getNodeValue().getDocumentMetadata().setPageFrom(taskDocumentMetadataDTO.getPageFrom());
+            }
+            if (taskDocumentMetadataDTO.getPageTo() != null) {
+                existing.getNodeValue().getDocumentMetadata().setPageTo(taskDocumentMetadataDTO.getPageTo());
+            }
+        }
 
         return taskNodeRepository.save(existing);
     }
@@ -316,6 +330,8 @@ public class TaskNodeService {
                         if (node.getNodeValue().getDocumentMetadata() != null) {
                             builder.prompt(node.getNodeValue().getDocumentMetadata().getPrompt());       // might be null, that's fine
                             builder.structure(node.getNodeValue().getDocumentMetadata().getStructure()); // might be null, that's fine
+                            builder.pageFrom(node.getNodeValue().getDocumentMetadata().getPageFrom());   // might be null, that's fine
+                            builder.pageTo(node.getNodeValue().getDocumentMetadata().getPageTo());       // might be null, that's fine
                         }
                     }
                     return builder.build();

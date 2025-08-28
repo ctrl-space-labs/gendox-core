@@ -24,4 +24,8 @@ public class TaskNodeCriteria {
 
     // if true, the Job will re-generate answers for existing nodes. Otherwise, it will only generate answers for new nodes
     private Boolean reGenerateExistingAnswers;
+    
+    // Page range for document digitization (1-based indexing)
+    private Integer pageFrom;
+    private Integer pageTo;
 }

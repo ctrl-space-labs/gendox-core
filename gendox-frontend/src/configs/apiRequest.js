@@ -202,8 +202,8 @@ export default {
   executeTaskByType: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/execute`,
 
-  getJobStatus: (organizationId, projectId, jobExecutionId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/jobs/${jobExecutionId}/status`,
+  getJobsByCriteria: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/jobs`,
 
   deleteTaskNode: (organizationId, projectId, taskNodeId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes/${taskNodeId}`,
@@ -213,6 +213,9 @@ export default {
 
   exportTaskCsv: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/export-csv`,
+
+  documentDigitizationExportCSV: (organizationId, projectId, taskId, documentNodeId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/export-csv`,
 
 
 }

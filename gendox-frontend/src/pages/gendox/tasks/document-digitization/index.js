@@ -11,6 +11,8 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 import { fetchTaskById } from 'src/store/activeTask/activeTask'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import DocumentDigitizationTable from 'src/views/pages/tasks/document-digitization/DocumentDigitizationTable'
+import { GenerationProvider } from 'src/views/pages/tasks/generation/GenerationContext'
+import GlobalGenerationStatus from 'src/views/pages/tasks/generation/GlobalGenerationStatus'
 
 const DocumentDigitization = () => {
   const dispatch = useDispatch()
@@ -32,53 +34,56 @@ const DocumentDigitization = () => {
   }, [organizationId, projectId, taskId, token, dispatch])
 
   return (
-    <Card sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
-      <ResponsiveCardContent sx={{ backgroundColor: 'background.paper' }}>
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            filter: isLoading ? 'blur(6px)' : 'none', // Apply blur to SectionCard
-            transition: 'filter 0.3s ease'
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {' '}
-            <Typography variant='h4' sx={{ fontWeight: 600, textAlign: 'left' }}>
-              Document Digitization
-            </Typography>
-            <Tooltip title='View and manage digitization for your document'>
-              <span>
-                <IconButton color='primary' sx={{ ml: 1, mb: 6, width: 'auto', height: 'auto' }}>
-                  <Icon icon='mdi:information-outline' />
+    <GenerationProvider>
+      <GlobalGenerationStatus />
+      <Card sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
+        <ResponsiveCardContent sx={{ backgroundColor: 'background.paper' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              filter: isLoading ? 'blur(6px)' : 'none', // Apply blur to SectionCard
+              transition: 'filter 0.3s ease'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              {' '}
+              <Typography variant='h4' sx={{ fontWeight: 600, textAlign: 'left' }}>
+                Document Digitization
+              </Typography>
+              <Tooltip title='View and manage digitization for your document'>
+                <span>
+                  <IconButton color='primary' sx={{ ml: 1, mb: 6, width: 'auto', height: 'auto' }}>
+                    <Icon icon='mdi:information-outline' />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Box>
+
+            <Box sx={{ display: 'inline-flex', gap: 1 }}>
+              <Tooltip title='Back'>
+                <IconButton
+                  onClick={handleGoBack}
+                  sx={{
+                    mb: 6,
+                    width: 'auto',
+                    height: 'auto',
+                    color: 'primary.main'
+                  }}
+                >
+                  <Icon icon='mdi:arrow-left-bold' />
                 </IconButton>
-              </span>
-            </Tooltip>
+              </Tooltip>
+            </Box>
           </Box>
+        </ResponsiveCardContent>
+        <Box sx={{ height: 20 }} />
 
-          <Box sx={{ display: 'inline-flex', gap: 1 }}>
-            <Tooltip title='Back'>
-              <IconButton
-                onClick={handleGoBack}
-                sx={{
-                  mb: 6,
-                  width: 'auto',
-                  height: 'auto',
-                  color: 'primary.main'
-                }}
-              >
-                <Icon icon='mdi:arrow-left-bold' />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </Box>
-      </ResponsiveCardContent>
-      <Box sx={{ height: 20 }} />
-
-      {/* Main content area */}
-      <DocumentDigitizationTable selectedTask={selectedTask} />
-    </Card>
+        {/* Main content area */}
+        <DocumentDigitizationTable selectedTask={selectedTask} />
+      </Card>
+    </GenerationProvider>
   )
 }
 

@@ -4,18 +4,25 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.AsyncService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.JobService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AsyncExecutionTypes;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
+import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
+import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionCriteria;
+import dev.ctrlspace.gendox.spring.batch.model.criteria.BatchExecutionParamCriteria;
+import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
+import dev.ctrlspace.gendox.spring.batch.utils.JobUtils;
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -28,21 +35,23 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
-public class AsyncController {
+public class JobController {
 
-    Logger logger = LoggerFactory.getLogger(AsyncController.class);
+    private final JobUtils jobUtils;
+    Logger logger = LoggerFactory.getLogger(JobController.class);
 
-    private final AsyncService asyncService;
+    private final JobService jobService;
     private final SecurityUtils securityUtils;
     private final TaskService taskService;
 
     @Autowired
-    public AsyncController(AsyncService asyncService,
-                           SecurityUtils securityUtils,
-                           TaskService taskService) {
-        this.asyncService = asyncService;
+    public JobController(JobService jobService,
+                         SecurityUtils securityUtils,
+                         TaskService taskService, JobUtils jobUtils) {
+        this.jobService = jobService;
         this.securityUtils = securityUtils;
         this.taskService = taskService;
+        this.jobUtils = jobUtils;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
@@ -81,13 +90,13 @@ public class AsyncController {
 
         switch (jobName.toUpperCase()) {
             case AsyncExecutionTypes.SPLITTER:
-                asyncService.executeSplitter(projectIdFromRequest, timePeriodDTO);
+                jobService.executeSplitter(projectIdFromRequest, timePeriodDTO);
                 break;
             case AsyncExecutionTypes.TRAINING:
-                asyncService.executeTraining(projectIdFromRequest, timePeriodDTO);
+                jobService.executeTraining(projectIdFromRequest, timePeriodDTO);
                 break;
             case AsyncExecutionTypes.SPLITTER_AND_TRAINING:
-                asyncService.executeSplitterAndTraining(projectIdFromRequest, timePeriodDTO);
+                jobService.executeSplitterAndTraining(projectIdFromRequest, timePeriodDTO);
                 break;
             default:
                 throw new GendoxException(
@@ -112,16 +121,21 @@ public class AsyncController {
         Task task = taskService.getTaskById(taskId);
         String taskType = task.getTaskType().getName();
 
+
+        if (!task.getProjectId().equals(projectId)) {
+            throw new GendoxException("TASK_PROJECT_MISMATCH", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
+
         if (TaskTypeConstants.DOCUMENT_INSIGHTS.equalsIgnoreCase(taskType)) {
-            CompletableFuture<JobExecution> futureJob = asyncService
-                    .executeDocumentInsightsTask(taskId, criteria);
+            CompletableFuture<JobExecution> futureJob = jobService
+                    .executeDocumentInsightsTask(task, criteria);
             return futureJob
                     .thenApply(JobExecution::getId);
 
 
         } else if (TaskTypeConstants.DOCUMENT_DIGITIZATION.equalsIgnoreCase(taskType)) {
-            CompletableFuture<JobExecution> futureJob = asyncService
-                    .executeDocumentDigitizationTask(taskId, criteria);
+            CompletableFuture<JobExecution> futureJob = jobService
+                    .executeDocumentDigitizationTask(task, criteria);
             return futureJob
                     .thenApply(JobExecution::getId);
 
@@ -134,20 +148,17 @@ public class AsyncController {
     }
 
 
-
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
             "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
-    @GetMapping("organizations/{organizationId}/projects/{projectId}/jobs/{jobExecutionId}/status")
+    @GetMapping("organizations/{organizationId}/projects/{projectId}/jobs")
     @Operation(summary = "Get Job Execution Status")
-    public String getJobStatus(@PathVariable UUID organizationId,
-                               @PathVariable UUID projectId,
-                               @PathVariable Long jobExecutionId) throws GendoxException {
-        BatchStatus status = asyncService.getJobStatus(jobExecutionId);
-        if (status == null) {
-            throw new GendoxException("JOB_NOT_FOUND", "Job Execution with ID " + jobExecutionId + " not found", HttpStatus.NOT_FOUND);
+    public Page<BatchJobExecution> getJobsByCriteria(@PathVariable UUID projectId, BatchExecutionCriteria jobCriteria, Pageable pageable) throws GendoxException {
+
+        if (!securityUtils.isSuperAdmin()) {
+            jobCriteria.getMatchAllParams().add(new BatchExecutionParamCriteria(JobExecutionParamConstants.PROJECT_ID, projectId.toString()));
         }
-        logger.info("Job Execution ID: {}, Status: {}", jobExecutionId, status);
-        return status.name(); // π.χ. "STARTED", "COMPLETED", "FAILED"
+
+        return jobUtils.getJobsByCriteria(jobCriteria, pageable);
     }
 
 

@@ -2,7 +2,9 @@ package dev.ctrlspace.gendox.spring.batch.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
+import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import org.slf4j.Logger;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
@@ -14,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -37,11 +40,10 @@ public class DocumentDigitizationBatchService {
     /**
      * Run Document Digitization batch job for a specific Task ID
      */
-    public JobExecution runDocumentDigitization(UUID taskId, TaskNodeCriteria criteria)  throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
-        logger.info("Starting Document Digitization job for Task ID: {}", taskId);
+    public JobExecution runDocumentDigitization(Task task, TaskNodeCriteria criteria)  throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
+        logger.info("Starting Document Digitization job for Task ID: {}", task.getId());
 
         JobParametersBuilder paramsBuilder = new JobParametersBuilder();
-        paramsBuilder.addString("taskId", taskId.toString());
         ObjectMapper mapper = new ObjectMapper();
 
         if (criteria.getDocumentNodeIds() != null && !criteria.getDocumentNodeIds().isEmpty()) {
@@ -53,9 +55,13 @@ public class DocumentDigitizationBatchService {
             }
         }
 
-        paramsBuilder.addLong("run.id", System.currentTimeMillis());
-        paramsBuilder.addString("reGenerateExistingAnswers", criteria.getReGenerateExistingAnswers() != null ? criteria.getReGenerateExistingAnswers().toString() : "false");
-        paramsBuilder.addString("jobName", documentDigitizationJobName);
+
+        paramsBuilder.addString(JobExecutionParamConstants.TASK_ID, task.getId().toString());
+        paramsBuilder.addString(JobExecutionParamConstants.NOW, Instant.now().toString());
+        paramsBuilder.addString(JobExecutionParamConstants.PROJECT_ID, task.getProjectId().toString());
+        paramsBuilder.addString(JobExecutionParamConstants.RE_GENERATE_EXISTING_ANSWERS, criteria.getReGenerateExistingAnswers() != null ? criteria.getReGenerateExistingAnswers().toString() : "false");
+        paramsBuilder.addString(JobExecutionParamConstants.JOB_NAME, documentDigitizationJobName);
+
 
         JobParameters jobParameters = paramsBuilder.toJobParameters();
 

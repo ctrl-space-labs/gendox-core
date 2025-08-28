@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { executeTaskByType } from 'src/store/activeTask/activeTask'
 import { toast } from 'react-hot-toast'
+import { useGeneration as useGenerationContext } from '../../generation/GenerationContext'
 
 export default function useGeneration({
   organizationId,
@@ -16,6 +17,7 @@ export default function useGeneration({
   fetchAnswers
 }) {
   const dispatch = useDispatch()
+  const { startGeneration, updateProgress, completeGeneration, failGeneration } = useGenerationContext()
   const [isGeneratingAll, setIsGeneratingAll] = useState(false)
   const [isGeneratingCells, setIsGeneratingCells] = useState({})
 
@@ -44,15 +46,23 @@ export default function useGeneration({
           executeTaskByType({ organizationId, projectId, taskId, criteria, token })
         ).unwrap()
 
+        // Start tracking generation in GlobalGenerationStatus
+        const generationType = isAll ? 'all' : selectedDocuments?.length > 0 ? 'selected' : 'new'
+        startGeneration(taskId, null, generationType, docIds.length)
+
         toast.success(`Started generation for ${docIds.length} document(s)`)
 
         await pollJobStatus(jobExecutionId)
         fetchAnswers()        
 
+        // Complete generation tracking
+        completeGeneration(taskId, null)
         toast.success(`Generation completed for ${docIds.length} document(s)`)
         setSelectedDocuments([])
       } catch (error) {
         console.error('Failed to start generation:', error)
+        // Fail generation tracking
+        failGeneration(taskId, null, error.message || 'Generation failed')
         toast.error('Failed to start generation')
       } finally {
         if (isAll) setIsGeneratingAll(false)

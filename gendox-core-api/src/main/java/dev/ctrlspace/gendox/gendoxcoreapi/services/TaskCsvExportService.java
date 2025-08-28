@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeValueDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
 import org.slf4j.Logger;
@@ -156,6 +157,99 @@ public class TaskCsvExportService {
             return "\"" + value + "\"";
         }
         return value;
+    }
+
+    public InputStreamResource documentDigitizationExportCSV(UUID taskId, UUID documentNodeId) throws GendoxException {
+        logger.info("Exporting document digitization CSV: taskId={}, documentNodeId={}", taskId, documentNodeId);
+
+        // Get the document node and its info
+        TaskNode documentNode = taskNodeService.getTaskNodeById(documentNodeId);
+        if (documentNode == null || !documentNode.getTaskId().equals(taskId)) {
+            throw new GendoxException("DOCUMENT_NODE_NOT_FOUND", "Document node not found for task", org.springframework.http.HttpStatus.NOT_FOUND);
+        }
+
+        // Get document info
+        DocumentInstanceDTO document = null;
+        if (documentNode.getDocumentId() != null) {
+            DocumentCriteria criteria = new DocumentCriteria();
+            criteria.setDocumentInstanceIds(List.of(documentNode.getDocumentId().toString()));
+            Page<DocumentInstanceDTO> docsPage = documentService.getAllDocuments(criteria, Pageable.unpaged())
+                    .map(documentOnlyConverter::toDTO);
+            if (!docsPage.getContent().isEmpty()) {
+                document = docsPage.getContent().get(0);
+            }
+        }
+
+        // Get answer nodes for this document
+        TaskNodeCriteria answerCriteria = TaskNodeCriteria.builder()
+                .taskId(taskId)
+                .nodeTypeNames(List.of(TaskNodeTypeConstants.ANSWER))
+                .nodeValueNodeDocumentId(documentNodeId)
+                .build();
+        Page<TaskNode> answerNodes = taskNodeService.getTaskNodesByCriteria(answerCriteria, Pageable.unpaged());
+
+        // Group answers by page number and sort
+        Map<Integer, TaskNode> pageAnswerMap = answerNodes.getContent().stream()
+                .filter(node -> node.getNodeValue() != null && node.getNodeValue().getOrder() != null)
+                .collect(Collectors.toMap(
+                        node -> node.getNodeValue().getOrder(),
+                        node -> node,
+                        (existing, replacement) -> existing // Keep first if duplicates
+                ));
+
+        // Write CSV
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
+
+        try {
+            writeDocumentDigitizationCsv(writer, document, documentNode, pageAnswerMap);
+            writer.flush();
+            return new InputStreamResource(new ByteArrayInputStream(out.toByteArray()));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to export document digitization CSV", e);
+        }
+    }
+
+    private void writeDocumentDigitizationCsv(
+            OutputStreamWriter writer,
+            DocumentInstanceDTO document,
+            TaskNode documentNode,
+            Map<Integer, TaskNode> pageAnswerMap
+    ) throws Exception {
+        // Header row
+        writer.write("Document Title,Prompt,Structure");
+        
+        // Add page columns for all pages that have answers
+        List<Integer> sortedPages = pageAnswerMap.keySet().stream()
+                .sorted()
+                .toList();
+        
+        for (Integer pageNum : sortedPages) {
+            writer.write(",Page " + pageNum);
+        }
+        writer.write("\n");
+
+        // Data row
+        String documentTitle = document != null ? document.getTitle() : "Unknown Document";
+        String prompt = documentNode.getNodeValue() != null && documentNode.getNodeValue().getDocumentMetadata().getPrompt() != null
+                ? documentNode.getNodeValue().getDocumentMetadata().getPrompt() : "";
+        String structure = documentNode.getNodeValue() != null && documentNode.getNodeValue().getDocumentMetadata().getStructure() != null
+                ? documentNode.getNodeValue().getDocumentMetadata().getStructure() : "";
+
+        writer.write(escapeCsv(documentTitle));
+        writer.write("," + escapeCsv(prompt));
+        writer.write("," + escapeCsv(structure));
+
+        // Add page answer data
+        for (Integer pageNum : sortedPages) {
+            TaskNode answerNode = pageAnswerMap.get(pageNum);
+            String answerContent = "";
+            if (answerNode != null && answerNode.getNodeValue() != null && answerNode.getNodeValue().getMessage() != null) {
+                answerContent = answerNode.getNodeValue().getMessage();
+            }
+            writer.write("," + escapeCsv(answerContent));
+        }
+        writer.write("\n");
     }
 
 }

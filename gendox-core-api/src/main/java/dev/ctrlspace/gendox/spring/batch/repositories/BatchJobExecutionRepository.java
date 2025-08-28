@@ -18,6 +18,7 @@ import java.util.List;
 @Repository
 public interface BatchJobExecutionRepository extends JpaRepository<BatchJobExecution, Long>, QuerydslPredicateExecutor<BatchJobExecution> {
 
+    @EntityGraph(attributePaths = {"batchJobExecutionParams"})
     Page<BatchJobExecution> findAll(Predicate predicate, Pageable pageable);
 
     @Query("select job " +

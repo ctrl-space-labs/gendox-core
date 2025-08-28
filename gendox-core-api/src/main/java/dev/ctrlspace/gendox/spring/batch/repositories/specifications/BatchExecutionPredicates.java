@@ -25,6 +25,7 @@ public class BatchExecutionPredicates {
                 jobName(criteria.getJobName()),
                 status(criteria.getStatus()),
                 exitCode(criteria.getExitCode()),
+                jobExecutionIdsIn(criteria.getJobExecutionIdsIn()),
                 allParams(criteria.getMatchAllParams())
         );
     }
@@ -85,6 +86,13 @@ public class BatchExecutionPredicates {
             return null;
         }
         return qBatchJobExecution.exitCode.eq(exitCode);
+    }
+
+    private static Predicate jobExecutionIdsIn(List<Long> jobExecutionIds) {
+        if (jobExecutionIds == null || jobExecutionIds.isEmpty()) {
+            return null;
+        }
+        return qBatchJobExecution.jobExecutionId.in(jobExecutionIds);
     }
 }
 

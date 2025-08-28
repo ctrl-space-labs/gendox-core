@@ -52,7 +52,6 @@ const updateTask = async (organizationId, projectId, taskId, token, updatePayloa
   })
 }
 
-
 /** Get Task by ID
  * @param organizationId
  * @param projectId
@@ -103,7 +102,6 @@ const createTaskNodesBatch = async (organizationId, projectId, taskNodesPayload,
   })
 }
 
-
 /**
  * Update Task Node
  * @param organizationId
@@ -131,12 +129,16 @@ const updateTaskNode = async (organizationId, projectId, taskNodePayload, token)
  * @returns {Promise<axios.AxiosResponse<TaskNode>>}
  */
 const updateTaskNodeForDocumentDigitization = async (organizationId, projectId, taskId, updatePayload, token) => {
-  return axios.put(apiRequests.updateTaskNodeForDocumentDigitization(organizationId, projectId, taskId), updatePayload, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + token
+  return axios.put(
+    apiRequests.updateTaskNodeForDocumentDigitization(organizationId, projectId, taskId),
+    updatePayload,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token
+      }
     }
-  })
+  )
 }
 
 /**
@@ -272,12 +274,16 @@ const getTaskEdgesByCriteria = async (organizationId, projectId, criteria, token
  * @returns {Promise<axios.AxiosResponse<TaskNode[]>>}
  */
 const getAnswerTaskNodes = async (organizationId, projectId, taskId, answerTaskNodePayload, token, page, size) => {
-  return axios.post(apiRequests.getAnswerTaskNodes(organizationId, projectId, taskId, page, size), answerTaskNodePayload,{
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + token
+  return axios.post(
+    apiRequests.getAnswerTaskNodes(organizationId, projectId, taskId, page, size),
+    answerTaskNodePayload,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token
+      }
     }
-  })
+  )
 }
 
 const executeTaskByType = async (organizationId, projectId, taskId, criteria, token) => {
@@ -289,8 +295,48 @@ const executeTaskByType = async (organizationId, projectId, taskId, criteria, to
   })
 }
 
-const getJobStatus = async (organizationId, projectId, jobExecutionId, token) => {
-  return axios.get(apiRequests.getJobStatus(organizationId, projectId, jobExecutionId), {
+
+/**
+ * Get jobs by criteria with query parameters
+ * @param organizationId
+ * @param projectId
+ * @param criteria - Object containing status and matchAllParams array
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<JobExecution[]>>}
+ */
+const getJobsByCriteria = async (organizationId, projectId, criteria, token) => {
+  const params = new URLSearchParams()
+  // Add other criteria parameters if provided
+  if (criteria.jobName) {
+    params.append('jobName', criteria.jobName)
+  }
+  if (criteria.status) {
+    params.append('status', criteria.status)
+  }
+  if (criteria.exitCode) {
+    params.append('exitCode', criteria.exitCode)
+  }
+
+  // Add jobExecutionIdsIn if provided
+  if (criteria.jobExecutionIdsIn && Array.isArray(criteria.jobExecutionIdsIn)) {
+    criteria.jobExecutionIdsIn.forEach(id => {
+      params.append('jobExecutionIdsIn', id)
+    })
+  }
+
+  // Add matchAllParams if provided
+  if (criteria.matchAllParams && Array.isArray(criteria.matchAllParams)) {
+    criteria.matchAllParams.forEach((param, index) => {
+      if (param.paramName && param.paramValue) {
+        params.append(`matchAllParams[${index}].paramName`, param.paramName)
+        params.append(`matchAllParams[${index}].paramValue`, param.paramValue)
+      }
+    })
+  }
+
+  const url = `${apiRequests.getJobsByCriteria(organizationId, projectId)}?${params.toString()}`
+
+  return axios.get(url, {
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -314,7 +360,6 @@ const deleteTaskNode = async (organizationId, projectId, taskNodeId, token) => {
     }
   })
 }
-
 
 /**
  * Delete a task
@@ -342,18 +387,36 @@ const deleteTask = async (organizationId, projectId, taskId, token) => {
  * @returns {Promise<Blob>}
  */
 const exportTaskCsv = async (organizationId, projectId, taskId, token) => {
+  const response = await axios.get(apiRequests.exportTaskCsv(organizationId, projectId, taskId), {
+    headers: {
+      Authorization: 'Bearer ' + token
+    },
+    responseType: 'blob' // Important for CSV files!
+  })
+  return response.data // This is the CSV blob
+}
+
+/**
+ * Export Document Digitization CSV
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param documentNodeId
+ * @param token
+ * @returns {Promise<Blob>}
+ */
+const documentDigitizationExportCSV = async (organizationId, projectId, taskId, documentNodeId, token) => {
   const response = await axios.get(
-    apiRequests.exportTaskCsv(organizationId, projectId, taskId),
+    apiRequests.documentDigitizationExportCSV(organizationId, projectId, taskId, documentNodeId),
     {
       headers: {
-        Authorization: 'Bearer ' + token,
+        Authorization: 'Bearer ' + token
       },
-      responseType: 'blob', // Important for CSV files!
+      responseType: 'blob' // Important for CSV files!
     }
   )
   return response.data // This is the CSV blob
 }
-
 
 export default {
   createTask,
@@ -373,8 +436,9 @@ export default {
   getTaskEdgeById,
   getTaskEdgesByCriteria,
   executeTaskByType,
-  getJobStatus,
+  getJobsByCriteria,
   deleteTaskNode,
   deleteTask,
-  exportTaskCsv
+  exportTaskCsv,
+  documentDigitizationExportCSV
 }

@@ -47,7 +47,7 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQues
         ObjectMapper mapper = new ObjectMapper();
 
         // Deserialize documentNodeIds list from JSON string
-        String documentNodeIdsJson = jobParameters.getString("documentNodeIds");
+        String documentNodeIdsJson = jobParameters.getString(JobExecutionParamConstants.DOCUMENT_NODE_IDS);
         if (documentNodeIdsJson != null && !documentNodeIdsJson.isBlank()) {
             try {
                 List<UUID> documentNodeIds = mapper.readValue(
@@ -62,7 +62,7 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQues
         }
 
         // Deserialize questionNodeIds list from JSON string
-        String questionNodeIdsJson = jobParameters.getString("questionNodeIds");
+        String questionNodeIdsJson = jobParameters.getString(JobExecutionParamConstants.QUESTION_NODE_IDS);
         if (questionNodeIdsJson != null && !questionNodeIdsJson.isBlank()) {
             try {
                 List<UUID> questionNodeIds = mapper.readValue(

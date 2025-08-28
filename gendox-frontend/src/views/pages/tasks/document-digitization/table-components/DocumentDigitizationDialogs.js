@@ -5,12 +5,14 @@ import { deleteTaskNode } from 'src/store/activeTask/activeTask'
 import DocumentDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentDialog'
 import DocumentsAddNewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentsAddNewDialog'
 import AnswerDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationAnswerDialog'
+import DocumentPagePreviewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentPagePreviewDialog'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 
 const DocumentDigitizationDialogs = ({
   dialogs,
   activeNode,
   onClose,
+  onOpen,
   refreshDocuments,
   taskId,
   organizationId,
@@ -18,7 +20,11 @@ const DocumentDigitizationDialogs = ({
   token,
   existingDocuments,
   setEditMode,
-  editMode
+  editMode,
+  documentPages = [],
+  generateSingleDocument,
+  onExportCsv,
+  isExportingCsv
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
@@ -109,6 +115,22 @@ const DocumentDigitizationDialogs = ({
         onClose={() => onClose('answerDetail')}
         refreshAnswers={refreshAnswers}
       /> */}
+
+      {/* Document Page Preview Dialog */}
+      <DocumentPagePreviewDialog
+        open={dialogs.pagePreview || false}
+        onClose={() => onClose('pagePreview')}
+        document={activeNode}
+        documentPages={documentPages}
+        generateSingleDocument={generateSingleDocument}
+        onDocumentUpdate={(updatedDoc) => {
+          // Refresh documents to show updated data
+          if (refreshDocuments) refreshDocuments()
+        }}
+        onExportCsv={onExportCsv}
+        isExportingCsv={isExportingCsv}
+        onDelete={() => onOpen && onOpen('delete', activeNode)}
+      />
 
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog

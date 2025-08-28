@@ -35,14 +35,14 @@ public class DocPageToImageOptions {
         DocPageToImageOptionsBuilder b = this.toBuilder();
 
         if (pageTo == null) {
-            b.pageTo(totalPages); // exclusive
+            b.pageTo(totalPages-1); // inclusive
         }
 
         DocPageToImageOptions withDefaults = b.build();
 
-        if (withDefaults.pageFrom < 0 || withDefaults.pageTo < 0 || withDefaults.pageFrom >= withDefaults.pageTo || withDefaults.pageTo > totalPages) {
+        if (withDefaults.pageFrom < 0 || withDefaults.pageTo < 0 || withDefaults.pageFrom > withDefaults.pageTo || withDefaults.pageTo > totalPages) {
             throw new IllegalArgumentException(
-                    "Invalid page range: from=" + withDefaults.pageFrom + " to(exclusive)=" + withDefaults.pageTo + " total=" + totalPages);
+                    "Invalid page range: from(inclusive)=" + withDefaults.pageFrom + " to(inclusive)=" + withDefaults.pageTo + " total=" + totalPages);
         }
 
         if (withDefaults.minSide <= 0) {

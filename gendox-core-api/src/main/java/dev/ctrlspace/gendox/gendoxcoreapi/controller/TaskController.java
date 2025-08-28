@@ -306,6 +306,7 @@ public class TaskController {
         logger.info("Request to delete task: taskId={}", taskId);
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/export-csv")
     public ResponseEntity<InputStreamResource> exportTaskCsv(@PathVariable UUID organizationId,
                                                              @PathVariable UUID projectId,
@@ -320,6 +321,29 @@ public class TaskController {
         }
         InputStreamResource fileResource = taskCsvExportService.exportTaskCsv(taskId);
         String filename = "task_" + taskId + "_answers.csv";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(fileResource);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/documents/{documentNodeId}/export-csv")
+    public ResponseEntity<InputStreamResource> documentDigitizationExportCSV(@PathVariable UUID organizationId,
+                                                                               @PathVariable UUID projectId,
+                                                                               @PathVariable UUID taskId,
+                                                                               @PathVariable UUID documentNodeId
+    ) throws GendoxException {
+        Task task = taskService.getTaskById(taskId);
+        if (task == null) {
+            throw new GendoxException("TASK_NOT_FOUND", "Task not found", HttpStatus.NOT_FOUND);
+        }
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
+        
+        InputStreamResource fileResource = taskCsvExportService.documentDigitizationExportCSV(taskId, documentNodeId);
+        String filename = "document_digitization_" + documentNodeId + ".csv";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.parseMediaType("text/csv"))

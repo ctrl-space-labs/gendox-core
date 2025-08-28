@@ -23,6 +23,7 @@ import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 import UploaderDocumentDigitization from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationUploaderDocumentDigitization'
 import { fetchProjectDocuments } from 'src/store/activeProject/activeProject'
 import { useDispatch, useSelector } from 'react-redux'
+import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 
 const DocumentsAddNewDialog = ({
   open,
@@ -73,8 +74,11 @@ const DocumentsAddNewDialog = ({
   }, [projectDocuments, page])
 
   const filteredDocuments = useMemo(() => {
-    if (!searchTerm) return documents
-    return documents.filter(doc => doc.title?.toLowerCase().includes(searchTerm.toLowerCase()))
+    let filtered = documents.filter(doc => isFileTypeSupported(doc.remoteUrl))    
+    if (searchTerm) {
+      filtered = filtered.filter(doc => doc.title?.toLowerCase().includes(searchTerm.toLowerCase()))
+    }
+    return filtered
   }, [searchTerm, documents])
 
   // Handlers
@@ -100,16 +104,16 @@ const DocumentsAddNewDialog = ({
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth='sm'>
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth='lg'>
         <DialogTitle
-          sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600 }}
+          sx={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}
         >
           Select Project Documents
           <IconButton onClick={onClose} size='small' aria-label='close'>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers sx={{ pt: 1, display: 'flex', flexDirection: 'column' }}>
+        <DialogContent >
           <TextField
             fullWidth
             size='small'
@@ -149,6 +153,8 @@ const DocumentsAddNewDialog = ({
                 {filteredDocuments.map((doc, index) => {
                   const isAlreadySelected = existingDocIds.has(doc.id)
                   const isSelected = selectedDocIds.has(doc.id)
+                  const isSupported = isFileTypeSupported(doc.remoteUrl)
+                  const isDisabled = isAlreadySelected || !isSupported
                   const createdDate = doc.createAt
                     ? new Date(doc.createAt).toLocaleDateString(undefined, {
                         year: 'numeric',
@@ -161,11 +167,11 @@ const DocumentsAddNewDialog = ({
                       <ListItemButton
                         onClick={() => handleToggleSelect(doc)}
                         selected={isSelected}
-                        disabled={isAlreadySelected}
+                        disabled={isDisabled}
                         sx={{
                           transition: 'background-color 0.3s',
-                          opacity: isAlreadySelected ? 0.5 : 1,
-                          cursor: isAlreadySelected ? 'not-allowed' : 'pointer',
+                          opacity: isDisabled ? 0.5 : 1,
+                          cursor: isDisabled ? 'not-allowed' : 'pointer',
                           '&.Mui-selected': {
                             backgroundColor: 'primary.light',
                             color: 'primary.contrastText',
@@ -177,10 +183,15 @@ const DocumentsAddNewDialog = ({
                           primary={doc.title || 'Untitled Document'}
                           secondary={`Created at: ${createdDate}`}
                         />
-                        {isSelected && !isAlreadySelected && <CheckCircleIcon color='primary' />}
+                        {isSelected && !isDisabled && <CheckCircleIcon color='primary' />}
                         {isAlreadySelected && (
                           <Typography variant='caption' color='error' sx={{ ml: 2 }}>
                             Already selected
+                          </Typography>
+                        )}
+                        {!isSupported && !isAlreadySelected && (
+                          <Typography variant='caption' color='warning.main' sx={{ ml: 2 }}>
+                            Unsupported format
                           </Typography>
                         )}
                       </ListItemButton>

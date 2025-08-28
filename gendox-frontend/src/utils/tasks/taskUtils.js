@@ -11,3 +11,9 @@ export function chunk(array, size) {
   }
   return result
 }
+
+// Import centralized file format configuration for document digitization
+import { isDocumentDigitizationFileTypeSupported } from '../fileFormats'
+
+// Re-export for backward compatibility
+export const isFileTypeSupported = isDocumentDigitizationFileTypeSupported

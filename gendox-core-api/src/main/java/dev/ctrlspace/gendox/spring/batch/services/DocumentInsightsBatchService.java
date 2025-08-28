@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.spring.batch.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
+import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
@@ -16,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 
+import java.time.Instant;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -40,11 +43,9 @@ public class DocumentInsightsBatchService {
     /**
      * Run Document Insights batch job for a specific Task ID
      */
-    public JobExecution runDocumentInsights(UUID taskId, TaskNodeCriteria criteria) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
+    public JobExecution runDocumentInsights(Task task, TaskNodeCriteria criteria) throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, GendoxException {
 
         JobParametersBuilder paramsBuilder = new JobParametersBuilder();
-
-        paramsBuilder.addString("taskId", taskId.toString());
 
 
         ObjectMapper mapper = new ObjectMapper();
@@ -68,17 +69,17 @@ public class DocumentInsightsBatchService {
         }
 
 
-        // Add a run.id param to force job rerun if needed
-        paramsBuilder.addLong("run.id", System.currentTimeMillis());
-        paramsBuilder.addString("reGenerateExistingAnswers", criteria.getReGenerateExistingAnswers() != null ? criteria.getReGenerateExistingAnswers().toString() : "false");
 
-        // Add jobName param for logging/debug
-        paramsBuilder.addString("jobName", documentInsightsJobName);
+        paramsBuilder.addString(JobExecutionParamConstants.TASK_ID, task.getId().toString());
+        paramsBuilder.addString(JobExecutionParamConstants.NOW, Instant.now().toString());
+        paramsBuilder.addString(JobExecutionParamConstants.PROJECT_ID, task.getProjectId().toString());
+        paramsBuilder.addString(JobExecutionParamConstants.RE_GENERATE_EXISTING_ANSWERS, criteria.getReGenerateExistingAnswers() != null ? criteria.getReGenerateExistingAnswers().toString() : "false");
+        paramsBuilder.addString(JobExecutionParamConstants.JOB_NAME, documentInsightsJobName);
 
         JobParameters jobParameters = paramsBuilder.toJobParameters();
 
 
-        logger.info("Starting Document Insights job for Task ID {} with parameters: {}", taskId, jobParameters);
+        logger.info("Starting Document Insights job for Task ID {} with parameters: {}", task.getId(), jobParameters);
 
         // Launch the job
         JobExecution jobExecution = jobLauncher.run(documentInsightsJob, jobParameters);
