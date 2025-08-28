@@ -22,6 +22,7 @@ public interface DocumentInstanceSectionRepository extends JpaRepository<Documen
     @EntityGraph(attributePaths = {"documentSectionMetadata", "documentInstance"})
     Page<DocumentInstanceSection> findAll(Predicate predicate, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"documentSectionMetadata", "documentInstance"})
     @Query("SELECT dis FROM DocumentInstanceSection dis WHERE dis.documentInstance.id = :documentInstanceId")
     public List<DocumentInstanceSection> findByDocumentInstance(UUID documentInstanceId);
 

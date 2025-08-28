@@ -10,13 +10,32 @@ import apiRequests from 'src/configs/apiRequest.js'
  * @returns {Promise<axios.AxiosResponse<DocumentInstances[]>>}
  */
 const getDocumentByProject = async (organizationId, projectId, token, page) => {
-  return axios.get(apiRequests.getDocumentsByProject(organizationId, projectId, page), {
+  return axios.get(apiRequests.getDocumentsByCriteriaProjectId(organizationId, projectId, page), {
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token
     },
     params: {
       projectId: projectId
+    }
+  })
+}
+
+/**
+ * Get all documents by criteria
+ * @param organizationId
+ * @param projectId
+ * @param criteria
+ * @param token
+ * @param page
+ * @param size
+ * @returns {Promise<axios.AxiosResponse<DocumentInstances[]>>}
+ */
+const findDocumentsByCriteria = async (organizationId, projectId, criteria, token, page, size) => {
+  return axios.post(apiRequests.findDocumentsByCriteria(organizationId, projectId, page, size), criteria, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
     }
   })
 }
@@ -105,6 +124,26 @@ const uploadDocument = async (organizationId, projectId, formData, token) => {
 }
 
 /**
+ * Upload a single document file
+ * @param {string} organizationId
+ * @param {string} projectId
+ * @param {File} file - The single file to upload
+ * @param {string} token - Authorization bearer token
+ * @returns {Promise<AxiosResponse>}
+ */
+const uploadSingleDocument = async (organizationId, projectId, file, token) => {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  return axios.post(apiRequests.uploadSingleDocument(organizationId, projectId), formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      Authorization: `Bearer ${token}`
+    }
+  })
+}
+
+/**
  * Update Document Sections Order
  * @param documentId
  * @param token
@@ -160,14 +199,11 @@ const deleteDocumentSection = async (documentId, sectionId, token) => {
  * @param token
  * @returns {Promise<axios.AxiosResponse<String>>}
  */
-const triggerJobs = async (organizationId, projectId, token) => {
-  return axios.get(apiRequests.triggerJobs(organizationId, projectId), {
+const triggerJobs = async (organizationId, projectId, token, jobName, projectIdParam) => {
+  return axios.get(apiRequests.triggerJobs(organizationId, projectId, jobName, projectIdParam), {
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token
-    },
-    params: {
-      projectId: projectId
     }
   })
 }
@@ -179,8 +215,10 @@ export default {
   createDocumentSection,
   updateDocumentSection,
   uploadDocument,
+  uploadSingleDocument,
   updateSectionsOrder,
   deleteDocument,
   deleteDocumentSection,
-  triggerJobs
+  triggerJobs,
+  findDocumentsByCriteria,
 }

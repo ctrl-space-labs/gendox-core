@@ -33,5 +33,6 @@ public class DocumentInstanceDTO {
     private Instant updateAt;
     private List<DocumentInstanceSectionDTO> documentInstanceSections = new ArrayList<>();
     private Long fileSizeBytes;
+    private Integer numberOfPages;
 
 }

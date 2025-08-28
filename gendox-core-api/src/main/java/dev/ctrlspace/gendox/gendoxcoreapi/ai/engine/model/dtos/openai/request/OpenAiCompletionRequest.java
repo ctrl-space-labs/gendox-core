@@ -28,10 +28,14 @@ public class OpenAiCompletionRequest {
     private Long maxTokens;
     @JsonProperty("max_completion_tokens")
     private Long maxCompletionTokens;
+    @JsonProperty("reasoning_effort")
+    private String reasoningEffort;
     @JsonProperty("tool_choice")
     private String toolChoice;
     @JsonProperty("tools")
     private List<ToolDto> tools = new ArrayList<>();
+    @JsonProperty("response_format")
+    private ResponseFormat responseFormat;
 
 
     @Data
@@ -42,6 +46,17 @@ public class OpenAiCompletionRequest {
         private String type;
         private JsonNode function;
     }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ResponseFormat {
+        private String type;
+        @JsonProperty("json_schema")
+        private JsonNode jsonSchema;
+    }
+
 
 
 }

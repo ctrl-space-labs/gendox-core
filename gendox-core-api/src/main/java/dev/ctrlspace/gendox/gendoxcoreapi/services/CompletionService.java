@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.CompletionResponse;
@@ -13,7 +14,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProvenAiMetadata;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
@@ -22,12 +26,18 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAuthor;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
 import io.micrometer.observation.annotation.Observed;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 
@@ -36,6 +46,11 @@ public class CompletionService {
 
 
     Logger logger = LoggerFactory.getLogger(CompletionService.class);
+
+
+    // "self" here will be the OAP proxy, to avoid self-invocation problem
+    private CompletionService self;
+
     private ProjectService projectService;
     private MessageAiMessageConverter messageAiMessageConverter;
     private EmbeddingService embeddingService;
@@ -54,7 +69,8 @@ public class CompletionService {
     private ObjectMapper objectMapper;
 
     @Autowired
-    public CompletionService(ProjectService projectService,
+    public CompletionService(@Lazy CompletionService self,
+                             ProjectService projectService,
                              MessageAiMessageConverter messageAiMessageConverter,
                              EmbeddingService embeddingService,
                              ProjectAgentRepository projectAgentRepository,
@@ -68,6 +84,7 @@ public class CompletionService {
                              AuditLogsService auditLogsService,
                              DocumentUtils documentUtils,
                              ObjectMapper objectMapper) {
+        this.self = self;
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
         this.embeddingService = embeddingService;
@@ -84,16 +101,113 @@ public class CompletionService {
     }
 
     private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
-                                                        AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice) throws GendoxException {
+                                                        AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice,
+                                                        @Nullable ObjectNode responseJsonSchema) throws GendoxException {
 
         //choose the correct aiModel adapter
         AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
-        CompletionResponse completionResponse = aiModelApiAdapterService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice);
+        CompletionResponse completionResponse = aiModelApiAdapterService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema);
         return completionResponse;
     }
 
 
-    @Observed(name = "CompletionService.getCompletion",
+    /**
+     * This method is used to get the completion for the given message and project.
+     * It will search for the closest sections and return the completion response.
+     * This is mainly used by the /chat API where the user asks a question and the agent searching in the knowledge base before answering.
+     *
+     * @param message
+     * @param project
+     * @return CompletionMessageDTO
+     * @throws GendoxException
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     */
+    @Observed(name = "CompletionService.getCompletionSearch",
+            contextualName = "CompletionService#getCompletionSearch",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
+    public CompletionMessageDTO getCompletionSearch(Message message, Project project) throws GendoxException, IOException, NoSuchAlgorithmException {
+
+        List<DocumentInstanceSectionDTO> topSectionsForCompletion = new ArrayList<>();
+        List<DocumentInstanceSectionDTO> searchHistorySections = new ArrayList<>();
+
+        // search and rerank sections
+        List<DocumentInstanceSectionDTO> sectionDTOs = embeddingService.findClosestSections(
+                message,
+                project,
+                PageRequest.of(0, project.getProjectAgent().getMaxSearchLimit().intValue())
+        );
+
+
+
+        int maxCompletionLimit = project.getProjectAgent().getMaxCompletionLimit().intValue();
+
+        // Choose the sections that will be included in the completion response
+        for (int i = 0; i < sectionDTOs.size(); i++) {
+            DocumentInstanceSectionDTO section = sectionDTOs.get(i);
+            if (i < maxCompletionLimit) {
+                topSectionsForCompletion.add(section);
+            } else {
+                searchHistorySections.add(section);
+            }
+        }
+
+        // Get the actual completion
+        List<Message> completions = self.getCompletion(message, topSectionsForCompletion, project, null);
+
+        // Associate the sections with the completion messages
+        List<MessageSection> topCompletionMessageSections;
+        List<MessageSection> searchHistoryMessageSections;
+        for (Message m : completions) {
+            if (m.getRole().equals("assistant")) {
+                //each agent message connected with the sections
+                topCompletionMessageSections = messageService.createMessageSections(topSectionsForCompletion, m, true);
+                searchHistoryMessageSections = messageService.createMessageSections(searchHistorySections, m, false);
+                messageService.updateMessageWithSections(m, topCompletionMessageSections);
+            }
+        }
+
+        // Prepare the completion metadata
+        List<ProvenAiMetadata> sectionInfos = sectionDTOs.stream()
+                .map(section -> ProvenAiMetadata.builder()
+                        .sectionId(section.getId()) // Section ID
+                        .iscc(section.getDocumentSectionIsccCode())
+                        .title(section.getDocumentSectionMetadata().getTitle())
+                        .documentURL(section.getDocumentURL())
+                        .tokens(section.getTokenCount())
+                        .ownerName(section.getOwnerName())
+                        .signedPermissionOfUseVc(section.getSignedPermissionOfUseVc())
+                        .aiModelName(section.getAiModelName())
+                        .build())
+                .collect(Collectors.toList());
+
+        return CompletionMessageDTO.builder()
+                .messages(completions)
+                .threadId(message.getThreadId())
+                .provenAiMetadata(sectionInfos) // Populate with detailed section info
+                .build();
+
+
+    }
+
+
+    /**
+     * This method is used to get the completion for the given message and project.
+     * The completion context need to be given either in the message or in the nearestSections.
+     * Currently, if the agent wants to execute a tool, it will be marked as "done" and provided to the LLM for a final response.
+     *
+     * @param message the user message that contains the question
+     * @param nearestSections the nearest sections that will be used to provide context for the completion.
+     * @param project the project that contains the agent and its settings.
+     * @return the list of responses. Might be more than one if there are tool calls in the completion response.
+     * @throws GendoxException
+     */
+        @Observed(name = "CompletionService.getCompletion",
             contextualName = "CompletionService#getCompletion",
             lowCardinalityKeyValues = {
                     ObservabilityTags.LOGGABLE, "true",
@@ -101,26 +215,36 @@ public class CompletionService {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, UUID projectId) throws GendoxException {
-        String question = convertToAiModelTextQuestion(message, nearestSections, projectId);
-        Project project = projectService.getProjectById(projectId);
+    public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, Project project, @Nullable ObjectNode responseJsonSchema) throws GendoxException {
+        String question = convertToAiModelTextQuestion(message, nearestSections, project.getId());
+
         ProjectAgent agent = project.getProjectAgent();
         List<AiTools> availableTools = agent.getAiTools();
 
         // check moderation
         String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(agent, "MODERATION_MODEL");
-        ModerationResponse moderationResponse = trainingService.getModeration(question, moderationApiKey, agent.getModerationModel());
-        if (moderationResponse.getResults().get(0).isFlagged()) {
-            throw new GendoxException("MODERATION_CHECK_FAILED", "The question did not pass moderation.", HttpStatus.NOT_ACCEPTABLE);
+        if (agent.getModerationCheck()) {
+            ModerationResponse moderationResponse = trainingService.getModeration(question, moderationApiKey, agent.getModerationModel());
+            if (moderationResponse.getResults().get(0).isFlagged()) {
+                throw new GendoxException("MODERATION_CHECK_FAILED", "The question did not pass moderation.", HttpStatus.NOT_ACCEPTABLE);
+            }
         }
 
 
 
+        // TODO rethink the logic, validate count of previous message tokens and drop messages if not enough space
+        // TODO maybe add a similar logic to the embedding service to limit the number of messages
         List<AiModelMessage> previousMessages = messageService.getPreviousMessages(message, 25);
+
+        //get contentParts without type "text"
+        List<ContentPart> contentParts = message.getAdditionalResources().stream()
+                .filter(part -> !"text".equals(part.getType()))
+                .toList();
 
         // clone message to avoid changing the original message text in DB
         AiModelMessage promptMessage = AiModelMessage.builder()
                 .content(question)
+                .contentParts(contentParts)
                 .role(message.getRole() != null ? message.getRole() : "user")
                 .build();
 
@@ -143,13 +267,14 @@ public class CompletionService {
                 aiModelRequestParams,
                 apiKey,
                 availableTools,
-                "auto");
+                "auto",
+                responseJsonSchema);
 
         //        completion request audits
         Type completionRequestType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
         AuditLogs requestAuditLogs = auditLogsService.createDefaultAuditLogs(completionRequestType);
         requestAuditLogs.setTokenCount((long) completionResponse.getUsage().getPromptTokens());
-        requestAuditLogs.setProjectId(projectId);
+        requestAuditLogs.setProjectId(project.getId());
         requestAuditLogs.setOrganizationId(project.getOrganizationId());
         auditLogsService.saveAuditLogs(requestAuditLogs);
 
@@ -157,13 +282,13 @@ public class CompletionService {
         Type completionResponseType = typeService.getAuditLogTypeByName("COMPLETION_RESPONSE");
         AuditLogs completionAuditLogs = auditLogsService.createDefaultAuditLogs(completionResponseType);
         completionAuditLogs.setTokenCount((long) completionResponse.getUsage().getCompletionTokens());
-        completionAuditLogs.setProjectId(projectId);
+        completionAuditLogs.setProjectId(project.getId());
         completionAuditLogs.setOrganizationId(project.getOrganizationId());
         auditLogsService.saveAuditLogs(completionAuditLogs);
 
         Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
 
-        completionResponseMessage.setProjectId(projectId);
+        completionResponseMessage.setProjectId(project.getId());
         completionResponseMessage.setThreadId(message.getThreadId());
         completionResponseMessage.setCreatedBy(agent.getUserId());
         completionResponseMessage.setUpdatedBy(agent.getUserId());
@@ -185,7 +310,7 @@ public class CompletionService {
             // Save tool response messages.
             toolResponseMessages.forEach(toolResponseMessage -> {
                 Message toolResponse = messageAiMessageConverter.toEntity(toolResponseMessage);
-                toolResponse.setProjectId(projectId);
+                toolResponse.setProjectId(project.getId());
                 toolResponse.setThreadId(message.getThreadId());
                 toolResponse.setCreatedBy(agent.getUserId());
                 toolResponse.setUpdatedBy(agent.getUserId());
@@ -204,12 +329,13 @@ public class CompletionService {
                         aiModelRequestParams,
                         apiKey,
                         availableTools,
-                        "auto");
+                        "auto",
+                        responseJsonSchema);
 
 
                 Message finalCompletionMessage = messageAiMessageConverter.toEntity(finalResponse.getChoices().get(0).getMessage());
 
-                finalCompletionMessage.setProjectId(projectId);
+                finalCompletionMessage.setProjectId(project.getId());
                 finalCompletionMessage.setThreadId(message.getThreadId());
                 finalCompletionMessage.setCreatedBy(agent.getUserId());
                 finalCompletionMessage.setUpdatedBy(agent.getUserId());
@@ -244,7 +370,7 @@ public class CompletionService {
                         .jsonSchema("""
                                 {
                                   "name": "advanced_search",
-                                  "description": "Compose a single semantic-search query for the vector store.\\n\\n▸ INPUTS\\n  • Full chat history (chronological) plus the user’s latest turn.\\n\\n▸ WHEN THE USER ASKS A FOLLOW-UP (e.g. “Tell me more”, “Why?”)\\n  • Infer the missing subject from the last few assistant/user messages.\\n  • Focus on the newest context; ignore unrelated earlier turns.\\n\\n▸ QUERY LENGTH RULES\\n  • Let query length scale with the user’s current message:\\n      − If the user’s turn is brief (≲ 20 words) → expand with synonyms / related phrases.\\n      − If the turn is long (≫ 100 words) → condense to the core concepts; ~10–50 % of the user’s tokens is fine.\\n\\n▸ QUERY CONTENT RULES\\n  • Preserve the user’s main nouns/verbs.\\n  • Add 2–4 plausible synonyms or closely related terms for each key concept to improve recall.\\n  • Remove filler words, conjunctions, and polite phrases.\\n  • Do NOT answer the question or cite documents—only return the query text.",
+                                  "description": "Compose a single semantic-search query for the vector store.\\n\\n▸ INPUTS\\n  • Full chat history (chronological) plus the user’s latest turn.\\n\\n▸ WHEN THE USER ASKS A FOLLOW-UP (e.g. “Tell me more”, “Why?”)\\n  • Infer the missing subject from the last few assistant/user messages.\\n  • Focus on the newest context; ignore unrelated earlier turns.\\n\\n▸ QUERY LENGTH RULES\\n  • Let query length scale with the user’s current message:\\n      − If user says something that doesn't require follow-up search, like 'thanks', return empty string in the search_query.\\n      − If the user’s turn is brief (≲ 20 words) → expand with synonyms / related phrases.\\n      − If the turn is long (≫ 100 words) → condense to the core concepts; ~10–50 % of the user’s tokens is fine, it MUST NEVER be more that 4000 characters.\\n\\n▸ QUERY CONTENT RULES\\n  • Preserve the user’s main nouns/verbs.\\n  • Add 2–4 plausible synonyms or closely related terms for each key concept to improve recall.\\n  • Remove filler words, conjunctions, and polite phrases.\\n  • Do NOT answer the question or cite documents—only return the query text.",
                                   "strict": true,
                                   "parameters": {
                                     "type": "object",
@@ -285,7 +411,8 @@ public class CompletionService {
                 aiModelRequestParams,
                 apiKey,
                 advancedSearchTools,
-                "required");
+                "required",
+                null);
 
         return completionResponse.getChoices().get(0).getMessage();
     }

@@ -9,6 +9,7 @@ import activeDocument from 'src/store/activeDocument/activeDocument'
 import gendoxChat from 'src/store/chat/gendoxChat'
 import activeProjectAgent from "src/store/activeProjectAgent/activeProjectAgent.js";
 import globalSearch from 'src/store/globalSearch/globalSearch'
+import activeTask from 'src/store/activeTask/activeTask'
 
 const reducer = {
   userData,
@@ -17,7 +18,8 @@ const reducer = {
   activeDocument,
   gendoxChat,
   activeProjectAgent,
-  globalSearch
+  globalSearch,
+  activeTask
 }
 
 

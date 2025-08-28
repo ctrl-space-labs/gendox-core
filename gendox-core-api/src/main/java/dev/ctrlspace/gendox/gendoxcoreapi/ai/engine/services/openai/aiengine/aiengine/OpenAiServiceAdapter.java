@@ -1,7 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.openai.aiengine.aiengine;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
@@ -22,7 +22,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AiModelRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ApiRateLimitService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DurationUtils;
 import io.github.bucket4j.Bucket;
+import lombok.SneakyThrows;
 import org.apache.logging.log4j.util.Strings;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +39,7 @@ import java.util.*;
 @Service
 public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
+    private final ObjectMapper objectMapper;
     protected Set<String> supportedApiType = Set.of("OPEN_AI_API");
     protected Logger logger = LoggerFactory.getLogger(OpenAiServiceAdapter.class);
     private AiModelRepository aiModelRepository;
@@ -55,7 +58,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                                 OpenAiEmbeddingResponseConverter openAiEmbeddingResponseConverter,
                                 DurationUtils durationUtils,
                                 OpenAiModerationResponseConverter openAiModerationResponseConverter,
-                                ToolDtoConverter toolDtoConverter) {
+                                ToolDtoConverter toolDtoConverter, ObjectMapper objectMapper) {
         this.aiModelRepository = aiModelRepository;
         this.apiRateLimitService = apiRateLimitService;
         this.openAiEmbeddingResponseConverter = openAiEmbeddingResponseConverter;
@@ -63,6 +66,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         this.durationUtils = durationUtils;
         this.openAiModerationResponseConverter = openAiModerationResponseConverter;
         this.toolDtoConverter = toolDtoConverter;
+        this.objectMapper = objectMapper;
     }
 
     private static final RestTemplate restTemplate = new RestTemplate();
@@ -230,13 +234,15 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
     }
 
+    @SneakyThrows
     @Override
     public CompletionResponse askCompletion(List<AiModelMessage> messages,
                                             String agentRole, AiModel aiModel,
                                             AiModelRequestParams aiModelRequestParams,
                                             String apiKey,
                                             List<AiTools> tools,
-                                            String toolChoice) {
+                                            String toolChoice,
+                                            @Nullable ObjectNode responseJsonSchema) {
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
 
@@ -258,6 +264,15 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
         }
 
+        if (responseJsonSchema != null) {
+            openAiGptRequestBuilder
+                    .responseFormat(OpenAiCompletionRequest.ResponseFormat.builder()
+                            .type("json_schema")
+                            .jsonSchema(responseJsonSchema)
+                            .build());
+
+        }
+
 
         // Special case for preview search models
         if (aiModel.getModel().toLowerCase().contains("search-preview")) {
@@ -270,11 +285,12 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                     .maxCompletionTokens(null);
         }
         // Special case for o1, o3, o4 models
-        else if (List.of("o1", "o3", "o4").stream()
+        else if (List.of("o1", "o3", "o4", "gemini-2.5").stream()
                 .anyMatch(aiModel.getModel()::contains)) {
             openAiGptRequestBuilder
                     .temperature(1.0)
                     .topP(1.0)
+                    .reasoningEffort(computeReasoningEffort(aiModelRequestParams.getMaxTokens()))
                     .maxCompletionTokens(2 * aiModelRequestParams.getMaxTokens())
                     .maxTokens(null);
 
@@ -295,6 +311,13 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         return completionResponse;
     }
 
+    // TODO Change this. The reassoning budget should be stored as an extra property n the Agent
+    private static String computeReasoningEffort(Long maxTokens) {
+        if (maxTokens >= 32_768) return "high";
+        if (maxTokens >= 8_192)  return "medium";
+        if (maxTokens >= 1_024)  return "low";
+        return "none";
+    }
 
 
     @Override

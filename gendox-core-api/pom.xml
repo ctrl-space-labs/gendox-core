@@ -10,13 +10,13 @@
     </parent>
     <groupId>dev.ctrlspace.gendox</groupId>
     <artifactId>gendox-core-api</artifactId>
-    <version>0.8.5</version>
+    <version>0.9.0</version>
     <name>gendox-core-api</name>
     <description>gendox-core-api</description>
     <properties>
         <java.version>21</java.version>
         <querydsl.version>5.0.0</querydsl.version>
-        <spring-ai.version>1.0.0-M3</spring-ai.version>
+        <spring-ai.version>1.0.0-M6</spring-ai.version>
     </properties>
 
 
@@ -416,6 +416,28 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
         </dependency>
+
+
+        <!-- docx4j core (load .docx and convert to HTML) -->
+        <dependency>
+            <groupId>org.docx4j</groupId>
+            <artifactId>docx4j-core</artifactId>
+            <version>11.5.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.docx4j</groupId>
+            <artifactId>docx4j-JAXB-ReferenceImpl</artifactId>
+            <version>11.5.3</version>
+        </dependency>
+
+        <!-- Flexmark HTML→Markdown converter -->
+        <dependency>
+            <groupId>com.vladsch.flexmark</groupId>
+            <artifactId>flexmark-html2md-converter</artifactId>
+            <version>0.64.8</version>
+        </dependency>
+
     </dependencies>
 
     <dependencyManagement>

@@ -119,6 +119,14 @@ public class ProjectAgent {
     @JoinColumn(name= "rerank_model_id", referencedColumnName = "id", nullable = true)
     private AiModel rerankModel;
 
+    @Basic
+    @Column(name= "advanced_search_enable")
+    private Boolean advancedSearchEnable;
+
+    @ManyToOne
+    @JoinColumn(name= "advanced_search_model_id", referencedColumnName = "id", nullable = true)
+    private AiModel advancedSearchModel;
+
     @JsonManagedReference(value = "aiTools")
     @OneToMany(mappedBy = "agent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AiTools> aiTools = new ArrayList<>();
@@ -333,17 +341,32 @@ public class ProjectAgent {
         this.aiTools = aiTools;
     }
 
+    public Boolean getAdvancedSearchEnable() {
+        return advancedSearchEnable;
+    }
+
+    public void setAdvancedSearchEnable(Boolean advancedSearchEnable) {
+        this.advancedSearchEnable = advancedSearchEnable;
+    }
+
+    public AiModel getAdvancedSearchModel() {
+        return advancedSearchModel;
+    }
+
+    public void setAdvancedSearchModel(AiModel advancedSearchModel) {
+        this.advancedSearchModel = advancedSearchModel;
+    }
+
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ProjectAgent that = (ProjectAgent) o;
-        return Objects.equals(id, that.id) && Objects.equals(project, that.project) && Objects.equals(userId, that.userId) && Objects.equals(semanticSearchModel, that.semanticSearchModel) && Objects.equals(completionModel, that.completionModel) && Objects.equals(agentName, that.agentName) && Objects.equals(agentBehavior, that.agentBehavior) && Objects.equals(privateAgent, that.privateAgent) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(documentSplitterType, that.documentSplitterType) && Objects.equals(chatTemplateId, that.chatTemplateId) && Objects.equals(sectionTemplateId, that.sectionTemplateId) && Objects.equals(maxToken, that.maxToken) && Objects.equals(temperature, that.temperature) && Objects.equals(topP, that.topP) && Objects.equals(moderationCheck, that.moderationCheck) && Objects.equals(moderationModel, that.moderationModel) && Objects.equals(agentVcJwt, that.agentVcJwt) && Objects.equals(organizationDid, that.organizationDid) && Objects.equals(maxSearchLimit, that.maxSearchLimit) && Objects.equals(maxCompletionLimit, that.maxCompletionLimit) && Objects.equals(rerankEnable, that.rerankEnable) && Objects.equals(rerankModel, that.rerankModel) && Objects.equals(aiTools, that.aiTools);
+        ProjectAgent agent = (ProjectAgent) o;
+        return Objects.equals(id, agent.id) && Objects.equals(project, agent.project) && Objects.equals(userId, agent.userId) && Objects.equals(semanticSearchModel, agent.semanticSearchModel) && Objects.equals(completionModel, agent.completionModel) && Objects.equals(agentName, agent.agentName) && Objects.equals(agentBehavior, agent.agentBehavior) && Objects.equals(privateAgent, agent.privateAgent) && Objects.equals(createdAt, agent.createdAt) && Objects.equals(updatedAt, agent.updatedAt) && Objects.equals(createdBy, agent.createdBy) && Objects.equals(updatedBy, agent.updatedBy) && Objects.equals(documentSplitterType, agent.documentSplitterType) && Objects.equals(chatTemplateId, agent.chatTemplateId) && Objects.equals(sectionTemplateId, agent.sectionTemplateId) && Objects.equals(maxToken, agent.maxToken) && Objects.equals(temperature, agent.temperature) && Objects.equals(topP, agent.topP) && Objects.equals(moderationCheck, agent.moderationCheck) && Objects.equals(moderationModel, agent.moderationModel) && Objects.equals(agentVcJwt, agent.agentVcJwt) && Objects.equals(organizationDid, agent.organizationDid) && Objects.equals(maxSearchLimit, agent.maxSearchLimit) && Objects.equals(maxCompletionLimit, agent.maxCompletionLimit) && Objects.equals(rerankEnable, agent.rerankEnable) && Objects.equals(rerankModel, agent.rerankModel) && Objects.equals(advancedSearchEnable, agent.advancedSearchEnable) && Objects.equals(advancedSearchModel, agent.advancedSearchModel) && Objects.equals(aiTools, agent.aiTools);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, project, userId, semanticSearchModel, completionModel, agentName, agentBehavior, privateAgent, createdAt, updatedAt, createdBy, updatedBy, documentSplitterType, chatTemplateId, sectionTemplateId, maxToken, temperature, topP, moderationCheck, moderationModel, agentVcJwt, organizationDid, maxSearchLimit, maxCompletionLimit, rerankEnable, rerankModel, aiTools);
+        return Objects.hash(id, project, userId, semanticSearchModel, completionModel, agentName, agentBehavior, privateAgent, createdAt, updatedAt, createdBy, updatedBy, documentSplitterType, chatTemplateId, sectionTemplateId, maxToken, temperature, topP, moderationCheck, moderationModel, agentVcJwt, organizationDid, maxSearchLimit, maxCompletionLimit, rerankEnable, rerankModel, advancedSearchEnable, advancedSearchModel, aiTools);
     }
 }

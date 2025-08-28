@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.spring.batch.repositories;
 import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
+import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -17,6 +18,7 @@ import java.util.List;
 @Repository
 public interface BatchJobExecutionRepository extends JpaRepository<BatchJobExecution, Long>, QuerydslPredicateExecutor<BatchJobExecution> {
 
+    @EntityGraph(attributePaths = {"batchJobExecutionParams"})
     Page<BatchJobExecution> findAll(Predicate predicate, Pageable pageable);
 
     @Query("select job " +
@@ -26,4 +28,28 @@ public interface BatchJobExecutionRepository extends JpaRepository<BatchJobExecu
             "   and instance.jobName = :jobName ")
     List<BatchJobExecution> findJobExecutionByJobNameAndStatus(@Param("jobName") String jobName,
                                                                @Param("status") String status);
+
+    /**
+     * Finds job executions by job name, status, and a specific project ID parameter.
+     * This is mainly used to see if the same job is already running.
+     * The projectId param can be a specific project, or "ALL_PROJECTS" to match all projects. In any case, this is finding this job.
+     *
+     * @param jobName
+     * @param status
+     * @param projectIdParam
+     * @return
+     */
+    @Query("select job " +
+            "from BatchJobExecution job " +
+            "   join BatchJobInstance instance on job.jobInstanceId = instance.jobInstanceId " +
+            "   join BatchJobExecutionParams projectParams on projectParams.jobExecutionId = job.jobExecutionId " +
+            "where job.status = :status " +
+            "   and instance.jobName = :jobName " +
+            "   and projectParams.parameterName = '"+ JobExecutionParamConstants.PROJECT_ID + "' " +
+            "   and projectParams.parameterValue = :projectIdParam" )
+    List<BatchJobExecution> findJobExecutionByJobNameAndStatusAndProjectParam(@Param("jobName") String jobName,
+                                                                        @Param("status") String status,
+                                                                        @Param("projectIdParam") String projectIdParam);
+
+
 }

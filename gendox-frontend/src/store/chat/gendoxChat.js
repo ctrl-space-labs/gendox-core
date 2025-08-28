@@ -81,6 +81,7 @@ export const fetchThreads = createAsyncThunk(
         // No projects means no threads to fetch.
         return []
       }
+      
 
       // 3. For unauthenticated users, check for local thread IDs.
       let localThreadIds = null

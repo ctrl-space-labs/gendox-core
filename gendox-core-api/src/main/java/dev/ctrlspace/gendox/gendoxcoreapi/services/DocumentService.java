@@ -10,12 +10,14 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -35,8 +37,9 @@ public class DocumentService {
     private TypeService typeService;
     private AuditLogsService auditLogsService;
     private SubscriptionValidationService subscriptionValidationService;
-
+    private TaskNodeService taskNodeService;
     private EntityManager entityManager;
+    private DownloadService downloadService;
 
 
     @Autowired
@@ -46,7 +49,9 @@ public class DocumentService {
                            TypeService typeService,
                            AuditLogsService auditLogsService,
                            SubscriptionValidationService subscriptionValidationService,
-                           EntityManager entityManager) {
+                           EntityManager entityManager,
+                           TaskNodeService taskNodeService,
+                           DownloadService downloadService) {
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentSectionService = documentSectionService;
         this.projectDocumentService = projectDocumentService;
@@ -54,6 +59,8 @@ public class DocumentService {
         this.auditLogsService = auditLogsService;
         this.subscriptionValidationService = subscriptionValidationService;
         this.entityManager = entityManager;
+        this.taskNodeService = taskNodeService;
+        this.downloadService = downloadService;
     }
 
 
@@ -85,7 +92,7 @@ public class DocumentService {
                 .orElse(null);
     }
 
-    public DocumentInstance createDocumentInstance(DocumentInstance documentInstance) throws GendoxException {
+    public DocumentInstance createDocumentInstance(DocumentInstance documentInstance) throws GendoxException, IOException {
 
 
         if (documentInstance.getId() == null) {
@@ -95,6 +102,17 @@ public class DocumentService {
         // if file size bytes is null do it 0
         if (documentInstance.getFileSizeBytes() == null) {
             documentInstance.setFileSizeBytes(0L);
+        }
+
+        if (documentInstance.getRemoteUrl() != null && downloadService.isPdfUrl(documentInstance.getRemoteUrl())) {
+            try {
+                documentInstance.setNumberOfPages(downloadService.countDocumentPages(documentInstance.getRemoteUrl()));
+            } catch (IOException e) {
+                logger.error("Error counting document pages for document with ID: {}", documentInstance.getId(), e);
+                throw new GendoxException("PAGE_COUNT_ERROR", "Error counting document pages", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } else {
+            documentInstance.setNumberOfPages(null);
         }
 
 //         Check if the organization has reached the maximum number of documents allowed
@@ -152,6 +170,16 @@ public class DocumentService {
         }
         if (updatedDocument.getDocumentSha256Hash() != null) {
             existingDocument.setDocumentSha256Hash(updatedDocument.getDocumentSha256Hash());
+        }
+        if (updatedDocument.getFileSizeBytes() != null) {
+            if (updatedDocument.getRemoteUrl() != null && downloadService.isPdfUrl(updatedDocument.getRemoteUrl())) {
+                try {
+                    updatedDocument.setNumberOfPages(downloadService.countDocumentPages(updatedDocument.getRemoteUrl()));
+                } catch (IOException e) {
+                    logger.error("Error counting document pages for document with ID: {}", updatedDocument.getId(), e);
+                    throw new GendoxException("PAGE_COUNT_ERROR", "Error counting document pages", HttpStatus.INTERNAL_SERVER_ERROR);
+                }
+            }
         }
 
         existingDocument.setUpdatedAt(Instant.now());
@@ -213,8 +241,11 @@ public class DocumentService {
 
     @Transactional
     public void deleteDocument(DocumentInstance documentInstance, UUID projectId) throws GendoxException {
-        // Use the new bulk deletion method
-        documentSectionService.deleteSections(documentInstance.getDocumentInstanceSections());
+
+        List<DocumentInstanceSection> managedSections = documentSectionService.getSectionsByDocument(documentInstance.getId());
+        // Delete task nodes associated with this document
+        taskNodeService.deleteDocumentNodeAndConnectionNodesByDocumentId(documentInstance.getId());
+        documentSectionService.deleteSections(managedSections);
 
         // Delete any project-specific associations (make sure these are done in bulk too)
         projectDocumentService.deleteProjectDocument(documentInstance.getId(), projectId);
@@ -228,6 +259,8 @@ public class DocumentService {
 
         auditLogsService.saveAuditLogs(deleteDocumentAuditLogs);
         documentInstanceRepository.delete(documentInstance);
+
+
     }
 
 

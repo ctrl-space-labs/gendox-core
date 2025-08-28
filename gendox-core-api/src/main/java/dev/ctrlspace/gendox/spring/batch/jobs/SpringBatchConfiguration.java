@@ -2,14 +2,15 @@ package dev.ctrlspace.gendox.spring.batch.jobs;
 
 import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
 import dev.ctrlspace.gendox.spring.batch.jobs.demojob.DemoJobConfig;
+import dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.DocumentInsightsJobConfig;
 import dev.ctrlspace.gendox.spring.batch.jobs.splitter.SplitterJobConfig;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
 import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionRepository;
 import dev.ctrlspace.gendox.spring.batch.jobs.training.TrainingJobConfig;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
+import dev.ctrlspace.gendox.spring.batch.utils.JobUtils;
 import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,9 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
         TrainingBatchService.class,
         DemoJobConfig.class,
         TrainingJobConfig.class,
-        SplitterJobConfig.class})
+        SplitterJobConfig.class,
+        JobUtils.class,
+        DocumentInsightsJobConfig.class})
 @EnableJpaRepositories(basePackageClasses = {BatchJobExecutionRepository.class})
 @EntityScan(basePackageClasses = {BatchJobExecution.class})
 public class SpringBatchConfiguration implements ApplicationRunner {

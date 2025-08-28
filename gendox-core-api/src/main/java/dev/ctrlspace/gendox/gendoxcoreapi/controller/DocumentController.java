@@ -10,9 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionOrderDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,9 +47,6 @@ public class DocumentController {
     private DocumentSectionService documentSectionService;
     private DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter;
 
-    private SecurityUtils securityUtils;
-
-    private DocumentInstanceSectionRepository documentInstanceSectionRepository;
 
 
     @Autowired
@@ -59,10 +54,8 @@ public class DocumentController {
                               DocumentInstanceConverter documentInstanceConverter,
                               UploadService uploadService,
                               SplitFileService splitFileService,
-                              SecurityUtils securityUtils,
                               DocumentSectionService documentSectionService,
                               DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter,
-                              DocumentInstanceSectionRepository documentInstanceSectionRepository,
                               DocumentOnlyConverter documentOnlyConverter
     ) {
         this.documentService = documentService;
@@ -70,9 +63,7 @@ public class DocumentController {
         this.uploadService = uploadService;
         this.splitFileService = splitFileService;
         this.documentSectionService = documentSectionService;
-        this.securityUtils = securityUtils;
         this.documentInstanceSectionWithoutDocumentConverter = documentInstanceSectionWithoutDocumentConverter;
-        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.documentOnlyConverter = documentOnlyConverter;
     }
 
@@ -94,6 +85,28 @@ public class DocumentController {
     @Operation(summary = "Get all documents",
             description = "Retrieve a list of all documents based on the provided criteria.")
     public Page<DocumentInstanceDTO> getAll(@Valid DocumentCriteria criteria, Pageable pageable) throws GendoxException {
+        if (pageable == null) {
+            pageable = PageRequest.of(0, 100);
+        }
+        if (pageable.getPageSize() > 100) {
+            throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 100", HttpStatus.BAD_REQUEST);
+        }
+
+        Page<DocumentInstance> documentInstances = documentService.getAllDocuments(criteria, pageable);
+
+        // Convert the Page of DocumentInstance to a Page of DocumentDTO using the converter
+        Page<DocumentInstanceDTO> documentDTOs = documentInstances.map(document -> documentOnlyConverter.toDTO(document));
+
+
+        return documentDTOs;
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @PostMapping("/organizations/{organizationId}/projects/{projectId}/documents/search")
+    @Operation(summary = "Get all documents",
+            description = "Retrieve a list of all documents based on the provided criteria.")
+    public Page<DocumentInstanceDTO> getAllByCriteria(@RequestBody DocumentCriteria criteria, Pageable pageable) throws GendoxException {
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
         }
@@ -142,7 +155,7 @@ public class DocumentController {
             description = "Create a new document based on the provided document details. " +
                     "This operation creates a new document instance with associated sections and metadata, " +
                     "incorporating the provided document information.")
-    public DocumentInstance create(@RequestBody DocumentInstanceDTO documentInstanceDTO, @PathVariable UUID organizationId) throws GendoxException {
+    public DocumentInstance create(@RequestBody DocumentInstanceDTO documentInstanceDTO, @PathVariable UUID organizationId) throws GendoxException, IOException {
 
         if (documentInstanceDTO.getId() != null) {
             throw new GendoxException("DOCUMENT_INSTANCE_ID_MUST_BE_NULL", "Document instant id is not null", HttpStatus.BAD_REQUEST);
@@ -302,6 +315,26 @@ public class DocumentController {
         response.put("message", "Files uploaded successfully");
         return ResponseEntity.ok(response);
     }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @PostMapping("/organizations/{organizationId}/projects/{projectId}/documents/upload-single")
+    @Operation(summary = "Upload a single document file",
+            description = "Upload a single file and return the created or updated DocumentInstance.")
+    public ResponseEntity<DocumentInstance> uploadSingleFile(
+            @RequestParam("file") MultipartFile file,
+            @PathVariable UUID organizationId,
+            @PathVariable UUID projectId) throws IOException, GendoxException {
+
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        DocumentInstance documentInstance = uploadService.uploadFile(file, organizationId, projectId);
+
+        return ResponseEntity.ok(documentInstance);
+    }
+
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
             "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")

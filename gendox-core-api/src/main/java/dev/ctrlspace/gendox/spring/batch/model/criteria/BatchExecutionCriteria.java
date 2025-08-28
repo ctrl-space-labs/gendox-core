@@ -5,6 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -14,4 +17,8 @@ public class BatchExecutionCriteria {
     private String jobName;
     private String status;
     private String exitCode;
+    private List<Long> jobExecutionIdsIn;
+    @Builder.Default
+    private List<BatchExecutionParamCriteria> matchAllParams = new ArrayList<>(); // Parameters that must match all criteria
+
 }

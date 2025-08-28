@@ -173,12 +173,17 @@ public class ProjectAgentService {
         if (projectAgent.getRerankModel() == null) {
             projectAgent.setRerankModel(aiModelService.getByName(AiModelConstants.VOYAGE_RERANK_2));
         }
-
+        if (projectAgent.getAdvancedSearchModel() == null) {
+            projectAgent.setAdvancedSearchModel(aiModelService.getByName(AiModelConstants.GEMINI_2_FLASH));
+        }
         if (projectAgent.getModerationCheck() == null) {
             projectAgent.setModerationCheck(true);
         }
         if (projectAgent.getRerankEnable() == null) {
             projectAgent.setRerankEnable(false);
+        }
+        if (projectAgent.getAdvancedSearchEnable() == null) {
+            projectAgent.setAdvancedSearchEnable(false);
         }
         if (projectAgent.getChatTemplateId() == null) {
             projectAgent.setChatTemplateId(templateRepository.findIdByIsDefaultTrueAndTemplateTypeName("CHAT_TEMPLATE"));
@@ -220,6 +225,7 @@ public class ProjectAgentService {
         AiModel semanticSearchModel = aiModelService.getByName(projectAgent.getSemanticSearchModel().getName());
         AiModel moderationModel = aiModelService.getByName(projectAgent.getModerationModel().getName());
         AiModel rerankModel = aiModelService.getByName(projectAgent.getRerankModel().getName());
+        AiModel advancedSearchModel = aiModelService.getByName(projectAgent.getAdvancedSearchModel().getName());
 
         UUID subscriptionPlanId = organizationPlanService
                 .getActiveOrganizationPlan(existingProjectAgent.getProject().getOrganizationId())
@@ -258,6 +264,14 @@ public class ProjectAgentService {
                     HttpStatus.FORBIDDEN);
         }
 
+        if (projectAgent.getAdvancedSearchEnable() && !subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, advancedSearchModel.getModelTierType().getId())) {
+            throw new GendoxException("NO_ACCESS_TO_ADVANCED_SEARCH_MODEL",
+                    "No access to the advanced search model. Basic or Pro subscription is required",
+                    HttpStatus.FORBIDDEN);
+        }
+
+        // TODO add validation if can enable advanced search based on subscription plan
+
 
         existingProjectAgent.setAgentName(projectAgent.getAgentName());
         existingProjectAgent.setCompletionModel(completionModel);
@@ -280,6 +294,10 @@ public class ProjectAgentService {
         existingProjectAgent.setRerankEnable(projectAgent.getRerankEnable());
         if (projectAgent.getRerankModel() != null && projectAgent.getRerankEnable()) {
             existingProjectAgent.setRerankModel(aiModelService.getByName(projectAgent.getRerankModel().getName()));
+        }
+        existingProjectAgent.setAdvancedSearchEnable(projectAgent.getAdvancedSearchEnable());
+        if (projectAgent.getAdvancedSearchModel() != null && projectAgent.getAdvancedSearchEnable()) {
+            existingProjectAgent.setAdvancedSearchModel(aiModelService.getByName(projectAgent.getAdvancedSearchModel().getName()));
         }
         existingProjectAgent.setOrganizationDid(projectAgent.getOrganizationDid());
 

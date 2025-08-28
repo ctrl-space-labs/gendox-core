@@ -77,6 +77,10 @@ public class DocumentInstance {
     @Column(name = "file_size_bytes", nullable = false)
     private Long fileSizeBytes;
 
+    @Basic
+    @Column(name = "number_of_pages")
+    private Integer numberOfPages;
+
     @JsonManagedReference(value = "DocumentInstanceSection")
     @OneToMany(mappedBy = "documentInstance")
     private List<DocumentInstanceSection> documentInstanceSections;
@@ -209,17 +213,24 @@ public class DocumentInstance {
         this.documentInstanceSections = documentInstanceSections;
     }
 
+    public Integer getNumberOfPages() {
+        return numberOfPages;
+    }
+
+    public void setNumberOfPages(Integer numberOfPages) {
+        this.numberOfPages = numberOfPages;
+    }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DocumentInstance that = (DocumentInstance) o;
-        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(documentTemplateId, that.documentTemplateId) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(documentIsccCode, that.documentIsccCode) && Objects.equals(documentSha256Hash, that.documentSha256Hash) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(fileType, that.fileType) && Objects.equals(contentId, that.contentId) && Objects.equals(externalUrl, that.externalUrl) && Objects.equals(title, that.title) && Objects.equals(fileSizeBytes, that.fileSizeBytes) && Objects.equals(documentInstanceSections, that.documentInstanceSections);
+        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(documentTemplateId, that.documentTemplateId) && Objects.equals(remoteUrl, that.remoteUrl) && Objects.equals(documentIsccCode, that.documentIsccCode) && Objects.equals(documentSha256Hash, that.documentSha256Hash) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(fileType, that.fileType) && Objects.equals(contentId, that.contentId) && Objects.equals(externalUrl, that.externalUrl) && Objects.equals(title, that.title) && Objects.equals(fileSizeBytes, that.fileSizeBytes) && Objects.equals(numberOfPages, that.numberOfPages) && Objects.equals(documentInstanceSections, that.documentInstanceSections);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, organizationId, documentTemplateId, remoteUrl, documentIsccCode, documentSha256Hash, createdBy, updatedBy, createdAt, updatedAt, fileType, contentId, externalUrl, title, fileSizeBytes, documentInstanceSections);
+        return Objects.hash(id, organizationId, documentTemplateId, remoteUrl, documentIsccCode, documentSha256Hash, createdBy, updatedBy, createdAt, updatedAt, fileType, contentId, externalUrl, title, fileSizeBytes, numberOfPages, documentInstanceSections);
     }
 }

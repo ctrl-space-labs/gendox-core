@@ -69,6 +69,9 @@ public class DocumentInstanceConverter implements GendoxConverter<DocumentInstan
         if (documentInstance.getFileSizeBytes() != null) {
             documentInstanceDTO.setFileSizeBytes(documentInstance.getFileSizeBytes());
         }
+        if (documentInstance.getNumberOfPages() != null) {
+            documentInstanceDTO.setNumberOfPages(documentInstance.getNumberOfPages());
+        }
 
         // Convert the List<DocumentInstanceSection> to List<DocumentInstanceSectionDTO>
         if (documentInstance.getDocumentInstanceSections() != null) {
@@ -132,6 +135,9 @@ public class DocumentInstanceConverter implements GendoxConverter<DocumentInstan
         }
         if (documentInstanceDTO.getFileSizeBytes() != null) {
             documentInstance.setFileSizeBytes(documentInstanceDTO.getFileSizeBytes());
+        }
+        if (documentInstanceDTO.getNumberOfPages() != null) {
+            documentInstance.setNumberOfPages(documentInstanceDTO.getNumberOfPages());
         }
 
         if (documentInstanceDTO.getDocumentInstanceSections() != null) {

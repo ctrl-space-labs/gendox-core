@@ -62,8 +62,10 @@ const AiAgentProjectSettings = () => {
     completionModel: project.projectAgent.completionModel?.name || '',
     moderationModel: project.projectAgent.moderationModel?.name || '',
     rerankModel: project.projectAgent.rerankModel?.name || '',
+    advancedSearchModel: project.projectAgent.advancedSearchModel?.name || '',
     moderationCheck: project.projectAgent.moderationCheck,
     rerankEnable: project.projectAgent.rerankEnable,
+    advancedSearchEnable: project.projectAgent.advancedSearchEnable,
     documentSplitterType: project.projectAgent.documentSplitterType?.name || '',
     maxToken: project.projectAgent.maxToken,
     temperature: project.projectAgent.temperature,
@@ -207,6 +209,7 @@ const AiAgentProjectSettings = () => {
         completionModel: { name: data.completionModel },
         moderationModel: { name: data.moderationModel },
         rerankModel: { name: data.rerankModel },
+        advancedSearchModel: { name: data.advancedSearchModel },
         privateAgent: data.selected === 'private',
         maxToken: data.maxToken,
         temperature: data.temperature,
@@ -215,6 +218,7 @@ const AiAgentProjectSettings = () => {
         maxCompletionLimit: data.maxCompletionLimit,
         agentBehavior: data.agentBehavior,
         moderationCheck: data.moderationCheck,
+        advancedSearchEnable: data.advancedSearchEnable,
         rerankEnable: data.rerankEnable,
         aiTools: data.aiTools
       }
@@ -514,6 +518,87 @@ const AiAgentProjectSettings = () => {
                         </FormControl>
                       )}
                     </Grid>
+
+                    {/* Advanced Search */}
+                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                      <FormControlLabel
+                        label="Advanced Search"
+                        control={
+                          <Checkbox
+                            {...register('advancedSearchEnable')}
+                            checked={watch('advancedSearchEnable')}
+                          />
+                        }
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                      {watch('advancedSearchEnable') && (
+                        <FormControl fullWidth>
+                          <InputLabel id="advanced-search-model-label" />
+                          <Controller
+                            name="advancedSearchModel"
+                            control={control}
+                            render={({ field }) => (
+                              <Autocomplete
+                                {...field}
+                                options={sortModels(completionModels)}
+                                getOptionLabel={option => option.name}
+                                onChange={(_, value) =>
+                                  setValue('advancedSearchModel', value?.name)
+                              }
+                                value={
+                                completionModels.find(
+                                  model => model.name === watch('advancedSearchModel')
+                                ) || null
+                              }
+                                disableClearable
+                                renderInput={params => (
+                                  <TextField
+                                    {...params}
+                                    label="Advanced Search Model"
+                                    id="advanced-search-model-label"
+                                  />
+                                )}
+                                renderOption={(props, option) => (
+                                  <Box
+                                    {...props}
+                                    sx={{ display: 'flex', flexDirection: 'column' }}
+                                  >
+                                    <Typography variant="body1">{option.name}</Typography>
+                                    <Typography
+                                      variant="body2"
+                                      sx={{ fontStyle: 'italic', color: 'gray' }}
+                                    >
+                                      {option.aiModelProvider?.name}{' '}
+                                      {option.modelTierType?.name === 'FREE_MODEL' && (
+                                        <Box
+                                          component="span"
+                                          sx={{
+                                            ml: 1,
+                                            px: 1.5,
+                                            py: 0.3,
+                                            backgroundColor: '#e0f2f1',
+                                            color: '#00695c',
+                                            fontWeight: 600,
+                                            fontSize: '0.75rem',
+                                            borderRadius: '6px',
+                                          }}
+                                        >
+                                          Free
+                                        </Box>
+                                      )}
+                                    </Typography>
+                                  </Box>
+                                )}
+                              />
+                            )}
+                          />
+                        </FormControl>
+                      )}
+                    </Grid>
+
+
 
                     {/* Rerank Search Results */}
                     <Grid item xs={12} sm={6} sx={{ mb: 2 }}>

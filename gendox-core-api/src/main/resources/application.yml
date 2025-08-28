@@ -50,7 +50,7 @@ spring:
   servlet:
     multipart:
       enabled: true
-      max-file-size: 10MB
+      max-file-size: 100MB
       max-request-size: 100MB
   application:
     name: gendox-core-api
@@ -172,6 +172,7 @@ gendox:
     message: "Sorry, I can't reply in this message, it contains inappropriate content. If this this not the case, please contact the support team."
 
   batch-jobs:
+    default-start-days: 365
     document-training:
       job:
         name: documentTrainingJob
@@ -179,7 +180,6 @@ gendox:
         steps:
           document-training-step:
             name: documentTrainingStep
-            throttle-limit: 6    # this should be around 5-10 to not hit the throttle limit of the OpenAI API
             chunk-size: 128
             pageable-size: 1000
     document-splitter:
@@ -189,7 +189,24 @@ gendox:
         steps:
           document-splitter-step:
             name: documentSplitterStep
-            throttle-limit: 10    # this should be around 10 to not hit the throttle limit of the OpenAI API
+            chunk-size: 10
+            pageable-size: 1000
+    document-insights:
+      job:
+        name: documentInsightsJob
+        thread-pool-size: 10
+        steps:
+          document-insights-step:
+            name: documentInsightsStep
+            chunk-size: 10
+            pageable-size: 1000
+    document-digitization:
+      job:
+        name: documentDigitizationJob
+        thread-pool-size: 10
+        steps:
+          document-digitization-step:
+            name: documentDigitizationStep
             chunk-size: 10
             pageable-size: 1000
   user-invitation:

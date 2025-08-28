@@ -93,8 +93,8 @@ public class DocumentInstanceSectionWithDocumentConverter implements GendoxConve
         documentInstanceSection.setDocumentSectionMetadata(metadata);
 
         // Convert DocumentDTO to DocumentInstance using DocumentOnlyConverter
-            DocumentInstance documentInstance = documentOnlyConverter.toEntity(documentInstanceSectionDTO.getDocumentInstanceDTO());
-            documentInstanceSection.setDocumentInstance(documentInstance);
+        DocumentInstance documentInstance = documentOnlyConverter.toEntity(documentInstanceSectionDTO.getDocumentInstanceDTO());
+        documentInstanceSection.setDocumentInstance(documentInstance);
 
 
         return documentInstanceSection;

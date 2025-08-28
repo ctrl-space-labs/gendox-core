@@ -44,6 +44,8 @@ public class ProjectAgentDTO {
     private Long maxCompletionLimit;
     private Boolean rerankEnable;
     private AiModel rerankModel;
+    private Boolean advancedSearchEnable;
+    private AiModel advancedSearchModel;
     private List<AiTools> aiTools = new ArrayList<>();
 
 

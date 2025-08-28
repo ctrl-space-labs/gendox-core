@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.knuddels.jtokkit.Encodings;
+import com.knuddels.jtokkit.api.EncodingRegistry;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.VoyageEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
@@ -94,6 +96,11 @@ public class GendoxCoreApiApplication {
 
 
         return objectMapper;
+    }
+
+    @Bean
+    public EncodingRegistry encodingRegistry() {
+        return Encodings.newDefaultEncodingRegistry();
     }
 
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

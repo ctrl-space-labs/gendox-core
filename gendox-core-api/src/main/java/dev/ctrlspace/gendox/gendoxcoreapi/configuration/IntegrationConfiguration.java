@@ -14,6 +14,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.IntegrationManag
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import dev.ctrlspace.gendox.spring.batch.services.SplitterAndTrainingBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
 import io.micrometer.observation.annotation.Observed;
@@ -56,6 +57,7 @@ public class IntegrationConfiguration {
     private ProjectService projectService;
     private SplitterBatchService splitterBatchService;
     private TrainingBatchService trainingBatchService;
+    private SplitterAndTrainingBatchService splitterAndTrainingBatchService;
     private TypeService typeService;
     private DocumentUtils documentUtils;
     private TempIntegrationFileCheckService tempIntegrationFileCheckService;
@@ -69,7 +71,8 @@ public class IntegrationConfiguration {
                                     TrainingBatchService trainingBatchService,
                                     TypeService typeService,
                                     DocumentUtils documentUtils,
-                                    TempIntegrationFileCheckService tempIntegrationFileCheckService) {
+                                    TempIntegrationFileCheckService tempIntegrationFileCheckService,
+                                    SplitterAndTrainingBatchService splitterAndTrainingBatchService) {
         this.integrationManager = integrationManager;
         this.uploadService = uploadService;
         this.projectService = projectService;
@@ -78,6 +81,7 @@ public class IntegrationConfiguration {
         this.typeService = typeService;
         this.documentUtils = documentUtils;
         this.tempIntegrationFileCheckService = tempIntegrationFileCheckService;
+        this.splitterAndTrainingBatchService = splitterAndTrainingBatchService;
     }
 
 
@@ -182,9 +186,8 @@ public class IntegrationConfiguration {
                 if (hasNewFiles) {
                     try {
                         logger.debug("Starting splitter and training jobs");
-                        JobExecution splitterJobExecution = splitterBatchService.runAutoSplitter();
-                        JobExecution trainingJobExecution = trainingBatchService.runAutoTraining();
-                        logger.debug("Splitter job status: {}, Training job status: {}", splitterJobExecution.getStatus(), trainingJobExecution.getStatus());
+                        JobExecution splitterAndTrainingJobExecution = splitterAndTrainingBatchService.runSplitterAndTraining();
+                        logger.debug("Splitter and training job status: {}", splitterAndTrainingJobExecution.getStatus());
                     } catch (Exception e) {
                         logger.error("Error handling integration message: {}", e.getMessage(), e);
                         throw new RuntimeException(e);
