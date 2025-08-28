@@ -150,30 +150,22 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         DocPageToImageOptions printOptions = DocPageToImageOptions.builder().build();
         // increase print quality, this doubles the input tokens, compare to the default 768
         printOptions.setMinSide(1024);
+        printOptions.setPageFrom(Collections.min(pagesToProcess));
+        printOptions.setPageTo(Collections.max(pagesToProcess));
 
         // TODO change this to optionally get a list of page numbers to print
         List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), printOptions);
         
         // Validate that we have enough pages and create safe mapping
         Map<Integer, String> pageImages = pagesToProcess.stream()
-                .filter(i -> i >= 0 && i < printedPagesBase64.size())
-                .collect(Collectors.toMap(i -> i, i -> printedPagesBase64.get(i)));
-        
-        // Log warning if some pages were filtered out due to bounds issues
-        if (pageImages.size() != pagesToProcess.size()) {
-            logger.warn("Some pages were skipped due to bounds issues. Expected {} pages, got {} page images, processing {} pages", 
-                       pagesToProcess.size(), printedPagesBase64.size(), pageImages.size());
-        }
-        
-        // Update pagesToProcess to only include valid pages
-        pagesToProcess = new ArrayList<>(pageImages.keySet());
+                .collect(Collectors.toMap(i -> i, i -> printedPagesBase64.get(i - printOptions.getPageFrom())));
 
         // CORE PROCESSING:
         // There are 2 thread pools: 1 for the docs, 1 for the LLM completions
         // This runs 10 files in parallel, then these 10 files are competing against each other for LLM completions
         // 1. When there are multiple files, they progress all together, 2. When there is a single file, it will run all the pages in parallel
         List<CompletableFuture<AnswerCreationDTO>> completionFutures = pagesToProcess.stream()
-                .map(i -> getCompletionAnswerFuture(prompt, pageImages.get(i), totalPages, documentNode, i))
+                .map(pageNumber -> getCompletionAnswerFuture(prompt, pageImages.get(pageNumber), totalPages, documentNode, pageNumber))
                 .toList();
 
 

@@ -281,7 +281,7 @@ public class DownloadService {
 
             PDFRenderer renderer = new PDFRenderer(doc);
 
-            for (int i = options.getPageFrom(); i < options.getPageTo() ; i++) {
+            for (int i = options.getPageFrom(); i <= options.getPageTo() ; i++) {
 
                 BufferedImage img;
 
