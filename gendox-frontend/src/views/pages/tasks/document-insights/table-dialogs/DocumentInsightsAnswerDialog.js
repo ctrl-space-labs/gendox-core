@@ -81,7 +81,7 @@ const AnswerDialog = ({ open, onClose, answer, questions }) => {
   const questionText = answer ? getQuestionMessageById(questions, answer.questionNodeId) : ''
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth='sm' aria-labelledby='answer-dialog-title'>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth='xl' aria-labelledby='answer-dialog-title'>
       <DialogTitle
         id='answer-dialog-title'
         sx={{

@@ -132,7 +132,7 @@ const DocumentDialog = ({
   if (!document) return null
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth='sm'>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth='md'>
       <DialogTitle
         sx={{
           fontWeight: 600,
