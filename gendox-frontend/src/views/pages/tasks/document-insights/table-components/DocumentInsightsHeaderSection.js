@@ -101,15 +101,20 @@ const HeaderSection = ({
       }
     }
 
-    // Check if there are new (ungenerated) documents
-    const newDocs = documents.filter(doc => !hasGeneratedContent(doc.id))
+   
+    // Check if there are new fields (document-question combinations) that haven't been generated
+    const totalCombinations = documents.length * questions.length
+    const generatedCombinations = documents.reduce((count, doc) => {
+      return count + questions.filter(question => hasGeneratedContent(doc.id, question.id)).length
+    }, 0)
+    const newFields = totalCombinations - generatedCombinations
 
     // Always default to "Generate New" as main button
     return {
       text: `Generate New`,
       type: 'new',
       loading: generatingNew,
-      disabled: generatingAll || generatingNew || generatingSelected || newDocs.length === 0 || questions.length === 0
+      disabled: generatingAll || generatingNew || generatingSelected ||  questions.length === 0 || newFields === 0
     }
   }
 
@@ -267,7 +272,12 @@ const HeaderSection = ({
                     isLoading ||
                     (() => {
                       const newDocs = documents.filter(doc => !hasGeneratedContent(doc.id))
-                      return newDocs.length === 0 || questions.length === 0
+                      const totalCombinations = documents.length * questions.length
+                      const generatedCombinations = documents.reduce((count, doc) => {
+                        return count + questions.filter(question => hasGeneratedContent(doc.id, question.id)).length
+                      }, 0)
+                      const newFields = totalCombinations - generatedCombinations
+                      return newDocs.length === 0 || questions.length === 0 || newFields === 0
                     })()
                   }
                 >
