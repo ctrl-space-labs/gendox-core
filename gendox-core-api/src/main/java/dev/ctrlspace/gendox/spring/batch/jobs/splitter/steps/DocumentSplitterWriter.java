@@ -1,13 +1,10 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.model.AuditLogs;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.AuditLogsService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -23,17 +20,14 @@ import java.util.*;
 public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
 
     private DocumentSectionService documentSectionService;
-    private TypeService typeService;
     private AuditLogsService auditLogsService;
     private DocumentService documentService;
 
     @Autowired
     public DocumentSplitterWriter(DocumentSectionService documentSectionService,
-                                   TypeService typeService,
-                                   AuditLogsService auditLogsService,
-                                   DocumentService documentService) {
+                                  AuditLogsService auditLogsService,
+                                  DocumentService documentService) {
         this.documentSectionService = documentSectionService;
-        this.typeService = typeService;
         this.auditLogsService = auditLogsService;
         this.documentService = documentService;
     }
@@ -46,32 +40,34 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
 
         logger.debug("Start writing sections chunk {} items", chunk.getItems().size());
 
-        Set<DocumentInstance> updatedDocuments = new HashSet<>();
-
         for (DocumentSectionDTO documentSectionDTO : chunk.getItems()) {
+            UUID docId = documentSectionDTO.documentInstance().getId();
+            DocumentInstance lockedDoc = documentService.lockDocumentForUpdate(docId);
+
             logger.debug("Create {} Sections for document instance: {}",
                     documentSectionDTO.contentSections().size(),
                     documentSectionDTO.documentInstance().getId());
+
+            if (documentSectionDTO.documentUpdated()) {
+                lockedDoc.setUpdatedAt(java.time.Instant.now());
+                documentService.saveDocumentInstance(lockedDoc);
+            }
+
             List<DocumentInstanceSection> documentSections =
-                    documentSectionService.createSections(documentSectionDTO.documentInstance(), documentSectionDTO.contentSections());
+                    documentSectionService.createSections(lockedDoc, documentSectionDTO.contentSections());
 
             long documentSectionCount = documentSections.size();
 
-            if (documentSectionDTO.documentUpdated()) {
-                updatedDocuments.add(documentSectionDTO.documentInstance());
-            }
 
             //update Document Sections Auditing
-             auditLogsService.createAuditLog(documentSectionDTO.documentInstance().getOrganizationId(),
-                    null,"CREATE_DOCUMENT_SECTIONS",documentSectionCount);
+            auditLogsService.createAuditLog(documentSectionDTO.documentInstance().getOrganizationId(),
+                    null, "CREATE_DOCUMENT_SECTIONS", documentSectionCount);
 //            // TODO this is for auditing reasons, it doesn't worth it to do an extra query to get the project id
 
 
         }
 
-        for (DocumentInstance documentInstance : updatedDocuments) {
-            documentService.saveDocumentInstance(documentInstance);
-        }
+
     }
 }
 

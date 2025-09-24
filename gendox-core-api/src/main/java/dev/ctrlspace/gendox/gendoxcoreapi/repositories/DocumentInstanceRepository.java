@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
@@ -67,6 +69,9 @@ public interface DocumentInstanceRepository extends JpaRepository<DocumentInstan
     @Query(nativeQuery = true, value = "DELETE FROM gendox_core.document_instance WHERE id IN :documentIds")
     void deleteAllByIds(@Param("documentIds") List<UUID> documentIds);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select d from DocumentInstance d where d.id = :id")
+    Optional<DocumentInstance> findByIdForUpdate(@Param("id") UUID id);
 
 }
 
