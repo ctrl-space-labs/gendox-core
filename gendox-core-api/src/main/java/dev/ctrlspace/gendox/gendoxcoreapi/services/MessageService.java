@@ -57,7 +57,7 @@ public class MessageService {
         ProjectAgent agent = null;
         if (message.getThreadId() == null) {
             agent = projectAgentService.getAgentByProjectId(message.getProjectId());
-            ChatThread chatThread = createThreadForMessage(List.of(securityUtils.getUserId(), agent.getUserId()), message.getProjectId());
+            ChatThread chatThread = createThreadForMessage(Arrays.asList(securityUtils.getUserId(), agent.getUserId()), message.getProjectId());
             message.setThreadId(chatThread.getId());
         }
 
@@ -97,6 +97,12 @@ public class MessageService {
             member.setUserId(memberId);
             member.setChatThread(chatThread);
             chatThread.getChatThreadMembers().add(member);
+        }
+
+        // Public thread rule: exactly 2 entries and exactly 1 is null
+        long nullCount = memberIds.stream().filter(Objects::isNull).count();
+        if (memberIds.size() == 2 && nullCount == 1) {
+            chatThread.setPublicThread(true);
         }
 
         return chatThreadService.createChatThread(chatThread);
