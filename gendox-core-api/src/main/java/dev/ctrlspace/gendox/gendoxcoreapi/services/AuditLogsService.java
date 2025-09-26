@@ -8,7 +8,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.AuditLogsRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.AuditLogsPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import io.micrometer.tracing.Tracer;
-import org.postgresql.util.PSQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +20,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.sql.SQLException;
 import java.util.UUID;
 
 @Service
@@ -81,7 +81,7 @@ public class AuditLogsService {
     }
 
     @Retryable(
-            include = { CannotAcquireLockException.class, PSQLException.class },
+            include = { CannotAcquireLockException.class, SQLException.class },
             maxAttempts = 5,
             backoff = @Backoff(delay = 100, multiplier = 2, maxDelay = 2000)
     )
