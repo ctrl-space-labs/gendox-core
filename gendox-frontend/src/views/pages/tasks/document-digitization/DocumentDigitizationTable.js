@@ -12,8 +12,8 @@ import HeaderSection from './table-components/DocumentDigitizationHeaderSection'
 import DialogManager from './table-components/DocumentDigitizationDialogs'
 import useDocumentDigitizationGeneration from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationGeneration'
 import useExportFile from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationExportFile'
-import taskService from 'src/gendox-sdk/taskService'
 import { useGeneration } from '../generation/GenerationContext'
+import { checkAndResumeRunningJob } from '../generation/runningJobsDetectionUtils'
 
 const MAX_PAGE_SIZE = 2147483647
 
@@ -72,80 +72,58 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     )
   }, [organizationId, projectId, taskId, token, dispatch])
 
-  // Check for running jobs when task loads (for UI state only, not to block operations)
-  const checkRunningJobs = useCallback(async () => {
-    if (!organizationId || !projectId || !taskId || !token) return
+  const handleGenerationComplete = useCallback(() => {
+    completeGeneration(taskId, null)
+    // Refresh data (same as you already do)
+    fetchDocuments()
+      .unwrap()
+      .catch(err => console.error('Failed to refresh documents:', err))
 
-    try {
-      const criteria = {
-        status: 'STARTED',
-        matchAllParams: [
-          { paramName: 'projectId', paramValue: projectId },
-          { paramName: 'taskId', paramValue: taskId }
-        ]
+    loadDocumentPages()
+      .unwrap()
+      .then(pages => {
+        const pagesData = pages?.content || pages || []
+        setDocumentPages(pagesData)
+      })
+      .catch(err => console.error('Failed to refresh document pages:', err))
+
+    toast.success('Generation completed successfully!')
+  }, [completeGeneration, taskId, fetchDocuments, loadDocumentPages])
+
+  useEffect(() => {
+    if (!(organizationId && projectId && taskId && token)) return
+
+    let localCleanup = null
+
+    ;(async () => {
+      const { wasRunning, cleanup } = await checkAndResumeRunningJob({
+        organizationId,
+        projectId,
+        taskId,
+        token,
+        onResume: () => {
+          // mirror your previous UI "resumed" state
+          startGeneration(taskId, null, 'resumed', { documentNames: 'Background processing...', totalDocuments: 0 })
+        },
+        onComplete: handleGenerationComplete,
+        onError: e => console.error('Polling error:', e),
+        intervalMs: 3000
+      })
+
+      localCleanup = cleanup
+      setPollCleanup(() => cleanup)
+
+      // (optional) if you want a toast when we detect a running job on page load:
+      if (wasRunning) {
+        // toast('Resumed background processing…')
       }
+    })()
 
-      const response = await taskService.getJobsByCriteria(organizationId, projectId, criteria, token)
-      const isRunning = response.data?.content?.length > 0
-
-      if (isRunning) {
-        // Start generation tracking for running job (UI state only)
-        startGeneration(taskId, null, 'resumed', { documentNames: 'Background processing...', totalDocuments: 0 })
-
-        // Start polling to detect when the job completes
-        const cleanup = startJobCompletionPolling()
-        setPollCleanup(() => cleanup)
-      }
-    } catch (error) {
-      console.error('Failed to check running jobs:', error)
-    }
-  }, [organizationId, projectId, taskId, token, startGeneration])
-
-  // Poll for job completion when we detect an existing running job after page refresh
-  const startJobCompletionPolling = useCallback(() => {
-    const pollInterval = setInterval(async () => {
-      try {
-        const criteria = {
-          status: 'STARTED',
-          matchAllParams: [
-            { paramName: 'projectId', paramValue: projectId },
-            { paramName: 'taskId', paramValue: taskId }
-          ]
-        }
-
-        const response = await taskService.getJobsByCriteria(organizationId, projectId, criteria, token)
-        const isStillRunning = response.data?.content?.length > 0
-
-        if (!isStillRunning) {
-          // Job has completed, mark as completed in context
-          completeGeneration(taskId, null)
-          clearInterval(pollInterval)
-
-          // Refresh data to show results
-          fetchDocuments().unwrap()
-          loadDocumentPages()
-            .unwrap()
-            .then(pages => {
-              const pagesData = pages?.content || pages || []
-              setDocumentPages(pagesData)
-            })
-            .catch(error => console.error('Failed to refresh document pages after polling:', error))
-
-          toast.success('Generation completed successfully!')
-        }
-      } catch (error) {
-        console.error('Error polling job completion:', error)
-        // Stop polling on error
-        clearInterval(pollInterval)
-      }
-    }, 3000) // Poll every 3 seconds
-
-    // Clean up interval on unmount or task change
     return () => {
-      clearInterval(pollInterval)
+      if (localCleanup) localCleanup()
+      setPollCleanup(null)
     }
-  }, [organizationId, projectId, taskId, token, completeGeneration, fetchDocuments, loadDocumentPages])
-
+  }, [organizationId, projectId, taskId, token, startGeneration, handleGenerationComplete])
 
   // 1️⃣ **Reset all local state when switching tasks/orgs/projects**
   useEffect(() => {
@@ -182,12 +160,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       .then(pages => setDocumentPages(pages || []))
       .catch(() => toast.error('Failed to load document pages'))
   }, [loadDocumentPages])
-
-  // 4️⃣ **Check for running jobs when task loads**
-  useEffect(() => {
-    if (!(organizationId && projectId && taskId && token)) return
-    checkRunningJobs()
-  }, [organizationId, projectId, taskId, token])
 
   // 5️⃣ **Cleanup polling on unmount**
   useEffect(() => {

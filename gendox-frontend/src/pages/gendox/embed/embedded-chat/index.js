@@ -137,7 +137,7 @@ const EmbeddedChatPage = props => {
             }}
           >
             {/* <Icon icon='mdi:close' /> */}
-            <Icon icon='mdi:window-minimize' />
+            <Icon icon='mdi:window-close' />
           </IconButton>
         )}
 

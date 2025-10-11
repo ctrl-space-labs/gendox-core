@@ -89,7 +89,6 @@ export default function useDocumentDigitizationGeneration({
             : generationType === 'selected'
             ? 'selected'
             : 'single'
-        toast.success(`Started ${typeText} generation for ${docIds.length} document(s)`)
 
         // Poll job status with progress updates - Let generation context handle lifecycle
         await pollJobStatus(jobExecutionId, status => {

@@ -243,6 +243,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       .catch(() => toast.error('Failed to load answers'))
   }, [fetchAnswers])
 
+
   // 6️⃣ **Sync answers to local state**
   useEffect(() => {
     setAnswers(
@@ -335,6 +336,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     documents
   })
 
+
   return (
     <>
       <Paper sx={{ p: 3, overflowX: 'auto', backgroundColor: 'action.hover', mb: 3 }}>
@@ -356,7 +358,12 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           generatingSelected={false}
           documents={documents}
           questions={questions}
-          hasGeneratedContent={(docId) => answers.some(answer => answer.documentNodeId === docId)}
+          hasGeneratedContent={(docId, questionId) => {
+            if (questionId) {
+              return answers.some(answer => answer.documentNodeId === docId && answer.questionNodeId === questionId)
+            }
+            return answers.some(answer => answer.documentNodeId === docId)
+          }}
         />
 
         <Box
