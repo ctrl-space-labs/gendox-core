@@ -15,10 +15,11 @@ import java.util.UUID;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "audit_logs", schema = "gendox_core")
 public class AuditLogs {
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "audit_logs_id_seq")
+    @SequenceGenerator( name = "audit_logs_id_seq", sequenceName = "gendox_core.audit_logs_id_seq", allocationSize = 50)
     @Column(name = "id")
-    private UUID id;
+    private Long id;
     @Basic
     @Column(name = "project_id")
     private UUID projectId;
@@ -60,11 +61,11 @@ public class AuditLogs {
     @LastModifiedBy
     private UUID updatedBy;
 
-    public UUID getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(UUID id) {
+    public void setId(Long id) {
         this.id = id;
     }
 

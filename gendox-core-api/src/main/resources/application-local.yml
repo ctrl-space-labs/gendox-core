@@ -70,6 +70,9 @@ gendox:
         wait-time-seconds: 1 #not in use
         visibility-timeout-seconds: 300
 
+  maintenance:
+    daily-usage-aggregator:
+      fixed-delay: 86400000s # 24 hours in milliseconds
   domain:
     base-url: http://localhost:8080
 
