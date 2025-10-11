@@ -46,8 +46,6 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
 
         logger.debug("Start writing sections chunk {} items", chunk.getItems().size());
 
-        Set<DocumentInstance> updatedDocuments = new HashSet<>();
-
         for (DocumentSectionDTO documentSectionDTO : chunk.getItems()) {
             logger.debug("Create {} Sections for document instance: {}",
                     documentSectionDTO.contentSections().size(),
@@ -58,7 +56,7 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
             long documentSectionCount = documentSections.size();
 
             if (documentSectionDTO.documentUpdated()) {
-                updatedDocuments.add(documentSectionDTO.documentInstance());
+                documentService.saveDocumentInstance(documentSectionDTO.documentInstance());
             }
 
             //update Document Sections Auditing
@@ -69,9 +67,6 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
 
         }
 
-        for (DocumentInstance documentInstance : updatedDocuments) {
-            documentService.saveDocumentInstance(documentInstance);
-        }
     }
 }
 
