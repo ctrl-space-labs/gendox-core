@@ -11,11 +11,8 @@ import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -80,11 +77,6 @@ public class AuditLogsService {
         this.saveAuditLogs(auditLogs);
     }
 
-    @Retryable(
-            include = { CannotAcquireLockException.class, SQLException.class },
-            maxAttempts = 5,
-            backoff = @Backoff(delay = 100, multiplier = 2, maxDelay = 2000)
-    )
     public AuditLogs saveAuditLogs(AuditLogs auditLogs) {
         return auditLogsRepository.save(auditLogs);
     }

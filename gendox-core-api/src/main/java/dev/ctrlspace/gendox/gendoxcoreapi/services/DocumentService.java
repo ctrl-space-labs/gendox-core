@@ -10,6 +10,7 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -138,8 +139,7 @@ public class DocumentService {
     @Transactional
     public DocumentInstance updateDocument(DocumentInstance updatedDocument) throws GendoxException {
         UUID documentId = updatedDocument.getId();
-        DocumentInstance existingDocument = documentInstanceRepository.findByIdForUpdate(documentId)
-                .orElseThrow(() -> new GendoxException("DOCUMENT_NOT_FOUND", "Document not found with id: " + documentId, HttpStatus.NOT_FOUND));
+        DocumentInstance existingDocument = this.getDocumentInstanceById(documentId);
 
         if (updatedDocument.getDocumentTemplateId() != null) {
             existingDocument.setDocumentTemplateId(updatedDocument.getDocumentTemplateId());
@@ -264,11 +264,7 @@ public class DocumentService {
     }
 
 
-    @Transactional
     public DocumentInstance saveDocumentInstance(DocumentInstance documentInstance) {
-        if (documentInstance.getId() != null && documentInstanceRepository.existsById(documentInstance.getId())) {
-            documentInstanceRepository.findByIdForUpdate(documentInstance.getId());
-        }
         return documentInstanceRepository.save(documentInstance);
     }
 
@@ -290,12 +286,8 @@ public class DocumentService {
                 throw new GendoxException("DELETE_FAILED", "Failed to delete document instances", HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
-    }
 
-    public DocumentInstance lockDocumentForUpdate(UUID id) throws GendoxException {
-        return documentInstanceRepository.findByIdForUpdate(id)
-                .orElseThrow(() -> new GendoxException(
-                        "DOCUMENT_NOT_FOUND", "Document not found with id: " + id, HttpStatus.NOT_FOUND));
+
     }
 
 
