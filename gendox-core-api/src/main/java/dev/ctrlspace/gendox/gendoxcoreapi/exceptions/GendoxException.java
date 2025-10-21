@@ -23,6 +23,16 @@ public class GendoxException extends Exception {
         this.time = Instant.now();
         this.data = null;
     }
+
+    public GendoxException(String errorCode, String errorMessage, HttpStatus httpStatus, Throwable cause) {
+        super(errorMessage, cause);
+        this.errorCode = errorCode;
+        this.errorMessage = errorMessage;
+        this.httpStatus = httpStatus;
+        this.time = Instant.now();
+        this.data = null;
+    }
+
     public GendoxException(String errorCode, String errorMessage, HttpStatus httpStatus, Object data) {
         super(errorMessage);
         this.errorCode = errorCode;
