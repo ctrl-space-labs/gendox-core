@@ -101,18 +101,7 @@ public class OrganizationModelKeyService {
      */
     @Nullable
     public OrganizationModelProviderKey getKeyForAgent(ProjectAgent agent, String aiModelType) throws GendoxException {
-        AiModel model = null;
-
-        //find the model based on the type
-        if ("COMPLETION_MODEL".equals(aiModelType)) {
-            model = agent.getCompletionModel();
-        } else if ("SEMANTIC_SEARCH_MODEL".equals(aiModelType)) {
-            model = agent.getSemanticSearchModel();
-        } else if ("MODERATION_MODEL".equals(aiModelType)) {
-            model = agent.getModerationModel();
-        } else if ("RERANK_MODEL".equals(aiModelType)) {
-            model = agent.getRerankModel();
-        }
+        AiModel model = getAgentModelByType(agent, aiModelType);
 
         // find Organization Key
         OrganizationModelProviderKey organizationKey = this.getAllByCriteria(OrganizationModelKeyCriteria.builder()
@@ -135,18 +124,7 @@ public class OrganizationModelKeyService {
      * @throws GendoxException
      */
     public String getDefaultKeyForAgent(ProjectAgent agent, String aiModelType) throws GendoxException {
-        AiModel model = null;
-
-        //find the model based on the type
-        if ("COMPLETION_MODEL".equals(aiModelType)) {
-            model = agent.getCompletionModel();
-        } else if ("SEMANTIC_SEARCH_MODEL".equals(aiModelType)) {
-            model = agent.getSemanticSearchModel();
-        } else if ("MODERATION_MODEL".equals(aiModelType)) {
-            model = agent.getModerationModel();
-        } else if ("RERANK_MODEL".equals(aiModelType)) {
-            model = agent.getRerankModel();
-        }
+        AiModel model = getAgentModelByType(agent, aiModelType);
 
 
         // validate that the default key is used only for free and standard model tiers
@@ -161,6 +139,22 @@ public class OrganizationModelKeyService {
         return environment.getProperty(providerKeyProperty);
 
 
+    }
+
+    public @Nullable AiModel getAgentModelByType(ProjectAgent agent, String aiModelType) {
+        AiModel model = null;
+
+        //find the model based on the type
+        if ("COMPLETION_MODEL".equals(aiModelType)) {
+            model = agent.getCompletionModel();
+        } else if ("SEMANTIC_SEARCH_MODEL".equals(aiModelType)) {
+            model = agent.getSemanticSearchModel();
+        } else if ("MODERATION_MODEL".equals(aiModelType)) {
+            model = agent.getModerationModel();
+        } else if ("RERANK_MODEL".equals(aiModelType)) {
+            model = agent.getRerankModel();
+        }
+        return model;
     }
 
 

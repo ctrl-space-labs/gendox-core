@@ -227,6 +227,8 @@ cloud:
       region: eu-central-1
     SQS:
       region: eu-central-1
+  gcloud:
+    client-secret: ${GCLOUD_CLIENT_SECRET}
 
 
 

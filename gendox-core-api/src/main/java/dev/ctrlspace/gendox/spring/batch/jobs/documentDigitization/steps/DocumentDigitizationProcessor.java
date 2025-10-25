@@ -84,6 +84,8 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         }
         if (project == null) {
             project = projectService.getProjectById(task.getProjectId());
+            // lazy load child collections
+            project.getProjectAgent().getAiTools().size();
         }
 
         DocumentInstance documentInstance = documentService.getDocumentInstanceById(documentNode.getDocumentId());
