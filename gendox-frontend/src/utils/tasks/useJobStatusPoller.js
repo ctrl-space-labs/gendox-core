@@ -8,7 +8,7 @@ export const useJobStatusPoller = ({ organizationId, projectId, token }) => {
 
   const pollJobStatus = useCallback(
     // 10 seconds interval, 4 hours timeout
-    async (jobExecutionId, interval = 10000, timeout = 1000 /*14400000*/) => {
+    async (jobExecutionId, interval = 10000, timeout = 14400000) => {
       const startTime = Date.now()
 
       while (true) {
