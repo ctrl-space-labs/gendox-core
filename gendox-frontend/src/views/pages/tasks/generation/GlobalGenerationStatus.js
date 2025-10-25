@@ -16,12 +16,11 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import CloseIcon from '@mui/icons-material/Close'
 import RefreshIcon from '@mui/icons-material/Refresh'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorIcon from '@mui/icons-material/Error'
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
 import { useGeneration } from 'src/views/pages/tasks/generation/GenerationContext'
 
-const GlobalGenerationStatus = () => {
+const GlobalGenerationStatus = ({ showTimeoutDialog = false }) => {
   const { activeGenerations, completeGeneration, retryGeneration } = useGeneration()
   const [expanded, setExpanded] = useState(false)
   const [dismissed, setDismissed] = useState(false)
@@ -217,6 +216,11 @@ const GlobalGenerationStatus = () => {
 
               <Typography variant='body2' sx={{ flex: 1, fontWeight: 600, fontSize: '0.875rem' }}>
                 {getStatusText()}
+                {showTimeoutDialog && (
+                  <Typography component='span' sx={{ ml: 1, fontWeight: 700, color: 'warning.light' }}>
+                    <br /> This is taking too long. If it’s not expected, please contact the administrator.
+                  </Typography>
+                )}
               </Typography>
 
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
