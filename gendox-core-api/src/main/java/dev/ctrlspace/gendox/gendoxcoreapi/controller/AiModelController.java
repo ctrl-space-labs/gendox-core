@@ -33,7 +33,6 @@ public class AiModelController {
             description = "Retrieve all ai-models by project ID. The user must have the appropriate permissions to access this.")
     public List<AiModel> getAllAiModels(@PathVariable UUID organizationId) throws GendoxException {
 
-//        TODO: Implement the logic to get all ai-models by org ID and moler tier related to subscription plan
         return aiModelService.getAllActiveAiModelsByOrganizationId(organizationId);
     }
     

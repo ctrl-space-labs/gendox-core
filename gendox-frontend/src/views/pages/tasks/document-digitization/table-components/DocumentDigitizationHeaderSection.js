@@ -31,6 +31,7 @@ const HeaderSection = ({
     setAnchorEl(prev => (prev ? null : event.currentTarget.parentElement))
   }
 
+
   // Helper function to check if documents have existing generated content
   const hasExistingContent = docs => {
     return docs.some(doc => hasGeneratedContent(doc.id))

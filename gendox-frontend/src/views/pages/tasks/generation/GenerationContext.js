@@ -12,6 +12,7 @@ export const useGeneration = () => {
 
 export const GenerationProvider = ({ children }) => {
   const [activeGenerations, setActiveGenerations] = useState(new Map())
+  const keyOf = (taskId, documentId) => `${taskId}-${documentId || 'all'}`
 
   const startGeneration = (taskId, documentId, type, metadata = null) => {
     const key = `${taskId}-${documentId || 'all'}`
@@ -24,7 +25,8 @@ export const GenerationProvider = ({ children }) => {
       completedItems: 0,
       status: 'running',
       documentNames: metadata?.documentNames || null,
-      totalDocuments: metadata?.totalDocuments || null
+      totalDocuments: metadata?.totalDocuments || null,
+      warningMessage: null,
     })))
   }
 
@@ -79,6 +81,25 @@ export const GenerationProvider = ({ children }) => {
     })
   }
 
+  const setGenerationWarning = (taskId, documentId, message) => {
+    const key = keyOf(taskId, documentId)
+    setActiveGenerations(prev => {
+      const gen = prev.get(key)
+      if (!gen) return prev
+      return new Map(prev.set(key, { ...gen, warningMessage: message }))
+    })
+  }
+
+  const clearGenerationWarning = (taskId, documentId) => {
+    const key = keyOf(taskId, documentId)
+    setActiveGenerations(prev => {
+      const gen = prev.get(key)
+      if (!gen) return prev
+      if (!gen.warningMessage) return prev
+      return new Map(prev.set(key, { ...gen, warningMessage: null }))
+    })
+  }
+
   return (
     <GenerationContext.Provider value={{
       activeGenerations,
@@ -87,6 +108,8 @@ export const GenerationProvider = ({ children }) => {
       completeGeneration,
       failGeneration,
       retryGeneration,
+      setGenerationWarning,
+      clearGenerationWarning,
       hasActiveGenerations: activeGenerations.size > 0,
       totalActiveGenerations: activeGenerations.size
     }}>

@@ -86,10 +86,12 @@ public class SubscriptionValidationService {
             return true;
         }
         OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
-        int maxDocumentSize = activePlan.getSubscriptionPlan().getUserUploadLimitMb() * activePlan.getNumberOfSeats() * 1024 * 1024; // Convert MB to bytes;
-        int totalDocumentSize = countDocumentsSize(organizationId, activePlan.getStartDate(), activePlan.getEndDate()) + fileSize;
+        long maxDocumentSize = (long) activePlan.getSubscriptionPlan().getUserUploadLimitMb() * activePlan.getNumberOfSeats() ;
+        long totalDocumentSize = countDocumentsSize(organizationId, activePlan.getStartDate(), activePlan.getEndDate()) + fileSize;
 
-        return totalDocumentSize < maxDocumentSize;
+        long totalDocumentSizeMb = totalDocumentSize / (1024 * 1024);
+        return totalDocumentSizeMb < maxDocumentSize;
+
     }
 
     // check for the Document Sections allowed for the organization

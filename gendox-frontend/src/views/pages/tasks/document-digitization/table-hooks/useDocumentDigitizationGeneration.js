@@ -3,7 +3,6 @@ import { useDispatch } from 'react-redux'
 import { executeTaskByType } from 'src/store/activeTask/activeTask'
 import { toast } from 'react-hot-toast'
 import { useGeneration } from '../../generation/GenerationContext'
-import taskService from 'src/gendox-sdk/taskService'
 
 export default function useDocumentDigitizationGeneration({
   organizationId,
@@ -11,6 +10,7 @@ export default function useDocumentDigitizationGeneration({
   taskId,
   documents,
   pollJobStatus,
+  showTimeoutDialog,
   token,
   setSelectedDocuments,
   documentPages,
@@ -23,6 +23,8 @@ export default function useDocumentDigitizationGeneration({
   const [generatingSelected, setGeneratingSelected] = useState(false)
   const [generatingDocuments, setGeneratingDocuments] = useState(new Set())
 
+  console.log('NODE PAGES IN HOOK:', documentPages)
+
   // Helper function to check if document has been generated
   const hasGeneratedContent = useCallback(
     documentId => {
@@ -30,6 +32,7 @@ export default function useDocumentDigitizationGeneration({
         ? documentPages.find(page => page.taskDocumentNodeId === documentId)
         : (documentPages?.content || []).find(page => page.taskDocumentNodeId === documentId)
 
+      console.log('Checking generated content for documentId:', documentId, 'Found docPage:', docPage)
       const hasContent = docPage && docPage.numberOfNodePages > 0
 
       return hasContent

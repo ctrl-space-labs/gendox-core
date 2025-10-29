@@ -14,6 +14,7 @@ import useDocumentDigitizationGeneration from 'src/views/pages/tasks/document-di
 import useExportFile from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationExportFile'
 import { useGeneration } from '../generation/GenerationContext'
 import { checkAndResumeRunningJob } from '../generation/runningJobsDetectionUtils'
+import GlobalGenerationStatus from '../generation/GlobalGenerationStatus'
 
 const MAX_PAGE_SIZE = 2147483647
 
@@ -42,7 +43,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const [editMode, setEditMode] = useState(false)
   const [pollCleanup, setPollCleanup] = useState(null)
 
-  const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
+  const { pollJobStatus, showTimeoutDialog } = useJobStatusPoller({ organizationId, projectId, token })
   const { startGeneration, completeGeneration } = useGeneration()
 
   const fetchDocuments = useCallback(() => {
@@ -272,6 +273,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     documents,
     setSelectedDocuments,
     pollJobStatus,
+    showTimeoutDialog,
     token,
     documentPages,
     onGenerationComplete: () => {
@@ -308,6 +310,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
 
   return (
     <>
+    <GlobalGenerationStatus showTimeoutDialog={showTimeoutDialog} />
       <Paper sx={{ p: 3, overflowX: 'auto', backgroundColor: 'action.hover', mb: 3 }}>
         <HeaderSection
           title={selectedTask?.title}
@@ -370,6 +373,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         onExportCsv={exportDocumentDigitizationCsv}
         isExportingCsv={isExportingCsv}
       />
+      
     </>
   )
 }

@@ -70,7 +70,17 @@ const TextareaAutosizeStyled = forwardRef((props, ref) => {
   )
 })
 
-const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onDocumentUpdate, generateSingleDocument, onExportCsv, isExportingCsv, onDelete }) => {
+const DocumentPagePreviewDialog = ({
+  open,
+  onClose,
+  document,
+  documentPages,
+  onDocumentUpdate,
+  generateSingleDocument,
+  onExportCsv,
+  isExportingCsv,
+  onDelete
+}) => {
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -107,31 +117,30 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
       if (updateState) setPageRangeError('')
       return true
     }
-    
+
     const from = fromPage && fromPage.trim() !== '' ? parseInt(fromPage, 10) : null
     const to = toPage && toPage.trim() !== '' ? parseInt(toPage, 10) : null
-    
+
     // Validate individual values
     if (from !== null && (isNaN(from) || from < 1 || from > totalPages)) {
       if (updateState) setPageRangeError(`From page must be between 1 and ${totalPages}`)
       return false
     }
-    
+
     if (to !== null && (isNaN(to) || to < 1 || to > totalPages)) {
       if (updateState) setPageRangeError(`To page must be between 1 and ${totalPages}`)
       return false
     }
-    
+
     // If both are set, validate range
     if (from !== null && to !== null && from > to) {
       if (updateState) setPageRangeError('From page cannot be greater than To page')
       return false
     }
-    
+
     if (updateState) setPageRangeError('')
     return true
   }
-  
 
   // Initialize prompt and structure values from document
   useEffect(() => {
@@ -269,7 +278,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
     onClose()
   }
 
-  const handlePageFromChange = (value) => {
+  const handlePageFromChange = value => {
     setPageFrom(value)
     validatePageRange(value, pageTo)
     // If user types in page range, uncheck "select all"
@@ -283,7 +292,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
     }
   }
 
-  const handlePageToChange = (value) => {
+  const handlePageToChange = value => {
     setPageTo(value)
     validatePageRange(pageFrom, value)
     // If user types in page range, uncheck "select all"
@@ -297,7 +306,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
     }
   }
 
-  const handleSelectAllPagesChange = (checked) => {
+  const handleSelectAllPagesChange = checked => {
     setSelectAllPages(checked)
     if (checked) {
       // Clear page range when "select all" is checked
@@ -328,17 +337,10 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
         structure: structureValue,
         pageFrom: pageFrom && pageFrom.trim() ? parseInt(pageFrom, 10) : null,
         pageTo: pageTo && pageTo.trim() ? parseInt(pageTo, 10) : null,
-        allPages: selectAllPages || (!pageFrom || !pageFrom.trim()) && (!pageTo || !pageTo.trim())
+        allPages: selectAllPages || ((!pageFrom || !pageFrom.trim()) && (!pageTo || !pageTo.trim()))
       }
-      
 
-      await taskService.updateTaskNodeForDocumentDigitization(
-        organizationId,
-        projectId,
-        taskId,
-        updateData,
-        token
-      )
+      await taskService.updateTaskNodeForDocumentDigitization(organizationId, projectId, taskId, updateData, token)
 
       // Update the document object locally first
       const updatedDocument = {
@@ -358,7 +360,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
 
       setEditMode(false)
       toast.success('Document updated successfully!')
-      
+
       // Force re-render by updating the document reference
       // This ensures all UI elements reflect the new prompt state immediately
     } catch (error) {
@@ -383,7 +385,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
 
   const handleGenerateClick = () => {
     const hasGeneratedContent = pageNodes.length > 0
-    
+
     if (hasGeneratedContent) {
       // Show confirmation dialog for regenerate
       setConfirmRegenerate(true)
@@ -406,13 +408,13 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
         setIsGenerating(true)
         setConfirmRegenerate(false)
         setShowPromptStructure(false) // Close the config section
-        
+
         // Pass page range if specified
         const pageFromValue = pageFrom && pageFrom.trim() ? pageFrom : null
         const pageToValue = pageTo && pageTo.trim() ? pageTo : null
-        
+
         await generateSingleDocument(currentDocument, pageFromValue, pageToValue)
-        
+
         // Refresh the page nodes after generation
         await fetchAnswerNodes(0, false)
       } catch (error) {
@@ -489,8 +491,9 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                 Unsupported File Format
               </Typography>
               <Typography variant='body1' color='text.secondary' sx={{ maxWidth: 600 }}>
-                This file format ({currentDocument?.name?.split('.').pop()?.toUpperCase()}) is not supported for document digitization. 
-                Supported formats include PDF, Word documents, PowerPoint presentations, and Excel files.
+                This file format ({currentDocument?.name?.split('.').pop()?.toUpperCase()}) is not supported for
+                document digitization. Supported formats include PDF, Word documents, PowerPoint presentations, and
+                Excel files.
               </Typography>
               <Typography variant='body2' color='grey.600' sx={{ fontWeight: 500 }}>
                 📄 Supported formats: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, ODT, RTF
@@ -641,7 +644,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                   const numberOfNodePages = docPage?.numberOfNodePages || pageNodes.length
                   const documentPages = docPage?.documentPages || 0
                   const missingPages = Math.max(0, documentPages - numberOfNodePages)
-                  
+
                   const pagesText = numberOfNodePages === 1 ? '1 page' : `${numberOfNodePages} pages`
                   return missingPages > 0 ? `${pagesText} (${missingPages} missing)` : pagesText
                 })()}
@@ -677,49 +680,56 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
               </>
             ) : (
               <>
-              <Tooltip title={!isFileTypeSupported(currentDocument?.url) ? 'This file format is not supported for configuration' : 'Edit prompt and structure'}>
-                <span>
-                  <IconButton
-                    onClick={() => setEditMode(true)}
-                    size='small'
-                    sx={{ mr: 1 }}
-                    disabled={!isFileTypeSupported(currentDocument?.url)}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                </span>
-              </Tooltip>
-                <Tooltip 
-                title={
-                  isGenerating
-                    ? 'Generation in progress...'
-                    : !isFileTypeSupported(currentDocument?.url)
-                    ? 'This file format is not supported for generation'
-                    : !currentDocument.prompt?.trim() 
-                    ? 'Add a prompt first to generate answers'
-                    : pageRangeError !== ''
-                    ? `Fix page range error: ${pageRangeError}`
-                    : pageNodes.length > 0 
-                    ? 'Regenerate document answers' 
-                    : 'Generate document answers'
-                }
-              >
-                <span>
-                  <IconButton
-                    size='small'
-                    onClick={handleGenerateClick}
-                    sx={{ mr: 1 }}
-                    disabled={!isFileTypeSupported(currentDocument?.url) || !currentDocument.prompt?.trim() || isGenerating || pageRangeError !== ''}
-                  >
-                    {isGenerating ? (
-                      <CircularProgress size={20} />
-                    ) : (
-                      <RocketLaunchIcon />
-                    )}
-                  </IconButton>
-                </span>
-              </Tooltip>
-                <Tooltip title="Delete document">
+                <Tooltip
+                  title={
+                    !isFileTypeSupported(currentDocument?.url)
+                      ? 'This file format is not supported for configuration'
+                      : 'Edit prompt and structure'
+                  }
+                >
+                  <span>
+                    <IconButton
+                      onClick={() => setEditMode(true)}
+                      size='small'
+                      sx={{ mr: 1 }}
+                      disabled={!isFileTypeSupported(currentDocument?.url)}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip
+                  title={
+                    isGenerating
+                      ? 'Generation in progress...'
+                      : !isFileTypeSupported(currentDocument?.url)
+                      ? 'This file format is not supported for generation'
+                      : !currentDocument.prompt?.trim()
+                      ? 'Add a prompt first to generate answers'
+                      : pageRangeError !== ''
+                      ? `Fix page range error: ${pageRangeError}`
+                      : pageNodes.length > 0
+                      ? 'Regenerate document answers'
+                      : 'Generate document answers'
+                  }
+                >
+                  <span>
+                    <IconButton
+                      size='small'
+                      onClick={handleGenerateClick}
+                      sx={{ mr: 1 }}
+                      disabled={
+                        !isFileTypeSupported(currentDocument?.url) ||
+                        !currentDocument.prompt?.trim() ||
+                        isGenerating ||
+                        pageRangeError !== ''
+                      }
+                    >
+                      {isGenerating ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title='Delete document'>
                   <span>
                     <IconButton
                       size='small'
@@ -731,7 +741,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                     </IconButton>
                   </span>
                 </Tooltip>
-                
+
                 <Tooltip title={isExportingCsv ? 'Exporting...' : 'Export data as CSV'}>
                   <span>
                     <IconButton
@@ -744,7 +754,6 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                     </IconButton>
                   </span>
                 </Tooltip>
-                
               </>
             )}
 
@@ -779,10 +788,10 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
         >
           <CircularProgress size={24} sx={{ color: 'inherit' }} />
           <Box sx={{ flex: 1 }}>
-            <Typography variant="body1" sx={{ fontWeight: 600 }}>
+            <Typography variant='body1' sx={{ fontWeight: 600 }}>
               Generating Document Answers...
             </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
+            <Typography variant='body2' sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
               Processing your document - you can continue viewing the content below
             </Typography>
           </Box>
@@ -795,7 +804,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
           elevation={0}
           sx={{
             borderBottom: 1,
-            p:2,
+            p: 2,
             borderColor: 'divider',
             backgroundColor: 'background.paper'
           }}
@@ -806,18 +815,18 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                 <Typography variant='h6' color='text.primary' sx={{ fontWeight: 600 }}>
                   Document Configuration
                 </Typography>
-                
+
                 {/* Status chips */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   {/* File Type Status Chip - Always show if unsupported */}
                   {!isFileTypeSupported(currentDocument?.url) && (
                     <Chip
                       icon={<BlockIcon sx={{ fontSize: '0.875rem' }} />}
-                      label="Unsupported Format"
-                      size="small"
-                      color="default"
-                      variant="filled"
-                      sx={{ 
+                      label='Unsupported Format'
+                      size='small'
+                      color='default'
+                      variant='filled'
+                      sx={{
                         fontSize: '0.75rem',
                         height: 24,
                         fontWeight: 500,
@@ -828,15 +837,15 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                   )}
 
                   {/* Prompt Status Chip - Always show for supported files */}
-                  {isFileTypeSupported(currentDocument?.url) && (
-                    currentDocument?.prompt && currentDocument.prompt.trim() ? (
+                  {isFileTypeSupported(currentDocument?.url) &&
+                    (currentDocument?.prompt && currentDocument.prompt.trim() ? (
                       <Chip
                         icon={<AutoAwesomeIcon sx={{ fontSize: '0.875rem' }} />}
-                        label="Prompt"
-                        size="small"
-                        color="primary"
-                        variant="filled"
-                        sx={{ 
+                        label='Prompt'
+                        size='small'
+                        color='primary'
+                        variant='filled'
+                        sx={{
                           fontSize: '0.75rem',
                           height: 24,
                           fontWeight: 500
@@ -844,29 +853,28 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                       />
                     ) : (
                       <Chip
-                        label="No Prompt"
-                        size="small"
-                        color="warning"
-                        variant="outlined"
-                        sx={{ 
+                        label='No Prompt'
+                        size='small'
+                        color='warning'
+                        variant='outlined'
+                        sx={{
                           fontSize: '0.75rem',
                           height: 24,
                           fontWeight: 500
                         }}
                       />
-                    )
-                  )}
+                    ))}
 
                   {/* Generation Status Chip - Always show generation status for supported files */}
-                  {isFileTypeSupported(currentDocument?.url) && (
-                    pageNodes.length > 0 ? (
+                  {isFileTypeSupported(currentDocument?.url) &&
+                    (pageNodes.length > 0 ? (
                       <Chip
                         icon={<CheckCircleIcon sx={{ fontSize: '0.875rem' }} />}
-                        label="Generated"
-                        size="small"
-                        color="success"
-                        variant="filled"
-                        sx={{ 
+                        label='Generated'
+                        size='small'
+                        color='success'
+                        variant='filled'
+                        sx={{
                           fontSize: '0.75rem',
                           height: 24,
                           fontWeight: 500
@@ -875,29 +883,28 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                     ) : (
                       <Chip
                         icon={<ErrorIcon sx={{ fontSize: '0.875rem' }} />}
-                        label="Not Generated"
-                        size="small"
-                        color="error"
-                        variant="filled"
-                        sx={{ 
+                        label='Not Generated'
+                        size='small'
+                        color='error'
+                        variant='filled'
+                        sx={{
                           fontSize: '0.75rem',
                           height: 24,
                           fontWeight: 500
                         }}
                       />
-                    )
-                  )}
+                    ))}
 
                   {/* Structure Status Chip - Always show structure status for supported files */}
-                  {isFileTypeSupported(currentDocument?.url) && (
-                    currentDocument?.structure && currentDocument.structure.trim() ? (
+                  {isFileTypeSupported(currentDocument?.url) &&
+                    (currentDocument?.structure && currentDocument.structure.trim() ? (
                       <Chip
                         icon={<AccountTreeIcon sx={{ fontSize: '0.875rem' }} />}
-                        label="Structure"
-                        size="small"
-                        color="info"
-                        variant="filled"
-                        sx={{ 
+                        label='Structure'
+                        size='small'
+                        color='info'
+                        variant='filled'
+                        sx={{
                           fontSize: '0.75rem',
                           height: 24,
                           fontWeight: 500
@@ -905,21 +912,20 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                       />
                     ) : (
                       <Chip
-                        label="No Structure"
-                        size="small"
-                        color="default"
-                        variant="outlined"
-                        sx={{ 
+                        label='No Structure'
+                        size='small'
+                        color='default'
+                        variant='outlined'
+                        sx={{
                           fontSize: '0.75rem',
                           height: 24,
                           fontWeight: 500
                         }}
                       />
-                    )
-                  )}
+                    ))}
                 </Box>
               </Box>
-              
+
               <IconButton size='small' onClick={() => setShowPromptStructure(!showPromptStructure)}>
                 {showPromptStructure ? <ExpandLessIcon /> : <ExpandMoreIcon />}
               </IconButton>
@@ -950,8 +956,12 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                         border: '1px solid',
                         borderColor: 'divider',
                         minHeight: 40,
+                        maxHeight: '30vh', 
+                        overflowY: 'auto', 
                         fontFamily: 'monospace',
-                        whiteSpace: 'pre-wrap'
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word', 
+                        overflowWrap: 'anywhere' 
                       }}
                     >
                       {promptValue || 'No prompt specified'}
@@ -982,8 +992,12 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                         border: '1px solid',
                         borderColor: 'divider',
                         minHeight: 40,
+                        maxHeight: '30vh', 
+                        overflowY: 'auto', 
                         fontFamily: 'monospace',
-                        whiteSpace: 'pre-wrap'
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word', 
+                        overflowWrap: 'anywhere' 
                       }}
                     >
                       {structureValue || 'No structure specified'}
@@ -996,23 +1010,23 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                   <Typography variant='body2' color='text.secondary' sx={{ mb: 2, fontWeight: 500 }}>
                     Page Range (optional)
                   </Typography>
-                  
+
                   {/* Select All Pages Checkbox */}
                   {editMode && (
                     <FormControlLabel
                       control={
                         <Checkbox
                           checked={selectAllPages}
-                          onChange={(e) => handleSelectAllPagesChange(e.target.checked)}
-                          size="small"
+                          onChange={e => handleSelectAllPagesChange(e.target.checked)}
+                          size='small'
                           disabled={false}
                         />
                       }
-                      label="Select all pages"
+                      label='Select all pages'
                       sx={{ mb: 3 }}
                     />
                   )}
-                  
+
                   <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
                     <TextField
                       size='small'
@@ -1025,9 +1039,9 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                       placeholder='1'
                       inputProps={{ min: 1, max: totalPages }}
                       error={pageRangeError !== '' && pageFrom && pageFrom.trim() !== ''}
-                      sx={{ 
+                      sx={{
                         width: 120,
-                        backgroundColor: editMode ? 'background.default' : 'action.hover' 
+                        backgroundColor: editMode ? 'background.default' : 'action.hover'
                       }}
                       disabled={!editMode || selectAllPages}
                     />
@@ -1045,9 +1059,9 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                       placeholder={totalPages.toString()}
                       inputProps={{ min: 1, max: totalPages }}
                       error={pageRangeError !== '' && pageTo && pageTo.trim() !== ''}
-                      sx={{ 
+                      sx={{
                         width: 120,
-                        backgroundColor: editMode ? 'background.default' : 'action.hover' 
+                        backgroundColor: editMode ? 'background.default' : 'action.hover'
                       }}
                       disabled={!editMode || selectAllPages}
                     />
@@ -1080,7 +1094,7 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
           >
             <SectionCardContent />
           </ResponsiveCardContent>
-          
+
           {/* Subtle loading overlay for content area */}
           {isGenerating && (
             <Box
@@ -1110,26 +1124,23 @@ const DocumentPagePreviewDialog = ({ open, onClose, document, documentPages, onD
                   borderColor: 'divider'
                 }}
               >
-                <CircularProgress size={32} color="primary" />
-                <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 500 }}>
+                <CircularProgress size={32} color='primary' />
+                <Typography variant='body1' sx={{ color: 'text.primary', fontWeight: 500 }}>
                   Content will refresh when generation completes
                 </Typography>
               </Box>
             </Box>
           )}
         </Box>
-
-        
       </DialogContent>
-      
+
       {/* Regenerate Confirmation Dialog */}
       <GenerateConfirmDialog
         open={confirmRegenerate}
         onClose={handleCancelRegenerate}
         onConfirm={handleConfirmRegenerate}
-        type="document"
+        type='document'
       />
-      
     </Dialog>
   )
 }
