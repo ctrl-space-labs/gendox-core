@@ -23,7 +23,6 @@ export default function useDocumentDigitizationGeneration({
   const [generatingSelected, setGeneratingSelected] = useState(false)
   const [generatingDocuments, setGeneratingDocuments] = useState(new Set())
 
-  console.log('NODE PAGES IN HOOK:', documentPages)
 
   // Helper function to check if document has been generated
   const hasGeneratedContent = useCallback(
@@ -32,7 +31,6 @@ export default function useDocumentDigitizationGeneration({
         ? documentPages.find(page => page.taskDocumentNodeId === documentId)
         : (documentPages?.content || []).find(page => page.taskDocumentNodeId === documentId)
 
-      console.log('Checking generated content for documentId:', documentId, 'Found docPage:', docPage)
       const hasContent = docPage && docPage.numberOfNodePages > 0
 
       return hasContent
