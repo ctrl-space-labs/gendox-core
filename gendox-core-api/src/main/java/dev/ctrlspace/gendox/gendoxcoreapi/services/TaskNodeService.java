@@ -199,8 +199,8 @@ public class TaskNodeService {
         if (taskNodeIds == null || taskNodeIds.isEmpty()) {
             return;
         }
-        List<TaskNode> nodesToDelete = taskNodeRepository.findAllById(taskNodeIds);
-        taskNodeRepository.deleteAll(nodesToDelete);
+//        List<TaskNode> nodesToDelete = taskNodeRepository.findAllById(taskNodeIds);
+        taskNodeRepository.deleteAllByIds(taskNodeIds);
     }
 
     public void deleteDocumentNodeAndConnectionNodesByDocumentId(UUID documentId) throws GendoxException {
@@ -233,11 +233,11 @@ public class TaskNodeService {
                 .map(edge -> edge.getFromNode().getId())
                 .toList();
 
-        List<TaskEdge> edgesToDeleteFrom = taskEdgeRepository.findAllByFromNodeIdIn(fromNodeIds);
+        List<UUID> edgeIDsToDeleteFrom = taskEdgeRepository.findAllIdsByFromNodeIdIn(fromNodeIds);
 
         Set<UUID> allEdgeIdsToDelete = new HashSet<>();
         allEdgeIdsToDelete.addAll(edgesToDeleteTo.stream().map(TaskEdge::getId).toList());
-        allEdgeIdsToDelete.addAll(edgesToDeleteFrom.stream().map(TaskEdge::getId).toList());
+        allEdgeIdsToDelete.addAll(edgeIDsToDeleteFrom);
 
         if (!allEdgeIdsToDelete.isEmpty()) {
             taskEdgeRepository.deleteAllByIds(new ArrayList<>(allEdgeIdsToDelete));

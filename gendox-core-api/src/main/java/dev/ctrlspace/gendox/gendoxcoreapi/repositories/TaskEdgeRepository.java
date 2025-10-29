@@ -21,12 +21,13 @@ public interface TaskEdgeRepository extends JpaRepository<TaskEdge, UUID>, Query
     @Query("DELETE FROM TaskEdge e WHERE e.id IN :ids")
     void deleteAllByIds(@Param("ids") List<UUID> ids);
 
-    List<TaskEdge> findAllByRelationTypeAndToNodeIdIn(Type relationType, List<UUID> toNodeIds);
+    @Query("select e.id from TaskEdge e where e.fromNode.id in :fromNodeIds")
+    List<UUID> findAllIdsByFromNodeIdIn(@Param("fromNodeIds") List<UUID> fromNodeIds);
     List<TaskEdge> findAllByFromNodeIdIn(List<UUID> fromNodeIds);
-    List<TaskEdge> findAllByToNodeIdIn(List<UUID> toNodeIds);
 
-    @Query("SELECT e.id FROM TaskEdge e WHERE e.fromNode.id IN :fromNodeIds")
-    List<UUID> findIdsByFromNodeIdIn(@Param("fromNodeIds") List<UUID> fromNodeIds);
+    @Query("select e.id from TaskEdge e where e.toNode.id in :toNodeIds")
+    List<UUID> findAllIdsByToNodeIdIn(@Param("toNodeIds") List<UUID> toNodeIds);
+    List<TaskEdge> findAllByToNodeIdIn(List<UUID> toNodeIds);
 
 
 

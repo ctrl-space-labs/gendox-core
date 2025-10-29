@@ -112,8 +112,9 @@ public class TaskEdgeService {
         if (fromNodeIds == null || fromNodeIds.isEmpty()) {
             return;
         }
-        List<TaskEdge> edgesToDelete = taskEdgeRepository.findAllByFromNodeIdIn(fromNodeIds);
-        taskEdgeRepository.deleteAll(edgesToDelete);
+
+        List<UUID> edgeIdsToDelete = taskEdgeRepository.findAllIdsByFromNodeIdIn(fromNodeIds);
+        taskEdgeRepository.deleteAllByIds(edgeIdsToDelete);
     }
 
     public void deleteTaskEdgesByNodeIds(List<TaskNode> taskNodes) {
@@ -123,16 +124,18 @@ public class TaskEdgeService {
         List<UUID> taskNodeIds = taskNodes.stream()
                 .map(TaskNode::getId)
                 .collect(Collectors.toList());
-        List<TaskEdge> edgesToDeleteTo = taskEdgeRepository.findAllByToNodeIdIn(taskNodeIds);
-        if (!edgesToDeleteTo.isEmpty()) {
+        // To nodes
+        List<UUID> toEdgesIdsToDelete = taskEdgeRepository.findAllIdsByToNodeIdIn(taskNodeIds);
+        if (!toEdgesIdsToDelete.isEmpty()) {
             logger.info("Deleting task edges to nodes: {}", taskNodeIds);
-            taskEdgeRepository.deleteAll(edgesToDeleteTo);
+            taskEdgeRepository.deleteAllById(toEdgesIdsToDelete);
         }
-        taskEdgeRepository.deleteAll(edgesToDeleteTo);
-        List<TaskEdge> edgesToDeleteFrom = taskEdgeRepository.findAllByFromNodeIdIn(taskNodeIds);
-        if (!edgesToDeleteFrom.isEmpty()) {
+        taskEdgeRepository.deleteAllById(toEdgesIdsToDelete);
+        // From nodes
+        List<UUID> fromEdgeIdsToDelete = taskEdgeRepository.findAllIdsByFromNodeIdIn(taskNodeIds);
+        if (!fromEdgeIdsToDelete.isEmpty()) {
             logger.info("Deleting task edges from nodes: {}", taskNodeIds);
-            taskEdgeRepository.deleteAll(edgesToDeleteFrom);
+            taskEdgeRepository.deleteAllById(fromEdgeIdsToDelete);
         }
     }
 
