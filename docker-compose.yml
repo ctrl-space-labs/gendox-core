@@ -36,8 +36,11 @@ services:
         - PROVEN_AI_GIT_BRANCH=${PROVEN_AI_GIT_BRANCH}
     image: gendox-core-api:latest
     container_name: gendox-core-api
+    env_file:
+      - ~/secrets/gcloud.env
     volumes:
       - ~/.aws/:/root/.aws:ro
+      - ~/secrets/gcloud-client-secret.json:/run/secrets/gcloud-client-secret.json:ro
     depends_on:
       gendox-database:
         condition: service_healthy
@@ -57,7 +60,7 @@ services:
       - GEMINI_KEY=${GEMINI_KEY}
       - MISTRAL_KEY=${MISTRAL_KEY}
       - VOYAGE_KEY=${VOYAGE_KEY}
-      - GCLOUD_CLIENT_SECRET=/run/secrets/gcloud-client-secret.json
+      - GCLOUD_CLIENT_SECRET_PATH=/run/secrets/gcloud-client-secret.json
       - GENDOX_SPRING_EMAIL_HOST=${GENDOX_SPRING_EMAIL_HOST}
       - GENDOX_SPRING_EMAIL_PORT=${GENDOX_SPRING_EMAIL_PORT}
       - GENDOX_SPRING_EMAIL_USERNAME=${GENDOX_SPRING_EMAIL_USERNAME}
