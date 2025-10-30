@@ -72,7 +72,7 @@ gendox:
 
   maintenance:
     daily-usage-aggregator:
-      fixed-delay: 86400000s # 24 hours in milliseconds
+      fixed-delay: 86400s # 24 hours
   domain:
     base-url: http://localhost:8080
 
