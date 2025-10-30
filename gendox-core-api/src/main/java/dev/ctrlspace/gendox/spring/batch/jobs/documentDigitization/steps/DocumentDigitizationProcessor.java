@@ -179,8 +179,10 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
         batch.setNewAnswers(newAnswers);
 
-        logger.info("Processing document node: {}, prompt: {}, structure: {}",
-                documentNode.getId(), prompt, structure);
+        logger.info("Processing document node: {}, instance id: {}, prompt: {}, structure: {}",
+                documentNode.getId(), documentInstance.getId(), prompt, structure);
+        logger.debug("Processing prompt: {}, structure: {}",
+                prompt, structure);
 
 
         return batch;

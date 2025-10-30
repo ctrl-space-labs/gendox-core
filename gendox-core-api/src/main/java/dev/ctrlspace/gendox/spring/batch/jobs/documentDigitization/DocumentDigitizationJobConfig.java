@@ -26,8 +26,11 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 public class DocumentDigitizationJobConfig {
+
     @Value("${gendox.batch-jobs.document-digitization.job.thread-pool-size}")
     private Integer threadPoolSize;
+    @Value("${gendox.batch-jobs.document-digitization.job.llm-completion-executor-pool-size}")
+    private Integer llmCompletionExecutorPoolSize;
     @Value("${gendox.batch-jobs.document-digitization.job.steps.document-digitization-step.chunk-size}")
     private Integer chunkSize;
     @Value("${gendox.batch-jobs.document-digitization.job.name}")
@@ -100,7 +103,7 @@ public class DocumentDigitizationJobConfig {
 
         executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
         // Throttle concurrency
-        executor.setConcurrencyLimit(threadPoolSize);
+        executor.setConcurrencyLimit(llmCompletionExecutorPoolSize);
         return executor;
     }
 
