@@ -56,7 +56,7 @@ export const useJobStatusPoller = ({ organizationId, projectId, token }) => {
     [organizationId, projectId, token]
   )
 
-  
+
 
   return { pollJobStatus, showTimeoutDialog, }
 }

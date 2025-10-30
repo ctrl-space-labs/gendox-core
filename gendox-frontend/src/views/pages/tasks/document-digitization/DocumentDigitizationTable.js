@@ -19,6 +19,7 @@ import GlobalGenerationStatus from '../generation/GlobalGenerationStatus'
 const MAX_PAGE_SIZE = 2147483647
 
 const DocumentDigitizationTable = ({ selectedTask }) => {
+  console.log("welcome to DocumentDigitizationTable")
   const router = useRouter()
   const dispatch = useDispatch()
   const token = window.localStorage.getItem('accessToken')
