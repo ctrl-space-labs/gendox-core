@@ -42,6 +42,8 @@ public interface ProjectDocumentRepository extends JpaRepository<ProjectDocument
     Optional<UUID> findProjectIdByDocumentId(@Param("documentId") UUID documentId);
 
     @Modifying
+    @Query(nativeQuery = true,
+            value = "DELETE FROM gendox_core.project_documents pd WHERE pd.document_id = :documentId AND pd.project_id = :projectId")
     void deleteByDocumentIdAndProjectId(@Param("documentId") UUID documentId, @Param("projectId") UUID projectId);
 
 

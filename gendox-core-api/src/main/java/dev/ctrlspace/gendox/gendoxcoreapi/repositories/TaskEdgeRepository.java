@@ -18,7 +18,8 @@ public interface TaskEdgeRepository extends JpaRepository<TaskEdge, UUID>, Query
 
     @Modifying
     @Transactional
-    @Query("DELETE FROM TaskEdge e WHERE e.id IN :ids")
+    @Query(nativeQuery = true,
+            value = "DELETE FROM gendox_core.task_edges e WHERE e.id IN :ids")
     void deleteAllByIds(@Param("ids") List<UUID> ids);
 
     @Query("select e.id from TaskEdge e where e.fromNode.id in :fromNodeIds")

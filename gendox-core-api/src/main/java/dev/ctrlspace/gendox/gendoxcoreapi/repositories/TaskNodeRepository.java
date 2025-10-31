@@ -24,7 +24,8 @@ public interface TaskNodeRepository extends JpaRepository<TaskNode, UUID>, Query
 
     @Modifying
     @Transactional
-    @Query("DELETE FROM TaskNode n WHERE n.id IN :ids")
+    @Query(nativeQuery = true,
+            value = "DELETE FROM gendox_core.task_nodes n WHERE n.id IN :ids")
     void deleteAllByIds(@Param("ids") List<UUID> ids);
 
     @Query("SELECT tn FROM TaskNode tn WHERE tn.taskId = :taskId AND tn.nodeType.name = :nodeTypeName")

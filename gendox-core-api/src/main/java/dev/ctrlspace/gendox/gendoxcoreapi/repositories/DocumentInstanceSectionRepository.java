@@ -55,19 +55,14 @@ public interface DocumentInstanceSectionRepository extends JpaRepository<Documen
               WHERE s.document_instance_id = :documentId
               RETURNING s.document_section_metadata_id
             ),
-            orphans AS (
-              SELECT DISTINCT d.document_section_metadata_id
-              FROM del_sections d
-              WHERE d.document_section_metadata_id IS NOT NULL
-                AND NOT EXISTS (
-                  SELECT 1
-                  FROM gendox_core.document_instance_sections s2
-                  WHERE s2.document_section_metadata_id = d.document_section_metadata_id
-                )
+            del_meta AS (
+              SELECT DISTINCT document_section_metadata_id AS id
+              FROM del_sections
+              WHERE document_section_metadata_id IS NOT NULL
             )
             DELETE FROM gendox_core.document_section_metadata m
-            USING orphans o
-            WHERE m.id = o.document_section_metadata_id
+            USING del_meta d
+            WHERE m.id = d.id;
             """, nativeQuery = true)
     int deleteSectionsAndOrphanMetadata(@Param("documentId") UUID documentId);
 
