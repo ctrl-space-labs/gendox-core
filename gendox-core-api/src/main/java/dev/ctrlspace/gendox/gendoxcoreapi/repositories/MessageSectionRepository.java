@@ -22,4 +22,7 @@ public interface MessageSectionRepository extends JpaRepository<MessageSection, 
     @Query("DELETE FROM MessageSection ms WHERE ms.sectionId IN :sectionIds")
     void bulkDeleteBySectionIds(@Param("sectionIds") List<UUID> sectionIds);
 
+    @Modifying
+    void deleteByDocumentId(UUID documentId);
+
 }

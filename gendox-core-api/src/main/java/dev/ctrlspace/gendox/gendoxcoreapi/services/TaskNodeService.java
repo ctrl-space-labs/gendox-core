@@ -222,12 +222,8 @@ public class TaskNodeService {
     public void deleteTaskNodeAndConnectionNodes(UUID taskNodeId) throws GendoxException {
         logger.info("Deleting task node and its connection nodes: {}", taskNodeId);
 
-        // Fetch the node to delete
-        TaskNode nodeToDelete = taskNodeRepository.findById(taskNodeId)
-                .orElseThrow(() -> new GendoxException("TASK_NODE_NOT_FOUND", "Task node not found for deletion", HttpStatus.NOT_FOUND));
-
         // Find all edges connected to this node
-        List<TaskEdge> edgesToDeleteTo = taskEdgeRepository.findAllByToNodeIdIn(List.of(nodeToDelete.getId()));
+        List<TaskEdge> edgesToDeleteTo = taskEdgeRepository.findAllByToNodeIdIn(List.of(taskNodeId));
 
         List<UUID> fromNodeIds = edgesToDeleteTo.stream()
                 .map(edge -> edge.getFromNode().getId())
@@ -250,7 +246,7 @@ public class TaskNodeService {
         }
 
         // Now delete the node itself
-        taskNodeRepository.delete(nodeToDelete);
+        taskNodeRepository.deleteById(taskNodeId);
     }
 
     /**

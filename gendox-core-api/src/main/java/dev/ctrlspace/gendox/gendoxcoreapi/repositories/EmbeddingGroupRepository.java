@@ -1,6 +1,7 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.EmbeddingGroup;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -46,5 +47,21 @@ public interface EmbeddingGroupRepository extends JpaRepository<EmbeddingGroup, 
     @Query("DELETE FROM EmbeddingGroup eg WHERE eg.sectionId IN :sectionIds")
     void bulkDeleteBySectionIds(@Param("sectionIds") List<UUID> sectionIds);
 
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            WITH del_groups
+                AS (
+                DELETE FROM gendox_core.embedding_group eg
+                    USING gendox_core.document_instance_sections ds
+                    WHERE eg.section_id = ds.id AND ds.document_instance_id = :documentId
+                    RETURNING 1)
+            DELETE
+            FROM gendox_core.embedding eg
+            USING gendox_core.document_instance_sections ds
+            WHERE eg.section_id = ds.id
+              AND ds.document_instance_id = :documentId
+            """,
+            nativeQuery = true)
+    int deleteGroupsAndEmbeddingsByDocumentId(@Param("documentId") UUID documentId);
 
 }

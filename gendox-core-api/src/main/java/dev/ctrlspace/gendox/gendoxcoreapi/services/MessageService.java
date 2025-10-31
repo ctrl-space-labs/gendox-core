@@ -187,9 +187,9 @@ public class MessageService {
     }
 
     @Transactional
-    public void deleteMessageSections(List<UUID> sectionIds) {
-        if (sectionIds != null && !sectionIds.isEmpty()) {
-            messageSectionRepository.bulkDeleteBySectionIds(sectionIds);
+    public void deleteMessageSectionsByDocumentId(UUID documentId) {
+        if (documentId != null) {
+            messageSectionRepository.deleteByDocumentId(documentId);
         }
     }
 

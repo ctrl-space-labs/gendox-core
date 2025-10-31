@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 import com.querydsl.core.types.Predicate;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
+import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -46,10 +47,30 @@ public interface DocumentInstanceSectionRepository extends JpaRepository<Documen
     @Query("SELECT COUNT(dis) FROM DocumentInstanceSection dis WHERE dis.documentInstance.id IN :documentInstanceIds")
     long countByDocumentInstanceIds(@Param("documentInstanceIds") Set<UUID> documentInstanceIds);
 
+    // Deletes all sections for the doc, then deletes ONLY metadata no longer referenced by any section
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            WITH del_sections AS (
+              DELETE FROM gendox_core.document_instance_sections s
+              WHERE s.document_instance_id = :documentId
+              RETURNING s.document_section_metadata_id
+            ),
+            orphans AS (
+              SELECT DISTINCT d.document_section_metadata_id
+              FROM del_sections d
+              WHERE d.document_section_metadata_id IS NOT NULL
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM gendox_core.document_instance_sections s2
+                  WHERE s2.document_section_metadata_id = d.document_section_metadata_id
+                )
+            )
+            DELETE FROM gendox_core.document_section_metadata m
+            USING orphans o
+            WHERE m.id = o.document_section_metadata_id
+            """, nativeQuery = true)
+    int deleteSectionsAndOrphanMetadata(@Param("documentId") UUID documentId);
 
-    @Modifying
-    @Query("DELETE FROM DocumentInstanceSection d WHERE d.id IN :ids")
-    void deleteAllByIdsInBulk(@Param("ids") List<UUID> ids);
 
 
 }

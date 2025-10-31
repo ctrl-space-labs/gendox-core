@@ -33,6 +33,10 @@ public interface TaskNodeRepository extends JpaRepository<TaskNode, UUID>, Query
     @Query("SELECT tn FROM TaskNode tn WHERE tn.documentId = :documentId AND tn.nodeType.name = :nodeTypeName")
     List<TaskNode> findAllByDocumentIdAndNodeTypeName(@Param("documentId") UUID documentId, @Param("nodeTypeName") String nodeTypeName);
 
+    @Query("select e.fromNode from TaskEdge e where e.toNode.id = :toNodeId")
+    List<TaskNode> findNodesPointingTo(@Param("toNodeId") UUID toNodeId);
+
+
 
     @Query("""
                 select docNode, quesNode
