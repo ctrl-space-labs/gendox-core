@@ -1,7 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
@@ -289,23 +288,12 @@ public class EmbeddingService {
     }
 
     @Transactional
-    public void deleteEmbeddingGroupsBySectionIds(List<UUID> sectionIds) throws GendoxException {
-        if (sectionIds == null || sectionIds.isEmpty()) {
+    public void deleteEmbeddingGroupsByDocumentId(UUID documentIds) throws GendoxException {
+        if (documentIds == null) {
             return;
         }
-        // Retrieve all embedding groups associated with these section IDs
-        List<EmbeddingGroup> embeddingGroups = embeddingGroupRepository.findAllBySectionIdIn(sectionIds);
-        if (!embeddingGroups.isEmpty()) {
-            List<UUID> embeddingIds = embeddingGroups.stream()
-                    .map(EmbeddingGroup::getEmbeddingId)
-                    .collect(Collectors.toList());
 
-            // delete embedding groups
-            embeddingGroupRepository.bulkDeleteBySectionIds(sectionIds);
-
-            // delete embeddings
-            embeddingRepository.deleteAllByIdInBatch(embeddingIds);
-        }
+        embeddingGroupRepository.deleteGroupsAndEmbeddingsByDocumentId(documentIds);
     }
 
     /**

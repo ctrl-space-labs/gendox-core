@@ -10,7 +10,6 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -242,10 +241,10 @@ public class DocumentService {
     @Transactional
     public void deleteDocument(DocumentInstance documentInstance, UUID projectId) throws GendoxException {
 
-        List<DocumentInstanceSection> managedSections = documentSectionService.getSectionsByDocument(documentInstance.getId());
+
         // Delete task nodes associated with this document
         taskNodeService.deleteDocumentNodeAndConnectionNodesByDocumentId(documentInstance.getId());
-        documentSectionService.deleteSections(managedSections);
+        documentSectionService.deleteSectionsByDocumentId(documentInstance.getId());
 
         // Delete any project-specific associations (make sure these are done in bulk too)
         projectDocumentService.deleteProjectDocument(documentInstance.getId(), projectId);
@@ -258,7 +257,7 @@ public class DocumentService {
         deleteDocumentAuditLogs.setAuditValue(documentInstance.getFileSizeBytes());
 
         auditLogsService.saveAuditLogs(deleteDocumentAuditLogs);
-        documentInstanceRepository.delete(documentInstance);
+        documentInstanceRepository.deleteById(documentInstance.getId());
 
 
     }

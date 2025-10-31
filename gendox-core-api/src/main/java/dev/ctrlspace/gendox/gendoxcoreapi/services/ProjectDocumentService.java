@@ -73,8 +73,8 @@ public class ProjectDocumentService {
     }
 
     public void deleteProjectDocument(UUID documentIid, UUID projectId) throws GendoxException {
-        ProjectDocument projectDocument = getProjectDocument(documentIid, projectId);
-        projectDocumentRepository.delete(projectDocument);
+
+        projectDocumentRepository.deleteByDocumentIdAndProjectId(documentIid, projectId);
     }
 
 
