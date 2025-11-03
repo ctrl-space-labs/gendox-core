@@ -12,7 +12,6 @@ import { fetchTaskById } from 'src/store/activeTask/activeTask'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import DocumentDigitizationTable from 'src/views/pages/tasks/document-digitization/DocumentDigitizationTable'
 import { GenerationProvider } from 'src/views/pages/tasks/generation/GenerationContext'
-import GlobalGenerationStatus from 'src/views/pages/tasks/generation/GlobalGenerationStatus'
 
 const DocumentDigitization = () => {
   const dispatch = useDispatch()
@@ -35,7 +34,6 @@ const DocumentDigitization = () => {
 
   return (
     <GenerationProvider>
-      <GlobalGenerationStatus />
       <Card sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
         <ResponsiveCardContent sx={{ backgroundColor: 'background.paper' }}>
           <Box

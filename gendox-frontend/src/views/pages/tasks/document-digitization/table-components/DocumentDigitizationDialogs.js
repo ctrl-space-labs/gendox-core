@@ -24,10 +24,17 @@ const DocumentDigitizationDialogs = ({
   documentPages = [],
   generateSingleDocument,
   onExportCsv,
-  isExportingCsv
+  isExportingCsv,
+  isDocumentGenerating,
+  generatingAll = false,
+  generatingNew = false,
+  generatingSelected = false
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
+  const isGenRunningGlobal = generatingAll || generatingNew || generatingSelected
+  const isGenRunningForActiveDoc = activeNode?.id ? isDocumentGenerating?.(activeNode.id) : false
+  const dialogLoading = Boolean(loading || isGenRunningGlobal || isGenRunningForActiveDoc)
 
   // SAVE document handler for DocumentDialog
   const handleUpdateDocument = async updatedDoc => {
@@ -123,10 +130,11 @@ const DocumentDigitizationDialogs = ({
         document={activeNode}
         documentPages={documentPages}
         generateSingleDocument={generateSingleDocument}
-        onDocumentUpdate={(updatedDoc) => {
+        onDocumentUpdate={updatedDoc => {
           // Refresh documents to show updated data
           if (refreshDocuments) refreshDocuments()
         }}
+        dialogLoading={dialogLoading}
         onExportCsv={onExportCsv}
         isExportingCsv={isExportingCsv}
         onDelete={() => onOpen && onOpen('delete', activeNode)}

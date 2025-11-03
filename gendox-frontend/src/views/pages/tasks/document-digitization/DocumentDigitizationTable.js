@@ -15,6 +15,7 @@ import useExportFile from 'src/views/pages/tasks/document-digitization/table-hoo
 import { useGeneration } from '../generation/GenerationContext'
 import { checkAndResumeRunningJob } from '../generation/runningJobsDetectionUtils'
 import GlobalGenerationStatus from '../generation/GlobalGenerationStatus'
+import useGenerateNewPagesGuard from 'src/views/pages/tasks/document-digitization/table-hooks/useGenerateNewPagesGuard'
 
 const MAX_PAGE_SIZE = 2147483647
 
@@ -71,7 +72,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         size: MAX_PAGE_SIZE
       })
     )
-  }, [organizationId, projectId, taskId, token, dispatch])
+  }, [organizationId, projectId, taskId, token, dispatch, taskNodesDocumentList])
 
   const handleGenerationComplete = useCallback(() => {
     completeGeneration(taskId, null)
@@ -88,40 +89,51 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       })
       .catch(err => console.error('Failed to refresh document pages:', err))
 
-    toast.success('Generation completed successfully!')
   }, [completeGeneration, taskId, fetchDocuments, loadDocumentPages])
 
   useEffect(() => {
     if (!(organizationId && projectId && taskId && token)) return
 
-    let localCleanup = null
+    let stopPollingFn = null
+    let cancelled = false
 
-    ;(async () => {
-      const { wasRunning, cleanup } = await checkAndResumeRunningJob({
-        organizationId,
-        projectId,
-        taskId,
-        token,
-        onResume: () => {
-          // mirror your previous UI "resumed" state
-          startGeneration(taskId, null, 'resumed', { documentNames: 'Background processing...', totalDocuments: 0 })
-        },
-        onComplete: handleGenerationComplete,
-        onError: e => console.error('Polling error:', e),
-        intervalMs: 3000
-      })
 
-      localCleanup = cleanup
-      setPollCleanup(() => cleanup)
+    async function resumeIfNeeded() {
+      try {
+        console.log('Attempting to resume running job if any...')
+        const { stopPolling } = await checkAndResumeRunningJob({
+          organizationId,
+          projectId,
+          taskId,
+          token,
+          onResume: () => {
+            startGeneration(taskId, null, 'resumed', {
+              documentNames: 'Background processing...',
+              totalDocuments: 0
+            })
+          },
+          onComplete: handleGenerationComplete,
+          onError: e => console.error('Polling error:', e),
+          intervalMs: 3000
+        })
 
-      // (optional) if you want a toast when we detect a running job on page load:
-      if (wasRunning) {
-        // toast('Resumed background processing…')
+        if (cancelled) {
+          stopPolling?.()
+          return
+        }
+        stopPollingFn = stopPolling
+        setPollCleanup(() => stopPolling)
+      } catch (err) {
+        console.error('Failed to resume running job:', err)
       }
-    })()
+    }
+
+
+    resumeIfNeeded()
 
     return () => {
-      if (localCleanup) localCleanup()
+      cancelled = true
+      stopPollingFn?.()
       setPollCleanup(null)
     }
   }, [organizationId, projectId, taskId, token, startGeneration, handleGenerationComplete])
@@ -198,6 +210,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
               structure: node.nodeValue?.documentMetadata?.structure || '',
               pageFrom: node.nodeValue?.documentMetadata?.pageFrom || null,
               pageTo: node.nodeValue?.documentMetadata?.pageTo || null,
+              allPages: node.nodeValue?.documentMetadata?.allPages ?? false,
               createdAt: node.createdAt || new Date().toISOString()
             }
           })
@@ -294,8 +307,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         .catch(error => {
           console.error('Failed to refresh document pages:', error)
         })
-
-      toast.success('Data refreshed successfully!')
     }
   })
 
@@ -308,9 +319,49 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     documents
   })
 
+  // Handle Retry Generation from Global Status
+  const handleRetryGeneration = useCallback(
+    gen => {
+      const t = gen.type ?? gen.generationType
+
+      switch (t) {
+        case 'all':
+          return generateAll()
+        case 'new':
+          return generateNew()
+        case 'selected': {
+          const ids = gen.selectedIds ?? []
+          if (!ids.length) {
+            toast.error('No selected documents for regeneration.')
+            return
+          }
+          return generateSelected(ids)
+        }
+        case 'single': {
+          const doc = documents.find(d => d.id === gen.documentId)
+          if (!doc) {
+            toast.error('Document not found for regeneration.')
+            return
+          }
+          const from = gen.pageFrom ?? doc.pageFrom ?? null
+          const to = gen.pageTo ?? doc.pageTo ?? null
+          return generateSingleDocument(doc, from, to)
+        }
+        default:
+          console.warn('Unknown generation type on retry:', gen)
+      }
+    },
+    [generateAll, generateNew, generateSelected, generateSingleDocument, documents]
+  )
+  const { disableGenerateFlag } = useGenerateNewPagesGuard({
+    documents,
+    selectedDocuments,
+    documentPages
+  })
+  
   return (
     <>
-    <GlobalGenerationStatus showTimeoutDialog={showTimeoutDialog} />
+      <GlobalGenerationStatus showTimeoutDialog={showTimeoutDialog} onRetryGeneration={handleRetryGeneration} />
       <Paper sx={{ p: 3, overflowX: 'auto', backgroundColor: 'action.hover', mb: 3 }}>
         <HeaderSection
           title={selectedTask?.title}
@@ -319,6 +370,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
           onGenerateNew={generateNew}
           onGenerateAll={generateAll}
           onGenerateSelected={() => generateSelected(selectedDocuments)}
+          disableGenerateNew={disableGenerateFlag}
           disableGenerate={documents.length === 0}
           isLoading={isLoading}
           isExportingCsv={isExportingCsv}
@@ -372,8 +424,11 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         generateSingleDocument={generateSingleDocument}
         onExportCsv={exportDocumentDigitizationCsv}
         isExportingCsv={isExportingCsv}
+        isDocumentGenerating={isDocumentGenerating}
+        generatingAll={generatingAll}
+        generatingNew={generatingNew}
+        generatingSelected={generatingSelectedState}
       />
-      
     </>
   )
 }

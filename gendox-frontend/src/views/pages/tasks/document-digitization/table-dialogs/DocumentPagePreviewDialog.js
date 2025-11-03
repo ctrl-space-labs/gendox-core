@@ -45,6 +45,7 @@ import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/router'
 import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
+import useGenerateNewPagesGuard from 'src/views/pages/tasks/document-digitization/table-hooks/useGenerateNewPagesGuard'
 
 const TextareaAutosizeStyled = forwardRef((props, ref) => {
   const theme = useTheme()
@@ -77,6 +78,7 @@ const DocumentPagePreviewDialog = ({
   documentPages,
   onDocumentUpdate,
   generateSingleDocument,
+  dialogLoading,
   onExportCsv,
   isExportingCsv,
   onDelete
@@ -109,6 +111,28 @@ const DocumentPagePreviewDialog = ({
     ? documentPages.find(page => page.taskDocumentNodeId === document?.id)
     : (documentPages?.content || []).find(page => page.taskDocumentNodeId === document?.id)
   const totalPages = docPage?.documentPages || 0
+
+  const parsedFrom = pageFrom && pageFrom.trim() ? parseInt(pageFrom, 10) : null
+  const parsedTo = pageTo && pageTo.trim() ? parseInt(pageTo, 10) : null
+  const allPagesFlag = selectAllPages || ((!pageFrom || pageFrom.trim() === '') && (!pageTo || pageTo.trim() === ''))
+
+  const { requestedExceedsGeneratedSingle, generateNewDisabledSingle } = useGenerateNewPagesGuard({
+    documentPages,
+    singleDoc: {
+      docId: currentDocument?.id,
+      pageFrom: parsedFrom,
+      pageTo: parsedTo,
+      allPages: allPagesFlag
+    }
+  })
+
+  const generateNewDisabled = generateNewDisabledSingle({
+    isSupported: isFileTypeSupported(currentDocument?.url),
+    hasPrompt: !!currentDocument?.prompt?.trim(),
+    isGenerating,
+    dialogLoading,
+    pageRangeError
+  })
 
   // Validation function for page range
   const validatePageRange = (fromPage, toPage, updateState = true) => {
@@ -154,7 +178,7 @@ const DocumentPagePreviewDialog = ({
         setPageFrom(fromPage)
         setPageTo(toPage)
         // Set selectAllPages to true if both pageFrom and pageTo are empty
-        setSelectAllPages(!fromPage && !toPage)
+        setSelectAllPages(document?.allPages || (!fromPage && !toPage))
       }
     }
   }, [open, document])
@@ -268,7 +292,7 @@ const DocumentPagePreviewDialog = ({
       const toPage = currentDocument?.pageTo ? currentDocument.pageTo.toString() : ''
       setPageFrom(fromPage)
       setPageTo(toPage)
-      setSelectAllPages(!fromPage && !toPage)
+      setSelectAllPages(currentDocument?.allPages || (!fromPage && !toPage))
     }
     setFullscreen(false)
     setPageNodes([])
@@ -348,7 +372,8 @@ const DocumentPagePreviewDialog = ({
         prompt: promptValue,
         structure: structureValue,
         pageFrom: pageFrom && pageFrom.trim() ? parseInt(pageFrom, 10) : null,
-        pageTo: pageTo && pageTo.trim() ? parseInt(pageTo, 10) : null
+        pageTo: pageTo && pageTo.trim() ? parseInt(pageTo, 10) : null,
+        allPages: updateData.allPages
       }
 
       // Update local state to reflect changes immediately
@@ -379,7 +404,7 @@ const DocumentPagePreviewDialog = ({
     const toPage = currentDocument?.pageTo ? currentDocument.pageTo.toString() : ''
     setPageFrom(fromPage)
     setPageTo(toPage)
-    setSelectAllPages(!fromPage && !toPage)
+    setSelectAllPages(currentDocument?.allPages || (!fromPage && !toPage))
     setPageRangeError('')
   }
 
@@ -722,13 +747,38 @@ const DocumentPagePreviewDialog = ({
                         !isFileTypeSupported(currentDocument?.url) ||
                         !currentDocument.prompt?.trim() ||
                         isGenerating ||
+                        dialogLoading ||
                         pageRangeError !== ''
                       }
                     >
-                      {isGenerating ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
+                      {isGenerating || dialogLoading ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
                     </IconButton>
                   </span>
                 </Tooltip>
+                <Tooltip
+                  title={
+                    !isFileTypeSupported(currentDocument?.url)
+                      ? 'This file format is not supported for generation'
+                      : !currentDocument.prompt?.trim()
+                      ? 'Add a prompt first to generate answers'
+                      : pageRangeError !== ''
+                      ? `Fix page range error: ${pageRangeError}`
+                      : !requestedExceedsGeneratedSingle
+                      ? 'All selected pages have been generated'
+                      : 'Generate NEW pages'
+                  }
+                >
+                  <span>
+                    <IconButton
+                      size='small'
+                      onClick={handleGenerate}
+                      sx={{ mr: 1 }}
+                      disabled={generateNewDisabled}
+                    >
+                      {isGenerating || dialogLoading ? <CircularProgress size={20} /> : <AutoAwesomeIcon />}
+                    </IconButton>
+                  </span>
+                </Tooltip>{' '}
                 <Tooltip title='Delete document'>
                   <span>
                     <IconButton
@@ -741,7 +791,6 @@ const DocumentPagePreviewDialog = ({
                     </IconButton>
                   </span>
                 </Tooltip>
-
                 <Tooltip title={isExportingCsv ? 'Exporting...' : 'Export data as CSV'}>
                   <span>
                     <IconButton
@@ -773,7 +822,7 @@ const DocumentPagePreviewDialog = ({
       </AppBar>
 
       {/* Generation Progress Banner */}
-      {isGenerating && (
+      {(isGenerating || dialogLoading) && (
         <Box
           sx={{
             backgroundColor: 'primary.main',
@@ -956,12 +1005,12 @@ const DocumentPagePreviewDialog = ({
                         border: '1px solid',
                         borderColor: 'divider',
                         minHeight: 40,
-                        maxHeight: '30vh', 
-                        overflowY: 'auto', 
+                        maxHeight: '30vh',
+                        overflowY: 'auto',
                         fontFamily: 'monospace',
                         whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word', 
-                        overflowWrap: 'anywhere' 
+                        wordBreak: 'break-word',
+                        overflowWrap: 'anywhere'
                       }}
                     >
                       {promptValue || 'No prompt specified'}
@@ -992,12 +1041,12 @@ const DocumentPagePreviewDialog = ({
                         border: '1px solid',
                         borderColor: 'divider',
                         minHeight: 40,
-                        maxHeight: '30vh', 
-                        overflowY: 'auto', 
+                        maxHeight: '30vh',
+                        overflowY: 'auto',
                         fontFamily: 'monospace',
                         whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word', 
-                        overflowWrap: 'anywhere' 
+                        wordBreak: 'break-word',
+                        overflowWrap: 'anywhere'
                       }}
                     >
                       {structureValue || 'No structure specified'}
@@ -1096,7 +1145,7 @@ const DocumentPagePreviewDialog = ({
           </ResponsiveCardContent>
 
           {/* Subtle loading overlay for content area */}
-          {isGenerating && (
+          {(isGenerating || dialogLoading) && (
             <Box
               sx={{
                 position: 'absolute',

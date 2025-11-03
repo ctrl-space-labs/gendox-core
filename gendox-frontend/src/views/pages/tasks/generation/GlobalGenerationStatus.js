@@ -20,7 +20,7 @@ import ErrorIcon from '@mui/icons-material/Error'
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
 import { useGeneration } from 'src/views/pages/tasks/generation/GenerationContext'
 
-const GlobalGenerationStatus = ({ showTimeoutDialog = false }) => {
+const GlobalGenerationStatus = ({ showTimeoutDialog = false, onRetryGeneration }) => {
   const { activeGenerations, completeGeneration, retryGeneration } = useGeneration()
   const [expanded, setExpanded] = useState(false)
   const [dismissed, setDismissed] = useState(false)
@@ -68,8 +68,6 @@ const GlobalGenerationStatus = ({ showTimeoutDialog = false }) => {
       clearTimeout(autoHideTimeout)
       setAutoHideTimeout(null)
     }
-    // Auto-restore when new generations start
-    setTimeout(() => setDismissed(false), 100)
   }
 
   // Drag functionality
@@ -246,7 +244,9 @@ const GlobalGenerationStatus = ({ showTimeoutDialog = false }) => {
                   <GenerationItem
                     key={`${gen.taskId}-${gen.documentId || 'all'}`}
                     generation={gen}
-                    onRetry={() => retryGeneration(gen.taskId, gen.documentId)}
+                     onRetry={() =>
+                      onRetryGeneration ? onRetryGeneration(gen) : retryGeneration(gen.taskId, gen.documentId)
+                    }
                     onDismiss={() => completeGeneration(gen.taskId, gen.documentId)}
                   />
                 ))}
