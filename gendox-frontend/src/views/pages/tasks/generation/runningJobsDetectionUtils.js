@@ -1,6 +1,5 @@
 import taskService from 'src/gendox-sdk/taskService'
 
-
 export const checkJobStatus = async (organizationId, projectId, taskId, token) => {
   if (!organizationId || !projectId || !taskId || !token) return
 
@@ -36,24 +35,35 @@ export const startJobCompletionPolling = ({
     return () => {}
   }
 
-  const pollInterval = setInterval(async () => {
+  let stopped = false
+
+  async function tick() {
+    // const pollInterval = setInterval(async () => {
     try {
       const jobs = await checkJobStatus(organizationId, projectId, taskId, token)
       onTick?.(jobs)
+
+
       const isStillRunning = Array.isArray(jobs) && jobs.length > 0
       if (!isStillRunning) {
-        clearInterval(pollInterval)
         onComplete?.()
+      }
+      if (!stopped) {
+        setTimeout(tick, intervalMs)
       }
     } catch (err) {
       console.error('Error polling job completion:', err)
-      clearInterval(pollInterval)
       onError?.(err)
     }
-  }, intervalMs)
+  }
 
-  return () => clearInterval(pollInterval)
+  tick()
+
+  return () => {
+    stopped = true
+  }
 }
+
 
 export const checkAndResumeRunningJob = async ({
   organizationId,
@@ -70,13 +80,13 @@ export const checkAndResumeRunningJob = async ({
   const wasRunning = Array.isArray(jobs) && jobs.length > 0
 
   if (!wasRunning) {
-    return { wasRunning: false, cleanup: () => {} }
+    return { wasRunning: false, stopPolling: () => {} }
   }
 
   // Notify the UI that we resumed a background job
   onResume?.(jobs)
 
-  const cleanup = startJobCompletionPolling({
+  const stopPolling = startJobCompletionPolling({
     organizationId,
     projectId,
     taskId,
@@ -87,5 +97,5 @@ export const checkAndResumeRunningJob = async ({
     intervalMs
   })
 
-  return { wasRunning: true, cleanup }
+  return { wasRunning: true, stopPolling }
 }

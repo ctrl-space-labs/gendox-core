@@ -30,7 +30,6 @@ export const useJobStatusPoller = ({ organizationId, projectId, token }) => {
         }
 
         await new Promise(res => setTimeout(res, currentInterval))
-        console.log(`[POLLING] Waiting ${currentInterval}ms, elapsed: ${elapsed}ms`)
 
         const criteria = {
           jobExecutionIdsIn: [jobExecutionId]
@@ -39,7 +38,6 @@ export const useJobStatusPoller = ({ organizationId, projectId, token }) => {
         const response = await taskService.getJobsByCriteria(organizationId, projectId, criteria, token)
 
         let status = response.data?.content[0]?.status
-        console.log(`[POLLING] Got response, status: ${status}`)
         if (typeof status === 'string') {
           status = status.trim().toUpperCase()
         }
@@ -52,7 +50,6 @@ export const useJobStatusPoller = ({ organizationId, projectId, token }) => {
           throw new Error(`Job ended with status: ${status}`)
         }
 
-        // await new Promise(res => setTimeout(res, currentInterval))
       }
     },
     [organizationId, projectId, token]

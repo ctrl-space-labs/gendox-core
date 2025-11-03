@@ -23,7 +23,6 @@ export default function useDocumentDigitizationGeneration({
   const [generatingSelected, setGeneratingSelected] = useState(false)
   const [generatingDocuments, setGeneratingDocuments] = useState(new Set())
 
-
   // Helper function to check if document has been generated
   const hasGeneratedContent = useCallback(
     documentId => {
@@ -40,7 +39,14 @@ export default function useDocumentDigitizationGeneration({
 
   // Helper function to execute generation with proper state management
   const executeGeneration = useCallback(
-    async (docs, generationType, reGenerateExistingAnswers = false, pageFrom = null, pageTo = null) => {
+    async (
+      docs,
+      generationType,
+      reGenerateExistingAnswers = false,
+      pageFrom = null,
+      pageTo = null,
+      allPages = null
+    ) => {
       let setLoading
       switch (generationType) {
         case 'all':
@@ -61,7 +67,19 @@ export default function useDocumentDigitizationGeneration({
 
       // Start global generation tracking with document info
       const documentNames = docs.map(doc => doc.name).join(', ')
-      startGeneration(taskId, documentId, generationType, { documentNames, totalDocuments: docs.length })
+      const metadataForContext = {
+        documentNames,
+        totalDocuments: docs.length,
+        // retry metadata
+        selectedIds: docIds,
+        reGenerateExistingAnswers,
+        pageFrom: pageFrom ?? null,
+        pageTo: pageTo ?? null,
+        allPages: allPages ?? null,
+        generationType
+      }
+
+      startGeneration(taskId, documentId, generationType, metadataForContext)
 
       // Set individual document loading states
       setGeneratingDocuments(prev => new Set([...prev, ...docIds]))
@@ -148,17 +166,36 @@ export default function useDocumentDigitizationGeneration({
     ]
   )
 
+  // helper για να βρούμε τα counts από το documentPages
+  const getDocPageStats = useCallback(
+    docId => {
+      const dp = Array.isArray(documentPages)
+        ? documentPages.find(p => p.taskDocumentNodeId === docId)
+        : (documentPages?.content || []).find(p => p.taskDocumentNodeId === docId)
+
+      return {
+        total: dp?.documentPages ?? 0,
+        generated: dp?.numberOfNodePages ?? 0
+      }
+    },
+    [documentPages]
+  )
+
   // Generate New: Only documents that haven't been generated yet
   const generateNew = useCallback(async () => {
     const docsWithPrompts = documents.filter(doc => doc.prompt && doc.prompt.trim())
     const newDocs = docsWithPrompts.filter(doc => !hasGeneratedContent(doc.id))
 
-    if (newDocs.length === 0) {
-      toast.success('No new documents to generate. All documents with prompts have already been generated.')
+    const docsWithMissing = docsWithPrompts.filter(d => {
+      const { total, generated } = getDocPageStats(d.id)
+      return total > 0 && generated < total
+    })
+    if (docsWithMissing.length === 0) {
+      toast.success('No new pages to generate. All documents are fully processed.')
       return
     }
-
-    await executeGeneration(newDocs, 'new', false)
+    
+    await executeGeneration(docsWithMissing, 'new', false)
   }, [documents, hasGeneratedContent, executeGeneration])
 
   // Generate All: All documents with prompts, regenerate existing ones
