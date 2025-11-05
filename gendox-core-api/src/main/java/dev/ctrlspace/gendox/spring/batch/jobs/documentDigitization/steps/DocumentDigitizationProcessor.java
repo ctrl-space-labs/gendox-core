@@ -73,7 +73,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
         TaskAnswerBatchDTO batch = new TaskAnswerBatchDTO();
 
-        TaskNode documentNode = taskNodeService.getTaskNodeById(documentMetadata.getTaskNodeId());
+        TaskNode documentNode = documentMetadata.getTaskNode();
         if (documentNode.getDocumentId() == null) {
             return null;
         }
@@ -88,7 +88,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
             project.getProjectAgent().getAiTools().size();
         }
 
-        DocumentInstance documentInstance = documentService.getDocumentInstanceById(documentNode.getDocumentId());
+        DocumentInstance documentInstance = documentMetadata.getDocumentInstance();
 
 
         TaskNodeCriteria existingAnswersCriteria = TaskNodeCriteria.builder()
@@ -176,6 +176,8 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
+        // incentivize GC to free memory
+        printedPagesBase64.clear();
 
         batch.setNewAnswers(newAnswers);
 

@@ -207,12 +207,13 @@ gendox:
     document-digitization:
       job:
         name: documentDigitizationJob
-        thread-pool-size: 1     # Process books one-by-one, each book runs in parallel multiple pages
+        thread-pool-size: 2     # Process books 2-by-2, each book runs in parallel multiple pages
         llm-completion-executor-pool-size: 10     # Run 10 LLM completions in parallel for 10 pages
         steps:
           document-digitization-step:
             name: documentDigitizationStep
             chunk-size: 1
+            doc-page-chunk-size: 20  # Process docs at batches of 20 pages
             pageable-size: 1000
   user-invitation:
     accept-url-template: /accept-invitation/?email=%s&token=%s

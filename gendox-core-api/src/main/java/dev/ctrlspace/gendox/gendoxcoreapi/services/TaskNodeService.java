@@ -1,9 +1,11 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.DocumentNodeAnswerPagesDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentMetadataDTO;
@@ -17,10 +19,10 @@ import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,17 +37,20 @@ public class TaskNodeService {
     private final TaskEdgeRepository taskEdgeRepository;
     private final TypeService typeService;
     private final EntityManager entityManager;
+    private final DocumentService documentService;
 
 
     @Autowired
     public TaskNodeService(TaskNodeRepository taskNodeRepository,
                            TaskEdgeRepository taskEdgeRepository,
                            TypeService typeService,
-                           EntityManager entityManager) {
+                           EntityManager entityManager,
+                           @Lazy DocumentService documentService) {
         this.taskNodeRepository = taskNodeRepository;
         this.taskEdgeRepository = taskEdgeRepository;
         this.typeService = typeService;
         this.entityManager = entityManager;
+        this.documentService = documentService;
     }
 
 
@@ -325,15 +330,19 @@ public class TaskNodeService {
         return documentsPage;
     }
 
-    public Page<TaskDocumentMetadataDTO> getTaskDocumentMetadataByCriteria(TaskNodeCriteria criteria, Pageable pageable) {
+    public Page<TaskDocumentMetadataDTO> getTaskDocumentMetadataByCriteria(TaskNodeCriteria criteria, Pageable pageable) throws GendoxException {
         logger.info("Fetching task document metadata by criteria: {}", criteria);
 
         Page<TaskNode> nodesPage = taskNodeRepository.findAll(TaskNodePredicates.build(criteria), pageable);
+        Map<UUID, DocumentInstance> documentsById = getDocumentsById(nodesPage);
 
         List<TaskDocumentMetadataDTO> metadataList = nodesPage.stream()
                 .map(node -> {
                     TaskDocumentMetadataDTO.TaskDocumentMetadataDTOBuilder builder = TaskDocumentMetadataDTO.builder()
-                            .taskNodeId(node.getId());
+                            .taskNodeId(node.getId())
+                            .taskNode(node)
+                            .documentInstance(documentsById.get(node.getDocumentId()));
+
                     if (node.getNodeValue() != null) {
                         if (node.getNodeValue().getDocumentMetadata() != null) {
                             builder.prompt(node.getNodeValue().getDocumentMetadata().getPrompt());
@@ -348,6 +357,23 @@ public class TaskNodeService {
                 .collect(Collectors.toList());
 
         return new PageImpl<>(metadataList, pageable, nodesPage.getTotalElements());
+    }
+
+    private Map<UUID, DocumentInstance> getDocumentsById(Page<TaskNode> nodesPage) throws GendoxException {
+        List<UUID> documentIdsInvolved = nodesPage.stream()
+                .map(TaskNode::getDocumentId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        DocumentCriteria documentCriteria = DocumentCriteria.builder()
+                .documentInstanceIds(documentIdsInvolved.stream().map(UUID::toString).collect(Collectors.toList()))
+                .build();
+        Map<UUID, DocumentInstance> documentsById = documentService.getAllDocuments(documentCriteria, Pageable.unpaged())
+                .stream()
+                .collect(Collectors.toMap(DocumentInstance::getId, doc -> doc));
+
+        return documentsById;
     }
 
 

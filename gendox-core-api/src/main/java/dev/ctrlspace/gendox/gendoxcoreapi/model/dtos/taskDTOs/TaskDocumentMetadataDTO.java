@@ -1,5 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,4 +23,10 @@ public class TaskDocumentMetadataDTO {
     private Integer pageFrom;
     private Integer pageTo;
     private Boolean allPages; // true when user wants to process all pages (clear page range)
+
+    //// fields used in Digitization Job
+    @JsonIgnore
+    private TaskNode taskNode;
+    @JsonIgnore
+    private DocumentInstance documentInstance;
 }
