@@ -136,7 +136,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       stopPollingFn?.()
       setPollCleanup(null)
     }
-  }, [organizationId, projectId, taskId, token, startGeneration, handleGenerationComplete])
+  }, [organizationId, projectId, taskId, token])
 
   // 1️⃣ **Reset all local state when switching tasks/orgs/projects**
   useEffect(() => {
@@ -358,7 +358,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     selectedDocuments,
     documentPages
   })
-  
+
   return (
     <>
       <GlobalGenerationStatus showTimeoutDialog={showTimeoutDialog} onRetryGeneration={handleRetryGeneration} />
