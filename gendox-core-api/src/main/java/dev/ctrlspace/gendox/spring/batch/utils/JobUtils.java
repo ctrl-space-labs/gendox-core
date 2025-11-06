@@ -71,7 +71,7 @@ public class JobUtils {
         }
 
         Page<BatchJobExecution> batchJobExecutions =
-                batchJobExecutionRepository.findAll(BatchExecutionPredicates.build(criteria), pageRequest);
+                batchJobExecutionRepository.findAllPageableWithExecutionParams(BatchExecutionPredicates.build(criteria), pageRequest);
 
 
         Instant start;
@@ -92,7 +92,7 @@ public class JobUtils {
 
 
         Page<BatchJobExecution> batchJobExecutions =
-                batchJobExecutionRepository.findAll(BatchExecutionPredicates.build(criteria), pageable);
+                batchJobExecutionRepository.findAllPageableWithExecutionParams(BatchExecutionPredicates.build(criteria), pageable);
 
         return batchJobExecutions;
 

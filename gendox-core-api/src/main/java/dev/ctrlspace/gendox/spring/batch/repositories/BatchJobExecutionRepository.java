@@ -13,13 +13,15 @@ import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
-public interface BatchJobExecutionRepository extends JpaRepository<BatchJobExecution, Long>, QuerydslPredicateExecutor<BatchJobExecution> {
+public interface BatchJobExecutionRepository extends JpaRepository<BatchJobExecution, Long>, QuerydslPredicateExecutor<BatchJobExecution>, BatchJobExecutionRepositoryCustom
+{
 
-    @EntityGraph(attributePaths = {"batchJobExecutionParams"})
-    Page<BatchJobExecution> findAll(Predicate predicate, Pageable pageable);
+    @EntityGraph(attributePaths = "batchJobExecutionParams")
+    List<BatchJobExecution> findByJobExecutionIdIn(Collection<Long> ids);
 
     @Query("select job " +
             "from BatchJobExecution job " +
