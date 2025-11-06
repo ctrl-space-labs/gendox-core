@@ -202,7 +202,7 @@ gendox:
         steps:
           document-insights-step:
             name: documentInsightsStep
-            chunk-size: 10
+            chunk-size: 2
             pageable-size: 1000
     document-digitization:
       job:
