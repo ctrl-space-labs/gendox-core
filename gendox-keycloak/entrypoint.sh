@@ -6,7 +6,7 @@ if keytool -list -keystore /opt/keycloak/conf/server.keystore -storepass "${KEYS
   keytool -delete -alias server -keystore /opt/keycloak/conf/server.keystore -storepass "${KEYSTORE_PASSWORD}"
 fi
 
-echo "Generating new keystore and key pair."
+echo "Generating new keystore and key pair...."
 keytool -genkeypair \
   -storepass "${KEYSTORE_PASSWORD}" \
   -storetype PKCS12 \
