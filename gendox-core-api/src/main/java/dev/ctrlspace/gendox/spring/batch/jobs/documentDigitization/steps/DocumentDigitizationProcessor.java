@@ -161,7 +161,8 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         // download and read file bytes
         byte[] fileBytes = downloadService.readDocumentBytes(documentInstance.getRemoteUrl());
         List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), fileBytes, printOptions);
-        
+        fileBytes = null;
+
         // Validate that we have enough pages and create safe mapping
         Map<Integer, String> pageImages = pagesToProcess.stream()
                 .collect(Collectors.toMap(i -> i, i -> printedPagesBase64.get(i - printOptions.getPageFrom())));
