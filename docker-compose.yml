@@ -91,7 +91,7 @@ services:
       - /bin/bash
       - -c
       - |
-        echo "KEYSTORE_FILE=${KEYSTORE_FILE}"
+        echo "KEYSTORE_FILE=$$KEYSTORE_FILE"
         if [ -f "${KEYSTORE_FILE}" ] && { [ ! -s "${KEYSTORE_FILE}" ] || ! keytool -list -keystore "${KEYSTORE_FILE}" -storepass "${KEYSTORE_PASSWORD}" > /dev/null 2>&1; }; then
           echo "Keystore is empty or invalid. Deleting it."
           rm -f "${KEYSTORE_FILE}"
@@ -112,6 +112,7 @@ services:
         else
           echo "Using existing valid keystore."
         fi
+        echo "Starting Keycloak..."
         exec /opt/keycloak/bin/kc.sh start \
           --http-relative-path="${KEYCLOAK_HTTP_RELATIVE_PATH}" \
           --features=token-exchange \
