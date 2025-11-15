@@ -86,21 +86,27 @@ services:
       - /bin/bash
       - -c
       - |
-        if keytool -list -keystore /opt/keycloak/conf/server.keystore -storepass "${KEYSTORE_PASSWORD}" -alias server > /dev/null 2>&1; then
-          echo "Alias 'server' exists, deleting it.";
-          keytool -delete -alias server -keystore /opt/keycloak/conf/server.keystore -storepass "${KEYSTORE_PASSWORD}";
-        fi && \
-        echo "Generating new keystore and key pair." && \
-        keytool -genkeypair \
-          -storepass "${KEYSTORE_PASSWORD}" \
-          -storetype PKCS12 \
-          -keyalg RSA \
-          -keysize 2048 \
-          -dname "CN=localhost" \
-          -alias server \
-          -validity 365 \
-          -ext SAN:c=DNS:localhost,IP:127.0.0.1 \
-          -keystore /opt/keycloak/conf/server.keystore && \
+        # If keystore exists but is empty OR invalid -> delete it
+        if [ -f "$KEYSTORE_FILE" ] && { [ ! -s "$KEYSTORE_FILE" ] || ! keytool -list -keystore "$KEYSTORE_FILE" -storepass "${KEYSTORE_PASSWORD}" > /dev/null 2>&1; }; then
+          echo "Keystore is empty or invalid. Deleting it."
+          rm -f "$KEYSTORE_FILE"
+        fi
+        if [ ! -f "$KEYSTORE_FILE" ]; then
+          echo "Generating new keystore and key pair."
+          keytool -genkeypair \
+            -storepass "${KEYSTORE_PASSWORD}" \
+            -storetype PKCS12 \
+            -keyalg RSA \
+            -keysize 2048 \
+            -dname "CN=localhost" \
+            -alias server \
+            -validity 365 \
+            -ext "SAN=DNS:localhost,IP:127.0.0.1" \
+            -keystore "$KEYSTORE_FILE" \
+            -noprompt
+        else
+          echo "Using existing valid keystore."
+        fi
         exec /opt/keycloak/bin/kc.sh start \
           --http-relative-path="${KEYCLOAK_HTTP_RELATIVE_PATH}" \
           --features=token-exchange \
