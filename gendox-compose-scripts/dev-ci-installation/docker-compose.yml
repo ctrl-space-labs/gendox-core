@@ -93,7 +93,7 @@ services:
           rm -f "$KEYSTORE_FILE"
         fi
         if [ ! -f "$KEYSTORE_FILE" ]; then
-          echo "Generating new keystore and key pair."
+          echo "Generating new keystore and key pair..."
           keytool -genkeypair \
             -storepass "${KEYSTORE_PASSWORD}" \
             -storetype PKCS12 \
