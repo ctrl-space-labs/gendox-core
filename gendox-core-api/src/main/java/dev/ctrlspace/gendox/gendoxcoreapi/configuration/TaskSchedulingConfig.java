@@ -28,7 +28,8 @@ public class TaskSchedulingConfig {
 
     private BackendMaintenanceTaskService backendMaintenanceTaskService;
 
-    private Instant lastDebugHeartbeat = Instant.EPOCH;
+    // to log the 1st time, after startup
+    private Instant lastDebugHeartbeat = Instant.MIN;
     private static final Duration LOG_HEARTBEAT_INTERVAL = Duration.ofHours(1);
     private Duration fixedDelay;
 
