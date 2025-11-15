@@ -155,8 +155,12 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         printOptions.setPageFrom(Collections.min(pagesToProcess));
         printOptions.setPageTo(Collections.max(pagesToProcess));
 
+
         // TODO change this to optionally get a list of page numbers to print
-        List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), printOptions);
+        // TODO optimize this, to not download the doc from the remote url every time
+        // download and read file bytes
+        byte[] fileBytes = downloadService.readDocumentBytes(documentInstance.getRemoteUrl());
+        List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), fileBytes, printOptions);
         
         // Validate that we have enough pages and create safe mapping
         Map<Integer, String> pageImages = pagesToProcess.stream()

@@ -62,6 +62,13 @@ public class DownloadService {
 
     }
 
+    public byte[] readDocumentBytes(String documentUrl) throws GendoxException, IOException {
+        Resource resource = openResource(documentUrl);
+        try (InputStream in = resource.getInputStream()) {
+            return in.readAllBytes();
+        }
+    }
+
     public String readDocumentContent(String documentUrl) throws GendoxException, IOException {
         // Get the Resource from openResource
         Resource resource = openResource(documentUrl);
@@ -92,11 +99,11 @@ public class DownloadService {
      * @throws GendoxException
      * @throws IOException
      */
-    public List<String> printDocumentPages(String documentUrl, @Nullable DocPageToImageOptions printOptions) throws GendoxException, IOException {
+    public List<String> printDocumentPages(String documentUrl, byte[] fileBytes, @Nullable DocPageToImageOptions printOptions) throws GendoxException, IOException {
         // Get the Resource from openResource
         Resource resource = openResource(documentUrl);
-
         String fileExtension = getFileExtension(documentUrl, resource);
+
 
         if (printOptions == null) {
             printOptions = DocPageToImageOptions.builder().build();
@@ -106,7 +113,7 @@ public class DownloadService {
         if (isTextFile(fileExtension)) {
             throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Document is already in text format. Unsupported file type: " + fileExtension, HttpStatus.BAD_REQUEST);
         } else if (isPdfFile(fileExtension)) {
-            List <String> printedPages = pdfToBase64Pages(resource, printOptions);
+            List <String> printedPages = pdfToBase64Pages(resource, fileBytes, printOptions);
             return printedPages;
         } else if (isDocxFile(fileExtension)) {
             throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Not Supported yet, file type: " + fileExtension, HttpStatus.BAD_REQUEST);
@@ -272,10 +279,10 @@ public class DownloadService {
      * @throws GendoxException
      * @throws IOException
      */
-    public List<String> pdfToBase64Pages(Resource fileResource, DocPageToImageOptions options) throws GendoxException, IOException {
+    public List<String> pdfToBase64Pages(Resource fileResource, byte[] fileBytes, DocPageToImageOptions options) throws GendoxException, IOException {
         List<String> allPagesContent = new ArrayList<>();
 
-        try (PDDocument doc = Loader.loadPDF(fileResource.getContentAsByteArray())) {
+        try (PDDocument doc = Loader.loadPDF(fileBytes)) {
 
             options = options.applyDefaults(doc.getNumberOfPages());
 
