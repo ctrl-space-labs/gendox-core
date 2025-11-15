@@ -91,7 +91,6 @@ services:
       - /bin/bash
       - -c
       - |
-        # If keystore exists but is empty OR invalid -> delete it
         if [ -f "${KEYSTORE_FILE}" ] && { [ ! -s "${KEYSTORE_FILE}" ] || ! keytool -list -keystore "${KEYSTORE_FILE}" -storepass "${KEYSTORE_PASSWORD}" > /dev/null 2>&1; }; then
           echo "Keystore is empty or invalid. Deleting it."
           rm -f "${KEYSTORE_FILE}"
