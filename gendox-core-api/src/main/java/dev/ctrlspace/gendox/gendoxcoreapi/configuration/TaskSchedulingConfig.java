@@ -60,7 +60,7 @@ public class TaskSchedulingConfig {
         if (Duration.between(lastDebugHeartbeat, now).compareTo(LOG_HEARTBEAT_INTERVAL) >= 0) {
             lastDebugHeartbeat = now;
 
-            logger.trace("Daily usage aggregation task completed: {}", results);
+            logger.debug("Daily usage aggregation task completed: {}", results);
             logger.debug("Rest assured, this task runs every {}", fixedDelay);
         }
     }
