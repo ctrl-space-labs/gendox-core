@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
 import dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps.DocumentDigitizationProcessor;
 import dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps.DocumentDigitizationReader;
 import dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps.DocumentDigitizationWriter;
+import dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps.TempFileCleanupListener;
 import io.micrometer.observation.ObservationRegistry;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -71,6 +72,7 @@ public class DocumentDigitizationJobConfig {
     public Step documentDigitizationStep(DocumentDigitizationReader documentDigitizationReader,
                                          DocumentDigitizationProcessor documentDigitizationProcessor,
                                          DocumentDigitizationWriter documentDigitizationWriter,
+                                         TempFileCleanupListener tempFileCleanupListener,
                                          TaskExecutor asyncBatchDigitizationExecutor,
                                          PlatformTransactionManager transactionManager) {
 
@@ -80,6 +82,7 @@ public class DocumentDigitizationJobConfig {
                 .processor(documentDigitizationProcessor)
                 .writer(documentDigitizationWriter)
                 .taskExecutor(asyncBatchDigitizationExecutor)
+                .listener(tempFileCleanupListener)
                 .build();
     }
 

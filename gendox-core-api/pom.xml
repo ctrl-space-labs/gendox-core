@@ -417,6 +417,12 @@
             <artifactId>jackson-annotations</artifactId>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/com.fasterxml.uuid/java-uuid-generator -->
+        <dependency>
+            <groupId>com.fasterxml.uuid</groupId>
+            <artifactId>java-uuid-generator</artifactId>
+            <version>5.1.1</version>
+        </dependency>
 
         <!-- docx4j core (load .docx and convert to HTML) -->
         <dependency>

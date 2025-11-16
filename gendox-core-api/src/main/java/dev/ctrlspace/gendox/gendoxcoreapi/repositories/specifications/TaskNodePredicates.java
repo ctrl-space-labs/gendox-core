@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.core.types.dsl.SimpleExpression;
 import com.querydsl.core.types.dsl.StringExpression;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QTaskNode;
@@ -20,7 +21,9 @@ public class TaskNodePredicates {
                 taskIdEq(criteria.getTaskId()),
                 nodeIds(criteria.getNodeIds()),
                 nodeTypes(criteria.getNodeTypeNames()),
-                nodeValueNodeDocumentId(criteria.getNodeValueNodeDocumentId())
+                nodeValueNodeDocumentId(criteria.getNodeValueNodeDocumentId()),
+                pageFrom(criteria.getPageFrom()),
+                pageTo(criteria.getPageTo())
 
         );
     }
@@ -109,6 +112,38 @@ public class TaskNodePredicates {
             return null;
         }
         return qTaskNode.taskId.eq(taskId);
+    }
+
+    private static Predicate pageFrom(Integer pageFrom) {
+        if (pageFrom == null) {
+            return null;
+        }
+
+        //  ((node_value ->> 'order')::int)
+        NumberExpression<Integer> orderInt = Expressions.numberTemplate(
+                Integer.class,
+                "cast(function('jsonb_extract_path_text', {0}, {1}) as int)",
+                qTaskNode.nodeValue,
+                Expressions.constant("order")
+        );
+
+        return orderInt.goe(pageFrom);
+    }
+
+    public static Predicate pageTo(Integer pageTo) {
+        if (pageTo == null) {
+            return null;
+        }
+
+        //  ((node_value ->> 'order')::int)
+        NumberExpression<Integer> orderInt = Expressions.numberTemplate(
+                Integer.class,
+                "cast(function('jsonb_extract_path_text', {0}, {1}) as int)",
+                qTaskNode.nodeValue,
+                Expressions.constant("order")
+        );
+
+        return orderInt.loe(pageTo);
     }
 }
 

@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -37,7 +38,8 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private boolean reGenerateExistingAnswers;
-
+    @Value("#{stepExecution.jobExecution.jobInstance.id}")
+    private Long jobInstanceId;
 
     private TaskService taskService;
     private TaskNodeService taskNodeService;
@@ -95,6 +97,8 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
                 .taskId(documentNode.getTaskId())
                 .nodeTypeNames(List.of("ANSWER"))
                 .nodeValueNodeDocumentId(documentNode.getId())
+                .pageFrom(documentMetadata.getPageFrom())
+                .pageTo(documentMetadata.getPageTo())
                 .build();
         Page<TaskNode> existingNodes = taskNodeService.getTaskNodesByCriteria(existingAnswersCriteria, Pageable.unpaged());
 
@@ -159,9 +163,8 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         // TODO change this to optionally get a list of page numbers to print
         // TODO optimize this, to not download the doc from the remote url every time
         // download and read file bytes
-        byte[] fileBytes = downloadService.readDocumentBytes(documentInstance.getRemoteUrl());
-        List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), fileBytes, printOptions);
-        fileBytes = null;
+        Path tempFilePath = downloadService.downloadToTemp(documentInstance.getRemoteUrl(), "digitization-instance-id-" + jobInstanceId);
+        List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), tempFilePath, printOptions);
 
         // Validate that we have enough pages and create safe mapping
         Map<Integer, String> pageImages = pagesToProcess.stream()

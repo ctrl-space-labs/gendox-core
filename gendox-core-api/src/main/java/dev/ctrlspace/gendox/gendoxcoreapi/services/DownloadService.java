@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import com.fasterxml.uuid.Generators;
 import com.vladsch.flexmark.html2md.converter.FlexmarkHtmlConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.DocPageToImageOptions;
@@ -7,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.ImageUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import io.micrometer.observation.annotation.Observed;
 import jakarta.annotation.Nullable;
+import jakarta.annotation.PostConstruct;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.ImageType;
@@ -35,9 +37,15 @@ import org.springframework.stereotype.Service;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 @Service
 public class DownloadService {
@@ -62,11 +70,95 @@ public class DownloadService {
 
     }
 
+    @PostConstruct
+    public void cleanTempDirOnStartup() throws IOException {
+        Path sysTemp = Paths.get(System.getProperty("java.io.tmpdir")).toAbsolutePath().normalize();
+        Path tempDir = getTempDir();
+
+        try {
+            if (!tempDir.startsWith(sysTemp)) {
+                logger.warn("Skipping cleanup: resolved tempDir {} is outside system temp {}", tempDir, sysTemp);
+                return;
+            }
+
+            if (Files.exists(tempDir)) {
+                try (Stream<Path> walk = Files.walk(tempDir)) {
+                    walk.filter(p -> !p.equals(tempDir))
+                            .sorted(Comparator.reverseOrder())
+                            .forEach(p -> {
+                                try {
+                                    Files.deleteIfExists(p);
+                                } catch (IOException e) {
+                                    logger.warn("Failed to delete {}: {}", p, e.getMessage());
+                                }
+                            });
+                }
+            }
+
+            Files.createDirectories(tempDir);
+            logger.info("Cleaned temp dir {}", tempDir);
+        } catch (IOException e) {
+            logger.error("Failed to clean temp dir {}: {}", tempDir, e.getMessage());
+        }
+    }
+
     public byte[] readDocumentBytes(String documentUrl) throws GendoxException, IOException {
         Resource resource = openResource(documentUrl);
         try (InputStream in = resource.getInputStream()) {
             return in.readAllBytes();
         }
+    }
+
+    public Path getTempDir() throws IOException {
+        Path tempDir = Paths.get(System.getProperty("java.io.tmpdir"), "gendox-docs");
+        Files.createDirectories(tempDir);
+        return tempDir;
+    }
+
+    /**
+     * Downloads the document from the given URL to a temporary file.
+     * If the file already exists, it returns the existing path.
+     * Otherwise, it copies the content from the resource to the temp file.
+     *
+     * @param documentUrl the URL of the document to download
+     * @param prefix an optional prefix to add to the temp file name
+     * @return
+     * @throws GendoxException
+     * @throws IOException
+     */
+    public Path downloadToTemp(String documentUrl, @Nullable String prefix) throws GendoxException, IOException {
+        Resource resource = openResource(documentUrl);
+
+
+        if (prefix == null) {
+            prefix = "";
+        }
+
+        String fileName = resource.getFilename();
+        if (fileName == null || fileName.isBlank()) {
+            fileName = Generators.timeBasedEpochGenerator().generate() + ".tmp";
+        }
+
+        // append prefix
+        fileName =  prefix + "-" + fileName;
+
+        Path tempDir = getTempDir();
+        Files.createDirectories(tempDir);
+
+        Path tempFile = tempDir.resolve(fileName);
+
+        if (Files.exists(tempFile)) {
+            logger.debug("Temp file already exists: {}", tempFile.toString());
+            return tempFile;
+        }
+
+
+        try (InputStream in = resource.getInputStream()) {
+            logger.debug("Downloading temp file to: {}", tempFile.toString());
+            Files.copy(in, tempFile, StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        return tempFile;
     }
 
     public String readDocumentContent(String documentUrl) throws GendoxException, IOException {
@@ -99,7 +191,7 @@ public class DownloadService {
      * @throws GendoxException
      * @throws IOException
      */
-    public List<String> printDocumentPages(String documentUrl, byte[] fileBytes, @Nullable DocPageToImageOptions printOptions) throws GendoxException, IOException {
+    public List<String> printDocumentPages(String documentUrl, Path filePath, @Nullable DocPageToImageOptions printOptions) throws GendoxException, IOException {
         // Get the Resource from openResource
         Resource resource = openResource(documentUrl);
         String fileExtension = getFileExtension(documentUrl, resource);
@@ -113,7 +205,7 @@ public class DownloadService {
         if (isTextFile(fileExtension)) {
             throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Document is already in text format. Unsupported file type: " + fileExtension, HttpStatus.BAD_REQUEST);
         } else if (isPdfFile(fileExtension)) {
-            List <String> printedPages = pdfToBase64Pages(resource, fileBytes, printOptions);
+            List <String> printedPages = pdfToBase64Pages(resource, filePath, printOptions);
             return printedPages;
         } else if (isDocxFile(fileExtension)) {
             throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Not Supported yet, file type: " + fileExtension, HttpStatus.BAD_REQUEST);
@@ -279,10 +371,10 @@ public class DownloadService {
      * @throws GendoxException
      * @throws IOException
      */
-    public List<String> pdfToBase64Pages(Resource fileResource, byte[] fileBytes, DocPageToImageOptions options) throws GendoxException, IOException {
+    public List<String> pdfToBase64Pages(Resource fileResource, Path filePath, DocPageToImageOptions options) throws GendoxException, IOException {
         List<String> allPagesContent = new ArrayList<>();
 
-        try (PDDocument doc = Loader.loadPDF(fileBytes)) {
+        try (PDDocument doc = Loader.loadPDF(filePath.toFile())) {
 
             options = options.applyDefaults(doc.getNumberOfPages());
 
