@@ -33,6 +33,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -136,7 +137,8 @@ public class DownloadService {
             prefix = "";
         }
 
-        String fileName = resource.getFilename();
+        String fullPath = resource.getFilename();
+        String fileName = StringUtils.getFilename(fullPath);
         logger.debug("Original file name: {}", fileName);
         if (fileName == null || fileName.isBlank()) {
             fileName = Generators.timeBasedEpochGenerator().generate() + ".tmp";
