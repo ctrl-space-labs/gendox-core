@@ -171,8 +171,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
 
         // TODO change this to optionally get a list of page numbers to print
-        // TODO optimize this, to not download the doc from the remote url every time
-        // download and read file bytes
+        // temp file will be deleted by TempFileCleanupListener at the end of the step
         Path tempFilePath = downloadService.downloadToTemp(documentInstance.getRemoteUrl(), "digitization-instance-id-" + jobInstanceId);
         List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), tempFilePath, printOptions);
 
@@ -199,10 +198,9 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
         batch.setNewAnswers(newAnswers);
 
-        logger.info("Processing document node: {}, instance id: {}, prompt: {}, structure: {}",
-                documentNode.getId(), documentInstance.getId(), prompt, structure);
-        logger.debug("Processing prompt: {}, structure: {}",
-                prompt, structure);
+        logger.debug("Processing document node: {}, instance id: {}, prompt: {}, structure: {}",
+                documentNode.getId(), documentInstance.getId(), promptPreview, structure);
+
 
 
         return batch;

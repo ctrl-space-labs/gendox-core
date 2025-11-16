@@ -130,16 +130,12 @@ public class DownloadService {
     public Path downloadToTemp(String documentUrl, @Nullable String prefix) throws GendoxException, IOException {
         Resource resource = openResource(documentUrl);
 
-        logger.debug("Downloading resource {} with prefix {}", resource, prefix);
-
-
         if (prefix == null) {
             prefix = "";
         }
 
         String fullPath = resource.getFilename();
         String fileName = StringUtils.getFilename(fullPath);
-        logger.debug("Original file name: {}", fileName);
         if (fileName == null || fileName.isBlank()) {
             fileName = Generators.timeBasedEpochGenerator().generate() + ".tmp";
         }
