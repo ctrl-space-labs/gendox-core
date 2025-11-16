@@ -71,7 +71,17 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
     @Override
     public TaskAnswerBatchDTO process(TaskDocumentMetadataDTO documentMetadata) throws Exception {
 
-        logger.info("Processing document metadata: {}", documentMetadata);
+        String promptPreview = documentMetadata.getPrompt() == null || documentMetadata.getPrompt().length() <= 100
+                ? documentMetadata.getPrompt()
+                : documentMetadata.getPrompt().substring(0, 100) + "...";
+        logger.info(
+                "Processing document metadata: taskNodeId={}, prompt={}, pageFrom={}, pageTo={}, allPages={}",
+                documentMetadata.getTaskNodeId(),
+                promptPreview,
+                documentMetadata.getPageFrom(),
+                documentMetadata.getPageTo(),
+                documentMetadata.getAllPages()
+        );
 
         TaskAnswerBatchDTO batch = new TaskAnswerBatchDTO();
 

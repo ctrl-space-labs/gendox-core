@@ -129,12 +129,15 @@ public class DownloadService {
     public Path downloadToTemp(String documentUrl, @Nullable String prefix) throws GendoxException, IOException {
         Resource resource = openResource(documentUrl);
 
+        logger.debug("Downloading resource {} with prefix {}", resource, prefix);
+
 
         if (prefix == null) {
             prefix = "";
         }
 
         String fileName = resource.getFilename();
+        logger.debug("Original file name: {}", fileName);
         if (fileName == null || fileName.isBlank()) {
             fileName = Generators.timeBasedEpochGenerator().generate() + ".tmp";
         }
@@ -146,6 +149,7 @@ public class DownloadService {
         Files.createDirectories(tempDir);
 
         Path tempFile = tempDir.resolve(fileName);
+        Files.createDirectories(tempDir);
 
         if (Files.exists(tempFile)) {
             logger.debug("Temp file already exists: {}", tempFile.toString());
@@ -158,6 +162,7 @@ public class DownloadService {
             Files.copy(in, tempFile, StandardCopyOption.REPLACE_EXISTING);
         }
 
+        logger.debug("Temp file copied to: {} | file size: {}", tempFile.toString(), tempFile.toFile().length());
         return tempFile;
     }
 
