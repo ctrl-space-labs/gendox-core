@@ -57,6 +57,22 @@ public class Task {
     @LastModifiedBy
     private UUID updatedBy;
 
+    @ManyToOne
+    @JoinColumn(name = "completion_model_id", referencedColumnName = "id", nullable = true)
+    private AiModel completionModel;
+    @Basic
+    @Column(name = "task_prompt", nullable = true, length = -1)
+    private String taskPrompt;
+    @Basic
+    @Column(name = "max_token", nullable = true)
+    private Long maxToken;
+    @Basic
+    @Column(name = "temperature", nullable = true)
+    private Double temperature;
+    @Basic
+    @Column(name = "top_p", nullable = true)
+    private Double topP;
+
 
     public UUID getId() {
         return id;
@@ -138,16 +154,56 @@ public class Task {
         this.description = description;
     }
 
+    public AiModel getCompletionModel() {
+        return completionModel;
+    }
+
+    public void setCompletionModel(AiModel completionModel) {
+        this.completionModel = completionModel;
+    }
+
+    public String getTaskPrompt() {
+        return taskPrompt;
+    }
+
+    public void setTaskPrompt(String taskPrompt) {
+        this.taskPrompt = taskPrompt;
+    }
+
+    public Long getMaxToken() {
+        return maxToken;
+    }
+
+    public void setMaxToken(Long maxToken) {
+        this.maxToken = maxToken;
+    }
+
+    public Double getTemperature() {
+        return temperature;
+    }
+
+    public void setTemperature(Double temperature) {
+        this.temperature = temperature;
+    }
+
+    public Double getTopP() {
+        return topP;
+    }
+
+    public void setTopP(Double topP) {
+        this.topP = topP;
+    }
+
+
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Task task = (Task) o;
-        return Objects.equals(id, task.id) && Objects.equals(projectId, task.projectId) && Objects.equals(taskType, task.taskType) && Objects.equals(title, task.title) && Objects.equals(description, task.description) && Objects.equals(status, task.status) && Objects.equals(createdAt, task.createdAt) && Objects.equals(updatedAt, task.updatedAt) && Objects.equals(createdBy, task.createdBy) && Objects.equals(updatedBy, task.updatedBy);
+        return Objects.equals(id, task.id) && Objects.equals(projectId, task.projectId) && Objects.equals(taskType, task.taskType) && Objects.equals(title, task.title) && Objects.equals(description, task.description) && Objects.equals(status, task.status) && Objects.equals(createdAt, task.createdAt) && Objects.equals(updatedAt, task.updatedAt) && Objects.equals(createdBy, task.createdBy) && Objects.equals(updatedBy, task.updatedBy) && Objects.equals(completionModel, task.completionModel) && Objects.equals(taskPrompt, task.taskPrompt) && Objects.equals(maxToken, task.maxToken) && Objects.equals(temperature, task.temperature) && Objects.equals(topP, task.topP);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, projectId, taskType, title, description, status, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, projectId, taskType, title, description, status, createdAt, updatedAt, createdBy, updatedBy, completionModel, taskPrompt, maxToken, temperature, topP);
     }
 }

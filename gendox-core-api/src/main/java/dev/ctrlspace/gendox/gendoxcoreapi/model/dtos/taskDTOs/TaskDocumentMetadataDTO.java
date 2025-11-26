@@ -18,7 +18,7 @@ import java.util.UUID;
 @Builder(toBuilder = true)
 public class TaskDocumentMetadataDTO {
     private UUID taskNodeId;
-    private String prompt;
+    private String prompt;      // this is used in both insights & digitization tasks for document specific prompt
     private String structure;
     private Integer pageFrom;
     private Integer pageTo;
