@@ -74,13 +74,13 @@ public class Task {
     private Double topP;
     @Basic
     @Column(name = "max_questions_per_bucket", nullable = false, length = -1)
-    private String maxQuestionsPerBucket;
+    private Integer maxQuestionsPerBucket;
     @Basic
     @Column(name = "max_question_tokens_per_bucket", nullable = false, length = -1)
-    private String maxQuestionTokensPerBucket;
+    private Integer maxQuestionTokensPerBucket;
     @Basic
     @Column(name = "max_sections_chunk_tokens", nullable = false, length = -1)
-    private String maxSectionsChunkTokens;
+    private Integer maxSectionsChunkTokens;
 
 
     public UUID getId() {
@@ -204,27 +204,27 @@ public class Task {
     }
 
 
-    public String getMaxQuestionsPerBucket() {
+    public Integer getMaxQuestionsPerBucket() {
         return maxQuestionsPerBucket;
     }
 
-    public void setMaxQuestionsPerBucket(String maxQuestionsPerBucket) {
+    public void setMaxQuestionsPerBucket(Integer maxQuestionsPerBucket) {
         this.maxQuestionsPerBucket = maxQuestionsPerBucket;
     }
 
-    public String getMaxQuestionTokensPerBucket() {
+    public Integer getMaxQuestionTokensPerBucket() {
         return maxQuestionTokensPerBucket;
     }
 
-    public void setMaxQuestionTokensPerBucket(String maxQuestionTokensPerBucket) {
+    public void setMaxQuestionTokensPerBucket(Integer maxQuestionTokensPerBucket) {
         this.maxQuestionTokensPerBucket = maxQuestionTokensPerBucket;
     }
 
-    public String getMaxSectionsChunkTokens() {
+    public Integer getMaxSectionsChunkTokens() {
         return maxSectionsChunkTokens;
     }
 
-    public void setMaxSectionsChunkTokens(String maxSectionsChunkTokens) {
+    public void setMaxSectionsChunkTokens(Integer maxSectionsChunkTokens) {
         this.maxSectionsChunkTokens = maxSectionsChunkTokens;
     }
 

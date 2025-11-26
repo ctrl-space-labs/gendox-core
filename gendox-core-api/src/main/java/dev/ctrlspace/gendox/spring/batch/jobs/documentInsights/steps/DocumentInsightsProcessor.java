@@ -35,11 +35,6 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private Boolean reGenerateExistingAnswers;
-    // package private for testing
-    static final int MAX_QUESTIONS_PER_BUCKET = 10;
-    static final int MAX_QUESTION_TOKENS_PER_BUCKET = 5_000;
-    static final int MAX_SECTIONS_CHUNK_TOKENS = 100_000;
-
 
     private final CompletionService completionService;
     private final ProjectService projectService;
@@ -110,8 +105,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         }
         ObjectNode responseJsonSchema = buildResponseSchema();
 
-        List<List<CompletionQuestionRequest>> questionChunks = chunkQuestionsToGroups(documentGroupWithQuestions.getQuestionNodes());
-        List<List<DocumentInstanceSection>> sectionChunks = groupSectionsBy100kTokens(documentGroupWithQuestions.getDocumentNode().getDocumentId());
+        List<List<CompletionQuestionRequest>> questionChunks = chunkQuestionsToGroups(task, documentGroupWithQuestions.getQuestionNodes());
+        List<List<DocumentInstanceSection>> sectionChunks = groupSectionsBy100kTokens(task, documentGroupWithQuestions.getDocumentNode().getDocumentId());
 
         // For each question group
         questionLoop:
@@ -337,7 +332,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
      * Packs questions into buckets of ≤10 items and ≤10_000 tokens,
      * back‑filling any earlier bucket that still has room.
      */
-    public @NotNull List<List<CompletionQuestionRequest>> chunkQuestionsToGroups(List<TaskNode> questions) {
+    public @NotNull List<List<CompletionQuestionRequest>> chunkQuestionsToGroups(Task task, List<TaskNode> questions) {
         var enc = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
 
         List<List<CompletionQuestionRequest>> buckets = new ArrayList<>();
@@ -355,7 +350,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                     .build();
 
             // 1) If this question alone exceeds the token limit → its own bucket
-            if (qTokens > MAX_QUESTION_TOKENS_PER_BUCKET) {
+            if (qTokens > task.getMaxQuestionTokensPerBucket()) {
                 single = Collections.singletonList(req);
                 buckets.add(single);
                 bucketTokenSums.add(qTokens);
@@ -368,8 +363,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 List<CompletionQuestionRequest> bucket = buckets.get(i);
                 int currentSum = bucketTokenSums.get(i);
 
-                if (bucket.size() < MAX_QUESTIONS_PER_BUCKET
-                        && currentSum + qTokens <= MAX_QUESTION_TOKENS_PER_BUCKET)
+                if (bucket.size() < task.getMaxQuestionsPerBucket()
+                        && currentSum + qTokens <= task.getMaxQuestionTokensPerBucket())
                 {
                     bucket.add(req);
                     bucketTokenSums.set(i, currentSum + qTokens);
@@ -390,7 +385,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         return buckets;
     }
 
-    private @NotNull List<List<DocumentInstanceSection>> groupSectionsBy100kTokens(UUID documentId) {
+    private @NotNull List<List<DocumentInstanceSection>> groupSectionsBy100kTokens(Task task, UUID documentId) {
         var enc = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
 
         List<DocumentInstanceSection> sections = documentSectionService.getSectionsByDocument(documentId);
@@ -406,7 +401,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
             int sectionTokens = enc.encode(section.getSectionValue()).size();
 
             // if adding this section would overflow the 100k-token budget, flush
-            if (currentTokens + sectionTokens > MAX_SECTIONS_CHUNK_TOKENS && !currentGroup.isEmpty()) {
+            if (currentTokens + sectionTokens > task.getMaxSectionsChunkTokens() && !currentGroup.isEmpty()) {
                 groups.add(currentGroup);
                 currentGroup = new ArrayList<>();
                 currentTokens = 0;
