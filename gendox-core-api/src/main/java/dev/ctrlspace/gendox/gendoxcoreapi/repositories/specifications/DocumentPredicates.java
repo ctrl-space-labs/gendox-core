@@ -2,6 +2,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications;
 
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Predicate;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.core.util.StringUtils;
 import com.querydsl.jpa.JPAExpressions;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QDocumentInstance;
@@ -25,11 +28,43 @@ public class DocumentPredicates {
         return ExpressionUtils.allOf(
                 organizationsId(criteria.getOrganizationId()),
                 projectId(criteria.getProjectId()),
+                documentNameContains(criteria.getDocumentNameContains()),
                 createdBetween(criteria.getCreatedBetween()),
                 updatedBetween(criteria.getUpdatedBetween()),
                 documentInstanceId(criteria.getDocumentInstanceId()),
                 documentInstanceIds(criteria.getDocumentInstanceIds())
         );
+    }
+
+    private static Predicate documentNameContains(String documentNameContains) {
+        if (StringUtils.isNullOrEmpty(documentNameContains)) {
+            return null;
+        }
+        //title or remote url contains
+        // if there are a lot of files a trigram index could help, needs investigation
+        StringExpression normalizedTitle =
+                Expressions.stringTemplate(
+                        "cast(function('unaccent', lower({0})) as string)",
+                        qDocumentInstance.title
+                );
+
+        StringExpression normalizedUrl =
+                Expressions.stringTemplate(
+                        "cast(function('unaccent', lower({0})) as string)",
+                        qDocumentInstance.remoteUrl
+                );
+
+        String pattern = "%" + documentNameContains + "%";
+        StringExpression normalizedPattern =
+                Expressions.stringTemplate(
+                        "cast(function('unaccent', lower({0})) as string)",
+                        Expressions.constant(pattern)
+                );
+
+        BooleanExpression titleExpr = normalizedTitle.like(normalizedPattern);
+        BooleanExpression urlExpr   = normalizedUrl.like(normalizedPattern);
+
+        return titleExpr.or(urlExpr);
     }
 
     private static Predicate updatedBetween(TimePeriodDTO updatedBetween) {
