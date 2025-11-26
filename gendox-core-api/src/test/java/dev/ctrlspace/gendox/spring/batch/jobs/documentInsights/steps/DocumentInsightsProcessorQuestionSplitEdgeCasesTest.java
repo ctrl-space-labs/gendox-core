@@ -4,9 +4,11 @@ import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.CompletionQuestionRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeValueDTO;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,8 +29,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
 
-    private static final int QUESTION_LIMIT = DocumentInsightsProcessor.MAX_QUESTIONS_PER_BUCKET;
-    private static final int TOKEN_LIMIT = DocumentInsightsProcessor.MAX_QUESTION_TOKENS_PER_BUCKET;
+    private static int QUESTION_LIMIT;
+    private static int TOKEN_LIMIT;
 
     @Spy
     private EncodingRegistry encodingRegistry = Encodings.newDefaultEncodingRegistry();
@@ -37,10 +39,21 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
     private DocumentInsightsProcessor processor;
 
     private Encoding enc;
+    private static Task task;
 
     @BeforeEach
     void setUp() {
         enc = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
+    }
+
+    @BeforeAll
+    static void initTask() {
+        task = new Task();
+        task.setMaxQuestionsPerBucket(10);
+        QUESTION_LIMIT = 10;
+        task.setMaxQuestionTokensPerBucket(5_000);
+        TOKEN_LIMIT = 5_000;
+        task.setMaxSectionsChunkTokens(100_000);
     }
 
     /* ───────────── helpers ─────────────────────────────────────────────── */
@@ -88,7 +101,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
         }
 
         List<List<CompletionQuestionRequest>> buckets =
-                processor.chunkQuestionsToGroups(input);
+                processor.chunkQuestionsToGroups(task, input);
 
         assertEquals(1, buckets.size(), "All questions should fit together");
         assertEquals(5, buckets.get(0).size());
@@ -99,10 +112,10 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
     @Test
     void tokenOverflow_startsNewBucket() {
         // pick a size so that two fit but three do not
-        int safeSize = DocumentInsightsProcessor.MAX_QUESTION_TOKENS_PER_BUCKET / 2 - 50;
-        assertTrue(2 * safeSize < DocumentInsightsProcessor.MAX_QUESTION_TOKENS_PER_BUCKET,
+        int safeSize = task.getMaxQuestionTokensPerBucket() / 2 - 50;
+        assertTrue(2 * safeSize < task.getMaxQuestionTokensPerBucket(),
                 "sanity: two safes must fit");
-        assertTrue(3 * safeSize > DocumentInsightsProcessor.MAX_QUESTION_TOKENS_PER_BUCKET,
+        assertTrue(3 * safeSize > task.getMaxQuestionTokensPerBucket(),
                 "sanity: three safes must overflow");
 
         TaskNode q1 = nodeWithTokens(safeSize);
@@ -110,7 +123,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
         TaskNode q3 = nodeWithTokens(safeSize);   // would push >limit → new bucket
 
         List<List<CompletionQuestionRequest>> buckets =
-                processor.chunkQuestionsToGroups(List.of(q1, q2, q3));
+                processor.chunkQuestionsToGroups(task, List.of(q1, q2, q3));
 
         assertEquals(2, buckets.size(), "Expect two buckets due to token overflow");
         // first bucket got q1+q2
@@ -118,8 +131,8 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
         // second bucket got q3
         assertEquals(1, buckets.get(1).size());
 
-        assertTrue(sumTokens(buckets.get(0)) <= DocumentInsightsProcessor.MAX_QUESTION_TOKENS_PER_BUCKET);
-        assertTrue(sumTokens(buckets.get(1)) <= DocumentInsightsProcessor.MAX_QUESTION_TOKENS_PER_BUCKET);
+        assertTrue(sumTokens(buckets.get(0)) <= task.getMaxQuestionTokensPerBucket());
+        assertTrue(sumTokens(buckets.get(1)) <= task.getMaxQuestionTokensPerBucket());
     }
 
     /** 3 ) Question >10 000 tokens → must live alone in its own bucket */
@@ -130,7 +143,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
         TaskNode small2 = nodeWithTokens(500);
 
         List<List<CompletionQuestionRequest>> buckets =
-                processor.chunkQuestionsToGroups(List.of(huge, small1, small2));
+                processor.chunkQuestionsToGroups(task, List.of(huge, small1, small2));
 
         assertEquals(2, buckets.size(), "Oversize + combined smalls");
 
@@ -159,7 +172,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
         list.add(tiny);
 
         List<List<CompletionQuestionRequest>> buckets =
-                processor.chunkQuestionsToGroups(list);
+                processor.chunkQuestionsToGroups(task, list);
 
         assertEquals(1, buckets.size(),
                 "Tiny question should fit into the first bucket (back‑fill)");
@@ -177,7 +190,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
                 .mapToObj(i -> nodeWithTokens(each))
                 .toList();
 
-        List<List<CompletionQuestionRequest>> result = processor.chunkQuestionsToGroups(input);
+        List<List<CompletionQuestionRequest>> result = processor.chunkQuestionsToGroups(task, input);
 
         assertEquals(1, result.size());
         assertEquals(QUESTION_LIMIT, result.get(0).size());
@@ -194,7 +207,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
         List<TaskNode> input = new ArrayList<>(full);
         input.add(nodeWithTokens(10));                     // tiny
 
-        List<List<CompletionQuestionRequest>> res = processor.chunkQuestionsToGroups(input);
+        List<List<CompletionQuestionRequest>> res = processor.chunkQuestionsToGroups(task, input);
 
         assertEquals(2, res.size(), "Extra tiny question should open a 2nd bucket");
         assertEquals(QUESTION_LIMIT, res.get(0).size());
@@ -208,7 +221,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
                 .mapToObj(i -> nodeWithTokens(50))  // 50 tokens each
                 .toList();
 
-        List<List<CompletionQuestionRequest>> res = processor.chunkQuestionsToGroups(input);
+        List<List<CompletionQuestionRequest>> res = processor.chunkQuestionsToGroups(task, input);
 
         assertEquals(2, res.size());
         assertEquals(QUESTION_LIMIT, res.get(0).size());
@@ -219,19 +232,19 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
     @Test
     void tokenOverflow_twoQuestions() {
         // pick each just over half the limit so together they overflow
-        int halfPlus = DocumentInsightsProcessor.MAX_QUESTION_TOKENS_PER_BUCKET / 2 + 1;
-        assertTrue(halfPlus * 2 > DocumentInsightsProcessor.MAX_QUESTION_TOKENS_PER_BUCKET,
+        int halfPlus = task.getMaxQuestionTokensPerBucket() / 2 + 1;
+        assertTrue(halfPlus * 2 > task.getMaxQuestionTokensPerBucket(),
                 "sanity: two halfPluses must overflow");
 
         TaskNode q1 = nodeWithTokens(halfPlus);
         TaskNode q2 = nodeWithTokens(halfPlus);
 
         List<List<CompletionQuestionRequest>> buckets =
-                processor.chunkQuestionsToGroups(List.of(q1, q2));
+                processor.chunkQuestionsToGroups(task, List.of(q1, q2));
 
         assertEquals(2, buckets.size(), "Should split into two when sum > limit");
-        assertTrue(sumTokens(buckets.get(0)) <= DocumentInsightsProcessor.MAX_QUESTION_TOKENS_PER_BUCKET);
-        assertTrue(sumTokens(buckets.get(1)) <= DocumentInsightsProcessor.MAX_QUESTION_TOKENS_PER_BUCKET);
+        assertTrue(sumTokens(buckets.get(0)) <= task.getMaxQuestionTokensPerBucket());
+        assertTrue(sumTokens(buckets.get(1)) <= task.getMaxQuestionTokensPerBucket());
     }
 
     /** 9) Multiple oversized questions – each must stand alone */
@@ -242,7 +255,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
         TaskNode big3 = nodeWithTokens(TOKEN_LIMIT + 3_000);
 
         List<List<CompletionQuestionRequest>> res =
-                processor.chunkQuestionsToGroups(List.of(big1, big2, big3));
+                processor.chunkQuestionsToGroups(task, List.of(big1, big2, big3));
 
         assertEquals(3, res.size());
         res.forEach(b -> assertEquals(1, b.size(), "Oversized must be solitary"));
@@ -255,7 +268,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
                 .mapToObj(i -> nodeWithRawText(""))
                 .toList();
 
-        List<List<CompletionQuestionRequest>> res = processor.chunkQuestionsToGroups(input);
+        List<List<CompletionQuestionRequest>> res = processor.chunkQuestionsToGroups(task, input);
 
         assertEquals(2, res.size());
         assertEquals(QUESTION_LIMIT, res.get(0).size());
@@ -284,7 +297,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
         Collections.shuffle(questions, new Random(42));// seed for reproducibility
 
         /*  run SUT  */
-        List<List<CompletionQuestionRequest>> buckets = processor.chunkQuestionsToGroups(questions);
+        List<List<CompletionQuestionRequest>> buckets = processor.chunkQuestionsToGroups(task, questions);
 
         /*  classify buckets  */
         int smallBucketCount = 0;

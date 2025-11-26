@@ -2,9 +2,11 @@ package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.EncodingRegistry;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.CompletionQuestionRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeValueDTO;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -28,6 +30,8 @@ public class DocumentInsightsProcessorQuestionsCountSplitTest {
 
     @InjectMocks
     private DocumentInsightsProcessor documentInsightsProcessor;
+
+    private static Task task;
 
 
     /* -----------------------------------------------------------------------
@@ -53,11 +57,19 @@ public class DocumentInsightsProcessorQuestionsCountSplitTest {
         return nodes;
     }
 
+    @BeforeAll
+    static void initTask() {
+        task = new Task();
+        task.setMaxQuestionsPerBucket(10);
+        task.setMaxQuestionTokensPerBucket(5_000);
+        task.setMaxSectionsChunkTokens(100_000);
+    }
+
     /** 1) Empty input → empty output list */
     @Test
     void chunkQuestions_emptyList_returnsEmpty() {
         List<List<CompletionQuestionRequest>> buckets =
-                documentInsightsProcessor.chunkQuestionsToGroups(List.of());
+                documentInsightsProcessor.chunkQuestionsToGroups(task, List.of());
 
         assertTrue(buckets.isEmpty(), "Expected no buckets for empty input");
     }
@@ -65,11 +77,11 @@ public class DocumentInsightsProcessorQuestionsCountSplitTest {
     /** 2) Fewer than CHUNK_SIZE questions → single bucket */
     @Test
     void chunkQuestions_lessThanChunkSize_singleBucket() {
-        int chunk = DocumentInsightsProcessor.MAX_QUESTIONS_PER_BUCKET;       // ← dynamic size
+        int chunk = task.getMaxQuestionsPerBucket();
         List<TaskNode> input = makeTaskNodes(chunk - 1);         // e.g. 9 if chunk=10
 
         List<List<CompletionQuestionRequest>> buckets =
-                documentInsightsProcessor.chunkQuestionsToGroups(input);
+                documentInsightsProcessor.chunkQuestionsToGroups(task, input);
 
         assertEquals(1, buckets.size(), "Should produce exactly one bucket");
         assertEquals(chunk - 1, buckets.get(0).size(),
@@ -79,11 +91,11 @@ public class DocumentInsightsProcessorQuestionsCountSplitTest {
     /** 3) Exactly CHUNK_SIZE questions → single full bucket */
     @Test
     void chunkQuestions_exactChunkSize_singleFullBucket() {
-        int chunk = DocumentInsightsProcessor.MAX_QUESTIONS_PER_BUCKET;
+        int chunk = task.getMaxQuestionsPerBucket();
         List<TaskNode> input = makeTaskNodes(chunk);
 
         List<List<CompletionQuestionRequest>> buckets =
-                documentInsightsProcessor.chunkQuestionsToGroups(input);
+                documentInsightsProcessor.chunkQuestionsToGroups(task, input);
 
         assertEquals(1, buckets.size(), "Still one bucket");
         assertEquals(chunk, buckets.get(0).size(), "Bucket must be exactly full");
@@ -92,12 +104,12 @@ public class DocumentInsightsProcessorQuestionsCountSplitTest {
     /** 4) count = 2·chunk + chunk/2 → three buckets */
     @Test
     void chunkQuestions_twoAndHalfChunks_threeBuckets() {
-        int chunk = DocumentInsightsProcessor.MAX_QUESTIONS_PER_BUCKET;
+        int chunk = task.getMaxQuestionsPerBucket();
         int total = (int)(2.5 * chunk);          // 2½ chunks (e.g. 25 when chunk = 10)
         List<TaskNode> input = makeTaskNodes(total);
 
         List<List<CompletionQuestionRequest>> buckets =
-                documentInsightsProcessor.chunkQuestionsToGroups(input);
+                documentInsightsProcessor.chunkQuestionsToGroups(task, input);
 
         int expectedBuckets      = (total + chunk - 1) / chunk;          // ceil div
         int expectedLastSize     = total % chunk == 0 ? chunk : total % chunk;
@@ -119,7 +131,7 @@ public class DocumentInsightsProcessorQuestionsCountSplitTest {
         TaskNode n2 = mockTaskNode(id2, "What is your quest?");
 
         List<List<CompletionQuestionRequest>> buckets =
-                documentInsightsProcessor.chunkQuestionsToGroups(List.of(n1, n2));
+                documentInsightsProcessor.chunkQuestionsToGroups(task, List.of(n1, n2));
 
         CompletionQuestionRequest first  = buckets.get(0).get(0);
         CompletionQuestionRequest second = buckets.get(0).get(1);
