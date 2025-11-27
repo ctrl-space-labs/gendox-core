@@ -1,19 +1,25 @@
 import React from 'react'
+import { useState, useEffect } from 'react'
+
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Button,
-  TextareaAutosize,
   IconButton,
+  Tooltip,
+  Divider,
   Box,
   CircularProgress
 } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import AddIcon from '@mui/icons-material/Add'
+import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
-import GendoxMarkdownRenderer from 'src/views/pages/markdown-renderer/GendoxMarkdownRenderer'
+import ExpandableMarkdownSection from '../../helping-components/ExpandableMarkodownSection'
+import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
+const MAX_COLLAPSED_HEIGHT = 80 // px, about 3-4 lines
 
 const QuestionsDialog = ({
   open,
@@ -21,13 +27,23 @@ const QuestionsDialog = ({
   questions,
   setQuestions,
   onConfirm,
+  handleUpdateQuestion,
   activeQuestion,
-  editMode = false,
+  addQuestionMode = false,
   isSaving = false
 }) => {
-  const questionText = activeQuestion?.text || ''
   const theme = useTheme()
+  const [editMode, setEditMode] = useState(false)
+  const [questionText, setQuestionText] = useState(activeQuestion?.text || '')
   const safeQuestions = Array.isArray(questions) ? questions : ['']
+
+  const isViewMode = !addQuestionMode && !editMode
+  const isEditMode = editMode
+  const isAddMode = addQuestionMode
+
+  useEffect(() => {
+    setQuestionText(activeQuestion?.text || '')
+  }, [activeQuestion, open])
 
   const handleQuestionChange = (idx, value) => {
     const updated = [...questions]
@@ -44,7 +60,7 @@ const QuestionsDialog = ({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth='xs' disableEnforceFocus disableRestoreFocus>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth='xl' aria-labelledby='question-dialog-title'>
       {isSaving && (
         <Box
           sx={{
@@ -61,7 +77,27 @@ const QuestionsDialog = ({
           <CircularProgress />
         </Box>
       )}
-      <DialogTitle>{!editMode ? 'View Question' : 'Add New Question'}</DialogTitle>
+      <DialogTitle
+        id='question-dialog-title'
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontWeight: 600
+        }}
+      >
+        {isAddMode ? 'Add Questions' : isEditMode ? 'Edit Question' : 'View Question'}
+
+        {isViewMode && (
+          <Tooltip title='Edit question'>
+            <IconButton aria-label='Edit question' onClick={() => setEditMode(true)} sx={{ color: 'primary.main' }}>
+              <EditIcon />
+            </IconButton>
+          </Tooltip>
+        )}
+      </DialogTitle>
+
+      <Divider />
 
       <DialogContent>
         {safeQuestions.map((q, idx) => (
@@ -81,38 +117,39 @@ const QuestionsDialog = ({
                 mt: '4px'
               }}
             >
-              {idx + 1}
+              {isAddMode ? idx + 1 : 'Q'}
             </Box>
 
-            {!editMode ? (
-              <Box sx={{ mt: 1 }}>
-                <GendoxMarkdownRenderer markdownText={questionText || '*No question text*'} />
-              </Box>
-            ) : (
-              <TextareaAutosize
-                autoFocus={idx === safeQuestions.length - 1}
-                style={{
-                  width: '100%',
-                  minHeight: '60px',
-                  padding: '12px 16px',
-                  fontSize: '1rem',
-                  fontFamily: 'Roboto, Helvetica, Arial, sans-serif',
-                  borderRadius: 6,
-                  border: `1px solid ${theme.palette.primary.main}`,
-                  backgroundColor: 'transparent',
-                  color: `${theme.palette.text.primary}`,
-                  resize: 'vertical',
-                  boxSizing: 'border-box',
-                  outline: 'none',
-                  cursor: !editMode ? 'default' : 'text'
-                }}
-                value={q}
-                onChange={e => editMode && handleQuestionChange(idx, e.target.value)}
-                aria-label={`Question ${idx + 1}`}
-                readOnly={!editMode}
+            {isEditMode ? (
+              <TextareaAutosizeStyled
+                value={questionText}
+                onChange={e => setQuestionText(e.target.value)}
+                placeholder=''
+                minRows={3}
+                autoFocus
               />
+            ) : isAddMode ? (
+              <TextareaAutosizeStyled
+                autoFocus={idx === safeQuestions.length - 1}
+                placeholder='Enter question text...'
+                value={q}
+                onChange={e => isAddMode && handleQuestionChange(idx, e.target.value)}
+                aria-label={`Question ${idx + 1}`}
+                readOnly={!isAddMode}
+              />
+            ) : (
+              <Box sx={{ mt: 1 }}>
+                <ExpandableMarkdownSection
+                  label=''
+                  markdown={questionText || '*No question text*'}
+                  maxHeight={MAX_COLLAPSED_HEIGHT}
+                />
+              </Box>
             )}
-            {editMode && questions.length > 1 && (
+
+            <Divider sx={{ my: 1 }} />
+
+            {isAddMode && questions.length > 1 && (
               <IconButton
                 aria-label='Remove question'
                 onClick={() => handleRemoveQuestion(idx)}
@@ -124,20 +161,56 @@ const QuestionsDialog = ({
             )}
           </Box>
         ))}
-        {editMode && (
+        {isAddMode && (
           <Button startIcon={<AddIcon />} onClick={handleAddQuestion} sx={{ mb: 1 }} variant='outlined' fullWidth>
             Add New
           </Button>
         )}
       </DialogContent>
-
-      <DialogActions>
-        <Button onClick={onClose} variant='contained' disabled={isSaving}>
-          Close
-        </Button>
-        {editMode && (
-          <Button variant='contained' onClick={onConfirm} disabled={isSaving}>
-            {isSaving ? 'Saving...' : 'Save'}
+      <Divider />
+      <DialogActions sx={{ justifyContent: 'right', py: 2 }}>
+        {isEditMode ? (
+          <>
+            <Button
+              onClick={() => {
+                setEditMode(false)
+                setQuestionText(activeQuestion?.text || '')
+              }}
+              variant='outlined'
+            >
+              {isSaving ? 'Saving...' : 'Cancel'}
+            </Button>
+            <Button
+              variant='contained'
+              onClick={() => {
+                handleUpdateQuestion(questionText)
+                setEditMode(false)
+              }}
+              disabled={isSaving}
+            >
+              {' '}
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </>
+        ) : isAddMode ? (
+          <>
+            <Button
+              onClick={() => {
+                setQuestions([''])
+                onClose()
+              }}
+              variant='outlined'
+              disabled={isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Close'}
+            </Button>
+            <Button variant='contained' onClick={onConfirm} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Questions'}
+            </Button>
+          </>
+        ) : (
+          <Button onClick={onClose} variant='outlined' disabled={isSaving}>
+            Close
           </Button>
         )}
       </DialogActions>

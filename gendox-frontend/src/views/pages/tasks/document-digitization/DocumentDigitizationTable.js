@@ -5,7 +5,7 @@ import { Box } from '@mui/material'
 import Paper from '@mui/material/Paper'
 import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
-import { fetchTaskNodesByCriteria, fetchDocumentPages } from 'src/store/activeTask/activeTask'
+import { fetchTaskNodesByCriteria, fetchDocumentPages } from 'src/store/activeTaskNode/activeTaskNode'
 import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocument'
 import DocumentDigitizationGrid from './table-components/DocumentDigitizationGrid'
 import HeaderSection from './table-components/DocumentDigitizationHeaderSection'
@@ -24,7 +24,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const dispatch = useDispatch()
   const token = window.localStorage.getItem('accessToken')
   const { organizationId, taskId, projectId } = router.query
-  const { taskNodesDocumentList, isLoading } = useSelector(state => state.activeTask)
+  const { taskNodesDocumentList, isLoading } = useSelector(state => state.activeTaskNode)
   const isBlurring = useSelector(state => state.activeDocument.isBlurring)
 
   const [documents, setDocuments] = useState([])
@@ -46,6 +46,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
 
   const { pollJobStatus, showTimeoutDialog } = useJobStatusPoller({ organizationId, projectId, token })
   const { startGeneration, completeGeneration } = useGeneration()
+
 
   const fetchDocuments = useCallback(() => {
     return dispatch(

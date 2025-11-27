@@ -74,7 +74,7 @@ const DocumentsAddNewDialog = ({
   }, [projectDocuments, page])
 
   const filteredDocuments = useMemo(() => {
-    let filtered = documents.filter(doc => isFileTypeSupported(doc.remoteUrl))    
+    let filtered = documents.filter(doc => isFileTypeSupported(doc.remoteUrl))
     if (searchTerm) {
       filtered = filtered.filter(doc => doc.title?.toLowerCase().includes(searchTerm.toLowerCase()))
     }

@@ -1,13 +1,18 @@
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
-import taskService from 'src/gendox-sdk/taskService'
-import { deleteTaskNode, createTaskNodesBatch } from 'src/store/activeTask/activeTask'
+import {
+  deleteTaskNode,
+  createTaskNode,
+  createTaskNodesBatch,
+  updateTaskNode
+} from 'src/store/activeTaskNode/activeTaskNode'
 import { chunk } from 'src/utils/tasks/taskUtils'
 import { toast } from 'react-hot-toast'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import DocumentAddNewDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsDocumentAddNewDialog'
 import AnswerDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsAnswerDialog'
 import QuestionsDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsQuestionsDialog'
+import DocumentPagePreviewDialog from '../table-dialogs/DocumentInsightsDocumentPagePreviewDialog'
 
 const DocumentInsightsDialogs = ({
   dialogs,
@@ -21,27 +26,39 @@ const DocumentInsightsDialogs = ({
   projectId,
   token,
   documents,
+  documentPages = [],
   questions,
-  editMode
+  addQuestionMode
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
   const [questionsDialogTexts, setQuestionsDialogTexts] = useState([''])
 
-  // ADD NEW documents handler for DocumentsAddNewDialog
+  // ADD NEW documents
   const handleAddNewDocuments = async selectedDocIds => {
     setLoading(true)
     try {
       for (const docId of selectedDocIds) {
-        const taskNodePayload = {
+        const payload = {
           taskId,
           nodeType: 'DOCUMENT',
           documentId: docId
         }
-        await taskService.createTaskNode(organizationId, projectId, taskNodePayload, token)
+
+        await dispatch(
+          createTaskNode({
+            organizationId,
+            projectId,
+            taskNodePayload: payload,
+            token
+          })
+        ).unwrap()
       }
+
       if (refreshDocuments) await refreshDocuments()
       onClose('newDoc')
+    } catch (error) {
+      toast.error('Failed to add documents')
     } finally {
       setLoading(false)
     }
@@ -102,6 +119,51 @@ const DocumentInsightsDialogs = ({
     }
   }
 
+  const handleUpdateQuestion = async newText => {
+    if (!activeNode?.id) {
+      return
+    }
+
+    newText = newText.trim()
+    if (!newText) {
+      toast.error('Question text cannot be empty')
+      return
+    }
+
+    setLoading(true)
+
+    const taskNodePayload = {
+      id: activeNode.id,
+      taskId,
+      nodeType: 'QUESTION',
+      nodeValue: {
+        message: newText,
+        order: activeNode.order
+      }
+    }
+
+    try {
+      await dispatch(
+        updateTaskNode({
+          organizationId,
+          projectId,
+          taskNodePayload,
+          token
+        })
+      ).unwrap()
+
+      toast.success('Question updated!')
+      if (refreshQuestions) await refreshQuestions()
+
+      onClose('questionDetail')
+    } catch (error) {
+      toast.error('Failed to update question')
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <>
       {/* New Document Dialog */}
@@ -126,6 +188,24 @@ const DocumentInsightsDialogs = ({
         questions={questions}
       />
 
+      {/* Document Page Preview Dialog */}
+      <DocumentPagePreviewDialog
+        open={dialogs.pagePreview || false}
+        openAddDocument={dialogs.newDoc}
+        onClose={() => onClose('pagePreview')}
+        document={activeNode}
+        documentPages={documentPages}
+        //generateSingleDocument={generateSingleDocument}
+        onDocumentUpdate={updatedDoc => {
+          // Refresh documents to show updated data
+          if (refreshDocuments) refreshDocuments()
+        }}
+        //dialogLoading={dialogLoading}
+        //onExportCsv={onExportCsv}
+        //isExportingCsv={isExportingCsv}
+        onDelete={() => onOpen && onOpen('delete', activeNode)}
+      />
+
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog
         open={dialogs.delete}
@@ -144,9 +224,10 @@ const DocumentInsightsDialogs = ({
         questions={questionsDialogTexts}
         setQuestions={setQuestionsDialogTexts}
         onConfirm={handleAddQuestions}
+        handleUpdateQuestion={handleUpdateQuestion}
         activeQuestion={activeNode}
         isSaving={loading}
-        editMode={editMode}
+        addQuestionMode={addQuestionMode}
       />
     </>
   )

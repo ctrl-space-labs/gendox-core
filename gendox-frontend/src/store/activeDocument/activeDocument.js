@@ -16,7 +16,7 @@ export const fetchDocument = createAsyncThunk(
       })
       return { document: documentData.data, sections: orderedSections }
     } catch (error) {
-      toast.error(`Failed to fetch Documents. Error: ${getErrorMessage(error)}`)
+      // toast.error(`Failed to fetch Documents. Error: ${getErrorMessage(error)}`)
       return thunkAPI.rejectWithValue(error.response.data)
     }
   }

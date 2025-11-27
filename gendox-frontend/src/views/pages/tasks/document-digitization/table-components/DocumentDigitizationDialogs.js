@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
 import taskService from 'src/gendox-sdk/taskService'
-import { deleteTaskNode } from 'src/store/activeTask/activeTask'
+import { deleteTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
 import DocumentDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentDialog'
 import DocumentsAddNewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentsAddNewDialog'
 import AnswerDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationAnswerDialog'

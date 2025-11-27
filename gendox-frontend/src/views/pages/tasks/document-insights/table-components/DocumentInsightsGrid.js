@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react'
 import { DataGrid } from '@mui/x-data-grid'
-import { Box, Tooltip } from '@mui/material'
+import { Box, Tooltip, IconButton, Menu, MenuItem } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
+import DescriptionIcon from '@mui/icons-material/Description'
 import CircularProgress from '@mui/material/CircularProgress'
 import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
 import Checkbox from '@mui/material/Checkbox'
@@ -30,6 +32,10 @@ const DocumentInsightsGrid = ({
   isGeneratingCells = {}
 }) => {
   const theme = useTheme()
+  const [documentMenuAnchor, setDocumentMenuAnchor] = useState(null)
+  const [documentMenuDoc, setDocumentMenuDoc] = useState(null)
+  const [questionMenuAnchor, setQuestionMenuAnchor] = useState(null)
+  const [questionMenuItem, setQuestionMenuItem] = useState(null)
 
   const sortedQuestions = useMemo(() => {
     return [...questions].sort((a, b) => a.order - b.order)
@@ -45,48 +51,49 @@ const DocumentInsightsGrid = ({
         filterable: false,
         disableColumnMenu: true,
         renderHeader: () => {
-          const docsWithQuestions = documents.filter(doc => 
-            doc.id && sortedQuestions.length > 0
-          )
+          const docsWithQuestions = documents.filter(doc => doc.id && sortedQuestions.length > 0)
           const selectedDocsWithQuestions = selectedDocuments.filter(id => {
             const doc = documents.find(d => d.id === id)
             return doc?.id && sortedQuestions.length > 0
           })
-          
+
           return (
-            <Tooltip title="Select all documents">
+            <Tooltip title='Select all documents'>
               <Checkbox
                 checked={docsWithQuestions.length > 0 && selectedDocsWithQuestions.length === docsWithQuestions.length}
-                indeterminate={selectedDocsWithQuestions.length > 0 && selectedDocsWithQuestions.length < docsWithQuestions.length}
-                onChange={(e) => {
+                indeterminate={
+                  selectedDocsWithQuestions.length > 0 && selectedDocsWithQuestions.length < docsWithQuestions.length
+                }
+                onChange={e => {
                   if (e.target.checked) {
-                    onSelectDocument('all', docsWithQuestions.map(doc => doc.id))
+                    onSelectDocument(
+                      'all',
+                      docsWithQuestions.map(doc => doc.id)
+                    )
                   } else {
                     onSelectDocument('none', [])
                   }
                 }}
-                size="small"
+                size='small'
               />
             </Tooltip>
           )
         },
-        renderCell: (params) => {
+        renderCell: params => {
           const isSelected = selectedDocuments.includes(params.row.id)
           const hasQuestions = sortedQuestions.length > 0
           const canSelect = hasQuestions
-          
-          const tooltipTitle = !hasQuestions 
-            ? "Please add questions to enable selection for generation" 
-            : ""
-          
+
+          const tooltipTitle = !hasQuestions ? 'Please add questions to enable selection for generation' : ''
+
           return (
             <Tooltip title={tooltipTitle}>
               <span>
                 <Checkbox
                   checked={isSelected}
-                  onChange={(e) => onSelectDocument(params.row.id, e.target.checked)}
+                  onChange={e => onSelectDocument(params.row.id, e.target.checked)}
                   disabled={!canSelect}
-                  size="small"
+                  size='small'
                 />
               </span>
             </Tooltip>
@@ -102,7 +109,7 @@ const DocumentInsightsGrid = ({
         disableColumnMenu: true,
         renderCell: params => {
           const isSelected = selectedDocuments.includes(params.row.id)
-          
+
           return (
             <Box
               sx={{
@@ -111,14 +118,18 @@ const DocumentInsightsGrid = ({
                 alignItems: 'center',
                 gap: 1,
                 width: '100%',
-                cursor: !params.row.documentId ? 'pointer' : 'default',
-                pr: 4, // space for delete icon
-                '&:hover .delete-icon': {
+                // cursor: !params.row.documentId ? 'pointer' : 'default',
+                cursor: 'pointer',
+                pr: 4, // space for vertical icon
+                '&:hover .vertical-icon': {
                   opacity: 1,
                   pointerEvents: 'auto'
                 }
               }}
-              onClick={() => !params.row.documentId && openUploader()}
+              onClick={e => {
+                e.stopPropagation()
+                openDialog('pagePreview', params.row._doc)
+              }}
               title={params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
             >
               <Box
@@ -128,38 +139,35 @@ const DocumentInsightsGrid = ({
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   flexGrow: 1,
-                  color: isSelected ? 'primary.main' : (params.row.documentId ? 'text.primary' : 'primary.main'),
-                  fontWeight: isSelected ? '600' : (params.row.documentId ? 'normal' : '600'),
+                  color: isSelected ? 'primary.main' : params.row.documentId ? 'text.primary' : 'primary.main',
+                  fontWeight: isSelected ? '600' : params.row.documentId ? 'normal' : '600',
                   userSelect: 'none'
                 }}
               >
                 {params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
               </Box>
 
-              {/* Hover-reveal Delete Icon */}
-              <DeleteOutlineIcon
-                className='delete-icon'
+              {/* Hover-reveal vertical Icon */}
+              <IconButton
+                size='small'
+                className='vertical-icon'
                 sx={{
                   position: 'absolute',
                   right: 4,
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  cursor: 'pointer',
-                  color: 'error.main',
-                  fontSize: '1.2rem',
                   opacity: 0,
                   pointerEvents: 'none',
-                  transition: 'opacity 0.25s ease',
-                  '&:hover': {
-                    color: 'error.dark'
-                  }
+                  transition: 'opacity 0.25s ease'
                 }}
                 onClick={e => {
                   e.stopPropagation()
-                  openDialog('delete', params.row)
+                  setDocumentMenuDoc(params.row._doc)
+                  setDocumentMenuAnchor(e.currentTarget)
                 }}
-                aria-label={`Delete document ${params.row.name}`}
-              />
+              >
+                <MoreVertIcon fontSize='small' />
+              </IconButton>
             </Box>
           )
         }
@@ -189,7 +197,7 @@ const DocumentInsightsGrid = ({
               textOverflow: 'ellipsis',
               fontWeight: 600,
               flexGrow: 1,
-              '&:hover .delete-icon': {
+              '&:hover .vertical-icon': {
                 opacity: 1,
                 pointerEvents: 'auto'
               }
@@ -220,30 +228,27 @@ const DocumentInsightsGrid = ({
               {params.colDef.headerName}
             </Box>
 
-            {/* Hover-reveal Delete Icon */}
-            <DeleteOutlineIcon
-              className='delete-icon'
+            {/* Hover-reveal Vertical Icon */}
+            <IconButton
+              size='small'
+              className='vertical-icon'
               sx={{
                 position: 'absolute',
                 right: 4,
                 top: '50%',
                 transform: 'translateY(-50%)',
-                cursor: 'pointer',
-                color: 'error.main',
-                fontSize: '1.2rem',
                 opacity: 0,
                 pointerEvents: 'none',
-                transition: 'opacity 0.25s ease',
-                '&:hover': {
-                  color: 'error.dark'
-                }
+                transition: 'opacity 0.25s ease'
               }}
               onClick={e => {
                 e.stopPropagation()
-                openDialog('delete', q)
+                setQuestionMenuItem(q)
+                setQuestionMenuAnchor(e.currentTarget)
               }}
-              aria-label={`Delete question ${q.text}`}
-            />
+            >
+              <MoreVertIcon fontSize='small' />
+            </IconButton>
           </Box>
         ),
 
@@ -355,14 +360,30 @@ const DocumentInsightsGrid = ({
         }
       }))
     ]
-  }, [sortedQuestions, answers, openUploader, onGenerate, isLoadingAnswers, isLoading, documents, selectedDocuments, onSelectDocument, openDialog, isGeneratingAll, isGeneratingCells, onGenerateSingleAnswer, theme])
+  }, [
+    sortedQuestions,
+    answers,
+    openUploader,
+    onGenerate,
+    isLoadingAnswers,
+    isLoading,
+    documents,
+    selectedDocuments,
+    onSelectDocument,
+    openDialog,
+    isGeneratingAll,
+    isGeneratingCells,
+    onGenerateSingleAnswer,
+    theme
+  ])
 
   const rows = useMemo(() => {
     return documents.map(doc => {
       const row = {
         id: doc.id,
         name: doc.name || '',
-        documentId: doc.documentId
+        documentId: doc.documentId,
+        _doc: doc
       }
 
       sortedQuestions.forEach(q => {
@@ -446,6 +467,91 @@ const DocumentInsightsGrid = ({
           }
         }}
       />
+      <Menu
+        anchorEl={documentMenuAnchor}
+        open={Boolean(documentMenuAnchor)}
+        onClose={() => {
+          setDocumentMenuAnchor(null)
+          setDocumentMenuDoc(null)
+        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        {documentMenuDoc && (
+          <>
+            <MenuItem
+              onClick={() => {
+                setDocumentMenuAnchor(null)
+                openDialog('pagePreview', documentMenuDoc)
+                setDocumentMenuDoc(null)
+              }}
+            >
+              <DescriptionIcon sx={{ mr: 1 }} fontSize='small' />
+              View Document
+            </MenuItem>
+
+            <MenuItem
+              onClick={() => {
+                setDocumentMenuAnchor(null)
+                openDialog('delete', documentMenuDoc)
+                setDocumentMenuDoc(null)
+              }}
+              sx={{ color: 'error.main' }}
+            >
+              <DeleteOutlineIcon sx={{ mr: 1 }} fontSize='small' />
+              Delete Document
+            </MenuItem>
+          </>
+        )}
+      </Menu>
+      <Menu
+        anchorEl={questionMenuAnchor}
+        open={Boolean(questionMenuAnchor)}
+        onClose={() => {
+          setQuestionMenuAnchor(null)
+          setQuestionMenuItem(null)
+        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        {questionMenuItem && (
+          <>
+            <MenuItem
+              onClick={() => {
+                setQuestionMenuAnchor(null)
+                openDialog('questionDetail', questionMenuItem)
+                setQuestionMenuItem(null)
+              }}
+            >
+              <DescriptionIcon sx={{ mr: 1 }} fontSize='small' />
+              View Question
+            </MenuItem>
+
+            <MenuItem
+              onClick={() => {
+                setQuestionMenuAnchor(null)
+                openDialog('editQuestion', questionMenuItem)
+                setQuestionMenuItem(null)
+              }}
+            >
+              <ReplayIcon sx={{ mr: 1 }} fontSize='small' />
+              Edit Question
+            </MenuItem>
+
+            <MenuItem
+              onClick={() => {
+                setQuestionMenuAnchor(null)
+                openDialog('delete', questionMenuItem)
+                setQuestionMenuItem(null)
+              }}
+              sx={{ color: 'error.main' }}
+            >
+              <DeleteOutlineIcon sx={{ mr: 1 }} fontSize='small' />
+              Delete Question
+            </MenuItem>
+          </>
+        )}
+      </Menu>
     </Box>
   )
 }
