@@ -5,6 +5,16 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Grid,
+  Divider,
+  InputAdornment,
+  Autocomplete,
+  FormControl,
+  InputLabel,
+  Checkbox,
+  Tooltip,
+  Icon,
+  IconButton,
   Button,
   RadioGroup,
   FormControlLabel,
@@ -31,40 +41,42 @@ const TASK_OPTIONS = [
   // }
 ]
 
-
 const CreateTaskDialog = ({ open, onClose, onSave, initialData = {}, editMode = false, TASK_TYPE_MAP }) => {
-  const [title, setTitle] = useState(initialData.title || '')
-  const [description, setDescription] = useState(initialData.description || '')
-  const [taskType, setTaskType] = useState(initialData.taskType || '')
+  console.log('Initial Data:', initialData)
+  // const [title, setTitle] = useState(initialData.title || '')
+  // const [description, setDescription] = useState(initialData.description || '')
+  // const [taskType, setTaskType] = useState(initialData.taskType || '')
   const [taskTypeError, setTaskTypeError] = useState('')
 
+  const [task, setTask] = useState({ ...initialData })
+  const handleChange = (field, value) => {
+    setTask(prev => ({ ...prev, [field]: value }))
+  }
 
   useEffect(() => {
     if (open) {
-      setTitle(initialData.title || '')
-      setDescription(initialData.description || '')
-      setTaskType(initialData.taskType || '')
+      setTask({
+        ...initialData
+      })
       setTaskTypeError('')
     }
   }, [initialData, open])
 
   const handleSave = () => {
-    if (title.trim() === '') {
+    if (task.title.trim() === '') {
       // You can add title validation UI later
       return
     }
-    if (!taskType) {
+    if (!task.taskType) {
       setTaskTypeError('Please select what you want to do')
       return
     }
-    onSave({ title, description, taskType })
+    onSave({ title: task.title, description: task.description, taskType: task.taskType })
     handleClose()
   }
 
   const handleClose = () => {
-    setTitle('')
-    setDescription('')
-    setTaskType('')
+    setTask({})    
     setTaskTypeError('')
     onClose()
   }
@@ -77,19 +89,12 @@ const CreateTaskDialog = ({ open, onClose, onSave, initialData = {}, editMode = 
         </Typography>
 
         {!editMode ? (
-          <RadioGroup
-            value={taskType}
-            onChange={e => {
-              setTaskType(e.target.value)
-              setTaskTypeError('')
-            }}
-            sx={{ mb: 2 }}
-          >
+          <RadioGroup value={task.taskType} onChange={e => handleChange('taskType', e.target.value)} sx={{ mb: 2 }}>
             {TASK_OPTIONS.map(option => (
               <Box
                 key={option.value}
                 sx={{
-                  border: taskType === option.value ? '2px solid #1976d2' : '1px solid #ccc',
+                  border: task.taskType === option.value ? '2px solid #1976d2' : '1px solid #ccc',
                   borderRadius: 2,
                   p: 2,
                   mb: 1,
@@ -97,7 +102,7 @@ const CreateTaskDialog = ({ open, onClose, onSave, initialData = {}, editMode = 
                   transition: 'border-color 0.3s ease',
                   '&:hover': { borderColor: '#1976d2' }
                 }}
-                onClick={() => setTaskType(option.value)}
+                onClick={() => setTask({ ...task, taskType: option.value })}
               >
                 <FormControlLabel
                   value={option.value}
@@ -160,9 +165,9 @@ const CreateTaskDialog = ({ open, onClose, onSave, initialData = {}, editMode = 
           type='text'
           fullWidth
           variant='outlined'
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          required          
+          value={task.title}
+          onChange={e => handleChange('title', e.target.value)}
+          required
         />
 
         {/* Description input */}
@@ -174,14 +179,18 @@ const CreateTaskDialog = ({ open, onClose, onSave, initialData = {}, editMode = 
           multiline
           minRows={3}
           variant='outlined'
-          value={description}
-          onChange={e => setDescription(e.target.value)}
+          value={task.description}
+          onChange={e => handleChange('description', e.target.value)}
           sx={{ mt: 2 }}
         />
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose}>Cancel</Button>
-        <Button onClick={handleSave} variant='contained' disabled={editMode ? false : !taskType || !title.trim()}>
+        <Button
+          onClick={handleSave}
+          variant='contained'
+          disabled={editMode ? false : !task.taskType || !task.title.trim()}
+        >
           {editMode ? 'Save' : 'Create'}
         </Button>
       </DialogActions>

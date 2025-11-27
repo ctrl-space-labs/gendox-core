@@ -11,14 +11,13 @@ import Icon from 'src/views/custom-components/mui/icon/icon'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/router'
-import { deleteTask } from 'src/store/activeTask/activeTask'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import LinearProgress from '@mui/material/LinearProgress'
 import Box from '@mui/material/Box'
 import CreateTaskDialog from './CreateOrEditTaskDialog'
-import { updateTask, fetchTasks } from 'src/store/activeTask/activeTask'
+import { updateTask, fetchTasks, deleteTask } from 'src/store/activeTask/activeTask'
 
 // Map your codes to user-friendly labels + colors
 const TASK_TYPE_MAP = {
@@ -102,8 +101,6 @@ const TasksList = ({ projectTasks, page }) => {
   const handleSaveEdit = async updatedData => {
     if (!editTaskData) return
     try {
-      // Call your update task API here - replace with your real API call:
-      // Example:
       await dispatch(
         updateTask({
           organizationId,

@@ -5,7 +5,7 @@ import { Box } from '@mui/material'
 import Paper from '@mui/material/Paper'
 import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
-import { fetchTaskNodesByCriteria, fetchAnswerTaskNodes } from 'src/store/activeTask/activeTask'
+import { fetchTaskNodesByCriteria, fetchAnswerTaskNodes, fetchDocumentPages } from 'src/store/activeTaskNode/activeTaskNode'
 import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocument'
 import useGeneration from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsGeneration'
 import useExportFile from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsExportFile'
@@ -23,10 +23,11 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const token = window.localStorage.getItem('accessToken')
   const { organizationId, taskId, projectId } = router.query
   const { taskNodesDocumentList, taskNodesQuestionList, taskNodesAnswerList, isLoading, isLoadingAnswers } =
-    useSelector(state => state.activeTask)
+    useSelector(state => state.activeTaskNode)
   const isBlurring = useSelector(state => state.activeDocument.isBlurring)
 
   const [documents, setDocuments] = useState([])
+  const [documentPages, setDocumentPages] = useState([])
   const [questions, setQuestions] = useState([])
   const [answers, setAnswers] = useState([])
   const [page, setPage] = useState(0)
@@ -37,10 +38,11 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     newDoc: false,
     delete: false,
     answerDetail: false,
-    questionDetail: false
+    questionDetail: false,
+    pagePreview: false
   })
   const [activeNode, setActiveNode] = useState(null)
-  const [editMode, setEditMode] = useState(false)
+  const [addQuestionMode, setAddQuestionMode] = useState(false)
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
   const { startGeneration, completeGeneration } = useGenerationContext()
@@ -73,6 +75,19 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       })
     )
   }, [organizationId, projectId, taskId, token, dispatch, page, pageSize])
+
+  const loadDocumentPages = useCallback(() => {
+      return dispatch(
+        fetchDocumentPages({
+          organizationId,
+          projectId,
+          taskId,
+          token,
+          page: 0,
+          size: MAX_PAGE_SIZE
+        })
+      )
+    }, [organizationId, projectId, taskId, token, dispatch, taskNodesDocumentList])
 
   const fetchAnswers = useCallback(() => {
     const answerTaskNodePayload = {
@@ -144,7 +159,9 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           // Refresh data to show results
           fetchDocuments().unwrap()
           fetchQuestions().unwrap()
-          fetchAnswers().unwrap().catch(error => console.error('Failed to refresh answers after polling:', error))
+          fetchAnswers()
+            .unwrap()
+            .catch(error => console.error('Failed to refresh answers after polling:', error))
 
           toast.success('Generation completed successfully!')
         }
@@ -160,7 +177,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       clearInterval(pollInterval)
     }
   }, [organizationId, projectId, taskId, token, completeGeneration, fetchDocuments, fetchQuestions, fetchAnswers])
-
 
   // 1️⃣ **Reset all local state when switching tasks/orgs/projects**
   useEffect(() => {
@@ -185,6 +201,15 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       .unwrap()
       .catch(() => toast.error('Failed to load questions'))
   }, [fetchQuestions])
+
+  // 3️⃣ **Fetch document pages when taskId changes**
+    useEffect(() => {
+      if (!(organizationId && projectId && taskId && token)) return
+      loadDocumentPages()
+        .unwrap()
+        .then(pages => setDocumentPages(pages || []))
+        .catch(() => toast.error('Failed to load document pages'))
+    }, [loadDocumentPages])
 
   // 3️⃣ **Sync questions to local state (combine reset and fill)**
   useEffect(() => {
@@ -218,7 +243,11 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             return {
               id: node.id,
               documentId: node.documentId,
-              name: fullDoc?.title || 'Unknown Document'
+              name: fullDoc?.title || 'Unknown Document',
+              url: fullDoc?.remoteUrl || '',
+              prompt: node.nodeValue?.documentMetadata?.prompt || '',
+              createdAt: node.createdAt || new Date().toISOString(),
+              _doc: fullDoc 
             }
           })
         )
@@ -242,7 +271,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       .unwrap()
       .catch(() => toast.error('Failed to load answers'))
   }, [fetchAnswers])
-
 
   // 6️⃣ **Sync answers to local state**
   useEffect(() => {
@@ -304,12 +332,12 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const openDialog = (dialogType, node = null, forceEditMode = false) => {
     setDialogs(prev => ({ ...prev, [dialogType]: true }))
     setActiveNode(node)
-    if (dialogType === 'questionDetail') setEditMode(forceEditMode)
+    if (dialogType === 'questionDetail') setAddQuestionMode(forceEditMode)
   }
   const closeDialog = dialogType => {
     setDialogs(prev => ({ ...prev, [dialogType]: false }))
     setActiveNode(null)
-    if (dialogType === 'questionDetail') setEditMode(false)
+    if (dialogType === 'questionDetail') setAddQuestionMode(false)
   }
 
   // Handle Generate Documents
@@ -336,7 +364,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     documents
   })
 
-
   return (
     <>
       <Paper sx={{ p: 3, overflowX: 'auto', backgroundColor: 'action.hover', mb: 3 }}>
@@ -345,7 +372,13 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           description={selectedTask?.description}
           onAddQuestion={() => openDialog('questionDetail', null, true)}
           openAddDocument={() => openDialog('newDoc')}
-          onGenerateNew={() => handleGenerate({ docs: documents.filter(doc => !answers.some(a => a.documentNodeId === doc.id)), reGenerateExistingAnswers: false, isAll: false })}
+          onGenerateNew={() =>
+            handleGenerate({
+              docs: documents.filter(doc => !answers.some(a => a.documentNodeId === doc.id)),
+              reGenerateExistingAnswers: false,
+              isAll: false
+            })
+          }
           onGenerateAll={() => handleGenerate({ docs: documents, reGenerateExistingAnswers: true, isAll: true })}
           onGenerateSelected={handleGenerateSelected}
           disableGenerate={documents.length === 0 || questions.length === 0}
@@ -375,6 +408,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           <DocumentInsightsGrid
             openDialog={openDialog}
             documents={documents}
+            documentPages={documentPages}
             questions={questions}
             answers={answers}
             onGenerate={docs => handleGenerate({ docs: docs, reGenerateExistingAnswers: true })}
@@ -408,7 +442,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         token={token}
         documents={documents}
         questions={questions}
-        editMode={editMode}
+        addQuestionMode={addQuestionMode}
       />
     </>
   )

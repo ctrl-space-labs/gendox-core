@@ -17,7 +17,7 @@ import { useDropzone } from 'react-dropzone'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import documentService from 'src/gendox-sdk/documentService'
 import useMediaQuery from '@mui/material/useMediaQuery'
-import { fetchTaskNodesByCriteria } from 'src/store/activeTask/activeTask'
+import { fetchTaskNodesByCriteria } from 'src/store/activeTaskNode/activeTaskNode'
 import taskService from 'src/gendox-sdk/taskService'
 import { isDocumentDigitizationFileTypeSupported, DOCUMENT_DIGITIZATION_SUPPORTED_MIME_TYPES, getDocumentDigitizationUnsupportedFormatMessage } from 'src/utils/fileFormats'
 

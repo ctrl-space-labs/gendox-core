@@ -46,30 +46,8 @@ import { useRouter } from 'next/router'
 import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
 import useGenerateNewPagesGuard from 'src/views/pages/tasks/document-digitization/table-hooks/useGenerateNewPagesGuard'
+import TextareaAutosizeStyled from 'src/views/pages/tasks/helping-components/TextareaAutosizeStyled'
 
-const TextareaAutosizeStyled = forwardRef((props, ref) => {
-  const theme = useTheme()
-  return (
-    <textarea
-      ref={ref}
-      {...props}
-      style={{
-        width: '100%',
-        minHeight: 80,
-        padding: '12px 16px',
-        fontSize: '1rem',
-        borderRadius: 8,
-        border: `1px solid ${theme.palette.divider}`,
-        backgroundColor: theme.palette.background.paper,
-        color: theme.palette.text.primary,
-        resize: 'vertical',
-        marginBottom: 16,
-        outline: 'none',
-        ...props.style
-      }}
-    />
-  )
-})
 
 const DocumentPagePreviewDialog = ({
   open,
@@ -92,7 +70,7 @@ const DocumentPagePreviewDialog = ({
   const [hasMore, setHasMore] = useState(false)
   const [totalElements, setTotalElements] = useState(0)
   const [editMode, setEditMode] = useState(false)
-  const [showPromptStructure, setShowPromptStructure] = useState(true)
+  const [showDocumentConfiguration, setShowDocumentConfiguration] = useState(true)
   const [promptValue, setPromptValue] = useState('')
   const [structureValue, setStructureValue] = useState('')
   const [confirmRegenerate, setConfirmRegenerate] = useState(false)
@@ -104,6 +82,7 @@ const DocumentPagePreviewDialog = ({
   const [selectAllPages, setSelectAllPages] = useState(false)
   const sectionRefs = useRef([])
   const router = useRouter()
+
 
   const PAGE_SIZE = 20
 
@@ -432,7 +411,7 @@ const DocumentPagePreviewDialog = ({
       try {
         setIsGenerating(true)
         setConfirmRegenerate(false)
-        setShowPromptStructure(false) // Close the config section
+        setShowDocumentConfiguration(false) // Close the config section
 
         // Pass page range if specified
         const pageFromValue = pageFrom && pageFrom.trim() ? pageFrom : null
@@ -975,12 +954,12 @@ const DocumentPagePreviewDialog = ({
                 </Box>
               </Box>
 
-              <IconButton size='small' onClick={() => setShowPromptStructure(!showPromptStructure)}>
-                {showPromptStructure ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              <IconButton size='small' onClick={() => setShowDocumentConfiguration(!showDocumentConfiguration)}>
+                {showDocumentConfiguration ? <ExpandLessIcon /> : <ExpandMoreIcon />}
               </IconButton>
             </Box>
 
-            <Collapse in={showPromptStructure}>
+            <Collapse in={showDocumentConfiguration}>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <Box>
                   <Typography variant='body2' color='text.secondary' sx={{ mb: 2, fontWeight: 500 }}>

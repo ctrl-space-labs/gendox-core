@@ -24,7 +24,7 @@ import UploaderDocumentInsights from './DocumentInsightsUploaderDocumentInsigths
 import { fetchProjectDocuments } from 'src/store/activeProject/activeProject'
 import { useDispatch, useSelector } from 'react-redux'
 import taskService from 'src/gendox-sdk/taskService'
-import { fetchTaskNodesByCriteria } from 'src/store/activeTask/activeTask'
+import { fetchTaskNodesByCriteria } from 'src/store/activeTaskNode/activeTaskNode'
 
 const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, taskId, existingDocuments }) => {
   const dispatch = useDispatch()
