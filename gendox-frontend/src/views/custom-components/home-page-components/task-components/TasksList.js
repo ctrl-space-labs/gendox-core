@@ -17,7 +17,7 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 import LinearProgress from '@mui/material/LinearProgress'
 import Box from '@mui/material/Box'
 import CreateTaskDialog from './CreateOrEditTaskDialog'
-import { updateTask, fetchTasks, deleteTask } from 'src/store/activeTask/activeTask'
+import { deleteTask } from 'src/store/activeTask/activeTask'
 
 // Map your codes to user-friendly labels + colors
 const TASK_TYPE_MAP = {
@@ -98,48 +98,21 @@ const TasksList = ({ projectTasks, page }) => {
     }
   }
 
-  const handleSaveEdit = async updatedData => {
-    if (!editTaskData) return
-    try {
-      await dispatch(
-        updateTask({
-          organizationId,
-          projectId,
-          taskId: editTaskData.id,
-          token,
-          updatePayload: { description: updatedData.description, title: updatedData.title }
-        })
-      ).unwrap()
-
-      toast.success('Task updated successfully.')
-      setEditDialogOpen(false)
-      setSelectedTask(null)
-
-      // Refresh tasks list
-      dispatch(fetchTasks({ organizationId, projectId, token }))
-    } catch (error) {
-      toast.error('Failed to update task.')
-    }
-  }
-
-  
   const handleRowClick = params => {
-  const typeCode =
-    params.row.taskType?.value || params.row.taskType?.name || params.row.type || ''
+    const typeCode = params.row.taskType?.value || params.row.taskType?.name || params.row.type || ''
 
-  let route = ''
-  if (typeCode === 'DOCUMENT_INSIGHTS') {
-    route = `/gendox/tasks/document-insights/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
-  } else if (typeCode === 'DOCUMENT_DIGITIZATION') {
-    route = `/gendox/tasks/document-digitization/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
-  } else {
-    // fallback, e.g. stay on page or show error/toast
-    return
+    let route = ''
+    if (typeCode === 'DOCUMENT_INSIGHTS') {
+      route = `/gendox/tasks/document-insights/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
+    } else if (typeCode === 'DOCUMENT_DIGITIZATION') {
+      route = `/gendox/tasks/document-digitization/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
+    } else {
+      // fallback, e.g. stay on page or show error/toast
+      return
+    }
+
+    router.push(route)
   }
-
-  router.push(route)
-}
-
 
   const columns = [
     {
@@ -303,7 +276,6 @@ const TasksList = ({ projectTasks, page }) => {
         onClose={() => setEditDialogOpen(false)}
         initialData={editTaskData || {}}
         editMode={true}
-        onSave={handleSaveEdit}
         TASK_TYPE_MAP={TASK_TYPE_MAP}
       />
     </Card>

@@ -158,7 +158,7 @@ export default {
 
   createTask: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/tasks`,
 
-  getTasks: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/tasks`,
+  getTasks: (organizationId, projectId, sort = 'createdAt,desc') => `${url}organizations/${organizationId}/projects/${projectId}/tasks?sort=${sort}`,
 
   taskRequest: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`,

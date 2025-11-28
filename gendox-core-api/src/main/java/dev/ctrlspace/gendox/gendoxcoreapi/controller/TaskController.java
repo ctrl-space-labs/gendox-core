@@ -60,7 +60,7 @@ public class TaskController {
     @ResponseStatus(value = HttpStatus.CREATED)
     public Task createTask(@PathVariable UUID organizationId,
                            @PathVariable UUID projectId,
-                           @RequestBody TaskDTO taskDTO) {
+                           @RequestBody TaskDTO taskDTO) throws GendoxException {
         return taskService.createTask(projectId, taskDTO);
     }
 
@@ -88,7 +88,7 @@ public class TaskController {
     public Task updateTask(@PathVariable UUID organizationId,
                            @PathVariable UUID projectId,
                            @PathVariable UUID taskId,
-                           @RequestBody TaskDTO taskDTO) {
+                           @RequestBody TaskDTO taskDTO) throws GendoxException {
         return taskService.updateTask(taskId, taskDTO);
     }
 

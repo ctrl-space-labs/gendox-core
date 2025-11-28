@@ -7,6 +7,7 @@ export const createTask = createAsyncThunk(
   'task/createTask',
   async ({ organizationId, projectId, taskPayload, token }, thunkAPI) => {
     try {
+      console.log("All parameters:", { organizationId, projectId, taskPayload, token });
       const response = await taskService.createTask(organizationId, projectId, taskPayload, token)
       return response.data
     } catch (error) {
@@ -33,6 +34,7 @@ export const updateTask = createAsyncThunk(
   'task/updateTask',
   async ({ organizationId, projectId, taskId, token, updatePayload }, thunkAPI) => {
     try {
+      console.log('AAll parameters:', { organizationId, projectId, taskId, token, updatePayload });
       const response = await taskService.updateTask(organizationId, projectId, taskId, token, updatePayload)
       return response.data
     } catch (error) {
