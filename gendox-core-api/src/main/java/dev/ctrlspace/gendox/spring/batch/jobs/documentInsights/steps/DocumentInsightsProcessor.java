@@ -216,7 +216,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
             
             %s
             
-            Please answer the following question:
+            Please answer the following questions:
             
             %s
             """.formatted(textSections, questionsPrompt);
@@ -301,6 +301,9 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
             logger.warn("Skipping processing documentId: {} fpr the questions: {}.",
                     documentGroupWithQuestions.getDocumentNode().getDocumentId(),
                     questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
+            return null;
+        } catch (Exception e) {
+            logger.warn("Unexpected error during completion for message: {}, error: {}", message.getId(), e.getMessage());
             return null;
         }
         return answers;
