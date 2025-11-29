@@ -274,6 +274,11 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         }
 
 
+        openAiGptRequestBuilder
+                .temperature(aiModelRequestParams.getTemperature())
+                .topP(aiModelRequestParams.getTopP())
+                .maxTokens(aiModelRequestParams.getMaxTokens());
+
         // Special case for preview search models
         if (aiModel.getModel().toLowerCase().contains("search-preview")) {
             // Only model and messages are set, no temperature, top_p, max_tokens
@@ -284,24 +289,26 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                     .maxTokens(null)
                     .maxCompletionTokens(null);
         }
-        // Special case for o1, o3, o4 models
-        else if (List.of("o1", "o3", "o4", "gemini-2.5").stream()
+        // Special case for o1, o3, o4 models, temprature to 1
+        if (List.of("o1", "o3", "o4").stream()
                 .anyMatch(aiModel.getModel()::contains)) {
             openAiGptRequestBuilder
                     .temperature(1.0)
-                    .topP(1.0)
-                    .reasoningEffort(computeReasoningEffort(aiModelRequestParams.getMaxTokens()))
+                    .topP(1.0);
+            // Make first message "user"
+            messages.getFirst().setRole("developer");
+        }
+
+        // thinking models, increate max tokens and set reasoning effort
+        if (List.of("o1", "o3", "o4", "gemini-2.5", "gemini-3").stream()
+                .anyMatch(aiModel.getModel()::contains)) {
+            openAiGptRequestBuilder
+                    .reasoningEffort(computeReasoningEffort(aiModelRequestParams.getMaxTokens(), aiModel.getModel()))
                     .maxCompletionTokens(2 * aiModelRequestParams.getMaxTokens())
                     .maxTokens(null);
 
             // Make first message "user"
             messages.getFirst().setRole("developer");
-        } else {
-            // Default setting for normal models
-            openAiGptRequestBuilder
-                    .temperature(aiModelRequestParams.getTemperature())
-                    .topP(aiModelRequestParams.getTopP())
-                    .maxTokens(aiModelRequestParams.getMaxTokens());
         }
 
         OpenAiCompletionRequest openAiCompletionRequest = openAiGptRequestBuilder.build();
@@ -311,11 +318,23 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         return completionResponse;
     }
 
-    // TODO Change this. The reassoning budget should be stored as an extra property n the Agent
-    private static String computeReasoningEffort(Long maxTokens) {
-        if (maxTokens >= 32_768) return "high";
-        if (maxTokens >= 8_192)  return "medium";
-        if (maxTokens >= 1_024)  return "low";
+    // TODO Change this. The reasoning budget should be stored as an extra property n the Agent
+    private static String computeReasoningEffort(Long maxTokens, String modelName) {
+        long tokens = maxTokens == null ? 0L : maxTokens;
+        String name = modelName == null ? "" : modelName.toLowerCase(Locale.ROOT);
+
+        boolean isGpt51       = name.startsWith("gpt-5.1");
+        boolean isGpt5        = name.startsWith("gpt-5") && !isGpt51;
+        boolean isGemini25Pro = name.contains("gemini-2.5-pro");
+
+        if (tokens >= 32_768L) return "high";
+        if (tokens >= 8_192L)  return "medium";
+        if (tokens >= 1_024L)  return "low";
+
+        if (isGpt5)        return "minimal"; // GPT-5 min is "minimal"
+        if (isGemini25Pro) return "low";     // Gemini 2.5 Pro: no "none", min "low"
+
+        // GPT-5.1 and others (that support it) can get "none"
         return "none";
     }
 
