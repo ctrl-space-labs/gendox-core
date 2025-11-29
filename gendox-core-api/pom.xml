@@ -14,8 +14,8 @@
     <name>gendox-core-api</name>
     <description>gendox-core-api</description>
     <properties>
-        <java.version>21</java.version>
-        <querydsl.version>5.0.0</querydsl.version>
+        <java.version>25</java.version>
+        <querydsl.version>5.1.0</querydsl.version>
         <spring-ai.version>1.0.0-M6</spring-ai.version>
     </properties>
 
@@ -230,6 +230,12 @@
             <version>${querydsl.version}</version>
         </dependency>
         <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+            <version>2.1.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>com.querydsl</groupId>
             <artifactId>querydsl-jpa</artifactId>
             <version>${querydsl.version}</version>
@@ -257,6 +263,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <version>1.18.42</version>
         </dependency>
 
 
@@ -565,6 +572,52 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
 <!--                <version>3.1.4</version>-->
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>${java.version}</release>
+                    <generatedSourcesDirectory>
+                        ${project.build.directory}/generated-sources/annotations
+                    </generatedSourcesDirectory>
+
+                    <annotationProcessorPaths>
+                        <!-- QueryDSL APT (Jakarta) -->
+                        <path>
+                            <groupId>com.querydsl</groupId>
+                            <artifactId>querydsl-apt</artifactId>
+                            <version>${querydsl.version}</version>
+                            <classifier>jakarta</classifier>
+                        </path>
+
+                        <!-- Needed by the QueryDSL processor -->
+                        <path>
+                            <groupId>jakarta.persistence</groupId>
+                            <artifactId>jakarta.persistence-api</artifactId>
+                            <version>3.1.0</version>
+                        </path>
+
+                        <path>
+                            <groupId>jakarta.annotation</groupId>
+                            <artifactId>jakarta.annotation-api</artifactId>
+                            <version>2.1.1</version>
+                        </path>
+
+                        <!-- Lombok processor -->
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.42</version>
+                        </path>
+                    </annotationProcessorPaths>
+                    <!-- NOTE: No <compilerArgs> / -processor here -->
+                </configuration>
+            </plugin>
+
+
+
 
 
         </plugins>
