@@ -207,7 +207,7 @@ public class CompletionService {
      * @return the list of responses. Might be more than one if there are tool calls in the completion response.
      * @throws GendoxException
      */
-        @Observed(name = "CompletionService.getCompletion",
+    @Observed(name = "CompletionService.getCompletion",
             contextualName = "CompletionService#getCompletion",
             lowCardinalityKeyValues = {
                     ObservabilityTags.LOGGABLE, "true",
@@ -216,6 +216,10 @@ public class CompletionService {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, Project project, @Nullable ObjectNode responseJsonSchema) throws GendoxException {
+
+        // TODO investigate - this is useful in the chat, but when it is used in Insights or Digitization task,
+        //  the template add fields for context and local context, which are empty in those cases.
+        //  Maybe move it to #getCompletionSearch()
         String question = convertToAiModelTextQuestion(message, nearestSections, project.getId());
 
         ProjectAgent agent = project.getProjectAgent();
@@ -250,9 +254,6 @@ public class CompletionService {
 
         previousMessages.add(promptMessage);
 
-        // TODO detect infinite loop of Agent calling with multiple messages of role "assistant" or "tool".
-        // ......
-
         String apiKey = embeddingService.getApiKey(agent, "COMPLETION_MODEL");
 
         AiModelRequestParams aiModelRequestParams = AiModelRequestParams.builder()
@@ -261,93 +262,87 @@ public class CompletionService {
                 .topP(project.getProjectAgent().getTopP())
                 .build();
 
-        CompletionResponse completionResponse = getCompletionForMessages(previousMessages,
-                project.getProjectAgent().getAgentBehavior(),
-                project.getProjectAgent().getCompletionModel(),
-                aiModelRequestParams,
-                apiKey,
-                availableTools,
-                "auto",
-                responseJsonSchema);
-
-        //        completion request audits
+        // Pre-load audit log types so we reuse them in the loop
         Type completionRequestType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
-        AuditLogs requestAuditLogs = auditLogsService.createDefaultAuditLogs(completionRequestType);
-        requestAuditLogs.setTokenCount((long) completionResponse.getUsage().getPromptTokens());
-        requestAuditLogs.setProjectId(project.getId());
-        requestAuditLogs.setOrganizationId(project.getOrganizationId());
-        auditLogsService.saveAuditLogs(requestAuditLogs);
-
-        //        completion completion audits
         Type completionResponseType = typeService.getAuditLogTypeByName("COMPLETION_RESPONSE");
-        AuditLogs completionAuditLogs = auditLogsService.createDefaultAuditLogs(completionResponseType);
-        completionAuditLogs.setTokenCount((long) completionResponse.getUsage().getCompletionTokens());
-        completionAuditLogs.setProjectId(project.getId());
-        completionAuditLogs.setOrganizationId(project.getOrganizationId());
-        auditLogsService.saveAuditLogs(completionAuditLogs);
-
-        Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
-
-        completionResponseMessage.setProjectId(project.getId());
-        completionResponseMessage.setThreadId(message.getThreadId());
-        completionResponseMessage.setCreatedBy(agent.getUserId());
-        completionResponseMessage.setUpdatedBy(agent.getUserId());
-        completionResponseMessage = messageService.createMessage(completionResponseMessage);
-
-//        return completionResponseMessage;
 
         List<Message> allResponseMessages = new ArrayList<>();
-        allResponseMessages.add(completionResponseMessage);
-        List<AiModelMessage> toolResponseMessages;
-        // TODO Handle tool calling
-        if ("tool_calls".equals(completionResponse.getChoices().getFirst().getFinishReason())) {
-            logger.info("Tool calls detected in completion response");
-//            completionResponse.getChoices().getFirst().getMessage().setContent(
-//                    "Calling tool: " + completionResponse.getChoices().getFirst().getMessage().getToolCalls().get(0).get("function").get("name").asText());
 
-            toolResponseMessages = handleToolExecution(completionResponseMessage, project, agent, availableTools);
+        boolean hasToolCalls;
+        int iteration = 0;
+        int maxIterations = 5; // safety guard against infinite loops
 
-            // Save tool response messages.
-            toolResponseMessages.forEach(toolResponseMessage -> {
-                Message toolResponse = messageAiMessageConverter.toEntity(toolResponseMessage);
-                toolResponse.setProjectId(project.getId());
-                toolResponse.setThreadId(message.getThreadId());
-                toolResponse.setCreatedBy(agent.getUserId());
-                toolResponse.setUpdatedBy(agent.getUserId());
-                messageService.createMessage(toolResponse);
-                allResponseMessages.add(toolResponse);
-            });
+        do {
+            CompletionResponse completionResponse = getCompletionForMessages(previousMessages,
+                    project.getProjectAgent().getAgentBehavior(),
+                    project.getProjectAgent().getCompletionModel(),
+                    aiModelRequestParams,
+                    apiKey,
+                    availableTools,
+                    "auto",
+                    responseJsonSchema);
 
-            // if all tools have response get final completion from the agents
-            if (toolResponseMessages.size() == completionResponseMessage.getToolCalls().size()) {
-                previousMessages.add(completionResponse.getChoices().get(0).getMessage());
-                previousMessages.addAll(toolResponseMessages);
+            AuditLogs requestAuditLogs = auditLogsService.createDefaultAuditLogs(completionRequestType);
+            requestAuditLogs.setTokenCount((long) completionResponse.getUsage().getPromptTokens());
+            requestAuditLogs.setProjectId(project.getId());
+            requestAuditLogs.setOrganizationId(project.getOrganizationId());
+            auditLogsService.saveAuditLogs(requestAuditLogs);
 
-                CompletionResponse finalResponse = getCompletionForMessages(previousMessages,
-                        project.getProjectAgent().getAgentBehavior(),
-                        project.getProjectAgent().getCompletionModel(),
-                        aiModelRequestParams,
-                        apiKey,
-                        availableTools,
-                        "auto",
-                        responseJsonSchema);
+            AuditLogs completionAuditLogs = auditLogsService.createDefaultAuditLogs(completionResponseType);
+            completionAuditLogs.setTokenCount((long) completionResponse.getUsage().getCompletionTokens());
+            completionAuditLogs.setProjectId(project.getId());
+            completionAuditLogs.setOrganizationId(project.getOrganizationId());
+            auditLogsService.saveAuditLogs(completionAuditLogs);
 
+            Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
 
-                Message finalCompletionMessage = messageAiMessageConverter.toEntity(finalResponse.getChoices().get(0).getMessage());
+            completionResponseMessage.setProjectId(project.getId());
+            completionResponseMessage.setThreadId(message.getThreadId());
+            completionResponseMessage.setCreatedBy(agent.getUserId());
+            completionResponseMessage.setUpdatedBy(agent.getUserId());
+            completionResponseMessage = messageService.createMessage(completionResponseMessage);
 
-                finalCompletionMessage.setProjectId(project.getId());
-                finalCompletionMessage.setThreadId(message.getThreadId());
-                finalCompletionMessage.setCreatedBy(agent.getUserId());
-                finalCompletionMessage.setUpdatedBy(agent.getUserId());
-                finalCompletionMessage = messageService.createMessage(finalCompletionMessage);
+            allResponseMessages.add(completionResponseMessage);
+            hasToolCalls = "tool_calls".equals(completionResponse.getChoices().getFirst().getFinishReason());
+            if (hasToolCalls) {
+                logger.info("Tool calls detected in completion response");
 
-                allResponseMessages.add(finalCompletionMessage);
+                // Execute all tools
+                List<AiModelMessage> toolResponseMessages = handleToolExecution(completionResponseMessage, project, agent, availableTools);
+
+                // Save tool response messages.
+                toolResponseMessages.forEach(toolResponseMessage -> {
+                    Message toolResponse = messageAiMessageConverter.toEntity(toolResponseMessage);
+                    toolResponse.setProjectId(project.getId());
+                    toolResponse.setThreadId(message.getThreadId());
+                    toolResponse.setCreatedBy(agent.getUserId());
+                    toolResponse.setUpdatedBy(agent.getUserId());
+                    messageService.createMessage(toolResponse);
+                    allResponseMessages.add(toolResponse);
+                });
+
+                // Sanity check: all tools responded
+                if (completionResponseMessage.getToolCalls() == null ||
+                        toolResponseMessages.size() != completionResponseMessage.getToolCalls().size()) {
+                    logger.warn("Tool response count does not match tool calls; stopping tool loop.");
+                    hasToolCalls = false; // avoid infinite loop with inconsistent state
+                } else {
+                    // Extend previousMessages for the *next* iteration ===
+                    previousMessages.add(completionResponse.getChoices().get(0).getMessage());
+                    previousMessages.addAll(toolResponseMessages);
+                }
             }
-        }
 
+            iteration++;
+
+            if (iteration >= maxIterations && hasToolCalls) {
+                logger.warn("Max tool-calling iterations ({}) reached, stopping loop.", maxIterations);
+                hasToolCalls = false;
+            }
+
+        } while (hasToolCalls);
 
         return allResponseMessages;
-
     }
 
     /**
