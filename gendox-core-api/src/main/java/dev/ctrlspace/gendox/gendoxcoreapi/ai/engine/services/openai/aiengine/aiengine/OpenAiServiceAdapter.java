@@ -290,7 +290,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                     .maxCompletionTokens(null);
         }
         // Special case for o1, o3, o4 models, temprature to 1
-        if (List.of("o1", "o3", "o4").stream()
+        if (List.of("o1", "o3", "o4", "gpt-5-", "gpt-5.1-").stream()
                 .anyMatch(aiModel.getModel()::contains)) {
             openAiGptRequestBuilder
                     .temperature(1.0)
@@ -300,7 +300,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         }
 
         // thinking models, increate max tokens and set reasoning effort
-        if (List.of("o1", "o3", "o4", "gemini-2.5", "gemini-3").stream()
+        if (List.of("o1", "o3", "o4", "gpt-5-", "gpt-5.1-", "gemini-2.5", "gemini-3").stream()
                 .anyMatch(aiModel.getModel()::contains)) {
             openAiGptRequestBuilder
                     .reasoningEffort(computeReasoningEffort(aiModelRequestParams.getMaxTokens(), aiModel.getModel()))
