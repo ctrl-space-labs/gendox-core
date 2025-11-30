@@ -54,7 +54,6 @@ const TASK_OPTIONS = [
 ]
 
 const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, TASK_TYPE_MAP }) => {
-  console.log('Initial Data:', initialData)
   const router = useRouter()
   const dispatch = useDispatch()
   const theme = useTheme()
@@ -77,7 +76,6 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
   const [errors, setErrors] = useState({})
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  console.log('Task State:', task)
 
   // --- Load initial data when editing ---
   useEffect(() => {

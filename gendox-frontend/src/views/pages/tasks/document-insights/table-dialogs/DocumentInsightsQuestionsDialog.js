@@ -60,7 +60,16 @@ const QuestionsDialog = ({
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth='xl' aria-labelledby='question-dialog-title'>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      disableEnforceFocus
+      disableAutoFocus
+      disableRestoreFocus
+      fullWidth
+      maxWidth='xl'
+      aria-labelledby='question-dialog-title'
+    >
       {isSaving && (
         <Box
           sx={{
@@ -162,7 +171,15 @@ const QuestionsDialog = ({
           </Box>
         ))}
         {isAddMode && (
-          <Button startIcon={<AddIcon />} onClick={handleAddQuestion} sx={{ mb: 1 }} variant='outlined' fullWidth>
+          <Button
+            startIcon={<AddIcon />}
+            onClick={() => {
+              handleAddQuestion()
+            }}
+            sx={{ mb: 1 }}
+            variant='outlined'
+            fullWidth
+          >
             Add New
           </Button>
         )}

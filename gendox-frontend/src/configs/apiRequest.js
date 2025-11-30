@@ -1,4 +1,5 @@
 import commonConfig from 'src/configs/common.config.js'
+import { duplicateTask } from 'src/store/activeTask/activeTask'
 
 const url = commonConfig.gendoxUrl
 
@@ -158,6 +159,9 @@ export default {
 
   createTask: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/tasks`,
 
+  duplicateTask: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/duplicate`,
+
   getTasks: (organizationId, projectId, sort = 'createdAt,desc') => `${url}organizations/${organizationId}/projects/${projectId}/tasks?sort=${sort}`,
 
   taskRequest: (organizationId, projectId, taskId) =>
@@ -172,8 +176,8 @@ export default {
   updateTaskNode: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes`,
 
-  updateTaskNodeForDocumentDigitization: (organizationId, projectId, taskId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/document-digitization`,
+  updateTaskNodeForDocumentMetadata: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/document-metadata`,
 
   getTaskNodeById: (organizationId, projectId, id) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes?id=${id}`,

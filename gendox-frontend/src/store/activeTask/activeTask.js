@@ -7,8 +7,20 @@ export const createTask = createAsyncThunk(
   'task/createTask',
   async ({ organizationId, projectId, taskPayload, token }, thunkAPI) => {
     try {
-      console.log("All parameters:", { organizationId, projectId, taskPayload, token });
       const response = await taskService.createTask(organizationId, projectId, taskPayload, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
+export const duplicateTask = createAsyncThunk(
+  'task/duplicateTask',
+  async ({ organizationId, projectId, payload, token }, thunkAPI) => {
+    try {
+      const response = await taskService.duplicateTask(organizationId, projectId, payload, token)
       return response.data
     } catch (error) {
       toast.error(getErrorMessage(error))
@@ -34,7 +46,6 @@ export const updateTask = createAsyncThunk(
   'task/updateTask',
   async ({ organizationId, projectId, taskId, token, updatePayload }, thunkAPI) => {
     try {
-      console.log('AAll parameters:', { organizationId, projectId, taskId, token, updatePayload });
       const response = await taskService.updateTask(organizationId, projectId, taskId, token, updatePayload)
       return response.data
     } catch (error) {
@@ -103,6 +114,21 @@ const taskSlice = createSlice({
         state.isLoading = false
         state.projectTasks.push(action.payload)
       })
+      .addCase(createTask.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+      .addCase(duplicateTask.pending, state => {
+        state.isLoading = true
+      })
+      .addCase(duplicateTask.fulfilled, (state, action) => {
+        state.isLoading = false
+        state.projectTasks.push(action.payload)
+      })
+      .addCase(duplicateTask.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
       .addCase(fetchTasks.fulfilled, (state, action) => {
         state.projectTasks = action.payload
       })
@@ -117,9 +143,7 @@ const taskSlice = createSlice({
         state.projectTasks = state.projectTasks.filter(t => t.id !== action.payload)
         if (state.selectedTask?.id === action.payload) state.selectedTask = null
       })
-      
   }
 })
 
 export default taskSlice.reducer
-

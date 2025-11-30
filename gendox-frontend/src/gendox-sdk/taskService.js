@@ -19,6 +19,23 @@ const createTask = async (organizationId, projectId, taskPayload, token) => {
 }
 
 /**
+ * Duplicate a Task
+ * @param organizationId
+ * @param projectId
+ * @param payload
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<Task>>}
+ */
+const duplicateTask = async (organizationId, projectId, payload, token) => {
+  return axios.post(apiRequests.duplicateTask(organizationId, projectId), payload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
  * Get all tasks for a project
  * @param organizationId
  * @param projectId
@@ -128,9 +145,9 @@ const updateTaskNode = async (organizationId, projectId, taskNodePayload, token)
  * @param updatePayload
  * @returns {Promise<axios.AxiosResponse<TaskNode>>}
  */
-const updateTaskNodeForDocumentDigitization = async (organizationId, projectId, taskId, updatePayload, token) => {
+const updateTaskNodeForDocumentMetadata = async (organizationId, projectId, taskId, updatePayload, token) => {
   return axios.put(
-    apiRequests.updateTaskNodeForDocumentDigitization(organizationId, projectId, taskId),
+    apiRequests.updateTaskNodeForDocumentMetadata(organizationId, projectId, taskId),
     updatePayload,
     {
       headers: {
@@ -420,6 +437,7 @@ const documentDigitizationExportCSV = async (organizationId, projectId, taskId, 
 
 export default {
   createTask,
+  duplicateTask,
   getTasks,
   updateTask,
   getTaskById,
@@ -430,7 +448,7 @@ export default {
   createTaskNode,
   createTaskNodesBatch,
   updateTaskNode,
-  updateTaskNodeForDocumentDigitization,
+  updateTaskNodeForDocumentMetadata,
   getTaskNodeById,
   createTaskEdge,
   getTaskEdgeById,

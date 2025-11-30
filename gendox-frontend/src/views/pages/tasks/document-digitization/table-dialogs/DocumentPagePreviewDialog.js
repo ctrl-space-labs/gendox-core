@@ -343,7 +343,7 @@ const DocumentPagePreviewDialog = ({
         allPages: selectAllPages || ((!pageFrom || !pageFrom.trim()) && (!pageTo || !pageTo.trim()))
       }
 
-      await taskService.updateTaskNodeForDocumentDigitization(organizationId, projectId, taskId, updateData, token)
+      await taskService.updateTaskNodeForDocumentMetadata(organizationId, projectId, taskId, updateData, token)
 
       // Update the document object locally first
       const updatedDocument = {

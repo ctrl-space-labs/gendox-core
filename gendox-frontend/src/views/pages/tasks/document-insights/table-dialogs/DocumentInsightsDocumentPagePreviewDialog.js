@@ -39,7 +39,6 @@ import { fetchDocument } from 'src/store/activeDocument/activeDocument'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
 
-
 const DocumentPagePreviewDialog = ({
   open,
   onClose,
@@ -93,7 +92,7 @@ const DocumentPagePreviewDialog = ({
         prompt: promptValue
       }
 
-      await taskService.updateTaskNodeForDocumentDigitization(organizationId, projectId, taskId, updateData, token)
+      await taskService.updateTaskNodeForDocumentMetadata(organizationId, projectId, taskId, updateData, token)
 
       setEditMode(false)
       toast.success('Document updated successfully!')
@@ -164,6 +163,9 @@ const DocumentPagePreviewDialog = ({
     <Dialog
       open={open}
       onClose={handleClose}
+      disableEnforceFocus
+      disableAutoFocus
+      disableRestoreFocus
       maxWidth={fullscreen ? false : 'lg'}
       fullWidth
       fullScreen={fullscreen}
@@ -222,7 +224,7 @@ const DocumentPagePreviewDialog = ({
                 <span>
                   <IconButton
                     size='small'
-                    onClick={() => onDelete && onDelete()}
+                    onClick={onDelete ? onDelete : undefined}
                     disabled={!onDelete}
                     sx={{ mr: 1, color: 'error.main' }}
                   >

@@ -98,7 +98,7 @@ public class TaskNodeService {
         return taskNodeRepository.save(existing);
     }
 
-    public TaskNode updateTaskNodeForDocumentDigitization(TaskDocumentMetadataDTO taskDocumentMetadataDTO) throws GendoxException {
+    public TaskNode updateTaskNodesMetadata(TaskDocumentMetadataDTO taskDocumentMetadataDTO) throws GendoxException {
         logger.info("Updating task node for document digitization: {}", taskDocumentMetadataDTO);
 
         TaskNode existing = taskNodeRepository.findById(taskDocumentMetadataDTO.getTaskNodeId())

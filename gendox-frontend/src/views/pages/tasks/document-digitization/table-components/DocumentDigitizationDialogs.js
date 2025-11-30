@@ -40,7 +40,7 @@ const DocumentDigitizationDialogs = ({
   const handleUpdateDocument = async updatedDoc => {
     setLoading(true)
     try {
-      await taskService.updateTaskNodeForDocumentDigitization(
+      await taskService.updateTaskNodeForDocumentMetadata(
         organizationId,
         projectId,
         taskId,

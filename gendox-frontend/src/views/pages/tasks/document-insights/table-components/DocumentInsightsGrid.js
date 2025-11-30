@@ -468,6 +468,9 @@ const DocumentInsightsGrid = ({
         }}
       />
       <Menu
+        disableEnforceFocus
+        disableAutoFocus
+        disableRestoreFocus
         anchorEl={documentMenuAnchor}
         open={Boolean(documentMenuAnchor)}
         onClose={() => {
@@ -477,34 +480,37 @@ const DocumentInsightsGrid = ({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        {documentMenuDoc && (
-          <>
-            <MenuItem
-              onClick={() => {
-                setDocumentMenuAnchor(null)
-                openDialog('pagePreview', documentMenuDoc)
-                setDocumentMenuDoc(null)
-              }}
-            >
-              <DescriptionIcon sx={{ mr: 1 }} fontSize='small' />
-              View Document
-            </MenuItem>
+        {documentMenuDoc && [
+          <MenuItem
+            key='document-view'
+            onClick={() => {
+              setDocumentMenuAnchor(null)
+              openDialog('pagePreview', documentMenuDoc)
+              setDocumentMenuDoc(null)
+            }}
+          >
+            <DescriptionIcon sx={{ mr: 1 }} fontSize='small' />
+            View Document
+          </MenuItem>,
 
-            <MenuItem
-              onClick={() => {
-                setDocumentMenuAnchor(null)
-                openDialog('delete', documentMenuDoc)
-                setDocumentMenuDoc(null)
-              }}
-              sx={{ color: 'error.main' }}
-            >
-              <DeleteOutlineIcon sx={{ mr: 1 }} fontSize='small' />
-              Delete Document
-            </MenuItem>
-          </>
-        )}
+          <MenuItem
+            key='document-delete'
+            onClick={() => {
+              setDocumentMenuAnchor(null)
+              openDialog('delete', documentMenuDoc)
+              setDocumentMenuDoc(null)
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            <DeleteOutlineIcon sx={{ mr: 1 }} fontSize='small' />
+            Delete Document
+          </MenuItem>
+        ]}
       </Menu>
       <Menu
+        disableEnforceFocus
+        disableAutoFocus
+        disableRestoreFocus
         anchorEl={questionMenuAnchor}
         open={Boolean(questionMenuAnchor)}
         onClose={() => {
@@ -514,43 +520,32 @@ const DocumentInsightsGrid = ({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        {questionMenuItem && (
-          <>
-            <MenuItem
-              onClick={() => {
-                setQuestionMenuAnchor(null)
-                openDialog('questionDetail', questionMenuItem)
-                setQuestionMenuItem(null)
-              }}
-            >
-              <DescriptionIcon sx={{ mr: 1 }} fontSize='small' />
-              View Question
-            </MenuItem>
+        {questionMenuItem && [
+          <MenuItem
+            key='question-view'
+            onClick={e => {
+              setQuestionMenuAnchor(null)
+              openDialog('questionDetail', questionMenuItem)
+              setQuestionMenuItem(null)
+            }}
+          >
+            <DescriptionIcon sx={{ mr: 1 }} fontSize='small' />
+            View Question
+          </MenuItem>,
 
-            <MenuItem
-              onClick={() => {
-                setQuestionMenuAnchor(null)
-                openDialog('editQuestion', questionMenuItem)
-                setQuestionMenuItem(null)
-              }}
-            >
-              <ReplayIcon sx={{ mr: 1 }} fontSize='small' />
-              Edit Question
-            </MenuItem>
-
-            <MenuItem
-              onClick={() => {
-                setQuestionMenuAnchor(null)
-                openDialog('delete', questionMenuItem)
-                setQuestionMenuItem(null)
-              }}
-              sx={{ color: 'error.main' }}
-            >
-              <DeleteOutlineIcon sx={{ mr: 1 }} fontSize='small' />
-              Delete Question
-            </MenuItem>
-          </>
-        )}
+          <MenuItem
+            key='question-delete'
+            onClick={() => {
+              setQuestionMenuAnchor(null)
+              openDialog('delete', questionMenuItem)
+              setQuestionMenuItem(null)
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            <DeleteOutlineIcon sx={{ mr: 1 }} fontSize='small' />
+            Delete Question
+          </MenuItem>
+        ]}
       </Menu>
     </Box>
   )
