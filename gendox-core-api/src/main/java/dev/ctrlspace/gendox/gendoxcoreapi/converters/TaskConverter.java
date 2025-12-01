@@ -27,7 +27,7 @@ public class TaskConverter implements GendoxConverter <Task, TaskDTO> {
 
 
     @Override
-    public TaskDTO toDTO(Task task) throws GendoxException, JsonProcessingException {
+    public TaskDTO toDTO(Task task) throws GendoxException {
         return TaskDTO.builder()
                 .id(task.getId())
                 .projectId(task.getProjectId())

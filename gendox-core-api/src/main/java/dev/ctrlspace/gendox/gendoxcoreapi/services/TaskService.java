@@ -60,20 +60,11 @@ public class TaskService {
         Task original = taskRepository.findById(taskDuplicateDTO.getTaskId())
                 .orElseThrow(() -> new GendoxException("TASK_NOT_FOUND", "Task not found", HttpStatus.NOT_FOUND));
 
-        Task newTask = new Task();
+        TaskDTO newTaskDTO = taskConverter.toDTO(original);
+        newTaskDTO.setId(null);
+        newTaskDTO.setProjectId(projectId);
 
-        // Copy base fields
-        newTask.setProjectId(projectId);
-        newTask.setTitle(taskDuplicateDTO.getNewTitle());
-        newTask.setDescription(taskDuplicateDTO.getNewDescription());
-        newTask.setTaskType(original.getTaskType());
-        newTask.setCompletionModel(original.getCompletionModel());
-        newTask.setTaskPrompt(original.getTaskPrompt());
-        newTask.setTemperature(original.getTemperature());
-        newTask.setTopP(original.getTopP());
-        newTask.setMaxToken(original.getMaxToken());
-
-        newTask = taskRepository.save(newTask);
+        Task newTask = this.createTask(projectId, newTaskDTO);
 
         List<TaskNode> nodesToSave = new ArrayList<>();
 
