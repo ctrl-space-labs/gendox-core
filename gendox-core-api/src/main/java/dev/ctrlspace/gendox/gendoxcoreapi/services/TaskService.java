@@ -10,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,10 @@ public class TaskService {
     private AiModelService aiModelService;
     private TaskNodeService taskNodeService;
 
+    private Integer maxQuestionsPerBucket;
+    private Integer maxQuestionTokensPerBucket;
+    private Integer maxSectionsChunkTokens;
+
     @Autowired
     public TaskService(TaskRepository taskRepository,
                        TaskNodeRepository taskNodeRepository,
@@ -37,7 +42,10 @@ public class TaskService {
                        TaskEdgeService taskEdgeService,
                        TaskConverter taskConverter,
                        AiModelService aiModelService,
-                       TaskNodeService taskNodeService) {
+                       TaskNodeService taskNodeService,
+                       @Value("${gendox.tasks.max-questions-per-bucket}") Integer maxQuestionsPerBucket,
+                       @Value("${gendox.tasks.max-question-tokens-per-bucket}") Integer maxQuestionTokensPerBucket,
+                       @Value("${gendox.tasks.max-sections-chunk-tokens}") Integer maxSectionsChunkTokens) {
         this.taskRepository = taskRepository;
         this.taskNodeRepository = taskNodeRepository;
         this.typeService = typeService;
@@ -45,10 +53,23 @@ public class TaskService {
         this.taskConverter = taskConverter;
         this.aiModelService = aiModelService;
         this.taskNodeService = taskNodeService;
+        this.maxQuestionsPerBucket = maxQuestionsPerBucket;
+        this.maxQuestionTokensPerBucket = maxQuestionTokensPerBucket;
+        this.maxSectionsChunkTokens = maxSectionsChunkTokens;
     }
 
     public Task createTask(UUID projectId, TaskDTO taskDTO) throws GendoxException {
         Task task = taskConverter.toEntity(taskDTO);
+        // defaults
+        if (task.getMaxQuestionsPerBucket() == null) {
+            task.setMaxQuestionsPerBucket(this.maxQuestionsPerBucket);
+        }
+        if (task.getMaxQuestionTokensPerBucket() == null) {
+            task.setMaxQuestionTokensPerBucket(this.maxQuestionTokensPerBucket);
+        }
+        if (task.getMaxSectionsChunkTokens() == null) {
+            task.setMaxSectionsChunkTokens(this.maxSectionsChunkTokens);
+        }
         logger.info("Creating new task: {}", task);
         return taskRepository.save(task);
     }

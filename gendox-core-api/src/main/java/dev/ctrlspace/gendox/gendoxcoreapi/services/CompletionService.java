@@ -216,10 +216,6 @@ public class CompletionService {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, Project project, @Nullable ObjectNode responseJsonSchema) throws GendoxException {
-
-        // TODO investigate - this is useful in the chat, but when it is used in Insights or Digitization task,
-        //  the template add fields for context and local context, which are empty in those cases.
-        //  Maybe move it to #getCompletionSearch()
         String question = convertToAiModelTextQuestion(message, nearestSections, project.getId());
 
         ProjectAgent agent = project.getProjectAgent();
