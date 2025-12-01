@@ -171,6 +171,10 @@ gendox:
     top_p: 0.4
     max_search_limit: 5
     max_completion_limit: 5
+  tasks:
+    max-questions-per-bucket: 10
+    max-question-tokens-per-bucket: 5000
+    max-sections-chunk-tokens: 100000
 
   moderation:
     message: "Sorry, I can't reply in this message, it contains inappropriate content. If this this not the case, please contact the support team."
