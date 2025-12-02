@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.EncodingRegistry;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.CompletionQuestionRequest;
@@ -67,7 +68,7 @@ public class DocumentInsightsProcessorQuestionsCountSplitTest {
 
     /** 1) Empty input → empty output list */
     @Test
-    void chunkQuestions_emptyList_returnsEmpty() {
+    void chunkQuestions_emptyList_returnsEmpty() throws GendoxException {
         List<List<CompletionQuestionRequest>> buckets =
                 documentInsightsProcessor.chunkQuestionsToGroups(task, List.of());
 
@@ -76,7 +77,7 @@ public class DocumentInsightsProcessorQuestionsCountSplitTest {
 
     /** 2) Fewer than CHUNK_SIZE questions → single bucket */
     @Test
-    void chunkQuestions_lessThanChunkSize_singleBucket() {
+    void chunkQuestions_lessThanChunkSize_singleBucket() throws GendoxException {
         int chunk = task.getMaxQuestionsPerBucket();
         List<TaskNode> input = makeTaskNodes(chunk - 1);         // e.g. 9 if chunk=10
 
@@ -90,7 +91,7 @@ public class DocumentInsightsProcessorQuestionsCountSplitTest {
 
     /** 3) Exactly CHUNK_SIZE questions → single full bucket */
     @Test
-    void chunkQuestions_exactChunkSize_singleFullBucket() {
+    void chunkQuestions_exactChunkSize_singleFullBucket() throws GendoxException {
         int chunk = task.getMaxQuestionsPerBucket();
         List<TaskNode> input = makeTaskNodes(chunk);
 
@@ -103,7 +104,7 @@ public class DocumentInsightsProcessorQuestionsCountSplitTest {
 
     /** 4) count = 2·chunk + chunk/2 → three buckets */
     @Test
-    void chunkQuestions_twoAndHalfChunks_threeBuckets() {
+    void chunkQuestions_twoAndHalfChunks_threeBuckets() throws GendoxException {
         int chunk = task.getMaxQuestionsPerBucket();
         int total = (int)(2.5 * chunk);          // 2½ chunks (e.g. 25 when chunk = 10)
         List<TaskNode> input = makeTaskNodes(total);
@@ -124,7 +125,7 @@ public class DocumentInsightsProcessorQuestionsCountSplitTest {
 
     /** 5) IDs & text copied correctly */
     @Test
-    void chunkQuestions_preservesIdsAndText() {
+    void chunkQuestions_preservesIdsAndText() throws GendoxException {
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
         TaskNode n1 = mockTaskNode(id1, "Life, universe and everything");

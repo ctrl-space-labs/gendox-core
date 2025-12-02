@@ -4,6 +4,7 @@ import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.CompletionQuestionRequest;
@@ -93,7 +94,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
 
     /** 1 ) Everything fits comfortably → 1 bucket, tokens <= 10 000 */
     @Test
-    void allSmallQuestions_singleBucket() {
+    void allSmallQuestions_singleBucket() throws GendoxException {
         int smallTokens = 800;                // 800 × 5  = 4 000  << 10 000
         List<TaskNode> input = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -110,7 +111,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
     }
 
     @Test
-    void tokenOverflow_startsNewBucket() {
+    void tokenOverflow_startsNewBucket() throws GendoxException {
         // pick a size so that two fit but three do not
         int safeSize = task.getMaxQuestionTokensPerBucket() / 2 - 50;
         assertTrue(2 * safeSize < task.getMaxQuestionTokensPerBucket(),
@@ -137,7 +138,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
 
     /** 3 ) Question >10 000 tokens → must live alone in its own bucket */
     @Test
-    void oversizedQuestion_getsOwnBucket() {
+    void oversizedQuestion_getsOwnBucket() throws GendoxException {
         TaskNode huge   = nodeWithTokens(TOKEN_LIMIT + 2_000); // > limit
         TaskNode small1 = nodeWithTokens(500);
         TaskNode small2 = nodeWithTokens(500);
@@ -159,7 +160,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
 
     /** 4 ) Late tiny question should back‑fill earlier bucket if there’s room */
     @Test
-    void lateSmallQuestion_backfillsEarlierBucket() {
+    void lateSmallQuestion_backfillsEarlierBucket() throws GendoxException {
         int almostFull = (TOKEN_LIMIT - 1_000) / (QUESTION_LIMIT - 1); // plenty of headroom
         List<TaskNode> list = new ArrayList<>();
 
@@ -184,7 +185,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
 
     /** 5) Bucket packed close to the token ceiling but still ≤ limit */
     @Test
-    void nearTokenCeiling_singleBucket() {
+    void nearTokenCeiling_singleBucket() throws GendoxException {
         int each = TOKEN_LIMIT / QUESTION_LIMIT - 50;                 // e.g. 950 tokens
         List<TaskNode> input = IntStream.range(0, QUESTION_LIMIT)
                 .mapToObj(i -> nodeWithTokens(each))
@@ -199,7 +200,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
 
     /** 6) Exactly full bucket (questions=10, tokens≈10 000) then one extra tiny question */
     @Test
-    void fullBucket_thenExtraQuestion_startsNewBucket() {
+    void fullBucket_thenExtraQuestion_startsNewBucket() throws GendoxException {
         int each = TOKEN_LIMIT / QUESTION_LIMIT;                      // ≈1000 tokens
         List<TaskNode> full = IntStream.range(0, QUESTION_LIMIT)
                 .mapToObj(i -> nodeWithTokens(each))
@@ -216,7 +217,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
 
     /** 7) Question‑count limit reached even though plenty of token head‑room */
     @Test
-    void questionLimitTriggersSplit() {
+    void questionLimitTriggersSplit() throws GendoxException {
         List<TaskNode> input = IntStream.range(0, QUESTION_LIMIT + 1) // 11 questions
                 .mapToObj(i -> nodeWithTokens(50))  // 50 tokens each
                 .toList();
@@ -230,7 +231,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
 
     /** 8) Token overflow triggers split even with only two questions */
     @Test
-    void tokenOverflow_twoQuestions() {
+    void tokenOverflow_twoQuestions() throws GendoxException {
         // pick each just over half the limit so together they overflow
         int halfPlus = task.getMaxQuestionTokensPerBucket() / 2 + 1;
         assertTrue(halfPlus * 2 > task.getMaxQuestionTokensPerBucket(),
@@ -249,7 +250,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
 
     /** 9) Multiple oversized questions – each must stand alone */
     @Test
-    void multipleOversizedQuestions_eachOwnBucket() {
+    void multipleOversizedQuestions_eachOwnBucket() throws GendoxException {
         TaskNode big1 = nodeWithTokens(TOKEN_LIMIT + 1_000);
         TaskNode big2 = nodeWithTokens(TOKEN_LIMIT + 2_000);
         TaskNode big3 = nodeWithTokens(TOKEN_LIMIT + 3_000);
@@ -263,7 +264,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
 
     /** 10) Zero‑token questions (empty strings) – split only by question count */
     @Test
-    void zeroTokenQuestions_groupedByCount() {
+    void zeroTokenQuestions_groupedByCount() throws GendoxException {
         List<TaskNode> input = IntStream.range(0, QUESTION_LIMIT + 2) // 12 empties
                 .mapToObj(i -> nodeWithRawText(""))
                 .toList();
@@ -279,7 +280,7 @@ class DocumentInsightsProcessorQuestionSplitEdgeCasesTest {
     /** 11) 30 small questions + 2 huge ones, random order →
      *      3 compact small‑buckets (10/10/10) + 2 singleton huge‑buckets. */
     @Test
-    void mixedSmallAndHugeQuestions_expectedPacking() {
+    void mixedSmallAndHugeQuestions_expectedPacking() throws GendoxException {
         int smallTokens = 200;                              // well under the 10 000 limit
         int hugeTokens  = TOKEN_LIMIT + 4_000;                  // definitely oversized
 
