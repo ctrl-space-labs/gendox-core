@@ -26,3 +26,5 @@ COMMENT ON COLUMN gendox_core.tasks.max_sections_chunk_tokens IS 'Max tokens all
 CREATE INDEX IF NOT EXISTS idx_tasks_completion_model
     ON gendox_core.tasks (completion_model_id);
 
+ALTER TABLE gendox_core.document_instance
+    ADD COLUMN IF NOT EXISTS total_tokens bigint;

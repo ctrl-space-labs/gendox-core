@@ -1,6 +1,8 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.splitter.steps;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.knuddels.jtokkit.api.Encoding;
+import com.knuddels.jtokkit.api.EncodingRegistry;
+import com.knuddels.jtokkit.api.ModelType;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ApiKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
@@ -15,6 +17,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.ContentDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -36,6 +40,8 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
     Logger logger = LoggerFactory.getLogger(DocumentSplitterProcessor.class);
     @Value("#{jobParameters['skipUnchangedDocs']}")
     protected Boolean skipUnchangedDocs;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private ServiceSelector serviceSelector;
     private ProjectAgentService projectAgentService;
@@ -44,7 +50,9 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
     private CryptographyUtils cryptographyUtils;
     private ApiKeyService apiKeyService;
     private OrganizationWebSiteService organizationWebSiteService;
+    private EncodingRegistry encodingRegistry;
 
+    private Encoding enc;
 
     @Autowired
     public DocumentSplitterProcessor(ServiceSelector serviceSelector,
@@ -53,7 +61,8 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
                                      GendoxAPIIntegrationService gendoxAPIIntegrationService,
                                      CryptographyUtils cryptographyUtils,
                                      ApiKeyService apiKeyService,
-                                     OrganizationWebSiteService organizationWebSiteService) {
+                                     OrganizationWebSiteService organizationWebSiteService,
+                                     EncodingRegistry encodingRegistry) {
         this.serviceSelector = serviceSelector;
         this.projectAgentService = projectAgentService;
         this.downloadService = downloadService;
@@ -61,6 +70,10 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         this.cryptographyUtils = cryptographyUtils;
         this.apiKeyService = apiKeyService;
         this.organizationWebSiteService = organizationWebSiteService;
+        this.encodingRegistry = encodingRegistry;
+
+
+        this.enc = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
     }
 
 
@@ -77,6 +90,13 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
                 logger.trace("No changes detected for document {}. Skipping processing.", instance.getId());
                 return null;
             }
+
+            // Stop JPA/Hibernate from tracking this instance. It will be saved in Writer if updated.
+            entityManager.detach(instance);
+
+            // using gpt-4o encoding for token counting - not perfect but good enough approximation for all models
+            int totalTokens = enc.countTokens(fileContent);
+            instance.setTotalTokens((long)totalTokens);
 
             // Step 3: Split content into sections
             List<String> contentSections = splitContent(instance, fileContent);

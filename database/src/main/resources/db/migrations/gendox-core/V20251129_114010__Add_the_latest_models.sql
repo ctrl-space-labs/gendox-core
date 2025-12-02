@@ -17,7 +17,7 @@ SELECT
 WHERE NOT EXISTS (
     SELECT 1
     FROM gendox_core.ai_models
-    WHERE name = 'GEMINI-3-PRO-PREVIEW'
+    WHERE name = 'GEMINI_3-PRO-PREVIEW'
 );
 
 
