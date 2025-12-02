@@ -96,6 +96,20 @@ public class DocumentSectionService {
         return documentInstanceSectionRepository.findAll(DocumentInstanceSectionPredicates.build(criteria), pageable);
     }
 
+    public String getFullDocumentText(UUID docId) throws GendoxException {
+        List<DocumentInstanceSection> sections = this.getSectionsByDocument(docId);
+        sections.sort(Comparator.comparingInt(
+                s -> s.getDocumentSectionMetadata().getSectionOrder()
+        ));
+
+        String documentText = sections.stream()
+                .map(DocumentInstanceSection::getSectionValue)
+                .reduce("", (a, b) -> a + "\n" + b);
+
+        return documentText;
+    }
+
+
     /**
      * TODO merge this with the above to findSectionsByCriteria
      *

@@ -200,9 +200,16 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                 completionApiUrl,
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader(apiKey)),
                 OpenAiCompletionResponse.class);
-        logger.debug("Received completion Response from {}. Prompt Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getPromptTokens());
-        logger.debug("Received completion Response from {}. Completion Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getCompletionTokens());
-        logger.info("Received completion Response from {}. Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getTotalTokens());
+        logger.debug("Received completion Response from {}. Prompt Tokens billed: {}, Cached Tokens billed: {}, Completion Tokens billed: {}, total tokens: {}",
+                completionApiUrl,
+                responseEntity.getBody().getUsage().getPromptTokens(),
+                Optional.ofNullable(responseEntity.getBody())
+                        .map(b -> b.getUsage())
+                        .map(u -> u.getPromptTokensDetail())
+                        .map(d -> d.getCachedTokens())
+                        .orElse(0),
+                responseEntity.getBody().getUsage().getCompletionTokens(),
+                responseEntity.getBody().getUsage().getTotalTokens());
 
         return responseEntity.getBody();
     }

@@ -10,6 +10,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.Completio
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.ModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
@@ -45,6 +47,7 @@ import org.slf4j.Logger;
 public class CompletionService {
 
 
+    private final AiToolRegistry aiToolRegistry;
     Logger logger = LoggerFactory.getLogger(CompletionService.class);
 
 
@@ -83,7 +86,7 @@ public class CompletionService {
                              MessageService messageService,
                              AuditLogsService auditLogsService,
                              DocumentUtils documentUtils,
-                             ObjectMapper objectMapper) {
+                             ObjectMapper objectMapper, AiToolRegistry aiToolRegistry) {
         this.self = self;
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
@@ -98,6 +101,7 @@ public class CompletionService {
         this.auditLogsService = auditLogsService;
         this.documentUtils = documentUtils;
         this.objectMapper = objectMapper;
+        this.aiToolRegistry = aiToolRegistry;
     }
 
     private CompletionResponse getCompletionForMessages(List<AiModelMessage> aiModelMessages, String agentRole, AiModel aiModel,
@@ -441,20 +445,20 @@ public class CompletionService {
 
         completionResponseMessage.getToolCalls().forEach(toolCall -> {
             String toolName = toolCall.get("function").get("name").asText();
-            AiTools tool = toolMap.get(toolName);
-            if (tool == null) {
+            AiTools toolDefinition = toolMap.get(toolName);
+            if (toolDefinition == null) {
                 throw new GendoxRuntimeException(HttpStatus.BAD_REQUEST, "AI_TOOL_NOT_FOUND", "Tool with name " + toolName + " not found in available tools");
             }
 
-            // TODO add support for actual backend tool execution
+            JsonNode args = toolCall.get("function").get("arguments");
+            ToolExecutionContext ctx = new ToolExecutionContext(project, agent, toolDefinition);
+            JsonNode result = aiToolRegistry.execute(toolName, args, ctx);
 
-            // Here you would execute the tool using the toolCall parameters and the tool's jsonSchema
-            // For now, we will just support frontend actions with no feedback to the llm
             AiModelMessage message = new AiModelMessage();
             message.setRole("tool");
             message.setToolCallId(toolCall.get("id").asText());
             message.setName(toolName);
-            message.setContent("{\"status\": \"executed\"}");
+            message.setContent(result.toString());
             toolExecutionMessages.add(message);
         });
 

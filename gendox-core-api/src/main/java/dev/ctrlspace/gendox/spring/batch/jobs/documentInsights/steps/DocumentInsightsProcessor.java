@@ -5,10 +5,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContext;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
@@ -21,6 +24,8 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 
@@ -46,6 +51,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     private ObjectMapper objectMapper;
     private EncodingRegistry encodingRegistry;
     private Project project;
+    private final DocumentService documentService;
 
     @Autowired
     public DocumentInsightsProcessor(TypeService typeService,
@@ -56,7 +62,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                                      ProjectService projectService,
                                      MessageService messageService,
                                      DocumentSectionService documentSectionService,
-                                     TaskNodeService taskNodeService) {
+                                     TaskNodeService taskNodeService,
+                                     DocumentService documentService) {
         this.typeService = typeService;
         this.taskService = taskService;
         this.objectMapper = objectMapper;
@@ -66,6 +73,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         this.messageService = messageService;
         this.documentSectionService = documentSectionService;
         this.taskNodeService = taskNodeService;
+        this.documentService = documentService;
     }
 
     @Override
@@ -108,6 +116,15 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         List<List<CompletionQuestionRequest>> questionChunks = chunkQuestionsToGroups(task, documentGroupWithQuestions.getQuestionNodes());
         List<List<DocumentInstanceSection>> sectionChunks = groupSectionsBy100kTokens(task, documentGroupWithQuestions.getDocumentNode().getDocumentId());
 
+        Page<DocumentInstance> mainDocSupportingDocuments = getSupportingDocuments(
+                documentGroupWithQuestions.getDocumentNode());
+
+        MessageLocalContext mainDocLocalContext = generateLocalContextForQuestion(
+                documentGroupWithQuestions.getDocumentNode(),
+                mainDocSupportingDocuments,
+                "main-document");
+
+
         // For each question group
         questionLoop:
         for (List<CompletionQuestionRequest> questionChunk : questionChunks) {
@@ -126,7 +143,13 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()),
                         project.getId(),
                         "DOCUMENT_INSIGHTS - Task:" + task.getId());
-                Message message = buildPromptMessageForSections(groupedDocumentPart, questionsPrompt, newThread);
+
+                List<MessageLocalContext> supportingDocumentsContext = new ArrayList<>();
+                supportingDocumentsContext.add(mainDocLocalContext);
+                supportingDocumentsContext.addAll(questionChunk.stream().map(CompletionQuestionRequest::getQuestionSupportingDocsLocalContext).toList());
+                supportingDocumentsContext.removeIf(Objects::isNull);
+
+                Message message = buildPromptMessageForSections(groupedDocumentPart, questionsPrompt, newThread, supportingDocumentsContext);
                 GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionChunk);
                 if (documentPartAnswers == null) {
                     // ignore all partialAnswers, since there is an error, we cant trust any of those
@@ -205,21 +228,39 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         return consolidatedDocumentAnswers;
     }
 
-    private Message buildPromptMessageForSections(List<DocumentInstanceSection> sectionGroup, String questionsPrompt, ChatThread newThread) {
+    private Message buildPromptMessageForSections(List<DocumentInstanceSection> sectionGroup,
+                                                  String questionsPrompt,
+                                                  ChatThread newThread,
+                                                  List<MessageLocalContext> supportingDocumentsContext) {
         String textSections = sectionGroup.stream()
                 .map(DocumentInstanceSection::getSectionValue)
                 .reduce("", (a, b) -> a + "\n\n" + b);
 
+        // Main document is 1st in local context, to increase LLM cache hit rate
+        MessageLocalContext mainDocumentContext = MessageLocalContext.builder()
+                .contextType(Type.builder().name("**Main Document Text**").build())
+                .value("""
+                        
+                        \"\"\"\"\"
+                        %s
+                        \"\"\"\"\"
+                        """.formatted(textSections))
+                .build();
+        supportingDocumentsContext.add(0, mainDocumentContext);
+
         String prompt = """
-            You are an AI assistant that answers questions based on provided text.
-            The text is as follows:
-            
-            %s
+            You are an AI assistant that answers questions for the **Main Document Text**, based on provided supporting documents.            
             
             Please answer the following questions:
-            
+            \"\"\"\"\"
             %s
-            """.formatted(textSections, questionsPrompt);
+            \"\"\"\"\"
+            
+            1. Read the above questions to be answered for the main document.
+            2. Use the available tools to load and read the related supporting documents, if needed. You will find the supporting documents in the Session Context in the beginning of this message.
+            3. The tool result loads the supporting documents in the context.
+            4. Then answer the questions for the **Main Document Text** based using the supporting documents as reference.
+            """.formatted(questionsPrompt);
 
         Message message = new Message();
         message.setValue(prompt);
@@ -228,6 +269,9 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         message.setCreatedBy(project.getProjectAgent().getUserId());
         message.setUpdatedBy(project.getProjectAgent().getUserId());
         message = messageService.createMessage(message);
+
+        // add after creations as the local context is not saved
+        message.setLocalContexts(supportingDocumentsContext);
         return message;
     }
 
@@ -335,7 +379,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
      * Packs questions into buckets of ≤10 items and ≤10_000 tokens,
      * back‑filling any earlier bucket that still has room.
      */
-    public @NotNull List<List<CompletionQuestionRequest>> chunkQuestionsToGroups(Task task, List<TaskNode> questions) {
+    public @NotNull List<List<CompletionQuestionRequest>> chunkQuestionsToGroups(Task task, List<TaskNode> questions) throws GendoxException {
         var enc = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
 
         List<List<CompletionQuestionRequest>> buckets = new ArrayList<>();
@@ -345,13 +389,20 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
         for (TaskNode q : questions) {
             String text = q.getNodeValue().getMessage();
-            int    qTokens = enc.countTokens(text);
+            Page<DocumentInstance> supportingDocuments = getSupportingDocuments(q);
+
+            int qTokens = countQuestionTokens(enc, text, supportingDocuments);
+
+            MessageLocalContext localContext = generateLocalContextForQuestion(q, supportingDocuments, "questions");
 
             CompletionQuestionRequest req = CompletionQuestionRequest.builder()
                     .questionId(q.getId())
                     .questionText(text)
+                    .questionSupportingDocsLocalContext(localContext)
                     .build();
 
+            // TODO: (@see #472 ) Add in create question an LLM call to identify if supporting documents are needed,
+            //  if yes, the question will have to be executed alone, without other questions in the same bucket
             // 1) If this question alone exceeds the token limit → its own bucket
             if (qTokens > task.getMaxQuestionTokensPerBucket()) {
                 single = Collections.singletonList(req);
@@ -386,6 +437,60 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         }
 
         return buckets;
+    }
+
+    private static int countQuestionTokens(Encoding enc, String text, Page<DocumentInstance> supportingDocuments) {
+        int    qTokens = enc.countTokens(text);
+        // If it isn't int, we should be rich :)
+        qTokens += (int) supportingDocuments.stream()
+                .mapToLong(DocumentInstance::getTotalTokens)
+                .sum();
+        return qTokens;
+    }
+
+    private Page<DocumentInstance> getSupportingDocuments(TaskNode node) throws GendoxException {
+        if (node.getNodeValue().getSupportingDocumentIds() == null ||
+                node.getNodeValue().getSupportingDocumentIds().isEmpty()) {
+            return Page.empty();
+        }
+        DocumentCriteria supportingDocsCriteria = DocumentCriteria.builder()
+                .documentInstanceIds(node.getNodeValue().getSupportingDocumentIds().stream().map(UUID::toString).toList())
+                .build();
+        Page<DocumentInstance> supportingDocuments = documentService.getAllDocuments(supportingDocsCriteria, Pageable.unpaged());
+        return supportingDocuments;
+    }
+
+    /**
+     * Generates a local context representing the supporting documents for a given question.
+     * *
+     *
+     * @param q
+     * @param supportingDocuments
+     * @param supportingDocumentDirName like 'questions' will return -> ./supporting-documents/questions/[question_id]/doc_name.pdf
+     * @return
+     */
+    private static @Nullable MessageLocalContext generateLocalContextForQuestion(TaskNode q, Page<DocumentInstance> supportingDocuments, String supportingDocumentDirName) {
+        if (q.getNodeValue().getSupportingDocumentIds() == null ||
+                q.getNodeValue().getSupportingDocumentIds().isEmpty()) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("./supporting-documents").append("\n");
+        sb.append("./supporting-documents/").append(supportingDocumentDirName).append("\n");
+        sb.append("./supporting-documents/").append(supportingDocumentDirName).append("/").append(q.getId()).append("\n");
+        for (DocumentInstance doc : supportingDocuments.getContent()) {
+            sb.append("./supporting-documents/").append(supportingDocumentDirName).append("/").append(q.getId()).append("/")
+                    .append(doc.getTitle())
+                    .append(" | size=").append(doc.getFileSizeBytes()/1024).append("KB")
+                    .append(" | pages=").append(doc.getNumberOfPages())
+                    .append(" | UUID=").append(doc.getId())
+                    .append("\n");
+        }
+        MessageLocalContext localContext = MessageLocalContext.builder()
+                .contextType(Type.builder().name("Supporting Documents").build())
+                .value(sb.toString())
+                .build();
+        return localContext;
     }
 
     private @NotNull List<List<DocumentInstanceSection>> groupSectionsBy100kTokens(Task task, UUID documentId) {
