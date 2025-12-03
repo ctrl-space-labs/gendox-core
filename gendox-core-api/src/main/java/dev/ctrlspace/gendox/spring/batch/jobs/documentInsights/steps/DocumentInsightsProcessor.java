@@ -119,7 +119,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         Page<DocumentInstance> mainDocSupportingDocuments = getSupportingDocuments(
                 documentGroupWithQuestions.getDocumentNode());
 
-        MessageLocalContext mainDocLocalContext = generateLocalContextForQuestion(
+        MessageLocalContext mainDocSupportingDocumentsContext = generateLocalContextForQuestion(
                 documentGroupWithQuestions.getDocumentNode(),
                 mainDocSupportingDocuments,
                 "main-document");
@@ -147,7 +147,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
 
                 List<MessageLocalContext> supportingDocumentsContext = new ArrayList<>();
-                supportingDocumentsContext.add(mainDocLocalContext);
+                supportingDocumentsContext.add(mainDocSupportingDocumentsContext);
                 supportingDocumentsContext.addAll(questionChunk.stream().map(CompletionQuestionRequest::getQuestionSupportingDocsLocalContext).toList());
                 supportingDocumentsContext.removeIf(Objects::isNull);
 
