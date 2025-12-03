@@ -451,7 +451,7 @@ public class CompletionService {
             }
 
             JsonNode args = toolCall.get("function").get("arguments");
-            ToolExecutionContext ctx = new ToolExecutionContext(project, agent, toolDefinition);
+            ToolExecutionContext ctx = new ToolExecutionContext(project, agent, completionResponseMessage, toolDefinition);
             JsonNode result = aiToolRegistry.execute(toolName, args, ctx);
 
             AiModelMessage message = new AiModelMessage();
