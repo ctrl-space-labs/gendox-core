@@ -22,6 +22,29 @@ export const fetchDocument = createAsyncThunk(
   }
 )
 
+export const fetchSupportingDocuments = createAsyncThunk(
+  'activeDocument/fetchSupportingDocuments',
+  async ({ organizationId, projectId, documentIds, token }, thunkAPI) => {
+    if (!documentIds || documentIds.length === 0) return []
+
+    const documentInstanceIds = documentIds.map(id => id.toString())
+
+    const criteria = {
+      organizationId,
+      projectId,
+      documentInstanceIds
+    }
+
+    try {
+      const response = await documentService.findDocumentsByCriteria(organizationId, projectId, criteria, token)
+      return response.data.content || []
+    } catch (error) {
+      toast.error('Failed to fetch supporting documents')
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
 export const fetchDocumentsByCriteria = createAsyncThunk(
   'activeTask/fetchDocumentsByCriteria',
   async ({ organizationId, projectId, documentIds, token, page = 0, size = 20 }, thunkAPI) => {
@@ -36,7 +59,14 @@ export const fetchDocumentsByCriteria = createAsyncThunk(
     }
 
     try {
-      const response = await documentService.findDocumentsByCriteria(organizationId, projectId, criteria, token, page, size)
+      const response = await documentService.findDocumentsByCriteria(
+        organizationId,
+        projectId,
+        criteria,
+        token,
+        page,
+        size
+      )
       return response.data.content || []
     } catch (error) {
       toast.error('Failed to fetch documents by criteria')
@@ -64,6 +94,7 @@ const initialActiveDocumentState = {
   document: {},
   documents: [],
   sections: [],
+  supportingDocuments: [],
   isBlurring: false,
   error: null
 }
@@ -78,6 +109,9 @@ const activeDocumentSlice = createSlice({
     },
     setBlurring: (state, action) => {
       state.isBlurring = action.payload // Add a reducer for setting isBlurring
+    },
+    resetSupportingDocuments(state) {
+      state.supportingDocuments = []
     }
   },
   extraReducers: builder => {
@@ -125,9 +159,21 @@ const activeDocumentSlice = createSlice({
         state.isBlurring = false
         state.error = action.payload
       })
+      .addCase(fetchSupportingDocuments.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchSupportingDocuments.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.supportingDocuments = action.payload
+      })
+      .addCase(fetchSupportingDocuments.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
   }
 })
 
 // Export actions and reducer
-export const { updateSectionOrder, setBlurring } = activeDocumentSlice.actions
+export const { updateSectionOrder, setBlurring, resetSupportingDocuments } = activeDocumentSlice.actions
 export default activeDocumentSlice.reducer

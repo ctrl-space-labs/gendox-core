@@ -28,7 +28,7 @@ import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 const DocumentsAddNewDialog = ({
   open,
   onClose,
-  existingDocuments,
+  existingDocumentIds = [],
   loading,
   onConfirm,
   organizationId,
@@ -45,7 +45,7 @@ const DocumentsAddNewDialog = ({
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedDocIds, setSelectedDocIds] = useState(new Set())
 
-  const existingDocIds = useMemo(() => new Set(existingDocuments.map(doc => doc.documentId)), [existingDocuments])
+  const existingDocIds = useMemo(() => new Set(existingDocumentIds || []), [existingDocumentIds])
 
   useEffect(() => {
     if (!open) {
@@ -105,15 +105,13 @@ const DocumentsAddNewDialog = ({
   return (
     <>
       <Dialog open={open} onClose={onClose} fullWidth maxWidth='lg'>
-        <DialogTitle
-          sx={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}
-        >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
           Select Project Documents
           <IconButton onClick={onClose} size='small' aria-label='close'>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent >
+        <DialogContent>
           <TextField
             fullWidth
             size='small'

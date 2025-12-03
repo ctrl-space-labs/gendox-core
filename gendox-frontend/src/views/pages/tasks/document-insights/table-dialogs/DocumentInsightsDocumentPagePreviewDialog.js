@@ -35,19 +35,15 @@ import { useRouter } from 'next/router'
 import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
 import SectionCard from 'src/views/pages/documents-components/SectionCard'
-import { fetchDocument } from 'src/store/activeDocument/activeDocument'
+import {
+  fetchDocument,
+  fetchSupportingDocuments,
+  resetSupportingDocuments
+} from 'src/store/activeDocument/activeDocument'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
 import DocumentInsightsDocumentAddNewDialog from './DocumentInsightsDocumentAddNewDialog'
-
-const TESTING_SUPPORTING_DOCUMENTS = [
-  { documentId: 'doc-123', name: 'Sample Document 1.pdf', url: 'https://example.com/sample-document-1.pdf' },
-  { documentId: 'doc-456', name: 'Sample Document 2.docx', url: 'https://example.com/sample-document-2.docx' },
-  { documentId: 'doc-789', name: 'Sample Document 3.txt', url: 'https://example.com/sample-document-3.txt' },
-  { documentId: 'doc-101', name: 'Sample Document 4.pptx', url: 'https://example.com/sample-document-4.pptx' },
-  { documentId: 'doc-112', name: 'Sample Document 5.xlsx', url: 'https://example.com/sample-document-5.xlsx' },
-  { documentId: 'doc-131', name: 'Sample Document 6.pdf', url: 'https://example.com/sample-document-6.pdf' }
-]
+import { useSelector } from 'react-redux'
 
 const CleanCollapse = ({ title, open, onToggle, children }) => (
   <Paper
@@ -107,6 +103,9 @@ const DocumentPagePreviewDialog = ({
   onDelete
 }) => {
   const dispatch = useDispatch()
+  const router = useRouter()
+  const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
+  const { organizationId, projectId, taskId } = router.query
   const [fullscreen, setFullscreen] = useState(false)
   const [showDetails, setShowDetails] = useState(true)
   const [confirmRegenerate, setConfirmRegenerate] = useState(false)
@@ -115,11 +114,7 @@ const DocumentPagePreviewDialog = ({
   const [saving, setSaving] = useState(false)
   const [promptValue, setPromptValue] = useState('')
   const [openAddDocDialog, setOpenAddDocDialog] = useState(false)
-  const [supportingDocs, setSupportingDocs] = useState([])
-
-  const router = useRouter()
-  const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-  const { organizationId, projectId, taskId } = router.query
+  const supportingDocuments = useSelector(state => state.activeDocument.supportingDocuments)
 
   useEffect(() => {
     if (document) {
@@ -136,15 +131,22 @@ const DocumentPagePreviewDialog = ({
   }, [open, document])
 
   useEffect(() => {
-    if (document?.supportingDocuments?.length) {
-      setSupportingDocs(document.supportingDocuments)
-    } else {
-      setSupportingDocs(TESTING_SUPPORTING_DOCUMENTS)
-    }
-  }, [document])
+    if (!document) return
+    if (!document.supportingDocumentIds || document.supportingDocumentIds.length === 0) return
+
+    dispatch(
+      fetchSupportingDocuments({
+        organizationId,
+        projectId,
+        documentIds: document.supportingDocumentIds,
+        token
+      })
+    )
+  }, [document, dispatch, organizationId, projectId, token])
 
   const handleClose = () => {
     setFullscreen(false)
+    dispatch(resetSupportingDocuments())
     onClose()
   }
 
@@ -173,15 +175,89 @@ const DocumentPagePreviewDialog = ({
     }
   }
 
+  const handleAddSupportingDoc = async newDocIds => {
+    if (!document) return
+    setSaving(true)
+
+    try {
+      const existingIds = document.supportingDocumentIds || []
+
+      // Combine existing + new
+      const updatedIds = Array.from(new Set([...existingIds, ...newDocIds]))
+
+      const updateData = {
+        taskNodeId: document.id,
+        prompt: promptValue,
+        supportingDocumentIds: updatedIds
+      }
+
+      await taskService.updateTaskNodeForDocumentMetadata(organizationId, projectId, taskId, updateData, token)
+
+      toast.success('Supporting documents added!')
+
+      document.supportingDocumentIds = updatedIds
+
+      // Also refetch supporting docs from backend
+      dispatch(
+        fetchSupportingDocuments({
+          organizationId,
+          projectId,
+          documentIds: updatedIds,
+          token
+        })
+      )
+
+      setOpenAddDocDialog(false)
+    } catch (error) {
+      console.error('Error adding supporting docs:', error)
+      toast.error('Failed to add supporting documents')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleCancelEdit = () => {
     setEditMode(false)
     setPromptValue(document?.prompt || '')
   }
 
-  const handleRemoveSupportingDoc = docId => {
-    setSupportingDocs(prev => prev.filter(d => d.documentId !== docId))
+  const handleRemoveSupportingDoc = async docIdToRemove => {
+    if (!document) return
 
-    toast.success('Supporting document removed')
+    setSaving(true)
+
+    try {
+      const oldIds = document.supportingDocumentIds || []
+      const updatedIds = oldIds.filter(id => id !== docIdToRemove)
+
+      const updateData = {
+        taskNodeId: document.id,
+        prompt: promptValue,
+        supportingDocumentIds: updatedIds
+      }
+
+      await taskService.updateTaskNodeForDocumentMetadata(organizationId, projectId, taskId, updateData, token)
+
+      toast.success('Supporting document removed!')
+
+      document.supportingDocumentIds = updatedIds
+
+      dispatch(
+        fetchSupportingDocuments({
+          organizationId,
+          projectId,
+          documentIds: updatedIds,
+          token
+        })
+      )
+
+      if (onDocumentUpdate) onDocumentUpdate()
+    } catch (error) {
+      console.error('Failed removing supporting document', error)
+      toast.error('Failed to remove supporting document')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleGenerateClick = () => {
@@ -426,7 +502,7 @@ const DocumentPagePreviewDialog = ({
 
             {/* SUPPORTING DOCUMENTS AREA */}
             <Box>
-              <Typography variant='body2' sx={{ fontWeight: 600, mb: 1 }}>
+              <Typography variant='body2' sx={{ fontWeight: 600, mb: 4 }}>
                 Supporting Documents
               </Typography>
 
@@ -444,75 +520,56 @@ const DocumentPagePreviewDialog = ({
                 sx={{
                   maxHeight: 260,
                   overflowY: 'auto',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 1
+                  display: 'grid',
+                  gap: 2,
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))'
                 }}
               >
-                {supportingDocs.map(doc => (
+                {supportingDocuments.map(doc => (
                   <Paper
                     key={doc.documentId}
+                    elevation={1}
                     sx={{
-                      p: 1.5,
+                      p: 2,
                       borderRadius: 2,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
                       border: '1px solid',
                       borderColor: 'divider',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: 120,
+                      transition: '0.2s',
                       backgroundColor: 'background.paper',
-                      transition: '0.15s ease',
                       '&:hover': {
-                        backgroundColor: 'action.hover',
-                        transform: 'translateY(-1px)'
+                        transform: 'translateY(-4px)',
+                        boxShadow: 4,
+                        backgroundColor: 'action.hover'
                       }
                     }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Box
-                        sx={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'primary.dark'
-                        }}
-                      >
-                        <DescriptionIcon fontSize='small' />
-                      </Box>
-
-                      <Box>
-                        <Typography sx={{ fontWeight: 600, fontSize: '0.9rem' }}>{doc.name}</Typography>
-                        <Typography variant='caption' color='text.secondary'>
-                          {doc.documentId}
-                        </Typography>
-                      </Box>
+                    {/* Header Row */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <DescriptionIcon color='primary' />
+                      <Typography sx={{ fontWeight: 600, flex: 1 }}>{doc.title}</Typography>
                     </Box>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {doc.url && (
+                    {/* Footer Actions */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                      {doc.id && (
                         <Button
                           variant='outlined'
                           size='small'
-                          href={doc.url}
+                          href={`http://localhost:3000/gendox/document-instance/?organizationId=${organizationId}&documentId=${doc.id}&projectId=${projectId}`}
                           target='_blank'
                           sx={{ textTransform: 'none' }}
                         >
-                          Open
+                          Open Document
                         </Button>
                       )}
 
-                      <Tooltip title='Remove'>
-                        <IconButton
-                          size='small'
-                          color='error'
-                          onClick={() => handleRemoveSupportingDoc(doc.documentId)}
-                        >
-                          <DeleteOutlineIcon fontSize='small' />
-                        </IconButton>
-                      </Tooltip>
+                      <IconButton size='small' color='error' onClick={() => handleRemoveSupportingDoc(doc.id)}>
+                        <DeleteOutlineIcon fontSize='small' />
+                      </IconButton>
                     </Box>
                   </Paper>
                 ))}
@@ -585,15 +642,12 @@ const DocumentPagePreviewDialog = ({
       <DocumentInsightsDocumentAddNewDialog
         open={openAddDocDialog}
         onClose={() => setOpenAddDocDialog(false)}
-        existingDocuments={document?.supportingDocuments || []}
+        existingDocumentIds={document?.supportingDocumentIds || []}
         organizationId={organizationId}
         projectId={projectId}
         taskId={taskId}
         token={token}
-        onConfirm={() => {
-          setOpenAddDocDialog(false)
-          if (onDocumentUpdate) onDocumentUpdate()
-        }}
+        onConfirm={newIds => handleAddSupportingDoc(newIds)}
       />
     </Dialog>
   )

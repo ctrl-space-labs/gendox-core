@@ -250,6 +250,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
               name: fullDoc?.title || 'Unknown Document',
               url: fullDoc?.remoteUrl || '',
               prompt: node.nodeValue?.documentMetadata?.prompt || '',
+              supportingDocumentIds : node.nodeValue?.documentMetadata?.supportingDocumentIds || [],
               createdAt: node.createdAt || new Date().toISOString(),
               _doc: fullDoc
             }

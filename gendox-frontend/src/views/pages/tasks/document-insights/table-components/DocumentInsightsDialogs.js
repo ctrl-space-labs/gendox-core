@@ -171,7 +171,7 @@ const DocumentInsightsDialogs = ({
       <DocumentAddNewDialog
         open={dialogs.newDoc}
         onClose={() => onClose('newDoc')}
-        existingDocuments={documents}
+        existingDocumentIds={documents.map(d => d.documentId)}
         loading={loading}
         onConfirm={handleAddNewDocuments}
         organizationId={organizationId}
@@ -192,13 +192,17 @@ const DocumentInsightsDialogs = ({
       {/* Document Page Preview Dialog */}
       <DocumentPagePreviewDialog
         open={dialogs.pagePreview || false}
-        onClose={() => onClose('pagePreview')}
+        onClose={() => {
+          onClose('pagePreview')
+          refreshDocuments()
+          refreshAnswers()
+        }}
         document={activeNode}
         documentPages={documentPages}
         //generateSingleDocument={generateSingleDocument}
-        onDocumentUpdate={updatedDoc => {
-          // Refresh documents to show updated data
-          if (refreshDocuments) refreshDocuments()
+        onDocumentUpdate={() => {
+          refreshDocuments()
+          refreshAnswers()
         }}
         //dialogLoading={dialogLoading}
         //onExportCsv={onExportCsv}
