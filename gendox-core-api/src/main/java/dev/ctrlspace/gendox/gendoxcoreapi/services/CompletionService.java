@@ -294,7 +294,7 @@ public class CompletionService {
 
             AuditLogs completionAuditLogs = auditLogsService.createDefaultAuditLogs(completionResponseType);
             completionAuditLogs.setTokenCount((long) completionResponse.getUsage().getCompletionTokens());
-            requestAuditLogs.setReasoningTokenCount((long) Optional.ofNullable(completionResponse.getUsage())
+            completionAuditLogs.setReasoningTokenCount((long) Optional.ofNullable(completionResponse.getUsage())
                     .map(u -> u.getCompletionTokensDetail())
                     .map(d -> d.getReasoningTokens())
                     .orElse(0));
