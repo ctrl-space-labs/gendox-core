@@ -144,6 +144,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                         project.getId(),
                         "DOCUMENT_INSIGHTS - Task:" + task.getId());
 
+
+
                 List<MessageLocalContext> supportingDocumentsContext = new ArrayList<>();
                 supportingDocumentsContext.add(mainDocLocalContext);
                 supportingDocumentsContext.addAll(questionChunk.stream().map(CompletionQuestionRequest::getQuestionSupportingDocsLocalContext).toList());
