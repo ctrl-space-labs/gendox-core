@@ -10,6 +10,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -23,6 +24,7 @@ public class TaskDocumentMetadataDTO {
     private Integer pageFrom;
     private Integer pageTo;
     private Boolean allPages; // true when user wants to process all pages (clear page range)
+    private List<UUID> supportingDocumentIds; // ids of supporting documents linked to this document or Question used in insights task
 
     //// fields used in Digitization Job
     @JsonIgnore

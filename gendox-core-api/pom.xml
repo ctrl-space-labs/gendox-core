@@ -59,7 +59,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
-<!--        micrometer prometheus-->
+        <!--        micrometer prometheus-->
         <!-- https://mvnrepository.com/artifact/io.micrometer/micrometer-registry-prometheus -->
         <dependency>
             <groupId>io.micrometer</groupId>
@@ -183,16 +183,16 @@
             <artifactId>commons-text</artifactId>
             <version>1.10.0</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.springdoc</groupId>-->
-<!--            <artifactId>springdoc-openapi-ui</artifactId>-->
-<!--            <version>1.6.3</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.springdoc</groupId>-->
-<!--            <artifactId>springdoc-openapi-data-rest</artifactId>-->
-<!--            <version>1.6.3</version>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.springdoc</groupId>-->
+        <!--            <artifactId>springdoc-openapi-ui</artifactId>-->
+        <!--            <version>1.6.3</version>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.springdoc</groupId>-->
+        <!--            <artifactId>springdoc-openapi-data-rest</artifactId>-->
+        <!--            <version>1.6.3</version>-->
+        <!--        </dependency>-->
 
         <!-- https://mvnrepository.com/artifact/com.nimbusds/nimbus-jose-jwt -->
         <dependency>
@@ -233,7 +233,7 @@
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
             <version>2.1.1</version>
-            <scope>provided</scope>
+<!--            <scope>provided</scope>-->
         </dependency>
         <dependency>
             <groupId>com.querydsl</groupId>
@@ -362,7 +362,7 @@
             <version>3.0.0</version>
         </dependency>
 
-<!--                              Discord                           -->
+        <!--                              Discord                           -->
         <dependency>
             <groupId>net.dv8tion</groupId>
             <artifactId>JDA</artifactId>
@@ -421,7 +421,7 @@
             <version>1.8.21</version>
         </dependency>
 
-<!--        Like TikToken tokenizer but for Java-->
+        <!--        Like TikToken tokenizer but for Java-->
         <dependency>
             <groupId>com.knuddels</groupId>
             <artifactId>jtokkit</artifactId>
@@ -577,7 +577,7 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-<!--                <version>3.1.4</version>-->
+                <!--                <version>3.1.4</version>-->
             </plugin>
 
             <plugin>

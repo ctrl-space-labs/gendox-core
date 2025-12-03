@@ -18,6 +18,7 @@ const DocumentInsightsDialogs = ({
   dialogs,
   activeNode,
   onClose,
+  onOpen,
   refreshDocuments,
   refreshQuestions,
   refreshAnswers,
@@ -191,7 +192,6 @@ const DocumentInsightsDialogs = ({
       {/* Document Page Preview Dialog */}
       <DocumentPagePreviewDialog
         open={dialogs.pagePreview || false}
-        openAddDocument={dialogs.newDoc}
         onClose={() => onClose('pagePreview')}
         document={activeNode}
         documentPages={documentPages}
@@ -215,6 +215,7 @@ const DocumentInsightsDialogs = ({
         contentText='Are you sure you want to delete this item? This action cannot be undone.'
         confirmButtonText='Delete'
         cancelButtonText='Cancel'
+        disableConfirm={loading}
       />
 
       {/* Question Dialog */}

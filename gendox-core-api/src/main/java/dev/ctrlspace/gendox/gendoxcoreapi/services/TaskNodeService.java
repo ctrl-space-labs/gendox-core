@@ -117,6 +117,9 @@ public class TaskNodeService {
         if (taskDocumentMetadataDTO.getStructure() != null) {
             existing.getNodeValue().getDocumentMetadata().setStructure(taskDocumentMetadataDTO.getStructure());
         }
+        if (taskDocumentMetadataDTO.getSupportingDocumentIds() != null) {
+            existing.getNodeValue().getDocumentMetadata().setSupportingDocumentIds(taskDocumentMetadataDTO.getSupportingDocumentIds());
+        }
 
         // allPages / page range
         Boolean allPages = taskDocumentMetadataDTO.getAllPages();

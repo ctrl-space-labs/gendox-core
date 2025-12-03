@@ -3,7 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.TaskConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TaskDuplicateDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDuplicateDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
@@ -84,6 +84,12 @@ public class TaskService {
         TaskDTO newTaskDTO = taskConverter.toDTO(original);
         newTaskDTO.setId(null);
         newTaskDTO.setProjectId(projectId);
+        if (taskDuplicateDTO.getNewTitle() != null) {
+            newTaskDTO.setTitle(taskDuplicateDTO.getNewTitle());
+        }
+        if (taskDuplicateDTO.getNewDescription() != null) {
+            newTaskDTO.setDescription(taskDuplicateDTO.getNewDescription());
+        }
 
         Task newTask = this.createTask(projectId, newTaskDTO);
 
@@ -99,7 +105,8 @@ public class TaskService {
                 newQuestionNode.setNodeType(questionNode.getNodeType());
                 newQuestionNode.setNodeValue(questionNode.getNodeValue());
 
-                nodesToSave.add(newQuestionNode);            }
+                nodesToSave.add(newQuestionNode);
+            }
         }
 
 

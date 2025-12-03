@@ -6,7 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TaskDuplicateDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDuplicateDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskEdgeCriteria;
@@ -36,7 +36,6 @@ public class TaskController {
     private final TaskCsvExportService taskCsvExportService;
     private final TaskNodeService taskNodeService;
     private final TaskEdgeService taskEdgeService;
-    private final TypeService typeService;
 
 
     @Autowired
@@ -45,15 +44,13 @@ public class TaskController {
                           TaskEdgeConverter taskEdgeConverter,
                           TaskCsvExportService taskCsvExportService,
                           TaskNodeService taskNodeService,
-                          TaskEdgeService taskEdgeService,
-                          TypeService typeService) {
+                          TaskEdgeService taskEdgeService) {
         this.taskService = taskService;
         this.taskNodeConverter = taskNodeConverter;
         this.taskEdgeConverter = taskEdgeConverter;
         this.taskCsvExportService = taskCsvExportService;
         this.taskNodeService = taskNodeService;
         this.taskEdgeService = taskEdgeService;
-        this.typeService = typeService;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")

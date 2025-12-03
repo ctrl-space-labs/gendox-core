@@ -17,8 +17,8 @@ import { useDispatch } from 'react-redux'
 import CloseIcon from '@mui/icons-material/Close'
 import SaveIcon from '@mui/icons-material/Save'
 import CancelIcon from '@mui/icons-material/Cancel'
+import Divider from '@mui/material/Divider'
 import EditIcon from '@mui/icons-material/Edit'
-import { useTheme } from '@mui/material/styles'
 import taskService from 'src/gendox-sdk/taskService'
 import FullscreenIcon from '@mui/icons-material/Fullscreen'
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
@@ -38,6 +38,62 @@ import SectionCard from 'src/views/pages/documents-components/SectionCard'
 import { fetchDocument } from 'src/store/activeDocument/activeDocument'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
+import DocumentInsightsDocumentAddNewDialog from './DocumentInsightsDocumentAddNewDialog'
+
+const TESTING_SUPPORTING_DOCUMENTS = [
+  { documentId: 'doc-123', name: 'Sample Document 1.pdf', url: 'https://example.com/sample-document-1.pdf' },
+  { documentId: 'doc-456', name: 'Sample Document 2.docx', url: 'https://example.com/sample-document-2.docx' },
+  { documentId: 'doc-789', name: 'Sample Document 3.txt', url: 'https://example.com/sample-document-3.txt' },
+  { documentId: 'doc-101', name: 'Sample Document 4.pptx', url: 'https://example.com/sample-document-4.pptx' },
+  { documentId: 'doc-112', name: 'Sample Document 5.xlsx', url: 'https://example.com/sample-document-5.xlsx' },
+  { documentId: 'doc-131', name: 'Sample Document 6.pdf', url: 'https://example.com/sample-document-6.pdf' }
+]
+
+const CleanCollapse = ({ title, open, onToggle, children }) => (
+  <Paper
+    elevation={0}
+    sx={{
+      border: '1px solid',
+      borderColor: 'divider',
+      borderRadius: 2,
+      overflow: 'hidden',
+      backgroundColor: 'background.paper'
+    }}
+  >
+    {/* Header */}
+    <Box
+      onClick={onToggle}
+      sx={{
+        px: 2.5,
+        py: 1.8,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        cursor: 'pointer',
+        '&:hover': { backgroundColor: 'action.hover' }
+      }}
+    >
+      <Typography variant='subtitle1' sx={{ fontWeight: 600 }}>
+        {title}
+      </Typography>
+
+      <IconButton size='small'>{open ? <ExpandLessIcon /> : <ExpandMoreIcon />}</IconButton>
+    </Box>
+
+    <Collapse in={open} timeout={180}>
+      <Box
+        sx={{
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          p: 2.5,
+          backgroundColor: 'action.hover'
+        }}
+      >
+        {children}
+      </Box>
+    </Collapse>
+  </Paper>
+)
 
 const DocumentPagePreviewDialog = ({
   open,
@@ -45,7 +101,6 @@ const DocumentPagePreviewDialog = ({
   document,
   onDocumentUpdate,
   generateSingleDocument,
-  openAddDocument,
   dialogLoading,
   onExportCsv,
   isExportingCsv,
@@ -59,6 +114,9 @@ const DocumentPagePreviewDialog = ({
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving] = useState(false)
   const [promptValue, setPromptValue] = useState('')
+  const [openAddDocDialog, setOpenAddDocDialog] = useState(false)
+  const [supportingDocs, setSupportingDocs] = useState([])
+
   const router = useRouter()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   const { organizationId, projectId, taskId } = router.query
@@ -76,6 +134,14 @@ const DocumentPagePreviewDialog = ({
       }
     }
   }, [open, document])
+
+  useEffect(() => {
+    if (document?.supportingDocuments?.length) {
+      setSupportingDocs(document.supportingDocuments)
+    } else {
+      setSupportingDocs(TESTING_SUPPORTING_DOCUMENTS)
+    }
+  }, [document])
 
   const handleClose = () => {
     setFullscreen(false)
@@ -110,6 +176,12 @@ const DocumentPagePreviewDialog = ({
   const handleCancelEdit = () => {
     setEditMode(false)
     setPromptValue(document?.prompt || '')
+  }
+
+  const handleRemoveSupportingDoc = docId => {
+    setSupportingDocs(prev => prev.filter(d => d.documentId !== docId))
+
+    toast.success('Supporting document removed')
   }
 
   const handleGenerateClick = () => {
@@ -162,10 +234,10 @@ const DocumentPagePreviewDialog = ({
   return (
     <Dialog
       open={open}
-      onClose={handleClose}
+      // onClose={handleClose}
+      onClose={() => {}}
       disableEnforceFocus
       disableAutoFocus
-      disableRestoreFocus
       maxWidth={fullscreen ? false : 'lg'}
       fullWidth
       fullScreen={fullscreen}
@@ -298,125 +370,155 @@ const DocumentPagePreviewDialog = ({
             backgroundColor: 'background.paper'
           }}
         >
-          <Box sx={{ py: 3, px: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Typography variant='h6' color='text.primary' sx={{ fontWeight: 600 }}>
-                  Document Details
+          <CleanCollapse title='Document Details' open={showDetails} onToggle={() => setShowDetails(!showDetails)}>
+            {/* PROMPT AREA */}
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                  Prompt
                 </Typography>
+
+                {!editMode ? (
+                  <IconButton size='small' onClick={() => setEditMode(true)}>
+                    <EditIcon fontSize='small' />
+                  </IconButton>
+                ) : (
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button variant='outlined' size='small' onClick={handleCancelEdit}>
+                      Cancel
+                    </Button>
+                    <Button variant='contained' size='small' onClick={handleSave} disabled={saving}>
+                      {saving ? 'Saving...' : 'Save'}
+                    </Button>
+                  </Box>
+                )}
               </Box>
 
-              <IconButton size='small' onClick={() => setShowDetails(!showDetails)}>
-                {showDetails ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              </IconButton>
+              {!editMode ? (
+                <Typography
+                  sx={{
+                    p: 2,
+                    backgroundColor: 'background.paper',
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    whiteSpace: 'pre-wrap',
+                    minHeight: 40,
+                    fontFamily: 'monospace'
+                  }}
+                >
+                  {promptValue || 'No prompt specified'}
+                </Typography>
+              ) : (
+                <TextareaAutosizeStyled
+                  value={promptValue}
+                  onChange={e => setPromptValue(e.target.value)}
+                  minRows={3}
+                  autoFocus
+                />
+              )}
             </Box>
 
-            <Collapse in={showDetails}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <Box>
-                  <Box>
-                    {/* Title on left + Edit/Save-Cancel on right */}
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        mb: 2
-                      }}
-                    >
-                      <Typography variant='body2' color='text.secondary' sx={{ fontWeight: 500 }}>
-                        Prompt
-                      </Typography>
+            {/* SPACE & DIVIDER */}
+            <Box sx={{ my: 3 }}>
+              <Divider />
+            </Box>
 
-                      {/* Right-side actions in same fixed place */}
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        {!editMode ? (
-                          <Tooltip title='Edit prompt'>
-                            <IconButton size='small' onClick={() => setEditMode(true)} sx={{ color: 'text.secondary' }}>
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                        ) : (
-                          <>
-                            <Button
-                              variant='outlined'
-                              size='small'
-                              startIcon={<CancelIcon />}
-                              onClick={handleCancelEdit}
-                              sx={{ mr: 1 }}
-                              disabled={saving}
-                            >
-                              Cancel
-                            </Button>
+            {/* SUPPORTING DOCUMENTS AREA */}
+            <Box>
+              <Typography variant='body2' sx={{ fontWeight: 600, mb: 1 }}>
+                Supporting Documents
+              </Typography>
 
-                            <Button
-                              variant='contained'
-                              size='small'
-                              startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
-                              onClick={handleSave}
-                              disabled={saving}
-                            >
-                              {saving ? 'Saving...' : 'Save'}
-                            </Button>
-                          </>
-                        )}
+              <Button
+                variant='outlined'
+                startIcon={<DocumentScannerIcon />}
+                onClick={() => setOpenAddDocDialog(true)}
+                sx={{ mb: 2 }}
+              >
+                Add Document
+              </Button>
+
+              {/* DOCUMENT LIST */}
+              <Box
+                sx={{
+                  maxHeight: 260,
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1
+                }}
+              >
+                {supportingDocs.map(doc => (
+                  <Paper
+                    key={doc.documentId}
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 2,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      backgroundColor: 'background.paper',
+                      transition: '0.15s ease',
+                      '&:hover': {
+                        backgroundColor: 'action.hover',
+                        transform: 'translateY(-1px)'
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Box
+                        sx={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'primary.dark'
+                        }}
+                      >
+                        <DescriptionIcon fontSize='small' />
+                      </Box>
+
+                      <Box>
+                        <Typography sx={{ fontWeight: 600, fontSize: '0.9rem' }}>{doc.name}</Typography>
+                        <Typography variant='caption' color='text.secondary'>
+                          {doc.documentId}
+                        </Typography>
                       </Box>
                     </Box>
 
-                    {/* Content (text or textarea) */}
-                    {!editMode ? (
-                      <Typography
-                        variant='body2'
-                        color='text.primary'
-                        sx={{
-                          p: 2,
-                          backgroundColor: 'action.hover',
-                          borderRadius: 1,
-                          border: '1px solid',
-                          borderColor: 'divider',
-                          minHeight: 40,
-                          maxHeight: '30vh',
-                          overflowY: 'auto',
-                          fontFamily: 'monospace',
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word'
-                        }}
-                      >
-                        {promptValue || 'No prompt specified'}
-                      </Typography>
-                    ) : (
-                      <TextareaAutosizeStyled
-                        value={promptValue}
-                        onChange={e => setPromptValue(e.target.value)}
-                        minRows={3}
-                        autoFocus
-                      />
-                    )}
-                  </Box>
-                </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {doc.url && (
+                        <Button
+                          variant='outlined'
+                          size='small'
+                          href={doc.url}
+                          target='_blank'
+                          sx={{ textTransform: 'none' }}
+                        >
+                          Open
+                        </Button>
+                      )}
 
-                <Box sx={{ display: 'flex', justifyContent: 'left', width: '100%', my: '1.5rem' }}>
-                  <Typography variant='body2' color='text.secondary' sx={{ mb: 2, fontWeight: 500 }}>
-                    Supporting Documents
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'left', width: '100%' }}>
-                  <span>
-                    <Button
-                      variant='outlined'
-                      startIcon={<DocumentScannerIcon />}
-                      onClick={openAddDocument}
-                      disabled={isGenerating}
-                      size='medium'
-                      fullWidth
-                    >
-                      Add Document
-                    </Button>
-                  </span>
-                </Box>
+                      <Tooltip title='Remove'>
+                        <IconButton
+                          size='small'
+                          color='error'
+                          onClick={() => handleRemoveSupportingDoc(doc.documentId)}
+                        >
+                          <DeleteOutlineIcon fontSize='small' />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </Paper>
+                ))}
               </Box>
-            </Collapse>
-          </Box>
+            </Box>
+          </CleanCollapse>
         </Paper>
 
         <Box sx={{ flex: 1, overflow: 'auto', position: 'relative' }}>
@@ -479,6 +581,19 @@ const DocumentPagePreviewDialog = ({
         onClose={handleCancelRegenerate}
         onConfirm={handleConfirmRegenerate}
         type='document'
+      />
+      <DocumentInsightsDocumentAddNewDialog
+        open={openAddDocDialog}
+        onClose={() => setOpenAddDocDialog(false)}
+        existingDocuments={document?.supportingDocuments || []}
+        organizationId={organizationId}
+        projectId={projectId}
+        taskId={taskId}
+        token={token}
+        onConfirm={() => {
+          setOpenAddDocDialog(false)
+          if (onDocumentUpdate) onDocumentUpdate()
+        }}
       />
     </Dialog>
   )

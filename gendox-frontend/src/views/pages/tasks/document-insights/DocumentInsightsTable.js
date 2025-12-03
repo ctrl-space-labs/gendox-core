@@ -5,7 +5,11 @@ import { Box } from '@mui/material'
 import Paper from '@mui/material/Paper'
 import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
-import { fetchTaskNodesByCriteria, fetchAnswerTaskNodes, fetchDocumentPages } from 'src/store/activeTaskNode/activeTaskNode'
+import {
+  fetchTaskNodesByCriteria,
+  fetchAnswerTaskNodes,
+  fetchDocumentPages
+} from 'src/store/activeTaskNode/activeTaskNode'
 import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocument'
 import useGeneration from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsGeneration'
 import useExportFile from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsExportFile'
@@ -77,17 +81,17 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   }, [organizationId, projectId, taskId, token, dispatch, page, pageSize])
 
   const loadDocumentPages = useCallback(() => {
-      return dispatch(
-        fetchDocumentPages({
-          organizationId,
-          projectId,
-          taskId,
-          token,
-          page: 0,
-          size: MAX_PAGE_SIZE
-        })
-      )
-    }, [organizationId, projectId, taskId, token, dispatch, taskNodesDocumentList])
+    return dispatch(
+      fetchDocumentPages({
+        organizationId,
+        projectId,
+        taskId,
+        token,
+        page: 0,
+        size: MAX_PAGE_SIZE
+      })
+    )
+  }, [organizationId, projectId, taskId, token, dispatch, taskNodesDocumentList])
 
   const fetchAnswers = useCallback(() => {
     const answerTaskNodePayload = {
@@ -203,13 +207,13 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   }, [fetchQuestions])
 
   // 3️⃣ **Fetch document pages when taskId changes**
-    useEffect(() => {
-      if (!(organizationId && projectId && taskId && token)) return
-      loadDocumentPages()
-        .unwrap()
-        .then(pages => setDocumentPages(pages || []))
-        .catch(() => toast.error('Failed to load document pages'))
-    }, [loadDocumentPages])
+  useEffect(() => {
+    if (!(organizationId && projectId && taskId && token)) return
+    loadDocumentPages()
+      .unwrap()
+      .then(pages => setDocumentPages(pages || []))
+      .catch(() => toast.error('Failed to load document pages'))
+  }, [loadDocumentPages])
 
   // 3️⃣ **Sync questions to local state (combine reset and fill)**
   useEffect(() => {
@@ -247,7 +251,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
               url: fullDoc?.remoteUrl || '',
               prompt: node.nodeValue?.documentMetadata?.prompt || '',
               createdAt: node.createdAt || new Date().toISOString(),
-              _doc: fullDoc 
+              _doc: fullDoc
             }
           })
         )
@@ -432,6 +436,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       <DialogManager
         dialogs={dialogs}
         activeNode={activeNode}
+        onOpen={openDialog}
         onClose={closeDialog}
         refreshDocuments={fetchDocuments}
         refreshQuestions={fetchQuestions}

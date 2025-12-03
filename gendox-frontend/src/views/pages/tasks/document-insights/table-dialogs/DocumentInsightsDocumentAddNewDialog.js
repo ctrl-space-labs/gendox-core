@@ -20,13 +20,22 @@ import CloseIcon from '@mui/icons-material/Close'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
-import UploaderDocumentInsights from './DocumentInsightsUploaderDocumentInsigths'
+import UploaderDocumentDigitization from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationUploaderDocumentDigitization'
 import { fetchProjectDocuments } from 'src/store/activeProject/activeProject'
 import { useDispatch, useSelector } from 'react-redux'
-import taskService from 'src/gendox-sdk/taskService'
-import { fetchTaskNodesByCriteria } from 'src/store/activeTaskNode/activeTaskNode'
+import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 
-const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, taskId, existingDocuments }) => {
+const DocumentsAddNewDialog = ({
+  open,
+  onClose,
+  existingDocuments,
+  loading,
+  onConfirm,
+  organizationId,
+  projectId,
+  token,
+  taskId
+}) => {
   const dispatch = useDispatch()
   const { projectDocuments, isBlurring } = useSelector(state => state.activeProject)
   const [documents, setDocuments] = useState([])
@@ -39,14 +48,17 @@ const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, task
   const existingDocIds = useMemo(() => new Set(existingDocuments.map(doc => doc.documentId)), [existingDocuments])
 
   useEffect(() => {
-    if (open && organizationId && projectId && token) {
-      dispatch(fetchProjectDocuments({ organizationId, projectId, token, page }))
-    }
     if (!open) {
       setSelectedDocIds(new Set())
-      setDocuments([])
-      setPage(0)
       setSearchTerm('')
+      setShowUploader(false)
+      setPage(0)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (open && organizationId && projectId && token) {
+      dispatch(fetchProjectDocuments({ organizationId, projectId, token, page }))
     }
   }, [open, organizationId, projectId, token, page, dispatch])
 
@@ -62,64 +74,46 @@ const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, task
   }, [projectDocuments, page])
 
   const filteredDocuments = useMemo(() => {
-    if (!searchTerm) return documents
-    return documents.filter(doc => doc.title?.toLowerCase().includes(searchTerm.toLowerCase()))
+    let filtered = documents.filter(doc => isFileTypeSupported(doc.remoteUrl))
+    if (searchTerm) {
+      filtered = filtered.filter(doc => doc.title?.toLowerCase().includes(searchTerm.toLowerCase()))
+    }
+    return filtered
   }, [searchTerm, documents])
 
+  // Handlers
   const handleToggleSelect = doc => {
     if (existingDocIds.has(doc.id)) return
     setSelectedDocIds(prev => {
       const newSet = new Set(prev)
-      if (newSet.has(doc.id)) {
-        newSet.delete(doc.id)
-      } else {
-        newSet.add(doc.id)
-      }
+      if (newSet.has(doc.id)) newSet.delete(doc.id)
+      else newSet.add(doc.id)
       return newSet
     })
   }
 
-  const handleConfirm = async () => {
-    const selectedIdsArray = Array.from(selectedDocIds)
-    for (const docId of selectedIdsArray) {
-      const taskNodePayload = {
-        taskId,
-        nodeType: 'DOCUMENT',
-        documentId: docId
-      }
-      await taskService.createTaskNode(organizationId, projectId, taskNodePayload, token)
-    }
-    await dispatch(
-      fetchTaskNodesByCriteria({
-        organizationId,
-        projectId,
-        taskId,
-        criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
-        token
-      })
-    )
-    onClose()
-  }
-
   const handleLoadMore = () => {
-    if (page + 1 < totalPages) {
+    if (projectDocuments && page + 1 < projectDocuments.totalPages) {
       setPage(prev => prev + 1)
     }
   }
 
+  const handleConfirm = () => {
+    onConfirm(Array.from(selectedDocIds))
+  }
+
   return (
     <>
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth='sm'>
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth='lg'>
         <DialogTitle
-          sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600 }}
+          sx={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}
         >
           Select Project Documents
           <IconButton onClick={onClose} size='small' aria-label='close'>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-
-        <DialogContent dividers sx={{ pt: 1, display: 'flex', flexDirection: 'column' }}>
+        <DialogContent >
           <TextField
             fullWidth
             size='small'
@@ -129,8 +123,7 @@ const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, task
             onChange={e => setSearchTerm(e.target.value)}
             sx={{ mb: 2 }}
           />
-
-          {isBlurring ? (
+          {isBlurring || loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
               <CircularProgress />
             </Box>
@@ -160,7 +153,8 @@ const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, task
                 {filteredDocuments.map((doc, index) => {
                   const isAlreadySelected = existingDocIds.has(doc.id)
                   const isSelected = selectedDocIds.has(doc.id)
-
+                  const isSupported = isFileTypeSupported(doc.remoteUrl)
+                  const isDisabled = isAlreadySelected || !isSupported
                   const createdDate = doc.createAt
                     ? new Date(doc.createAt).toLocaleDateString(undefined, {
                         year: 'numeric',
@@ -168,17 +162,16 @@ const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, task
                         day: 'numeric'
                       })
                     : 'Unknown date'
-
                   return (
                     <React.Fragment key={doc.id}>
                       <ListItemButton
                         onClick={() => handleToggleSelect(doc)}
                         selected={isSelected}
-                        disabled={isAlreadySelected}
+                        disabled={isDisabled}
                         sx={{
                           transition: 'background-color 0.3s',
-                          opacity: isAlreadySelected ? 0.5 : 1,
-                          cursor: isAlreadySelected ? 'not-allowed' : 'pointer',
+                          opacity: isDisabled ? 0.5 : 1,
+                          cursor: isDisabled ? 'not-allowed' : 'pointer',
                           '&.Mui-selected': {
                             backgroundColor: 'primary.light',
                             color: 'primary.contrastText',
@@ -190,10 +183,15 @@ const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, task
                           primary={doc.title || 'Untitled Document'}
                           secondary={`Created at: ${createdDate}`}
                         />
-                        {isSelected && !isAlreadySelected && <CheckCircleIcon color='primary' />}
+                        {isSelected && !isDisabled && <CheckCircleIcon color='primary' />}
                         {isAlreadySelected && (
                           <Typography variant='caption' color='error' sx={{ ml: 2 }}>
                             Already selected
+                          </Typography>
+                        )}
+                        {!isSupported && !isAlreadySelected && (
+                          <Typography variant='caption' color='warning.main' sx={{ ml: 2 }}>
+                            Unsupported format
                           </Typography>
                         )}
                       </ListItemButton>
@@ -201,33 +199,32 @@ const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, task
                     </React.Fragment>
                   )
                 })}
-                {page + 1 < totalPages && (
+                {projectDocuments && page + 1 < projectDocuments.totalPages && (
                   <>
                     <Divider component='li' />
-                    <ListItem
+                    <ListItemButton
                       sx={{
                         justifyContent: 'center',
                         py: 1.5,
                         cursor: 'pointer',
                         '&:hover': { backgroundColor: 'action.hover' }
                       }}
+                      onClick={handleLoadMore}
                     >
                       <Button
                         variant='outlined'
-                        onClick={handleLoadMore}
                         sx={{ width: '100%', maxWidth: 200, mx: 'auto', fontWeight: 'bold' }}
                         startIcon={isBlurring ? <CircularProgress size={16} /> : null}
                       >
                         Load More
                       </Button>
-                    </ListItem>
+                    </ListItemButton>
                   </>
                 )}
               </List>
             </>
           )}
         </DialogContent>
-
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button startIcon={<CloudUploadIcon />} variant='outlined' onClick={() => setShowUploader(true)}>
             Upload New Document
@@ -240,7 +237,6 @@ const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, task
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Nested uploader modal */}
       <Dialog
         open={showUploader}
@@ -257,13 +253,15 @@ const DocumentsDialog = ({ open, onClose, organizationId, projectId, token, task
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-
         <DialogContent dividers>
-          <UploaderDocumentInsights closeUploader={() => setShowUploader(false)} taskId={taskId} onClose={onClose} />
+          <UploaderDocumentDigitization
+            closeUploader={() => setShowUploader(false)}
+            taskId={taskId}
+            onClose={onClose}
+          />
         </DialogContent>
       </Dialog>
     </>
   )
 }
-
-export default DocumentsDialog
+export default DocumentsAddNewDialog
