@@ -284,12 +284,20 @@ public class CompletionService {
 
             AuditLogs requestAuditLogs = auditLogsService.createDefaultAuditLogs(completionRequestType);
             requestAuditLogs.setTokenCount((long) completionResponse.getUsage().getPromptTokens());
+            requestAuditLogs.setCachedTokenCount((long) Optional.ofNullable(completionResponse.getUsage())
+                    .map(u -> u.getPromptTokensDetail())
+                    .map(d -> d.getCachedTokens())
+                    .orElse(0));
             requestAuditLogs.setProjectId(project.getId());
             requestAuditLogs.setOrganizationId(project.getOrganizationId());
             auditLogsService.saveAuditLogs(requestAuditLogs);
 
             AuditLogs completionAuditLogs = auditLogsService.createDefaultAuditLogs(completionResponseType);
             completionAuditLogs.setTokenCount((long) completionResponse.getUsage().getCompletionTokens());
+            requestAuditLogs.setReasoningTokenCount((long) Optional.ofNullable(completionResponse.getUsage())
+                    .map(u -> u.getCompletionTokensDetail())
+                    .map(d -> d.getReasoningTokens())
+                    .orElse(0));
             completionAuditLogs.setProjectId(project.getId());
             completionAuditLogs.setOrganizationId(project.getOrganizationId());
             auditLogsService.saveAuditLogs(completionAuditLogs);
