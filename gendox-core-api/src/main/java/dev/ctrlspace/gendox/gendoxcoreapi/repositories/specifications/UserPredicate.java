@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications;
 
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Predicate;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QUser;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.UserCriteria;
 
@@ -56,9 +57,27 @@ public class UserPredicate {
         if (userIdentifier == null) {
             return null;
         }
-        return user.email.eq(userIdentifier.toLowerCase())
-                .or(user.userName.eq(userIdentifier.toLowerCase()))
-                .or(user.phone.eq(userIdentifier.toLowerCase()));
+
+        UUID id = tryParseUUID(userIdentifier);
+
+        BooleanExpression predicate =
+                user.email.equalsIgnoreCase(userIdentifier)
+                        .or(user.userName.equalsIgnoreCase(userIdentifier))
+                        .or(user.phone.equalsIgnoreCase(userIdentifier));
+
+        if (id != null) {
+            predicate = predicate.or(user.id.eq(id));
+        }
+
+        return predicate;
+    }
+
+    private static UUID tryParseUUID(String value) {
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
 

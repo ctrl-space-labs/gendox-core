@@ -343,12 +343,18 @@ public class SecurityUtils {
         }
 
 
-        return AccessCriteria
-                .builder()
-                .orgIds(new HashSet<>())
-                .projectIds(new HashSet<>())
-                .threadId(new String())
-                .documentId(documentId)
+        return getRequestedDocumentIdAccessCriteria(documentId);
+    }
+
+    public AccessCriteria getRequestedDocumentIdAccessCriteria(String documentId) {
+
+        String documentIdParam = Objects.toString(documentId, "");
+
+        return AccessCriteria.builder()
+                .orgIds(Collections.emptySet())
+                .projectIds(Collections.emptySet())
+                .threadId("")
+                .documentId(documentIdParam)
                 .build();
     }
 
@@ -386,14 +392,6 @@ public class SecurityUtils {
      * @return
      */
     public boolean hasAuthority(String authority, String getterFunction) throws IOException {
-        if (!(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserProfile)) {
-            return false;
-        }
-        UserProfile userProfile = (UserProfile) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-
-        if (isSuperAdmin(userProfile)) {
-            return true; // Skip validation if user is an admin
-        }
 
         AccessCriteria accessCriteria = new AccessCriteria();
 
@@ -421,11 +419,40 @@ public class SecurityUtils {
             accessCriteria = getRequestedDocumentIdFromPathVariable();
         }
 
+        if (!(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserProfile)) {
+            return false;
+        }
+        UserProfile userProfile = (UserProfile) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+
+        return this.hasAuthority(userProfile, authority, accessCriteria);
+    }
+
+
+    /**
+     *  Use to check for Authorization with provided AccessCriteria, this is used inside services
+     *  the other #hasAuthority is used in @PreAuthorize annotations.
+     *
+     *  To generate the AccessCriteria, you can use the related getter methods in this class.
+     *  *
+     * @param userProfile
+     * @param authority
+     * @param accessCriteria
+     * @return
+     * @throws IOException
+     */
+    public boolean hasAuthority(UserProfile userProfile, String authority, AccessCriteria accessCriteria) {
+
+        if (isSuperAdmin(userProfile)) {
+            return true; // Skip validation if user is an admin
+        }
+
         if (accessCriteria == null) {
             return false;
         }
         return can(authority, userProfile, accessCriteria);
     }
+
 
 
     public UUID getUserId() {

@@ -1,6 +1,9 @@
 CREATE EXTENSION IF NOT EXISTS unaccent;
 
 
+ALTER TABLE gendox_core.audit_logs
+    ADD COLUMN IF NOT EXISTS cached_token_count bigint,
+    ADD COLUMN IF NOT EXISTS reasoning_token_count bigint;
 
 ALTER TABLE gendox_core.tasks
     ADD COLUMN IF NOT EXISTS completion_model_id uuid
@@ -28,3 +31,34 @@ CREATE INDEX IF NOT EXISTS idx_tasks_completion_model
 
 ALTER TABLE gendox_core.document_instance
     ADD COLUMN IF NOT EXISTS total_tokens bigint;
+
+
+
+INSERT INTO gendox_core.types (type_category, name, description)
+SELECT
+    'AI_TOOL_EXAMPLES',
+    'READ_DOCUMENT',
+    $${
+      "name": "read_document",
+      "strict": true,
+      "parameters": {
+        "type": "object",
+        "required": [
+          "document_id"
+        ],
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "description": "the UUID of the document to load"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Function that is used to fetch the content of the document in the LLM contexts"
+    }$$
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.types
+    WHERE type_category = 'AI_TOOL_EXAMPLES'
+      AND name = 'READ_DOCUMENT'
+);

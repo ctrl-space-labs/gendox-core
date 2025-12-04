@@ -251,8 +251,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                                             String toolChoice,
                                             @Nullable ObjectNode responseJsonSchema) {
         if (Strings.isNotEmpty(agentRole)) {
-            messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
-
+            upsertSystemPrompt(messages, agentRole);
         }
 
 
@@ -323,6 +322,26 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         CompletionResponse completionResponse = openAiCompletionResponseConverter.toCompletionResponse(openAiCompletionResponse);
 
         return completionResponse;
+    }
+
+    private static void upsertSystemPrompt(List<AiModelMessage> messages, String agentRole) {
+        AiModelMessage first = messages.isEmpty() ? null : messages.getFirst();
+
+        boolean hasSpecialRole = first != null &&
+                ("system".equals(first.getRole()) || "developer".equals(first.getRole()));
+
+        String role = hasSpecialRole ? first.getRole() : "system";
+
+        AiModelMessage updated = AiModelMessage.builder()
+                .role(role)
+                .content(agentRole)
+                .build();
+
+        if (hasSpecialRole) {
+            messages.set(0, updated);
+        } else {
+            messages.add(0, updated);
+        }
     }
 
     // TODO Change this. The reasoning budget should be stored as an extra property n the Agent

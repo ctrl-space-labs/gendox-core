@@ -284,12 +284,20 @@ public class CompletionService {
 
             AuditLogs requestAuditLogs = auditLogsService.createDefaultAuditLogs(completionRequestType);
             requestAuditLogs.setTokenCount((long) completionResponse.getUsage().getPromptTokens());
+            requestAuditLogs.setCachedTokenCount((long) Optional.ofNullable(completionResponse.getUsage())
+                    .map(u -> u.getPromptTokensDetail())
+                    .map(d -> d.getCachedTokens())
+                    .orElse(0));
             requestAuditLogs.setProjectId(project.getId());
             requestAuditLogs.setOrganizationId(project.getOrganizationId());
             auditLogsService.saveAuditLogs(requestAuditLogs);
 
             AuditLogs completionAuditLogs = auditLogsService.createDefaultAuditLogs(completionResponseType);
             completionAuditLogs.setTokenCount((long) completionResponse.getUsage().getCompletionTokens());
+            completionAuditLogs.setReasoningTokenCount((long) Optional.ofNullable(completionResponse.getUsage())
+                    .map(u -> u.getCompletionTokensDetail())
+                    .map(d -> d.getReasoningTokens())
+                    .orElse(0));
             completionAuditLogs.setProjectId(project.getId());
             completionAuditLogs.setOrganizationId(project.getOrganizationId());
             auditLogsService.saveAuditLogs(completionAuditLogs);
@@ -451,7 +459,7 @@ public class CompletionService {
             }
 
             JsonNode args = toolCall.get("function").get("arguments");
-            ToolExecutionContext ctx = new ToolExecutionContext(project, agent, toolDefinition);
+            ToolExecutionContext ctx = new ToolExecutionContext(project, agent, completionResponseMessage, toolDefinition);
             JsonNode result = aiToolRegistry.execute(toolName, args, ctx);
 
             AiModelMessage message = new AiModelMessage();
