@@ -221,7 +221,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       (taskNodesQuestionList?.content || []).map(node => ({
         id: node.id,
         text: node.nodeValue?.message || '',
-        order: node.nodeValue?.order || 0
+        order: node.nodeValue?.order || 0,
+        supportingDocumentIds : node.nodeValue?.documentMetadata?.supportingDocumentIds || [],
       }))
     )
   }, [taskNodesQuestionList])

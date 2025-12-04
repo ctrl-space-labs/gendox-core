@@ -34,6 +34,7 @@ const DocumentInsightsDialogs = ({
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
   const [questionsDialogTexts, setQuestionsDialogTexts] = useState([''])
+  const [previewDocument, setPreviewDocument] = useState(null)
 
   // ADD NEW documents
   const handleAddNewDocuments = async selectedDocIds => {
@@ -231,7 +232,7 @@ const DocumentInsightsDialogs = ({
         onConfirm={handleAddQuestions}
         handleUpdateQuestion={handleUpdateQuestion}
         activeQuestion={activeNode}
-        isSaving={loading}
+        isLoading={loading}
         addQuestionMode={addQuestionMode}
       />
     </>

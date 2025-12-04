@@ -40,10 +40,20 @@ function ExpandableMarkdownSection({ label, markdown, maxHeight = MAX_COLLAPSED_
           p: 2,
           borderRadius: 2,
           minHeight: 54,
-          maxHeight: expanded ? 'none' : `${maxHeight}px`,
-          overflow: 'hidden',
+          maxHeight: expanded ? '500px' : `${maxHeight}px`,
+          overflowY: expanded ? 'auto' : 'hidden',
+          overflowX: 'auto',
           position: 'relative',
-          transition: 'max-height 0.3s'
+          transition: 'max-height 0.3s ease',
+
+          '&::-webkit-scrollbar': {
+            height: '6px',
+            width: '6px'
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: theme.palette.divider,
+            borderRadius: '4px'
+          }
         }}
       >
         <GendoxMarkdownRenderer markdownText={markdown} />
@@ -71,4 +81,3 @@ function ExpandableMarkdownSection({ label, markdown, maxHeight = MAX_COLLAPSED_
 }
 
 export default ExpandableMarkdownSection
-

@@ -7,6 +7,9 @@ import { getQuestionMessageById } from 'src/utils/tasks/taskUtils'
 import ExpandableMarkdownSection from 'src/views/pages/tasks/helping-components/ExpandableMarkodownSection'
 const MAX_COLLAPSED_HEIGHT = 80 // px, about 3-4 lines
 
+
+
+
 const AnswerDialog = ({ open, onClose, answer, questions }) => {
   const theme = useTheme()
   if (!answer) return null

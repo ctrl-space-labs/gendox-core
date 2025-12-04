@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, forwardRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -13,10 +13,8 @@ import {
   Paper,
   Tooltip
 } from '@mui/material'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import CloseIcon from '@mui/icons-material/Close'
-import SaveIcon from '@mui/icons-material/Save'
-import CancelIcon from '@mui/icons-material/Cancel'
 import Divider from '@mui/material/Divider'
 import EditIcon from '@mui/icons-material/Edit'
 import taskService from 'src/gendox-sdk/taskService'
@@ -24,8 +22,6 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen'
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
 import DescriptionIcon from '@mui/icons-material/Description'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import DownloadIcon from '@mui/icons-material/Download'
@@ -33,6 +29,7 @@ import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/router'
 import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
+import CleanCollapse from 'src/views/custom-components/mui/collapse'
 import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
 import SectionCard from 'src/views/pages/documents-components/SectionCard'
 import {
@@ -43,53 +40,7 @@ import {
 import { localStorageConstants } from 'src/utils/generalConstants'
 import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
 import AddNewDocumentDialog from '../../helping-components/AddNewDocumentDialog'
-import { useSelector } from 'react-redux'
 
-const CleanCollapse = ({ title, open, onToggle, children }) => (
-  <Paper
-    elevation={0}
-    sx={{
-      border: '1px solid',
-      borderColor: 'divider',
-      borderRadius: 2,
-      overflow: 'hidden',
-      backgroundColor: 'background.paper'
-    }}
-  >
-    {/* Header */}
-    <Box
-      onClick={onToggle}
-      sx={{
-        px: 2.5,
-        py: 1.8,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        cursor: 'pointer',
-        '&:hover': { backgroundColor: 'action.hover' }
-      }}
-    >
-      <Typography variant='subtitle1' sx={{ fontWeight: 600 }}>
-        {title}
-      </Typography>
-
-      <IconButton size='small'>{open ? <ExpandLessIcon /> : <ExpandMoreIcon />}</IconButton>
-    </Box>
-
-    <Collapse in={open} timeout={180}>
-      <Box
-        sx={{
-          borderTop: '1px solid',
-          borderColor: 'divider',
-          p: 2.5,
-          backgroundColor: 'action.hover'
-        }}
-      >
-        {children}
-      </Box>
-    </Collapse>
-  </Paper>
-)
 
 const DocumentPagePreviewDialog = ({
   open,
@@ -231,8 +182,7 @@ const DocumentPagePreviewDialog = ({
       const updatedIds = oldIds.filter(id => id !== docIdToRemove)
 
       const updateData = {
-        taskNodeId: document.id,
-        prompt: promptValue,
+        taskNodeId: document.id,        
         supportingDocumentIds: updatedIds
       }
 
@@ -310,8 +260,7 @@ const DocumentPagePreviewDialog = ({
   return (
     <Dialog
       open={open}
-      // onClose={handleClose}
-      onClose={() => {}}
+      onClose={handleClose}
       disableEnforceFocus
       disableAutoFocus
       maxWidth={fullscreen ? false : 'lg'}
