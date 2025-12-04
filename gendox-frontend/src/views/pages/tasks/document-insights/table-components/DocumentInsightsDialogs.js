@@ -9,7 +9,7 @@ import {
 import { chunk } from 'src/utils/tasks/taskUtils'
 import { toast } from 'react-hot-toast'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
-import DocumentAddNewDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsDocumentAddNewDialog'
+import AddNewDocumentDialog from 'src/views/pages/tasks/helping-components/AddNewDocumentDialog'
 import AnswerDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsAnswerDialog'
 import QuestionsDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsQuestionsDialog'
 import DocumentPagePreviewDialog from '../table-dialogs/DocumentInsightsDocumentPagePreviewDialog'
@@ -168,7 +168,7 @@ const DocumentInsightsDialogs = ({
   return (
     <>
       {/* New Document Dialog */}
-      <DocumentAddNewDialog
+      <AddNewDocumentDialog
         open={dialogs.newDoc}
         onClose={() => onClose('newDoc')}
         existingDocumentIds={documents.map(d => d.documentId)}

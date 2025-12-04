@@ -3,8 +3,7 @@ import { useDispatch } from 'react-redux'
 import taskService from 'src/gendox-sdk/taskService'
 import { deleteTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
 import DocumentDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentDialog'
-import DocumentsAddNewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentsAddNewDialog'
-import AnswerDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationAnswerDialog'
+import DocumentsAddNewDialog from 'src/views/pages/tasks/helping-components/AddNewDocumentDialog'
 import DocumentPagePreviewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentPagePreviewDialog'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 
@@ -95,7 +94,8 @@ const DocumentDigitizationDialogs = ({
       <DocumentsAddNewDialog
         open={dialogs.newDoc}
         onClose={() => onClose('newDoc')}
-        existingDocuments={existingDocuments}
+        // existingDocuments={existingDocuments}
+        existingDocumentIds={existingDocuments.map(d => d.documentId)}
         loading={loading}
         onConfirm={handleAddNewDocuments}
         organizationId={organizationId}
@@ -114,14 +114,6 @@ const DocumentDigitizationDialogs = ({
         editMode={editMode}
         setEditMode={setEditMode}
       />
-
-      {/* Answer Details Dialog */}
-      {/* <AnswerDialog
-        open={dialogs.answerDetail}
-        answer={activeNode}
-        onClose={() => onClose('answerDetail')}
-        refreshAnswers={refreshAnswers}
-      /> */}
 
       {/* Document Page Preview Dialog */}
       <DocumentPagePreviewDialog

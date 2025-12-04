@@ -42,7 +42,7 @@ import {
 } from 'src/store/activeDocument/activeDocument'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
-import DocumentInsightsDocumentAddNewDialog from './DocumentInsightsDocumentAddNewDialog'
+import AddNewDocumentDialog from '../../helping-components/AddNewDocumentDialog'
 import { useSelector } from 'react-redux'
 
 const CleanCollapse = ({ title, open, onToggle, children }) => (
@@ -179,6 +179,7 @@ const DocumentPagePreviewDialog = ({
     if (!document) return
     setSaving(true)
 
+    console.log('Adding supporting docs:', newDocIds)
     try {
       const existingIds = document.supportingDocumentIds || []
 
@@ -186,8 +187,7 @@ const DocumentPagePreviewDialog = ({
       const updatedIds = Array.from(new Set([...existingIds, ...newDocIds]))
 
       const updateData = {
-        taskNodeId: document.id,
-        prompt: promptValue,
+        taskNodeId: document.id,        
         supportingDocumentIds: updatedIds
       }
 
@@ -639,7 +639,7 @@ const DocumentPagePreviewDialog = ({
         onConfirm={handleConfirmRegenerate}
         type='document'
       />
-      <DocumentInsightsDocumentAddNewDialog
+      <AddNewDocumentDialog
         open={openAddDocDialog}
         onClose={() => setOpenAddDocDialog(false)}
         existingDocumentIds={document?.supportingDocumentIds || []}
@@ -647,7 +647,9 @@ const DocumentPagePreviewDialog = ({
         projectId={projectId}
         taskId={taskId}
         token={token}
+        mode="supporting"
         onConfirm={newIds => handleAddSupportingDoc(newIds)}
+        onUploadSuccess={newDocIds => handleAddSupportingDoc(newDocIds)}
       />
     </Dialog>
   )

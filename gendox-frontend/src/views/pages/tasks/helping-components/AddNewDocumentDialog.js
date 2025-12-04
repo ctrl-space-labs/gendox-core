@@ -20,7 +20,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
-import UploaderDocumentDigitization from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationUploaderDocumentDigitization'
+import UploaderDocuments from 'src/views/pages/tasks/helping-components/UploaderDocuments'
 import { fetchProjectDocuments } from 'src/store/activeProject/activeProject'
 import { useDispatch, useSelector } from 'react-redux'
 import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
@@ -31,10 +31,12 @@ const DocumentsAddNewDialog = ({
   existingDocumentIds = [],
   loading,
   onConfirm,
+  onUploadSuccess,
   organizationId,
   projectId,
   token,
-  taskId
+  taskId,
+  mode = 'main'
 }) => {
   const dispatch = useDispatch()
   const { projectDocuments, isBlurring } = useSelector(state => state.activeProject)
@@ -252,10 +254,12 @@ const DocumentsAddNewDialog = ({
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          <UploaderDocumentDigitization
+          <UploaderDocuments
             closeUploader={() => setShowUploader(false)}
             taskId={taskId}
             onClose={onClose}
+            onUploadSuccess={onUploadSuccess}
+            mode={mode}
           />
         </DialogContent>
       </Dialog>
