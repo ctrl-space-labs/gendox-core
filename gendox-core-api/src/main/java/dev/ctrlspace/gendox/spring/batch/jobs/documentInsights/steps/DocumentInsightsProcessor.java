@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 
 import java.util.*;
@@ -144,14 +145,23 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                         project.getId(),
                         "DOCUMENT_INSIGHTS - Task:" + task.getId());
 
-
+                // TODO: Next steps:
+                //  Investigate what to do with 'sistash orizontias idiokthsias' which is HUUUUUGE
+                //  Extract all hardcoded strings to properties files
+                //  Overwrite the default agent settings, from the settings in the task
+                //  Add in the context the Task and Document prompt messages
 
                 List<MessageLocalContext> supportingDocumentsContext = new ArrayList<>();
                 supportingDocumentsContext.add(mainDocSupportingDocumentsContext);
                 supportingDocumentsContext.addAll(questionChunk.stream().map(CompletionQuestionRequest::getQuestionSupportingDocsLocalContext).toList());
                 supportingDocumentsContext.removeIf(Objects::isNull);
 
-                Message message = buildPromptMessageForSections(groupedDocumentPart, questionsPrompt, newThread, supportingDocumentsContext);
+                Message message = buildPromptMessageForSections(groupedDocumentPart,
+                        questionsPrompt,
+                        newThread,
+                        supportingDocumentsContext,
+                        task,
+                        documentGroupWithQuestions.getDocumentNode());
                 GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionChunk);
                 if (documentPartAnswers == null) {
                     // ignore all partialAnswers, since there is an error, we cant trust any of those
@@ -233,22 +243,22 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     private Message buildPromptMessageForSections(List<DocumentInstanceSection> sectionGroup,
                                                   String questionsPrompt,
                                                   ChatThread newThread,
-                                                  List<MessageLocalContext> supportingDocumentsContext) {
+                                                  List<MessageLocalContext> localContext,
+                                                  Task task,
+                                                  TaskNode documentNode) {
         String textSections = sectionGroup.stream()
                 .map(DocumentInstanceSection::getSectionValue)
                 .reduce("", (a, b) -> a + "\n\n" + b);
 
         // Main document is 1st in local context, to increase LLM cache hit rate
-        MessageLocalContext mainDocumentContext = MessageLocalContext.builder()
-                .contextType(Type.builder().name("**Main Document Text**").build())
-                .value("""
-                        
-                        \"\"\"\"\"
-                        %s
-                        \"\"\"\"\"
-                        """.formatted(textSections))
-                .build();
-        supportingDocumentsContext.add(0, mainDocumentContext);
+        addMainDocumentText(localContext, textSections);
+
+        // task prompt, if exists, is 2nd in local context
+        addTaskPromptIfExists(localContext, task);
+
+        // document prompt, if exists, is 3rd in local context
+        addDocumentPromptIfExists(localContext, documentNode);
+
 
         String prompt = """
             You are an AI assistant that answers questions for the **Main Document Text**, based on provided supporting documents.            
@@ -273,8 +283,58 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         message = messageService.createMessage(message);
 
         // add after creations as the local context is not saved
-        message.setLocalContexts(supportingDocumentsContext);
+        message.setLocalContexts(localContext);
         return message;
+    }
+
+    private static void addDocumentPromptIfExists(List<MessageLocalContext> localContext, TaskNode documentNode) {
+        if (Optional.ofNullable(documentNode)
+                .map(n -> n.getNodeValue())
+                .map(v -> v.getDocumentMetadata())
+                .map(m -> m.getPrompt())
+                .filter(StringUtils::hasText)
+                .isPresent()) {
+
+
+            MessageLocalContext documentPrompt = MessageLocalContext.builder()
+                    .contextType(Type.builder().name("**Instructions to follow, and information to know, for this specific [Main Document]**").build())
+                    .value("""
+                            
+                            \"\"\"\"\"
+                            %s
+                            \"\"\"\"\"
+                            """.formatted(documentNode.getNodeValue().getDocumentMetadata().getPrompt()))
+                    .build();
+            localContext.add(2, documentPrompt);
+        }
+    }
+
+    private static void addTaskPromptIfExists(List<MessageLocalContext> localContext, Task task) {
+        if (task.getTaskPrompt() != null && !task.getTaskPrompt().isBlank()) {
+            MessageLocalContext taskPrompt = MessageLocalContext.builder()
+                    .contextType(Type.builder().name("**General instructions to follow for the processing**").build())
+                    .value("""
+                            
+                            \"\"\"\"\"
+                            %s
+                            \"\"\"\"\"
+                            """.formatted(task.getTaskPrompt()))
+                    .build();
+            localContext.add(1, taskPrompt);
+        }
+    }
+
+    private static void addMainDocumentText(List<MessageLocalContext> localContext, String textSections) {
+        MessageLocalContext mainDocumentContext = MessageLocalContext.builder()
+                .contextType(Type.builder().name("**[Main Document] Text**").build())
+                .value("""
+                        
+                        \"\"\"\"\"
+                        %s
+                        \"\"\"\"\"
+                        """.formatted(textSections))
+                .build();
+        localContext.add(0, mainDocumentContext);
     }
 
     /**
