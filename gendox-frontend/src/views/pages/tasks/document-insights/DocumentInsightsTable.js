@@ -7,7 +7,7 @@ import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
 import { loadTaskData } from 'src/store/activeTaskNode/activeTaskNode'
 import useGeneration from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsGeneration'
-import useExportFile from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsExportFile'
+import useExportFile from 'src/views/pages/tasks/helping-components/TaskExportFiles'
 import taskService from 'src/gendox-sdk/taskService'
 import { useGeneration as useGenerationContext } from '../generation/GenerationContext'
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
@@ -249,16 +249,18 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       taskId,
       documents,
       questions,
+      pollJobStatus,
       selectedDocuments,
       setSelectedDocuments,
-      pollJobStatus,
+      reloadAll,
       token
     })
 
-  const { exportCsv, isExportingCsv } = useExportFile({
+  const { exportDocumentInsightCsv, exportSingleDocumentInsightCsv, isExportingCsv } = useExportFile({
     organizationId,
     projectId,
     taskId,
+    documentNodeId: activeNode?.id,
     token,
     selectedTask,
     documents
@@ -284,7 +286,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           disableGenerate={documents.length === 0 || questions.length === 0}
           isPageLoading={isPageLoading}
           isExportingCsv={isExportingCsv}
-          onExportCsv={exportCsv}
+          onExportCsv={exportDocumentInsightCsv}
           selectedDocuments={selectedDocuments}
           generatingAll={isGeneratingAll}
           generatingNew={false}
@@ -340,6 +342,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         documents={documents}
         questions={questions}
         addQuestionMode={addQuestionMode}
+        isExportingCsv={isExportingCsv}
+        onExportCsv={exportSingleDocumentInsightCsv}
       />
     </>
   )

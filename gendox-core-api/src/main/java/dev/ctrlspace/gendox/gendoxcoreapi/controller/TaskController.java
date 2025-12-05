@@ -314,10 +314,12 @@ public class TaskController {
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
-    @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/export-csv")
-    public ResponseEntity<InputStreamResource> exportTaskCsv(@PathVariable UUID organizationId,
-                                                             @PathVariable UUID projectId,
-                                                             @PathVariable UUID taskId
+    @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/documents/{documentNodeId}/insights/export-csv")
+    public ResponseEntity<InputStreamResource> documentInsightExportSingleCSV(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID taskId,
+            @PathVariable UUID documentNodeId
     ) throws GendoxException {
         Task task = taskService.getTaskById(taskId);
         if (task == null) {
@@ -326,8 +328,10 @@ public class TaskController {
         if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
             throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
         }
-        InputStreamResource fileResource = taskCsvExportService.exportTaskCsv(taskId);
-        String filename = "task_" + taskId + "_answers.csv";
+        InputStreamResource fileResource = taskCsvExportService.documentInsightExportSingleDocumentCSV(taskId, documentNodeId);
+        String filename = "task_" + taskId + "_document_" + documentNodeId + ".csv";
+
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.parseMediaType("text/csv"))
@@ -335,7 +339,30 @@ public class TaskController {
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
-    @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/documents/{documentNodeId}/export-csv")
+    @GetMapping("/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/insights/export-csv")
+    public ResponseEntity<InputStreamResource> documentInsightExportAll(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID taskId
+    ) throws GendoxException {
+
+        Task task = taskService.getTaskById(taskId);
+        if (task == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task not found", HttpStatus.NOT_FOUND);
+
+        }
+
+        InputStreamResource fileResource = taskCsvExportService.documentInsightExportCSV(taskId);
+        String filename = "task_" + taskId + "_answers.csv";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(fileResource);
+    }
+
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/documents/{documentNodeId}/digitization/export-csv")
     public ResponseEntity<InputStreamResource> documentDigitizationExportCSV(@PathVariable UUID organizationId,
                                                                              @PathVariable UUID projectId,
                                                                              @PathVariable UUID taskId,

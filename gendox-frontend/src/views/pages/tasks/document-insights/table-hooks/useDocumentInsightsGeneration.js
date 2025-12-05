@@ -10,11 +10,11 @@ export default function useGeneration({
   taskId,
   documents,
   questions,
-  pollJobStatus,
-  token,
+  pollJobStatus,  
   selectedDocuments,
   setSelectedDocuments,
-  fetchAnswers
+  reloadAll,
+  token,
 }) {
   const dispatch = useDispatch()
   const { startGeneration, updateProgress, completeGeneration, failGeneration } = useGenerationContext()
@@ -52,7 +52,7 @@ export default function useGeneration({
 
 
         await pollJobStatus(jobExecutionId)
-        fetchAnswers()
+        reloadAll()
 
         // Complete generation tracking
         completeGeneration(taskId, null)

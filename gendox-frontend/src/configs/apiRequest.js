@@ -162,7 +162,8 @@ export default {
   duplicateTask: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/duplicate`,
 
-  getTasks: (organizationId, projectId, sort = 'createdAt,desc') => `${url}organizations/${organizationId}/projects/${projectId}/tasks?sort=${sort}`,
+  getTasks: (organizationId, projectId, sort = 'createdAt,desc') =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks?sort=${sort}`,
 
   taskRequest: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`,
@@ -188,10 +189,10 @@ export default {
   getDocumentPages: (organizationId, projectId, taskId, page, size) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/document-pages?page=${page}&size=${size}`,
 
-  getTaskNodesByCriteria: (organizationId, projectId, taskId, page , size) =>
+  getTaskNodesByCriteria: (organizationId, projectId, taskId, page, size) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/search?page=${page}&size=${size}`,
 
-  getAnswerTaskNodes: (organizationId, projectId, taskId, page , size ) =>
+  getAnswerTaskNodes: (organizationId, projectId, taskId, page, size) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/answers/batch?page=${page}&size=${size}`,
 
   createTaskEdge: (organizationId, projectId) =>
@@ -206,8 +207,7 @@ export default {
   executeTaskByType: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/execute`,
 
-  getJobsByCriteria: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/jobs`,
+  getJobsByCriteria: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/jobs`,
 
   deleteTaskNode: (organizationId, projectId, taskNodeId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes/${taskNodeId}`,
@@ -215,11 +215,12 @@ export default {
   deleteTask: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`,
 
-  exportTaskCsv: (organizationId, projectId, taskId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/export-csv`,
+  documentInsightsExportAllCSV: (organizationId, projectId, taskId) =>
+  `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/insights/export-csv`,
+
+  documentInsightsExportCSV: (organizationId, projectId, taskId, documentNodeId) =>
+  `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/insights/export-csv`,
 
   documentDigitizationExportCSV: (organizationId, projectId, taskId, documentNodeId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/export-csv`,
-
-
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/digitization/export-csv`
 }

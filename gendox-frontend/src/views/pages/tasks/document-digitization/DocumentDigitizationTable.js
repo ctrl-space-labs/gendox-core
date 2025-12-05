@@ -11,7 +11,7 @@ import DocumentDigitizationGrid from './table-components/DocumentDigitizationGri
 import HeaderSection from './table-components/DocumentDigitizationHeaderSection'
 import DialogManager from './table-components/DocumentDigitizationDialogs'
 import useDocumentDigitizationGeneration from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationGeneration'
-import useExportFile from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationExportFile'
+import useExportFile from 'src/views/pages/tasks/helping-components/TaskExportFiles'
 import { useGeneration } from '../generation/GenerationContext'
 import { checkAndResumeRunningJob } from '../generation/runningJobsDetectionUtils'
 import GlobalGenerationStatus from '../generation/GlobalGenerationStatus'
@@ -311,7 +311,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     }
   })
 
-  const { exportCsv, exportDocumentDigitizationCsv, isExportingCsv } = useExportFile({
+  const { exportDocumentDigitizationCsv, isExportingCsv } = useExportFile({
     organizationId,
     projectId,
     taskId,
@@ -374,8 +374,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
           disableGenerateNew={disableGenerateFlag}
           disableGenerate={documents.length === 0}
           isLoading={isLoading}
-          isExportingCsv={isExportingCsv}
-          onExportCsv={exportCsv}
           selectedDocuments={selectedDocuments}
           generatingAll={generatingAll}
           generatingNew={generatingNew}

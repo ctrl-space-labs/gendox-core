@@ -26,7 +26,9 @@ const DocumentInsightsDialogs = ({
   documents,
   questions,
   addQuestionMode,
-  reloadAll
+  reloadAll,
+  isExportingCsv,
+  onExportCsv
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
@@ -192,8 +194,8 @@ const DocumentInsightsDialogs = ({
         //generateSingleDocument={generateSingleDocument}
         onDocumentUpdate={reloadAll}
         isLoading={loading}
-        //onExportCsv={onExportCsv}
-        //isExportingCsv={isExportingCsv}
+        isExportingCsv={isExportingCsv}
+        onExportCsv={onExportCsv}
         onDelete={() => onOpen && onOpen('delete', activeNode)}
       />
 

@@ -146,16 +146,12 @@ const updateTaskNode = async (organizationId, projectId, taskNodePayload, token)
  * @returns {Promise<axios.AxiosResponse<TaskNode>>}
  */
 const updateTaskNodeForDocumentMetadata = async (organizationId, projectId, taskId, updatePayload, token) => {
-  return axios.put(
-    apiRequests.updateTaskNodeForDocumentMetadata(organizationId, projectId, taskId),
-    updatePayload,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + token
-      }
+  return axios.put(apiRequests.updateTaskNodeForDocumentMetadata(organizationId, projectId, taskId), updatePayload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
     }
-  )
+  })
 }
 
 /**
@@ -312,7 +308,6 @@ const executeTaskByType = async (organizationId, projectId, taskId, criteria, to
   })
 }
 
-
 /**
  * Get jobs by criteria with query parameters
  * @param organizationId
@@ -400,18 +395,44 @@ const deleteTask = async (organizationId, projectId, taskId, token) => {
  * @param organizationId
  * @param projectId
  * @param taskId
+ * @param documentId
  * @param token
  * @returns {Promise<Blob>}
  */
-const exportTaskCsv = async (organizationId, projectId, taskId, token) => {
-  const response = await axios.get(apiRequests.exportTaskCsv(organizationId, projectId, taskId), {
-    headers: {
-      Authorization: 'Bearer ' + token
-    },
-    responseType: 'blob' // Important for CSV files!
-  })
-  return response.data // This is the CSV blob
+const documentInsightsExportAllCSV = async (organizationId, projectId, taskId, token) => {
+  const response = await axios.get(
+    apiRequests.documentInsightsExportAllCSV(organizationId, projectId, taskId),
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      responseType: 'blob'
+    }
+  )
+  return response.data
 }
+
+/**
+ * Download Document Insights CSV
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param documentNodeId
+ * @param token
+ * @returns {Promise<Blob>}
+ */
+const documentInsightsExportCSV = async (organizationId, projectId, taskId, documentNodeId, token) => {
+  const response = await axios.get(
+    apiRequests.documentInsightsExportCSV(organizationId, projectId, taskId, documentNodeId),
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: 'blob'
+    }
+  )
+  return response.data
+}
+
+
 
 /**
  * Export Document Digitization CSV
@@ -457,6 +478,7 @@ export default {
   getJobsByCriteria,
   deleteTaskNode,
   deleteTask,
-  exportTaskCsv,
+  documentInsightsExportAllCSV,
+  documentInsightsExportCSV,
   documentDigitizationExportCSV
 }

@@ -13,7 +13,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -38,7 +40,7 @@ public class TaskCsvExportService {
         this.documentOnlyConverter = documentOnlyConverter;
     }
 
-    public InputStreamResource exportTaskCsv(UUID taskId) throws GendoxException {
+    public InputStreamResource documentInsightExportCSV(UUID taskId) throws GendoxException {
         // Fetch nodes
         Page<TaskNode> documentNodes = taskNodeService.getTaskNodesByType(taskId, TaskNodeTypeConstants.DOCUMENT);
         Page<TaskNode> questionNodes = taskNodeService.getTaskNodesByType(taskId, TaskNodeTypeConstants.QUESTION);
@@ -70,7 +72,61 @@ public class TaskCsvExportService {
         }
     }
 
-// --- Helper methods below ---
+    public InputStreamResource documentInsightExportSingleDocumentCSV(UUID taskId, UUID documentNodeId) throws GendoxException {
+        logger.info("Exporting single document insight CSV: taskId={}, documentNodeId={}", taskId, documentNodeId);
+
+        TaskNode documentNode = taskNodeService.getTaskNodeById(documentNodeId);
+        if (documentNode == null || !documentNode.getTaskId().equals(taskId)) {
+            throw new GendoxException("DOCUMENT_NODE_NOT_FOUND", "Document node not found for task", HttpStatus.NOT_FOUND);
+        }
+
+        // Load questions
+        Page<TaskNode> questionNodes = taskNodeService.getTaskNodesByType(taskId, TaskNodeTypeConstants.QUESTION);
+
+        // Load answers only for this document
+        TaskNodeCriteria criteria = TaskNodeCriteria.builder()
+                .taskId(taskId)
+                .nodeTypeNames(List.of(TaskNodeTypeConstants.ANSWER))
+                .nodeValueNodeDocumentId(documentNodeId)
+                .build();
+        Page<TaskNode> answerNodes = taskNodeService.getTaskNodesByCriteria(criteria, Pageable.unpaged());
+
+        Map<String, TaskNodeValueDTO> answerMatrix = buildAnswerMatrix(answerNodes);
+
+        // Optional: Load document title
+        Map<UUID, String> docTitles = getDocumentTitles(new PageImpl<>(List.of(documentNode)));
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
+
+        try {
+            // header: questions only
+            writer.write("Document");
+            for (TaskNode question : questionNodes) {
+                writer.write("," + escapeCsv(question.getNodeValue().getMessage()));
+            }
+            writer.write("\n");
+
+            String docTitle = docTitles.getOrDefault(documentNode.getDocumentId(), documentNodeId.toString());
+            writer.write(escapeCsv(docTitle));
+
+            // answers row
+            for (TaskNode q : questionNodes) {
+                String key = documentNodeId + "|" + q.getId();
+                TaskNodeValueDTO val = answerMatrix.get(key);
+                writer.write("," + escapeCsv(val != null ? val.getAnswerValue() : ""));
+            }
+
+            writer.write("\n");
+            writer.flush();
+
+            return new InputStreamResource(new ByteArrayInputStream(out.toByteArray()));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to export single document CSV", e);
+        }
+    }
+
+
 
     private Map<UUID, String> getDocumentTitles(Page<TaskNode> documentNodes) throws GendoxException {
         List<UUID> documentNodeIds = documentNodes.stream()
