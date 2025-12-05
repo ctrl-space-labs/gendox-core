@@ -12,6 +12,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
@@ -24,6 +25,7 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
@@ -101,6 +103,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
             batch.setAnswersToDelete(answersToDelete);
         } else {
             documentGroupWithQuestions.getQuestionNodes().removeAll(answeredQuestions);
+            answeredQuestions.clear();  // nothing to delete in this case
             if (documentGroupWithQuestions.getQuestionNodes().isEmpty()) {
                 return null; // nothing left to process
             }
@@ -112,7 +115,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         if (project == null){
             project = projectService.getProjectById(task.getProjectId());
         }
-        ObjectNode responseJsonSchema = buildResponseSchema();
+        ObjectNode responseJsonSchema = buildResponseSchema(new org.springframework.core.ParameterizedTypeReference<GroupedQuestionAnswers>() {});
 
         List<List<CompletionQuestionRequest>> questionChunks = chunkQuestionsToGroups(task, documentGroupWithQuestions.getQuestionNodes());
         List<List<DocumentInstanceSection>> sectionChunks = groupSectionsBy100kTokens(task, documentGroupWithQuestions.getDocumentNode().getDocumentId());
@@ -146,10 +149,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                         "DOCUMENT_INSIGHTS - Task:" + task.getId());
 
                 // TODO: Next steps:
-                //  Investigate what to do with 'sistash orizontias idiokthsias' which is HUUUUUGE
                 //  Extract all hardcoded strings to properties files
                 //  Overwrite the default agent settings, from the settings in the task
-                //  Add in the context the Task and Document prompt messages
 
                 List<MessageLocalContext> supportingDocumentsContext = new ArrayList<>();
                 supportingDocumentsContext.add(mainDocSupportingDocumentsContext);
@@ -587,8 +588,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         return groups;
     }
 
-    private static ObjectNode buildResponseSchema() throws JsonProcessingException {
-        String raw = JsonSchemaGenerator.generateForType(new org.springframework.core.ParameterizedTypeReference<GroupedQuestionAnswers>() {}.getType());
+    private static ObjectNode buildResponseSchema(ParameterizedTypeReference typeReference) throws JsonProcessingException {
+        String raw = JsonSchemaGenerator.generateForType(typeReference.getType());
         ObjectMapper mapper = new ObjectMapper();
         JsonNode schemaNode = mapper.readTree(raw);
         ObjectNode wrapper = mapper.createObjectNode();

@@ -1,8 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import lombok.AllArgsConstructor;
@@ -25,6 +23,7 @@ public class TaskDocumentMetadataDTO {
     private Integer pageTo;
     private Boolean allPages; // true when user wants to process all pages (clear page range)
     private List<UUID> supportingDocumentIds; // ids of supporting documents linked to this document or Question used in insights task
+    private CompletionAnswerSummary insightsSummary; // used in Documents analysed by Insights Job
 
     //// fields used in Digitization Job
     @JsonIgnore

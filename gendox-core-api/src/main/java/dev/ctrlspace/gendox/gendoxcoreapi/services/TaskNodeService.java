@@ -23,6 +23,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -102,7 +103,7 @@ public class TaskNodeService {
         logger.info("Updating task node for document digitization: {}", taskDocumentMetadataDTO);
 
         TaskNode existing = taskNodeRepository.findById(taskDocumentMetadataDTO.getTaskNodeId())
-                .orElseThrow(() -> new RuntimeException("TaskNode not found for update"));
+                .orElseThrow(() -> new GendoxException("TASK_NODE_NOT_FOUND", "TaskNode not found for update", HttpStatus.NOT_FOUND));
 
         if (existing.getNodeValue() == null) {
             existing.setNodeValue(new TaskNodeValueDTO());
@@ -119,6 +120,9 @@ public class TaskNodeService {
         }
         if (taskDocumentMetadataDTO.getSupportingDocumentIds() != null) {
             existing.getNodeValue().getDocumentMetadata().setSupportingDocumentIds(taskDocumentMetadataDTO.getSupportingDocumentIds());
+        }
+        if (taskDocumentMetadataDTO.getInsightsSummary() != null) {
+            existing.getNodeValue().getDocumentMetadata().setInsightsSummary(taskDocumentMetadataDTO.getInsightsSummary());
         }
 
         // allPages / page range
@@ -239,7 +243,7 @@ public class TaskNodeService {
     }
 
     @Transactional
-    public void deleteTaskNodeAndConnectionNodes(UUID taskNodeId) throws GendoxException {
+    public void deleteTaskNodeAndConnectionNodes(UUID taskNodeId) {
         logger.info("Deleting task node and its connection nodes: {}", taskNodeId);
 
         // Find all edges connected to this node

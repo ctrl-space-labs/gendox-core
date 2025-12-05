@@ -1,11 +1,10 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.InsightDocumentAnswersWithSummaryDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskAnswerBatchDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentQuestionsDTO;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
-import dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps.DocumentInsightsProcessor;
-import dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps.DocumentInsightsReader;
-import dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps.DocumentInsightsWriter;
+import dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps.*;
 import io.micrometer.observation.ObservationRegistry;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -41,10 +40,12 @@ public class DocumentInsightsJobConfig {
     private UniqueInstanceDecider uniqueInstanceDecider;
 
     @Bean
-    public Job documentInsightsJob(Step documentInsightsStep) {
+    public Job documentInsightsJob(Step documentInsightsStep,
+                                   Step insightsSummaryStep) {
 
         Flow documentInsightsFlow = new FlowBuilder<Flow>(documentInsightsJobName + "Flow")
                 .start(documentInsightsStep)
+                .next(insightsSummaryStep)
                 .build();
 
         return new JobBuilder(documentInsightsJobName, jobRepository)
@@ -75,6 +76,24 @@ public class DocumentInsightsJobConfig {
 
         return stepBuilder
                 .<TaskDocumentQuestionsDTO, TaskAnswerBatchDTO>chunk(chunkSize, platformTransactionManager)
+                .reader(reader)
+                .processor(processor)
+                .writer(writer)
+                .taskExecutor(asyncBatchInsightsExecutor)
+                .build();
+    }
+
+    @Bean
+    public Step insightsSummaryStep(InsightsSummaryReader reader,
+                                    InsightsSummaryProcessor processor,
+                                    InsightsSummaryWriter writer,
+                                    TaskExecutor asyncBatchInsightsExecutor,
+                                    PlatformTransactionManager platformTransactionManager) {
+
+        StepBuilder stepBuilder = new StepBuilder("insightsSummaryStep", jobRepository);
+
+        return stepBuilder
+                .<TaskDocumentQuestionsDTO, InsightDocumentAnswersWithSummaryDTO>chunk(chunkSize, platformTransactionManager)
                 .reader(reader)
                 .processor(processor)
                 .writer(writer)
