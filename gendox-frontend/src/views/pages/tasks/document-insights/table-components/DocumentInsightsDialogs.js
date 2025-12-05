@@ -19,22 +19,18 @@ const DocumentInsightsDialogs = ({
   activeNode,
   onClose,
   onOpen,
-  refreshDocuments,
-  refreshQuestions,
-  refreshAnswers,
   taskId,
   organizationId,
   projectId,
   token,
   documents,
-  documentPages = [],
   questions,
-  addQuestionMode
+  addQuestionMode,
+  reloadAll
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
   const [questionsDialogTexts, setQuestionsDialogTexts] = useState([''])
-  const [previewDocument, setPreviewDocument] = useState(null)
 
   // ADD NEW documents
   const handleAddNewDocuments = async selectedDocIds => {
@@ -57,7 +53,7 @@ const DocumentInsightsDialogs = ({
         ).unwrap()
       }
 
-      if (refreshDocuments) await refreshDocuments()
+      await reloadAll()
       onClose('newDoc')
     } catch (error) {
       toast.error('Failed to add documents')
@@ -71,8 +67,7 @@ const DocumentInsightsDialogs = ({
     setLoading(true)
     try {
       await dispatch(deleteTaskNode({ organizationId, projectId, taskNodeId: nodeId, token })).unwrap()
-      if (refreshDocuments) await refreshDocuments()
-      if (refreshQuestions) await refreshQuestions()
+      await reloadAll()
       onClose('delete')
     } finally {
       setLoading(false)
@@ -110,14 +105,14 @@ const DocumentInsightsDialogs = ({
         ).unwrap()
       }
       // Refresh the question list after saving all
-      if (refreshQuestions) await refreshQuestions()
-      setLoading(false)
-      setQuestionsDialogTexts(['']) // Reset the input field
+      await reloadAll()
       onClose('questionDetail')
+      setQuestionsDialogTexts(['']) // Reset the input field
       toast.success('Questions added!')
     } catch (error) {
       toast.error('Failed to save questions')
-      console.error(error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -155,8 +150,7 @@ const DocumentInsightsDialogs = ({
       ).unwrap()
 
       toast.success('Question updated!')
-      if (refreshQuestions) await refreshQuestions()
-
+      await reloadAll()
       onClose('questionDetail')
     } catch (error) {
       toast.error('Failed to update question')
@@ -186,26 +180,18 @@ const DocumentInsightsDialogs = ({
         open={dialogs.answerDetail}
         answer={activeNode}
         onClose={() => onClose('answerDetail')}
-        refreshAnswers={refreshAnswers}
+        refreshAnswers={reloadAll}
         questions={questions}
       />
 
       {/* Document Page Preview Dialog */}
       <DocumentPagePreviewDialog
         open={dialogs.pagePreview || false}
-        onClose={() => {
-          onClose('pagePreview')
-          refreshDocuments()
-          refreshAnswers()
-        }}
+        onClose={() => onClose('pagePreview')}
         document={activeNode}
-        documentPages={documentPages}
         //generateSingleDocument={generateSingleDocument}
-        onDocumentUpdate={() => {
-          refreshDocuments()
-          refreshAnswers()
-        }}
-        //dialogLoading={dialogLoading}
+        onDocumentUpdate={reloadAll}
+        isLoading={loading}
         //onExportCsv={onExportCsv}
         //isExportingCsv={isExportingCsv}
         onDelete={() => onOpen && onOpen('delete', activeNode)}

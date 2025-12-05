@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import taskService from 'src/gendox-sdk/taskService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
+import { fetchDocumentsByCriteria } from '../activeDocument/activeDocument'
 
 // -------- Thunks for TaskNodes --------
 
@@ -148,20 +149,128 @@ export const deleteTaskNode = createAsyncThunk(
   }
 )
 
+export const loadTaskData = createAsyncThunk(
+  'taskNode/loadTaskData',
+  async ({ organizationId, projectId, taskId, token, docsPage, docsPageSize }, thunkAPI) => {
+    try {
+      //
+      // 1️⃣ Fetch DOCUMENT task nodes
+      //
+      const docsResult = await thunkAPI
+        .dispatch(
+          fetchTaskNodesByCriteria({
+            organizationId,
+            projectId,
+            taskId,
+            token,
+            criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
+            page: docsPage,
+            size: docsPageSize
+          })
+        )
+        .unwrap()
+
+      const documentNodes = docsResult.content || []
+      const documentIds = documentNodes.map(n => n.documentId).filter(Boolean)
+
+      //
+      // 2️⃣ Fetch full documents
+      //
+      if (documentIds.length > 0) {
+        await thunkAPI
+          .dispatch(
+            fetchDocumentsByCriteria({
+              organizationId,
+              projectId,
+              documentIds,
+              token
+            })
+          )
+          .unwrap()
+      }
+      const fullDocs = thunkAPI.getState().activeDocument.documents
+
+      const mergedDocumentNodes = documentNodes.map(node => {
+        const full = fullDocs.find(d => d.id === node.documentId)
+
+        return {
+          ...node,
+          nodeValue: {
+            ...node.nodeValue,
+            documentMetadata: {
+              ...(node.nodeValue?.documentMetadata || {}),
+              title: full?.title,
+              remoteUrl: full?.remoteUrl,
+              prompt: node.nodeValue?.documentMetadata?.prompt || '',
+              supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || []
+            }
+          }
+        }
+      })
+      thunkAPI.dispatch({
+        type: 'taskNode/updateMergedDocuments',
+        payload: mergedDocumentNodes
+      })
+
+      //
+      // 3️⃣ Fetch QUESTION task nodes
+      //
+      const questionsResult = await thunkAPI
+        .dispatch(
+          fetchTaskNodesByCriteria({
+            organizationId,
+            projectId,
+            taskId,
+            token,
+            criteria: { taskId, nodeTypeNames: ['QUESTION'] },
+            page: 0,
+            size: 2147483647 // max int to fetch all questions
+          })
+        )
+        .unwrap()
+
+      const questionNodes = questionsResult.content || []
+
+      //
+      // 4️⃣ Fetch ANSWER task nodes (depends on docs + questions)
+      //
+      const answerPayload = {
+        documentNodeIds: documentNodes.map(d => d.id),
+        questionNodeIds: questionNodes.map(q => q.id)
+      }
+
+      await thunkAPI
+        .dispatch(
+          fetchAnswerTaskNodes({
+            organizationId,
+            projectId,
+            taskId,
+            answerTaskNodePayload: answerPayload,
+            token,
+            page: 0,
+            size: 2147483647 // max int to fetch all answers
+          })
+        )
+        .unwrap()
+
+      return true
+    } catch (error) {
+      toast.error('Failed to load task data.')
+      return thunkAPI.rejectWithValue(error)
+    }
+  }
+)
+
 // -------- State --------
 
 const initialState = {
   taskNodes: {},
-
   taskNodesList: [],
-
   taskNodesDocumentList: [],
   taskNodesQuestionList: [],
   taskNodesAnswerList: [],
   taskNodesRestList: [],
-
   taskDocumentPages: [],
-
   isLoading: false,
   isLoadingAnswers: false,
   error: null
@@ -170,7 +279,14 @@ const initialState = {
 const taskNodeSlice = createSlice({
   name: 'taskNode',
   initialState,
-  reducers: {},
+  reducers: {
+    updateMergedDocuments(state, action) {
+      state.taskNodesDocumentList = {
+        ...state.taskNodesDocumentList,
+        content: action.payload
+      }
+    }
+  },
   extraReducers: builder => {
     builder
       // create / update / fetch single node

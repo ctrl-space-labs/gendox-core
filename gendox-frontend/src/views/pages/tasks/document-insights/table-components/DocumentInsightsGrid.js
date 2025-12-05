@@ -15,11 +15,9 @@ const DocumentInsightsGrid = ({
   documents,
   questions,
   answers,
-  openUploader,
   onGenerate,
   isLoadingAnswers,
-  isLoading,
-  isBlurring,
+  isPageLoading,
   page,
   pageSize,
   setPage,
@@ -36,6 +34,7 @@ const DocumentInsightsGrid = ({
   const [documentMenuDoc, setDocumentMenuDoc] = useState(null)
   const [questionMenuAnchor, setQuestionMenuAnchor] = useState(null)
   const [questionMenuItem, setQuestionMenuItem] = useState(null)
+
 
   const sortedQuestions = useMemo(() => {
     return [...questions].sort((a, b) => a.order - b.order)
@@ -286,8 +285,8 @@ const DocumentInsightsGrid = ({
                 fontSize: '0.875rem',
                 backgroundColor: 'transparent',
                 color: 'inherit',
-                cursor: isLoadingAnswers || isLoading || isBlurring ? 'default' : 'pointer',
-                opacity: isLoadingAnswers || isLoading || isBlurring ? 0.5 : 1,
+                cursor: isLoadingAnswers || isPageLoading  ? 'default' : 'pointer',
+                opacity: isLoadingAnswers || isPageLoading ? 0.5 : 1,
                 userSelect: 'none',
                 borderRadius: 1,
                 border: '1px solid transparent',
@@ -302,7 +301,7 @@ const DocumentInsightsGrid = ({
                 }
               }}
               onClick={() => {
-                if (!isLoadingAnswers && !isLoading) {
+                if (!isLoadingAnswers && !isPageLoading) {
                   if (!answerObj?.answerValue) {
                     // Trigger generate for this cell only
                     onGenerateSingleAnswer(params.row, q)
@@ -363,10 +362,9 @@ const DocumentInsightsGrid = ({
   }, [
     sortedQuestions,
     answers,
-    openUploader,
     onGenerate,
     isLoadingAnswers,
-    isLoading,
+    isPageLoading,
     documents,
     selectedDocuments,
     onSelectDocument,
@@ -410,12 +408,12 @@ const DocumentInsightsGrid = ({
         height: 650,
         width: '100%',
         overflowX: 'auto',
-        filter: isLoading || isBlurring ? 'blur(6px)' : 'none',
+        filter: isPageLoading ? 'blur(6px)' : 'none',
         transition: 'filter 0.3s ease',
         borderRadius: 1
       }}
     >
-      {isLoading && (
+      {isPageLoading && (
         <Box
           sx={{
             position: 'absolute',
@@ -447,7 +445,7 @@ const DocumentInsightsGrid = ({
         componentsProps={{
           pagination: { showFirstButton: true, showLastButton: true }
         }}
-        loading={isLoading || isBlurring}
+        loading={isPageLoading}
         sx={{
           '& .MuiDataGrid-cell': {
             outline: 'none',

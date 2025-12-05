@@ -5,12 +5,7 @@ import { Box } from '@mui/material'
 import Paper from '@mui/material/Paper'
 import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
-import {
-  fetchTaskNodesByCriteria,
-  fetchAnswerTaskNodes,
-  fetchDocumentPages
-} from 'src/store/activeTaskNode/activeTaskNode'
-import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocument'
+import { loadTaskData } from 'src/store/activeTaskNode/activeTaskNode'
 import useGeneration from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsGeneration'
 import useExportFile from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsExportFile'
 import taskService from 'src/gendox-sdk/taskService'
@@ -19,8 +14,6 @@ import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-
 import HeaderSection from './table-components/DocumentInsightsHeaderSection'
 import DialogManager from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsDialogs'
 
-const MAX_PAGE_SIZE = 2147483647
-
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
   const dispatch = useDispatch()
@@ -28,16 +21,10 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const { organizationId, taskId, projectId } = router.query
   const { taskNodesDocumentList, taskNodesQuestionList, taskNodesAnswerList, isLoading, isLoadingAnswers } =
     useSelector(state => state.activeTaskNode)
-  const isBlurring = useSelector(state => state.activeDocument.isBlurring)
 
-  const [documents, setDocuments] = useState([])
-  const [documentPages, setDocumentPages] = useState([])
-  const [questions, setQuestions] = useState([])
-  const [answers, setAnswers] = useState([])
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
   const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
-  const [selectedDocuments, setSelectedDocuments] = useState([])
   const [dialogs, setDialogs] = useState({
     newDoc: false,
     delete: false,
@@ -47,69 +34,89 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   })
   const [activeNode, setActiveNode] = useState(null)
   const [addQuestionMode, setAddQuestionMode] = useState(false)
+  const [selectedDocuments, setSelectedDocuments] = useState([])
+  const [isPageReloading, setIsPageReloading] = useState(false)
 
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
   const { startGeneration, completeGeneration } = useGenerationContext()
   const [pollCleanup, setPollCleanup] = useState(null)
 
-  const fetchDocuments = useCallback(() => {
-    return dispatch(
-      fetchTaskNodesByCriteria({
-        organizationId,
-        projectId,
-        taskId,
-        criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
-        token,
-        page,
-        size: pageSize
-      })
-    )
+  // loaders
+  const isDocumentsLoading = useMemo(
+    () => isLoading && taskNodesDocumentList?.content === undefined,
+    [isLoading, taskNodesDocumentList]
+  )
+
+  const isQuestionsLoading = useMemo(
+    () => isLoading && taskNodesQuestionList?.content === undefined,
+    [isLoading, taskNodesQuestionList]
+  )
+
+  const isAnswersLoading = isLoadingAnswers
+
+  const isPageLoading = isDocumentsLoading || isQuestionsLoading || isAnswersLoading || isPageReloading
+
+  // --- Extract normalized lists from Redux ---
+  const documents = useMemo(() => {
+    const nodes = taskNodesDocumentList?.content || []
+    return nodes.map(node => ({
+      id: node.id,
+      documentId: node.documentId,
+      name: node.nodeValue?.documentMetadata?.title || 'Unknown Document',
+      url: node.nodeValue?.documentMetadata?.remoteUrl || '',
+      prompt: node.nodeValue?.documentMetadata?.prompt || '',
+      supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || [],
+      createdAt: node.createdAt
+    }))
+  }, [taskNodesDocumentList])
+
+  const questions = useMemo(() => {
+    const nodes = taskNodesQuestionList?.content || []
+    return nodes.map(node => ({
+      id: node.id,
+      text: node.nodeValue?.message || '',
+      order: node.nodeValue?.order || 0,
+      supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || []
+    }))
+  }, [taskNodesQuestionList])
+
+  const answers = useMemo(() => {
+    const nodes = taskNodesAnswerList?.content || []
+    return nodes.map(node => ({
+      id: node.id,
+      documentNodeId: node.nodeValue?.nodeDocumentId,
+      questionNodeId: node.nodeValue?.nodeQuestionId,
+      message: node.nodeValue?.message || '',
+      answerValue: node.nodeValue?.answerValue || '',
+      answerFlagEnum: node.nodeValue?.answerFlagEnum || ''
+    }))
+  }, [taskNodesAnswerList])
+
+  const reloadAll = useCallback(async () => {
+    if (!organizationId || !projectId || !taskId) return
+    setIsPageReloading(true)
+    try {
+      await dispatch(
+        loadTaskData({
+          organizationId,
+          projectId,
+          taskId,
+          token,
+          docsPage: page,
+          docsPageSize: pageSize
+        })
+      ).unwrap()
+    } finally {
+      setIsPageReloading(false)
+    }
   }, [organizationId, projectId, taskId, token, page, pageSize, dispatch])
 
-  const fetchQuestions = useCallback(() => {
-    return dispatch(
-      fetchTaskNodesByCriteria({
-        organizationId,
-        projectId,
-        taskId,
-        criteria: { taskId, nodeTypeNames: ['QUESTION'] },
-        token,
-        page: 0,
-        size: MAX_PAGE_SIZE
-      })
-    )
-  }, [organizationId, projectId, taskId, token, dispatch, page, pageSize])
-
-  const loadDocumentPages = useCallback(() => {
-    return dispatch(
-      fetchDocumentPages({
-        organizationId,
-        projectId,
-        taskId,
-        token,
-        page: 0,
-        size: MAX_PAGE_SIZE
-      })
-    )
-  }, [organizationId, projectId, taskId, token, dispatch, taskNodesDocumentList])
-
-  const fetchAnswers = useCallback(() => {
-    const answerTaskNodePayload = {
-      documentNodeIds: documents.map(d => d.id),
-      questionNodeIds: questions.map(q => q.id)
+  // Initial load
+  useEffect(() => {
+    if (organizationId && projectId && taskId) {
+      reloadAll()
     }
-    return dispatch(
-      fetchAnswerTaskNodes({
-        organizationId,
-        projectId,
-        taskId,
-        answerTaskNodePayload,
-        token,
-        page: 0,
-        size: MAX_PAGE_SIZE
-      })
-    )
-  }, [documents, questions])
+  }, [organizationId, projectId, taskId])
 
   // Check for running jobs when task loads (for UI state only, not to block operations)
   const checkRunningJobs = useCallback(async () => {
@@ -159,14 +166,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           // Job has completed, mark as completed in context
           completeGeneration(taskId, null)
           clearInterval(pollInterval)
-
-          // Refresh data to show results
-          fetchDocuments().unwrap()
-          fetchQuestions().unwrap()
-          fetchAnswers()
-            .unwrap()
-            .catch(error => console.error('Failed to refresh answers after polling:', error))
-
+          reloadAll()
           toast.success('Generation completed successfully!')
         }
       } catch (error) {
@@ -180,120 +180,11 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     return () => {
       clearInterval(pollInterval)
     }
-  }, [organizationId, projectId, taskId, token, completeGeneration, fetchDocuments, fetchQuestions, fetchAnswers])
-
-  // 1️⃣ **Reset all local state when switching tasks/orgs/projects**
-  useEffect(() => {
-    setDocuments([])
-    setQuestions([])
-    setAnswers([])
-    setSelectedDocuments([])
-    setPage(0)
-  }, [taskId, organizationId, projectId])
-
-  // 2️⃣ **Fetch task nodes (documents & questions) when dependencies change**
-  useEffect(() => {
-    if (!(organizationId && projectId && taskId && token)) return
-    fetchDocuments()
-      .unwrap()
-      .catch(() => toast.error('Failed to load documents'))
-  }, [fetchDocuments])
+  }, [organizationId, projectId, taskId, token, completeGeneration])
 
   useEffect(() => {
-    if (!(organizationId && projectId && taskId && token)) return
-    fetchQuestions()
-      .unwrap()
-      .catch(() => toast.error('Failed to load questions'))
-  }, [fetchQuestions])
+    if (!pageSize) return
 
-  // 3️⃣ **Fetch document pages when taskId changes**
-  useEffect(() => {
-    if (!(organizationId && projectId && taskId && token)) return
-    loadDocumentPages()
-      .unwrap()
-      .then(pages => setDocumentPages(pages || []))
-      .catch(() => toast.error('Failed to load document pages'))
-  }, [loadDocumentPages])
-
-  // 3️⃣ **Sync questions to local state (combine reset and fill)**
-  useEffect(() => {
-    setQuestions(
-      (taskNodesQuestionList?.content || []).map(node => ({
-        id: node.id,
-        text: node.nodeValue?.message || '',
-        order: node.nodeValue?.order || 0,
-        supportingDocumentIds : node.nodeValue?.documentMetadata?.supportingDocumentIds || [],
-      }))
-    )
-  }, [taskNodesQuestionList])
-
-  // 4️⃣ **Documents: Fetch full details or clear immediately if none**
-  useEffect(() => {
-    let isCancelled = false
-
-    const nodes = taskNodesDocumentList?.content || []
-    const documentIds = nodes.map(n => n.documentId).filter(Boolean)
-    if (!documentIds.length) {
-      setDocuments([])
-      return
-    }
-
-    dispatch(fetchDocumentsByCriteria({ organizationId, projectId, documentIds, token }))
-      .unwrap()
-      .then(fullDocuments => {
-        if (isCancelled) return
-        setDocuments(
-          nodes.map(node => {
-            const fullDoc = (fullDocuments || []).find(d => d.id === node.documentId)
-            return {
-              id: node.id,
-              documentId: node.documentId,
-              name: fullDoc?.title || 'Unknown Document',
-              url: fullDoc?.remoteUrl || '',
-              prompt: node.nodeValue?.documentMetadata?.prompt || '',
-              supportingDocumentIds : node.nodeValue?.documentMetadata?.supportingDocumentIds || [],
-              createdAt: node.createdAt || new Date().toISOString(),
-              _doc: fullDoc
-            }
-          })
-        )
-      })
-      .catch(() => {
-        if (!isCancelled) {
-          setDocuments([])
-          toast.error('Failed to load full document details')
-        }
-      })
-    return () => {
-      isCancelled = true
-    }
-  }, [taskNodesDocumentList, organizationId, projectId, token, dispatch])
-
-  // 5️⃣ **Answers: Fetch when you have docs & questions**
-  useEffect(() => {
-    if (!(organizationId && projectId && taskId && token)) return
-
-    fetchAnswers()
-      .unwrap()
-      .catch(() => toast.error('Failed to load answers'))
-  }, [fetchAnswers])
-
-  // 6️⃣ **Sync answers to local state**
-  useEffect(() => {
-    setAnswers(
-      (taskNodesAnswerList?.content || []).map(node => ({
-        id: node.id,
-        documentNodeId: node.nodeValue?.nodeDocumentId || '',
-        questionNodeId: node.nodeValue?.nodeQuestionId || '',
-        message: node.nodeValue?.message || '',
-        answerValue: node.nodeValue?.answerValue || '',
-        answerFlagEnum: node.nodeValue?.answerFlagEnum || ''
-      }))
-    )
-  }, [taskNodesAnswerList])
-
-  // 7️⃣ **Update URL query params when page or pageSize changes**
-  useEffect(() => {
     router.replace(
       {
         pathname: router.pathname,
@@ -306,16 +197,20 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       undefined,
       { shallow: true }
     )
-    setSelectedDocuments([])
   }, [page, pageSize])
 
-  // 8️⃣ **Check for running jobs when task loads**
+  useEffect(() => {
+    if (!organizationId || !projectId || !taskId) return
+    reloadAll()
+  }, [page, pageSize])
+
+  // **Check for running jobs when task loads**
   useEffect(() => {
     if (!(organizationId && projectId && taskId && token)) return
     checkRunningJobs()
   }, [organizationId, projectId, taskId, token])
 
-  // 9️⃣ **Cleanup polling on unmount**
+  // **Cleanup polling on unmount**
   useEffect(() => {
     return () => {
       if (pollCleanup) {
@@ -357,8 +252,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       selectedDocuments,
       setSelectedDocuments,
       pollJobStatus,
-      token,
-      fetchAnswers
+      token
     })
 
   const { exportCsv, isExportingCsv } = useExportFile({
@@ -388,7 +282,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           onGenerateAll={() => handleGenerate({ docs: documents, reGenerateExistingAnswers: true, isAll: true })}
           onGenerateSelected={handleGenerateSelected}
           disableGenerate={documents.length === 0 || questions.length === 0}
-          isLoading={isLoading}
+          isPageLoading={isPageLoading}
           isExportingCsv={isExportingCsv}
           onExportCsv={exportCsv}
           selectedDocuments={selectedDocuments}
@@ -408,19 +302,17 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         <Box
           sx={{
             minWidth: 800,
-            filter: isLoading || isBlurring ? 'blur(6px)' : 'none'
+            filter: isLoading ? 'blur(6px)' : 'none'
           }}
         >
           <DocumentInsightsGrid
             openDialog={openDialog}
             documents={documents}
-            documentPages={documentPages}
             questions={questions}
             answers={answers}
             onGenerate={docs => handleGenerate({ docs: docs, reGenerateExistingAnswers: true })}
+            isPageLoading={isPageLoading}
             isLoadingAnswers={isLoadingAnswers}
-            isLoading={isLoading}
-            isBlurring={isBlurring}
             page={page}
             pageSize={pageSize}
             setPage={setPage}
@@ -440,9 +332,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
         activeNode={activeNode}
         onOpen={openDialog}
         onClose={closeDialog}
-        refreshDocuments={fetchDocuments}
-        refreshQuestions={fetchQuestions}
-        refreshAnswers={fetchAnswers}
+        reloadAll={reloadAll}
         taskId={taskId}
         organizationId={organizationId}
         projectId={projectId}

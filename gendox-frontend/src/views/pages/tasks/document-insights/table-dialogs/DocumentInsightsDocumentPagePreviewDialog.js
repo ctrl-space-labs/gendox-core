@@ -9,7 +9,6 @@ import {
   IconButton,
   AppBar,
   Toolbar,
-  Collapse,
   Paper,
   Tooltip
 } from '@mui/material'
@@ -48,7 +47,7 @@ const DocumentPagePreviewDialog = ({
   document,
   onDocumentUpdate,
   generateSingleDocument,
-  dialogLoading,
+  isLoading,
   onExportCsv,
   isExportingCsv,
   onDelete
@@ -310,9 +309,9 @@ const DocumentPagePreviewDialog = ({
                     size='small'
                     onClick={handleGenerateClick}
                     sx={{ mr: 1 }}
-                    disabled={!isFileTypeSupported(document?.url) || isGenerating || dialogLoading}
+                    disabled={!isFileTypeSupported(document?.url) || isGenerating || isLoading}
                   >
-                    {isGenerating || dialogLoading ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
+                    {isGenerating || isLoading ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
                   </IconButton>
                 </span>
               </Tooltip>
@@ -359,7 +358,7 @@ const DocumentPagePreviewDialog = ({
       </AppBar>
 
       {/* Generation Progress Banner */}
-      {(isGenerating || dialogLoading) && (
+      {(isGenerating || isLoading) && (
         <Box
           sx={{
             backgroundColor: 'primary.main',
@@ -543,7 +542,7 @@ const DocumentPagePreviewDialog = ({
           </ResponsiveCardContent>
 
           {/* Subtle loading overlay for content area */}
-          {(isGenerating || dialogLoading) && (
+          {(isGenerating || isLoading) && (
             <Box
               sx={{
                 position: 'absolute',

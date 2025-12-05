@@ -4,7 +4,7 @@ import taskService from 'src/gendox-sdk/taskService'
 import { deleteTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
 import DocumentDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentDialog'
 import DocumentsAddNewDialog from 'src/views/pages/tasks/helping-components/AddNewDocumentDialog'
-import DocumentPagePreviewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentPagePreviewDialog'
+import DocumentPagePreviewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentPagePreviewDialog'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 
 const DocumentDigitizationDialogs = ({

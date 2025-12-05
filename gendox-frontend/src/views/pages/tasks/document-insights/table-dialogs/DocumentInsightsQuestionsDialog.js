@@ -50,7 +50,6 @@ const QuestionsDialog = ({
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   const { organizationId, projectId, taskId } = router.query
   const [editMode, setEditMode] = useState(false)
-  const [isSaving, setSaving] = useState(isLoading)
   const [supportingDocsOpen, setSupportingDocsOpen] = useState(true)
   const [questionText, setQuestionText] = useState(activeQuestion?.text || '')
   const [openAddDocDialog, setOpenAddDocDialog] = useState(false)
@@ -102,7 +101,7 @@ const QuestionsDialog = ({
 
   const handleAddSupportingDoc = async newDocIds => {
     if (!activeQuestion) return
-    setSaving(true)
+    // setSaving(true)
 
     try {
       const existingIds = activeQuestion.supportingDocumentIds || []
@@ -135,15 +134,11 @@ const QuestionsDialog = ({
     } catch (error) {
       console.error('Error adding supporting docs:', error)
       toast.error('Failed to add supporting documents')
-    } finally {
-      setSaving(false)
     }
   }
 
   const handleRemoveSupportingDoc = async docIdToRemove => {
     if (!activeQuestion) return
-
-    setSaving(true)
 
     try {
       const oldIds = activeQuestion.supportingDocumentIds || []
@@ -171,8 +166,6 @@ const QuestionsDialog = ({
     } catch (error) {
       console.error('Failed removing supporting document', error)
       toast.error('Failed to remove supporting document')
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -187,7 +180,7 @@ const QuestionsDialog = ({
       maxWidth='xl'
       aria-labelledby='question-dialog-title'
     >
-      {isSaving && (
+      {isLoading && (
         <Box
           sx={{
             position: 'absolute',
@@ -253,18 +246,18 @@ const QuestionsDialog = ({
                       setQuestionText(activeQuestion?.text || '')
                     }}
                   >
-                    {isSaving ? 'Saving...' : 'Cancel'}
+                    {isLoading ? 'Saving...' : 'Cancel'}
                   </Button>
                   <Button
                     variant='contained'
                     size='small'
-                    disabled={isSaving}
+                    disabled={isLoading}
                     onClick={() => {
                       handleUpdateQuestion(questionText)
                       setEditMode(false)
                     }}
                   >
-                    {isSaving ? 'Saving...' : 'Save'}
+                    {isLoading ? 'Saving...' : 'Save'}
                   </Button>
                 </Box>
               ) : null}
@@ -418,17 +411,17 @@ const QuestionsDialog = ({
                 handleClose()
               }}
               variant='outlined'
-              disabled={isSaving}
+              disabled={isLoading}
             >
-              {isSaving ? 'Saving...' : 'Close'}
+              {isLoading ? 'Saving...' : 'Close'}
             </Button>
-            <Button variant='contained' onClick={onConfirm} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save Questions'}
+            <Button variant='contained' onClick={onConfirm} disabled={isLoading}>
+              {isLoading ? 'Saving...' : 'Save Questions'}
             </Button>
           </>
         ) : (
           <Box sx={{ mt: 4 }}>
-            <Button onClick={handleClose} variant='outlined' disabled={isSaving}>
+            <Button onClick={handleClose} variant='outlined' disabled={isLoading}>
               Close
             </Button>
           </Box>
