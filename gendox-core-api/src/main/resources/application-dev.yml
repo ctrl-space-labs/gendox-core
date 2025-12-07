@@ -24,8 +24,6 @@ gendox:
 #    upload-dir: file:${user.home}/gendox/documents
     upload-dir: s3://gendox.organization.documents.dev
     wordCount: 300
-    allowed:
-      extensions: .txt,.md,.rst,.pdf
 
   integrations:
 #    poller: 120000 # 90 seconds

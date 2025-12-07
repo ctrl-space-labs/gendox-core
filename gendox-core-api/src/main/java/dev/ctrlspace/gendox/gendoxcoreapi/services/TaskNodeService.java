@@ -100,7 +100,7 @@ public class TaskNodeService {
     }
 
     public TaskNode updateTaskNodesMetadata(TaskDocumentMetadataDTO taskDocumentMetadataDTO) throws GendoxException {
-        logger.info("Updating task node for document digitization: {}", taskDocumentMetadataDTO);
+        logger.debug("Updating task node for document digitization: {}", taskDocumentMetadataDTO);
 
         TaskNode existing = taskNodeRepository.findById(taskDocumentMetadataDTO.getTaskNodeId())
                 .orElseThrow(() -> new GendoxException("TASK_NODE_NOT_FOUND", "TaskNode not found for update", HttpStatus.NOT_FOUND));

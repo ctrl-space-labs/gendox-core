@@ -120,7 +120,7 @@ gendox:
       
       {%s}------------------------------------------------
     allowed:
-      extensions: .txt,.md,.rst,.pdf
+      extensions: .txt,.md,.rst,.pdf,.docx
 
   integrations:
     #    poller: 30000 # 30 seconds

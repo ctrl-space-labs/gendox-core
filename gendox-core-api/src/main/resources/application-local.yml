@@ -55,8 +55,6 @@ gendox:
   documents:
     upload-dir: file:${user.home}/gendox/documents
     wordCount: 500
-    allowed:
-      extensions: .txt,.md,.rst,.pdf
 
   integrations:
 #    poller: 30000 # 30 seconds

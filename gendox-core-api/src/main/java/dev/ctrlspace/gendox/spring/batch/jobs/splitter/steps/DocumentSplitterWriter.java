@@ -55,7 +55,7 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
             // fetch fresh DocumentInstance since the param has been detached from hibernate session
             DocumentInstance freshDoc = documentService.getDocumentInstanceById(documentSectionDTO.documentInstance().getId());
             freshDoc.setDocumentSha256Hash(documentSectionDTO.documentInstance().getDocumentSha256Hash());
-            freshDoc.setTotalTokens(freshDoc.getTotalTokens());
+            freshDoc.setTotalTokens(documentSectionDTO.documentInstance().getTotalTokens());
             if (documentSectionDTO.documentUpdated()) {
                 documentService.saveDocumentInstance(freshDoc);
             }

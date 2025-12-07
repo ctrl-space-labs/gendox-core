@@ -93,6 +93,8 @@ public class ReadDocumentTool implements AiToolHandler {
 
         String docText = documentSectionService.getFullDocumentText(docId);
 
+        logger.debug("Reading document tool, with document id: {} and text length: {} characters", docId, docText.length());
+
         ObjectNode result = objectMapper.createObjectNode();
         result.put("document_id", docId.toString());
         result.put("document_text",
