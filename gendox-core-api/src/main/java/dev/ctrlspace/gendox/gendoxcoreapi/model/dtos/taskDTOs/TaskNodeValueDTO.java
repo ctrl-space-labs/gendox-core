@@ -20,8 +20,7 @@ public class TaskNodeValueDTO {
     private UUID nodeDocumentId;
     private String message;
     private String answerValue;
-    private List<UUID> supportingDocumentIds;
     private AnswerFlag answerFlagEnum;
     private Integer order;
-    private TaskDocumentMetadataDTO documentMetadata;
+    private TaskDocumentMetadataDTO documentMetadata = new TaskDocumentMetadataDTO();
 }

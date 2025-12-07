@@ -163,10 +163,13 @@ public class InsightsSummaryProcessor implements ItemProcessor<TaskDocumentQuest
         qSB.append("\"\"\"\"\"\"\n");
         documentGroupWithQuestions.getQuestionNodes()
                 .forEach(questionNode -> {
+                    TaskNode answerNode = answersByQuestionId.get(questionNode.getId());
+                    if (answerNode == null) {
+                        return;
+                    }
                     qSB.append("\"\"\"\n");
                     qSB.append("Question ID: ").append(questionNode.getId()).append("\n");
                     qSB.append("Question: ").append(questionNode.getNodeValue().getMessage()).append("\n");
-                    TaskNode answerNode = answersByQuestionId.get(questionNode.getId());
                     qSB.append("Answer Flag: ").append(answerNode.getNodeValue().getAnswerFlagEnum()).append("\n");
                     qSB.append("Answer Value: ").append(answerNode.getNodeValue().getAnswerValue()).append("\n");
                     qSB.append("Answer: ").append(answerNode.getNodeValue().getMessage()).append("\n\n");

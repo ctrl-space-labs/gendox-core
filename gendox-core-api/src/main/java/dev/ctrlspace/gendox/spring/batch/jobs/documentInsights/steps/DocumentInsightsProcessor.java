@@ -112,10 +112,11 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
         Type answerNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.ANSWER);
         Task task = taskService.getTaskById(documentGroupWithQuestions.getTaskId());
-        if (project == null){
+        if (project == null) {
             project = projectService.getProjectById(task.getProjectId());
         }
-        ObjectNode responseJsonSchema = buildResponseSchema(new org.springframework.core.ParameterizedTypeReference<GroupedQuestionAnswers>() {});
+        ObjectNode responseJsonSchema = buildResponseSchema(new org.springframework.core.ParameterizedTypeReference<GroupedQuestionAnswers>() {
+        });
 
         List<List<CompletionQuestionRequest>> questionChunks = chunkQuestionsToGroups(task, documentGroupWithQuestions.getQuestionNodes());
         List<List<DocumentInstanceSection>> sectionChunks = groupSectionsBy100kTokens(task, documentGroupWithQuestions.getDocumentNode().getDocumentId());
@@ -201,13 +202,13 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     private @Nullable GroupedQuestionAnswers consolidatePartsAnswersToASingleOne(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, String allQuestions, List<GroupedQuestionAnswers> allAnswersFromDocumentParts, ChatThread newThread, ObjectNode responseJsonSchema, Task task) throws JsonProcessingException {
         StringBuilder prompt = new StringBuilder();
         prompt.append("""
-           Big documents don't fit in the LLM context window; the document was split into parts.
-           Each question may therefore have multiple partial answers. Consolidate them so that 
-           *each questionId* has a single definitive answer
-            
-           Original questions:
-           
-           """);
+                Big documents don't fit in the LLM context window; the document was split into parts.
+                Each question may therefore have multiple partial answers. Consolidate them so that 
+                *each questionId* has a single definitive answer
+                
+                Original questions:
+                
+                """);
 
         prompt.append(allQuestions).append("\n\n");
 
@@ -220,7 +221,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
             try {
                 prompt.append(objectMapper.writeValueAsString(answers.getCompletionAnswers())).append("\n\n");
-            } catch (JsonProcessingException ignored) { }
+            } catch (JsonProcessingException ignored) {
+            }
         }
 
         if (newThread == null) {
@@ -262,18 +264,18 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
 
         String prompt = """
-            You are an AI assistant that answers questions for the **Main Document Text**, based on provided supporting documents.            
-            
-            Please answer the following questions:
-            \"\"\"\"\"
-            %s
-            \"\"\"\"\"
-            
-            1. Read the above questions to be answered for the main document.
-            2. Use the available tools to load and read the related supporting documents, if needed. You will find the supporting documents in the Session Context in the beginning of this message.
-            3. The tool result loads the supporting documents in the context.
-            4. Then answer the questions for the **Main Document Text** based using the supporting documents as reference.
-            """.formatted(questionsPrompt);
+                You are an AI assistant that answers questions for the **Main Document Text**, based on provided supporting documents.            
+                
+                Please answer the following questions:
+                \"\"\"\"\"
+                %s
+                \"\"\"\"\"
+                
+                1. Read the above questions to be answered for the main document.
+                2. Use the available tools to load and read the related supporting documents, if needed. You will find the supporting documents in the Session Context in the beginning of this message.
+                3. The tool result loads the supporting documents in the context.
+                4. Then answer the questions for the **Main Document Text** based using the supporting documents as reference.
+                """.formatted(questionsPrompt);
 
         Message message = new Message();
         message.setValue(prompt);
@@ -403,14 +405,16 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
             return null;
 
         } catch (JsonProcessingException | IllegalArgumentException e) {
-            logger.warn("Error converting Json completion to GroupedQuestionAnswers, message: {}, error: {}", message.getId(), e.getMessage());
-            logger.warn("Response Completion message is: {}", response.getLast().getValue());
+            logger.warn("Error converting Json completion to GroupedQuestionAnswers, message: {}, error: {}", message.getId(), e.getMessage(), e);
+            if (response.getLast() != null) {
+                logger.warn("Response Completion message is: {}", response.getLast().getValue());
+            }
             logger.warn("Skipping processing documentId: {} fpr the questions: {}.",
                     documentGroupWithQuestions.getDocumentNode().getDocumentId(),
                     questionGroup.stream().map(CompletionQuestionRequest::getQuestionId).toList());
             return null;
         } catch (Exception e) {
-            logger.warn("Unexpected error during completion for message: {}, error: {}", message.getId(), e.getMessage());
+            logger.warn("Unexpected error during completion for message: {}, error: {}", message.getId(), e.getMessage(), e);
             return null;
         }
         return answers;
@@ -421,16 +425,16 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
      * answer nodes along with their corresponding questions.
      *
      * @param documentGroupWithQuestions the DTO containing the document and its questions
-     * @param existingAnswers           a list to be populated with found answer nodes
-     * @param answeredQuestions         a list to be populated with questions that already have answers
+     * @param existingAnswers            a list to be populated with found answer nodes
+     * @param answeredQuestions          a list to be populated with questions that already have answers
      */
     private void populateExistingAnswers(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<TaskNode> existingAnswers, List<TaskNode> answeredQuestions) {
         for (TaskNode question : documentGroupWithQuestions.getQuestionNodes()) {
             //TODO this can be done in one query, instead of a for loop
             taskNodeService.findAnswerNodeByDocumentAndQuestionOptional(
-                    documentGroupWithQuestions.getDocumentNode().getTaskId(),
-                    documentGroupWithQuestions.getDocumentNode().getId(),
-                    question.getId())
+                            documentGroupWithQuestions.getDocumentNode().getTaskId(),
+                            documentGroupWithQuestions.getDocumentNode().getId(),
+                            question.getId())
                     .ifPresent(anser -> {
                         existingAnswers.add(anser);
                         answeredQuestions.add(question);
@@ -447,7 +451,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
         List<List<CompletionQuestionRequest>> buckets = new ArrayList<>();
         // Parallel list to track the token sum of each bucket:
-        List<Integer> bucketTokenSums           = new ArrayList<>();
+        List<Integer> bucketTokenSums = new ArrayList<>();
         List<CompletionQuestionRequest> single; // temp for >limit questions
 
         for (TaskNode q : questions) {
@@ -481,8 +485,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 int currentSum = bucketTokenSums.get(i);
 
                 if (bucket.size() < task.getMaxQuestionsPerBucket()
-                        && currentSum + qTokens <= task.getMaxQuestionTokensPerBucket())
-                {
+                        && currentSum + qTokens <= task.getMaxQuestionTokensPerBucket()) {
                     bucket.add(req);
                     bucketTokenSums.set(i, currentSum + qTokens);
                     placed = true;
@@ -503,21 +506,24 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     }
 
     private static int countQuestionTokens(Encoding enc, String text, Page<DocumentInstance> supportingDocuments) {
-        int    qTokens = enc.countTokens(text);
+        int qTokens = enc.countTokens(text);
         // If it isn't int, we should be rich :)
         qTokens += (int) supportingDocuments.stream()
-                .mapToLong(DocumentInstance::getTotalTokens)
+                .mapToLong(doc -> doc.getTotalTokens() == null ? 0L : doc.getTotalTokens())
                 .sum();
         return qTokens;
     }
 
     private Page<DocumentInstance> getSupportingDocuments(TaskNode node) throws GendoxException {
-        if (node.getNodeValue().getSupportingDocumentIds() == null ||
-                node.getNodeValue().getSupportingDocumentIds().isEmpty()) {
+        if (node.getNodeValue().getDocumentMetadata() == null) {
+            return Page.empty();
+        }
+        if (node.getNodeValue().getDocumentMetadata().getSupportingDocumentIds() == null ||
+                node.getNodeValue().getDocumentMetadata().getSupportingDocumentIds().isEmpty()) {
             return Page.empty();
         }
         DocumentCriteria supportingDocsCriteria = DocumentCriteria.builder()
-                .documentInstanceIds(node.getNodeValue().getSupportingDocumentIds().stream().map(UUID::toString).toList())
+                .documentInstanceIds(node.getNodeValue().getDocumentMetadata().getSupportingDocumentIds().stream().map(UUID::toString).toList())
                 .build();
         Page<DocumentInstance> supportingDocuments = documentService.getAllDocuments(supportingDocsCriteria, Pageable.unpaged());
         return supportingDocuments;
@@ -533,8 +539,9 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
      * @return
      */
     private static @Nullable MessageLocalContext generateLocalContextForQuestion(TaskNode q, Page<DocumentInstance> supportingDocuments, String supportingDocumentDirName) {
-        if (q.getNodeValue().getSupportingDocumentIds() == null ||
-                q.getNodeValue().getSupportingDocumentIds().isEmpty()) {
+        if (q.getNodeValue().getDocumentMetadata() == null ||
+                q.getNodeValue().getDocumentMetadata().getSupportingDocumentIds() == null ||
+                q.getNodeValue().getDocumentMetadata().getSupportingDocumentIds().isEmpty()) {
             return null;
         }
         StringBuilder sb = new StringBuilder();
@@ -544,7 +551,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         for (DocumentInstance doc : supportingDocuments.getContent()) {
             sb.append("./supporting-documents/").append(supportingDocumentDirName).append("/").append(q.getId()).append("/")
                     .append(doc.getTitle())
-                    .append(" | size=").append(doc.getFileSizeBytes()/1024).append("KB")
+                    .append(" | size=").append(doc.getFileSizeBytes() / 1024).append("KB")
                     .append(" | pages=").append(doc.getNumberOfPages())
                     .append(" | UUID=").append(doc.getId())
                     .append("\n");
