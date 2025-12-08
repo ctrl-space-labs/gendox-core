@@ -30,7 +30,7 @@ import { useRouter } from 'next/router'
 import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 import CleanCollapse from 'src/views/custom-components/mui/collapse'
 import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
-import SectionCard from 'src/views/pages/documents-components/SectionCard'
+import DocumentTextComponent from '../../helping-components/DocumentTextComponent'
 import {
   fetchDocument,
   fetchSupportingDocuments,
@@ -65,6 +65,7 @@ const DocumentPagePreviewDialog = ({
   const [promptValue, setPromptValue] = useState('')
   const [openAddDocDialog, setOpenAddDocDialog] = useState(false)
   const supportingDocuments = useSelector(state => state.activeDocument.supportingDocuments)
+  const { sections, isBlurring } = useSelector(state => state.activeDocument)
 
   useEffect(() => {
     if (document) {
@@ -538,7 +539,14 @@ const DocumentPagePreviewDialog = ({
               pointerEvents: isGenerating ? 'none' : 'auto'
             }}
           >
-            <SectionCard />
+            <DocumentTextComponent
+              sections={sections}
+              isBlurring={isBlurring}
+              documentId={document.documentId}
+              projectId={projectId}
+              organizationId={organizationId}
+            />
+            {/* <SectionCard /> */}
           </ResponsiveCardContent>
 
           {/* Subtle loading overlay for content area */}

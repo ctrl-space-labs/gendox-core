@@ -374,7 +374,6 @@ const DocumentInsightsGrid = ({
     theme
   ])
 
-  console.log("documents", documents)
 
   const rows = useMemo(() => {
     const sortedDocs = [...documents].sort((a, b) => {

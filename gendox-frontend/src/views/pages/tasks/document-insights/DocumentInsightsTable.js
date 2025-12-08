@@ -42,6 +42,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const { startGeneration, completeGeneration } = useGenerationContext()
   const [pollCleanup, setPollCleanup] = useState(null)
 
+  console.log("ActiveNode:", activeNode)
+
 
   // loaders
   const isDocumentsLoading = useMemo(

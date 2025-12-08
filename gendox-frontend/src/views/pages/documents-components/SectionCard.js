@@ -11,7 +11,6 @@ import GendoxMarkdownRenderer from '../markdown-renderer/GendoxMarkdownRenderer'
 
 const SectionCard = forwardRef((props, ref) => {
   const { targetIndex, highlightedSectionId } = props
-  // const sections = useSelector((state) => state.activeDocument.sections);
   const { sections, isBlurring } = useSelector(state => state.activeDocument)
 
   if (!sections || sections.length === 0) {
