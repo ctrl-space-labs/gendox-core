@@ -13,6 +13,7 @@ import { useGeneration as useGenerationContext } from '../generation/GenerationC
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
 import HeaderSection from './table-components/DocumentInsightsHeaderSection'
 import DialogManager from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsDialogs'
+import { update } from 'lodash'
 
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
@@ -41,6 +42,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const { startGeneration, completeGeneration } = useGenerationContext()
   const [pollCleanup, setPollCleanup] = useState(null)
 
+
   // loaders
   const isDocumentsLoading = useMemo(
     () => isLoading && taskNodesDocumentList?.content === undefined,
@@ -66,7 +68,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       url: node.nodeValue?.documentMetadata?.remoteUrl || '',
       prompt: node.nodeValue?.documentMetadata?.prompt || '',
       supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || [],
-      createdAt: node.createdAt
+      createdAt: node.createdAt,
+      updatedAt: node.updatedAt
     }))
   }, [taskNodesDocumentList])
 

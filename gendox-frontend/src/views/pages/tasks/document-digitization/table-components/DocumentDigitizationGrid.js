@@ -484,7 +484,7 @@ const DocumentDigitizationGrid = ({
               sx={{ color: 'error.main' }}
             >
               <DeleteOutlineIcon sx={{ mr: 1 }} fontSize="small" />
-              Delete Document
+              Remove Document
             </MenuItem>
           </>
         )}

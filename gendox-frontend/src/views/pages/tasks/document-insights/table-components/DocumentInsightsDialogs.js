@@ -55,7 +55,7 @@ const DocumentInsightsDialogs = ({
         ).unwrap()
       }
 
-      await reloadAll()
+      reloadAll()
       onClose('newDoc')
     } catch (error) {
       toast.error('Failed to add documents')
@@ -69,7 +69,7 @@ const DocumentInsightsDialogs = ({
     setLoading(true)
     try {
       await dispatch(deleteTaskNode({ organizationId, projectId, taskNodeId: nodeId, token })).unwrap()
-      await reloadAll()
+      reloadAll()
       onClose('delete')
     } finally {
       setLoading(false)
@@ -107,7 +107,7 @@ const DocumentInsightsDialogs = ({
         ).unwrap()
       }
       // Refresh the question list after saving all
-      await reloadAll()
+      reloadAll()
       onClose('questionDetail')
       setQuestionsDialogTexts(['']) // Reset the input field
       toast.success('Questions added!')
@@ -152,7 +152,7 @@ const DocumentInsightsDialogs = ({
       ).unwrap()
 
       toast.success('Question updated!')
-      await reloadAll()
+      reloadAll()
       onClose('questionDetail')
     } catch (error) {
       toast.error('Failed to update question')
@@ -175,6 +175,9 @@ const DocumentInsightsDialogs = ({
         projectId={projectId}
         token={token}
         taskId={taskId}
+        onUploadSuccess={() => {
+          reloadAll()
+        }}
       />
 
       {/* Answer Details Dialog */}
@@ -197,6 +200,7 @@ const DocumentInsightsDialogs = ({
         isExportingCsv={isExportingCsv}
         onExportCsv={onExportCsv}
         onDelete={() => onOpen && onOpen('delete', activeNode)}
+        reloadAll={reloadAll}
       />
 
       {/* Delete Confirmation Dialog */}

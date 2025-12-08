@@ -106,7 +106,7 @@ const DocumentsAddNewDialog = ({
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth='lg'>
+      <Dialog open={open} onClose={onClose} disableEscapeKeyDown={false} fullWidth maxWidth='lg'>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
           Select Project Documents
           <IconButton onClick={onClose} size='small' aria-label='close'>

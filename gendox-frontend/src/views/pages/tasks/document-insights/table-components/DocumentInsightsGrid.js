@@ -35,7 +35,6 @@ const DocumentInsightsGrid = ({
   const [questionMenuAnchor, setQuestionMenuAnchor] = useState(null)
   const [questionMenuItem, setQuestionMenuItem] = useState(null)
 
-
   const sortedQuestions = useMemo(() => {
     return [...questions].sort((a, b) => a.order - b.order)
   }, [questions])
@@ -285,7 +284,7 @@ const DocumentInsightsGrid = ({
                 fontSize: '0.875rem',
                 backgroundColor: 'transparent',
                 color: 'inherit',
-                cursor: isLoadingAnswers || isPageLoading  ? 'default' : 'pointer',
+                cursor: isLoadingAnswers || isPageLoading ? 'default' : 'pointer',
                 opacity: isLoadingAnswers || isPageLoading ? 0.5 : 1,
                 userSelect: 'none',
                 borderRadius: 1,
@@ -375,8 +374,15 @@ const DocumentInsightsGrid = ({
     theme
   ])
 
+  console.log("documents", documents)
+
   const rows = useMemo(() => {
-    return documents.map(doc => {
+    const sortedDocs = [...documents].sort((a, b) => {
+      const dateA = new Date(a.updatedAt || a.updateAt || 0)
+      const dateB = new Date(b.updatedAt || b.updateAt || 0)
+      return dateB - dateA
+    })
+    return sortedDocs.map(doc => {
       const row = {
         id: doc.id,
         name: doc.name || '',
@@ -501,7 +507,7 @@ const DocumentInsightsGrid = ({
             sx={{ color: 'error.main' }}
           >
             <DeleteOutlineIcon sx={{ mr: 1 }} fontSize='small' />
-            Delete Document
+            Remove Document
           </MenuItem>
         ]}
       </Menu>

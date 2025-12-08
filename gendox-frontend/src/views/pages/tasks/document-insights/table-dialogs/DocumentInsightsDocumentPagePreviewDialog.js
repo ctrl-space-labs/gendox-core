@@ -40,7 +40,6 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
 import AddNewDocumentDialog from '../../helping-components/AddNewDocumentDialog'
 
-
 const DocumentPagePreviewDialog = ({
   open,
   onClose,
@@ -50,7 +49,8 @@ const DocumentPagePreviewDialog = ({
   isLoading,
   onExportCsv,
   isExportingCsv,
-  onDelete
+  onDelete,
+  reloadAll
 }) => {
   const dispatch = useDispatch()
   const router = useRouter()
@@ -137,7 +137,7 @@ const DocumentPagePreviewDialog = ({
       const updatedIds = Array.from(new Set([...existingIds, ...newDocIds]))
 
       const updateData = {
-        taskNodeId: document.id,        
+        taskNodeId: document.id,
         supportingDocumentIds: updatedIds
       }
 
@@ -181,7 +181,7 @@ const DocumentPagePreviewDialog = ({
       const updatedIds = oldIds.filter(id => id !== docIdToRemove)
 
       const updateData = {
-        taskNodeId: document.id,        
+        taskNodeId: document.id,
         supportingDocumentIds: updatedIds
       }
 
@@ -260,8 +260,8 @@ const DocumentPagePreviewDialog = ({
     <Dialog
       open={open}
       onClose={handleClose}
+      disableEscapeKeyDown={false}
       disableEnforceFocus
-      disableAutoFocus
       maxWidth={fullscreen ? false : 'lg'}
       fullWidth
       fullScreen={fullscreen}
@@ -316,7 +316,7 @@ const DocumentPagePreviewDialog = ({
                 </span>
               </Tooltip>
 
-              <Tooltip title='Delete document'>
+              <Tooltip title='Remove document'>
                 <span>
                   <IconButton
                     size='small'
@@ -333,7 +333,7 @@ const DocumentPagePreviewDialog = ({
                   <IconButton
                     size='small'
                     onClick={() => onExportCsv(document?.id, document?.name)}
-                    disabled={isExportingCsv }
+                    disabled={isExportingCsv}
                     sx={{ mr: 1 }}
                   >
                     {isExportingCsv ? <CircularProgress size={20} /> : <DownloadIcon />}
@@ -595,9 +595,13 @@ const DocumentPagePreviewDialog = ({
         projectId={projectId}
         taskId={taskId}
         token={token}
-        mode="supporting"
+        mode='supporting'
         onConfirm={newIds => handleAddSupportingDoc(newIds)}
-        onUploadSuccess={newDocIds => handleAddSupportingDoc(newDocIds)}
+        // onUploadSuccess={newDocIds => handleAddSupportingDoc(newDocIds)}
+        onUploadSuccess={async newDocIds => {
+          await handleAddSupportingDoc(newDocIds)
+          reloadAll()
+        }}
       />
     </Dialog>
   )

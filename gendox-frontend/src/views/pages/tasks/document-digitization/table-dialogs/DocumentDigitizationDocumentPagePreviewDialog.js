@@ -758,7 +758,7 @@ const DocumentPagePreviewDialog = ({
                     </IconButton>
                   </span>
                 </Tooltip>{' '}
-                <Tooltip title='Delete document'>
+                <Tooltip title='Remove document'>
                   <span>
                     <IconButton
                       size='small'

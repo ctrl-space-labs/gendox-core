@@ -192,7 +192,6 @@ export const loadTaskData = createAsyncThunk(
 
       const mergedDocumentNodes = documentNodes.map(node => {
         const full = fullDocs.find(d => d.id === node.documentId)
-
         return {
           ...node,
           nodeValue: {
