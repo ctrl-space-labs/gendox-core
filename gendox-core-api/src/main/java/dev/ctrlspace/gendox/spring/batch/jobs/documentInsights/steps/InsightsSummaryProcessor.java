@@ -82,6 +82,15 @@ public class InsightsSummaryProcessor implements ItemProcessor<TaskDocumentQuest
     @Override
     public InsightDocumentAnswersWithSummaryDTO process(TaskDocumentQuestionsDTO documentGroupWithQuestions) throws Exception {
 
+        // if already has summary and not reGenerateExistingAnswers, skip
+        // the summaries are deleted in the Writer before this step runs
+        if (documentGroupWithQuestions.getDocumentNode().getNodeValue().getDocumentMetadata() != null &&
+                documentGroupWithQuestions.getDocumentNode().getNodeValue().getDocumentMetadata().getInsightsSummary() != null) {
+            logger.trace("DocumentId: {} already has an insights summary, skipping.",
+                    documentGroupWithQuestions.getDocumentNode().getId());
+            return null;
+        }
+
         Type answerNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.ANSWER);
         if (task == null) {
 

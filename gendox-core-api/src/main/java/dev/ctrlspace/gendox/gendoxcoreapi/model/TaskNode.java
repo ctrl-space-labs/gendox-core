@@ -34,7 +34,7 @@ public class TaskNode {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "node_value", columnDefinition = "jsonb")
-    private TaskNodeValueDTO nodeValue;
+    private TaskNodeValueDTO nodeValue = new TaskNodeValueDTO();
 
     @Basic
     @Column(name = "parent_node_id")
