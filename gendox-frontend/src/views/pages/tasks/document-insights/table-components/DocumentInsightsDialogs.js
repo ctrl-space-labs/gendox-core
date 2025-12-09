@@ -1,11 +1,6 @@
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
-import {
-  deleteTaskNode,
-  createTaskNode,
-  createTaskNodesBatch,
-  updateTaskNode
-} from 'src/store/activeTaskNode/activeTaskNode'
+import { deleteTaskNode, createTaskNode, createTaskNodesBatch } from 'src/store/activeTaskNode/activeTaskNode'
 import { chunk } from 'src/utils/tasks/taskUtils'
 import { toast } from 'react-hot-toast'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
@@ -118,50 +113,6 @@ const DocumentInsightsDialogs = ({
     }
   }
 
-  const handleUpdateQuestion = async newText => {
-    if (!activeNode?.id) {
-      return
-    }
-
-    newText = newText.trim()
-    if (!newText) {
-      toast.error('Question text cannot be empty')
-      return
-    }
-
-    setLoading(true)
-
-    const taskNodePayload = {
-      id: activeNode.id,
-      taskId,
-      nodeType: 'QUESTION',
-      nodeValue: {
-        message: newText,
-        order: activeNode.order
-      }
-    }
-
-    try {
-      await dispatch(
-        updateTaskNode({
-          organizationId,
-          projectId,
-          taskNodePayload,
-          token
-        })
-      ).unwrap()
-
-      toast.success('Question updated!')
-      reloadAll()
-      onClose('questionDetail')
-    } catch (error) {
-      toast.error('Failed to update question')
-      console.error(error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <>
       {/* New Document Dialog */}
@@ -221,11 +172,11 @@ const DocumentInsightsDialogs = ({
         onClose={() => onClose('questionDetail')}
         questions={questionsDialogTexts}
         setQuestions={setQuestionsDialogTexts}
-        onConfirm={handleAddQuestions}
-        handleUpdateQuestion={handleUpdateQuestion}
+        handleAddQuestions={handleAddQuestions}
         activeQuestion={activeNode}
-        isLoading={loading}
+        isAddQuestionsLoading={loading}
         addQuestionMode={addQuestionMode}
+        reloadAll={reloadAll}
       />
     </>
   )

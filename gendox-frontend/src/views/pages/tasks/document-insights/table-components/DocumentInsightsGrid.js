@@ -39,6 +39,8 @@ const DocumentInsightsGrid = ({
     return [...questions].sort((a, b) => a.order - b.order)
   }, [questions])
 
+  const truncate = (text, limit = 30) => (text && text.length > limit ? text.slice(0, limit) + '...' : text)
+
   const columns = useMemo(() => {
     return [
       {
@@ -172,13 +174,14 @@ const DocumentInsightsGrid = ({
       },
       ...sortedQuestions.map(q => ({
         field: `q_${q.id}`,
-        headerName: q.text.length > 30 ? q.text.slice(0, 30) + '...' : q.text,
+        headerName: truncate(q.text),
         width: 240,
         editable: false,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
         cellClassName: 'answer-cell',
+
         renderHeader: params => (
           <Box
             sx={{
@@ -194,20 +197,14 @@ const DocumentInsightsGrid = ({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               fontWeight: 600,
-              flexGrow: 1,
-              '&:hover .vertical-icon': {
-                opacity: 1,
-                pointerEvents: 'auto'
-              }
+              flexGrow: 1
             }}
             title={q.text}
           >
             <Box
               component='button'
               type='button'
-              onClick={() => {
-                openDialog('questionDetail', q)
-              }}
+              onClick={() => openDialog('questionDetail', q)}
               aria-label={`View question details for ${q.text}`}
               sx={{
                 all: 'unset',
@@ -216,14 +213,14 @@ const DocumentInsightsGrid = ({
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                paddingRight: '28px', // space for delete icon
+                paddingRight: '28px',
                 '&:hover, &:focus-visible': {
                   textDecoration: 'underline',
                   outline: 'none'
                 }
               }}
             >
-              {params.colDef.headerName}
+              {truncate(q.title || q.text)}
             </Box>
 
             {/* Hover-reveal Vertical Icon */}
@@ -373,7 +370,6 @@ const DocumentInsightsGrid = ({
     onGenerateSingleAnswer,
     theme
   ])
-
 
   const rows = useMemo(() => {
     const sortedDocs = [...documents].sort((a, b) => {

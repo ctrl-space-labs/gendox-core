@@ -21,6 +21,7 @@ public class TaskNodeValueDTO {
     private String message;
     private String answerValue;
     private AnswerFlag answerFlagEnum;
+    private String questionTitle;
     private Integer order;
     private TaskDocumentMetadataDTO documentMetadata = new TaskDocumentMetadataDTO();
 }

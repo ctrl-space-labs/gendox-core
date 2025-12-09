@@ -142,17 +142,20 @@ public class TaskController {
 
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
-    @PutMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-nodes")
+    @PutMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/task-nodes")
     @ResponseStatus(value = HttpStatus.OK)
     public TaskNode updateTaskNode(@PathVariable UUID organizationId,
                                    @PathVariable UUID projectId,
+                                   @PathVariable UUID taskId,
                                    @RequestBody TaskNodeDTO taskNodeDTO) throws GendoxException {
         Task task = taskService.getTaskById(taskNodeDTO.getTaskId());
+        if (!task.getId().equals(taskId)) {
+            throw new GendoxException("TASK_ID_MISMATCH", "Task ID in path and body do not match", HttpStatus.BAD_REQUEST);
+        }
         if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
             throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
         }
-        TaskNode taskNode = taskNodeConverter.toEntity(taskNodeDTO);
-        return taskNodeService.updateTaskNode(taskNode);
+        return taskNodeService.updateTaskNode(taskNodeDTO);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")

@@ -42,8 +42,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const { startGeneration, completeGeneration } = useGenerationContext()
   const [pollCleanup, setPollCleanup] = useState(null)
 
-  console.log("ActiveNode:", activeNode)
-
 
   // loaders
   const isDocumentsLoading = useMemo(
@@ -81,7 +79,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       id: node.id,
       text: node.nodeValue?.message || '',
       order: node.nodeValue?.order || 0,
-      supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || []
+      supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || [],
+      title: node.nodeValue?.questionTitle || ''
     }))
   }, [taskNodesQuestionList])
 

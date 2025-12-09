@@ -7,6 +7,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  TextField,
   Button,
   IconButton,
   Tooltip,
@@ -27,7 +28,7 @@ import ExpandableMarkdownSection from '../../helping-components/ExpandableMarkod
 import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import { fetchSupportingDocuments, resetSupportingDocuments } from 'src/store/activeDocument/activeDocument'
-import taskService from 'src/gendox-sdk/taskService'
+import { updateTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
 import { toast } from 'react-hot-toast'
 import AddNewDocumentDialog from '../../helping-components/AddNewDocumentDialog'
 import CleanCollapse from 'src/views/custom-components/mui/collapse'
@@ -38,11 +39,11 @@ const QuestionsDialog = ({
   onClose,
   questions,
   setQuestions,
-  onConfirm,
-  handleUpdateQuestion,
+  handleAddQuestions,
   activeQuestion,
   addQuestionMode = false,
-  isLoading = false
+  isAddQuestionsLoading = false,
+  reloadAll
 }) => {
   const theme = useTheme()
   const dispatch = useDispatch()
@@ -52,37 +53,98 @@ const QuestionsDialog = ({
   const [editMode, setEditMode] = useState(false)
   const [supportingDocsOpen, setSupportingDocsOpen] = useState(true)
   const [questionText, setQuestionText] = useState(activeQuestion?.text || '')
+  const [questionTitle, setQuestionTitle] = useState(activeQuestion?.title || '')
+  const [tempSupportingDocs, setTempSupportingDocs] = useState([])
   const [openAddDocDialog, setOpenAddDocDialog] = useState(false)
-  const supportingDocuments = useSelector(state => state.activeDocument.supportingDocuments)
+  const [dialogLoading, setDialogLoading] = useState(false)
+  const { supportingDocuments, isLoading } = useSelector(state => state.activeDocument)
   const safeQuestions = Array.isArray(questions) ? questions : ['']
+
 
   const isViewMode = !addQuestionMode && !editMode
   const isEditMode = editMode
   const isAddMode = addQuestionMode
 
   useEffect(() => {
+    if (!open) return
+
+    setEditMode(false)
     setQuestionText(activeQuestion?.text || '')
-  }, [activeQuestion, open])
+    setQuestionTitle(activeQuestion?.title || '')
+    setTempSupportingDocs(activeQuestion?.supportingDocumentIds || [])
+  }, [open])
 
   useEffect(() => {
-    if (!activeQuestion) return
-    if (!activeQuestion.supportingDocumentIds || activeQuestion.supportingDocumentIds.length === 0) return
+    if (!open) return
+
+    // If no temp docs → clean view
+    if (!tempSupportingDocs?.length) {
+      dispatch(resetSupportingDocuments())
+      return
+    }
 
     dispatch(
       fetchSupportingDocuments({
         organizationId,
         projectId,
-        documentIds: activeQuestion.supportingDocumentIds,
+        documentIds: tempSupportingDocs,
         token
       })
     )
-  }, [activeQuestion, dispatch])
+  }, [open, tempSupportingDocs])
+
+  useEffect(() => {
+    setDialogLoading(isLoading || isAddQuestionsLoading)
+  }, [isLoading, isAddQuestionsLoading])
+
+  const handleSave = async () => {
+    setDialogLoading(true)
+
+    const updateData = {
+      id: activeQuestion.id,
+      taskId,
+      nodeType: 'QUESTION',
+      nodeValue: {
+        message: questionText,
+        questionTitle: questionTitle,
+        documentMetadata: {
+          supportingDocumentIds: tempSupportingDocs
+        }
+      }
+    }
+
+    try {
+      await dispatch(
+        updateTaskNode({
+          organizationId,
+          projectId,
+          taskNodePayload: updateData,
+          token
+        })
+      ).unwrap()
+      toast.success('Question updated!')
+      reloadAll()
+      setEditMode(false)
+    } catch (error) {
+      console.error('Error updating question:', error)
+      toast.error('Failed to update question')
+    } finally {
+      setDialogLoading(false)
+    }
+  }
 
   const handleClose = () => {
     dispatch(resetSupportingDocuments())
     setEditMode(false)
     setSupportingDocsOpen(true)
     onClose()
+  }
+
+  const handleCancel = () => {
+    setEditMode(false)
+    setQuestionText(activeQuestion?.text || '')
+    setQuestionTitle(activeQuestion?.title || '')
+    setTempSupportingDocs(activeQuestion?.supportingDocumentIds || [])
   }
 
   const handleQuestionChange = (idx, value) => {
@@ -99,74 +161,13 @@ const QuestionsDialog = ({
     setQuestions(questions.filter((_, i) => i !== idx))
   }
 
-  const handleAddSupportingDoc = async newDocIds => {
-    if (!activeQuestion) return
-    // setSaving(true)
-
-    try {
-      const existingIds = activeQuestion.supportingDocumentIds || []
-
-      // Combine existing + new
-      const updatedIds = Array.from(new Set([...existingIds, ...newDocIds]))
-
-      const updateData = {
-        taskNodeId: activeQuestion.id,
-        supportingDocumentIds: updatedIds
-      }
-
-      await taskService.updateTaskNodeForDocumentMetadata(organizationId, projectId, taskId, updateData, token)
-
-      toast.success('Supporting documents added!')
-
-      activeQuestion.supportingDocumentIds = updatedIds
-
-      // Also refetch supporting docs from backend
-      dispatch(
-        fetchSupportingDocuments({
-          organizationId,
-          projectId,
-          documentIds: updatedIds,
-          token
-        })
-      )
-
-      setOpenAddDocDialog(false)
-    } catch (error) {
-      console.error('Error adding supporting docs:', error)
-      toast.error('Failed to add supporting documents')
-    }
+  const handleAddSupportingDoc = newDocIds => {
+    setTempSupportingDocs(prev => Array.from(new Set([...prev, ...newDocIds])))
+    setOpenAddDocDialog(false)
   }
 
-  const handleRemoveSupportingDoc = async docIdToRemove => {
-    if (!activeQuestion) return
-
-    try {
-      const oldIds = activeQuestion.supportingDocumentIds || []
-      const updatedIds = oldIds.filter(id => id !== docIdToRemove)
-
-      const updateData = {
-        taskNodeId: activeQuestion.id,
-        supportingDocumentIds: updatedIds
-      }
-
-      await taskService.updateTaskNodeForDocumentMetadata(organizationId, projectId, taskId, updateData, token)
-
-      toast.success('Supporting document removed!')
-
-      activeQuestion.supportingDocumentIds = updatedIds
-
-      dispatch(
-        fetchSupportingDocuments({
-          organizationId,
-          projectId,
-          documentIds: updatedIds,
-          token
-        })
-      )
-    } catch (error) {
-      console.error('Failed removing supporting document', error)
-      toast.error('Failed to remove supporting document')
-    }
+  const handleRemoveSupportingDoc = id => {
+    setTempSupportingDocs(prev => prev.filter(docId => docId !== id))
   }
 
   return (
@@ -180,7 +181,7 @@ const QuestionsDialog = ({
       maxWidth='xl'
       aria-labelledby='question-dialog-title'
     >
-      {isLoading && (
+      {dialogLoading && (
         <Box
           sx={{
             position: 'absolute',
@@ -206,6 +207,13 @@ const QuestionsDialog = ({
         }}
       >
         {isAddMode ? 'Add Questions' : isEditMode ? 'Edit Question' : 'View Question'}
+        {isViewMode ? (
+          <Tooltip title='Edit question'>
+            <IconButton aria-label='Edit question' onClick={() => setEditMode(true)} sx={{ color: 'primary.main' }}>
+              <EditIcon />
+            </IconButton>
+          </Tooltip>
+        ) : null}
       </DialogTitle>
 
       <Divider />
@@ -217,72 +225,103 @@ const QuestionsDialog = ({
             borderBottom: 1,
             p: 2,
             borderColor: 'divider',
-            backgroundColor: 'background.paper'
+            backgroundColor: 'background.paper',
+            maxHeight: '70vh',
+            overflowY: 'auto'
           }}
         >
-          <Box sx={{ px: 2, pt: 1 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant='body2' sx={{ fontWeight: 600 }}>
-                Question Text
+          {/* TITLE SECTION */}
+          {!isAddMode && (
+            <Paper
+              elevation={0}
+              sx={{
+                px: 2,
+                py: 2,
+                mb: 3
+              }}
+            >
+              <Typography
+                variant='subtitle2'
+                sx={{ fontWeight: 700, mb: 1, color: 'text.primary', letterSpacing: 0.2 }}
+              >
+                Title
               </Typography>
-
-              {isViewMode ? (
-                <Tooltip title='Edit question'>
-                  <IconButton
-                    aria-label='Edit question'
-                    onClick={() => setEditMode(true)}
-                    sx={{ color: 'primary.main' }}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                </Tooltip>
-              ) : isEditMode ? (
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant='outlined'
-                    size='small'
-                    onClick={() => {
-                      setEditMode(false)
-                      setQuestionText(activeQuestion?.text || '')
-                    }}
-                  >
-                    {isLoading ? 'Saving...' : 'Cancel'}
-                  </Button>
-                  <Button
-                    variant='contained'
-                    size='small'
-                    disabled={isLoading}
-                    onClick={() => {
-                      handleUpdateQuestion(questionText)
-                      setEditMode(false)
-                    }}
-                  >
-                    {isLoading ? 'Saving...' : 'Save'}
-                  </Button>
-                </Box>
-              ) : null}
-            </Box>
-
-            {safeQuestions.map((q, idx) => (
-              <Box key={idx} sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
-                <Box
+              {isEditMode ? (
+                <TextField
+                  fullWidth
+                  multiline
+                  maxRows={1}
+                  value={questionTitle}
+                  onChange={e => setQuestionTitle(e.target.value)}
+                  autoFocus
+                  variant='outlined'
+                  placeholder='Enter a title...'
                   sx={{
-                    minWidth: 30,
-                    height: 30,
-                    bgcolor: theme.palette.primary.light,
-                    color: theme.palette.primary.contrastText,
-                    fontWeight: 600,
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    mr: 2,
-                    mt: '4px'
+                    backgroundColor: 'background.paper'
+                  }}
+                />
+              ) : (
+                /* VIEW MODE */
+                <Typography
+                  variant='h6'
+                  sx={{
+                    fontWeight: 500,
+                    color: 'text.primary',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    p: 3,
+                    backgroundColor: 'background.paper'
                   }}
                 >
-                  {isAddMode ? idx + 1 : 'Q'}
-                </Box>
+                  {questionTitle || 'No question title'}
+                </Typography>
+              )}
+            </Paper>
+          )}
+          {/* QUESTION TEXT */}
+          <Paper
+            elevation={0}
+            sx={{
+              px: 2,
+              py: 2,
+              mb: 3
+            }}
+          >
+            <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 1, color: 'text.primary', letterSpacing: 0.2 }}>
+              Question Text
+            </Typography>
 
+            {safeQuestions.map((q, idx) => (
+              <Box
+                key={idx}
+                sx={{
+                  mb: 3,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 2
+                }}
+              >
+                {/* Circle Label */}
+                {isAddMode ? (
+                  <Box
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      bgcolor: theme.palette.primary.light,
+                      color: theme.palette.primary.contrastText,
+                      fontWeight: 700,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    {isAddMode ? idx + 1 : 'Q'}
+                  </Box>
+                ) : null}
+
+                {/* EDIT / ADD / VIEW modes */}
                 {isEditMode ? (
                   <TextareaAutosizeStyled
                     value={questionText}
@@ -295,10 +334,19 @@ const QuestionsDialog = ({
                     autoFocus={idx === safeQuestions.length - 1}
                     placeholder='Enter question text...'
                     value={q}
-                    onChange={e => isAddMode && handleQuestionChange(idx, e.target.value)}
+                    onChange={e => handleQuestionChange(idx, e.target.value)}
+                    minRows={3}
                   />
                 ) : (
-                  <Box sx={{ mt: 1, flex: 1 }}>
+                  <Box
+                    sx={{
+                      flex: 1,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      p: 1,
+                      backgroundColor: 'background.paper'
+                    }}
+                  >
                     <ExpandableMarkdownSection
                       label=''
                       markdown={questionText || '*No question text*'}
@@ -307,11 +355,12 @@ const QuestionsDialog = ({
                   </Box>
                 )}
 
+                {/* Remove Button (Add Mode Only) */}
                 {isAddMode && questions.length > 1 && (
                   <IconButton
                     aria-label='Remove question'
                     onClick={() => handleRemoveQuestion(idx)}
-                    sx={{ ml: 1, mt: 1 }}
+                    sx={{ mt: 1 }}
                     size='small'
                   >
                     <DeleteIcon fontSize='small' />
@@ -321,11 +370,11 @@ const QuestionsDialog = ({
             ))}
 
             {isAddMode && (
-              <Button startIcon={<AddIcon />} onClick={handleAddQuestion} sx={{ mb: 1 }} variant='outlined' fullWidth>
-                Add New
+              <Button startIcon={<AddIcon />} onClick={handleAddQuestion} variant='outlined' sx={{ mt: 1 }} fullWidth>
+                Add New Question
               </Button>
             )}
-          </Box>
+          </Paper>
 
           {!isAddMode && (
             <CleanCollapse
@@ -334,68 +383,90 @@ const QuestionsDialog = ({
               onToggle={() => setSupportingDocsOpen(!supportingDocsOpen)}
             >
               <Box>
-                <Button
-                  variant='outlined'
-                  startIcon={<DocumentScannerIcon />}
-                  onClick={() => setOpenAddDocDialog(true)}
-                  sx={{ mb: 2 }}
-                >
-                  Add Document
-                </Button>
+                <Tooltip title={isViewMode ? 'You must be in edit mode to add documents' : ''}>
+                  <span>
+                    <Button
+                      variant='outlined'
+                      startIcon={<DocumentScannerIcon />}
+                      onClick={() => setOpenAddDocDialog(true)}
+                      sx={{ mb: 2 }}
+                      disabled={isViewMode}
+                    >
+                      Add Document
+                    </Button>
+                  </span>
+                </Tooltip>
 
-                <Box
+                <Paper
+                  elevation={0}
                   sx={{
                     maxHeight: 260,
                     overflowY: 'auto',
-                    display: 'grid',
-                    gap: 2,
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))'
+                    p: 1,
+                    backgroundColor: 'transparent'
                   }}
                 >
-                  {supportingDocuments.map(doc => (
-                    <Paper
-                      key={doc.documentId}
-                      elevation={1}
-                      sx={{
-                        p: 2,
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        minHeight: 120,
-                        transition: '0.2s',
-                        backgroundColor: 'background.paper',
-                        '&:hover': {
-                          transform: 'translateY(-4px)',
-                          boxShadow: 4,
-                          backgroundColor: 'action.hover'
-                        }
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <DescriptionIcon color='primary' />
-                        <Typography sx={{ fontWeight: 600, flex: 1 }}>{doc.title}</Typography>
-                      </Box>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gap: 2,
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))'
+                    }}
+                  >
+                    {supportingDocuments.map(doc => (
+                      <Paper
+                        key={doc.documentId}
+                        elevation={1}
+                        sx={{
+                          p: 2,
+                          borderRadius: 2,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          minHeight: 120,
+                          transition: '0.2s',
+                          backgroundColor: 'background.paper',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: 4,
+                            backgroundColor: 'action.hover'
+                          }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <DescriptionIcon color='primary' />
+                          <Typography sx={{ fontWeight: 600, flex: 1 }}>{doc.title}</Typography>
+                        </Box>
 
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-                        <Button
-                          variant='outlined'
-                          size='small'
-                          href={`http://localhost:3000/gendox/document-instance/?organizationId=${organizationId}&documentId=${doc.id}&projectId=${projectId}`}
-                          target='_blank'
-                          sx={{ textTransform: 'none' }}
-                        >
-                          Open
-                        </Button>
-                        <IconButton size='small' color='error' onClick={() => handleRemoveSupportingDoc(doc.id)}>
-                          <DeleteOutlineIcon fontSize='small' />
-                        </IconButton>
-                      </Box>
-                    </Paper>
-                  ))}
-                </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                          <Button
+                            variant='outlined'
+                            size='small'
+                            href={`http://localhost:3000/gendox/document-instance/?organizationId=${organizationId}&documentId=${doc.id}&projectId=${projectId}`}
+                            target='_blank'
+                            sx={{ textTransform: 'none' }}
+                          >
+                            Open
+                          </Button>
+                          <Tooltip title={isViewMode ? 'You must be in edit mode to remove documents' : ''}>
+                            <span>
+                              <IconButton
+                                size='small'
+                                color='error'
+                                onClick={() => handleRemoveSupportingDoc(doc.id)}
+                                disabled={isViewMode}
+                              >
+                                <DeleteOutlineIcon fontSize='small' />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </Box>
+                      </Paper>
+                    ))}
+                  </Box>
+                </Paper>
               </Box>
             </CleanCollapse>
           )}
@@ -404,24 +475,33 @@ const QuestionsDialog = ({
 
       <DialogActions sx={{ justifyContent: 'right', py: 2 }}>
         {isAddMode ? (
-          <>
+          <Box sx={{ display: 'flex', gap: 1, mt: 4 }}>
             <Button
               onClick={() => {
                 setQuestions([''])
                 handleClose()
               }}
               variant='outlined'
-              disabled={isLoading}
+              disabled={dialogLoading}
             >
-              {isLoading ? 'Saving...' : 'Close'}
+              {dialogLoading ? 'Saving...' : 'Close'}
             </Button>
-            <Button variant='contained' onClick={onConfirm} disabled={isLoading}>
-              {isLoading ? 'Saving...' : 'Save Questions'}
+            <Button variant='contained' onClick={handleAddQuestions} disabled={dialogLoading}>
+              {dialogLoading ? 'Saving...' : 'Save Questions'}
             </Button>
-          </>
+          </Box>
+        ) : isEditMode ? (
+          <Box sx={{ display: 'flex', gap: 1, mt: 4 }}>
+            <Button variant='outlined' onClick={handleCancel}>
+              {dialogLoading ? 'Saving...' : 'Cancel'}
+            </Button>
+            <Button variant='contained' disabled={dialogLoading} onClick={handleSave}>
+              {dialogLoading ? 'Saving...' : 'Save'}
+            </Button>
+          </Box>
         ) : (
-          <Box sx={{ mt: 4 }}>
-            <Button onClick={handleClose} variant='outlined' disabled={isLoading}>
+          <Box sx={{ display: 'flex', gap: 1, mt: 4 }}>
+            <Button onClick={handleClose} variant='outlined' disabled={dialogLoading}>
               Close
             </Button>
           </Box>

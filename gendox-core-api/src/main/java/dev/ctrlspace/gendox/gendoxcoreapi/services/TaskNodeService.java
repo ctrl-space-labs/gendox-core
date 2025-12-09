@@ -7,10 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.DocumentNodeAnswerPagesDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentMetadataDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentQuestionsDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeValueDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskEdgeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskNodeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.TaskNodePredicates;
@@ -83,21 +80,97 @@ public class TaskNodeService {
         return taskNodeRepository.saveAll(taskNodes);
     }
 
-    public TaskNode updateTaskNode(TaskNode taskNode) throws GendoxException {
-        logger.info("Updating task node: {}", taskNode);
+    public TaskNode updateTaskNode(TaskNodeDTO taskNodeDTO) throws GendoxException {
+        TaskNode existing = taskNodeRepository.findById(taskNodeDTO.getId())
+                .orElseThrow(() -> new GendoxException("TASK_NODE_NOT_FOUND", "Node not found", HttpStatus.NOT_FOUND));
 
-        // 1. Fetch existing from DB
-        TaskNode existing = taskNodeRepository.findById(taskNode.getId())
-                .orElseThrow(() -> new RuntimeException("TaskNode not found for update"));
+        // ---- LEVEL 1: Primitive attributes -----
+        if (taskNodeDTO.getParentNodeId() != null) {
+            existing.setParentNodeId(taskNodeDTO.getParentNodeId());
+        }
+        if (taskNodeDTO.getDocumentId() != null) {
+            existing.setDocumentId(taskNodeDTO.getDocumentId());
+        }
+        if (taskNodeDTO.getNodeType() != null) {
+            existing.setNodeType(typeService.getTaskNodeTypeByName(taskNodeDTO.getNodeType()));
+        }
+        if (taskNodeDTO.getUserId() != null) {
+            existing.setUpdatedBy(taskNodeDTO.getUserId());
+        }
 
-        existing.setNodeValue(taskNode.getNodeValue());
-        existing.setNodeType(taskNode.getNodeType());
-        existing.setParentNodeId(taskNode.getParentNodeId());
-        existing.setDocumentId(taskNode.getDocumentId());
-        existing.setUpdatedBy(taskNode.getUpdatedBy());
+        // ---- LEVEL 2: NodeValue (nested DTO) -----
+        if (taskNodeDTO.getNodeValue() != null) {
+            if (existing.getNodeValue() == null) {
+                existing.setNodeValue(new TaskNodeValueDTO());
+            }
+
+            TaskNodeValueDTO incomingValue = taskNodeDTO.getNodeValue();
+            TaskNodeValueDTO currentValue = existing.getNodeValue();
+
+            if (incomingValue.getMessage() != null) currentValue.setMessage(incomingValue.getMessage());
+            if (incomingValue.getAnswerValue() != null) currentValue.setAnswerValue(incomingValue.getAnswerValue());
+            if (incomingValue.getAnswerFlagEnum() != null)
+                currentValue.setAnswerFlagEnum(incomingValue.getAnswerFlagEnum());
+            if (incomingValue.getQuestionTitle() != null)
+                currentValue.setQuestionTitle(incomingValue.getQuestionTitle());
+            if (incomingValue.getOrder() != null) currentValue.setOrder(incomingValue.getOrder());
+
+
+            // ---- LEVEL 3: Metadata -----
+            if (incomingValue.getDocumentMetadata() != null) {
+
+                if (currentValue.getDocumentMetadata() == null) {
+                    currentValue.setDocumentMetadata(new TaskDocumentMetadataDTO());
+                }
+
+                TaskDocumentMetadataDTO incMeta = incomingValue.getDocumentMetadata();
+                TaskDocumentMetadataDTO curMeta = currentValue.getDocumentMetadata();
+
+                if (incMeta.getPrompt() != null) {
+                    curMeta.setPrompt(incMeta.getPrompt());
+                }
+                if (incMeta.getStructure() != null) {
+                    curMeta.setStructure(incMeta.getStructure());
+                }
+                if (incMeta.getSupportingDocumentIds() != null) {
+                    curMeta.setSupportingDocumentIds(incMeta.getSupportingDocumentIds());
+                }
+                if (incMeta.getInsightsSummary() != null) {
+                    curMeta.setInsightsSummary(incMeta.getInsightsSummary());
+                }
+
+                // allPages / page range
+                Boolean allPages = incMeta.getAllPages();
+                Integer from = incMeta.getPageFrom();
+                Integer to = incMeta.getPageTo();
+
+                if (Boolean.TRUE.equals(allPages)) {
+                    curMeta.setAllPages(true);
+                    curMeta.setPageFrom(null);
+                    curMeta.setPageTo(null);
+                } else {
+                    boolean hasRangeUpdate = (from != null) || (to != null);
+
+                    if (from != null) {
+                        curMeta.setPageFrom(from);
+                    }
+                    if (to != null) {
+                        curMeta.setPageTo(to);
+                    }
+
+                    if (allPages != null) {
+                        curMeta.setAllPages(allPages);
+                    } else if (hasRangeUpdate) {
+                        curMeta.setAllPages(false);
+                    }
+
+                }
+            }
+        }
 
         return taskNodeRepository.save(existing);
     }
+
 
     public TaskNode updateTaskNodesMetadata(TaskDocumentMetadataDTO taskDocumentMetadataDTO) throws GendoxException {
         logger.debug("Updating task node for document digitization: {}", taskDocumentMetadataDTO);
