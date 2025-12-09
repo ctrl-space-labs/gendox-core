@@ -20,7 +20,6 @@ import {
   Checkbox,
   FormControlLabel
 } from '@mui/material'
-import { useTheme } from '@mui/material/styles'
 import CloseIcon from '@mui/icons-material/Close'
 import FullscreenIcon from '@mui/icons-material/Fullscreen'
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
@@ -47,7 +46,8 @@ import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
 import useGenerateNewPagesGuard from 'src/views/pages/tasks/document-digitization/table-hooks/useGenerateNewPagesGuard'
 import TextareaAutosizeStyled from 'src/views/pages/tasks/helping-components/TextareaAutosizeStyled'
-
+import { updateTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
+import { useDispatch } from 'react-redux'
 
 const DocumentPagePreviewDialog = ({
   open,
@@ -61,6 +61,7 @@ const DocumentPagePreviewDialog = ({
   isExportingCsv,
   onDelete
 }) => {
+  const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -82,7 +83,6 @@ const DocumentPagePreviewDialog = ({
   const [selectAllPages, setSelectAllPages] = useState(false)
   const sectionRefs = useRef([])
   const router = useRouter()
-
 
   const PAGE_SIZE = 20
 
@@ -334,16 +334,24 @@ const DocumentPagePreviewDialog = ({
       const token = window.localStorage.getItem('accessToken')
       const { organizationId, projectId, taskId } = router.query
 
-      const updateData = {
-        taskNodeId: document.id,
-        prompt: promptValue,
-        structure: structureValue,
-        pageFrom: pageFrom && pageFrom.trim() ? parseInt(pageFrom, 10) : null,
-        pageTo: pageTo && pageTo.trim() ? parseInt(pageTo, 10) : null,
-        allPages: selectAllPages || ((!pageFrom || !pageFrom.trim()) && (!pageTo || !pageTo.trim()))
+      
+
+      const payload = {
+        id: document.id,
+        taskId,
+        nodeType: 'DOCUMENT',
+        nodeValue: {
+          documentMetadata: {
+            prompt: promptValue,
+            structure: structureValue,
+            pageFrom: pageFrom && pageFrom.trim() ? parseInt(pageFrom, 10) : null,
+            pageTo: pageTo && pageTo.trim() ? parseInt(pageTo, 10) : null,
+            allPages: selectAllPages || ((!pageFrom || !pageFrom.trim()) && (!pageTo || !pageTo.trim()))
+          }
+        }
       }
 
-      await taskService.updateTaskNodeForDocumentMetadata(organizationId, projectId, taskId, updateData, token)
+      await dispatch(updateTaskNode({ organizationId, projectId, taskId, taskNodePayload: payload, token })).unwrap()
 
       // Update the document object locally first
       const updatedDocument = {
@@ -352,7 +360,7 @@ const DocumentPagePreviewDialog = ({
         structure: structureValue,
         pageFrom: pageFrom && pageFrom.trim() ? parseInt(pageFrom, 10) : null,
         pageTo: pageTo && pageTo.trim() ? parseInt(pageTo, 10) : null,
-        allPages: updateData.allPages
+        allPages: payload.nodeValue.documentMetadata.allPages
       }
 
       // Update local state to reflect changes immediately
@@ -748,12 +756,7 @@ const DocumentPagePreviewDialog = ({
                   }
                 >
                   <span>
-                    <IconButton
-                      size='small'
-                      onClick={handleGenerate}
-                      sx={{ mr: 1 }}
-                      disabled={generateNewDisabled}
-                    >
+                    <IconButton size='small' onClick={handleGenerate} sx={{ mr: 1 }} disabled={generateNewDisabled}>
                       {isGenerating || dialogLoading ? <CircularProgress size={20} /> : <AutoAwesomeIcon />}
                     </IconButton>
                   </span>

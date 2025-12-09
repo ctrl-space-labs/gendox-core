@@ -6,6 +6,7 @@ import DocumentDialog from 'src/views/pages/tasks/document-digitization/table-di
 import DocumentsAddNewDialog from 'src/views/pages/tasks/helping-components/AddNewDocumentDialog'
 import DocumentPagePreviewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentPagePreviewDialog'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
+import { updateTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
 
 const DocumentDigitizationDialogs = ({
   dialogs,
@@ -38,18 +39,20 @@ const DocumentDigitizationDialogs = ({
   // SAVE document handler for DocumentDialog
   const handleUpdateDocument = async updatedDoc => {
     setLoading(true)
-    try {
-      await taskService.updateTaskNodeForDocumentMetadata(
-        organizationId,
-        projectId,
-        taskId,
-        {
+    const payload = {
+      id: updatedDoc.id,
+      taskId,
+      nodeType: 'DOCUMENT',
+      nodeValue: {
+        documentMetadata: {
           taskNodeId: updatedDoc.id,
           prompt: updatedDoc.prompt,
           structure: updatedDoc.structure
-        },
-        token
-      )
+        }
+      }
+    }
+    try {
+      await dispatch(updateTaskNode({ organizationId, projectId, taskId, taskNodePayload: payload, token })).unwrap()
       if (refreshDocuments) await refreshDocuments()
       onClose('docDetail')
     } finally {

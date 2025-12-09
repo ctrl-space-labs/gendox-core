@@ -123,12 +123,13 @@ const createTaskNodesBatch = async (organizationId, projectId, taskNodesPayload,
  * Update Task Node
  * @param organizationId
  * @param projectId
+ * @param taskId
  * @param taskNodePayload
  * @param token
  * @returns {Promise<axios.AxiosResponse<TaskNode>>}
  */
-const updateTaskNode = async (organizationId, projectId, taskNodePayload, token) => {
-  return axios.put(apiRequests.updateTaskNode(organizationId, projectId), taskNodePayload, {
+const updateTaskNode = async (organizationId, projectId, taskId, taskNodePayload, token) => {
+  return axios.put(apiRequests.updateTaskNode(organizationId, projectId, taskId), taskNodePayload, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token
@@ -136,23 +137,7 @@ const updateTaskNode = async (organizationId, projectId, taskNodePayload, token)
   })
 }
 
-/**
- * Update Task Node for Document Digitization
- * @param organizationId
- * @param projectId
- * @param taskId
- * @param token
- * @param updatePayload
- * @returns {Promise<axios.AxiosResponse<TaskNode>>}
- */
-const updateTaskNodeForDocumentMetadata = async (organizationId, projectId, taskId, updatePayload, token) => {
-  return axios.put(apiRequests.updateTaskNodeForDocumentMetadata(organizationId, projectId, taskId), updatePayload, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + token
-    }
-  })
-}
+
 
 /**
  * Get Task Node by ID
@@ -469,7 +454,6 @@ export default {
   createTaskNode,
   createTaskNodesBatch,
   updateTaskNode,
-  updateTaskNodeForDocumentMetadata,
   getTaskNodeById,
   createTaskEdge,
   getTaskEdgeById,

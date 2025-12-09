@@ -174,11 +174,8 @@ export default {
   createTaskNodesBatch: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes/batch`,
 
-  updateTaskNode: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/task-nodes`,
-
-  updateTaskNodeForDocumentMetadata: (organizationId, projectId, taskId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/document-metadata`,
+  updateTaskNode: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes`,
 
   getTaskNodeById: (organizationId, projectId, id) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes?id=${id}`,

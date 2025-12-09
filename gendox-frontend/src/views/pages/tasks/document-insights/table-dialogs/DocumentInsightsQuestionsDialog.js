@@ -118,6 +118,7 @@ const QuestionsDialog = ({
         updateTaskNode({
           organizationId,
           projectId,
+          taskId,
           taskNodePayload: updateData,
           token
         })

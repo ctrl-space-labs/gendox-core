@@ -16,7 +16,6 @@ import { useDispatch, useSelector } from 'react-redux'
 import CloseIcon from '@mui/icons-material/Close'
 import Divider from '@mui/material/Divider'
 import EditIcon from '@mui/icons-material/Edit'
-import taskService from 'src/gendox-sdk/taskService'
 import FullscreenIcon from '@mui/icons-material/Fullscreen'
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
@@ -39,6 +38,7 @@ import {
 import { localStorageConstants } from 'src/utils/generalConstants'
 import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
 import AddNewDocumentDialog from '../../helping-components/AddNewDocumentDialog'
+import { updateTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
 
 const DocumentPagePreviewDialog = ({
   open,
@@ -105,14 +105,19 @@ const DocumentPagePreviewDialog = ({
     if (!document) return
 
     setSaving(true)
-    try {
-      const updateData = {
-        taskNodeId: document.id,
-        prompt: promptValue
+    const payload = {
+      id: document.id,
+      taskId,
+      nodeType: 'DOCUMENT',
+      nodeValue: {
+        prompt: promptValue,
+        documentMetadata: {
+          supportingDocumentIds: document.supportingDocumentIds || []
+        }
       }
-
-      await taskService.updateTaskNodeForDocumentMetadata(organizationId, projectId, taskId, updateData, token)
-
+    }
+    try {
+      await dispatch(updateTaskNode({ organizationId, projectId, taskId, taskNodePayload: payload, token })).unwrap()
       setEditMode(false)
       toast.success('Document updated successfully!')
       if (onDocumentUpdate) {
@@ -137,12 +142,18 @@ const DocumentPagePreviewDialog = ({
       // Combine existing + new
       const updatedIds = Array.from(new Set([...existingIds, ...newDocIds]))
 
-      const updateData = {
-        taskNodeId: document.id,
-        supportingDocumentIds: updatedIds
+      const payload = {
+        id: document.id,
+        taskId,
+        nodeType: 'DOCUMENT',
+        nodeValue: {
+          documentMetadata: {
+            supportingDocumentIds: updatedIds
+          }
+        }
       }
 
-      await taskService.updateTaskNodeForDocumentMetadata(organizationId, projectId, taskId, updateData, token)
+      await dispatch(updateTaskNode({ organizationId, projectId, taskId, taskNodePayload: payload, token })).unwrap()
 
       toast.success('Supporting documents added!')
 
@@ -181,13 +192,18 @@ const DocumentPagePreviewDialog = ({
       const oldIds = document.supportingDocumentIds || []
       const updatedIds = oldIds.filter(id => id !== docIdToRemove)
 
-      const updateData = {
-        taskNodeId: document.id,
-        supportingDocumentIds: updatedIds
+      const payload = {
+        id: document.id,
+        taskId,
+        nodeType: 'DOCUMENT',
+        nodeValue: {
+          documentMetadata: {
+            supportingDocumentIds: updatedIds
+          }
+        }
       }
 
-      await taskService.updateTaskNodeForDocumentMetadata(organizationId, projectId, taskId, updateData, token)
-
+      await dispatch(updateTaskNode({ organizationId, projectId, taskId, taskNodePayload: payload, token })).unwrap()
       toast.success('Supporting document removed!')
 
       document.supportingDocumentIds = updatedIds

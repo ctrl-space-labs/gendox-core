@@ -158,19 +158,6 @@ public class TaskController {
         return taskNodeService.updateTaskNode(taskNodeDTO);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
-    @PutMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/task-nodes/document-metadata")
-    @ResponseStatus(value = HttpStatus.OK)
-    public TaskNode updateTaskNodesMetadata(@PathVariable UUID organizationId,
-                                            @PathVariable UUID projectId,
-                                            @PathVariable UUID taskId,
-                                            @RequestBody TaskDocumentMetadataDTO taskDocumentMetadataDTO) throws GendoxException {
-        Task task = taskService.getTaskById(taskId);
-        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
-            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
-        }
-        return taskNodeService.updateTaskNodesMetadata(taskDocumentMetadataDTO);
-    }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-nodes", produces = {"application/json"})

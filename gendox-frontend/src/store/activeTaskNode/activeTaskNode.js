@@ -34,9 +34,9 @@ export const createTaskNodesBatch = createAsyncThunk(
 
 export const updateTaskNode = createAsyncThunk(
   'taskNode/update',
-  async ({ organizationId, projectId, taskNodePayload, token }, thunkAPI) => {
+  async ({ organizationId, projectId, taskId, taskNodePayload, token }, thunkAPI) => {
     try {
-      const response = await taskService.updateTaskNode(organizationId, projectId, taskNodePayload, token)
+      const response = await taskService.updateTaskNode(organizationId, projectId, taskId, taskNodePayload, token)
       return response.data
     } catch (error) {
       toast.error(getErrorMessage(error))
