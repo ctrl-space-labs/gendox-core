@@ -69,12 +69,12 @@ const QuestionsDialog = ({
   const isAddMode = addQuestionMode
 
   useEffect(() => {
-    if (!open) return
+    if (!open || !activeQuestion) return
 
-    setEditMode(false)
-    setQuestionText(activeQuestion?.text || '')
-    setQuestionTitle(activeQuestion?.title || '')
-    setTempSupportingDocs(activeQuestion?.supportingDocumentIds || [])
+    setEditMode(false) // always reset to view mode on open
+    setQuestionText(activeQuestion.text || '')
+    setQuestionTitle(activeQuestion.title || '')
+    setTempSupportingDocs(activeQuestion.supportingDocumentIds || [])
   }, [open])
 
   useEffect(() => {
@@ -201,9 +201,15 @@ const QuestionsDialog = ({
 
   const handleCancel = () => {
     setEditMode(false)
-    setQuestionText(activeQuestion?.text || '')
-    setQuestionTitle(activeQuestion?.title || '')
-    setTempSupportingDocs(activeQuestion?.supportingDocumentIds || [])
+    resetQuestionState()
+  }
+
+  const resetQuestionState = () => {
+    if (!activeQuestion) return
+
+    setQuestionText(activeQuestion.text || '')
+    setQuestionTitle(activeQuestion.title || '')
+    setTempSupportingDocs(activeQuestion.supportingDocumentIds || [])
   }
 
   const handleQuestionChange = (idx, field, value) => {
@@ -346,7 +352,6 @@ const QuestionsDialog = ({
                 borderRadius: 1,
                 border: '1px solid',
                 borderColor: 'warning.main',
-                backgroundColor: 'warning.light',
                 color: 'warning.dark',
                 display: 'flex',
                 alignItems: 'center',
@@ -354,7 +359,7 @@ const QuestionsDialog = ({
               }}
             >
               <WarningIcon />
-              <Typography variant='body2' sx={{ fontWeight: 600 }}>
+              <Typography variant='body1' sx={{ fontWeight: 600 }}>
                 You changed the question or supporting documents. All related answers will be deleted when you save.
               </Typography>
             </Box>
@@ -501,6 +506,7 @@ const QuestionsDialog = ({
             )}
           </Paper>
 
+          {/* SUPPORTING DOCUMENTS SECTION */}
           {!isAddMode && (
             <CleanCollapse
               title='Supporting Documents'

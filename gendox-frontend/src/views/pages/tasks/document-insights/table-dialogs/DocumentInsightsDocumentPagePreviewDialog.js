@@ -39,14 +39,15 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
 import AddNewDocumentDialog from '../../helping-components/AddNewDocumentDialog'
 import { updateTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
+import { DeleteConfirmDialog } from 'src/utils/dialogs/DeleteConfirmDialog'
+import WarningIcon from '@mui/icons-material/Warning'
 
 const DocumentPagePreviewDialog = ({
   open,
   onClose,
-  document,
-  onDocumentUpdate,
+  activeDocument,
   generateSingleDocument,
-  isLoading,
+  loading,
   onExportCsv,
   isExportingCsv,
   onDelete,
@@ -58,176 +59,105 @@ const DocumentPagePreviewDialog = ({
   const { organizationId, projectId, taskId } = router.query
   const [fullscreen, setFullscreen] = useState(false)
   const [showDetails, setShowDetails] = useState(true)
+  const [showDocumentText, setShowDocumentText] = useState(false)
   const [confirmRegenerate, setConfirmRegenerate] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [editMode, setEditMode] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [promptValue, setPromptValue] = useState('')
   const [openAddDocDialog, setOpenAddDocDialog] = useState(false)
-  const supportingDocuments = useSelector(state => state.activeDocument.supportingDocuments)
+  const [dialogLoading, setDialogLoading] = useState(false)
+  const [tempSupportingDocs, setTempSupportingDocs] = useState([])
+  const [hasBreakingChanges, setHasBreakingChanges] = useState(false)
+  const [openConfirmAnswersDelete, setOpenConfirmAnswersDelete] = useState(false)
+  const { supportingDocuments, isLoading } = useSelector(state => state.activeDocument)
+
   const { sections, isBlurring } = useSelector(state => state.activeDocument)
 
   useEffect(() => {
-    if (document) {
-      dispatch(fetchDocument({ documentId: document.documentId, token }))
+    if (activeDocument) {
+      dispatch(fetchDocument({ documentId: activeDocument.documentId, token }))
     }
-  }, [document, dispatch, token])
+  }, [activeDocument, dispatch, token])
 
   useEffect(() => {
-    if (document) {
-      if (open) {
-        setPromptValue(document.prompt || '')
-      }
-    }
-  }, [open, document])
+    if (!open || !activeDocument) return
+
+    setEditMode(false)
+    setPromptValue(activeDocument.prompt || '')
+    setTempSupportingDocs(activeDocument?.supportingDocumentIds || [])
+  }, [open])
 
   useEffect(() => {
-    if (!document) return
-    if (!document.supportingDocumentIds || document.supportingDocumentIds.length === 0) return
+    if (!open) return
+
+    // If no temp docs → clean view
+    if (!tempSupportingDocs?.length) {
+      dispatch(resetSupportingDocuments())
+      return
+    }
 
     dispatch(
       fetchSupportingDocuments({
         organizationId,
         projectId,
-        documentIds: document.supportingDocumentIds,
+        documentIds: tempSupportingDocs,
         token
       })
     )
-  }, [document, dispatch, organizationId, projectId, token])
+  }, [open, tempSupportingDocs])
 
-  const handleClose = () => {
-    setFullscreen(false)
-    dispatch(resetSupportingDocuments())
-    onClose()
-  }
+  useEffect(() => {
+    setDialogLoading(loading || isLoading)
+  }, [loading, isLoading])
+
+  useEffect(() => {
+    if (!activeDocument) return
+
+    const PromptChanged = promptValue !== (activeDocument.prompt || '')
+    const docsChanged = JSON.stringify(tempSupportingDocs) !== JSON.stringify(activeDocument.supportingDocumentIds || [])
+
+    setHasBreakingChanges(PromptChanged || docsChanged)
+  }, [promptValue, tempSupportingDocs, activeDocument])
 
   const handleSave = async () => {
-    if (!document) return
+    if (!activeDocument) return
 
-    setSaving(true)
+    setDialogLoading(true)
     const payload = {
-      id: document.id,
+      id: activeDocument.id,
       taskId,
       nodeType: 'DOCUMENT',
-      nodeValue: {
-        prompt: promptValue,
+      nodeValue: {        
         documentMetadata: {
-          supportingDocumentIds: document.supportingDocumentIds || []
+          prompt: promptValue,
+          supportingDocumentIds: tempSupportingDocs
         }
       }
     }
     try {
       await dispatch(updateTaskNode({ organizationId, projectId, taskId, taskNodePayload: payload, token })).unwrap()
+      toast.success('Document updated!')
+      reloadAll()
       setEditMode(false)
-      toast.success('Document updated successfully!')
-      if (onDocumentUpdate) {
-        onDocumentUpdate()
-      }
     } catch (error) {
       console.error('Error updating document:', error)
       toast.error('Failed to update document')
     } finally {
-      setSaving(false)
+      setDialogLoading(false)
     }
   }
 
-  const handleAddSupportingDoc = async newDocIds => {
-    if (!document) return
-    setSaving(true)
-
-    console.log('Adding supporting docs:', newDocIds)
-    try {
-      const existingIds = document.supportingDocumentIds || []
-
-      // Combine existing + new
-      const updatedIds = Array.from(new Set([...existingIds, ...newDocIds]))
-
-      const payload = {
-        id: document.id,
-        taskId,
-        nodeType: 'DOCUMENT',
-        nodeValue: {
-          documentMetadata: {
-            supportingDocumentIds: updatedIds
-          }
-        }
-      }
-
-      await dispatch(updateTaskNode({ organizationId, projectId, taskId, taskNodePayload: payload, token })).unwrap()
-
-      toast.success('Supporting documents added!')
-
-      document.supportingDocumentIds = updatedIds
-
-      // Also refetch supporting docs from backend
-      dispatch(
-        fetchSupportingDocuments({
-          organizationId,
-          projectId,
-          documentIds: updatedIds,
-          token
-        })
-      )
-
-      setOpenAddDocDialog(false)
-    } catch (error) {
-      console.error('Error adding supporting docs:', error)
-      toast.error('Failed to add supporting documents')
-    } finally {
-      setSaving(false)
-    }
+  const handleAddSupportingDoc = newDocIds => {
+    setTempSupportingDocs(prev => Array.from(new Set([...prev, ...newDocIds])))
+    setOpenAddDocDialog(false)
   }
 
-  const handleCancelEdit = () => {
-    setEditMode(false)
-    setPromptValue(document?.prompt || '')
-  }
-
-  const handleRemoveSupportingDoc = async docIdToRemove => {
-    if (!document) return
-
-    setSaving(true)
-
-    try {
-      const oldIds = document.supportingDocumentIds || []
-      const updatedIds = oldIds.filter(id => id !== docIdToRemove)
-
-      const payload = {
-        id: document.id,
-        taskId,
-        nodeType: 'DOCUMENT',
-        nodeValue: {
-          documentMetadata: {
-            supportingDocumentIds: updatedIds
-          }
-        }
-      }
-
-      await dispatch(updateTaskNode({ organizationId, projectId, taskId, taskNodePayload: payload, token })).unwrap()
-      toast.success('Supporting document removed!')
-
-      document.supportingDocumentIds = updatedIds
-
-      dispatch(
-        fetchSupportingDocuments({
-          organizationId,
-          projectId,
-          documentIds: updatedIds,
-          token
-        })
-      )
-
-      if (onDocumentUpdate) onDocumentUpdate()
-    } catch (error) {
-      console.error('Failed removing supporting document', error)
-      toast.error('Failed to remove supporting document')
-    } finally {
-      setSaving(false)
-    }
+  const handleRemoveSupportingDoc = id => {
+    setTempSupportingDocs(prev => prev.filter(docId => docId !== id))
   }
 
   const handleGenerateClick = () => {
-    const hasGeneratedContent = document.length > 0
+    const hasGeneratedContent = activeDocument.length > 0
 
     if (hasGeneratedContent) {
       // Show confirmation dialog for regenerate
@@ -239,13 +169,14 @@ const DocumentPagePreviewDialog = ({
   }
 
   const handleGenerate = async () => {
-    if (generateSingleDocument && document) {
+    if (generateSingleDocument && activeDocument) {
       try {
         setIsGenerating(true)
         setConfirmRegenerate(false)
         setShowDetails(false) // Close the config section
+        setShowDocumentText(false) // Close the document text section
 
-        await generateSingleDocument(document)
+        await generateSingleDocument(activeDocument)
 
         // Refresh the page nodes after generation
         await fetchAnswerNodes(0, false)
@@ -269,7 +200,27 @@ const DocumentPagePreviewDialog = ({
     setConfirmRegenerate(false)
   }
 
-  if (!document) {
+  const handleClose = () => {    
+    dispatch(resetSupportingDocuments())
+    setEditMode(false)
+    setFullscreen(false)
+    setShowDetails(true)
+    setShowDocumentText(false)
+    onClose()
+  }
+
+  const handleCancel = () => {
+    setEditMode(false)
+    resetDocumentState()
+  }
+
+  const resetDocumentState = () => {
+    if (!activeDocument) return
+    setPromptValue(activeDocument?.prompt || '')
+    setTempSupportingDocs(activeDocument?.supportingDocumentIds || [])
+  }
+
+  if (!activeDocument) {
     return null
   }
 
@@ -303,20 +254,50 @@ const DocumentPagePreviewDialog = ({
             <DescriptionIcon color='primary' />
             <Box>
               <Typography variant='h6' component='div' color='text.primary' sx={{ fontWeight: 600 }}>
-                {document?.name || 'Document Preview'}
+                {activeDocument?.name || 'Document Preview'}
               </Typography>
             </Box>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <>
+              {!editMode ? (
+                <Tooltip title='Edit document details'>
+                  <span>
+                    <IconButton size='small' onClick={() => setEditMode(true)} disabled={editMode} sx={{ mr: 1 }}>
+                      <EditIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              ) : (
+                <Box sx={{ display: 'flex', gap: 1, mr: 2 }}>
+                  <Button variant='outlined' size='small' onClick={handleCancel}>
+                    {dialogLoading ? 'Saving...' : 'Cancel'}
+                  </Button>
+                  <Button
+                    variant='contained'
+                    size='small'
+                    onClick={() => {
+                      if (hasBreakingChanges) {
+                        setOpenConfirmAnswersDelete(true)
+                      } else {
+                        handleSave()
+                      }
+                    }}
+                    disabled={dialogLoading}
+                  >
+                    {dialogLoading ? 'Saving...' : 'Save'}
+                  </Button>
+                </Box>
+              )}
+
               <Tooltip
                 title={
                   isGenerating
                     ? 'Generation in progress...'
-                    : !isFileTypeSupported(document?.url)
+                    : !isFileTypeSupported(activeDocument?.url)
                     ? 'This file format is not supported for generation'
-                    : document.length > 0
+                    : activeDocument.length > 0
                     ? 'Regenerate document answers'
                     : 'Generate document answers'
                 }
@@ -326,9 +307,9 @@ const DocumentPagePreviewDialog = ({
                     size='small'
                     onClick={handleGenerateClick}
                     sx={{ mr: 1 }}
-                    disabled={!isFileTypeSupported(document?.url) || isGenerating || isLoading}
+                    disabled={!isFileTypeSupported(activeDocument?.url) || isGenerating || dialogLoading}
                   >
-                    {isGenerating || isLoading ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
+                    {isGenerating || dialogLoading ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
                   </IconButton>
                 </span>
               </Tooltip>
@@ -349,7 +330,7 @@ const DocumentPagePreviewDialog = ({
                 <span>
                   <IconButton
                     size='small'
-                    onClick={() => onExportCsv(document?.id, document?.name)}
+                    onClick={() => onExportCsv(activeDocument?.id, activeDocument?.name)}
                     disabled={isExportingCsv}
                     sx={{ mr: 1 }}
                   >
@@ -375,7 +356,7 @@ const DocumentPagePreviewDialog = ({
       </AppBar>
 
       {/* Generation Progress Banner */}
-      {(isGenerating || isLoading) && (
+      {(isGenerating || dialogLoading) && (
         <Box
           sx={{
             backgroundColor: 'primary.main',
@@ -401,6 +382,27 @@ const DocumentPagePreviewDialog = ({
       )}
 
       <DialogContent sx={{ p: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {/* BREAKING CHANGES WARNING */}
+        {hasBreakingChanges && editMode && (
+          <Box
+            sx={{
+              mb: 3,
+              p: 2,
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'warning.main',
+              color: 'warning.dark',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2
+            }}
+          >
+            <WarningIcon />
+            <Typography variant='body1' sx={{ fontWeight: 600 }}>
+              You changed the question or supporting documents. All related answers will be deleted when you save.
+            </Typography>
+          </Box>
+        )}
         {/* Prompt Section */}
         <Paper
           elevation={0}
@@ -408,7 +410,9 @@ const DocumentPagePreviewDialog = ({
             borderBottom: 1,
             p: 2,
             borderColor: 'divider',
-            backgroundColor: 'background.paper'
+            backgroundColor: 'background.paper',
+            maxHeight: '70vh',
+            overflowY: 'auto'
           }}
         >
           <CleanCollapse title='Document Details' open={showDetails} onToggle={() => setShowDetails(!showDetails)}>
@@ -418,21 +422,6 @@ const DocumentPagePreviewDialog = ({
                 <Typography variant='body2' sx={{ fontWeight: 600 }}>
                   Prompt
                 </Typography>
-
-                {!editMode ? (
-                  <IconButton size='small' onClick={() => setEditMode(true)}>
-                    <EditIcon fontSize='small' />
-                  </IconButton>
-                ) : (
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button variant='outlined' size='small' onClick={handleCancelEdit}>
-                      Cancel
-                    </Button>
-                    <Button variant='contained' size='small' onClick={handleSave} disabled={saving}>
-                      {saving ? 'Saving...' : 'Save'}
-                    </Button>
-                  </Box>
-                )}
               </Box>
 
               {!editMode ? (
@@ -470,16 +459,19 @@ const DocumentPagePreviewDialog = ({
               <Typography variant='body2' sx={{ fontWeight: 600, mb: 4 }}>
                 Supporting Documents
               </Typography>
-
-              <Button
-                variant='outlined'
-                startIcon={<DocumentScannerIcon />}
-                onClick={() => setOpenAddDocDialog(true)}
-                sx={{ mb: 2 }}
-              >
-                Add Document
-              </Button>
-
+              <Tooltip title={!editMode ? 'You must be in edit mode to add documents' : ''}>
+                <span>
+                  <Button
+                    variant='outlined'
+                    startIcon={<DocumentScannerIcon />}
+                    onClick={() => setOpenAddDocDialog(true)}
+                    sx={{ mb: 2 }}
+                    disabled={!editMode}
+                  >
+                    Add Document
+                  </Button>
+                </span>
+              </Tooltip>
               {/* DOCUMENT LIST */}
               <Box
                 sx={{
@@ -531,77 +523,92 @@ const DocumentPagePreviewDialog = ({
                           Open Document
                         </Button>
                       )}
-
-                      <IconButton size='small' color='error' onClick={() => handleRemoveSupportingDoc(doc.id)}>
-                        <DeleteOutlineIcon fontSize='small' />
-                      </IconButton>
+                      <Tooltip title={!editMode ? 'You must be in edit mode to remove documents' : ''}>
+                        <span>
+                          <IconButton
+                            size='small'
+                            color='error'
+                            onClick={() => handleRemoveSupportingDoc(doc.id)}
+                            disabled={!editMode}
+                          >
+                            <DeleteOutlineIcon fontSize='small' />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                     </Box>
                   </Paper>
                 ))}
               </Box>
             </Box>
           </CleanCollapse>
-        </Paper>
+          <Divider sx={{ my: 1, borderColor: 'transparent' }} />
 
-        <Box sx={{ flex: 1, overflow: 'auto', position: 'relative' }}>
-          <ResponsiveCardContent
-            sx={{
-              backgroundColor: 'action.hover',
-              py: 6,
-              px: 4,
-              minHeight: fullscreen ? 'calc(100vh - 200px)' : '50vh',
-              opacity: isGenerating ? 0.6 : 1,
-              transition: 'opacity 0.3s ease',
-              pointerEvents: isGenerating ? 'none' : 'auto'
-            }}
+          <CleanCollapse
+            title='Document Text'
+            open={showDocumentText}
+            onToggle={() => setShowDocumentText(!showDocumentText)}
           >
-            <DocumentTextComponent
-              sections={sections}
-              isBlurring={isBlurring}
-              documentId={document.documentId}
-              projectId={projectId}
-              organizationId={organizationId}
-            />
-            {/* <SectionCard /> */}
-          </ResponsiveCardContent>
-
-          {/* Subtle loading overlay for content area */}
-          {(isGenerating || isLoading) && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 10
-              }}
-            >
-              <Box
+            <Box sx={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+              <ResponsiveCardContent
                 sx={{
-                  backgroundColor: 'background.paper',
-                  borderRadius: 2,
-                  p: 3,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                  boxShadow: 2,
-                  border: '1px solid',
-                  borderColor: 'divider'
+                  backgroundColor: 'transparent',
+                  py: 6,
+                  px: 4,
+                  minHeight: fullscreen ? 'calc(100vh - 200px)' : '50vh',
+                  opacity: isGenerating ? 0.6 : 1,
+                  transition: 'opacity 0.3s ease',
+                  pointerEvents: isGenerating ? 'none' : 'auto'
                 }}
               >
-                <CircularProgress size={32} color='primary' />
-                <Typography variant='body1' sx={{ color: 'text.primary', fontWeight: 500 }}>
-                  Content will refresh when generation completes
-                </Typography>
-              </Box>
+                <DocumentTextComponent
+                  sections={sections}
+                  isBlurring={isBlurring}
+                  documentId={activeDocument.documentId}
+                  projectId={projectId}
+                  organizationId={organizationId}
+                />
+                {/* <SectionCard /> */}
+              </ResponsiveCardContent>
+
+              {/* Subtle loading overlay for content area */}
+              {(isGenerating || dialogLoading) && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10
+                  }}
+                >
+                  <Box
+                    sx={{
+                      backgroundColor: 'background.paper',
+                      borderRadius: 2,
+                      p: 3,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      boxShadow: 2,
+                      border: '1px solid',
+                      borderColor: 'divider'
+                    }}
+                  >
+                    <CircularProgress size={32} color='primary' />
+                    <Typography variant='body1' sx={{ color: 'text.primary', fontWeight: 500 }}>
+                      Content will refresh when generation completes
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
             </Box>
-          )}
-        </Box>
+          </CleanCollapse>
+        </Paper>
       </DialogContent>
 
       {/* Regenerate Confirmation Dialog */}
@@ -614,18 +621,28 @@ const DocumentPagePreviewDialog = ({
       <AddNewDocumentDialog
         open={openAddDocDialog}
         onClose={() => setOpenAddDocDialog(false)}
-        existingDocumentIds={document?.supportingDocumentIds || []}
+        existingDocumentIds={activeDocument?.supportingDocumentIds || []}
         organizationId={organizationId}
         projectId={projectId}
         taskId={taskId}
         token={token}
         mode='supporting'
         onConfirm={newIds => handleAddSupportingDoc(newIds)}
-        // onUploadSuccess={newDocIds => handleAddSupportingDoc(newDocIds)}
-        onUploadSuccess={async newDocIds => {
-          await handleAddSupportingDoc(newDocIds)
-          reloadAll()
+        onUploadSuccess={newDocIds => handleAddSupportingDoc(newDocIds)}
+      />
+
+      <DeleteConfirmDialog
+        open={openConfirmAnswersDelete}
+        onClose={() => setOpenConfirmAnswersDelete(false)}
+        onConfirm={() => {
+          setHasBreakingChanges(false)
+          setOpenConfirmAnswersDelete(false)
+          handleSave()
         }}
+        title='Confirm Document Update'
+        contentText='You changed the document or its supporting documents. All related answers will be permanently deleted. Do you want to proceed?'
+        confirmButtonText='Yes, continue'
+        cancelButtonText='Cancel'
       />
     </Dialog>
   )

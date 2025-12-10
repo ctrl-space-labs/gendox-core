@@ -102,10 +102,9 @@ const DocumentInsightsDialogs = ({
       <DocumentPagePreviewDialog
         open={dialogs.pagePreview || false}
         onClose={() => onClose('pagePreview')}
-        document={activeNode}
+        activeDocument={activeNode}
         //generateSingleDocument={generateSingleDocument}
-        onDocumentUpdate={reloadAll}
-        isLoading={loading}
+        loading={loading}
         isExportingCsv={isExportingCsv}
         onExportCsv={onExportCsv}
         onDelete={() => onOpen && onOpen('delete', activeNode)}

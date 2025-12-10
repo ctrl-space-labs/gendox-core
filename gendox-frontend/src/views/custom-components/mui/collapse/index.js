@@ -16,7 +16,7 @@ const CleanCollapse = ({ title, open, onToggle, children }) => {
         borderColor: 'divider',
         borderRadius: 2,
         overflow: 'hidden',
-        backgroundColor: 'background.paper'
+        backgroundColor: 'background.paper',
       }}
     >
       {/* Header */}
