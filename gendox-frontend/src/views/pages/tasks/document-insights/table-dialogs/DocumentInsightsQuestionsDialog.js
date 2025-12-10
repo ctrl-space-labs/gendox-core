@@ -28,21 +28,22 @@ import ExpandableMarkdownSection from '../../helping-components/ExpandableMarkod
 import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import { fetchSupportingDocuments, resetSupportingDocuments } from 'src/store/activeDocument/activeDocument'
-import { updateTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
+import { updateTaskNode, createTaskNodesBatch } from 'src/store/activeTaskNode/activeTaskNode'
 import { toast } from 'react-hot-toast'
 import AddNewDocumentDialog from '../../helping-components/AddNewDocumentDialog'
 import CleanCollapse from 'src/views/custom-components/mui/collapse'
+import WarningIcon from '@mui/icons-material/Warning'
+import { DeleteConfirmDialog } from 'src/utils/dialogs/DeleteConfirmDialog'
+import { chunk } from 'src/utils/tasks/taskUtils'
+
 const MAX_COLLAPSED_HEIGHT = 80 // px, about 3-4 lines
 
 const QuestionsDialog = ({
   open,
   onClose,
-  questions,
-  setQuestions,
-  handleAddQuestions,
   activeQuestion,
-  addQuestionMode = false,
   isAddQuestionsLoading = false,
+  addQuestionMode = false,
   reloadAll
 }) => {
   const theme = useTheme()
@@ -54,12 +55,14 @@ const QuestionsDialog = ({
   const [supportingDocsOpen, setSupportingDocsOpen] = useState(true)
   const [questionText, setQuestionText] = useState(activeQuestion?.text || '')
   const [questionTitle, setQuestionTitle] = useState(activeQuestion?.title || '')
+  const [addNewQuestions, setAddNewQuestions] = useState([{ title: '', text: '' }])
   const [tempSupportingDocs, setTempSupportingDocs] = useState([])
   const [openAddDocDialog, setOpenAddDocDialog] = useState(false)
   const [dialogLoading, setDialogLoading] = useState(false)
+  const [hasBreakingChanges, setHasBreakingChanges] = useState(false)
+  const [openConfirmAnswersDelete, setOpenConfirmAnswersDelete] = useState(false)
   const { supportingDocuments, isLoading } = useSelector(state => state.activeDocument)
-  const safeQuestions = Array.isArray(questions) ? questions : ['']
-
+  const safeQuestions = Array.isArray(addNewQuestions) ? addNewQuestions : ['']
 
   const isViewMode = !addQuestionMode && !editMode
   const isEditMode = editMode
@@ -96,6 +99,16 @@ const QuestionsDialog = ({
   useEffect(() => {
     setDialogLoading(isLoading || isAddQuestionsLoading)
   }, [isLoading, isAddQuestionsLoading])
+
+  useEffect(() => {
+    if (!activeQuestion) return
+
+    const textChanged = questionText !== (activeQuestion.text || '')
+    const docsChanged =
+      JSON.stringify(tempSupportingDocs) !== JSON.stringify(activeQuestion.supportingDocumentIds || [])
+
+    setHasBreakingChanges(textChanged || docsChanged)
+  }, [questionText, tempSupportingDocs, activeQuestion])
 
   const handleSave = async () => {
     setDialogLoading(true)
@@ -134,6 +147,51 @@ const QuestionsDialog = ({
     }
   }
 
+  // save questions handler for QuestionsDialog
+  const handleAddQuestions = async () => {
+    // Filter out empty questions
+    const validQuestions = addNewQuestions.filter(q => q.text.trim().length > 0 || q.title.trim().length > 0)
+
+    if (validQuestions.length === 0) {
+      toast.error('No questions to save!')
+      return
+    }
+
+    try {
+      const payloads = validQuestions.map((q, idx) => ({
+        taskId,
+        nodeType: 'QUESTION',
+        nodeValue: {
+          message: q.text,
+          questionTitle: q.title,
+          order: idx
+        }
+      }))
+
+      // chunk is used to send batches of 10
+      const batches = chunk(payloads, 10)
+
+      for (const batch of batches) {
+        await dispatch(
+          createTaskNodesBatch({
+            organizationId,
+            projectId,
+            taskNodesPayload: batch,
+            token
+          })
+        ).unwrap()
+      }
+
+      toast.success('Questions added!')
+      reloadAll()
+      onClose()
+      setAddNewQuestions([{ title: '', text: '' }])
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to save questions')
+    }
+  }
+
   const handleClose = () => {
     dispatch(resetSupportingDocuments())
     setEditMode(false)
@@ -148,18 +206,18 @@ const QuestionsDialog = ({
     setTempSupportingDocs(activeQuestion?.supportingDocumentIds || [])
   }
 
-  const handleQuestionChange = (idx, value) => {
-    const updated = [...questions]
-    updated[idx] = value
-    setQuestions(updated)
+  const handleQuestionChange = (idx, field, value) => {
+    const updated = [...addNewQuestions]
+    updated[idx][field] = value
+    setAddNewQuestions(updated)
   }
 
   const handleAddQuestion = () => {
-    setQuestions([...questions, ''])
+    setAddNewQuestions([...addNewQuestions, { title: '', text: '' }])
   }
 
   const handleRemoveQuestion = idx => {
-    setQuestions(questions.filter((_, i) => i !== idx))
+    setAddNewQuestions(addNewQuestions.filter((_, i) => i !== idx))
   }
 
   const handleAddSupportingDoc = newDocIds => {
@@ -279,6 +337,29 @@ const QuestionsDialog = ({
               )}
             </Paper>
           )}
+          {/* BREAKING CHANGES WARNING */}
+          {hasBreakingChanges && isEditMode && (
+            <Box
+              sx={{
+                mb: 3,
+                p: 2,
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'warning.main',
+                backgroundColor: 'warning.light',
+                color: 'warning.dark',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2
+              }}
+            >
+              <WarningIcon />
+              <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                You changed the question or supporting documents. All related answers will be deleted when you save.
+              </Typography>
+            </Box>
+          )}
+
           {/* QUESTION TEXT */}
           <Paper
             elevation={0}
@@ -331,13 +412,36 @@ const QuestionsDialog = ({
                     autoFocus
                   />
                 ) : isAddMode ? (
-                  <TextareaAutosizeStyled
-                    autoFocus={idx === safeQuestions.length - 1}
-                    placeholder='Enter question text...'
-                    value={q}
-                    onChange={e => handleQuestionChange(idx, e.target.value)}
-                    minRows={3}
-                  />
+                  <Box
+                    sx={{
+                      flex: 1,
+                      width: '100%',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}
+                  >
+                    <TextField
+                      fullWidth
+                      value={q.title}
+                      onChange={e => handleQuestionChange(idx, 'title', e.target.value)}
+                      placeholder='Enter title...'
+                      sx={{
+                        mb: 2,
+                        '& input': { fontWeight: 600 }
+                      }}
+                    />
+
+                    <TextareaAutosizeStyled
+                      style={{
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                      value={q.text}
+                      onChange={e => handleQuestionChange(idx, 'text', e.target.value)}
+                      placeholder='Enter question text...'
+                      minRows={3}
+                    />
+                  </Box>
                 ) : (
                   <Box
                     sx={{
@@ -357,7 +461,7 @@ const QuestionsDialog = ({
                 )}
 
                 {/* Remove Button (Add Mode Only) */}
-                {isAddMode && questions.length > 1 && (
+                {isAddMode && addNewQuestions.length > 1 && (
                   <IconButton
                     aria-label='Remove question'
                     onClick={() => handleRemoveQuestion(idx)}
@@ -370,10 +474,30 @@ const QuestionsDialog = ({
               </Box>
             ))}
 
+            {/*  ADD QUESTION BUTTON  */}
             {isAddMode && (
-              <Button startIcon={<AddIcon />} onClick={handleAddQuestion} variant='outlined' sx={{ mt: 1 }} fullWidth>
-                Add New Question
-              </Button>
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                <Button
+                  startIcon={<AddIcon />}
+                  onClick={handleAddQuestion}
+                  variant='contained'
+                  sx={{
+                    px: 4,
+                    py: 1.4,
+                    fontWeight: 600,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    backgroundColor: theme.palette.primary.main,
+                    boxShadow: 2,
+                    '&:hover': {
+                      backgroundColor: theme.palette.primary.dark,
+                      boxShadow: 4
+                    }
+                  }}
+                >
+                  Add New Question
+                </Button>
+              </Box>
             )}
           </Paper>
 
@@ -479,7 +603,7 @@ const QuestionsDialog = ({
           <Box sx={{ display: 'flex', gap: 1, mt: 4 }}>
             <Button
               onClick={() => {
-                setQuestions([''])
+                setAddNewQuestions([''])
                 handleClose()
               }}
               variant='outlined'
@@ -496,7 +620,17 @@ const QuestionsDialog = ({
             <Button variant='outlined' onClick={handleCancel}>
               {dialogLoading ? 'Saving...' : 'Cancel'}
             </Button>
-            <Button variant='contained' disabled={dialogLoading} onClick={handleSave}>
+            <Button
+              variant='contained'
+              disabled={dialogLoading}
+              onClick={() => {
+                if (hasBreakingChanges) {
+                  setOpenConfirmAnswersDelete(true)
+                } else {
+                  handleSave()
+                }
+              }}
+            >
               {dialogLoading ? 'Saving...' : 'Save'}
             </Button>
           </Box>
@@ -519,6 +653,19 @@ const QuestionsDialog = ({
         mode='supporting'
         onConfirm={newIds => handleAddSupportingDoc(newIds)}
         onUploadSuccess={newDocIds => handleAddSupportingDoc(newDocIds)}
+      />
+      <DeleteConfirmDialog
+        open={openConfirmAnswersDelete}
+        onClose={() => setOpenConfirmAnswersDelete(false)}
+        onConfirm={() => {
+          setHasBreakingChanges(false)
+          setOpenConfirmAnswersDelete(false)
+          handleSave()
+        }}
+        title='Confirm Question Update'
+        contentText='You changed the question or its supporting documents. All related answers will be permanently deleted. Do you want to proceed?'
+        confirmButtonText='Yes, continue'
+        cancelButtonText='Cancel'
       />
     </Dialog>
   )

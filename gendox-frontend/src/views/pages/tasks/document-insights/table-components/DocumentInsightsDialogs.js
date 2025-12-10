@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { deleteTaskNode, createTaskNode, createTaskNodesBatch } from 'src/store/activeTaskNode/activeTaskNode'
-import { chunk } from 'src/utils/tasks/taskUtils'
+import { deleteTaskNode, createTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
 import { toast } from 'react-hot-toast'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import AddNewDocumentDialog from 'src/views/pages/tasks/helping-components/AddNewDocumentDialog'
@@ -27,7 +26,6 @@ const DocumentInsightsDialogs = ({
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
-  const [questionsDialogTexts, setQuestionsDialogTexts] = useState([''])
 
   // ADD NEW documents
   const handleAddNewDocuments = async selectedDocIds => {
@@ -71,47 +69,7 @@ const DocumentInsightsDialogs = ({
     }
   }
 
-  // save questions handler for QuestionsDialog
-  const handleAddQuestions = async () => {
-    const validQuestions = (Array.isArray(questionsDialogTexts) ? questionsDialogTexts : [questionsDialogTexts])
-      .map(q => (typeof q === 'string' ? q.trim() : ''))
-      .filter(q => q.length > 0)
-
-    if (validQuestions.length === 0) {
-      toast.error('No questions to save!')
-      return
-    }
-    setLoading(true)
-    try {
-      const payloads = validQuestions.map((questionText, idx) => ({
-        taskId,
-        nodeType: 'QUESTION',
-        nodeValue: { message: questionText, order: idx }
-      }))
-
-      // Send in batches of 10
-      const batches = chunk(payloads, 10)
-      for (const batch of batches) {
-        await dispatch(
-          createTaskNodesBatch({
-            organizationId,
-            projectId,
-            taskNodesPayload: batch, // <-- array of up to 10
-            token
-          })
-        ).unwrap()
-      }
-      // Refresh the question list after saving all
-      reloadAll()
-      onClose('questionDetail')
-      setQuestionsDialogTexts(['']) // Reset the input field
-      toast.success('Questions added!')
-    } catch (error) {
-      toast.error('Failed to save questions')
-    } finally {
-      setLoading(false)
-    }
-  }
+  
 
   return (
     <>
@@ -170,9 +128,6 @@ const DocumentInsightsDialogs = ({
       <QuestionsDialog
         open={dialogs.questionDetail}
         onClose={() => onClose('questionDetail')}
-        questions={questionsDialogTexts}
-        setQuestions={setQuestionsDialogTexts}
-        handleAddQuestions={handleAddQuestions}
         activeQuestion={activeNode}
         isAddQuestionsLoading={loading}
         addQuestionMode={addQuestionMode}
