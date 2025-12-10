@@ -321,6 +321,21 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         OpenAiCompletionResponse openAiCompletionResponse = this.getCompletionResponse(openAiCompletionRequest, aiModel, apiKey);
         CompletionResponse completionResponse = openAiCompletionResponseConverter.toCompletionResponse(openAiCompletionResponse);
 
+        // for openai, completion tokens include the reasoning tokens
+        // for gemini, the reasoning tokens are total_tokens - prompt_tokens - completion_tokens
+        if (aiModel.getModel().contains("gemini")) {
+            completionResponse.getUsage().setCompletionTokensDetail(new Usage.CompletionTokensDetails());
+            completionResponse.getUsage().getCompletionTokensDetail().setReasoningTokens(
+                    completionResponse.getUsage().getTotalTokens()
+                            - completionResponse.getUsage().getPromptTokens()
+                            - completionResponse.getUsage().getCompletionTokens()
+            );
+            completionResponse.getUsage().setCompletionTokens(
+                    completionResponse.getUsage().getCompletionTokens()
+                    +completionResponse.getUsage().getCompletionTokensDetail().getReasoningTokens());
+
+        }
+
         return completionResponse;
     }
 
