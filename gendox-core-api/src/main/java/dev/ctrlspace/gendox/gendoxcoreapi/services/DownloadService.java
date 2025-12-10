@@ -6,6 +6,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.DocPageToImageOptions;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.ImageUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.DocxFileReader;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.ExcelFileReader;
 import io.micrometer.observation.annotation.Observed;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.PostConstruct;
@@ -51,6 +53,8 @@ import java.util.stream.Stream;
 @Service
 public class DownloadService {
 
+    private final ExcelFileReader excelFileReader;
+    private final DocxFileReader docxFileReader;
     Logger logger = LoggerFactory.getLogger(DownloadService.class);
 
 
@@ -63,12 +67,13 @@ public class DownloadService {
     @Autowired
     public DownloadService(ResourceLoader resourceLoader,
                            ImageUtils imageUtils,
-                           @Value("${gendox.documents.page-separator-template}") String pageSeparatorTemplate
-                            ) {
+                           @Value("${gendox.documents.page-separator-template}") String pageSeparatorTemplate,
+                           ExcelFileReader excelFileReader, DocxFileReader docxFileReader) {
         this.resourceLoader = resourceLoader;
         this.imageUtils = imageUtils;
         this.pageSeparatorTemplate = pageSeparatorTemplate;
-
+        this.excelFileReader = excelFileReader;
+        this.docxFileReader = docxFileReader;
     }
 
     @PostConstruct
@@ -179,6 +184,8 @@ public class DownloadService {
             return readPdfContent(resource);
         } else if (isDocxFile(fileExtension)) {
             return readDocxContent(resource);
+        } else if (isXlsFile(fileExtension) || isXlsxFile(fileExtension)) {
+            return readExcelContent(resource);
         } else {
             throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Unsupported file type: " + fileExtension, HttpStatus.BAD_REQUEST);
         }
@@ -326,42 +333,12 @@ public class DownloadService {
      */
     public String readDocxContent(Resource fileResource) throws IOException {
 
-        PhysicalFonts.setRegex(".*(calibri|cambria|arial|times|cour|symbol|wing).*");
+        return docxFileReader.readDocxContent(fileResource);
+    }
 
-        try (InputStream in = fileResource.getInputStream()) {
-            WordprocessingMLPackage pkg = WordprocessingMLPackage.load(in);
+    private String readExcelContent(Resource resource) throws GendoxException {
+        return excelFileReader.readExcelContent(resource);
 
-            HTMLSettings htmlSettings = Docx4J.createHTMLSettings();
-            htmlSettings.setOpcPackage(pkg);
-            htmlSettings.setImageHandler(new ConversionImageHandler() {
-                @Override
-                public String handleImage(AbstractWordXmlPicture abstractWordXmlPicture, Relationship relationship, BinaryPart binaryPart) throws Docx4JException {
-                    if (binaryPart == null) return relationship == null ? null : relationship.getTarget();
-                    try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-                        binaryPart.writeDataToOutputStream(bos);
-                        String mime = binaryPart.getContentType();           // e.g. image/png
-                        String b64  = Base64.getEncoder()
-                                .encodeToString(bos.toByteArray());
-                        return "data:" + mime + ";base64," + b64;      // <-- returned to exporter
-                    } catch (IOException ex) {
-                        throw new Docx4JException("Base64 image failure", ex);
-                    }
-                }
-            });
-
-
-            ByteArrayOutputStream htmlOut = new ByteArrayOutputStream();
-            Docx4J.toHTML(htmlSettings, htmlOut, Docx4J.FLAG_EXPORT_PREFER_XSL);
-            String html = htmlOut.toString(StandardCharsets.UTF_8);
-
-            // TODO: better HTML to Markdown conversion is needed
-            FlexmarkHtmlConverter converter = FlexmarkHtmlConverter.builder().build();
-            return converter.convert(html);
-        } catch (Docx4JException e) {
-            throw new RuntimeException(e);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
     /**
@@ -449,5 +426,15 @@ public class DownloadService {
 
     private boolean isDocxFile(String extension) {
         return ".docx".equals(extension);
+    }
+
+    private boolean isXlsFile(String fileExtension) {
+        return ".xls".equals(fileExtension);
+    }
+
+    private boolean isXlsxFile(String extension) {
+
+        return ".xlsx".equals(extension);
+
     }
 }
