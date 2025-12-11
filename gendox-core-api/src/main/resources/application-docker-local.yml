@@ -40,6 +40,8 @@ keycloak:
 gendox:
   domains:
     frontend: http://localhost:3000
+  documents:
+    upload-dir: file://${user.home}/gendox.organization.documents.local
 
   domain:
     base-url: http://localhost:8080

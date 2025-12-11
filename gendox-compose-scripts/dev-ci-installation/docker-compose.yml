@@ -21,7 +21,7 @@ services:
       - "${DATABASE_PORT}:5432"
     healthcheck:
       test: psql -h localhost -p 5432 -U $DATABASE_USERNAME -d $DATABASE_NAME -t -c "SELECT * from gendox_core.flyway_schema_history" | grep . || exit 1
-      interval: 40s
+      interval: 10s
       timeout: 30s
       retries: 30
       start_period: 15s
@@ -41,7 +41,9 @@ services:
     depends_on:
       gendox-database:
         condition: service_healthy
-    environment: # Gendox environment variables
+      gendox-keycloak:
+        condition: service_healthy
+    environment:
       - JAVA_TOOL_OPTIONS=-Xms512m -Xmx1536m
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_USERNAME=${DATABASE_USERNAME}
@@ -66,11 +68,13 @@ services:
       - PROVEN_AI_ENABLED=${PROVEN_AI_ENABLED}
       - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
     networks:
       - gendox_network
     ports:
       - "${GENDOX_BACKEND_PORT}:8080"
     restart: unless-stopped
+
 
   gendox-keycloak:
     build:
@@ -78,6 +82,12 @@ services:
       dockerfile: Dockerfile
     image: gendox-keycloak:latest
     container_name: gendox-keycloak
+    healthcheck:
+      test: [ "CMD-SHELL", "echo > /dev/tcp/localhost/8443 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
     depends_on:
       gendox-database:
         condition: service_healthy
@@ -109,7 +119,7 @@ services:
             -dname "CN=localhost" \
             -alias server \
             -validity 365 \
-            -ext "SAN=DNS:localhost,IP:127.0.0.1" \
+            -ext "SAN=DNS:localhost,IP:127.0.0.1,DNS:gendox-keycloak" \
             -keystore "$$KEYSTORE_FILE" \
             -noprompt
         else
@@ -150,18 +160,19 @@ services:
       - keycloak-data-upgrade-v26:/opt/keycloak/conf
     restart: unless-stopped
 
+
   gendox-frontend:
     build:
       context: ../../gendox-frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_GENDOX_OIDC_AUTHORITY: ${NEXT_PUBLIC_GENDOX_OIDC_AUTHORITY}
-        NEXT_PUBLIC_GENDOX_OIDC_CLIENT_ID: ${NEXT_PUBLIC_GENDOX_OIDC_CLIENT_ID}
-        NEXT_PUBLIC_GENDOX_OIDC_REDIRECT_URI: ${NEXT_PUBLIC_GENDOX_OIDC_REDIRECT_URI}
-        NEXT_PUBLIC_GENDOX_OIDC_POST_LOGOUT_REDIRECT_URI: ${NEXT_PUBLIC_GENDOX_OIDC_POST_LOGOUT_REDIRECT_URI}
-        NEXT_PUBLIC_GENDOX_OIDC_SILENT_REDIRECT_URI: ${NEXT_PUBLIC_GENDOX_OIDC_SILENT_REDIRECT_URI}
-        NEXT_PUBLIC_GENDOX_BACKEND_URL: ${NEXT_PUBLIC_GENDOX_BACKEND_URL}
-        NEXT_PUBLIC_PROVEN_AI_FRONTEND_URL: ${NEXT_PUBLIC_PROVEN_AI_FRONTEND_URL}
+        NEXT_PUBLIC_OIDC_AUTHORITY: ${NEXT_PUBLIC_GENDOX_OIDC_AUTHORITY}
+        NEXT_PUBLIC_OIDC_CLIENT_ID: ${NEXT_PUBLIC_GENDOX_OIDC_CLIENT_ID}
+        NEXT_PUBLIC_OIDC_REDIRECT_URI: ${NEXT_PUBLIC_GENDOX_OIDC_REDIRECT_URI}
+        NEXT_PUBLIC_OIDC_POST_LOGOUT_REDIRECT_URI: ${NEXT_PUBLIC_GENDOX_OIDC_POST_LOGOUT_REDIRECT_URI}
+        NEXT_PUBLIC_OIDC_SILENT_REDIRECT_URI: ${NEXT_PUBLIC_GENDOX_OIDC_SILENT_REDIRECT_URI}
+        NEXT_PUBLIC_GENDOX_URL: ${NEXT_PUBLIC_GENDOX_BACKEND_URL}
+        NEXT_PUBLIC_PROVEN_AI_URL: ${NEXT_PUBLIC_PROVEN_AI_FRONTEND_URL}
     image: gendox-frontend:latest
     container_name: gendox-frontend
     environment:
