@@ -19,6 +19,11 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+/**
+ *  Component to read .docx (Word 2007+) files and convert their content to Markdown.
+ *  Images are inlined as data:image/…;base64,… URIs.
+ *
+ */
 @Component
 public class DocxFileReader {
 

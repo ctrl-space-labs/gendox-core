@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.DocPageToImageOptions;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.ImageUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.DocFileReader;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.DocxFileReader;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.ExcelFileReader;
 import io.micrometer.observation.annotation.Observed;
@@ -55,6 +56,7 @@ public class DownloadService {
 
     private final ExcelFileReader excelFileReader;
     private final DocxFileReader docxFileReader;
+    private final DocFileReader docFileReader;
     Logger logger = LoggerFactory.getLogger(DownloadService.class);
 
 
@@ -68,12 +70,13 @@ public class DownloadService {
     public DownloadService(ResourceLoader resourceLoader,
                            ImageUtils imageUtils,
                            @Value("${gendox.documents.page-separator-template}") String pageSeparatorTemplate,
-                           ExcelFileReader excelFileReader, DocxFileReader docxFileReader) {
+                           ExcelFileReader excelFileReader, DocxFileReader docxFileReader, DocFileReader docFileReader) {
         this.resourceLoader = resourceLoader;
         this.imageUtils = imageUtils;
         this.pageSeparatorTemplate = pageSeparatorTemplate;
         this.excelFileReader = excelFileReader;
         this.docxFileReader = docxFileReader;
+        this.docFileReader = docFileReader;
     }
 
     @PostConstruct
@@ -184,6 +187,8 @@ public class DownloadService {
             return readPdfContent(resource);
         } else if (isDocxFile(fileExtension)) {
             return readDocxContent(resource);
+        } else if (isDocFile(fileExtension)) {
+            return readDocContent(resource);
         } else if (isXlsFile(fileExtension) || isXlsxFile(fileExtension)) {
             return readExcelContent(resource);
         } else {
@@ -336,6 +341,11 @@ public class DownloadService {
         return docxFileReader.readDocxContent(fileResource);
     }
 
+    public String readDocContent(Resource fileResource) throws IOException {
+
+        return docFileReader.readDocContent(fileResource);
+    }
+
     private String readExcelContent(Resource resource) throws GendoxException {
         return excelFileReader.readExcelContent(resource);
 
@@ -426,6 +436,10 @@ public class DownloadService {
 
     private boolean isDocxFile(String extension) {
         return ".docx".equals(extension);
+    }
+
+    private boolean isDocFile(String extension) {
+        return ".doc".equals(extension);
     }
 
     private boolean isXlsFile(String fileExtension) {
