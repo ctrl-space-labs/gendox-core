@@ -4,8 +4,8 @@ FROM alpine:3.18 as builder
 # Install jq in the builder image
 RUN apk add --no-cache jq
 
-# Use Keycloak 25.0.4 base image from Docker Hub
-FROM quay.io/keycloak/keycloak:25.0.4
+# Use Keycloak 26.4.7 base image from Docker Hub
+FROM quay.io/keycloak/keycloak:26.4.7
 
 # Work directory for Keycloak
 WORKDIR /opt/keycloak

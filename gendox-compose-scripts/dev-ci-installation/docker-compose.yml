@@ -161,6 +161,7 @@ services:
       - KC_DB_PASSWORD=${KC_DB_PASSWORD}
       - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
       - KEYSTORE_FILE=/opt/keycloak/conf/server.keystore
+      - KC_CACHE=local
     entrypoint: [ ]
     command:
       - /bin/bash
