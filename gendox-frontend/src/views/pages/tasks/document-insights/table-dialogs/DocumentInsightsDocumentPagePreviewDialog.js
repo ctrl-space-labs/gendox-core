@@ -114,7 +114,8 @@ const DocumentPagePreviewDialog = ({
     if (!activeDocument) return
 
     const PromptChanged = promptValue !== (activeDocument.prompt || '')
-    const docsChanged = JSON.stringify(tempSupportingDocs) !== JSON.stringify(activeDocument.supportingDocumentIds || [])
+    const docsChanged =
+      JSON.stringify(tempSupportingDocs) !== JSON.stringify(activeDocument.supportingDocumentIds || [])
 
     setHasBreakingChanges(PromptChanged || docsChanged)
   }, [promptValue, tempSupportingDocs, activeDocument])
@@ -127,7 +128,7 @@ const DocumentPagePreviewDialog = ({
       id: activeDocument.id,
       taskId,
       nodeType: 'DOCUMENT',
-      nodeValue: {        
+      nodeValue: {
         documentMetadata: {
           prompt: promptValue,
           supportingDocumentIds: tempSupportingDocs
@@ -200,7 +201,7 @@ const DocumentPagePreviewDialog = ({
     setConfirmRegenerate(false)
   }
 
-  const handleClose = () => {    
+  const handleClose = () => {
     dispatch(resetSupportingDocuments())
     setEditMode(false)
     setFullscreen(false)
@@ -236,7 +237,7 @@ const DocumentPagePreviewDialog = ({
       PaperProps={{
         sx: {
           height: fullscreen ? '100vh' : '90vh',
-          bgcolor: 'background.default'
+          bgcolor: fullscreen ? 'background.paper' : 'transparent'
         }
       }}
     >
@@ -290,42 +291,44 @@ const DocumentPagePreviewDialog = ({
                   </Button>
                 </Box>
               )}
-
-              <Tooltip
-                title={
-                  isGenerating
-                    ? 'Generation in progress...'
-                    : !isFileTypeSupported(activeDocument?.url)
-                    ? 'This file format is not supported for generation'
-                    : activeDocument.length > 0
-                    ? 'Regenerate document answers'
-                    : 'Generate document answers'
-                }
-              >
-                <span>
-                  <IconButton
-                    size='small'
-                    onClick={handleGenerateClick}
-                    sx={{ mr: 1 }}
-                    disabled={!isFileTypeSupported(activeDocument?.url) || isGenerating || dialogLoading}
-                  >
-                    {isGenerating || dialogLoading ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
-                  </IconButton>
-                </span>
-              </Tooltip>
-
-              <Tooltip title='Remove document'>
-                <span>
-                  <IconButton
-                    size='small'
-                    onClick={onDelete ? onDelete : undefined}
-                    disabled={!onDelete}
-                    sx={{ mr: 1, color: 'error.main' }}
-                  >
-                    <DeleteOutlineIcon />
-                  </IconButton>
-                </span>
-              </Tooltip>
+              {!editMode && (
+                <Tooltip
+                  title={
+                    isGenerating
+                      ? 'Generation in progress...'
+                      : !isFileTypeSupported(activeDocument?.url)
+                      ? 'This file format is not supported for generation'
+                      : activeDocument.length > 0
+                      ? 'Regenerate document answers'
+                      : 'Generate document answers'
+                  }
+                >
+                  <span>
+                    <IconButton
+                      size='small'
+                      onClick={handleGenerateClick}
+                      sx={{ mr: 1 }}
+                      disabled={!isFileTypeSupported(activeDocument?.url) || isGenerating || dialogLoading}
+                    >
+                      {isGenerating || dialogLoading ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
+              {!editMode && (
+                <Tooltip title='Remove document'>
+                  <span>
+                    <IconButton
+                      size='small'
+                      onClick={onDelete ? onDelete : undefined}
+                      disabled={!onDelete}
+                      sx={{ mr: 1, color: 'error.main' }}
+                    >
+                      <DeleteOutlineIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
               <Tooltip title={isExportingCsv ? 'Exporting...' : 'Export data as CSV'}>
                 <span>
                   <IconButton
@@ -386,11 +389,11 @@ const DocumentPagePreviewDialog = ({
         {hasBreakingChanges && editMode && (
           <Box
             sx={{
-              mb: 3,
               p: 2,
               borderRadius: 1,
               border: '1px solid',
               borderColor: 'warning.main',
+              backgroundColor: 'background.paper',
               color: 'warning.dark',
               display: 'flex',
               alignItems: 'center',
