@@ -155,7 +155,7 @@ public class TaskController {
         if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
             throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
         }
-        return taskNodeService.updateTaskNode(taskNodeDTO);
+        return taskNodeService.updateTaskNode(taskNodeDTO, task);
     }
 
 

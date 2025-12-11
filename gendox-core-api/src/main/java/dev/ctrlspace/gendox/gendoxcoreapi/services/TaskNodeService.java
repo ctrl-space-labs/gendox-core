@@ -4,6 +4,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
@@ -12,6 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskEdgeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskNodeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.TaskNodePredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,9 +82,10 @@ public class TaskNodeService {
         return taskNodeRepository.saveAll(taskNodes);
     }
 
-    public TaskNode updateTaskNode(TaskNodeDTO taskNodeDTO) throws GendoxException {
+    public TaskNode updateTaskNode(TaskNodeDTO taskNodeDTO, Task task) throws GendoxException {
         TaskNode existing = taskNodeRepository.findById(taskNodeDTO.getId())
                 .orElseThrow(() -> new GendoxException("TASK_NODE_NOT_FOUND", "Node not found", HttpStatus.NOT_FOUND));
+        logger.info("Updating task node: {} with data: {}", existing.getId(), taskNodeDTO);
 
         // ---- LEVEL 1: Primitive attributes -----
         if (taskNodeDTO.getParentNodeId() != null) {
@@ -107,7 +110,9 @@ public class TaskNodeService {
             TaskNodeValueDTO incomingValue = taskNodeDTO.getNodeValue();
             TaskNodeValueDTO currentValue = existing.getNodeValue();
 
-            if (incomingValue.getMessage() != null) currentValue.setMessage(incomingValue.getMessage());
+            if (incomingValue.getMessage() != null) {
+                currentValue.setMessage(incomingValue.getMessage());
+            }
             if (incomingValue.getAnswerValue() != null) currentValue.setAnswerValue(incomingValue.getAnswerValue());
             if (incomingValue.getAnswerFlagEnum() != null)
                 currentValue.setAnswerFlagEnum(incomingValue.getAnswerFlagEnum());
@@ -166,6 +171,11 @@ public class TaskNodeService {
 
                 }
             }
+        }
+
+        // check for Answer nodes to delete if document insights task questions or documents changed
+        if (TaskTypeConstants.DOCUMENT_INSIGHTS.equalsIgnoreCase(task.getTaskType().getName())) {
+            deleteRelatedAnswerNodes(existing, taskNodeDTO);
         }
 
         return taskNodeRepository.save(existing);
@@ -300,6 +310,14 @@ public class TaskNodeService {
         taskNodeRepository.deleteAllByIds(taskNodeIds);
     }
 
+    public void deleteAnswerTaskNodes(Page<TaskNode> taskNodes) {
+        List<UUID> nodeIdsToDelete = taskNodes.stream()
+                .map(TaskNode::getId)
+                .toList();
+        deleteAnswersConnectionEdges(nodeIdsToDelete);
+        deleteTaskNodesByIds(nodeIdsToDelete);
+    }
+
     public void deleteDocumentNodeAndConnectionNodesByDocumentId(UUID documentId) throws GendoxException {
         logger.info("Deleting document node and its connection nodes for document: {}", documentId);
 
@@ -345,6 +363,75 @@ public class TaskNodeService {
         // Now delete the node itself
         taskNodeRepository.deleteById(taskNodeId);
     }
+
+    @Transactional
+    public void deleteAnswersConnectionEdges(List<UUID> taskNodeIds) {
+        logger.info("Deleting task nodes' answer connection edges: {}", taskNodeIds);
+
+        // Find all edges connected to this node
+        List<UUID> edgesToDeleteTo = taskEdgeRepository.findAllIdsByToNodeIdIn(taskNodeIds);
+        List<UUID> edgeToDeleteFrom = taskEdgeRepository.findAllIdsByFromNodeIdIn(taskNodeIds);
+
+        Set<UUID> allEdgeIdsToDelete = new HashSet<>();
+        allEdgeIdsToDelete.addAll(edgesToDeleteTo);
+        allEdgeIdsToDelete.addAll(edgeToDeleteFrom);
+
+        if (!allEdgeIdsToDelete.isEmpty()) {
+            taskEdgeRepository.deleteAllByIds(new ArrayList<>(allEdgeIdsToDelete));
+            entityManager.clear();
+        }
+    }
+
+    private void deleteRelatedAnswerNodes(TaskNode existing, TaskNodeDTO taskNodeDTO) {
+        if (taskNodeDTO.getNodeValue() == null) {
+            return;
+        }
+        TaskNodeValueDTO incomingValue = taskNodeDTO.getNodeValue();
+        TaskDocumentMetadataDTO incomingMetadata = incomingValue.getDocumentMetadata();
+
+
+        TaskNodeCriteria.TaskNodeCriteriaBuilder criteriaBuilder = TaskNodeCriteria.builder()
+                .taskId(existing.getTaskId())
+                .nodeTypeNames(List.of(TaskNodeTypeConstants.ANSWER));
+
+        boolean shouldSearch = false;
+
+        // Check for QUESTION node changes
+        if (TaskNodeTypeConstants.QUESTION.equals(existing.getNodeType().getName())) {
+            boolean messageChanged = incomingValue.getMessage() != null;
+            boolean supportingDocsChanged = incomingMetadata.getSupportingDocumentIds() != null;
+
+            if (messageChanged || supportingDocsChanged) {
+                criteriaBuilder.questionNodeIds(List.of(existing.getId()));
+                shouldSearch = true;
+            }
+        }
+
+        // Check for DOCUMENT node changes
+        if (TaskNodeTypeConstants.DOCUMENT.equals(existing.getNodeType().getName())) {
+            boolean supportingDocsChanged = incomingMetadata.getSupportingDocumentIds() != null;
+            boolean promptChanged = incomingMetadata.getPrompt() != null;
+
+            if (supportingDocsChanged || promptChanged) {
+                criteriaBuilder.documentNodeIds(List.of(existing.getId()));
+                shouldSearch = true;
+            }
+        }
+
+        if (!shouldSearch) {
+            return;
+        }
+
+        TaskNodeCriteria criteria = criteriaBuilder.build();
+        Page<TaskNode> answerNodes = getTaskNodesByCriteria(criteria, Pageable.unpaged());
+
+        if (!answerNodes.isEmpty()) {
+            logger.info("Deleting {} answer nodes linked to updated node {}",
+                    answerNodes.getTotalElements(), existing.getId());
+            deleteAnswerTaskNodes(answerNodes);
+        }
+    }
+
 
     /**
      * Returns the current maximum 'order' value among task nodes of a given taskId.

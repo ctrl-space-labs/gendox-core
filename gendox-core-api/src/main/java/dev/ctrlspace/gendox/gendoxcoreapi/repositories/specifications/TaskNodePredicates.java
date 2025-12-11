@@ -22,6 +22,9 @@ public class TaskNodePredicates {
                 nodeIds(criteria.getNodeIds()),
                 nodeTypes(criteria.getNodeTypeNames()),
                 nodeValueNodeDocumentId(criteria.getNodeValueNodeDocumentId()),
+                nodeValueNodeQuestionIds(criteria.getQuestionNodeIds()),
+                nodeValueNodeDocumentIds(criteria.getDocumentNodeIds()),
+                nodeValueNodeAnswerIds(criteria.getAnswerNodeIds()),
                 pageFrom(criteria.getPageFrom()),
                 pageTo(criteria.getPageTo())
 
@@ -105,6 +108,57 @@ public class TaskNodePredicates {
 
         // Now eq(UUID) is available
         return docIdUuid.eq(nodeDocumentId);
+    }
+
+    private static Predicate nodeValueNodeQuestionIds(List<UUID> questionNodeIds) {
+        if (questionNodeIds == null || questionNodeIds.isEmpty()) {
+            return null;
+        }
+
+        //  ((node_value ->> 'nodeQuestionId')::uuid)
+        SimpleExpression<UUID> questionIdUuid =
+                Expressions.template(
+                        UUID.class,                                        // Java type
+                        "cast(function('jsonb_extract_path_text', {0}, {1}) as uuid)",
+                        qTaskNode.nodeValue,
+                        Expressions.constant("nodeQuestionId")
+                );
+
+        return questionIdUuid.in(questionNodeIds);
+    }
+
+    private static Predicate nodeValueNodeDocumentIds(List<UUID> documentNodeIds) {
+        if (documentNodeIds == null || documentNodeIds.isEmpty()) {
+            return null;
+        }
+
+        //  ((node_value ->> 'nodeDocumentId')::uuid)
+        SimpleExpression<UUID> docIdUuid =
+                Expressions.template(
+                        UUID.class,                                        // Java type
+                        "cast(function('jsonb_extract_path_text', {0}, {1}) as uuid)",
+                        qTaskNode.nodeValue,
+                        Expressions.constant("nodeDocumentId")
+                );
+
+        return docIdUuid.in(documentNodeIds);
+    }
+
+    private static Predicate nodeValueNodeAnswerIds(List<UUID> answerNodeIds) {
+        if (answerNodeIds == null || answerNodeIds.isEmpty()) {
+            return null;
+        }
+
+        //  ((node_value ->> 'nodeAnswerId')::uuid)
+        SimpleExpression<UUID> answerIdUuid =
+                Expressions.template(
+                        UUID.class,                                        // Java type
+                        "cast(function('jsonb_extract_path_text', {0}, {1}) as uuid)",
+                        qTaskNode.nodeValue,
+                        Expressions.constant("nodeAnswerId")
+                );
+
+        return answerIdUuid.in(answerNodeIds);
     }
 
     private static Predicate taskIdEq(UUID taskId) {
