@@ -16,7 +16,7 @@ logging:
 
 spring:
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/postgres}
+    url: ${DATABASE_URL:jdbc:postgresql://gendox-database:5433/postgres}
     username: ${DATABASE_USERNAME:gendox_user}
     password: ${DATABASE_PASSWORD:root}
     hikari:
@@ -26,13 +26,13 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://gendox-keycloak8080/idp/realms/gendox-idp-prod
-          jwk-set-uri: http://gendox-keycloak:8080/idp/realms/gendox-idp-prod/protocol/openid-connect/certs
+          issuer-uri: https://gendox-keycloak:8443/idp/realms/gendox-idp-prod
+          jwk-set-uri: https://gendox-keycloak:8443/idp/realms/gendox-idp-prod/protocol/openid-connect/certs
 
 
 keycloak:
-  base-url: http://gendox-keycloak:8080/idp
-  token-uri: http://gendox-keycloak:8080/idp/realms/gendox-idp-prod/protocol/openid-connect/token
+  base-url: https://gendox-keycloak:8443/idp
+  token-uri: https://gendox-keycloak:8443/idp/realms/gendox-idp-prod/protocol/openid-connect/token
   realm: gendox-idp-prod
   client-id: ${KEYCLOAK_CLIENT_ID}
   client-secret: ${KEYCLOAK_CLIENT_SECRET}
