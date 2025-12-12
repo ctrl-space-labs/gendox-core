@@ -1,4 +1,4 @@
-FROM pgvector/pgvector:pg15
+FROM pgvector/pgvector:pg18-trixie
 
 # Install Maven
 RUN apt-get update && apt-get install -y maven
