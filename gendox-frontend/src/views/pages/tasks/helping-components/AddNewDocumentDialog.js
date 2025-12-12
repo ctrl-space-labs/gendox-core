@@ -21,7 +21,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 import UploaderDocuments from 'src/views/pages/tasks/helping-components/UploaderDocuments'
-import { fetchProjectDocuments } from 'src/store/activeProject/activeProject'
+import { fetchDocuments } from 'src/store/activeDocument/activeDocument'
 import { useDispatch, useSelector } from 'react-redux'
 import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 
@@ -39,7 +39,7 @@ const DocumentsAddNewDialog = ({
   mode = 'main'
 }) => {
   const dispatch = useDispatch()
-  const { projectDocuments, isBlurring } = useSelector(state => state.activeProject)
+  const { projectDocuments, isBlurring } = useSelector(state => state.activeDocument)
   const [documents, setDocuments] = useState([])
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
@@ -60,7 +60,7 @@ const DocumentsAddNewDialog = ({
 
   useEffect(() => {
     if (open && organizationId && projectId && token) {
-      dispatch(fetchProjectDocuments({ organizationId, projectId, token, page }))
+      dispatch(fetchDocuments({ organizationId, projectId, token, page, target: 'projectDocuments' }))
     }
   }, [open, organizationId, projectId, token, page, dispatch])
 

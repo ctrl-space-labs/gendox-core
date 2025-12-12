@@ -15,7 +15,7 @@ import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import DocumentsGrid from './DocumentsGrid'
 import DocumentsList from './DocumentsList'
 import { localStorageConstants } from 'src/utils/generalConstants'
-import { fetchProjectDocuments } from 'src/store/activeProject/activeProject'
+import { fetchDocuments } from 'src/store/activeDocument/activeDocument'
 import { isValidOrganizationAndProject } from 'src/utils/validators'
 
 const Documents = () => {
@@ -26,7 +26,7 @@ const Documents = () => {
 
   const { organizationId, projectId } = router.query
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-  const { projectDocuments, isBlurring } = useSelector(state => state.activeProject)
+  const { projectDocuments, isBlurring } = useSelector(state => state.activeDocument)
   const { content: documents, totalPages } = projectDocuments
 
   const [viewMode, setViewMode] = useState('grid')
@@ -43,11 +43,12 @@ const Documents = () => {
   useEffect(() => {
     if (isValidOrganizationAndProject(organizationId, projectId, user)) {
       dispatch(
-        fetchProjectDocuments({
+        fetchDocuments({
           organizationId,
           projectId,
           token,
-          page: currentPage
+          page: currentPage,
+          target: 'projectDocuments'
         })
       )
     }
@@ -99,27 +100,27 @@ const Documents = () => {
         {documents.length > 0 && (
           <Box
             sx={{
-              display: "flex",
-              gap: 2,
+              display: 'flex',
+              gap: 2
             }}
           >
-            <Tooltip title="Grid View">
+            <Tooltip title='Grid View'>
               <IconButton
-                onClick={() => toggleViewMode("grid")}
-                color={viewMode === "grid" ? "primary" : "default"}
-                sx={{ fontSize: "3rem" }}
+                onClick={() => toggleViewMode('grid')}
+                color={viewMode === 'grid' ? 'primary' : 'default'}
+                sx={{ fontSize: '3rem' }}
               >
-                <Icon icon="mdi:view-grid-outline" fontSize="inherit" />
+                <Icon icon='mdi:view-grid-outline' fontSize='inherit' />
               </IconButton>
             </Tooltip>
             {!isMobile && (
-              <Tooltip title="List View">
+              <Tooltip title='List View'>
                 <IconButton
-                  onClick={() => toggleViewMode("list")}
-                  color={viewMode === "list" ? "primary" : "default"}
-                  sx={{ fontSize: "3rem" }}
+                  onClick={() => toggleViewMode('list')}
+                  color={viewMode === 'list' ? 'primary' : 'default'}
+                  sx={{ fontSize: '3rem' }}
                 >
-                  <Icon icon="mdi:view-list-outline" fontSize="inherit" />
+                  <Icon icon='mdi:view-list-outline' fontSize='inherit' />
                 </IconButton>
               </Tooltip>
             )}

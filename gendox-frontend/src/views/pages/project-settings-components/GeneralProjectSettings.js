@@ -28,11 +28,7 @@ const GeneralProjectSettings = () => {
   const dispatch = useDispatch()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   const { provenAiEnabled, provenAiUrl } = commonConfig
-
-  const project = useSelector(state => state.activeProject.projectDetails)
-  const isBlurring = useSelector(state => state.activeProject.isBlurring)
-  const isUpdatingProject = useSelector(state => state.activeProject.isUpdating)
-  const isDeletingProject = useSelector(state => state.activeProject.isDeleting)
+  const { project, isBlurring, isUpdatingProject, isDeletingProject } = useSelector(state => state.activeProject)
   const [autoTraining, setAutoTraining] = useState(!!project.autoTraining)
   const [name, setName] = useState(project.name)
   const [description, setDescription] = useState(project.description)
@@ -84,7 +80,7 @@ const GeneralProjectSettings = () => {
 
   const handleTrainingClick = () => {
     documentService
-      .triggerJobs(project.organizationId, project.id, token, "SPLITTER_AND_TRAINING", project.id)
+      .triggerJobs(project.organizationId, project.id, token, 'SPLITTER_AND_TRAINING', project.id)
       .then(response => {
         toast.success('Training triggered successfully!')
       })

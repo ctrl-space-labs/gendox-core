@@ -14,7 +14,7 @@ import Icon from 'src/views/custom-components/mui/icon/icon'
 import CustomAvatar from 'src/views/custom-components/mui/avatar'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import documentService from 'src/gendox-sdk/documentService.js'
-import { fetchProjectDocuments } from 'src/store/activeProject/activeProject'
+import { fetchDocuments } from 'src/store/activeDocument/activeDocument'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import toast from 'react-hot-toast'
 import { getErrorMessage } from 'src/utils/errorHandler'
@@ -64,11 +64,12 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, page }) => {
       setSelectedDocument(null)
       setIsBlurring(false)
       dispatch(
-        fetchProjectDocuments({
+        fetchDocuments({
           organizationId,
           projectId,
           token,
-          page: page
+          page: page,
+          target: 'projectDocuments'
         })
       )
     } catch (error) {

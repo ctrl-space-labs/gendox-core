@@ -32,7 +32,7 @@ import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
 import DocumentTextComponent from '../../helping-components/DocumentTextComponent'
 import {
   fetchDocument,
-  fetchSupportingDocuments,
+  fetchDocuments,
   resetSupportingDocuments
 } from 'src/store/activeDocument/activeDocument'
 import { localStorageConstants } from 'src/utils/generalConstants'
@@ -97,11 +97,12 @@ const DocumentPagePreviewDialog = ({
     }
 
     dispatch(
-      fetchSupportingDocuments({
+      fetchDocuments({
         organizationId,
         projectId,
         documentIds: tempSupportingDocs,
-        token
+        token,
+        target: 'supportingDocuments'
       })
     )
   }, [open, tempSupportingDocs])

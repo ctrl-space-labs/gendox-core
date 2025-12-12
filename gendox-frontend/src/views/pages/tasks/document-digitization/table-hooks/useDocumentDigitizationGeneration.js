@@ -246,6 +246,7 @@ export default function useDocumentDigitizationGeneration({
   // Generate single document (for dialog use)
   const generateSingleDocument = useCallback(
     async (document, pageFrom = null, pageTo = null) => {
+
       if (!document.prompt || !document.prompt.trim()) {
         toast.error('Document needs a prompt before generation.')
         return

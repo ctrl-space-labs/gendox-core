@@ -334,8 +334,6 @@ const DocumentPagePreviewDialog = ({
       const token = window.localStorage.getItem('accessToken')
       const { organizationId, projectId, taskId } = router.query
 
-      
-
       const payload = {
         id: document.id,
         taskId,
@@ -414,7 +412,7 @@ const DocumentPagePreviewDialog = ({
       if (!isValid) {
         toast.error('Please fix page range errors before generating')
         return
-      }
+      }      
 
       try {
         setIsGenerating(true)
@@ -620,6 +618,8 @@ const DocumentPagePreviewDialog = ({
     <Dialog
       open={open}
       onClose={handleClose}
+      disableEscapeKeyDown={false}
+      disableEnforceFocus
       maxWidth={fullscreen ? false : 'lg'}
       fullWidth
       fullScreen={fullscreen}

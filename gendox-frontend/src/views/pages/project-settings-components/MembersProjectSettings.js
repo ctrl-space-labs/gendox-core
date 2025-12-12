@@ -30,10 +30,7 @@ const MembersProjectSettings = () => {
   const { settings } = useSettings()
   const isDemo = settings.isDemo
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-  const project = useSelector(state => state.activeProject.projectDetails)
-  const projectMembers = useSelector(state => state.activeProject.projectMembersAndRoles)
-  const isMembersLoading = useSelector(state => state.activeProject.isMembersLoading)
-  const isDeletingMember = useSelector(state => state.activeProject.isDeletingMember)
+  const { project, projectMembers, isMembersLoading, isDeletingMember } = useSelector(state => state.activeProject)
 
   const { id: projectId, organizationId } = project
   const [searchText, setSearchText] = useState([])
