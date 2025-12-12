@@ -208,6 +208,7 @@ const DocumentPagePreviewDialog = ({
     setFullscreen(false)
     setShowDetails(true)
     setShowDocumentText(false)
+    setTempSupportingDocs([])
     onClose()
   }
 

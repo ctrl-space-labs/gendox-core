@@ -195,6 +195,7 @@ const QuestionsDialog = ({
 
   const handleClose = () => {
     dispatch(resetSupportingDocuments())
+    setTempSupportingDocs([])
     setEditMode(false)
     setSupportingDocsOpen(true)
     onClose()

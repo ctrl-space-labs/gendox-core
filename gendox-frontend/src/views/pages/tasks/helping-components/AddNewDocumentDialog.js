@@ -54,7 +54,7 @@ const DocumentsAddNewDialog = ({
       setSelectedDocIds(new Set())
       setSearchTerm('')
       setShowUploader(false)
-      setPage(0)
+      setPage(0), setDocuments([])
     }
   }, [open])
 
@@ -63,6 +63,25 @@ const DocumentsAddNewDialog = ({
       dispatch(fetchDocuments({ organizationId, projectId, token, page, target: 'projectDocuments' }))
     }
   }, [open, organizationId, projectId, token, page, dispatch])
+
+  useEffect(() => {
+    if (open && organizationId && projectId && token) {
+      const delayFetch = setTimeout(() => {
+        dispatch(
+          fetchDocuments({
+            organizationId,
+            projectId,
+            token,
+            page,
+            target: 'projectDocuments',
+            documentNameContains: searchTerm
+          })
+        )
+      }, 300) 
+
+      return () => clearTimeout(delayFetch) 
+    }
+  }, [open, organizationId, projectId, token, page, searchTerm, dispatch])
 
   useEffect(() => {
     if (projectDocuments?.content) {
@@ -75,13 +94,10 @@ const DocumentsAddNewDialog = ({
     }
   }, [projectDocuments, page])
 
-  const filteredDocuments = useMemo(() => {
-    let filtered = documents.filter(doc => isFileTypeSupported(doc.remoteUrl))
-    if (searchTerm) {
-      filtered = filtered.filter(doc => doc.title?.toLowerCase().includes(searchTerm.toLowerCase()))
-    }
-    return filtered
-  }, [searchTerm, documents])
+const displayDocuments = useMemo(() => {
+      return documents.filter(doc => isFileTypeSupported(doc.remoteUrl));
+  }, [documents])
+ 
 
   // Handlers
   const handleToggleSelect = doc => {
@@ -104,6 +120,12 @@ const DocumentsAddNewDialog = ({
     onConfirm(Array.from(selectedDocIds))
   }
 
+  const handleSearchChange = e => {
+      setSearchTerm(e.target.value)
+      setPage(0) 
+      setDocuments([]) 
+  }
+
   return (
     <>
       <Dialog open={open} onClose={onClose} disableEscapeKeyDown={false} fullWidth maxWidth='lg'>
@@ -120,14 +142,14 @@ const DocumentsAddNewDialog = ({
             variant='outlined'
             placeholder='Search documents...'
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
             sx={{ mb: 2 }}
           />
           {isBlurring || loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
               <CircularProgress />
             </Box>
-          ) : filteredDocuments.length === 0 ? (
+          ) : displayDocuments.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
               <DescriptionOutlinedIcon sx={{ fontSize: 60, mb: 1 }} color='disabled' />
               <Typography>No documents found</Typography>
@@ -150,7 +172,7 @@ const DocumentsAddNewDialog = ({
                   flexDirection: 'column'
                 }}
               >
-                {filteredDocuments.map((doc, index) => {
+                {displayDocuments.map((doc, index) => {
                   const isAlreadySelected = existingDocIds.has(doc.id)
                   const isSelected = selectedDocIds.has(doc.id)
                   const isSupported = isFileTypeSupported(doc.remoteUrl)
@@ -195,7 +217,7 @@ const DocumentsAddNewDialog = ({
                           </Typography>
                         )}
                       </ListItemButton>
-                      {index < filteredDocuments.length - 1 && <Divider component='li' />}
+                      {index < displayDocuments.length - 1 && <Divider component='li' />}
                     </React.Fragment>
                   )
                 })}
