@@ -28,7 +28,12 @@ const GeneralProjectSettings = () => {
   const dispatch = useDispatch()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   const { provenAiEnabled, provenAiUrl } = commonConfig
-  const { project, isBlurring, isUpdatingProject, isDeletingProject } = useSelector(state => state.activeProject)
+  const {
+    projectDetails: project, 
+    isBlurring,
+    isUpdating: isUpdatingProject, 
+    isDeleting: isDeletingProject 
+  } = useSelector(state => state.activeProject)
   const [autoTraining, setAutoTraining] = useState(!!project.autoTraining)
   const [name, setName] = useState(project.name)
   const [description, setDescription] = useState(project.description)
