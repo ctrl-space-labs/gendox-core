@@ -9,6 +9,7 @@ import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
 import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
+import Summarize from '@mui/icons-material/Summarize'
 
 const DocumentInsightsGrid = ({
   openDialog,
@@ -101,6 +102,30 @@ const DocumentInsightsGrid = ({
         }
       },
       {
+        field: 'summaryAction',
+        headerName: '',
+        width: 50,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: params => {
+          return (
+            <Tooltip title='View Summary'>
+              <IconButton
+                size='small'
+                onClick={e => {
+                  e.stopPropagation()
+                  openDialog('summaryDetail', params.row._doc)
+                }}
+                sx={{ color: theme.palette.primary.main }}
+              >
+                <Summarize fontSize='small' />
+              </IconButton>
+            </Tooltip>
+          )
+        }
+      },
+      {
         field: 'name',
         headerName: 'Document',
         width: 350,
@@ -132,20 +157,25 @@ const DocumentInsightsGrid = ({
               }}
               title={params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
             >
-              <Box
-                component='span'
-                sx={{
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  flexGrow: 1,
-                  color: isSelected ? 'primary.main' : params.row.documentId ? 'text.primary' : 'primary.main',
-                  fontWeight: isSelected ? '600' : params.row.documentId ? 'normal' : '600',
-                  userSelect: 'none'
-                }}
-              >
-                {params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
-              </Box>
+             
+
+              {/* DOCUMENT TITLE */}
+              <Tooltip title='View Document'>
+                <Box
+                  component='span'
+                  sx={{
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    flexGrow: 1,
+                    color: isSelected ? 'primary.main' : params.row.documentId ? 'text.primary' : 'primary.main',
+                    fontWeight: isSelected ? '600' : params.row.documentId ? 'normal' : '600',
+                    userSelect: 'none'
+                  }}
+                >
+                  {params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
+                </Box>
+              </Tooltip>
 
               {/* Hover-reveal vertical Icon */}
               <IconButton

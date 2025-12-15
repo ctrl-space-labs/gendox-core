@@ -29,6 +29,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     newDoc: false,
     delete: false,
     answerDetail: false,
+    summaryDetail: false,
     questionDetail: false,
     pagePreview: false
   })
@@ -66,6 +67,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       name: node.nodeValue?.documentMetadata?.title || 'Unknown Document',
       url: node.nodeValue?.documentMetadata?.remoteUrl || '',
       prompt: node.nodeValue?.documentMetadata?.prompt || '',
+      insightsSummary: node.nodeValue?.documentMetadata?.insightsSummary || '',
       supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || [],
       createdAt: node.createdAt,
       updatedAt: node.updatedAt
