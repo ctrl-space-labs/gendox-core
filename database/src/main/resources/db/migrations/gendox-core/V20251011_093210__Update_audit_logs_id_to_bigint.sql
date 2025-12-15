@@ -62,7 +62,7 @@ ALTER TABLE gendox_core.audit_logs
 
 -- Ensure the sequence is ahead of current max(id)
 SELECT setval('gendox_core.audit_logs_id_seq',
-              GREATEST( (SELECT COALESCE(MAX(id),0) FROM gendox_core.audit_logs), 0 ),
+              COALESCE((SELECT MAX(id) FROM gendox_core.audit_logs), 1),
               true);
 
 -- 1.5 Make bigint id NOT NULL
