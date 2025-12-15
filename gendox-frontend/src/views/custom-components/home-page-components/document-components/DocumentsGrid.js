@@ -18,6 +18,7 @@ import { fetchDocuments } from 'src/store/activeDocument/activeDocument'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import toast from 'react-hot-toast'
 import { getErrorMessage } from 'src/utils/errorHandler'
+import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
 
 const DocumentsGrid = ({ documents, showAll, setShowAll, page }) => {
   const dispatch = useDispatch()
@@ -144,7 +145,7 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, page }) => {
                   cursor: 'pointer'
                 }}
               >
-                {document.title}
+                <TruncatedText text={document.title} />
               </Typography>
             </Box>
             <Box

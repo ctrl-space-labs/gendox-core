@@ -10,6 +10,7 @@ import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
 import Summarize from '@mui/icons-material/Summarize'
+import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
 
 const DocumentInsightsGrid = ({
   openDialog,
@@ -40,7 +41,6 @@ const DocumentInsightsGrid = ({
     return [...questions].sort((a, b) => a.order - b.order)
   }, [questions])
 
-  const truncate = (text, limit = 30) => (text && text.length > limit ? text.slice(0, limit) + '...' : text)
 
   const columns = useMemo(() => {
     return [
@@ -173,7 +173,7 @@ const DocumentInsightsGrid = ({
                     userSelect: 'none'
                   }}
                 >
-                  {params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
+                  {<TruncatedText text={params.value} /> || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
                 </Box>
               </Tooltip>
 
@@ -202,9 +202,11 @@ const DocumentInsightsGrid = ({
           )
         }
       },
+
+      // Dynamic question columns
       ...sortedQuestions.map(q => ({
         field: `q_${q.id}`,
-        headerName: truncate(q.text),
+        headerName: <TruncatedText text={q.text} />,
         width: 240,
         editable: false,
         sortable: false,
@@ -229,7 +231,7 @@ const DocumentInsightsGrid = ({
               fontWeight: 600,
               flexGrow: 1
             }}
-            title={q.text}
+            // title={q.text}
           >
             <Box
               component='button'
@@ -250,7 +252,7 @@ const DocumentInsightsGrid = ({
                 }
               }}
             >
-              {truncate(q.title || q.text)}
+              <TruncatedText text={q.title || q.text} />
             </Box>
 
             {/* Hover-reveal Vertical Icon */}

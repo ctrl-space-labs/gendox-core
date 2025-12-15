@@ -17,6 +17,8 @@ import {
   Box,
   CircularProgress
 } from '@mui/material'
+import Icon from 'src/views/custom-components/mui/icon/icon'
+
 import { useTheme } from '@mui/material/styles'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
@@ -35,6 +37,7 @@ import CleanCollapse from 'src/views/custom-components/mui/collapse'
 import WarningIcon from '@mui/icons-material/Warning'
 import { DeleteConfirmDialog } from 'src/utils/dialogs/DeleteConfirmDialog'
 import { chunk } from 'src/utils/tasks/taskUtils'
+import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
 
 const MAX_COLLAPSED_HEIGHT = 80 // px, about 3-4 lines
 
@@ -560,6 +563,7 @@ const QuestionsDialog = ({
                           justifyContent: 'space-between',
                           minHeight: 120,
                           transition: '0.2s',
+                          cursor: 'default',
                           backgroundColor: 'background.paper',
                           '&:hover': {
                             transform: 'translateY(-4px)',
@@ -570,7 +574,7 @@ const QuestionsDialog = ({
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <DescriptionIcon color='primary' />
-                          <Typography sx={{ fontWeight: 600, flex: 1 }}>{doc.title}</Typography>
+                          <Typography sx={{ fontWeight: 600, flex: 1 }}>{<TruncatedText text={doc.title} cursor='default' />}</Typography>
                         </Box>
 
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>

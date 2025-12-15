@@ -34,6 +34,7 @@ import RouteHandler from '../authentication/components/RouteHandler'
 import OrganizationProjectGuard from 'src/authentication/components/OrganizationProjectGuard'
 import { AuthProvider } from '../authentication/context/AuthContext'
 import { IFrameMessageManagerProvider } from '../authentication/context/IFrameMessageManagerContext'
+import GlobalScrollbar from 'src/views/custom-components/global-scrollbar/GlobalScrollbar'
 
 const clientSideEmotionCache = createEmotionCache()
 
@@ -81,6 +82,7 @@ const App = props => {
                 {({ settings }) => {
                   return (
                     <ThemeComponent settings={settings}>
+                      <GlobalScrollbar />
                       <OrganizationProjectGuard authProviderOption={authProviderOption} pageConfig={pageConfig}>
                         <RouteHandler routeType={routeType}>{getLayout(<Component {...pageProps} />)}</RouteHandler>
                       </OrganizationProjectGuard>
