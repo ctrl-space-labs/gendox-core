@@ -12,10 +12,8 @@ export default {
   getPublicUsers: (page = 0, size = 10000) => `${url}users/public?page=${page}&size=${size}`,
 
   getProjectById: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}`,
+  
   getProjectsByOrganization: organizationId => `${url}organizations/${organizationId}/projects`,
-
-  getDocumentsByCriteriaProjectId: (organizationId, projectId, page, sort = 'createdAt,desc') =>
-    `${url}organizations/${organizationId}/projects/${projectId}/documents?page=${page}&sort=${sort}`,
 
   findDocumentsByCriteria: (organizationId, projectId, page, size, sort = 'createdAt,desc') =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/search?page=${page}&size=${size}&sort=${sort}`,

@@ -5,8 +5,7 @@ import { Box } from '@mui/material'
 import Paper from '@mui/material/Paper'
 import { toast } from 'react-hot-toast'
 import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
-import { fetchTaskNodesByCriteria, fetchDocumentPages } from 'src/store/activeTaskNode/activeTaskNode'
-import { fetchDocumentsByCriteria } from 'src/store/activeDocument/activeDocument'
+import { loadTaskData, fetchDocumentPages } from 'src/store/activeTaskNode/activeTaskNode'
 import DocumentDigitizationGrid from './table-components/DocumentDigitizationGrid'
 import HeaderSection from './table-components/DocumentDigitizationHeaderSection'
 import DialogManager from './table-components/DocumentDigitizationDialogs'
@@ -24,15 +23,12 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const dispatch = useDispatch()
   const token = window.localStorage.getItem('accessToken')
   const { organizationId, taskId, projectId } = router.query
-  const { taskNodesDocumentList, isLoading } = useSelector(state => state.activeTaskNode)
-  const isBlurring = useSelector(state => state.activeDocument.isBlurring)
 
-  const [documents, setDocuments] = useState([])
-  const [documentPages, setDocumentPages] = useState([])
+  const { taskNodesDocumentList, taskDocumentPages, isLoading } = useSelector(state => state.activeTaskNode)
+
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
   const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
-  const [selectedDocuments, setSelectedDocuments] = useState([])
   const [dialogs, setDialogs] = useState({
     newDoc: false,
     delete: false,
@@ -43,61 +39,88 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const [activeNode, setActiveNode] = useState(null)
   const [editMode, setEditMode] = useState(false)
   const [pollCleanup, setPollCleanup] = useState(null)
-
+  const [selectedDocuments, setSelectedDocuments] = useState([])
   const { pollJobStatus, showTimeoutDialog } = useJobStatusPoller({ organizationId, projectId, token })
-  const { startGeneration, completeGeneration } = useGeneration()
+  const { startGeneration, completeGeneration } = useGeneration()  
 
+  // --- Documents derived from Redux (like DocumentInsightsTable) ---
+  const documents = useMemo(() => {
+    const nodes = taskNodesDocumentList?.content || []
+    return nodes.map(node => {
+      const meta = node.nodeValue?.documentMetadata || {}
+      console.log('Document node metadata:', meta)
 
-  const fetchDocuments = useCallback(() => {
-    return dispatch(
-      fetchTaskNodesByCriteria({
-        organizationId,
-        projectId,
-        taskId,
-        criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
-        token,
-        page,
-        size: pageSize
-      })
-    )
+      return {
+        id: node.id,
+        documentId: node.documentId,
+        name: meta.title || 'Unknown Document',
+        url: meta.remoteUrl || '',
+        prompt: meta.prompt || '',
+        structure: meta.structure || '',
+        pageFrom: meta.pageFrom ?? null,
+        pageTo: meta.pageTo ?? null,
+        allPages: meta.allPages ?? false,
+        createdAt: node.createdAt || new Date().toISOString()
+      }
+    })
+  }, [taskNodesDocumentList])
+
+  // --- Document pages from Redux ---
+  const documentPages = useMemo(() => {
+    if (!taskDocumentPages) return []
+    // if the backend returns a Page object
+    if (Array.isArray(taskDocumentPages.content)) {
+      return taskDocumentPages.content
+    }
+    // if it's a direct array
+    if (Array.isArray(taskDocumentPages)) {
+      return taskDocumentPages
+    }
+    return []
+  }, [taskDocumentPages])
+
+  const reloadAll = useCallback(async () => {
+    if (!organizationId || !projectId || !taskId) return
+
+    try {
+      await dispatch(
+        loadTaskData({
+          organizationId,
+          projectId,
+          taskId,
+          token,
+          docsPage: page,
+          docsPageSize: pageSize
+        })
+      ).unwrap()
+
+      await dispatch(
+        fetchDocumentPages({
+          organizationId,
+          projectId,
+          taskId,
+          token,
+          page: 0,
+          size: MAX_PAGE_SIZE
+        })
+      ).unwrap()
+    } catch (error) {
+      console.error('Failed to reload digitization data:', error)
+      toast.error('Failed to load documents')
+    }
   }, [organizationId, projectId, taskId, token, page, pageSize, dispatch])
-
-  const loadDocumentPages = useCallback(() => {
-    return dispatch(
-      fetchDocumentPages({
-        organizationId,
-        projectId,
-        taskId,
-        token,
-        page: 0,
-        size: MAX_PAGE_SIZE
-      })
-    )
-  }, [organizationId, projectId, taskId, token, dispatch, taskNodesDocumentList])
 
   const handleGenerationComplete = useCallback(() => {
     completeGeneration(taskId, null)
     // Refresh data (same as you already do)
-    fetchDocuments()
-      .unwrap()
-      .catch(err => console.error('Failed to refresh documents:', err))
-
-    loadDocumentPages()
-      .unwrap()
-      .then(pages => {
-        const pagesData = pages?.content || pages || []
-        setDocumentPages(pagesData)
-      })
-      .catch(err => console.error('Failed to refresh document pages:', err))
-
-  }, [completeGeneration, taskId, fetchDocuments, loadDocumentPages])
+    reloadAll()
+  }, [completeGeneration, taskId, reloadAll])
 
   useEffect(() => {
     if (!(organizationId && projectId && taskId && token)) return
 
     let stopPollingFn = null
     let cancelled = false
-
 
     async function resumeIfNeeded() {
       try {
@@ -129,7 +152,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       }
     }
 
-
     resumeIfNeeded()
 
     return () => {
@@ -137,98 +159,24 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       stopPollingFn?.()
       setPollCleanup(null)
     }
-  }, [organizationId, projectId, taskId, token])
+  }, [organizationId, projectId, taskId, token, startGeneration, handleGenerationComplete])
 
-  // 1️⃣ **Reset all local state when switching tasks/orgs/projects**
   useEffect(() => {
     // Clean up any existing polling
     if (pollCleanup) {
       pollCleanup()
       setPollCleanup(null)
     }
-
-    setDocuments([])
-    setDocumentPages([])
     setSelectedDocuments([])
     setPage(0)
   }, [taskId, organizationId, projectId])
 
-  // ✅ **Always reset selected documents on component mount (page refresh)**
   useEffect(() => {
-    setSelectedDocuments([])
-  }, [])
+  if (!organizationId || !projectId || !taskId) return
+  reloadAll()
+}, [organizationId, projectId, taskId, page, pageSize, reloadAll])
 
-  // 2️⃣ **Fetch task nodes documents **
-  useEffect(() => {
-    if (!(organizationId && projectId && taskId && token)) return
-    fetchDocuments()
-      .unwrap()
-      .catch(() => toast.error('Failed to load documents'))
-  }, [fetchDocuments])
 
-  // 3️⃣ **Fetch document pages when taskId changes**
-  useEffect(() => {
-    if (!(organizationId && projectId && taskId && token)) return
-    loadDocumentPages()
-      .unwrap()
-      .then(pages => setDocumentPages(pages || []))
-      .catch(() => toast.error('Failed to load document pages'))
-  }, [loadDocumentPages])
-
-  // 5️⃣ **Cleanup polling on unmount**
-  useEffect(() => {
-    return () => {
-      if (pollCleanup) {
-        pollCleanup()
-      }
-    }
-  }, [pollCleanup])
-
-  // 4️⃣ **Fetch project documents and Sync with taskNodesDocumentList**
-  useEffect(() => {
-    let isCancelled = false
-
-    const nodes = taskNodesDocumentList?.content || []
-    const documentIds = nodes.map(n => n.documentId).filter(Boolean)
-    if (!documentIds.length) {
-      setDocuments([])
-      return
-    }
-
-    dispatch(fetchDocumentsByCriteria({ organizationId, projectId, documentIds, token }))
-      .unwrap()
-      .then(fullDocuments => {
-        if (isCancelled) return
-        setDocuments(
-          nodes.map(node => {
-            const fullDoc = (fullDocuments || []).find(d => d.id === node.documentId)
-            return {
-              id: node.id,
-              documentId: node.documentId,
-              name: fullDoc?.title || 'Unknown Document',
-              url: fullDoc?.remoteUrl || '',
-              prompt: node.nodeValue?.documentMetadata?.prompt || '',
-              structure: node.nodeValue?.documentMetadata?.structure || '',
-              pageFrom: node.nodeValue?.documentMetadata?.pageFrom || null,
-              pageTo: node.nodeValue?.documentMetadata?.pageTo || null,
-              allPages: node.nodeValue?.documentMetadata?.allPages ?? false,
-              createdAt: node.createdAt || new Date().toISOString()
-            }
-          })
-        )
-      })
-      .catch(() => {
-        if (!isCancelled) {
-          setDocuments([])
-          toast.error('Failed to load full document details')
-        }
-      })
-    return () => {
-      isCancelled = true
-    }
-  }, [taskNodesDocumentList, organizationId, projectId, token, dispatch])
-
-  // 6️⃣ **Update URL query params when page or pageSize changes**
   useEffect(() => {
     router.replace(
       {
@@ -245,6 +193,14 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     setSelectedDocuments([])
   }, [page, pageSize])
 
+  useEffect(() => {
+    return () => {
+      if (pollCleanup) {
+        pollCleanup()
+      }
+    }
+  }, [pollCleanup])
+
   // DIALOG HANDLERS
   const openDialog = (dialogType, node = null, forceEditMode = false) => {
     setDialogs(prev => ({ ...prev, [dialogType]: true }))
@@ -256,6 +212,9 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const closeDialog = dialogType => {
     setDialogs(prev => ({ ...prev, [dialogType]: false }))
     setActiveNode(null)
+    if (dialogType === 'docDetail') {
+      setEditMode(false)
+    }
   }
 
   const handleSelectDocument = (docId, checked) => {
@@ -291,23 +250,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     token,
     documentPages,
     onGenerationComplete: () => {
-      // Refresh task nodes (documents list)
-      fetchDocuments()
-        .unwrap()
-        .catch(error => {
-          console.error('Failed to refresh documents:', error)
-        })
-
-      // Refresh document pages and update local state immediately
-      loadDocumentPages()
-        .unwrap()
-        .then(pages => {
-          const pagesData = pages?.content || pages || []
-          setDocumentPages(pagesData)
-        })
-        .catch(error => {
-          console.error('Failed to refresh document pages:', error)
-        })
+      reloadAll()
     }
   })
 
@@ -385,7 +328,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         <Box
           sx={{
             minWidth: 800,
-            filter: isLoading || isBlurring ? 'blur(6px)' : 'none'
+            filter: isLoading ? 'blur(6px)' : 'none'
           }}
         >
           <DocumentDigitizationGrid
@@ -393,7 +336,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
             documents={documents}
             documentPages={documentPages}
             isLoading={isLoading}
-            isBlurring={isBlurring}
             page={page}
             pageSize={pageSize}
             setPage={setPage}
@@ -411,7 +353,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         activeNode={activeNode}
         onClose={closeDialog}
         onOpen={openDialog}
-        refreshDocuments={fetchDocuments}
+        refreshDocuments={reloadAll}
         taskId={taskId}
         organizationId={organizationId}
         projectId={projectId}

@@ -1,6 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import projectService from 'src/gendox-sdk/projectService'
-import documentService from 'src/gendox-sdk/documentService'
 import organizationService from 'src/gendox-sdk/organizationService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
@@ -19,19 +18,6 @@ export const fetchProject = createAsyncThunk(
       return { project: projectData.data, members: membersData.data }
     } catch (error) {
       console.error('Failed to fetch project', error)
-      return thunkAPI.rejectWithValue(error.response.data)
-    }
-  }
-)
-
-export const fetchProjectDocuments = createAsyncThunk(
-  'activeProject/fetchProjectDocuments',
-  async ({ organizationId, projectId, token, page }, thunkAPI) => {
-    try {
-      const response = await documentService.getDocumentByProject(organizationId, projectId, token, page)
-      return response.data
-    } catch (error) {
-      console.error('Failed to fetch project documents', error)
       return thunkAPI.rejectWithValue(error.response.data)
     }
   }
@@ -118,7 +104,6 @@ const initialActiveProjectState = {
   projectDetails: {},
   projectMembers: [],
   projectMembersAndRoles: [],
-  projectDocuments: { content: [], totalPages: 0 },
   error: null,
   isUpdating: false,
   isDeleting: false,
@@ -146,19 +131,6 @@ const activeProjectSlice = createSlice({
         state.projectMembers = action.payload.members
       })
       .addCase(fetchProject.rejected, (state, action) => {
-        state.isBlurring = false
-        state.error = action.payload
-      })
-
-      .addCase(fetchProjectDocuments.pending, state => {
-        state.isBlurring = true
-        state.error = null
-      })
-      .addCase(fetchProjectDocuments.fulfilled, (state, action) => {
-        state.isBlurring = false
-        state.projectDocuments = action.payload
-      })
-      .addCase(fetchProjectDocuments.rejected, (state, action) => {
         state.isBlurring = false
         state.error = action.payload
       })

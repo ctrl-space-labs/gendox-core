@@ -27,7 +27,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import ExpandableMarkdownSection from '../../helping-components/ExpandableMarkodownSection'
 import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
 import { localStorageConstants } from 'src/utils/generalConstants'
-import { fetchSupportingDocuments, resetSupportingDocuments } from 'src/store/activeDocument/activeDocument'
+import { fetchDocuments, resetSupportingDocuments } from 'src/store/activeDocument/activeDocument'
 import { updateTaskNode, createTaskNodesBatch } from 'src/store/activeTaskNode/activeTaskNode'
 import { toast } from 'react-hot-toast'
 import AddNewDocumentDialog from '../../helping-components/AddNewDocumentDialog'
@@ -87,11 +87,12 @@ const QuestionsDialog = ({
     }
 
     dispatch(
-      fetchSupportingDocuments({
+      fetchDocuments({
         organizationId,
         projectId,
         documentIds: tempSupportingDocs,
-        token
+        token,
+        target: 'supportingDocuments'
       })
     )
   }, [open, tempSupportingDocs])
@@ -194,6 +195,7 @@ const QuestionsDialog = ({
 
   const handleClose = () => {
     dispatch(resetSupportingDocuments())
+    setTempSupportingDocs([])
     setEditMode(false)
     setSupportingDocsOpen(true)
     onClose()

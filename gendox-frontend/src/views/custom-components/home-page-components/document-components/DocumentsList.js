@@ -13,7 +13,7 @@ import documentService from 'src/gendox-sdk/documentService.js'
 import SearchToolbar from 'src/utils/searchToolbar'
 import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/router'
-import { fetchProjectDocuments } from 'src/store/activeProject/activeProject'
+import { fetchDocuments } from 'src/store/activeDocument/activeDocument'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 import { localStorageConstants } from 'src/utils/generalConstants'
@@ -81,11 +81,12 @@ const DocumentsList = ({ documents, page }) => {
         setSelectedDocument(null)
         setIsBlurring(false)
         dispatch(
-          fetchProjectDocuments({
+          fetchDocuments({
             organizationId,
             projectId,
             token,
-            page: page
+            page: page,
+            target: 'projectDocuments'
           })
         )
       } catch (error) {

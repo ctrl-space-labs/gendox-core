@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import taskService from 'src/gendox-sdk/taskService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
-import { fetchDocumentsByCriteria } from '../activeDocument/activeDocument'
+import { fetchDocuments } from '../activeDocument/activeDocument'
 
 // -------- Thunks for TaskNodes --------
 
@@ -179,16 +179,17 @@ export const loadTaskData = createAsyncThunk(
       if (documentIds.length > 0) {
         await thunkAPI
           .dispatch(
-            fetchDocumentsByCriteria({
+            fetchDocuments({
               organizationId,
               projectId,
               documentIds,
-              token
+              token,
+              target: 'taskDocuments'
             })
           )
           .unwrap()
       }
-      const fullDocs = thunkAPI.getState().activeDocument.documents
+      const fullDocs = thunkAPI.getState().activeDocument.taskDocuments
 
       const mergedDocumentNodes = documentNodes.map(node => {
         const full = fullDocs.find(d => d.id === node.documentId)
@@ -201,7 +202,12 @@ export const loadTaskData = createAsyncThunk(
               title: full?.title,
               remoteUrl: full?.remoteUrl,
               prompt: node.nodeValue?.documentMetadata?.prompt || '',
-              supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || []
+              structure : node.nodeValue?.documentMetadata?.structure || '',
+              pageFrom: node.nodeValue?.documentMetadata?.pageFrom || null,
+              pageTo: node.nodeValue?.documentMetadata?.pageTo || null,
+              allPages : node.nodeValue?.documentMetadata?.allPages || false,
+              supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || [],
+
             }
           }
         }

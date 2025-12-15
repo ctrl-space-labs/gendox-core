@@ -13,7 +13,6 @@ import { useGeneration as useGenerationContext } from '../generation/GenerationC
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
 import HeaderSection from './table-components/DocumentInsightsHeaderSection'
 import DialogManager from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsDialogs'
-import { update } from 'lodash'
 
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
