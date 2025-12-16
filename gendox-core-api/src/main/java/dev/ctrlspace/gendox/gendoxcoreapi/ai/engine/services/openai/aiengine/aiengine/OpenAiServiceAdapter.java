@@ -200,9 +200,16 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                 completionApiUrl,
                 new HttpEntity<>(chatRequestHttpEntity, buildHeader(apiKey)),
                 OpenAiCompletionResponse.class);
-        logger.debug("Received completion Response from {}. Prompt Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getPromptTokens());
-        logger.debug("Received completion Response from {}. Completion Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getCompletionTokens());
-        logger.info("Received completion Response from {}. Tokens billed: {}", completionApiUrl, responseEntity.getBody().getUsage().getTotalTokens());
+        logger.debug("Received completion Response from {}. Prompt Tokens billed: {}, Cached Tokens billed: {}, Completion Tokens billed: {}, total tokens: {}",
+                completionApiUrl,
+                responseEntity.getBody().getUsage().getPromptTokens(),
+                Optional.ofNullable(responseEntity.getBody())
+                        .map(b -> b.getUsage())
+                        .map(u -> u.getPromptTokensDetail())
+                        .map(d -> d.getCachedTokens())
+                        .orElse(0),
+                responseEntity.getBody().getUsage().getCompletionTokens(),
+                responseEntity.getBody().getUsage().getTotalTokens());
 
         return responseEntity.getBody();
     }
@@ -244,8 +251,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                                             String toolChoice,
                                             @Nullable ObjectNode responseJsonSchema) {
         if (Strings.isNotEmpty(agentRole)) {
-            messages.add(0, AiModelMessage.builder().role("system").content(agentRole).build());
-
+            upsertSystemPrompt(messages, agentRole);
         }
 
 
@@ -274,6 +280,11 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         }
 
 
+        openAiGptRequestBuilder
+                .temperature(aiModelRequestParams.getTemperature())
+                .topP(aiModelRequestParams.getTopP())
+                .maxTokens(aiModelRequestParams.getMaxTokens());
+
         // Special case for preview search models
         if (aiModel.getModel().toLowerCase().contains("search-preview")) {
             // Only model and messages are set, no temperature, top_p, max_tokens
@@ -284,38 +295,87 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                     .maxTokens(null)
                     .maxCompletionTokens(null);
         }
-        // Special case for o1, o3, o4 models
-        else if (List.of("o1", "o3", "o4", "gemini-2.5").stream()
+        // Special case for o1, o3, o4 models, temprature to 1
+        if (List.of("o1", "o3", "o4", "gpt-5-", "gpt-5.1").stream()
                 .anyMatch(aiModel.getModel()::contains)) {
             openAiGptRequestBuilder
                     .temperature(1.0)
-                    .topP(1.0)
-                    .reasoningEffort(computeReasoningEffort(aiModelRequestParams.getMaxTokens()))
+                    .topP(1.0);
+            // Make first message "user"
+            messages.getFirst().setRole("developer");
+        }
+
+        // thinking models, increate max tokens and set reasoning effort
+        if (List.of("o1", "o3", "o4", "gpt-5-", "gpt-5.1", "gemini-2.5", "gemini-3").stream()
+                .anyMatch(aiModel.getModel()::contains)) {
+            openAiGptRequestBuilder
+                    .reasoningEffort(computeReasoningEffort(aiModelRequestParams.getMaxTokens(), aiModel.getModel()))
                     .maxCompletionTokens(2 * aiModelRequestParams.getMaxTokens())
                     .maxTokens(null);
 
             // Make first message "user"
             messages.getFirst().setRole("developer");
-        } else {
-            // Default setting for normal models
-            openAiGptRequestBuilder
-                    .temperature(aiModelRequestParams.getTemperature())
-                    .topP(aiModelRequestParams.getTopP())
-                    .maxTokens(aiModelRequestParams.getMaxTokens());
         }
 
         OpenAiCompletionRequest openAiCompletionRequest = openAiGptRequestBuilder.build();
         OpenAiCompletionResponse openAiCompletionResponse = this.getCompletionResponse(openAiCompletionRequest, aiModel, apiKey);
         CompletionResponse completionResponse = openAiCompletionResponseConverter.toCompletionResponse(openAiCompletionResponse);
 
+        // for openai, completion tokens include the reasoning tokens
+        // for gemini, the reasoning tokens are total_tokens - prompt_tokens - completion_tokens
+        if (aiModel.getModel().contains("gemini")) {
+            completionResponse.getUsage().setCompletionTokensDetail(new Usage.CompletionTokensDetails());
+            completionResponse.getUsage().getCompletionTokensDetail().setReasoningTokens(
+                    completionResponse.getUsage().getTotalTokens()
+                            - completionResponse.getUsage().getPromptTokens()
+                            - completionResponse.getUsage().getCompletionTokens()
+            );
+            completionResponse.getUsage().setCompletionTokens(
+                    completionResponse.getUsage().getCompletionTokens()
+                    +completionResponse.getUsage().getCompletionTokensDetail().getReasoningTokens());
+
+        }
+
         return completionResponse;
     }
 
-    // TODO Change this. The reassoning budget should be stored as an extra property n the Agent
-    private static String computeReasoningEffort(Long maxTokens) {
-        if (maxTokens >= 32_768) return "high";
-        if (maxTokens >= 8_192)  return "medium";
-        if (maxTokens >= 1_024)  return "low";
+    private static void upsertSystemPrompt(List<AiModelMessage> messages, String agentRole) {
+        AiModelMessage first = messages.isEmpty() ? null : messages.getFirst();
+
+        boolean hasSpecialRole = first != null &&
+                ("system".equals(first.getRole()) || "developer".equals(first.getRole()));
+
+        String role = hasSpecialRole ? first.getRole() : "system";
+
+        AiModelMessage updated = AiModelMessage.builder()
+                .role(role)
+                .content(agentRole)
+                .build();
+
+        if (hasSpecialRole) {
+            messages.set(0, updated);
+        } else {
+            messages.add(0, updated);
+        }
+    }
+
+    // TODO Change this. The reasoning budget should be stored as an extra property n the Agent
+    private static String computeReasoningEffort(Long maxTokens, String modelName) {
+        long tokens = maxTokens == null ? 0L : maxTokens;
+        String name = modelName == null ? "" : modelName.toLowerCase(Locale.ROOT);
+
+        boolean isGpt51       = name.startsWith("gpt-5.1");
+        boolean isGpt5        = name.startsWith("gpt-5") && !isGpt51;
+        boolean isGemini25Pro = name.contains("gemini-2.5-pro");
+
+        if (tokens >= 32_768L) return "high";
+        if (tokens >= 8_192L)  return "medium";
+        if (tokens >= 1_024L)  return "low";
+
+        if (isGpt5)        return "minimal"; // GPT-5 min is "minimal"
+        if (isGemini25Pro) return "low";     // Gemini 2.5 Pro: no "none", min "low"
+
+        // GPT-5.1 and others (that support it) can get "none"
         return "none";
     }
 

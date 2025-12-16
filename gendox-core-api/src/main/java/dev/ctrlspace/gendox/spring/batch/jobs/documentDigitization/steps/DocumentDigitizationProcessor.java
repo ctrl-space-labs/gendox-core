@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -37,7 +38,8 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private boolean reGenerateExistingAnswers;
-
+    @Value("#{stepExecution.jobExecution.jobInstance.id}")
+    private Long jobInstanceId;
 
     private TaskService taskService;
     private TaskNodeService taskNodeService;
@@ -69,11 +71,21 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
     @Override
     public TaskAnswerBatchDTO process(TaskDocumentMetadataDTO documentMetadata) throws Exception {
 
-        logger.info("Processing document metadata: {}", documentMetadata);
+        String promptPreview = documentMetadata.getPrompt() == null || documentMetadata.getPrompt().length() <= 100
+                ? documentMetadata.getPrompt()
+                : documentMetadata.getPrompt().substring(0, 100) + "...";
+        logger.info(
+                "Processing document metadata: taskNodeId={}, prompt={}, pageFrom={}, pageTo={}, allPages={}",
+                documentMetadata.getTaskNodeId(),
+                promptPreview,
+                documentMetadata.getPageFrom(),
+                documentMetadata.getPageTo(),
+                documentMetadata.getAllPages()
+        );
 
         TaskAnswerBatchDTO batch = new TaskAnswerBatchDTO();
 
-        TaskNode documentNode = taskNodeService.getTaskNodeById(documentMetadata.getTaskNodeId());
+        TaskNode documentNode = documentMetadata.getTaskNode();
         if (documentNode.getDocumentId() == null) {
             return null;
         }
@@ -84,15 +96,19 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         }
         if (project == null) {
             project = projectService.getProjectById(task.getProjectId());
+            // lazy load child collections
+            project.getProjectAgent().getAiTools().size();
         }
 
-        DocumentInstance documentInstance = documentService.getDocumentInstanceById(documentNode.getDocumentId());
+        DocumentInstance documentInstance = documentMetadata.getDocumentInstance();
 
 
         TaskNodeCriteria existingAnswersCriteria = TaskNodeCriteria.builder()
                 .taskId(documentNode.getTaskId())
                 .nodeTypeNames(List.of("ANSWER"))
                 .nodeValueNodeDocumentId(documentNode.getId())
+                .pageFrom(documentMetadata.getPageFrom())
+                .pageTo(documentMetadata.getPageTo())
                 .build();
         Page<TaskNode> existingNodes = taskNodeService.getTaskNodesByCriteria(existingAnswersCriteria, Pageable.unpaged());
 
@@ -153,9 +169,12 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         printOptions.setPageFrom(Collections.min(pagesToProcess));
         printOptions.setPageTo(Collections.max(pagesToProcess));
 
+
         // TODO change this to optionally get a list of page numbers to print
-        List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), printOptions);
-        
+        // temp file will be deleted by TempFileCleanupListener at the end of the step
+        Path tempFilePath = downloadService.downloadToTemp(documentInstance.getRemoteUrl(), "digitization-instance-id-" + jobInstanceId);
+        List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), tempFilePath, printOptions);
+
         // Validate that we have enough pages and create safe mapping
         Map<Integer, String> pageImages = pagesToProcess.stream()
                 .collect(Collectors.toMap(i -> i, i -> printedPagesBase64.get(i - printOptions.getPageFrom())));
@@ -174,11 +193,14 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
+        // incentivize GC to free memory
+        printedPagesBase64.clear();
 
         batch.setNewAnswers(newAnswers);
 
-        logger.info("Processing document node: {}, prompt: {}, structure: {}",
-                documentNode.getId(), prompt, structure);
+        logger.debug("Processing document node: {}, instance id: {}, prompt: {}, structure: {}",
+                documentNode.getId(), documentInstance.getId(), promptPreview, structure);
+
 
 
         return batch;

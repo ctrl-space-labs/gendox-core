@@ -10,6 +10,8 @@ import gendoxChat from 'src/store/chat/gendoxChat'
 import activeProjectAgent from "src/store/activeProjectAgent/activeProjectAgent.js";
 import globalSearch from 'src/store/globalSearch/globalSearch'
 import activeTask from 'src/store/activeTask/activeTask'
+import activeTaskNode from 'src/store/activeTaskNode/activeTaskNode'
+import activeTaskEdge from 'src/store/activeTaskEdge/activeTaskEdge'
 
 const reducer = {
   userData,
@@ -19,7 +21,9 @@ const reducer = {
   gendoxChat,
   activeProjectAgent,
   globalSearch,
-  activeTask
+  activeTask,
+  activeTaskNode,
+  activeTaskEdge
 }
 
 

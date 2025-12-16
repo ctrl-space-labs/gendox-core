@@ -16,11 +16,13 @@ export const answerFlagEnum = (flag, theme) => {
       return <WarningAmberIcon fontSize='small' sx={{ color: theme.palette.warning.main }} titleAccess='Warning' />
     case 'MINOR_ISSUE':
       return <ErrorOutlineIcon fontSize='small' sx={{ color: theme.palette.warning.dark }} titleAccess='Minor Issue' />
+    case 'MAJOR_ISSUE':
+      return <ErrorOutlineIcon fontSize='small' sx={{ color: theme.palette.error.main }} titleAccess='Major Issue' />
     case 'CRITICAL_ISSUE':
       return <ErrorOutlineIcon fontSize='small' sx={{ color: theme.palette.error.main }} titleAccess='Critical Issue' />
     case 'NA':
       return <HelpOutlineIcon fontSize='small' sx={{ color: theme.palette.text.disabled }} titleAccess='N/A' />
-    case '': 
+    case '':
       return <InfoOutlinedIcon fontSize='small' sx={{ color: theme.palette.info.main }} titleAccess='See details' />
     default:
       return (
@@ -43,11 +45,13 @@ export const getAnswerFlagProps = flag => {
       return { label: 'Warning', chipColor: 'warning' }
     case 'MINOR_ISSUE':
       return { label: 'Minor', chipColor: 'warning' }
+    case 'MAJOR_ISSUE':
+      return { label: 'Major', chipColor: 'error' }
     case 'CRITICAL_ISSUE':
       return { label: 'Critical', chipColor: 'error' }
     case 'NA':
       return { label: 'N/A', chipColor: 'primary' } // or 'info', 'warning', etc.
-    case '': 
+    case '':
       return { label: 'See details', chipColor: 'info' }
     default:
       return { label: 'Not generated', chipColor: 'primary' }

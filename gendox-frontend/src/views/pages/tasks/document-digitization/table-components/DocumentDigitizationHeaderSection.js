@@ -16,24 +16,20 @@ const HeaderSection = ({
   onGenerateAll,
   onGenerateSelected,
   disableGenerate,
+  disableGenerateNew,
   isLoading,
   selectedDocuments,
   generatingAll = false,
   generatingNew = false,
   generatingSelected = false,
   documents = [],
-  hasGeneratedContent = () => false
+  hasGeneratedContent = () => false,
 }) => {
   const [anchorEl, setAnchorEl] = useState(null)
   const [confirmGeneration, setConfirmGeneration] = useState(null) // 'all', 'new', 'selected', or null
 
   const handleToggle = event => {
     setAnchorEl(prev => (prev ? null : event.currentTarget.parentElement))
-  }
-
-  // Helper function to check if documents have existing generated content
-  const hasExistingContent = docs => {
-    return docs.some(doc => hasGeneratedContent(doc.id))
   }
 
   // Handle generation with confirmation check
@@ -112,7 +108,7 @@ const HeaderSection = ({
       text: `Generate New`,
       type: 'new',
       loading: generatingNew,
-      disabled: generatingAll || generatingNew || generatingSelected || newDocsWithPrompts.length === 0
+      disabled: generatingAll || generatingNew || generatingSelected || disableGenerateNew
     }
   }
 
@@ -235,19 +231,7 @@ const HeaderSection = ({
                 <MenuItem
                   key='generate-new'
                   onClick={() => handleGenerateClick('new')}
-                  disabled={
-                    generatingAll ||
-                    generatingNew ||
-                    generatingSelected ||
-                    isLoading ||
-                    (() => {
-                      const docsWithPrompts = documents.filter(
-                        doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
-                      )
-                      const newDocsWithPrompts = docsWithPrompts.filter(doc => !hasGeneratedContent(doc.id))
-                      return newDocsWithPrompts.length === 0
-                    })()
-                  }
+                  disabled={generatingAll || generatingNew || generatingSelected || isLoading || disableGenerateNew}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {generatingNew ? (

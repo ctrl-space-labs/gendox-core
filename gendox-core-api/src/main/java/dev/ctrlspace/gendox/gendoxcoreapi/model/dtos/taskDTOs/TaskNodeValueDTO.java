@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -20,6 +21,7 @@ public class TaskNodeValueDTO {
     private String message;
     private String answerValue;
     private AnswerFlag answerFlagEnum;
+    private String questionTitle;
     private Integer order;
-    private TaskDocumentMetadataDTO documentMetadata;
+    private TaskDocumentMetadataDTO documentMetadata = new TaskDocumentMetadataDTO();
 }

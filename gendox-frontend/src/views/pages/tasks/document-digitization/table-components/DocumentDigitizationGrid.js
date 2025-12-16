@@ -16,7 +16,6 @@ const DocumentDigitizationGrid = ({
   documents,
   documentPages,
   isLoading,
-  isBlurring,
   page,
   pageSize,
   setPage,
@@ -383,7 +382,7 @@ const DocumentDigitizationGrid = ({
         height: 650,
         width: '100%',
         overflowX: 'auto',
-        filter: isLoading || isBlurring ? 'blur(6px)' : 'none',
+        filter: isLoading ? 'blur(6px)' : 'none',
         transition: 'filter 0.3s ease',
         borderRadius: 1
       }}
@@ -420,7 +419,7 @@ const DocumentDigitizationGrid = ({
         componentsProps={{
           pagination: { showFirstButton: true, showLastButton: true }
         }}
-        loading={isLoading || isBlurring}
+        loading={isLoading }
         getRowClassName={(params) => {
           const isSelected = selectedDocuments.includes(params.row.id)
           return `${isSelected ? 'row-selected' : ''}`
@@ -484,7 +483,7 @@ const DocumentDigitizationGrid = ({
               sx={{ color: 'error.main' }}
             >
               <DeleteOutlineIcon sx={{ mr: 1 }} fontSize="small" />
-              Delete Document
+              Remove Document
             </MenuItem>
           </>
         )}

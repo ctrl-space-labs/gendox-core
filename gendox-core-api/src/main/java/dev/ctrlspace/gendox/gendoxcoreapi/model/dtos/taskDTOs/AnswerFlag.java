@@ -6,5 +6,6 @@ public enum AnswerFlag {
     OK,
     WARNING,
     MINOR_ISSUE,
+    MAJOR_ISSUE,
     CRITICAL_ISSUE
 }

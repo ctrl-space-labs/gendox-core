@@ -24,7 +24,6 @@ export const fetchExampleTools = createAsyncThunk(
   async ({ token }, thunkAPI) => {
     try {
       const response = await typesService.getToolExamples(token)
-      console.log('Fetched example tools:', response.data)
       return response.data
     } catch (error) {
       toast.error(`${getErrorMessage(error)}`)

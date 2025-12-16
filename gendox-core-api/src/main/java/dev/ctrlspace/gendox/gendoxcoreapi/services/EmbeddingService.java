@@ -1,10 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
+import dev.ctrlspace.gendox.authentication.GCloudAuthenticationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.EmbeddingResponse;
@@ -66,6 +66,7 @@ public class EmbeddingService {
     private CryptographyUtils cryptographyUtils;
     private AiToolUtils aiToolUtils;
     private EncodingRegistry encodingRegistry;
+    private GCloudAuthenticationService gCloudAuthenticationService;
 
     private RerankService rerankService;
 
@@ -95,7 +96,8 @@ public class EmbeddingService {
             RerankService rerankService,
             @Lazy CompletionService completionService,
             AiToolUtils aiToolUtils,
-            EncodingRegistry encodingRegistry) {
+            EncodingRegistry encodingRegistry,
+            GCloudAuthenticationService gCloudAuthenticationService) {
         this.embeddingRepository = embeddingRepository;
         this.auditLogsRepository = auditLogsRepository;
         this.embeddingGroupRepository = embeddingGroupRepository;
@@ -115,6 +117,7 @@ public class EmbeddingService {
         this.completionService = completionService;
         this.aiToolUtils = aiToolUtils;
         this.encodingRegistry = encodingRegistry;
+        this.gCloudAuthenticationService = gCloudAuthenticationService;
     }
 
     public Embedding createEmbedding(Embedding embedding) throws GendoxException {
@@ -217,14 +220,25 @@ public class EmbeddingService {
     }
 
     public String getApiKey(ProjectAgent agent, String aiModelType) throws GendoxException {
+        AiModel model = organizationModelKeyService.getAgentModelByType(agent, aiModelType);
         OrganizationModelProviderKey organizationModelProviderKey = organizationModelKeyService.getKeyForAgent(agent, aiModelType);
+        String rawKey = null;
         if (organizationModelProviderKey != null) {
             logger.debug("Using OrganizationModelProviderKey ID: {}", organizationModelProviderKey.getId());
-            return organizationModelProviderKey.getKey();
+            rawKey = organizationModelProviderKey.getKey();
+        } else {
+            logger.debug("Using default API key for agent id: {} and model type: {}", agent.getId(), aiModelType);
+            rawKey = organizationModelKeyService.getDefaultKeyForAgent(agent, aiModelType);
+
+            // OAuth2 authentication token requires special handling
+            // TODO generalize to get the GCP secret per organization, this will require GCloudAuthenticationService to cache GoogleCredentials per organization
+            if ("VERTEX_AI".equals(model.getAiModelProvider().getName()) ) {
+                rawKey = gCloudAuthenticationService.getClientToken();
+            }
         }
 
-        logger.debug("Using default API key for agent id: {} and model type: {}", agent.getId(), aiModelType);
-        return organizationModelKeyService.getDefaultKeyForAgent(agent, aiModelType);
+
+        return rawKey;
     }
 
 
@@ -274,23 +288,12 @@ public class EmbeddingService {
     }
 
     @Transactional
-    public void deleteEmbeddingGroupsBySectionIds(List<UUID> sectionIds) throws GendoxException {
-        if (sectionIds == null || sectionIds.isEmpty()) {
+    public void deleteEmbeddingGroupsByDocumentId(UUID documentIds) throws GendoxException {
+        if (documentIds == null) {
             return;
         }
-        // Retrieve all embedding groups associated with these section IDs
-        List<EmbeddingGroup> embeddingGroups = embeddingGroupRepository.findAllBySectionIdIn(sectionIds);
-        if (!embeddingGroups.isEmpty()) {
-            List<UUID> embeddingIds = embeddingGroups.stream()
-                    .map(EmbeddingGroup::getEmbeddingId)
-                    .collect(Collectors.toList());
 
-            // delete embedding groups
-            embeddingGroupRepository.bulkDeleteBySectionIds(sectionIds);
-
-            // delete embeddings
-            embeddingRepository.deleteAllByIdInBatch(embeddingIds);
-        }
+        embeddingGroupRepository.deleteGroupsAndEmbeddingsByDocumentId(documentIds);
     }
 
     /**

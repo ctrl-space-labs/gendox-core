@@ -1,9 +1,8 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
-import taskService from 'src/gendox-sdk/taskService' // <-- you'll create this SDK client to call your backend APIs
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import taskService from 'src/gendox-sdk/taskService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 
-// Async thunk to create a new task
 export const createTask = createAsyncThunk(
   'task/createTask',
   async ({ organizationId, projectId, taskPayload, token }, thunkAPI) => {
@@ -17,7 +16,19 @@ export const createTask = createAsyncThunk(
   }
 )
 
-// Async thunk to get all tasks of a project
+export const duplicateTask = createAsyncThunk(
+  'task/duplicateTask',
+  async ({ organizationId, projectId, payload, token }, thunkAPI) => {
+    try {
+      const response = await taskService.duplicateTask(organizationId, projectId, payload, token)
+      return response.data
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
 export const fetchTasks = createAsyncThunk(
   'task/fetchTasks',
   async ({ organizationId, projectId, token }, thunkAPI) => {
@@ -31,7 +42,6 @@ export const fetchTasks = createAsyncThunk(
   }
 )
 
-// Async thunk to update a task
 export const updateTask = createAsyncThunk(
   'task/updateTask',
   async ({ organizationId, projectId, taskId, token, updatePayload }, thunkAPI) => {
@@ -45,7 +55,6 @@ export const updateTask = createAsyncThunk(
   }
 )
 
-// Async to get task by ID
 export const fetchTaskById = createAsyncThunk(
   'task/fetchTaskById',
   async ({ organizationId, projectId, taskId, token }, thunkAPI) => {
@@ -59,171 +68,12 @@ export const fetchTaskById = createAsyncThunk(
   }
 )
 
-// Similarly for TaskNode
-export const createTaskNode = createAsyncThunk(
-  'task/createTaskNode',
-  async ({ organizationId, projectId, taskNodePayload, token }, thunkAPI) => {
-    try {
-      const response = await taskService.createTaskNode(organizationId, projectId, taskNodePayload, token)
-      return response.data
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-      return thunkAPI.rejectWithValue(error.response?.data || error.message)
-    }
-  }
-)
-
-export const createTaskNodesBatch = createAsyncThunk(
-  'task/createTaskNodesBatch',
-  async ({ organizationId, projectId, taskNodesPayload, token }, thunkAPI) => {
-    try {
-      const response = await taskService.createTaskNodesBatch(organizationId, projectId, taskNodesPayload, token)
-      return response.data
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-      return thunkAPI.rejectWithValue(error.response?.data || error.message)
-    }
-  }
-)
-
-export const updateTaskNode = createAsyncThunk(
-  'task/updateTaskNode',
-  async ({ organizationId, projectId, taskNodePayload, token }, thunkAPI) => {
-    try {
-      const response = await taskService.updateTaskNode(organizationId, projectId, taskNodePayload, token)
-      return response.data
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-      return thunkAPI.rejectWithValue(error.response?.data || error.message)
-    }
-  }
-)
-
-export const fetchTaskNodeById = createAsyncThunk(
-  'task/fetchTaskNodeById',
+export const deleteTask = createAsyncThunk(
+  'task/deleteTask',
   async ({ organizationId, projectId, taskId, token }, thunkAPI) => {
     try {
-      const response = await taskService.getTaskNodeById(organizationId, projectId, taskId, token)
-      return response.data
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-      return thunkAPI.rejectWithValue(error.response?.data || error.message)
-    }
-  }
-)
-
-export const fetchTaskNodesByTaskId = createAsyncThunk(
-  'task/fetchTaskNodesByTaskId',
-  async ({ organizationId, projectId, taskId, token, page = 0, size = 20 }, thunkAPI) => {
-    try {
-      const response = await taskService.getTaskNodesByTaskId(organizationId, projectId, taskId, token, page, size)
-      return response.data // this is an array of TaskNodes
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-      return thunkAPI.rejectWithValue(error.response?.data || error.message)
-    }
-  }
-)
-
-export const fetchDocumentPages = createAsyncThunk(
-  'task/fetchDocumentPages',
-  async ({ organizationId, projectId, taskId, token, page = 0, size = 20 }, thunkAPI) => {
-    try {
-      const response = await taskService.getDocumentPages(organizationId, projectId, taskId, token, page, size)
-      return response.data
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-      return thunkAPI.rejectWithValue(error.response?.data || error.message)
-    }
-  }
-)
-
-export const fetchTaskNodesByCriteria = createAsyncThunk(
-  'task/fetchTaskNodesByCriteria',
-  async ({ organizationId, projectId, taskId, criteria, token, page = 0, size = 20 }, thunkAPI) => {
-    try {
-      const response = await taskService.getTaskNodesByCriteria(
-        organizationId,
-        projectId,
-        taskId,
-        criteria,
-        token,
-        page,
-        size
-      )
-      return {
-        content: response.data.content,
-        totalElements: response.data.totalElements, // total items on backend (if your backend provides)
-        page: response.data.pageable.pageNumber || page,
-        size: response.data.pageable.pageSize || size
-      }
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-      return thunkAPI.rejectWithValue(error.response?.data || error.message)
-    }
-  }
-)
-
-export const fetchAnswerTaskNodes = createAsyncThunk(
-  'task/fetchAnswerTaskNodes',
-  async ({ organizationId, projectId, taskId, answerTaskNodePayload, token, page = 0, size = 20 }, thunkAPI) => {
-    try {
-      const response = await taskService.getAnswerTaskNodes(
-        organizationId,
-        projectId,
-        taskId,
-        answerTaskNodePayload,
-        token,
-        page,
-        size
-      )
-      return {
-        content: response.data.content,
-        totalElements: response.data.totalElements,
-        page: response.data.pageable.pageNumber || page,
-        size: response.data.pageable.pageSize || size
-      }
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-      return thunkAPI.rejectWithValue(error.response?.data || error.message)
-    }
-  }
-)
-
-// Similarly for TaskEdge
-export const createTaskEdge = createAsyncThunk(
-  'task/createTaskEdge',
-  async ({ organizationId, projectId, taskEdgePayload, token }, thunkAPI) => {
-    try {
-      const response = await taskService.createTaskEdge(organizationId, projectId, taskEdgePayload, token)
-      return response.data
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-      return thunkAPI.rejectWithValue(error.response?.data || error.message)
-    }
-  }
-)
-
-export const fetchTaskEdgeById = createAsyncThunk(
-  'task/fetchTaskEdgeById',
-  async ({ organizationId, projectId, id, token }, thunkAPI) => {
-    try {
-      const response = await taskService.getTaskEdgeById(organizationId, projectId, id, token)
-      return response.data
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-      return thunkAPI.rejectWithValue(error.response?.data || error.message)
-    }
-  }
-)
-
-export const fetchTaskEdgesByCriteria = createAsyncThunk(
-  'task/fetchTaskEdgesByCriteria',
-  async ({ organizationId, projectId, criteria, token }, thunkAPI) => {
-    try {
-      // We can add pagination params in criteria if needed or ignore here
-      const response = await taskService.getTaskEdgesByCriteria(organizationId, projectId, criteria, token)
-      return response.data
+      await taskService.deleteTask(organizationId, projectId, taskId, token)
+      return taskId
     } catch (error) {
       toast.error(getErrorMessage(error))
       return thunkAPI.rejectWithValue(error.response?.data || error.message)
@@ -244,63 +94,21 @@ export const executeTaskByType = createAsyncThunk(
   }
 )
 
-export const deleteTaskNode = createAsyncThunk(
-  'task/deleteTaskNode',
-  async ({ organizationId, projectId, taskNodeId, token }, thunkAPI) => {
-    try {
-      await taskService.deleteTaskNode(organizationId, projectId, taskNodeId, token)
-      return taskNodeId
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-      return thunkAPI.rejectWithValue(error.response?.data || error.message)
-    }
-  }
-)
-
-export const deleteTask = createAsyncThunk(
-  'task/deleteTask',
-  async ({ organizationId, projectId, taskId, token }, thunkAPI) => {
-    try {
-      await taskService.deleteTask(organizationId, projectId, taskId, token)
-      return taskId // return the taskId to remove it from the state
-    } catch (error) {
-      toast.error(getErrorMessage(error))
-      return thunkAPI.rejectWithValue(error.response?.data || error.message)
-    }
-  }
-)
-
-// Initial state for task slice
 const initialState = {
   projectTasks: [],
   selectedTask: null,
-  taskNodes: {},
-  taskNodesList: [],
-  taskEdgesList: [],
-  taskNodesRestList: [],
-  taskNodesDocumentList: [],
-  taskNodesQuestionList: [],
-  taskNodesAnswerList: [],
-  taskDocumentPages: [],
-  taskEdges: {},
   isLoading: false,
-  isLoadingAnswers: false, // specific loading state for answers
   error: null
 }
 
-// Slice
 const taskSlice = createSlice({
-  name: 'activeTask',
+  name: 'task',
   initialState,
-  reducers: {
-    // Add any synchronous reducers here if needed
-  },
+  reducers: {},
   extraReducers: builder => {
     builder
-      // Create Task
       .addCase(createTask.pending, state => {
         state.isLoading = true
-        state.error = null
       })
       .addCase(createTask.fulfilled, (state, action) => {
         state.isLoading = false
@@ -310,276 +118,30 @@ const taskSlice = createSlice({
         state.isLoading = false
         state.error = action.payload
       })
-
-      // Fetch Tasks
-      .addCase(fetchTasks.pending, state => {
+      .addCase(duplicateTask.pending, state => {
         state.isLoading = true
-        state.error = null
+      })
+      .addCase(duplicateTask.fulfilled, (state, action) => {
+        state.isLoading = false
+        state.projectTasks.push(action.payload)
+      })
+      .addCase(duplicateTask.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
       })
       .addCase(fetchTasks.fulfilled, (state, action) => {
-        state.isLoading = false
         state.projectTasks = action.payload
       })
-      .addCase(fetchTasks.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-
-      // Update Task
-      .addCase(updateTask.pending, state => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(updateTask.fulfilled, (state, action) => {
-        state.isLoading = false
-        // Update the task in projectTasks array by id
-        const idx = state.projectTasks.findIndex(task => task.id === action.payload.id)
-        if (idx !== -1) {
-          state.projectTasks[idx] = action.payload
-        }
-      })
-      .addCase(updateTask.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-
-      // Fetch Task By ID
-      .addCase(fetchTaskById.pending, state => {
-        state.isLoading = true
-        state.error = null
-        state.selectedTask = null // optional: clear previous selection
-      })
       .addCase(fetchTaskById.fulfilled, (state, action) => {
-        state.isLoading = false
         state.selectedTask = action.payload
       })
-      .addCase(fetchTaskById.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-
-      // Create TaskNode
-      .addCase(createTaskNode.pending, state => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(createTaskNode.fulfilled, (state, action) => {
-        state.isLoading = false
-        state.taskNodes[action.payload.id] = action.payload
-      })
-      .addCase(createTaskNode.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-
-      // Create TaskNodes in Batch
-      .addCase(createTaskNodesBatch.pending, state => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(createTaskNodesBatch.fulfilled, (state, action) => {
-        state.isLoading = false
-        action.payload.forEach(node => {
-          state.taskNodes[node.id] = node
-        })
-      })
-      .addCase(createTaskNodesBatch.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-
-      // update TaskNode
-      .addCase(updateTaskNode.pending, state => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(updateTaskNode.fulfilled, (state, action) => {
-        state.isLoading = false
-        // Update taskNodes dictionary and taskNodesList accordingly
-        state.taskNodes[action.payload.id] = action.payload
-        // Also update the taskNodesList array if present
-        const idx = state.taskNodesList?.content?.findIndex(n => n.id === action.payload.id)
-        if (idx !== -1) {
-          state.taskNodesList.content[idx] = action.payload
-        }
-      })
-      .addCase(updateTaskNode.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-
-      // Fetch TaskNode by ID
-      .addCase(fetchTaskNodeById.pending, state => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(fetchTaskNodeById.fulfilled, (state, action) => {
-        state.isLoading = false
-        state.taskNodes[action.payload.id] = action.payload
-      })
-      .addCase(fetchTaskNodeById.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-
-      // Fetch TaskNodes by Task ID
-      .addCase(fetchTaskNodesByTaskId.pending, state => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(fetchTaskNodesByTaskId.fulfilled, (state, action) => {
-        state.isLoading = false
-        state.taskNodesList = action.payload // set the list of task nodes
-      })
-      .addCase(fetchTaskNodesByTaskId.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-
-      // Fetch Document Pages
-      .addCase(fetchDocumentPages.pending, state => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(fetchDocumentPages.fulfilled, (state, action) => {
-        state.isLoading = false
-        state.taskDocumentPages = action.payload // set the document pages
-      })
-      .addCase(fetchDocumentPages.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-
-      // Fetch TaskNodes by Criteria
-      .addCase(fetchTaskNodesByCriteria.pending, (state, action) => {
-        const { criteria } = action.meta.arg
-        if (criteria.nodeTypeNames.includes('ANSWER')) {
-          state.isLoadingAnswers = true
-        } else {
-          state.isLoading = true
-        }
-        state.error = null
-      })
-      .addCase(fetchTaskNodesByCriteria.fulfilled, (state, action) => {
-        const { criteria } = action.meta.arg
-        if (criteria.nodeTypeNames.includes('ANSWER')) {
-          state.isLoadingAnswers = false
-          state.taskNodesAnswerList = action.payload
-        }
-        if (criteria.nodeTypeNames.includes('DOCUMENT')) {
-          state.isLoading = false
-          state.taskNodesDocumentList = action.payload
-        }
-        if (criteria.nodeTypeNames.includes('QUESTION')) {
-          state.isLoading = false
-          state.taskNodesQuestionList = action.payload
-        } else {
-          state.isLoading = false
-          state.taskNodesRestList = action.payload
-        }
-      })
-      .addCase(fetchTaskNodesByCriteria.rejected, (state, action) => {
-        const { criteria } = action.meta.arg
-        if (criteria.nodeTypeNames.includes('ANSWER')) {
-          state.isLoadingAnswers = false
-        } else {
-          state.isLoading = false
-        }
-        state.error = action.payload
-      })
-
-      // Fetch Answer TaskNodes
-      .addCase(fetchAnswerTaskNodes.pending, state => {
-        state.isLoadingAnswers = true
-        state.error = null
-      })
-      .addCase(fetchAnswerTaskNodes.fulfilled, (state, action) => {
-        state.isLoadingAnswers = false
-        state.taskNodesAnswerList = action.payload
-      })
-      .addCase(fetchAnswerTaskNodes.rejected, (state, action) => {
-        state.isLoadingAnswers = false
-        state.error = action.payload
-      })
-
-      // Create TaskEdge
-      .addCase(createTaskEdge.pending, state => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(createTaskEdge.fulfilled, (state, action) => {
-        state.isLoading = false
-        state.taskEdges[action.payload.id] = action.payload
-      })
-      .addCase(createTaskEdge.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-
-      // Fetch TaskEdge by ID
-      .addCase(fetchTaskEdgeById.pending, state => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(fetchTaskEdgeById.fulfilled, (state, action) => {
-        state.isLoading = false
-        state.taskEdges[action.payload.id] = action.payload
-      })
-      .addCase(fetchTaskEdgeById.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-
-      // Fetch TaskEdges by Criteria
-      .addCase(fetchTaskEdgesByCriteria.pending, state => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(fetchTaskEdgesByCriteria.fulfilled, (state, action) => {
-        state.isLoading = false
-        state.taskEdgesList = action.payload // store the list of edges
-      })
-      .addCase(fetchTaskEdgesByCriteria.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-
-      // Delete TaskNode and Conected Nodes and Edges
-      .addCase(deleteTaskNode.pending, state => {
-        state.isLoading = true
-        state.error = null
-      })
-      .addCase(deleteTaskNode.fulfilled, (state, action) => {
-        state.isLoading = false
-        // Remove the deleted task node from taskNodesList.content (if exists)
-        if (state.taskNodesList?.content) {
-          state.taskNodesList.content = state.taskNodesList.content.filter(node => node.id !== action.payload)
-        }
-        // Also remove from taskNodes dictionary
-        delete state.taskNodes[action.payload]
-      })
-      .addCase(deleteTaskNode.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
-      })
-
-      // Delete Task
-      .addCase(deleteTask.pending, state => {
-        state.isLoading = true
-        state.error = null
+      .addCase(updateTask.fulfilled, (state, action) => {
+        const idx = state.projectTasks.findIndex(t => t.id === action.payload.id)
+        if (idx !== -1) state.projectTasks[idx] = action.payload
       })
       .addCase(deleteTask.fulfilled, (state, action) => {
-        state.isLoading = false
-        // Remove the deleted task from projectTasks
-        state.projectTasks = state.projectTasks.filter(task => task.id !== action.payload)
-        // Optionally clear selectedTask if it was the deleted one
-        if (state.selectedTask?.id === action.payload) {
-          state.selectedTask = null
-        }
-      })
-      .addCase(deleteTask.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload
+        state.projectTasks = state.projectTasks.filter(t => t.id !== action.payload)
+        if (state.selectedTask?.id === action.payload) state.selectedTask = null
       })
   }
 })

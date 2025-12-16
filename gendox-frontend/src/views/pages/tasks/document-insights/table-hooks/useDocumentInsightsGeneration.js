@@ -10,11 +10,11 @@ export default function useGeneration({
   taskId,
   documents,
   questions,
-  pollJobStatus,
-  token,
+  pollJobStatus,  
   selectedDocuments,
   setSelectedDocuments,
-  fetchAnswers
+  reloadAll,
+  token,
 }) {
   const dispatch = useDispatch()
   const { startGeneration, updateProgress, completeGeneration, failGeneration } = useGenerationContext()
@@ -50,10 +50,9 @@ export default function useGeneration({
         const generationType = isAll ? 'all' : selectedDocuments?.length > 0 ? 'selected' : 'new'
         startGeneration(taskId, null, generationType, docIds.length)
 
-        toast.success(`Started generation for ${docIds.length} document(s)`)
 
         await pollJobStatus(jobExecutionId)
-        fetchAnswers()        
+        reloadAll()
 
         // Complete generation tracking
         completeGeneration(taskId, null)
@@ -119,7 +118,7 @@ export default function useGeneration({
       }
     }, [handleGenerate])
 
- 
+
 
   return {
     handleGenerateSelected,

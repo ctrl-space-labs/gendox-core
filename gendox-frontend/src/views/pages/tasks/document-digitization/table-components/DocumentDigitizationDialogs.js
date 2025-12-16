@@ -1,19 +1,19 @@
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
 import taskService from 'src/gendox-sdk/taskService'
-import { deleteTaskNode } from 'src/store/activeTask/activeTask'
+import { deleteTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
 import DocumentDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentDialog'
-import DocumentsAddNewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentsAddNewDialog'
-import AnswerDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationAnswerDialog'
-import DocumentPagePreviewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentPagePreviewDialog'
+import DocumentsAddNewDialog from 'src/views/pages/tasks/helping-components/AddNewDocumentDialog'
+import DocumentPagePreviewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentPagePreviewDialog'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
+import { updateTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
 
 const DocumentDigitizationDialogs = ({
   dialogs,
   activeNode,
   onClose,
   onOpen,
-  refreshDocuments,
+  reloadAll,
   taskId,
   organizationId,
   projectId,
@@ -24,27 +24,36 @@ const DocumentDigitizationDialogs = ({
   documentPages = [],
   generateSingleDocument,
   onExportCsv,
-  isExportingCsv
+  isExportingCsv,
+  isDocumentGenerating,
+  generatingAll = false,
+  generatingNew = false,
+  generatingSelected = false
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
+  const isGenRunningGlobal = generatingAll || generatingNew || generatingSelected
+  const isGenRunningForActiveDoc = activeNode?.id ? isDocumentGenerating?.(activeNode.id) : false
+  const dialogLoading = Boolean(loading || isGenRunningGlobal || isGenRunningForActiveDoc)
 
   // SAVE document handler for DocumentDialog
   const handleUpdateDocument = async updatedDoc => {
     setLoading(true)
-    try {
-      await taskService.updateTaskNodeForDocumentDigitization(
-        organizationId,
-        projectId,
-        taskId,
-        {
+    const payload = {
+      id: updatedDoc.id,
+      taskId,
+      nodeType: 'DOCUMENT',
+      nodeValue: {
+        documentMetadata: {
           taskNodeId: updatedDoc.id,
           prompt: updatedDoc.prompt,
           structure: updatedDoc.structure
-        },
-        token
-      )
-      if (refreshDocuments) await refreshDocuments()
+        }
+      }
+    }
+    try {
+      await dispatch(updateTaskNode({ organizationId, projectId, taskId, taskNodePayload: payload, token })).unwrap()
+      reloadAll()
       onClose('docDetail')
     } finally {
       setLoading(false)
@@ -63,7 +72,7 @@ const DocumentDigitizationDialogs = ({
         }
         await taskService.createTaskNode(organizationId, projectId, taskNodePayload, token)
       }
-      if (refreshDocuments) await refreshDocuments()
+      reloadAll()
       onClose('newDoc')
     } finally {
       setLoading(false)
@@ -75,7 +84,7 @@ const DocumentDigitizationDialogs = ({
     setLoading(true)
     try {
       await dispatch(deleteTaskNode({ organizationId, projectId, taskNodeId: nodeId, token })).unwrap()
-      if (refreshDocuments) await refreshDocuments()
+      reloadAll()
       onClose('delete')
     } finally {
       setLoading(false)
@@ -88,13 +97,17 @@ const DocumentDigitizationDialogs = ({
       <DocumentsAddNewDialog
         open={dialogs.newDoc}
         onClose={() => onClose('newDoc')}
-        existingDocuments={existingDocuments}
+        // existingDocuments={existingDocuments}
+        existingDocumentIds={existingDocuments.map(d => d.documentId)}
         loading={loading}
         onConfirm={handleAddNewDocuments}
         organizationId={organizationId}
         projectId={projectId}
         token={token}
         taskId={taskId}
+        onUploadSuccess={() => {
+          reloadAll()
+        }}
       />
 
       {/* Document Details Dialog */}
@@ -108,14 +121,6 @@ const DocumentDigitizationDialogs = ({
         setEditMode={setEditMode}
       />
 
-      {/* Answer Details Dialog */}
-      {/* <AnswerDialog
-        open={dialogs.answerDetail}
-        answer={activeNode}
-        onClose={() => onClose('answerDetail')}
-        refreshAnswers={refreshAnswers}
-      /> */}
-
       {/* Document Page Preview Dialog */}
       <DocumentPagePreviewDialog
         open={dialogs.pagePreview || false}
@@ -123,10 +128,10 @@ const DocumentDigitizationDialogs = ({
         document={activeNode}
         documentPages={documentPages}
         generateSingleDocument={generateSingleDocument}
-        onDocumentUpdate={(updatedDoc) => {
-          // Refresh documents to show updated data
-          if (refreshDocuments) refreshDocuments()
+        onDocumentUpdate={() => {
+          reloadAll()
         }}
+        dialogLoading={dialogLoading}
         onExportCsv={onExportCsv}
         isExportingCsv={isExportingCsv}
         onDelete={() => onOpen && onOpen('delete', activeNode)}

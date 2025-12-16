@@ -46,20 +46,24 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
 
         logger.debug("Start writing sections chunk {} items", chunk.getItems().size());
 
-        Set<DocumentInstance> updatedDocuments = new HashSet<>();
 
         for (DocumentSectionDTO documentSectionDTO : chunk.getItems()) {
             logger.debug("Create {} Sections for document instance: {}",
                     documentSectionDTO.contentSections().size(),
                     documentSectionDTO.documentInstance().getId());
+
+            // fetch fresh DocumentInstance since the param has been detached from hibernate session
+            DocumentInstance freshDoc = documentService.getDocumentInstanceById(documentSectionDTO.documentInstance().getId());
+            freshDoc.setDocumentSha256Hash(documentSectionDTO.documentInstance().getDocumentSha256Hash());
+            freshDoc.setTotalTokens(documentSectionDTO.documentInstance().getTotalTokens());
+            if (documentSectionDTO.documentUpdated()) {
+                documentService.saveDocumentInstance(freshDoc);
+            }
+
             List<DocumentInstanceSection> documentSections =
-                    documentSectionService.createSections(documentSectionDTO.documentInstance(), documentSectionDTO.contentSections());
+                    documentSectionService.createSections(freshDoc, documentSectionDTO.contentSections());
 
             long documentSectionCount = documentSections.size();
-
-            if (documentSectionDTO.documentUpdated()) {
-                updatedDocuments.add(documentSectionDTO.documentInstance());
-            }
 
             //update Document Sections Auditing
              auditLogsService.createAuditLog(documentSectionDTO.documentInstance().getOrganizationId(),
@@ -69,9 +73,6 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
 
         }
 
-        for (DocumentInstance documentInstance : updatedDocuments) {
-            documentService.saveDocumentInstance(documentInstance);
-        }
     }
 }
 

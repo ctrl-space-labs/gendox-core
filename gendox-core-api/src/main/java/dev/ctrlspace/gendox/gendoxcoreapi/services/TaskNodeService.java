@@ -1,22 +1,24 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.DocumentNodeAnswerPagesDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentMetadataDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentQuestionsDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskNodeValueDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskEdgeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskNodeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.TaskNodePredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
 import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -35,17 +37,20 @@ public class TaskNodeService {
     private final TaskEdgeRepository taskEdgeRepository;
     private final TypeService typeService;
     private final EntityManager entityManager;
+    private final DocumentService documentService;
 
 
     @Autowired
     public TaskNodeService(TaskNodeRepository taskNodeRepository,
                            TaskEdgeRepository taskEdgeRepository,
                            TypeService typeService,
-                           EntityManager entityManager) {
+                           EntityManager entityManager,
+                           @Lazy DocumentService documentService) {
         this.taskNodeRepository = taskNodeRepository;
         this.taskEdgeRepository = taskEdgeRepository;
         this.typeService = typeService;
         this.entityManager = entityManager;
+        this.documentService = documentService;
     }
 
 
@@ -77,27 +82,111 @@ public class TaskNodeService {
         return taskNodeRepository.saveAll(taskNodes);
     }
 
-    public TaskNode updateTaskNode(TaskNode taskNode) throws GendoxException {
-        logger.info("Updating task node: {}", taskNode);
+    public TaskNode updateTaskNode(TaskNodeDTO taskNodeDTO, Task task) throws GendoxException {
+        TaskNode existing = taskNodeRepository.findById(taskNodeDTO.getId())
+                .orElseThrow(() -> new GendoxException("TASK_NODE_NOT_FOUND", "Node not found", HttpStatus.NOT_FOUND));
+        logger.info("Updating task node: {} with data: {}", existing.getId(), taskNodeDTO);
 
-        // 1. Fetch existing from DB
-        TaskNode existing = taskNodeRepository.findById(taskNode.getId())
-                .orElseThrow(() -> new RuntimeException("TaskNode not found for update"));
+        // ---- LEVEL 1: Primitive attributes -----
+        if (taskNodeDTO.getParentNodeId() != null) {
+            existing.setParentNodeId(taskNodeDTO.getParentNodeId());
+        }
+        if (taskNodeDTO.getDocumentId() != null) {
+            existing.setDocumentId(taskNodeDTO.getDocumentId());
+        }
+        if (taskNodeDTO.getNodeType() != null) {
+            existing.setNodeType(typeService.getTaskNodeTypeByName(taskNodeDTO.getNodeType()));
+        }
+        if (taskNodeDTO.getUserId() != null) {
+            existing.setUpdatedBy(taskNodeDTO.getUserId());
+        }
 
-        existing.setNodeValue(taskNode.getNodeValue());
-        existing.setNodeType(taskNode.getNodeType());
-        existing.setParentNodeId(taskNode.getParentNodeId());
-        existing.setDocumentId(taskNode.getDocumentId());
-        existing.setUpdatedBy(taskNode.getUpdatedBy());
+        // ---- LEVEL 2: NodeValue (nested DTO) -----
+        if (taskNodeDTO.getNodeValue() != null) {
+            if (existing.getNodeValue() == null) {
+                existing.setNodeValue(new TaskNodeValueDTO());
+            }
+
+            TaskNodeValueDTO incomingValue = taskNodeDTO.getNodeValue();
+            TaskNodeValueDTO currentValue = existing.getNodeValue();
+
+            if (incomingValue.getMessage() != null) {
+                currentValue.setMessage(incomingValue.getMessage());
+            }
+            if (incomingValue.getAnswerValue() != null) currentValue.setAnswerValue(incomingValue.getAnswerValue());
+            if (incomingValue.getAnswerFlagEnum() != null)
+                currentValue.setAnswerFlagEnum(incomingValue.getAnswerFlagEnum());
+            if (incomingValue.getQuestionTitle() != null)
+                currentValue.setQuestionTitle(incomingValue.getQuestionTitle());
+            if (incomingValue.getOrder() != null) currentValue.setOrder(incomingValue.getOrder());
+
+
+            // ---- LEVEL 3: Metadata -----
+            if (incomingValue.getDocumentMetadata() != null) {
+
+                if (currentValue.getDocumentMetadata() == null) {
+                    currentValue.setDocumentMetadata(new TaskDocumentMetadataDTO());
+                }
+
+                TaskDocumentMetadataDTO incMeta = incomingValue.getDocumentMetadata();
+                TaskDocumentMetadataDTO curMeta = currentValue.getDocumentMetadata();
+
+                if (incMeta.getPrompt() != null) {
+                    curMeta.setPrompt(incMeta.getPrompt());
+                }
+                if (incMeta.getStructure() != null) {
+                    curMeta.setStructure(incMeta.getStructure());
+                }
+                if (incMeta.getSupportingDocumentIds() != null) {
+                    curMeta.setSupportingDocumentIds(incMeta.getSupportingDocumentIds());
+                }
+                if (incMeta.getInsightsSummary() != null) {
+                    curMeta.setInsightsSummary(incMeta.getInsightsSummary());
+                }
+
+                // allPages / page range
+                Boolean allPages = incMeta.getAllPages();
+                Integer from = incMeta.getPageFrom();
+                Integer to = incMeta.getPageTo();
+
+                if (Boolean.TRUE.equals(allPages)) {
+                    curMeta.setAllPages(true);
+                    curMeta.setPageFrom(null);
+                    curMeta.setPageTo(null);
+                } else {
+                    boolean hasRangeUpdate = (from != null) || (to != null);
+
+                    if (from != null) {
+                        curMeta.setPageFrom(from);
+                    }
+                    if (to != null) {
+                        curMeta.setPageTo(to);
+                    }
+
+                    if (allPages != null) {
+                        curMeta.setAllPages(allPages);
+                    } else if (hasRangeUpdate) {
+                        curMeta.setAllPages(false);
+                    }
+
+                }
+            }
+        }
+
+        // check for Answer nodes to delete if document insights task questions or documents changed
+        if (TaskTypeConstants.DOCUMENT_INSIGHTS.equalsIgnoreCase(task.getTaskType().getName())) {
+            deleteRelatedAnswerNodes(existing, taskNodeDTO);
+        }
 
         return taskNodeRepository.save(existing);
     }
 
-    public TaskNode updateTaskNodeForDocumentDigitization(TaskDocumentMetadataDTO taskDocumentMetadataDTO) throws GendoxException {
-        logger.info("Updating task node for document digitization: {}", taskDocumentMetadataDTO);
+
+    public TaskNode updateTaskNodesMetadata(TaskDocumentMetadataDTO taskDocumentMetadataDTO) throws GendoxException {
+        logger.debug("Updating task node for document digitization: {}", taskDocumentMetadataDTO);
 
         TaskNode existing = taskNodeRepository.findById(taskDocumentMetadataDTO.getTaskNodeId())
-                .orElseThrow(() -> new RuntimeException("TaskNode not found for update"));
+                .orElseThrow(() -> new GendoxException("TASK_NODE_NOT_FOUND", "TaskNode not found for update", HttpStatus.NOT_FOUND));
 
         if (existing.getNodeValue() == null) {
             existing.setNodeValue(new TaskNodeValueDTO());
@@ -112,18 +201,36 @@ public class TaskNodeService {
         if (taskDocumentMetadataDTO.getStructure() != null) {
             existing.getNodeValue().getDocumentMetadata().setStructure(taskDocumentMetadataDTO.getStructure());
         }
-        // Handle page range: if allPages is true, clear page range; otherwise update only if not null
-        if (taskDocumentMetadataDTO.getAllPages() != null && taskDocumentMetadataDTO.getAllPages()) {
-            // User explicitly wants to process all pages - clear page range
+        if (taskDocumentMetadataDTO.getSupportingDocumentIds() != null) {
+            existing.getNodeValue().getDocumentMetadata().setSupportingDocumentIds(taskDocumentMetadataDTO.getSupportingDocumentIds());
+        }
+        if (taskDocumentMetadataDTO.getInsightsSummary() != null) {
+            existing.getNodeValue().getDocumentMetadata().setInsightsSummary(taskDocumentMetadataDTO.getInsightsSummary());
+        }
+
+        // allPages / page range
+        Boolean allPages = taskDocumentMetadataDTO.getAllPages();
+        Integer from = taskDocumentMetadataDTO.getPageFrom();
+        Integer to = taskDocumentMetadataDTO.getPageTo();
+
+        if (Boolean.TRUE.equals(allPages)) {
+            existing.getNodeValue().getDocumentMetadata().setAllPages(true);
             existing.getNodeValue().getDocumentMetadata().setPageFrom(null);
             existing.getNodeValue().getDocumentMetadata().setPageTo(null);
         } else {
-            // Normal update logic - only update if not null
-            if (taskDocumentMetadataDTO.getPageFrom() != null) {
-                existing.getNodeValue().getDocumentMetadata().setPageFrom(taskDocumentMetadataDTO.getPageFrom());
+            boolean hasRangeUpdate = (from != null) || (to != null);
+
+            if (from != null) {
+                existing.getNodeValue().getDocumentMetadata().setPageFrom(from);
             }
-            if (taskDocumentMetadataDTO.getPageTo() != null) {
-                existing.getNodeValue().getDocumentMetadata().setPageTo(taskDocumentMetadataDTO.getPageTo());
+            if (to != null) {
+                existing.getNodeValue().getDocumentMetadata().setPageTo(to);
+            }
+
+            if (allPages != null) {
+                existing.getNodeValue().getDocumentMetadata().setAllPages(allPages);
+            } else if (hasRangeUpdate) {
+                existing.getNodeValue().getDocumentMetadata().setAllPages(false);
             }
         }
 
@@ -199,8 +306,16 @@ public class TaskNodeService {
         if (taskNodeIds == null || taskNodeIds.isEmpty()) {
             return;
         }
-        List<TaskNode> nodesToDelete = taskNodeRepository.findAllById(taskNodeIds);
-        taskNodeRepository.deleteAll(nodesToDelete);
+//        List<TaskNode> nodesToDelete = taskNodeRepository.findAllById(taskNodeIds);
+        taskNodeRepository.deleteAllByIds(taskNodeIds);
+    }
+
+    public void deleteAnswerTaskNodes(Page<TaskNode> taskNodes) {
+        List<UUID> nodeIdsToDelete = taskNodes.stream()
+                .map(TaskNode::getId)
+                .toList();
+        deleteAnswersConnectionEdges(nodeIdsToDelete);
+        deleteTaskNodesByIds(nodeIdsToDelete);
     }
 
     public void deleteDocumentNodeAndConnectionNodesByDocumentId(UUID documentId) throws GendoxException {
@@ -219,25 +334,21 @@ public class TaskNodeService {
     }
 
     @Transactional
-    public void deleteTaskNodeAndConnectionNodes(UUID taskNodeId) throws GendoxException {
+    public void deleteTaskNodeAndConnectionNodes(UUID taskNodeId) {
         logger.info("Deleting task node and its connection nodes: {}", taskNodeId);
 
-        // Fetch the node to delete
-        TaskNode nodeToDelete = taskNodeRepository.findById(taskNodeId)
-                .orElseThrow(() -> new GendoxException("TASK_NODE_NOT_FOUND", "Task node not found for deletion", HttpStatus.NOT_FOUND));
-
         // Find all edges connected to this node
-        List<TaskEdge> edgesToDeleteTo = taskEdgeRepository.findAllByToNodeIdIn(List.of(nodeToDelete.getId()));
+        List<TaskEdge> edgesToDeleteTo = taskEdgeRepository.findAllByToNodeIdIn(List.of(taskNodeId));
 
         List<UUID> fromNodeIds = edgesToDeleteTo.stream()
                 .map(edge -> edge.getFromNode().getId())
                 .toList();
 
-        List<TaskEdge> edgesToDeleteFrom = taskEdgeRepository.findAllByFromNodeIdIn(fromNodeIds);
+        List<UUID> edgeIDsToDeleteFrom = taskEdgeRepository.findAllIdsByFromNodeIdIn(fromNodeIds);
 
         Set<UUID> allEdgeIdsToDelete = new HashSet<>();
         allEdgeIdsToDelete.addAll(edgesToDeleteTo.stream().map(TaskEdge::getId).toList());
-        allEdgeIdsToDelete.addAll(edgesToDeleteFrom.stream().map(TaskEdge::getId).toList());
+        allEdgeIdsToDelete.addAll(edgeIDsToDeleteFrom);
 
         if (!allEdgeIdsToDelete.isEmpty()) {
             taskEdgeRepository.deleteAllByIds(new ArrayList<>(allEdgeIdsToDelete));
@@ -250,8 +361,77 @@ public class TaskNodeService {
         }
 
         // Now delete the node itself
-        taskNodeRepository.delete(nodeToDelete);
+        taskNodeRepository.deleteById(taskNodeId);
     }
+
+    @Transactional
+    public void deleteAnswersConnectionEdges(List<UUID> taskNodeIds) {
+        logger.info("Deleting task nodes' answer connection edges: {}", taskNodeIds);
+
+        // Find all edges connected to this node
+        List<UUID> edgesToDeleteTo = taskEdgeRepository.findAllIdsByToNodeIdIn(taskNodeIds);
+        List<UUID> edgeToDeleteFrom = taskEdgeRepository.findAllIdsByFromNodeIdIn(taskNodeIds);
+
+        Set<UUID> allEdgeIdsToDelete = new HashSet<>();
+        allEdgeIdsToDelete.addAll(edgesToDeleteTo);
+        allEdgeIdsToDelete.addAll(edgeToDeleteFrom);
+
+        if (!allEdgeIdsToDelete.isEmpty()) {
+            taskEdgeRepository.deleteAllByIds(new ArrayList<>(allEdgeIdsToDelete));
+            entityManager.clear();
+        }
+    }
+
+    private void deleteRelatedAnswerNodes(TaskNode existing, TaskNodeDTO taskNodeDTO) {
+        if (taskNodeDTO.getNodeValue() == null) {
+            return;
+        }
+        TaskNodeValueDTO incomingValue = taskNodeDTO.getNodeValue();
+        TaskDocumentMetadataDTO incomingMetadata = incomingValue.getDocumentMetadata();
+
+
+        TaskNodeCriteria.TaskNodeCriteriaBuilder criteriaBuilder = TaskNodeCriteria.builder()
+                .taskId(existing.getTaskId())
+                .nodeTypeNames(List.of(TaskNodeTypeConstants.ANSWER));
+
+        boolean shouldSearch = false;
+
+        // Check for QUESTION node changes
+        if (TaskNodeTypeConstants.QUESTION.equals(existing.getNodeType().getName())) {
+            boolean messageChanged = incomingValue.getMessage() != null;
+            boolean supportingDocsChanged = incomingMetadata.getSupportingDocumentIds() != null;
+
+            if (messageChanged || supportingDocsChanged) {
+                criteriaBuilder.questionNodeIds(List.of(existing.getId()));
+                shouldSearch = true;
+            }
+        }
+
+        // Check for DOCUMENT node changes
+        if (TaskNodeTypeConstants.DOCUMENT.equals(existing.getNodeType().getName())) {
+            boolean supportingDocsChanged = incomingMetadata.getSupportingDocumentIds() != null;
+            boolean promptChanged = incomingMetadata.getPrompt() != null;
+
+            if (supportingDocsChanged || promptChanged) {
+                criteriaBuilder.documentNodeIds(List.of(existing.getId()));
+                shouldSearch = true;
+            }
+        }
+
+        if (!shouldSearch) {
+            return;
+        }
+
+        TaskNodeCriteria criteria = criteriaBuilder.build();
+        Page<TaskNode> answerNodes = getTaskNodesByCriteria(criteria, Pageable.unpaged());
+
+        if (!answerNodes.isEmpty()) {
+            logger.info("Deleting {} answer nodes linked to updated node {}",
+                    answerNodes.getTotalElements(), existing.getId());
+            deleteAnswerTaskNodes(answerNodes);
+        }
+    }
+
 
     /**
      * Returns the current maximum 'order' value among task nodes of a given taskId.
@@ -317,21 +497,26 @@ public class TaskNodeService {
         return documentsPage;
     }
 
-    public Page<TaskDocumentMetadataDTO> getTaskDocumentMetadataByCriteria(TaskNodeCriteria criteria, Pageable pageable) {
+    public Page<TaskDocumentMetadataDTO> getTaskDocumentMetadataByCriteria(TaskNodeCriteria criteria, Pageable pageable) throws GendoxException {
         logger.info("Fetching task document metadata by criteria: {}", criteria);
 
         Page<TaskNode> nodesPage = taskNodeRepository.findAll(TaskNodePredicates.build(criteria), pageable);
+        Map<UUID, DocumentInstance> documentsById = getDocumentsById(nodesPage);
 
         List<TaskDocumentMetadataDTO> metadataList = nodesPage.stream()
                 .map(node -> {
                     TaskDocumentMetadataDTO.TaskDocumentMetadataDTOBuilder builder = TaskDocumentMetadataDTO.builder()
-                            .taskNodeId(node.getId());
+                            .taskNodeId(node.getId())
+                            .taskNode(node)
+                            .documentInstance(documentsById.get(node.getDocumentId()));
+
                     if (node.getNodeValue() != null) {
                         if (node.getNodeValue().getDocumentMetadata() != null) {
-                            builder.prompt(node.getNodeValue().getDocumentMetadata().getPrompt());       // might be null, that's fine
-                            builder.structure(node.getNodeValue().getDocumentMetadata().getStructure()); // might be null, that's fine
-                            builder.pageFrom(node.getNodeValue().getDocumentMetadata().getPageFrom());   // might be null, that's fine
-                            builder.pageTo(node.getNodeValue().getDocumentMetadata().getPageTo());       // might be null, that's fine
+                            builder.prompt(node.getNodeValue().getDocumentMetadata().getPrompt());
+                            builder.structure(node.getNodeValue().getDocumentMetadata().getStructure());
+                            builder.pageFrom(node.getNodeValue().getDocumentMetadata().getPageFrom());
+                            builder.pageTo(node.getNodeValue().getDocumentMetadata().getPageTo());
+                            builder.allPages(node.getNodeValue().getDocumentMetadata().getAllPages());
                         }
                     }
                     return builder.build();
@@ -339,6 +524,23 @@ public class TaskNodeService {
                 .collect(Collectors.toList());
 
         return new PageImpl<>(metadataList, pageable, nodesPage.getTotalElements());
+    }
+
+    private Map<UUID, DocumentInstance> getDocumentsById(Page<TaskNode> nodesPage) throws GendoxException {
+        List<UUID> documentIdsInvolved = nodesPage.stream()
+                .map(TaskNode::getDocumentId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        DocumentCriteria documentCriteria = DocumentCriteria.builder()
+                .documentInstanceIds(documentIdsInvolved.stream().map(UUID::toString).collect(Collectors.toList()))
+                .build();
+        Map<UUID, DocumentInstance> documentsById = documentService.getAllDocuments(documentCriteria, Pageable.unpaged())
+                .stream()
+                .collect(Collectors.toMap(DocumentInstance::getId, doc -> doc));
+
+        return documentsById;
     }
 
 

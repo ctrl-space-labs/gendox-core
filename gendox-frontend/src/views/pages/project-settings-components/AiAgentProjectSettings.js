@@ -23,7 +23,6 @@ import Checkbox from '@mui/material/Checkbox'
 import toast from 'react-hot-toast'
 import { useSelector, useDispatch } from 'react-redux'
 import { sortModels } from 'src/utils/sortModels'
-import { getErrorMessage } from 'src/utils/errorHandler'
 import {ButtonBase, DialogActions, DialogTitle, Stack} from '@mui/material'
 import Radio from '@mui/material/Radio'
 import { localStorageConstants } from 'src/utils/generalConstants'
@@ -55,7 +54,6 @@ const AiAgentProjectSettings = () => {
 
   const { id: projectId, organizationId } = project
 
-  console.log('AI Models', aiModels)
 
   const defaultValues = {
     semanticSearchModel: project.projectAgent.semanticSearchModel?.name || '',

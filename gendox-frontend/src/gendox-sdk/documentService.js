@@ -1,25 +1,7 @@
 import axios from 'axios'
 import apiRequests from 'src/configs/apiRequest.js'
 
-/**
- * Get all Project documents
- * @param organizationId
- * @param projectId
- * @param token
- * @param page
- * @returns {Promise<axios.AxiosResponse<DocumentInstances[]>>}
- */
-const getDocumentByProject = async (organizationId, projectId, token, page) => {
-  return axios.get(apiRequests.getDocumentsByCriteriaProjectId(organizationId, projectId, page), {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + token
-    },
-    params: {
-      projectId: projectId
-    }
-  })
-}
+
 
 /**
  * Get all documents by criteria
@@ -209,7 +191,6 @@ const triggerJobs = async (organizationId, projectId, token, jobName, projectIdP
 }
 
 export default {
-  getDocumentByProject,
   getDocumentById,
   getSectionsByDocumentId,
   createDocumentSection,

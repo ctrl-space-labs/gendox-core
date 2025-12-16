@@ -50,8 +50,8 @@ spring:
   servlet:
     multipart:
       enabled: true
-      max-file-size: 100MB
-      max-request-size: 100MB
+      max-file-size: 150MB
+      max-request-size: 150MB
   application:
     name: gendox-core-api
 
@@ -109,8 +109,7 @@ gendox:
   emails:
     contact-email: contact@ctrlspace.dev
   documents:
-#    upload-dir: s3://gendox.organization.documents.dev
-    upload-dir: file:${user.home}/gendox/documents
+    upload-dir: ${FILE_STORAGE_PATH:file://${user.home}/gendox/documents}
 #    Word count per document section, used in static word count Splitter
     wordCount: 500
 #    Token count per document section, used in Page or Markdown Splitters
@@ -120,7 +119,7 @@ gendox:
       
       {%s}------------------------------------------------
     allowed:
-      extensions: .txt,.md,.rst,.pdf
+      extensions: .txt,.md,.rst,.pdf,.docx,.doc,.xls,.xlsx
 
   integrations:
     #    poller: 30000 # 30 seconds
@@ -132,6 +131,10 @@ gendox:
         wait-time-seconds: 1 #not in use
         visibility-timeout-seconds: 300
         batch-size: 10
+  maintenance:
+    daily-usage-aggregator:
+      fixed-delay: 10s
+      batch-size: 50000
   models:
     #    It is important these fields to have the same names as the DB ai_model_provider.api_type_id.name
     open_ai:
@@ -167,6 +170,10 @@ gendox:
     top_p: 0.4
     max_search_limit: 5
     max_completion_limit: 5
+  tasks:
+    max-questions-per-bucket: 10
+    max-question-tokens-per-bucket: 5000
+    max-sections-chunk-tokens: 100000
 
   moderation:
     message: "Sorry, I can't reply in this message, it contains inappropriate content. If this this not the case, please contact the support team."
@@ -198,16 +205,18 @@ gendox:
         steps:
           document-insights-step:
             name: documentInsightsStep
-            chunk-size: 10
+            chunk-size: 2
             pageable-size: 1000
     document-digitization:
       job:
         name: documentDigitizationJob
-        thread-pool-size: 10
+        thread-pool-size: 1     # Process books 2-by-2, each book runs in parallel multiple pages
+        llm-completion-executor-pool-size: 10     # Run 10 LLM completions in parallel for 10 pages
         steps:
           document-digitization-step:
             name: documentDigitizationStep
-            chunk-size: 10
+            chunk-size: 1
+            doc-page-chunk-size: 20  # Process docs at batches of 20 pages
             pageable-size: 1000
   user-invitation:
     accept-url-template: /accept-invitation/?email=%s&token=%s
@@ -221,8 +230,10 @@ cloud:
   aws:
     s3:
       region: eu-central-1
-    SQS:
+    sqs:
       region: eu-central-1
+  gcloud:
+    client-secret: ${GCLOUD_CLIENT_SECRET:} # env variable or empty string
 
 
 

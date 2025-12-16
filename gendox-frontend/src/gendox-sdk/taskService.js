@@ -19,6 +19,23 @@ const createTask = async (organizationId, projectId, taskPayload, token) => {
 }
 
 /**
+ * Duplicate a Task
+ * @param organizationId
+ * @param projectId
+ * @param payload
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<Task>>}
+ */
+const duplicateTask = async (organizationId, projectId, payload, token) => {
+  return axios.post(apiRequests.duplicateTask(organizationId, projectId), payload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
  * Get all tasks for a project
  * @param organizationId
  * @param projectId
@@ -106,12 +123,13 @@ const createTaskNodesBatch = async (organizationId, projectId, taskNodesPayload,
  * Update Task Node
  * @param organizationId
  * @param projectId
+ * @param taskId
  * @param taskNodePayload
  * @param token
  * @returns {Promise<axios.AxiosResponse<TaskNode>>}
  */
-const updateTaskNode = async (organizationId, projectId, taskNodePayload, token) => {
-  return axios.put(apiRequests.updateTaskNode(organizationId, projectId), taskNodePayload, {
+const updateTaskNode = async (organizationId, projectId, taskId, taskNodePayload, token) => {
+  return axios.put(apiRequests.updateTaskNode(organizationId, projectId, taskId), taskNodePayload, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token
@@ -119,27 +137,7 @@ const updateTaskNode = async (organizationId, projectId, taskNodePayload, token)
   })
 }
 
-/**
- * Update Task Node for Document Digitization
- * @param organizationId
- * @param projectId
- * @param taskId
- * @param token
- * @param updatePayload
- * @returns {Promise<axios.AxiosResponse<TaskNode>>}
- */
-const updateTaskNodeForDocumentDigitization = async (organizationId, projectId, taskId, updatePayload, token) => {
-  return axios.put(
-    apiRequests.updateTaskNodeForDocumentDigitization(organizationId, projectId, taskId),
-    updatePayload,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + token
-      }
-    }
-  )
-}
+
 
 /**
  * Get Task Node by ID
@@ -295,7 +293,6 @@ const executeTaskByType = async (organizationId, projectId, taskId, criteria, to
   })
 }
 
-
 /**
  * Get jobs by criteria with query parameters
  * @param organizationId
@@ -383,18 +380,44 @@ const deleteTask = async (organizationId, projectId, taskId, token) => {
  * @param organizationId
  * @param projectId
  * @param taskId
+ * @param documentId
  * @param token
  * @returns {Promise<Blob>}
  */
-const exportTaskCsv = async (organizationId, projectId, taskId, token) => {
-  const response = await axios.get(apiRequests.exportTaskCsv(organizationId, projectId, taskId), {
-    headers: {
-      Authorization: 'Bearer ' + token
-    },
-    responseType: 'blob' // Important for CSV files!
-  })
-  return response.data // This is the CSV blob
+const documentInsightsExportAllCSV = async (organizationId, projectId, taskId, token) => {
+  const response = await axios.get(
+    apiRequests.documentInsightsExportAllCSV(organizationId, projectId, taskId),
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      responseType: 'blob'
+    }
+  )
+  return response.data
 }
+
+/**
+ * Download Document Insights CSV
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param documentNodeId
+ * @param token
+ * @returns {Promise<Blob>}
+ */
+const documentInsightsExportCSV = async (organizationId, projectId, taskId, documentNodeId, token) => {
+  const response = await axios.get(
+    apiRequests.documentInsightsExportCSV(organizationId, projectId, taskId, documentNodeId),
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: 'blob'
+    }
+  )
+  return response.data
+}
+
+
 
 /**
  * Export Document Digitization CSV
@@ -420,6 +443,7 @@ const documentDigitizationExportCSV = async (organizationId, projectId, taskId, 
 
 export default {
   createTask,
+  duplicateTask,
   getTasks,
   updateTask,
   getTaskById,
@@ -430,7 +454,6 @@ export default {
   createTaskNode,
   createTaskNodesBatch,
   updateTaskNode,
-  updateTaskNodeForDocumentDigitization,
   getTaskNodeById,
   createTaskEdge,
   getTaskEdgeById,
@@ -439,6 +462,7 @@ export default {
   getJobsByCriteria,
   deleteTaskNode,
   deleteTask,
-  exportTaskCsv,
+  documentInsightsExportAllCSV,
+  documentInsightsExportCSV,
   documentDigitizationExportCSV
 }

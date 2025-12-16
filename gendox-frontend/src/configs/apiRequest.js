@@ -1,4 +1,5 @@
 import commonConfig from 'src/configs/common.config.js'
+import { duplicateTask } from 'src/store/activeTask/activeTask'
 
 const url = commonConfig.gendoxUrl
 
@@ -11,10 +12,8 @@ export default {
   getPublicUsers: (page = 0, size = 10000) => `${url}users/public?page=${page}&size=${size}`,
 
   getProjectById: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}`,
+  
   getProjectsByOrganization: organizationId => `${url}organizations/${organizationId}/projects`,
-
-  getDocumentsByCriteriaProjectId: (organizationId, projectId, page, sort = 'createdAt,desc') =>
-    `${url}organizations/${organizationId}/projects/${projectId}/documents?page=${page}&sort=${sort}`,
 
   findDocumentsByCriteria: (organizationId, projectId, page, size, sort = 'createdAt,desc') =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/search?page=${page}&size=${size}&sort=${sort}`,
@@ -158,7 +157,11 @@ export default {
 
   createTask: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/tasks`,
 
-  getTasks: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/tasks`,
+  duplicateTask: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/duplicate`,
+
+  getTasks: (organizationId, projectId, sort = 'createdAt,desc') =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks?sort=${sort}`,
 
   taskRequest: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`,
@@ -169,11 +172,8 @@ export default {
   createTaskNodesBatch: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes/batch`,
 
-  updateTaskNode: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/task-nodes`,
-
-  updateTaskNodeForDocumentDigitization: (organizationId, projectId, taskId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/document-digitization`,
+  updateTaskNode: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes`,
 
   getTaskNodeById: (organizationId, projectId, id) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes?id=${id}`,
@@ -184,10 +184,10 @@ export default {
   getDocumentPages: (organizationId, projectId, taskId, page, size) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/document-pages?page=${page}&size=${size}`,
 
-  getTaskNodesByCriteria: (organizationId, projectId, taskId, page , size) =>
+  getTaskNodesByCriteria: (organizationId, projectId, taskId, page, size) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/search?page=${page}&size=${size}`,
 
-  getAnswerTaskNodes: (organizationId, projectId, taskId, page , size ) =>
+  getAnswerTaskNodes: (organizationId, projectId, taskId, page, size) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/answers/batch?page=${page}&size=${size}`,
 
   createTaskEdge: (organizationId, projectId) =>
@@ -202,8 +202,7 @@ export default {
   executeTaskByType: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/execute`,
 
-  getJobsByCriteria: (organizationId, projectId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/jobs`,
+  getJobsByCriteria: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/jobs`,
 
   deleteTaskNode: (organizationId, projectId, taskNodeId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes/${taskNodeId}`,
@@ -211,11 +210,12 @@ export default {
   deleteTask: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`,
 
-  exportTaskCsv: (organizationId, projectId, taskId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/export-csv`,
+  documentInsightsExportAllCSV: (organizationId, projectId, taskId) =>
+  `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/insights/export-csv`,
+
+  documentInsightsExportCSV: (organizationId, projectId, taskId, documentNodeId) =>
+  `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/insights/export-csv`,
 
   documentDigitizationExportCSV: (organizationId, projectId, taskId, documentNodeId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/export-csv`,
-
-
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/digitization/export-csv`
 }

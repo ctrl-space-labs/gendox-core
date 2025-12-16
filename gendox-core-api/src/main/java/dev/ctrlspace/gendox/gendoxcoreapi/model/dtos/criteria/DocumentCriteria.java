@@ -20,6 +20,7 @@ public class DocumentCriteria {
     private String projectId;
     private String organizationId;
     private String documentInstanceId;
+    private String documentNameContains;
     private List<String> documentInstanceIds;
     private TimePeriodDTO createdBetween;
     private TimePeriodDTO updatedBetween;

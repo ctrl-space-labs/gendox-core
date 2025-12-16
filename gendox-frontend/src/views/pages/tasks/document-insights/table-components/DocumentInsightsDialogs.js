@@ -1,47 +1,58 @@
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
-import taskService from 'src/gendox-sdk/taskService'
-import { deleteTaskNode, createTaskNodesBatch } from 'src/store/activeTask/activeTask'
-import { chunk } from 'src/utils/tasks/taskUtils'
+import { deleteTaskNode, createTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
 import { toast } from 'react-hot-toast'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
-import DocumentAddNewDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsDocumentAddNewDialog'
+import AddNewDocumentDialog from 'src/views/pages/tasks/helping-components/AddNewDocumentDialog'
 import AnswerDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsAnswerDialog'
 import QuestionsDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsQuestionsDialog'
+import DocumentPagePreviewDialog from '../table-dialogs/DocumentInsightsDocumentPagePreviewDialog'
+import SummaryDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsSummaryDialog'
 
 const DocumentInsightsDialogs = ({
   dialogs,
   activeNode,
   onClose,
-  refreshDocuments,
-  refreshQuestions,
-  refreshAnswers,
+  onOpen,
   taskId,
   organizationId,
   projectId,
   token,
   documents,
   questions,
-  editMode
+  addQuestionMode,
+  reloadAll,
+  isExportingCsv,
+  onExportCsv
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
-  const [questionsDialogTexts, setQuestionsDialogTexts] = useState([''])
 
-  // ADD NEW documents handler for DocumentsAddNewDialog
+  // ADD NEW documents
   const handleAddNewDocuments = async selectedDocIds => {
     setLoading(true)
     try {
       for (const docId of selectedDocIds) {
-        const taskNodePayload = {
+        const payload = {
           taskId,
           nodeType: 'DOCUMENT',
           documentId: docId
         }
-        await taskService.createTaskNode(organizationId, projectId, taskNodePayload, token)
+
+        await dispatch(
+          createTaskNode({
+            organizationId,
+            projectId,
+            taskNodePayload: payload,
+            token
+          })
+        ).unwrap()
       }
-      if (refreshDocuments) await refreshDocuments()
+
+      reloadAll()
       onClose('newDoc')
+    } catch (error) {
+      toast.error('Failed to add documents')
     } finally {
       setLoading(false)
     }
@@ -52,69 +63,31 @@ const DocumentInsightsDialogs = ({
     setLoading(true)
     try {
       await dispatch(deleteTaskNode({ organizationId, projectId, taskNodeId: nodeId, token })).unwrap()
-      if (refreshDocuments) await refreshDocuments()
-      if (refreshQuestions) await refreshQuestions()
+      reloadAll()
       onClose('delete')
     } finally {
       setLoading(false)
     }
   }
 
-  // save questions handler for QuestionsDialog
-  const handleAddQuestions = async () => {
-    const validQuestions = (Array.isArray(questionsDialogTexts) ? questionsDialogTexts : [questionsDialogTexts])
-      .map(q => (typeof q === 'string' ? q.trim() : ''))
-      .filter(q => q.length > 0)
-
-    if (validQuestions.length === 0) {
-      toast.error('No questions to save!')
-      return
-    }
-    setLoading(true)
-    try {
-      const payloads = validQuestions.map((questionText, idx) => ({
-        taskId,
-        nodeType: 'QUESTION',
-        nodeValue: { message: questionText, order: idx }
-      }))
-
-      // Send in batches of 10
-      const batches = chunk(payloads, 10)
-      for (const batch of batches) {
-        await dispatch(
-          createTaskNodesBatch({
-            organizationId,
-            projectId,
-            taskNodesPayload: batch, // <-- array of up to 10
-            token
-          })
-        ).unwrap()
-      }
-      // Refresh the question list after saving all
-      if (refreshQuestions) await refreshQuestions()
-      setLoading(false)
-      setQuestionsDialogTexts(['']) // Reset the input field
-      onClose('questionDetail')
-      toast.success('Questions added!')
-    } catch (error) {
-      toast.error('Failed to save questions')
-      console.error(error)
-    }
-  }
+  
 
   return (
     <>
       {/* New Document Dialog */}
-      <DocumentAddNewDialog
+      <AddNewDocumentDialog
         open={dialogs.newDoc}
         onClose={() => onClose('newDoc')}
-        existingDocuments={documents}
+        existingDocumentIds={documents.map(d => d.documentId)}
         loading={loading}
         onConfirm={handleAddNewDocuments}
         organizationId={organizationId}
         projectId={projectId}
         token={token}
         taskId={taskId}
+        onUploadSuccess={() => {
+          reloadAll()
+        }}
       />
 
       {/* Answer Details Dialog */}
@@ -122,8 +95,28 @@ const DocumentInsightsDialogs = ({
         open={dialogs.answerDetail}
         answer={activeNode}
         onClose={() => onClose('answerDetail')}
-        refreshAnswers={refreshAnswers}
+        refreshAnswers={reloadAll}
         questions={questions}
+      />
+
+      {/* Summary Details Dialog */}
+      <SummaryDialog
+        open={dialogs.summaryDetail}
+        onClose={() => onClose('summaryDetail')}
+        activeDocument={activeNode}
+      />
+
+      {/* Document Page Preview Dialog */}
+      <DocumentPagePreviewDialog
+        open={dialogs.pagePreview || false}
+        onClose={() => onClose('pagePreview')}
+        activeDocument={activeNode}
+        //generateSingleDocument={generateSingleDocument}
+        loading={loading}
+        isExportingCsv={isExportingCsv}
+        onExportCsv={onExportCsv}
+        onDelete={() => onOpen && onOpen('delete', activeNode)}
+        reloadAll={reloadAll}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -135,18 +128,17 @@ const DocumentInsightsDialogs = ({
         contentText='Are you sure you want to delete this item? This action cannot be undone.'
         confirmButtonText='Delete'
         cancelButtonText='Cancel'
+        disableConfirm={loading}
       />
 
       {/* Question Dialog */}
       <QuestionsDialog
         open={dialogs.questionDetail}
         onClose={() => onClose('questionDetail')}
-        questions={questionsDialogTexts}
-        setQuestions={setQuestionsDialogTexts}
-        onConfirm={handleAddQuestions}
         activeQuestion={activeNode}
-        isSaving={loading}
-        editMode={editMode}
+        isAddQuestionsLoading={loading}
+        addQuestionMode={addQuestionMode}
+        reloadAll={reloadAll}
       />
     </>
   )

@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.core.types.dsl.SimpleExpression;
 import com.querydsl.core.types.dsl.StringExpression;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QTaskNode;
@@ -20,7 +21,12 @@ public class TaskNodePredicates {
                 taskIdEq(criteria.getTaskId()),
                 nodeIds(criteria.getNodeIds()),
                 nodeTypes(criteria.getNodeTypeNames()),
-                nodeValueNodeDocumentId(criteria.getNodeValueNodeDocumentId())
+                nodeValueNodeDocumentId(criteria.getNodeValueNodeDocumentId()),
+                nodeValueNodeQuestionIds(criteria.getQuestionNodeIds()),
+                nodeValueNodeDocumentIds(criteria.getDocumentNodeIds()),
+                nodeValueNodeAnswerIds(criteria.getAnswerNodeIds()),
+                pageFrom(criteria.getPageFrom()),
+                pageTo(criteria.getPageTo())
 
         );
     }
@@ -104,11 +110,94 @@ public class TaskNodePredicates {
         return docIdUuid.eq(nodeDocumentId);
     }
 
+    private static Predicate nodeValueNodeQuestionIds(List<UUID> questionNodeIds) {
+        if (questionNodeIds == null || questionNodeIds.isEmpty()) {
+            return null;
+        }
+
+        //  ((node_value ->> 'nodeQuestionId')::uuid)
+        SimpleExpression<UUID> questionIdUuid =
+                Expressions.template(
+                        UUID.class,                                        // Java type
+                        "cast(function('jsonb_extract_path_text', {0}, {1}) as uuid)",
+                        qTaskNode.nodeValue,
+                        Expressions.constant("nodeQuestionId")
+                );
+
+        return questionIdUuid.in(questionNodeIds);
+    }
+
+    private static Predicate nodeValueNodeDocumentIds(List<UUID> documentNodeIds) {
+        if (documentNodeIds == null || documentNodeIds.isEmpty()) {
+            return null;
+        }
+
+        //  ((node_value ->> 'nodeDocumentId')::uuid)
+        SimpleExpression<UUID> docIdUuid =
+                Expressions.template(
+                        UUID.class,                                        // Java type
+                        "cast(function('jsonb_extract_path_text', {0}, {1}) as uuid)",
+                        qTaskNode.nodeValue,
+                        Expressions.constant("nodeDocumentId")
+                );
+
+        return docIdUuid.in(documentNodeIds);
+    }
+
+    private static Predicate nodeValueNodeAnswerIds(List<UUID> answerNodeIds) {
+        if (answerNodeIds == null || answerNodeIds.isEmpty()) {
+            return null;
+        }
+
+        //  ((node_value ->> 'nodeAnswerId')::uuid)
+        SimpleExpression<UUID> answerIdUuid =
+                Expressions.template(
+                        UUID.class,                                        // Java type
+                        "cast(function('jsonb_extract_path_text', {0}, {1}) as uuid)",
+                        qTaskNode.nodeValue,
+                        Expressions.constant("nodeAnswerId")
+                );
+
+        return answerIdUuid.in(answerNodeIds);
+    }
+
     private static Predicate taskIdEq(UUID taskId) {
         if (taskId == null) {
             return null;
         }
         return qTaskNode.taskId.eq(taskId);
+    }
+
+    private static Predicate pageFrom(Integer pageFrom) {
+        if (pageFrom == null) {
+            return null;
+        }
+
+        //  ((node_value ->> 'order')::int)
+        NumberExpression<Integer> orderInt = Expressions.numberTemplate(
+                Integer.class,
+                "cast(function('jsonb_extract_path_text', {0}, {1}) as int)",
+                qTaskNode.nodeValue,
+                Expressions.constant("order")
+        );
+
+        return orderInt.goe(pageFrom);
+    }
+
+    public static Predicate pageTo(Integer pageTo) {
+        if (pageTo == null) {
+            return null;
+        }
+
+        //  ((node_value ->> 'order')::int)
+        NumberExpression<Integer> orderInt = Expressions.numberTemplate(
+                Integer.class,
+                "cast(function('jsonb_extract_path_text', {0}, {1}) as int)",
+                qTaskNode.nodeValue,
+                Expressions.constant("order")
+        );
+
+        return orderInt.loe(pageTo);
     }
 }
 

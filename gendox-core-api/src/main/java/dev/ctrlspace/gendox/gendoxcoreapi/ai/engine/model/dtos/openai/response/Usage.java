@@ -12,9 +12,40 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Usage {
     @JsonProperty("prompt_tokens")
-    private int promptTokens;
+    private Integer promptTokens;
     @JsonProperty("completion_tokens")
-    private int completionTokens;
+    private Integer completionTokens;
     @JsonProperty("total_tokens")
-    private int totalTokens;
+    private Integer totalTokens;
+    @JsonProperty("prompt_tokens_details")
+    private PromptTokensDetail promptTokensDetail;
+    @JsonProperty("completion_tokens_details")
+    private CompletionTokensDetails completionTokensDetail;
+
+
+    @Data
+    @Builder(toBuilder = true)
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class PromptTokensDetail {
+        @JsonProperty("cached_tokens")
+        private Integer cachedTokens;
+        @JsonProperty("audio_tokens")
+        private Integer audioTokens;
+    }
+
+    @Data
+    @Builder(toBuilder = true)
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class CompletionTokensDetails {
+        @JsonProperty("reasoning_tokens")
+        private Integer reasoningTokens;
+        @JsonProperty("audio_tokens")
+        private Integer audioTokens;
+        @JsonProperty("accepted_prediction_tokens")
+        private Integer acceptedPredictionTokens;
+        @JsonProperty("rejected_prediction_tokens")
+        private Integer rejectedPredictionTokens;
+    }
 }

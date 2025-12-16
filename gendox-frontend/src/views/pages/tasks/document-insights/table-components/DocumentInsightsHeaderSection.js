@@ -18,7 +18,7 @@ const HeaderSection = ({
   onGenerateAll,
   onGenerateSelected,
   disableGenerate,
-  isLoading,
+  isPageLoading,
   onExportCsv,
   isExportingCsv,
   selectedDocuments,
@@ -36,10 +36,7 @@ const HeaderSection = ({
     setAnchorEl(prev => (prev ? null : event.currentTarget.parentElement))
   }
 
-  // Helper function to check if documents have existing generated content
-  const hasExistingContent = docs => {
-    return docs.some(doc => hasGeneratedContent(doc.id))
-  }
+  
 
   // Handle generation with confirmation check
   const handleGenerateClick = type => {
@@ -101,15 +98,20 @@ const HeaderSection = ({
       }
     }
 
-    // Check if there are new (ungenerated) documents
-    const newDocs = documents.filter(doc => !hasGeneratedContent(doc.id))
+   
+    // Check if there are new fields (document-question combinations) that haven't been generated
+    const totalCombinations = documents.length * questions.length
+    const generatedCombinations = documents.reduce((count, doc) => {
+      return count + questions.filter(question => hasGeneratedContent(doc.id, question.id)).length
+    }, 0)
+    const newFields = totalCombinations - generatedCombinations
 
     // Always default to "Generate New" as main button
     return {
       text: `Generate New`,
       type: 'new',
       loading: generatingNew,
-      disabled: generatingAll || generatingNew || generatingSelected || newDocs.length === 0 || questions.length === 0
+      disabled: generatingAll || generatingNew || generatingSelected ||  questions.length === 0 || newFields === 0
     }
   }
 
@@ -147,13 +149,13 @@ const HeaderSection = ({
         mb={3}
       >
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap='100%'>
-          <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Add a new document to your task'}>
+          <Tooltip title={isPageLoading ? 'Loading data, please wait...' : 'Add a new document to your task'}>
             <span>
               <Button
                 variant='outlined'
                 startIcon={<DocumentScannerIcon />}
                 onClick={openAddDocument}
-                disabled={isLoading}
+                disabled={isPageLoading}
                 size='medium'
                 fullWidth
               >
@@ -161,13 +163,13 @@ const HeaderSection = ({
               </Button>
             </span>
           </Tooltip>
-          <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Add a new question to the list'}>
+          <Tooltip title={isPageLoading ? 'Loading data, please wait...' : 'Add a new question to the list'}>
             <span>
               <Button
                 variant='outlined'
                 startIcon={<DescriptionIcon />}
                 onClick={onAddQuestion}
-                disabled={isLoading}
+                disabled={isPageLoading}
                 size='medium'
                 fullWidth
               >
@@ -178,13 +180,13 @@ const HeaderSection = ({
         </Stack>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap='100%'>
-          <Tooltip title={isLoading ? 'Loading data, please wait...' : 'Export data as CSV'}>
+          <Tooltip title={isPageLoading ? 'Loading data, please wait...' : 'Export data as CSV'}>
             <span>
               <Button
                 variant='outlined'
                 startIcon={isExportingCsv ? <CircularProgress size={18} /> : <DownloadIcon />}
                 onClick={onExportCsv}
-                disabled={isLoading || isExportingCsv || documents.length === 0}
+                disabled={isPageLoading || isExportingCsv || documents.length === 0}
                 size='medium'
                 fullWidth
               >
@@ -192,7 +194,7 @@ const HeaderSection = ({
               </Button>
             </span>
           </Tooltip>
-          <Tooltip title={isLoading ? 'Loading...' : buttonConfig.text}>
+          <Tooltip title={isPageLoading ? 'Loading...' : buttonConfig.text}>
             <span>
               <Box
                 sx={{
@@ -208,7 +210,7 @@ const HeaderSection = ({
                     buttonConfig.loading ? <CircularProgress size={20} color='inherit' /> : <RocketLaunchIcon />
                   }
                   onClick={() => handleGenerateClick(buttonConfig.type)}
-                  disabled={buttonConfig.disabled || isLoading || disableGenerate}
+                  disabled={buttonConfig.disabled || isPageLoading || disableGenerate}
                   sx={{
                     fontWeight: 700,
                     textTransform: 'uppercase',
@@ -224,7 +226,7 @@ const HeaderSection = ({
                   color='primary'
                   size='small'
                   onClick={handleToggle}
-                  disabled={isLoading || disableGenerate}
+                  disabled={isPageLoading || disableGenerate}
                   sx={{
                     minWidth: '40px',
                     px: 0,
@@ -264,10 +266,15 @@ const HeaderSection = ({
                     generatingAll ||
                     generatingNew ||
                     generatingSelected ||
-                    isLoading ||
+                    isPageLoading ||
                     (() => {
                       const newDocs = documents.filter(doc => !hasGeneratedContent(doc.id))
-                      return newDocs.length === 0 || questions.length === 0
+                      const totalCombinations = documents.length * questions.length
+                      const generatedCombinations = documents.reduce((count, doc) => {
+                        return count + questions.filter(question => hasGeneratedContent(doc.id, question.id)).length
+                      }, 0)
+                      const newFields = totalCombinations - generatedCombinations
+                      return newDocs.length === 0 || questions.length === 0 || newFields === 0
                     })()
                   }
                 >
@@ -288,7 +295,7 @@ const HeaderSection = ({
                     generatingAll ||
                     generatingNew ||
                     generatingSelected ||
-                    isLoading ||
+                    isPageLoading ||
                     documents.length === 0 ||
                     questions.length === 0
                   }
@@ -312,7 +319,7 @@ const HeaderSection = ({
                     generatingAll ||
                     generatingNew ||
                     generatingSelected ||
-                    isLoading ||
+                    isPageLoading ||
                     documents.length === 0 ||
                     questions.length === 0
                   }
@@ -328,9 +335,9 @@ const HeaderSection = ({
                 </MenuItem>
               )}
 
-              {(disableGenerate || isLoading) && (
+              {(disableGenerate || isPageLoading) && (
                 <Box sx={{ px: 2, pb: 1, pt: 0.5, fontSize: '0.85rem', color: 'grey.600' }}>
-                  {isLoading ? 'Loading, please wait...' : 'Add documents and questions to enable generation.'}
+                  {isPageLoading ? 'Loading, please wait...' : 'Add documents and questions to enable generation.'}
                 </Box>
               )}
             </Menu>

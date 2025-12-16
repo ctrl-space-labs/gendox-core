@@ -71,7 +71,8 @@ public class SplitterBatchService {
                 splitterTimePeriodAndOverride.now(),
                 splitterTimePeriodAndOverride.overrideDefaultPeriod(),
                 documentSplitterJobName,
-                Map.of(JobExecutionParamConstants.SKIP_UNCHANGED_DOCS, "true")
+                Map.of(JobExecutionParamConstants.SKIP_UNCHANGED_DOCS, "true",
+                        "run.id", UUID.randomUUID().toString())
         );
 
 

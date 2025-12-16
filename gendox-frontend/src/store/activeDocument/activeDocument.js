@@ -16,30 +16,51 @@ export const fetchDocument = createAsyncThunk(
       })
       return { document: documentData.data, sections: orderedSections }
     } catch (error) {
-      toast.error(`Failed to fetch Documents. Error: ${getErrorMessage(error)}`)
+      // toast.error(`Failed to fetch Documents. Error: ${getErrorMessage(error)}`)
       return thunkAPI.rejectWithValue(error.response.data)
     }
   }
 )
 
-export const fetchDocumentsByCriteria = createAsyncThunk(
-  'activeTask/fetchDocumentsByCriteria',
-  async ({ organizationId, projectId, documentIds, token, page = 0, size = 20 }, thunkAPI) => {
-    if (!documentIds || documentIds.length === 0) return []
-
-    const documentInstanceIds = documentIds.map(id => id.toString())
-
-    const criteria = {
+export const fetchDocuments = createAsyncThunk(
+  'activeDocument/fetchDocuments',
+  async (
+    {
       organizationId,
       projectId,
-      documentInstanceIds
-    }
-
+      token,
+      page = 0,
+      size = 20,
+      documentIds, // optional - array of document IDs to filter
+      documentNameContains, // optional - string to search in document names
+      createdBetween, // optional - { from: '2023-01-01', to: '2023-12-31' }
+      updatedBetween, // optional - { from: '2023-01-01', to: '2023-12-31' }
+      target // 'projectDocuments' | 'taskDocuments' | 'supportingDocuments'
+    },
+    thunkAPI
+  ) => {
     try {
-      const response = await documentService.findDocumentsByCriteria(organizationId, projectId, criteria, token, page, size)
-      return response.data.content || []
+      const criteria = {
+        organizationId,
+        projectId,
+        ...(documentIds && documentIds.length > 0 ? { documentInstanceIds: documentIds.map(id => id.toString()) } : {}),
+        ...(documentNameContains ? { documentNameContains } : {}),
+        ...(createdBetween ? { createdBetween } : {}),
+        ...(updatedBetween ? { updatedBetween } : {})
+      }
+
+      const response = await documentService.findDocumentsByCriteria(
+        organizationId,
+        projectId,
+        criteria,
+        token,
+        page,
+        size
+      )
+
+      return response.data
     } catch (error) {
-      toast.error('Failed to fetch documents by criteria')
+      toast.error('Failed to fetch documents')
       return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
@@ -62,8 +83,10 @@ export const updateSectionsOrder = createAsyncThunk(
 // Define the initial state
 const initialActiveDocumentState = {
   document: {},
-  documents: [],
   sections: [],
+  projectDocuments: { content: [], totalPages: 0 },
+  supportingDocuments: [],
+  taskDocuments: [],
   isBlurring: false,
   error: null
 }
@@ -78,6 +101,9 @@ const activeDocumentSlice = createSlice({
     },
     setBlurring: (state, action) => {
       state.isBlurring = action.payload // Add a reducer for setting isBlurring
+    },
+    resetSupportingDocuments(state) {
+      state.supportingDocuments = []
     }
   },
   extraReducers: builder => {
@@ -113,15 +139,28 @@ const activeDocumentSlice = createSlice({
           section.id === action.payload.sectionId ? { ...section, ...action.payload.updatedSection } : section
         )
       })
-      .addCase(fetchDocumentsByCriteria.pending, state => {
+      .addCase(fetchDocuments.pending, state => {
         state.isBlurring = true
         state.error = null
       })
-      .addCase(fetchDocumentsByCriteria.fulfilled, (state, action) => {
+      .addCase(fetchDocuments.fulfilled, (state, action) => {
         state.isBlurring = false
-        state.documents = action.payload
+
+        const target = action.meta.arg.target // 'projectDocuments' | 'taskDocuments' | 'supportingDocuments'
+        const data = action.payload
+        const content = data?.content || []
+
+        if (target === 'projectDocuments') {
+          // For project documents, we replace the existing list
+          state.projectDocuments = data
+        } else if (target === 'taskDocuments') {
+          // Only for task documents, we append to existing list
+          state.taskDocuments = content
+        } else if (target === 'supportingDocuments') {
+          state.supportingDocuments = content
+        }
       })
-      .addCase(fetchDocumentsByCriteria.rejected, (state, action) => {
+      .addCase(fetchDocuments.rejected, (state, action) => {
         state.isBlurring = false
         state.error = action.payload
       })
@@ -129,5 +168,5 @@ const activeDocumentSlice = createSlice({
 })
 
 // Export actions and reducer
-export const { updateSectionOrder, setBlurring } = activeDocumentSlice.actions
+export const { updateSectionOrder, setBlurring, resetSupportingDocuments } = activeDocumentSlice.actions
 export default activeDocumentSlice.reducer

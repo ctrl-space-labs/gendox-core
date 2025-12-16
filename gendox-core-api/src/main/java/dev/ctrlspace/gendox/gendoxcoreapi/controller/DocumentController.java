@@ -11,9 +11,14 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionOrderDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
+import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.batch.core.JobParametersInvalidException;
+import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
+import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -46,7 +51,7 @@ public class DocumentController {
     private SplitFileService splitFileService;
     private DocumentSectionService documentSectionService;
     private DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter;
-
+    private SplitterBatchService splitterBatchService;
 
 
     @Autowired
@@ -56,8 +61,8 @@ public class DocumentController {
                               SplitFileService splitFileService,
                               DocumentSectionService documentSectionService,
                               DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter,
-                              DocumentOnlyConverter documentOnlyConverter
-    ) {
+                              DocumentOnlyConverter documentOnlyConverter,
+                              SplitterBatchService splitterBatchService) {
         this.documentService = documentService;
         this.documentInstanceConverter = documentInstanceConverter;
         this.uploadService = uploadService;
@@ -65,6 +70,7 @@ public class DocumentController {
         this.documentSectionService = documentSectionService;
         this.documentInstanceSectionWithoutDocumentConverter = documentInstanceSectionWithoutDocumentConverter;
         this.documentOnlyConverter = documentOnlyConverter;
+        this.splitterBatchService = splitterBatchService;
     }
 
 
@@ -298,7 +304,8 @@ public class DocumentController {
                     "The uploaded files are associated with a specific organization and project.")
     public ResponseEntity<Map<String, Object>> handleFilesUpload(@RequestParam("file") List<MultipartFile> files,
                                                                  @PathVariable UUID organizationId,
-                                                                 @PathVariable UUID projectId) throws IOException, GendoxException {
+                                                                 @PathVariable UUID projectId)
+            throws IOException, GendoxException, JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
 
         // Get the allowed file extensions from application.properties
         List<String> allowedExtensionsList = Arrays.asList(allowedExtensions.split(","));
@@ -313,6 +320,8 @@ public class DocumentController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Files uploaded successfully");
+
+        splitterBatchService.runAutoSplitter(projectId, null);
         return ResponseEntity.ok(response);
     }
 
@@ -321,16 +330,19 @@ public class DocumentController {
     @PostMapping("/organizations/{organizationId}/projects/{projectId}/documents/upload-single")
     @Operation(summary = "Upload a single document file",
             description = "Upload a single file and return the created or updated DocumentInstance.")
-    public ResponseEntity<DocumentInstance> uploadSingleFile(
-            @RequestParam("file") MultipartFile file,
-            @PathVariable UUID organizationId,
-            @PathVariable UUID projectId) throws IOException, GendoxException {
+    public ResponseEntity<DocumentInstance> uploadSingleFile(@RequestParam("file") MultipartFile file,
+                                                             @PathVariable UUID organizationId,
+                                                             @PathVariable UUID projectId)
+            throws IOException, GendoxException, JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
+
 
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
 
         DocumentInstance documentInstance = uploadService.uploadFile(file, organizationId, projectId);
+
+        splitterBatchService.runAutoSplitter(projectId, null);
 
         return ResponseEntity.ok(documentInstance);
     }

@@ -96,6 +96,20 @@ public class DocumentSectionService {
         return documentInstanceSectionRepository.findAll(DocumentInstanceSectionPredicates.build(criteria), pageable);
     }
 
+    public String getFullDocumentText(UUID docId) throws GendoxException {
+        List<DocumentInstanceSection> sections = this.getSectionsByDocument(docId);
+        sections.sort(Comparator.comparingInt(
+                s -> s.getDocumentSectionMetadata().getSectionOrder()
+        ));
+
+        String documentText = sections.stream()
+                .map(DocumentInstanceSection::getSectionValue)
+                .reduce("", (a, b) -> a + "\n" + b);
+
+        return documentText;
+    }
+
+
     /**
      * TODO merge this with the above to findSectionsByCriteria
      *
@@ -116,9 +130,10 @@ public class DocumentSectionService {
         return documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
     }
 
+    @Transactional
     public List<DocumentInstanceSection> createSections(DocumentInstance documentInstance, List<String> contentSections) throws GendoxException {
         // if the document instance already has sections in the database, delete it
-        this.deleteDocumentSections(documentInstance.getId());
+        this.deleteSectionsByDocumentId(documentInstance.getId());
         List<DocumentInstanceSection> sections = new ArrayList<>();
         Integer sectionOrder = 0;
         for (String contentSection : contentSections) {
@@ -343,40 +358,22 @@ public class DocumentSectionService {
     }
 
     @Transactional
-    public void deleteSections(List<DocumentInstanceSection> sections) throws GendoxException {
-        if (sections == null || sections.isEmpty()) {
+    public void deleteSectionsByDocumentId(UUID documentId) throws GendoxException {
+        if (documentId == null) {
             return;
         }
 
-        // Collect IDs from the sections to delete
-        List<UUID> sectionIds = sections.stream()
-                .map(DocumentInstanceSection::getId)
-                .collect(Collectors.toList());
-
         // delete MessageSections associated with these sections
-        messageService.deleteMessageSections(sectionIds);
+        messageService.deleteMessageSectionsByDocumentId(documentId);
 
         // delete EmbeddingGroups and embeddings associated with these sections
-        embeddingService.deleteEmbeddingGroupsBySectionIds(sectionIds);
-
-        List<UUID> metadataIds = sections.stream()
-                .map(section -> section.getDocumentSectionMetadata().getId())
-                .distinct()
-                .collect(Collectors.toList());
+        embeddingService.deleteEmbeddingGroupsByDocumentId(documentId);
 
         // delete the sections
-        documentInstanceSectionRepository.deleteAllByIdsInBulk(sectionIds);
-        // delete the metadata
-        documentSectionMetadataRepository.bulkDeleteByIds(metadataIds);
+        documentInstanceSectionRepository.deleteSectionsAndOrphanMetadata(documentId);
+
         entityManager.flush();
         entityManager.clear();
-    }
-
-
-    public void deleteDocumentSections(UUID documentInstanceId) throws GendoxException {
-        List<DocumentInstanceSection> sections =
-                documentInstanceSectionRepository.findByDocumentInstance(documentInstanceId);
-        deleteSections(sections);
     }
 
     public void deleteMetadata(DocumentSectionMetadata metadata) throws GendoxException {

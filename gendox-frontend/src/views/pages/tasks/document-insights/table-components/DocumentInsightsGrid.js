@@ -1,23 +1,25 @@
 import React, { useMemo, useState } from 'react'
 import { DataGrid } from '@mui/x-data-grid'
-import { Box, Tooltip } from '@mui/material'
+import { Box, Tooltip, IconButton, Menu, MenuItem } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
+import DescriptionIcon from '@mui/icons-material/Description'
 import CircularProgress from '@mui/material/CircularProgress'
 import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
 import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
+import Summarize from '@mui/icons-material/Summarize'
+import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
 
 const DocumentInsightsGrid = ({
   openDialog,
   documents,
   questions,
   answers,
-  openUploader,
   onGenerate,
   isLoadingAnswers,
-  isLoading,
-  isBlurring,
+  isPageLoading,
   page,
   pageSize,
   setPage,
@@ -30,10 +32,15 @@ const DocumentInsightsGrid = ({
   isGeneratingCells = {}
 }) => {
   const theme = useTheme()
+  const [documentMenuAnchor, setDocumentMenuAnchor] = useState(null)
+  const [documentMenuDoc, setDocumentMenuDoc] = useState(null)
+  const [questionMenuAnchor, setQuestionMenuAnchor] = useState(null)
+  const [questionMenuItem, setQuestionMenuItem] = useState(null)
 
   const sortedQuestions = useMemo(() => {
     return [...questions].sort((a, b) => a.order - b.order)
   }, [questions])
+
 
   const columns = useMemo(() => {
     return [
@@ -45,50 +52,75 @@ const DocumentInsightsGrid = ({
         filterable: false,
         disableColumnMenu: true,
         renderHeader: () => {
-          const docsWithQuestions = documents.filter(doc => 
-            doc.id && sortedQuestions.length > 0
-          )
+          const docsWithQuestions = documents.filter(doc => doc.id && sortedQuestions.length > 0)
           const selectedDocsWithQuestions = selectedDocuments.filter(id => {
             const doc = documents.find(d => d.id === id)
             return doc?.id && sortedQuestions.length > 0
           })
-          
+
           return (
-            <Tooltip title="Select all documents">
+            <Tooltip title='Select all documents'>
               <Checkbox
                 checked={docsWithQuestions.length > 0 && selectedDocsWithQuestions.length === docsWithQuestions.length}
-                indeterminate={selectedDocsWithQuestions.length > 0 && selectedDocsWithQuestions.length < docsWithQuestions.length}
-                onChange={(e) => {
+                indeterminate={
+                  selectedDocsWithQuestions.length > 0 && selectedDocsWithQuestions.length < docsWithQuestions.length
+                }
+                onChange={e => {
                   if (e.target.checked) {
-                    onSelectDocument('all', docsWithQuestions.map(doc => doc.id))
+                    onSelectDocument(
+                      'all',
+                      docsWithQuestions.map(doc => doc.id)
+                    )
                   } else {
                     onSelectDocument('none', [])
                   }
                 }}
-                size="small"
+                size='small'
               />
             </Tooltip>
           )
         },
-        renderCell: (params) => {
+        renderCell: params => {
           const isSelected = selectedDocuments.includes(params.row.id)
           const hasQuestions = sortedQuestions.length > 0
           const canSelect = hasQuestions
-          
-          const tooltipTitle = !hasQuestions 
-            ? "Please add questions to enable selection for generation" 
-            : ""
-          
+
+          const tooltipTitle = !hasQuestions ? 'Please add questions to enable selection for generation' : ''
+
           return (
             <Tooltip title={tooltipTitle}>
               <span>
                 <Checkbox
                   checked={isSelected}
-                  onChange={(e) => onSelectDocument(params.row.id, e.target.checked)}
+                  onChange={e => onSelectDocument(params.row.id, e.target.checked)}
                   disabled={!canSelect}
-                  size="small"
+                  size='small'
                 />
               </span>
+            </Tooltip>
+          )
+        }
+      },
+      {
+        field: 'summaryAction',
+        headerName: '',
+        width: 50,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: params => {
+          return (
+            <Tooltip title='View Summary'>
+              <IconButton
+                size='small'
+                onClick={e => {
+                  e.stopPropagation()
+                  openDialog('summaryDetail', params.row._doc)
+                }}
+                sx={{ color: theme.palette.primary.main }}
+              >
+                <Summarize fontSize='small' />
+              </IconButton>
             </Tooltip>
           )
         }
@@ -102,7 +134,7 @@ const DocumentInsightsGrid = ({
         disableColumnMenu: true,
         renderCell: params => {
           const isSelected = selectedDocuments.includes(params.row.id)
-          
+
           return (
             <Box
               sx={{
@@ -111,68 +143,77 @@ const DocumentInsightsGrid = ({
                 alignItems: 'center',
                 gap: 1,
                 width: '100%',
-                cursor: !params.row.documentId ? 'pointer' : 'default',
-                pr: 4, // space for delete icon
-                '&:hover .delete-icon': {
+                // cursor: !params.row.documentId ? 'pointer' : 'default',
+                cursor: 'pointer',
+                pr: 4, // space for vertical icon
+                '&:hover .vertical-icon': {
                   opacity: 1,
                   pointerEvents: 'auto'
                 }
               }}
-              onClick={() => !params.row.documentId && openUploader()}
+              onClick={e => {
+                e.stopPropagation()
+                openDialog('pagePreview', params.row._doc)
+              }}
               title={params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
             >
-              <Box
-                component='span'
-                sx={{
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  flexGrow: 1,
-                  color: isSelected ? 'primary.main' : (params.row.documentId ? 'text.primary' : 'primary.main'),
-                  fontWeight: isSelected ? '600' : (params.row.documentId ? 'normal' : '600'),
-                  userSelect: 'none'
-                }}
-              >
-                {params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
-              </Box>
+             
 
-              {/* Hover-reveal Delete Icon */}
-              <DeleteOutlineIcon
-                className='delete-icon'
+              {/* DOCUMENT TITLE */}
+              <Tooltip title='View Document'>
+                <Box
+                  component='span'
+                  sx={{
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    flexGrow: 1,
+                    color: isSelected ? 'primary.main' : params.row.documentId ? 'text.primary' : 'primary.main',
+                    fontWeight: isSelected ? '600' : params.row.documentId ? 'normal' : '600',
+                    userSelect: 'none'
+                  }}
+                >
+                  {<TruncatedText text={params.value} /> || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
+                </Box>
+              </Tooltip>
+
+              {/* Hover-reveal vertical Icon */}
+              <IconButton
+                size='small'
+                className='vertical-icon'
                 sx={{
                   position: 'absolute',
                   right: 4,
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  cursor: 'pointer',
-                  color: 'error.main',
-                  fontSize: '1.2rem',
                   opacity: 0,
                   pointerEvents: 'none',
-                  transition: 'opacity 0.25s ease',
-                  '&:hover': {
-                    color: 'error.dark'
-                  }
+                  transition: 'opacity 0.25s ease'
                 }}
                 onClick={e => {
                   e.stopPropagation()
-                  openDialog('delete', params.row)
+                  setDocumentMenuDoc(params.row._doc)
+                  setDocumentMenuAnchor(e.currentTarget)
                 }}
-                aria-label={`Delete document ${params.row.name}`}
-              />
+              >
+                <MoreVertIcon fontSize='small' />
+              </IconButton>
             </Box>
           )
         }
       },
+
+      // Dynamic question columns
       ...sortedQuestions.map(q => ({
         field: `q_${q.id}`,
-        headerName: q.text.length > 30 ? q.text.slice(0, 30) + '...' : q.text,
+        headerName: <TruncatedText text={q.text} />,
         width: 240,
         editable: false,
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
         cellClassName: 'answer-cell',
+
         renderHeader: params => (
           <Box
             sx={{
@@ -188,20 +229,14 @@ const DocumentInsightsGrid = ({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               fontWeight: 600,
-              flexGrow: 1,
-              '&:hover .delete-icon': {
-                opacity: 1,
-                pointerEvents: 'auto'
-              }
+              flexGrow: 1
             }}
-            title={q.text}
+            // title={q.text}
           >
             <Box
               component='button'
               type='button'
-              onClick={() => {
-                openDialog('questionDetail', q)
-              }}
+              onClick={() => openDialog('questionDetail', q)}
               aria-label={`View question details for ${q.text}`}
               sx={{
                 all: 'unset',
@@ -210,40 +245,37 @@ const DocumentInsightsGrid = ({
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                paddingRight: '28px', // space for delete icon
+                paddingRight: '28px',
                 '&:hover, &:focus-visible': {
                   textDecoration: 'underline',
                   outline: 'none'
                 }
               }}
             >
-              {params.colDef.headerName}
+              <TruncatedText text={q.title || q.text} />
             </Box>
 
-            {/* Hover-reveal Delete Icon */}
-            <DeleteOutlineIcon
-              className='delete-icon'
+            {/* Hover-reveal Vertical Icon */}
+            <IconButton
+              size='small'
+              className='vertical-icon'
               sx={{
                 position: 'absolute',
                 right: 4,
                 top: '50%',
                 transform: 'translateY(-50%)',
-                cursor: 'pointer',
-                color: 'error.main',
-                fontSize: '1.2rem',
                 opacity: 0,
                 pointerEvents: 'none',
-                transition: 'opacity 0.25s ease',
-                '&:hover': {
-                  color: 'error.dark'
-                }
+                transition: 'opacity 0.25s ease'
               }}
               onClick={e => {
                 e.stopPropagation()
-                openDialog('delete', q)
+                setQuestionMenuItem(q)
+                setQuestionMenuAnchor(e.currentTarget)
               }}
-              aria-label={`Delete question ${q.text}`}
-            />
+            >
+              <MoreVertIcon fontSize='small' />
+            </IconButton>
           </Box>
         ),
 
@@ -281,8 +313,8 @@ const DocumentInsightsGrid = ({
                 fontSize: '0.875rem',
                 backgroundColor: 'transparent',
                 color: 'inherit',
-                cursor: isLoadingAnswers || isLoading || isBlurring ? 'default' : 'pointer',
-                opacity: isLoadingAnswers || isLoading || isBlurring ? 0.5 : 1,
+                cursor: isLoadingAnswers || isPageLoading ? 'default' : 'pointer',
+                opacity: isLoadingAnswers || isPageLoading ? 0.5 : 1,
                 userSelect: 'none',
                 borderRadius: 1,
                 border: '1px solid transparent',
@@ -297,7 +329,7 @@ const DocumentInsightsGrid = ({
                 }
               }}
               onClick={() => {
-                if (!isLoadingAnswers && !isLoading) {
+                if (!isLoadingAnswers && !isPageLoading) {
                   if (!answerObj?.answerValue) {
                     // Trigger generate for this cell only
                     onGenerateSingleAnswer(params.row, q)
@@ -355,14 +387,34 @@ const DocumentInsightsGrid = ({
         }
       }))
     ]
-  }, [sortedQuestions, answers, openUploader, onGenerate, isLoadingAnswers, isLoading, documents, selectedDocuments, onSelectDocument, openDialog, isGeneratingAll, isGeneratingCells, onGenerateSingleAnswer, theme])
+  }, [
+    sortedQuestions,
+    answers,
+    onGenerate,
+    isLoadingAnswers,
+    isPageLoading,
+    documents,
+    selectedDocuments,
+    onSelectDocument,
+    openDialog,
+    isGeneratingAll,
+    isGeneratingCells,
+    onGenerateSingleAnswer,
+    theme
+  ])
 
   const rows = useMemo(() => {
-    return documents.map(doc => {
+    const sortedDocs = [...documents].sort((a, b) => {
+      const dateA = new Date(a.updatedAt || a.updateAt || 0)
+      const dateB = new Date(b.updatedAt || b.updateAt || 0)
+      return dateB - dateA
+    })
+    return sortedDocs.map(doc => {
       const row = {
         id: doc.id,
         name: doc.name || '',
-        documentId: doc.documentId
+        documentId: doc.documentId,
+        _doc: doc
       }
 
       sortedQuestions.forEach(q => {
@@ -389,12 +441,12 @@ const DocumentInsightsGrid = ({
         height: 650,
         width: '100%',
         overflowX: 'auto',
-        filter: isLoading || isBlurring ? 'blur(6px)' : 'none',
+        filter: isPageLoading ? 'blur(6px)' : 'none',
         transition: 'filter 0.3s ease',
         borderRadius: 1
       }}
     >
-      {isLoading && (
+      {isPageLoading && (
         <Box
           sx={{
             position: 'absolute',
@@ -426,7 +478,7 @@ const DocumentInsightsGrid = ({
         componentsProps={{
           pagination: { showFirstButton: true, showLastButton: true }
         }}
-        loading={isLoading || isBlurring}
+        loading={isPageLoading}
         sx={{
           '& .MuiDataGrid-cell': {
             outline: 'none',
@@ -446,6 +498,86 @@ const DocumentInsightsGrid = ({
           }
         }}
       />
+      <Menu
+        disableEnforceFocus
+        disableAutoFocus
+        disableRestoreFocus
+        anchorEl={documentMenuAnchor}
+        open={Boolean(documentMenuAnchor)}
+        onClose={() => {
+          setDocumentMenuAnchor(null)
+          setDocumentMenuDoc(null)
+        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        {documentMenuDoc && [
+          <MenuItem
+            key='document-view'
+            onClick={() => {
+              setDocumentMenuAnchor(null)
+              openDialog('pagePreview', documentMenuDoc)
+              setDocumentMenuDoc(null)
+            }}
+          >
+            <DescriptionIcon sx={{ mr: 1 }} fontSize='small' />
+            View Document
+          </MenuItem>,
+
+          <MenuItem
+            key='document-delete'
+            onClick={() => {
+              setDocumentMenuAnchor(null)
+              openDialog('delete', documentMenuDoc)
+              setDocumentMenuDoc(null)
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            <DeleteOutlineIcon sx={{ mr: 1 }} fontSize='small' />
+            Remove Document
+          </MenuItem>
+        ]}
+      </Menu>
+      <Menu
+        disableEnforceFocus
+        disableAutoFocus
+        disableRestoreFocus
+        anchorEl={questionMenuAnchor}
+        open={Boolean(questionMenuAnchor)}
+        onClose={() => {
+          setQuestionMenuAnchor(null)
+          setQuestionMenuItem(null)
+        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        {questionMenuItem && [
+          <MenuItem
+            key='question-view'
+            onClick={e => {
+              setQuestionMenuAnchor(null)
+              openDialog('questionDetail', questionMenuItem)
+              setQuestionMenuItem(null)
+            }}
+          >
+            <DescriptionIcon sx={{ mr: 1 }} fontSize='small' />
+            View Question
+          </MenuItem>,
+
+          <MenuItem
+            key='question-delete'
+            onClick={() => {
+              setQuestionMenuAnchor(null)
+              openDialog('delete', questionMenuItem)
+              setQuestionMenuItem(null)
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            <DeleteOutlineIcon sx={{ mr: 1 }} fontSize='small' />
+            Delete Question
+          </MenuItem>
+        ]}
+      </Menu>
     </Box>
   )
 }

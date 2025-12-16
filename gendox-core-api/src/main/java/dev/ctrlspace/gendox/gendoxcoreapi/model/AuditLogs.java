@@ -15,10 +15,11 @@ import java.util.UUID;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "audit_logs", schema = "gendox_core")
 public class AuditLogs {
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "audit_logs_id_seq")
+    @SequenceGenerator( name = "audit_logs_id_seq", sequenceName = "gendox_core.audit_logs_id_seq", allocationSize = 50)
     @Column(name = "id")
-    private UUID id;
+    private Long id;
     @Basic
     @Column(name = "project_id")
     private UUID projectId;
@@ -60,11 +61,19 @@ public class AuditLogs {
     @LastModifiedBy
     private UUID updatedBy;
 
-    public UUID getId() {
+    // think if makes sence to change this to
+    @Basic
+    @Column(name = "cached_token_count")
+    private Long cachedTokenCount;
+    @Basic
+    @Column(name = "reasoning_token_count")
+    private Long reasoningTokenCount;
+
+    public Long getId() {
         return id;
     }
 
-    public void setId(UUID id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -160,16 +169,32 @@ public class AuditLogs {
         this.updatedBy = updatedBy;
     }
 
+    public Long getCachedTokenCount() {
+        return cachedTokenCount;
+    }
+
+    public void setCachedTokenCount(Long cachedTokenCount) {
+        this.cachedTokenCount = cachedTokenCount;
+    }
+
+    public Long getReasoningTokenCount() {
+        return reasoningTokenCount;
+    }
+
+    public void setReasoningTokenCount(Long reasoningTokenCount) {
+        this.reasoningTokenCount = reasoningTokenCount;
+    }
+
+
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         AuditLogs auditLogs = (AuditLogs) o;
-        return Objects.equals(id, auditLogs.id) && Objects.equals(projectId, auditLogs.projectId) && Objects.equals(userId, auditLogs.userId) && Objects.equals(tokenCount, auditLogs.tokenCount) && Objects.equals(type, auditLogs.type) && Objects.equals(traceId, auditLogs.traceId) && Objects.equals(spanId, auditLogs.spanId) && Objects.equals(organizationId, auditLogs.organizationId) && Objects.equals(auditValue, auditLogs.auditValue) && Objects.equals(createdAt, auditLogs.createdAt) && Objects.equals(updatedAt, auditLogs.updatedAt) && Objects.equals(createdBy, auditLogs.createdBy) && Objects.equals(updatedBy, auditLogs.updatedBy);
+        return Objects.equals(id, auditLogs.id) && Objects.equals(projectId, auditLogs.projectId) && Objects.equals(userId, auditLogs.userId) && Objects.equals(tokenCount, auditLogs.tokenCount) && Objects.equals(type, auditLogs.type) && Objects.equals(traceId, auditLogs.traceId) && Objects.equals(spanId, auditLogs.spanId) && Objects.equals(organizationId, auditLogs.organizationId) && Objects.equals(auditValue, auditLogs.auditValue) && Objects.equals(createdAt, auditLogs.createdAt) && Objects.equals(updatedAt, auditLogs.updatedAt) && Objects.equals(createdBy, auditLogs.createdBy) && Objects.equals(updatedBy, auditLogs.updatedBy) && Objects.equals(cachedTokenCount, auditLogs.cachedTokenCount) && Objects.equals(reasoningTokenCount, auditLogs.reasoningTokenCount);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, projectId, userId, tokenCount, type, traceId, spanId, organizationId, auditValue, createdAt, updatedAt, createdBy, updatedBy);
+        return Objects.hash(id, projectId, userId, tokenCount, type, traceId, spanId, organizationId, auditValue, createdAt, updatedAt, createdBy, updatedBy, cachedTokenCount, reasoningTokenCount);
     }
 }

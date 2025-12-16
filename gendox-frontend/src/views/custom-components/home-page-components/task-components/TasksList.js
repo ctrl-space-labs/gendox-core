@@ -11,14 +11,14 @@ import Icon from 'src/views/custom-components/mui/icon/icon'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/router'
-import { deleteTask } from 'src/store/activeTask/activeTask'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import LinearProgress from '@mui/material/LinearProgress'
 import Box from '@mui/material/Box'
-import CreateTaskDialog from './CreateOrEditTaskDialog'
-import { updateTask, fetchTasks } from 'src/store/activeTask/activeTask'
+import CreateOrEditTaskDialog from './CreateOrEditTaskDialog'
+import DuplicateTaskDialog from './DuplicateTaskDialog'
+import { deleteTask } from 'src/store/activeTask/activeTask'
 
 // Map your codes to user-friendly labels + colors
 const TASK_TYPE_MAP = {
@@ -34,15 +34,13 @@ const TasksList = ({ projectTasks, page }) => {
   const token = localStorage.getItem(localStorageConstants.accessTokenKey)
   const { id: projectId, organizationId } = projectDetails
   const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [editTaskData, setEditTaskData] = useState(null)
-
   const [anchorEl, setAnchorEl] = useState(null)
   const [selectedTask, setSelectedTask] = useState(null)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [searchText, setSearchText] = useState('')
   const [filteredTasks, setFilteredTasks] = useState(projectTasks)
-  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 })
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
 
   useEffect(() => {
     setFilteredTasks(projectTasks || [])
@@ -78,7 +76,6 @@ const TasksList = ({ projectTasks, page }) => {
   }
 
   const openEditDialog = () => {
-    setEditTaskData(selectedTask)
     setEditDialogOpen(true)
     handleMenuClose()
   }
@@ -99,50 +96,21 @@ const TasksList = ({ projectTasks, page }) => {
     }
   }
 
-  const handleSaveEdit = async updatedData => {
-    if (!editTaskData) return
-    try {
-      // Call your update task API here - replace with your real API call:
-      // Example:
-      await dispatch(
-        updateTask({
-          organizationId,
-          projectId,
-          taskId: editTaskData.id,
-          token,
-          updatePayload: { description: updatedData.description, title: updatedData.title }
-        })
-      ).unwrap()
-
-      toast.success('Task updated successfully.')
-      setEditDialogOpen(false)
-      setSelectedTask(null)
-
-      // Refresh tasks list
-      dispatch(fetchTasks({ organizationId, projectId, token }))
-    } catch (error) {
-      toast.error('Failed to update task.')
-    }
-  }
-
-  
   const handleRowClick = params => {
-  const typeCode =
-    params.row.taskType?.value || params.row.taskType?.name || params.row.type || ''
+    const typeCode = params.row.taskType?.value || params.row.taskType?.name || params.row.type || ''
 
-  let route = ''
-  if (typeCode === 'DOCUMENT_INSIGHTS') {
-    route = `/gendox/tasks/document-insights/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
-  } else if (typeCode === 'DOCUMENT_DIGITIZATION') {
-    route = `/gendox/tasks/document-digitization/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
-  } else {
-    // fallback, e.g. stay on page or show error/toast
-    return
+    let route = ''
+    if (typeCode === 'DOCUMENT_INSIGHTS') {
+      route = `/gendox/tasks/document-insights/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
+    } else if (typeCode === 'DOCUMENT_DIGITIZATION') {
+      route = `/gendox/tasks/document-digitization/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
+    } else {
+      // fallback, e.g. stay on page or show error/toast
+      return
+    }
+
+    router.push(route)
   }
-
-  router.push(route)
-}
-
 
   const columns = [
     {
@@ -209,9 +177,11 @@ const TasksList = ({ projectTasks, page }) => {
             aria-label='task actions'
             onClick={event => {
               event.stopPropagation()
+              event.currentTarget.blur();
               handleMenuClick(event, params.row)
             }}
             disabled={isDeleting}
+            size='small'
           >
             <Icon icon='mdi:dots-vertical' />
           </IconButton>
@@ -223,16 +193,56 @@ const TasksList = ({ projectTasks, page }) => {
             transformOrigin={{ vertical: 'top', horizontal: 'center' }}
           >
             <MenuItem
-              onClick={() => {
-                setEditTaskData(selectedTask)
-                setEditDialogOpen(true)
+              onClick={event => {
+                event.currentTarget.blur()
                 handleMenuClose()
+                setTimeout(() => {
+                  setEditDialogOpen(true)
+                }, 20)
               }}
               disabled={isDeleting}
+              sx={{
+                gap: 1.5,
+                py: 1,
+                '&:hover': { bgcolor: 'action.hover' }
+              }}
             >
+              <Icon icon='mdi:pencil-outline' width={20} />
               Edit Task
             </MenuItem>
-            <MenuItem onClick={openDeleteConfirm} disabled={isDeleting}>
+
+            {selectedTask?.taskType?.name === 'DOCUMENT_INSIGHTS' && (
+              <MenuItem
+                onClick={event => {
+                  event.currentTarget.blur()
+                  handleMenuClose()
+                  setTimeout(() => {
+                    setDuplicateDialogOpen(true)
+                  }, 20)
+                }}
+                disabled={isDeleting}
+                sx={{
+                  gap: 1.5,
+                  py: 1,
+                  '&:hover': { bgcolor: 'action.hover' }
+                }}
+              >
+                <Icon icon='mdi:content-copy' width={20} />
+                Duplicate Task
+              </MenuItem>
+            )}
+
+            <MenuItem
+              onClick={openDeleteConfirm}
+              disabled={isDeleting}
+              sx={{
+                gap: 1.5,
+                py: 1,
+                color: 'error.main',
+                '&:hover': { color: 'error.dark' }
+              }}
+            >
+              <Icon icon='mdi:trash-can-outline' width={20} />
               Delete Task
             </MenuItem>
           </Menu>
@@ -267,9 +277,7 @@ const TasksList = ({ projectTasks, page }) => {
         <DataGrid
           rows={filteredTasks}
           columns={columns}
-          pageSizeOptions={[10, 20, 40]}
-          paginationModel={paginationModel}
-          onPaginationModelChange={setPaginationModel}
+          pageSizeOptions={[10, 20, 40, 100]}
           disableRowSelectionOnClick
           onRowClick={handleRowClick}
           sx={{
@@ -301,13 +309,20 @@ const TasksList = ({ projectTasks, page }) => {
         cancelButtonText='Cancel'
         disableConfirm={isDeleting}
       />
-      <CreateTaskDialog
+      <CreateOrEditTaskDialog
         open={editDialogOpen}
         onClose={() => setEditDialogOpen(false)}
-        initialData={editTaskData || {}}
+        initialData={selectedTask || {}}
         editMode={true}
-        onSave={handleSaveEdit}
         TASK_TYPE_MAP={TASK_TYPE_MAP}
+      />
+      <DuplicateTaskDialog
+        open={duplicateDialogOpen}
+        onClose={() => setDuplicateDialogOpen(false)}
+        task={selectedTask}
+        organizationId={organizationId}
+        projectId={projectId}
+        token={token}
       />
     </Card>
   )

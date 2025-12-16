@@ -1,7 +1,6 @@
 // ** React Imports
 import React, { useEffect, useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { useSettings } from 'src/@core/hooks/useSettings'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
@@ -15,27 +14,24 @@ import Icon from 'src/views/custom-components/mui/icon/icon'
 import CustomChip from 'src/views/custom-components/mui/chip/index'
 import SearchToolbar from 'src/utils/searchToolbar'
 import InviteDialog from 'src/views/pages/project-settings-components/members-components/InviteDialog'
-
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
-import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 import { fetchProjectMembersAndRoles, deleteProjectMember } from 'src/store/activeProject/activeProject'
 import { fetchOrganizationMembers } from 'src/store/activeOrganization/activeOrganization'
-
 import { userTypeStatus, memberRoleStatus, escapeRegExp, renderClientAvatar } from 'src/utils/membersUtils'
 import { localStorageConstants } from 'src/utils/generalConstants'
 
 const MembersProjectSettings = () => {
   const dispatch = useDispatch()
-  const { settings } = useSettings()
-  const isDemo = settings.isDemo
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
-  const project = useSelector(state => state.activeProject.projectDetails)
-  const projectMembers = useSelector(state => state.activeProject.projectMembersAndRoles)
-  const isMembersLoading = useSelector(state => state.activeProject.isMembersLoading)
-  const isDeletingMember = useSelector(state => state.activeProject.isDeletingMember)
+  const { 
+    projectDetails: project, 
+    projectMembersAndRoles: projectMembers, 
+    isMembersLoading, 
+    isDeletingMember 
+  } = useSelector(state => state.activeProject)
 
-  const { id: projectId, organizationId } = project
+  const { id: projectId, organizationId } = project || {}
   const [searchText, setSearchText] = useState([])
   const [filteredProjectMembers, setFilteredProjectMembers] = useState([])
   const [paginationModel, setPaginationModel] = useState({

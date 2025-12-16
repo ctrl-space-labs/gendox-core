@@ -42,6 +42,7 @@ services:
       gendox-database:
         condition: service_healthy
     environment: # Gendox environment variables
+      - JAVA_TOOL_OPTIONS=-Xms512m -Xmx1536m
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_USERNAME=${DATABASE_USERNAME}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
@@ -57,6 +58,7 @@ services:
       - GEMINI_KEY=${GEMINI_KEY}
       - MISTRAL_KEY=${MISTRAL_KEY}
       - VOYAGE_KEY=${VOYAGE_KEY}
+      - GCLOUD_CLIENT_SECRET=${GCLOUD_CLIENT_SECRET}
       - GENDOX_SPRING_EMAIL_HOST=${GENDOX_SPRING_EMAIL_HOST}
       - GENDOX_SPRING_EMAIL_PORT=${GENDOX_SPRING_EMAIL_PORT}
       - GENDOX_SPRING_EMAIL_USERNAME=${GENDOX_SPRING_EMAIL_USERNAME}
@@ -84,31 +86,38 @@ services:
       - KC_DB_USERNAME=${KC_DB_USERNAME}
       - KC_DB_PASSWORD=${KC_DB_PASSWORD}
       - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
+      - KEYSTORE_FILE=/opt/keycloak/conf/server.keystore
     entrypoint: [ ]
     command:
       - /bin/bash
       - -c
       - |
-        if keytool -list -keystore /opt/keycloak/conf/server.keystore -storepass "${KEYSTORE_PASSWORD}" -alias server > /dev/null 2>&1; then
-          echo "Alias 'server' exists, deleting it.";
-          keytool -delete -alias server -keystore /opt/keycloak/conf/server.keystore -storepass "${KEYSTORE_PASSWORD}";
-        fi && \
-        echo "Generating new keystore and key pair." && \
-        keytool -genkeypair \
-          -storepass "${KEYSTORE_PASSWORD}" \
-          -storetype PKCS12 \
-          -keyalg RSA \
-          -keysize 2048 \
-          -dname "CN=localhost" \
-          -alias server \
-          -validity 365 \
-          -ext SAN:c=DNS:localhost,IP:127.0.0.1 \
-          -keystore /opt/keycloak/conf/server.keystore && \
+        if [ -f "$$KEYSTORE_FILE" ] && { [ ! -s "$$KEYSTORE_FILE" ] || ! keytool -list -keystore "$$KEYSTORE_FILE" -storepass "${KEYSTORE_PASSWORD}" > /dev/null 2>&1; }; then
+          echo "Keystore is empty or invalid. Deleting it."
+          rm -f "$$KEYSTORE_FILE"
+        fi
+        if [ ! -f "$$KEYSTORE_FILE" ]; then
+          echo "Generating new keystore and key pair.."
+          keytool -genkeypair \
+            -storepass "${KEYSTORE_PASSWORD}" \
+            -storetype PKCS12 \
+            -keyalg RSA \
+            -keysize 2048 \
+            -dname "CN=localhost" \
+            -alias server \
+            -validity 365 \
+            -ext "SAN=DNS:localhost,IP:127.0.0.1" \
+            -keystore "$$KEYSTORE_FILE" \
+            -noprompt
+        else
+          echo "Using existing valid keystore."
+        fi
+        echo "Starting Keycloak..."
         exec /opt/keycloak/bin/kc.sh start \
           --http-relative-path="${KEYCLOAK_HTTP_RELATIVE_PATH}" \
           --features=token-exchange \
           --hostname-strict=false \
-          --https-key-store-file=/opt/keycloak/conf/server.keystore \
+          --https-key-store-file="$$KEYSTORE_FILE" \
           --https-key-store-password "${KEYSTORE_PASSWORD}" \
           --spi-theme-static-max-age=600 \
           --spi-theme-cache-themes=true \

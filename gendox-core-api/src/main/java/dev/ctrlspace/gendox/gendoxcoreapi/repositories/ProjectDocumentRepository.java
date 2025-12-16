@@ -5,6 +5,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectMember;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
@@ -39,6 +40,11 @@ public interface ProjectDocumentRepository extends JpaRepository<ProjectDocument
 
     @Query(value = "SELECT pd.project_id FROM gendox_core.project_documents pd WHERE pd.document_id = :documentId LIMIT 1", nativeQuery = true)
     Optional<UUID> findProjectIdByDocumentId(@Param("documentId") UUID documentId);
+
+    @Modifying
+    @Query(nativeQuery = true,
+            value = "DELETE FROM gendox_core.project_documents pd WHERE pd.document_id = :documentId AND pd.project_id = :projectId")
+    void deleteByDocumentIdAndProjectId(@Param("documentId") UUID documentId, @Param("projectId") UUID projectId);
 
 
 

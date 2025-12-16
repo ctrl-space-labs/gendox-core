@@ -1,12 +1,16 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.TaskConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDuplicateDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -23,28 +27,110 @@ public class TaskService {
     private final TaskNodeRepository taskNodeRepository;
     private final TaskEdgeService taskEdgeService;
     private final TypeService typeService;
+    private TaskConverter taskConverter;
+    private AiModelService aiModelService;
+    private TaskNodeService taskNodeService;
 
+    private Integer maxQuestionsPerBucket;
+    private Integer maxQuestionTokensPerBucket;
+    private Integer maxSectionsChunkTokens;
 
     @Autowired
     public TaskService(TaskRepository taskRepository,
                        TaskNodeRepository taskNodeRepository,
                        TypeService typeService,
-                       TaskEdgeService taskEdgeService) {
+                       TaskEdgeService taskEdgeService,
+                       TaskConverter taskConverter,
+                       AiModelService aiModelService,
+                       TaskNodeService taskNodeService,
+                       @Value("${gendox.tasks.max-questions-per-bucket}") Integer maxQuestionsPerBucket,
+                       @Value("${gendox.tasks.max-question-tokens-per-bucket}") Integer maxQuestionTokensPerBucket,
+                       @Value("${gendox.tasks.max-sections-chunk-tokens}") Integer maxSectionsChunkTokens) {
         this.taskRepository = taskRepository;
         this.taskNodeRepository = taskNodeRepository;
         this.typeService = typeService;
         this.taskEdgeService = taskEdgeService;
+        this.taskConverter = taskConverter;
+        this.aiModelService = aiModelService;
+        this.taskNodeService = taskNodeService;
+        this.maxQuestionsPerBucket = maxQuestionsPerBucket;
+        this.maxQuestionTokensPerBucket = maxQuestionTokensPerBucket;
+        this.maxSectionsChunkTokens = maxSectionsChunkTokens;
     }
 
-    public Task createTask(UUID projectId, TaskDTO taskDTO) {
-        Task task = new Task();
-        task.setProjectId(projectId);
-        task.setTaskType(typeService.getTaskTypeByName(taskDTO.getType()));
-        task.setTitle(taskDTO.getTitle());
-        task.setDescription(taskDTO.getDescription());
+    public Task createTask(UUID projectId, TaskDTO taskDTO) throws GendoxException {
+        Task task = taskConverter.toEntity(taskDTO);
+        // defaults
+        if (task.getMaxQuestionsPerBucket() == null) {
+            task.setMaxQuestionsPerBucket(this.maxQuestionsPerBucket);
+        }
+        if (task.getMaxQuestionTokensPerBucket() == null) {
+            task.setMaxQuestionTokensPerBucket(this.maxQuestionTokensPerBucket);
+        }
+        if (task.getMaxSectionsChunkTokens() == null) {
+            task.setMaxSectionsChunkTokens(this.maxSectionsChunkTokens);
+        }
         logger.info("Creating new task: {}", task);
         return taskRepository.save(task);
     }
+
+    public Task duplicateTask(UUID projectId, TaskDuplicateDTO taskDuplicateDTO) throws GendoxException {
+        logger.info("Duplicating task {} with options: keepQuestions={}, keepDocuments={}",
+                taskDuplicateDTO.getTaskId(), taskDuplicateDTO.isKeepQuestions(), taskDuplicateDTO.isKeepDocuments());
+
+        Task original = taskRepository.findById(taskDuplicateDTO.getTaskId())
+                .orElseThrow(() -> new GendoxException("TASK_NOT_FOUND", "Task not found", HttpStatus.NOT_FOUND));
+
+        TaskDTO newTaskDTO = taskConverter.toDTO(original);
+        newTaskDTO.setId(null);
+        newTaskDTO.setProjectId(projectId);
+        if (taskDuplicateDTO.getNewTitle() != null) {
+            newTaskDTO.setTitle(taskDuplicateDTO.getNewTitle());
+        }
+        if (taskDuplicateDTO.getNewDescription() != null) {
+            newTaskDTO.setDescription(taskDuplicateDTO.getNewDescription());
+        }
+
+        Task newTask = this.createTask(projectId, newTaskDTO);
+
+        List<TaskNode> nodesToSave = new ArrayList<>();
+
+        // COPY QUESTIONS
+        if (taskDuplicateDTO.isKeepQuestions()) {
+            Page<TaskNode> questionNodes = taskNodeService.getTaskNodesByType(taskDuplicateDTO.getTaskId(), TaskNodeTypeConstants.QUESTION);
+
+            for (TaskNode questionNode : questionNodes) {
+                TaskNode newQuestionNode = new TaskNode();
+                newQuestionNode.setTaskId(newTask.getId());
+                newQuestionNode.setNodeType(questionNode.getNodeType());
+                newQuestionNode.setNodeValue(questionNode.getNodeValue());
+
+                nodesToSave.add(newQuestionNode);
+            }
+        }
+
+
+        // COPY DOCUMENTS
+        if (taskDuplicateDTO.isKeepDocuments()) {
+            Page<TaskNode> documentNodes = taskNodeService.getTaskNodesByType(taskDuplicateDTO.getTaskId(), TaskNodeTypeConstants.DOCUMENT);
+
+            for (TaskNode documentNode : documentNodes) {
+                TaskNode newDocumentNode = new TaskNode();
+                newDocumentNode.setTaskId(newTask.getId());
+                newDocumentNode.setNodeType(documentNode.getNodeType());
+                newDocumentNode.setNodeValue(documentNode.getNodeValue());
+                newDocumentNode.setDocumentId(documentNode.getDocumentId());
+                nodesToSave.add(newDocumentNode);
+            }
+        }
+
+        if (!nodesToSave.isEmpty()) {
+            taskNodeRepository.saveAll(nodesToSave);
+        }
+
+        return newTask;
+    }
+
 
     public List<Task> getAllTasksByProjectId(UUID projectId) {
         logger.info("Fetching all tasks for project: {}", projectId);
@@ -57,20 +143,75 @@ public class TaskService {
                 .orElseThrow(() -> new RuntimeException("Task not found"));
     }
 
-    public Task updateTask(UUID taskId, TaskDTO taskDTO) {
+    public Task updateTask(UUID taskId, TaskDTO taskDTO) throws GendoxException {
         logger.info("Updating task: {}", taskId);
+
         Task existingTask = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found for update"));
 
-        existingTask.setTitle(taskDTO.getTitle());
-        existingTask.setDescription(taskDTO.getDescription());
+
+        // Update projectId
+        if (taskDTO.getProjectId() != null) {
+            existingTask.setProjectId(taskDTO.getProjectId());
+        }
+
+        // Update type
+        if (taskDTO.getType() != null) {
+            existingTask.setTaskType(typeService.getTaskTypeByName(taskDTO.getType()));
+        }
+
+        // Update title
+        if (taskDTO.getTitle() != null) {
+            existingTask.setTitle(taskDTO.getTitle());
+        }
+
+        // Update description
+        if (taskDTO.getDescription() != null) {
+            existingTask.setDescription(taskDTO.getDescription());
+        }
+
+        // Update completionModel
+        if (taskDTO.getCompletionModel() != null) {
+            String modelName = taskDTO.getCompletionModel().getName();
+
+            if (modelName != null && !modelName.isBlank()) {
+                AiModel completionModel = aiModelService.getByName(modelName);
+
+                if (!completionModel.getIsActive()) {
+                    throw new GendoxException(
+                            "INACTIVE_COMPLETION_MODEL",
+                            "The selected completion model is inactive",
+                            HttpStatus.FORBIDDEN
+                    );
+                }
+
+                existingTask.setCompletionModel(completionModel);
+            }
+        }
+
+
+        // Update taskPrompt
+        if (taskDTO.getTaskPrompt() != null) {
+            existingTask.setTaskPrompt(taskDTO.getTaskPrompt());
+        }
+
+        // Update maxToken
+        if (taskDTO.getMaxToken() != null) {
+            existingTask.setMaxToken(taskDTO.getMaxToken());
+        }
+
+        // Update temperature
+        if (taskDTO.getTemperature() != null) {
+            existingTask.setTemperature(taskDTO.getTemperature());
+        }
+
+        // Update topP
+        if (taskDTO.getTopP() != null) {
+            existingTask.setTopP(taskDTO.getTopP());
+        }
+
         return taskRepository.save(existingTask);
     }
-
-
-
-
-
 
 
     @Transactional
@@ -94,11 +235,6 @@ public class TaskService {
         // Finally, delete the task itself
         taskRepository.delete(taskToDelete);
     }
-
-
-
-
-
 
 
 }

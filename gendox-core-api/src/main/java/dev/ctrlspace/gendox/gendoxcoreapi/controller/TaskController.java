@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDuplicateDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskEdgeCriteria;
@@ -35,7 +36,6 @@ public class TaskController {
     private final TaskCsvExportService taskCsvExportService;
     private final TaskNodeService taskNodeService;
     private final TaskEdgeService taskEdgeService;
-    private final TypeService typeService;
 
 
     @Autowired
@@ -44,15 +44,13 @@ public class TaskController {
                           TaskEdgeConverter taskEdgeConverter,
                           TaskCsvExportService taskCsvExportService,
                           TaskNodeService taskNodeService,
-                          TaskEdgeService taskEdgeService,
-                          TypeService typeService) {
+                          TaskEdgeService taskEdgeService) {
         this.taskService = taskService;
         this.taskNodeConverter = taskNodeConverter;
         this.taskEdgeConverter = taskEdgeConverter;
         this.taskCsvExportService = taskCsvExportService;
         this.taskNodeService = taskNodeService;
         this.taskEdgeService = taskEdgeService;
-        this.typeService = typeService;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -60,8 +58,17 @@ public class TaskController {
     @ResponseStatus(value = HttpStatus.CREATED)
     public Task createTask(@PathVariable UUID organizationId,
                            @PathVariable UUID projectId,
-                           @RequestBody TaskDTO taskDTO) {
+                           @RequestBody TaskDTO taskDTO) throws GendoxException {
         return taskService.createTask(projectId, taskDTO);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PostMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/duplicate")
+    @ResponseStatus(value = HttpStatus.CREATED)
+    public Task duplicateTask(@PathVariable UUID organizationId,
+                              @PathVariable UUID projectId,
+                              @RequestBody TaskDuplicateDTO taskDuplicateDTO) throws GendoxException {
+        return taskService.duplicateTask(projectId, taskDuplicateDTO);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -88,7 +95,7 @@ public class TaskController {
     public Task updateTask(@PathVariable UUID organizationId,
                            @PathVariable UUID projectId,
                            @PathVariable UUID taskId,
-                           @RequestBody TaskDTO taskDTO) {
+                           @RequestBody TaskDTO taskDTO) throws GendoxException {
         return taskService.updateTask(taskId, taskDTO);
     }
 
@@ -135,32 +142,22 @@ public class TaskController {
 
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
-    @PutMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-nodes")
+    @PutMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/task-nodes")
     @ResponseStatus(value = HttpStatus.OK)
     public TaskNode updateTaskNode(@PathVariable UUID organizationId,
                                    @PathVariable UUID projectId,
+                                   @PathVariable UUID taskId,
                                    @RequestBody TaskNodeDTO taskNodeDTO) throws GendoxException {
         Task task = taskService.getTaskById(taskNodeDTO.getTaskId());
+        if (!task.getId().equals(taskId)) {
+            throw new GendoxException("TASK_ID_MISMATCH", "Task ID in path and body do not match", HttpStatus.BAD_REQUEST);
+        }
         if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
             throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
         }
-        TaskNode taskNode = taskNodeConverter.toEntity(taskNodeDTO);
-        return taskNodeService.updateTaskNode(taskNode);
+        return taskNodeService.updateTaskNode(taskNodeDTO, task);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
-    @PutMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/task-nodes/document-digitization")
-    @ResponseStatus(value = HttpStatus.OK)
-    public TaskNode updateTaskNodeForDocumentDigitization(@PathVariable UUID organizationId,
-                                                          @PathVariable UUID projectId,
-                                                          @PathVariable UUID taskId,
-                                                          @RequestBody TaskDocumentMetadataDTO taskDocumentMetadataDTO) throws GendoxException {
-        Task task = taskService.getTaskById(taskId);
-        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
-            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
-        }
-        return taskNodeService.updateTaskNodeForDocumentDigitization(taskDocumentMetadataDTO);
-    }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-nodes", produces = {"application/json"})
@@ -307,10 +304,12 @@ public class TaskController {
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
-    @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/export-csv")
-    public ResponseEntity<InputStreamResource> exportTaskCsv(@PathVariable UUID organizationId,
-                                                             @PathVariable UUID projectId,
-                                                             @PathVariable UUID taskId
+    @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/documents/{documentNodeId}/insights/export-csv")
+    public ResponseEntity<InputStreamResource> documentInsightExportSingleCSV(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID taskId,
+            @PathVariable UUID documentNodeId
     ) throws GendoxException {
         Task task = taskService.getTaskById(taskId);
         if (task == null) {
@@ -319,8 +318,10 @@ public class TaskController {
         if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
             throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
         }
-        InputStreamResource fileResource = taskCsvExportService.exportTaskCsv(taskId);
-        String filename = "task_" + taskId + "_answers.csv";
+        InputStreamResource fileResource = taskCsvExportService.documentInsightExportSingleDocumentCSV(taskId, documentNodeId);
+        String filename = "task_" + taskId + "_document_" + documentNodeId + ".csv";
+
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.parseMediaType("text/csv"))
@@ -328,11 +329,34 @@ public class TaskController {
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
-    @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/documents/{documentNodeId}/export-csv")
+    @GetMapping("/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/insights/export-csv")
+    public ResponseEntity<InputStreamResource> documentInsightExportAll(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID taskId
+    ) throws GendoxException {
+
+        Task task = taskService.getTaskById(taskId);
+        if (task == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task not found", HttpStatus.NOT_FOUND);
+
+        }
+
+        InputStreamResource fileResource = taskCsvExportService.documentInsightExportCSV(taskId);
+        String filename = "task_" + taskId + "_answers.csv";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(fileResource);
+    }
+
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/documents/{documentNodeId}/digitization/export-csv")
     public ResponseEntity<InputStreamResource> documentDigitizationExportCSV(@PathVariable UUID organizationId,
-                                                                               @PathVariable UUID projectId,
-                                                                               @PathVariable UUID taskId,
-                                                                               @PathVariable UUID documentNodeId
+                                                                             @PathVariable UUID projectId,
+                                                                             @PathVariable UUID taskId,
+                                                                             @PathVariable UUID documentNodeId
     ) throws GendoxException {
         Task task = taskService.getTaskById(taskId);
         if (task == null) {
@@ -341,7 +365,7 @@ public class TaskController {
         if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
             throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
         }
-        
+
         InputStreamResource fileResource = taskCsvExportService.documentDigitizationExportCSV(taskId, documentNodeId);
         String filename = "document_digitization_" + documentNodeId + ".csv";
         return ResponseEntity.ok()

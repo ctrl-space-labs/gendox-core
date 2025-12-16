@@ -1,77 +1,11 @@
-import React, { useState, useRef, useLayoutEffect } from 'react'
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Divider, Box } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import { answerFlagEnum, getAnswerFlagProps } from 'src/utils/tasks/answerFlagEnum'
 import Chip from 'src/views/custom-components/mui/chip'
-import GendoxMarkdownRenderer from 'src/views/pages/markdown-renderer/GendoxMarkdownRenderer'
-
+import ExpandableMarkdownSection from 'src/views/pages/tasks/helping-components/ExpandableMarkodownSection'
 const MAX_COLLAPSED_HEIGHT = 80 // px, about 3-4 lines
 
-function ExpandableMarkdownSection({ label, markdown, maxHeight = MAX_COLLAPSED_HEIGHT }) {
-  const theme = useTheme()
-  const [expanded, setExpanded] = useState(false)
-  const [showButton, setShowButton] = useState(false)
-  const contentRef = useRef(null)
 
-  // Check if overflow exists after render
-  useLayoutEffect(() => {
-    if (contentRef.current) {
-      setShowButton(contentRef.current.scrollHeight > maxHeight + 2) // Allow for rounding errors
-    }
-  }, [markdown, maxHeight])
-
-  return (
-    <Box sx={{ mb: 3 }}>
-      <Typography
-        variant='caption'
-        sx={{
-          fontWeight: 700,
-          color: theme.palette.primary.main,
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
-          mb: 1,
-          display: 'block'
-        }}
-      >
-        {label}
-      </Typography>
-      <Box
-        ref={contentRef}
-        sx={{
-          alignItems: 'center',
-          gap: 2,
-          p: 2,
-          borderRadius: 2,
-          minHeight: 54,
-          maxHeight: expanded ? 'none' : `${maxHeight}px`,
-          overflow: 'hidden',
-          position: 'relative',
-          transition: 'max-height 0.3s'
-        }}
-      >
-        <GendoxMarkdownRenderer markdownText={markdown} />
-      </Box>
-      {showButton && (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 2, pt: 0.5 }}>
-          <Button
-            size='small'
-            variant='text'
-            sx={{
-              color: theme.palette.primary.main,
-              textTransform: 'none',
-              fontWeight: 600,
-              minWidth: 0,
-              p: 0
-            }}
-            onClick={() => setExpanded(e => !e)}
-          >
-            {expanded ? 'Show less' : 'Show more'}
-          </Button>
-        </Box>
-      )}
-    </Box>
-  )
-}
 
 const AnswerDialog = ({ open, onClose, answer }) => {
   const theme = useTheme()

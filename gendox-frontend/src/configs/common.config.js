@@ -1,5 +1,5 @@
 const commonConfig = {
-    gendoxHomePage: "https://www.ctrlspace.dev/gendox",
+    gendoxHomePage: "https://gendox.dev/",
     gendoxUrl: process.env.NEXT_PUBLIC_GENDOX_URL,
     oidcAuthority: process.env.NEXT_PUBLIC_OIDC_AUTHORITY,
     oidcClientId: process.env.NEXT_PUBLIC_OIDC_CLIENT_ID,

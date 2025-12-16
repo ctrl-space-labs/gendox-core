@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
 import dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps.DocumentDigitizationProcessor;
 import dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps.DocumentDigitizationReader;
 import dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps.DocumentDigitizationWriter;
+import dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps.TempFileCleanupListener;
 import io.micrometer.observation.ObservationRegistry;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -26,8 +27,11 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 public class DocumentDigitizationJobConfig {
+
     @Value("${gendox.batch-jobs.document-digitization.job.thread-pool-size}")
     private Integer threadPoolSize;
+    @Value("${gendox.batch-jobs.document-digitization.job.llm-completion-executor-pool-size}")
+    private Integer llmCompletionExecutorPoolSize;
     @Value("${gendox.batch-jobs.document-digitization.job.steps.document-digitization-step.chunk-size}")
     private Integer chunkSize;
     @Value("${gendox.batch-jobs.document-digitization.job.name}")
@@ -68,6 +72,7 @@ public class DocumentDigitizationJobConfig {
     public Step documentDigitizationStep(DocumentDigitizationReader documentDigitizationReader,
                                          DocumentDigitizationProcessor documentDigitizationProcessor,
                                          DocumentDigitizationWriter documentDigitizationWriter,
+                                         TempFileCleanupListener tempFileCleanupListener,
                                          TaskExecutor asyncBatchDigitizationExecutor,
                                          PlatformTransactionManager transactionManager) {
 
@@ -77,6 +82,7 @@ public class DocumentDigitizationJobConfig {
                 .processor(documentDigitizationProcessor)
                 .writer(documentDigitizationWriter)
                 .taskExecutor(asyncBatchDigitizationExecutor)
+                .listener(tempFileCleanupListener)
                 .build();
     }
 
@@ -100,7 +106,7 @@ public class DocumentDigitizationJobConfig {
 
         executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
         // Throttle concurrency
-        executor.setConcurrencyLimit(threadPoolSize);
+        executor.setConcurrencyLimit(llmCompletionExecutorPoolSize);
         return executor;
     }
 

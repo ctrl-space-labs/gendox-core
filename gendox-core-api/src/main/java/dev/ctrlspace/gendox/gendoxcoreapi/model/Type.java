@@ -1,9 +1,16 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+
 
 @Entity
 @Table(name = "types", schema = "gendox_core")
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder(toBuilder = true)
 public class Type {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id

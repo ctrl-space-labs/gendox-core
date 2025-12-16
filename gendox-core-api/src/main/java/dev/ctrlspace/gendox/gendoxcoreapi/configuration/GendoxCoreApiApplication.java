@@ -10,6 +10,7 @@ import com.knuddels.jtokkit.api.EncodingRegistry;
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.VoyageEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.ReadDocumentTool;
 import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeService;
 import dev.ctrlspace.gendox.spring.batch.jobs.SpringBatchConfiguration;
@@ -52,7 +53,8 @@ import java.util.StringJoiner;
         GendoxAuthenticationToken.class,
         GendoxAPIIntegrationService.class,
         UniqueIdentifierCodeService.class,
-        VoyageEmbeddingResponseConverter.class
+        VoyageEmbeddingResponseConverter.class,
+        ReadDocumentTool.class
         })
 @EnableCaching
 @EnableJpaRepositories(basePackageClasses = {UserRepository.class})
