@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SQSConfig {
 
-    @Value("${cloud.aws.SQS.region}")
+    @Value("${cloud.aws.sqs.region}")
     private String region;
 
 
