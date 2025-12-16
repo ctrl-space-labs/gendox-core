@@ -31,10 +31,6 @@ gendox:
   domain:
     base-url: http://localhost:5000
 
-  documents:
-      upload-dir: s3://gendox.organization.documents.dev
-
-
 proven-ai:
   base-url: https://proven-ai.ctrlspace.dev
 

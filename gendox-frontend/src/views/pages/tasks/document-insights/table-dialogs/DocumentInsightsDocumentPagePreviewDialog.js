@@ -12,6 +12,7 @@ import {
   Paper,
   Tooltip
 } from '@mui/material'
+import Icon from 'src/views/custom-components/mui/icon/icon'
 import { useDispatch, useSelector } from 'react-redux'
 import CloseIcon from '@mui/icons-material/Close'
 import Divider from '@mui/material/Divider'
@@ -30,17 +31,15 @@ import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 import CleanCollapse from 'src/views/custom-components/mui/collapse'
 import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
 import DocumentTextComponent from '../../helping-components/DocumentTextComponent'
-import {
-  fetchDocument,
-  fetchDocuments,
-  resetSupportingDocuments
-} from 'src/store/activeDocument/activeDocument'
+import { fetchDocument, fetchDocuments, resetSupportingDocuments } from 'src/store/activeDocument/activeDocument'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
 import AddNewDocumentDialog from '../../helping-components/AddNewDocumentDialog'
 import { updateTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
 import { DeleteConfirmDialog } from 'src/utils/dialogs/DeleteConfirmDialog'
 import WarningIcon from '@mui/icons-material/Warning'
+import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
+
 
 const DocumentPagePreviewDialog = ({
   open,
@@ -461,9 +460,17 @@ const DocumentPagePreviewDialog = ({
 
             {/* SUPPORTING DOCUMENTS AREA */}
             <Box>
-              <Typography variant='body2' sx={{ fontWeight: 600, mb: 4 }}>
-                Supporting Documents
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 4 }}>
+                <Typography variant='body2' sx={{ fontWeight: 600 }}>
+                  Supporting Documents
+                </Typography>
+                <Tooltip title=' Supporting documents provide additional context to improve answer accuracy.'>
+                  <IconButton color='primary' aria-label='info about tasks'>
+                    <Icon icon='mdi:information-outline' />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+
               <Tooltip title={!editMode ? 'You must be in edit mode to add documents' : ''}>
                 <span>
                   <Button
@@ -500,6 +507,7 @@ const DocumentPagePreviewDialog = ({
                       flexDirection: 'column',
                       justifyContent: 'space-between',
                       minHeight: 120,
+                      cursor: 'default',
                       transition: '0.2s',
                       backgroundColor: 'background.paper',
                       '&:hover': {
@@ -512,7 +520,7 @@ const DocumentPagePreviewDialog = ({
                     {/* Header Row */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <DescriptionIcon color='primary' />
-                      <Typography sx={{ fontWeight: 600, flex: 1 }}>{doc.title}</Typography>
+                      <Typography sx={{ fontWeight: 600, flex: 1 }}>{<TruncatedText text={doc.title} cursor='default' />}</Typography>
                     </Box>
 
                     {/* Footer Actions */}

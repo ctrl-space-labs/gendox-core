@@ -353,7 +353,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
         activeNode={activeNode}
         onClose={closeDialog}
         onOpen={openDialog}
-        refreshDocuments={reloadAll}
+        reloadAll={reloadAll}
         taskId={taskId}
         organizationId={organizationId}
         projectId={projectId}

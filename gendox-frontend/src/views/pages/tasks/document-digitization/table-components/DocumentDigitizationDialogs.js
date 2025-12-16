@@ -13,7 +13,7 @@ const DocumentDigitizationDialogs = ({
   activeNode,
   onClose,
   onOpen,
-  refreshDocuments,
+  reloadAll,
   taskId,
   organizationId,
   projectId,
@@ -53,7 +53,7 @@ const DocumentDigitizationDialogs = ({
     }
     try {
       await dispatch(updateTaskNode({ organizationId, projectId, taskId, taskNodePayload: payload, token })).unwrap()
-      if (refreshDocuments) await refreshDocuments()
+      reloadAll()
       onClose('docDetail')
     } finally {
       setLoading(false)
@@ -72,7 +72,7 @@ const DocumentDigitizationDialogs = ({
         }
         await taskService.createTaskNode(organizationId, projectId, taskNodePayload, token)
       }
-      if (refreshDocuments) await refreshDocuments()
+      reloadAll()
       onClose('newDoc')
     } finally {
       setLoading(false)
@@ -84,7 +84,7 @@ const DocumentDigitizationDialogs = ({
     setLoading(true)
     try {
       await dispatch(deleteTaskNode({ organizationId, projectId, taskNodeId: nodeId, token })).unwrap()
-      if (refreshDocuments) await refreshDocuments()
+      reloadAll()
       onClose('delete')
     } finally {
       setLoading(false)
@@ -105,6 +105,9 @@ const DocumentDigitizationDialogs = ({
         projectId={projectId}
         token={token}
         taskId={taskId}
+        onUploadSuccess={() => {
+          reloadAll()
+        }}
       />
 
       {/* Document Details Dialog */}
@@ -125,9 +128,8 @@ const DocumentDigitizationDialogs = ({
         document={activeNode}
         documentPages={documentPages}
         generateSingleDocument={generateSingleDocument}
-        onDocumentUpdate={updatedDoc => {
-          // Refresh documents to show updated data
-          if (refreshDocuments) refreshDocuments()
+        onDocumentUpdate={() => {
+          reloadAll()
         }}
         dialogLoading={dialogLoading}
         onExportCsv={onExportCsv}
