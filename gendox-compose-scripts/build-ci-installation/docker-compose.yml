@@ -2,8 +2,12 @@ version: '3'
 
 services:
   gendox-database:
-    image: ctrlspacelabs/gendox-database:latest
+    build:
+      context: ../../database
+      dockerfile: Dockerfile
+    image: gendox-database:latest
     container_name: gendox-database
+#    command: -c config_file=/etc/postgresql.conf
     volumes:
       - postgres-data-upgrade-v18:/var/lib/postgresql
     environment:
@@ -81,7 +85,13 @@ services:
     restart: "no"
 
   gendox-core-api:
-    image: ctrlspacelabs/gendox-core-api:latest
+    build:
+      context: ../../gendox-core-api
+      dockerfile: Dockerfile
+      args:
+        - PROVEN_AI_GIT_REPOSITORY=${PROVEN_AI_GIT_REPOSITORY}
+        - PROVEN_AI_GIT_BRANCH=${PROVEN_AI_GIT_BRANCH}
+    image: gendox-core-api:latest
     container_name: gendox-core-api
     volumes:
       - ~/.aws/:/root/.aws:ro
@@ -129,7 +139,10 @@ services:
 
 
   gendox-keycloak:
-    image: ctrlspacelabs/gendox-keycloak:latest
+    build:
+      context: ../../gendox-keycloak
+      dockerfile: Dockerfile
+    image: gendox-keycloak:latest
     container_name: gendox-keycloak
     healthcheck:
       test: [ "CMD-SHELL", "echo > /dev/tcp/localhost/8443 || exit 1" ]
