@@ -7,6 +7,7 @@ import AddNewDocumentDialog from 'src/views/pages/tasks/helping-components/AddNe
 import AnswerDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsAnswerDialog'
 import QuestionsDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsQuestionsDialog'
 import DocumentPagePreviewDialog from '../table-dialogs/DocumentInsightsDocumentPagePreviewDialog'
+import SummaryDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsSummaryDialog'
 
 const DocumentInsightsDialogs = ({
   dialogs,
@@ -96,6 +97,13 @@ const DocumentInsightsDialogs = ({
         onClose={() => onClose('answerDetail')}
         refreshAnswers={reloadAll}
         questions={questions}
+      />
+
+      {/* Summary Details Dialog */}
+      <SummaryDialog
+        open={dialogs.summaryDetail}
+        onClose={() => onClose('summaryDetail')}
+        activeDocument={activeNode}
       />
 
       {/* Document Page Preview Dialog */}

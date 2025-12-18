@@ -66,6 +66,7 @@ services:
       - PROVEN_AI_ENABLED=${PROVEN_AI_ENABLED}
       - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - FILE_STORAGE_PATH=${FILE_STORAGE_PATH}
     networks:
       - gendox_network
     ports:

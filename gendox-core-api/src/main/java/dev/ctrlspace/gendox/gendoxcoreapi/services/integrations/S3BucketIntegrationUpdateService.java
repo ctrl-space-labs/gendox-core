@@ -15,7 +15,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.s3BucketIntegration.ResourceMultipartFile;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.s3BucketIntegration.SQSService;
+import dev.ctrlspace.gendox.gendoxcoreapi.messages.sqs.SQSService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.S3BucketIntegrationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Component
 public class S3BucketIntegrationUpdateService implements IntegrationUpdateService {

@@ -9,6 +9,8 @@ import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
 import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
+import Summarize from '@mui/icons-material/Summarize'
+import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
 
 const DocumentInsightsGrid = ({
   openDialog,
@@ -39,7 +41,6 @@ const DocumentInsightsGrid = ({
     return [...questions].sort((a, b) => a.order - b.order)
   }, [questions])
 
-  const truncate = (text, limit = 30) => (text && text.length > limit ? text.slice(0, limit) + '...' : text)
 
   const columns = useMemo(() => {
     return [
@@ -101,6 +102,30 @@ const DocumentInsightsGrid = ({
         }
       },
       {
+        field: 'summaryAction',
+        headerName: '',
+        width: 50,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: params => {
+          return (
+            <Tooltip title='View Summary'>
+              <IconButton
+                size='small'
+                onClick={e => {
+                  e.stopPropagation()
+                  openDialog('summaryDetail', params.row._doc)
+                }}
+                sx={{ color: theme.palette.primary.main }}
+              >
+                <Summarize fontSize='small' />
+              </IconButton>
+            </Tooltip>
+          )
+        }
+      },
+      {
         field: 'name',
         headerName: 'Document',
         width: 350,
@@ -132,20 +157,25 @@ const DocumentInsightsGrid = ({
               }}
               title={params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
             >
-              <Box
-                component='span'
-                sx={{
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  flexGrow: 1,
-                  color: isSelected ? 'primary.main' : params.row.documentId ? 'text.primary' : 'primary.main',
-                  fontWeight: isSelected ? '600' : params.row.documentId ? 'normal' : '600',
-                  userSelect: 'none'
-                }}
-              >
-                {params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
-              </Box>
+             
+
+              {/* DOCUMENT TITLE */}
+              <Tooltip title='View Document'>
+                <Box
+                  component='span'
+                  sx={{
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    flexGrow: 1,
+                    color: isSelected ? 'primary.main' : params.row.documentId ? 'text.primary' : 'primary.main',
+                    fontWeight: isSelected ? '600' : params.row.documentId ? 'normal' : '600',
+                    userSelect: 'none'
+                  }}
+                >
+                  {<TruncatedText text={params.value} /> || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
+                </Box>
+              </Tooltip>
 
               {/* Hover-reveal vertical Icon */}
               <IconButton
@@ -172,9 +202,11 @@ const DocumentInsightsGrid = ({
           )
         }
       },
+
+      // Dynamic question columns
       ...sortedQuestions.map(q => ({
         field: `q_${q.id}`,
-        headerName: truncate(q.text),
+        headerName: <TruncatedText text={q.text} />,
         width: 240,
         editable: false,
         sortable: false,
@@ -199,7 +231,7 @@ const DocumentInsightsGrid = ({
               fontWeight: 600,
               flexGrow: 1
             }}
-            title={q.text}
+            // title={q.text}
           >
             <Box
               component='button'
@@ -220,7 +252,7 @@ const DocumentInsightsGrid = ({
                 }
               }}
             >
-              {truncate(q.title || q.text)}
+              <TruncatedText text={q.title || q.text} />
             </Box>
 
             {/* Hover-reveal Vertical Icon */}

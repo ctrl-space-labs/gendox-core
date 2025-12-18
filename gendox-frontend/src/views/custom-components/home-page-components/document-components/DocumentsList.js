@@ -17,6 +17,7 @@ import { fetchDocuments } from 'src/store/activeDocument/activeDocument'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 import { localStorageConstants } from 'src/utils/generalConstants'
+import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
 
 const DocumentsList = ({ documents, page }) => {
   const dispatch = useDispatch()
@@ -112,7 +113,7 @@ const DocumentsList = ({ documents, page }) => {
       sortable: true,
       renderCell: params => (
         <Typography variant='body2' sx={{ fontWeight: 600 }}>
-          {params.row.title}
+          <TruncatedText text={params.row.title} />
         </Typography>
       )
     },

@@ -121,6 +121,7 @@ services:
       - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
+      - FILE_STORAGE_PATH=${FILE_STORAGE_PATH}
     networks:
       - gendox_network
     ports:

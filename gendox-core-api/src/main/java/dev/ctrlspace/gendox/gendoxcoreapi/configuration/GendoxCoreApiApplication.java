@@ -11,6 +11,8 @@ import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.VoyageEmbeddingResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.ReadDocumentTool;
+import dev.ctrlspace.gendox.gendoxcoreapi.messages.postgres.QueueProducerService;
+import dev.ctrlspace.gendox.gendoxcoreapi.messages.sqs.SQSService;
 import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeService;
 import dev.ctrlspace.gendox.spring.batch.jobs.SpringBatchConfiguration;
@@ -54,7 +56,9 @@ import java.util.StringJoiner;
         GendoxAPIIntegrationService.class,
         UniqueIdentifierCodeService.class,
         VoyageEmbeddingResponseConverter.class,
-        ReadDocumentTool.class
+        ReadDocumentTool.class,
+        QueueProducerService.class,
+        SQSService.class
         })
 @EnableCaching
 @EnableJpaRepositories(basePackageClasses = {UserRepository.class})

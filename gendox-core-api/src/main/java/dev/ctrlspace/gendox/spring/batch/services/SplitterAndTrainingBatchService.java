@@ -1,9 +1,18 @@
 package dev.ctrlspace.gendox.spring.batch.services;
 
 import brave.internal.Nullable;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.messages.QueueMessageTopicNameConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.QueueMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.spring.batch.utils.JobUtils;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.*;
@@ -11,12 +20,19 @@ import org.springframework.batch.core.repository.JobExecutionAlreadyRunningExcep
 import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class SplitterAndTrainingBatchService {
+    private final ObjectMapper objectMapper;
+    private final ProjectService projectService;
     Logger logger = LoggerFactory.getLogger(SplitterAndTrainingBatchService.class);
 
 
@@ -28,10 +44,12 @@ public class SplitterAndTrainingBatchService {
     public SplitterAndTrainingBatchService(
             JobUtils jobUtils,
             SplitterBatchService splitterBatchService,
-            TrainingBatchService trainingBatchService) {
+            TrainingBatchService trainingBatchService, ObjectMapper objectMapper, ProjectService projectService) {
         this.jobUtils = jobUtils;
         this.splitterBatchService = splitterBatchService;
         this.trainingBatchService = trainingBatchService;
+        this.objectMapper = objectMapper;
+        this.projectService = projectService;
     }
 
     public JobExecution runSplitterAndTraining() throws
@@ -73,6 +91,43 @@ public class SplitterAndTrainingBatchService {
         return trainingExecution;
 
     }
+
+
+    public void runSplitterAndTrainingForBatchOfFiles(List<QueueMessage> batch) {
+        logger.info("Received message from topic: {}, processing {} messages", QueueMessageTopicNameConstants.DOCUMENT_UPLOAD, batch.size());
+        try {
+            List<Project> projects = getProjectsWithNewDocuments(batch);
+
+            for (Project project : projects) {
+                if(project.getAutoTraining()) {
+                    // this waits for the job to complete
+                    JobExecution splitterExecution = this.runSplitterAndTraining(project.getId());
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private @NotNull List<Project> getProjectsWithNewDocuments(List<QueueMessage> batch) throws GendoxException {
+        Set<String> uniqueProjects = batch.stream().map(message -> {
+                    try {
+                        return objectMapper.treeToValue(message.getPayload(), DocumentCriteria.class);
+                    } catch (JsonProcessingException e) {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .map(d -> d.getProjectId())
+                .collect(Collectors.toSet());
+
+        ProjectCriteria projectCriteria = ProjectCriteria.builder()
+                .projectIdIn(uniqueProjects.stream().toList())
+                .build();
+        List<Project> projects = projectService.getAllProjects(projectCriteria, Pageable.unpaged()).stream().toList();
+        return projects;
+    }
+
 
 
 }

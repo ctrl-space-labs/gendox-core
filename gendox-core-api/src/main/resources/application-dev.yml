@@ -21,8 +21,6 @@ gendox:
   domains:
     frontend: https://dev.gendox.ctrlspace.dev
   documents:
-#    upload-dir: file:${user.home}/gendox/documents
-    upload-dir: s3://gendox.organization.documents.dev
     wordCount: 300
 
   integrations:
@@ -30,8 +28,7 @@ gendox:
     #    poller: 300000
     poller: 86400000 # 24 hours in milliseconds
     storage:
-      temporary: file:${user.home}\\gendox\\temporary_integration_files
-    #      temporary: s3://gendox.organization.documents.local/gendox_wiki
+      temporary: file:${user.home}/gendox/temporary_integration_files
     s3:
       sqs:
         wait-time-seconds: 1 #not in use
