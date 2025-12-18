@@ -5,7 +5,7 @@
  */
 const devConfig = {
     use: {
-        baseURL: process.env.BASE_URL || 'https://gendox.ctrlspace.dev',
+        baseURL: process.env.BASE_URL || 'https://app.gendox.dev',
     },
     gendox: {
         contextPath: '/gendox/api/v1',

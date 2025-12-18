@@ -104,7 +104,7 @@ rsa:
 
 gendox:
   domains:
-    frontend: https://dev.gendox.ctrlspace.dev
+    frontend: https://app.gendox.dev
 
   emails:
     contact-email: contact@ctrlspace.dev
