@@ -30,7 +30,7 @@ public class QueueConsumerService {
 
         this.workerId = WorkerIdResolver.resolve();
         this.deadOnFailure = true; // maxAttempts=1 for now
-        this.visibilityTimeout = Duration.ofMinutes(1);
+        this.visibilityTimeout = Duration.ofMinutes(60);
     }
 
     /**
