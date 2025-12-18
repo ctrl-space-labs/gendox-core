@@ -4,6 +4,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithoutDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentOnlyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.messages.QueueMessageTopicNameConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.messages.postgres.QueueProducerService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceDTO;
@@ -51,7 +53,10 @@ public class DocumentController {
     private SplitFileService splitFileService;
     private DocumentSectionService documentSectionService;
     private DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter;
-    private SplitterBatchService splitterBatchService;
+    private QueueProducerService queueProducerService;
+
+    @Value("${gendox.batch-jobs.document-splitter.job.name}")
+    private String documentSplitterJobName;
 
 
     @Autowired
@@ -62,7 +67,7 @@ public class DocumentController {
                               DocumentSectionService documentSectionService,
                               DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter,
                               DocumentOnlyConverter documentOnlyConverter,
-                              SplitterBatchService splitterBatchService) {
+                              QueueProducerService queueProducerService) {
         this.documentService = documentService;
         this.documentInstanceConverter = documentInstanceConverter;
         this.uploadService = uploadService;
@@ -70,7 +75,7 @@ public class DocumentController {
         this.documentSectionService = documentSectionService;
         this.documentInstanceSectionWithoutDocumentConverter = documentInstanceSectionWithoutDocumentConverter;
         this.documentOnlyConverter = documentOnlyConverter;
-        this.splitterBatchService = splitterBatchService;
+        this.queueProducerService = queueProducerService;
     }
 
 
@@ -314,14 +319,21 @@ public class DocumentController {
         validateFileExtensions(files, allowedExtensionsList);
         files.removeIf(MultipartFile::isEmpty);
 
+        List<DocumentInstance> uploadedDocumentInstances = new ArrayList<>();
         for (MultipartFile file : files) {
-            uploadService.uploadFile(file, organizationId, projectId);
+            DocumentInstance uploaded = uploadService.uploadFile(file, organizationId, projectId);
+            uploadedDocumentInstances.add(uploaded);
         }
 
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Files uploaded successfully");
 
-        splitterBatchService.runAutoSplitter(projectId, null);
+        DocumentCriteria documentCriteria = DocumentCriteria
+                .builder()
+                .documentInstanceIds(uploadedDocumentInstances.stream().map(d -> String.valueOf(d.getId())).toList())
+                .projectId(projectId.toString())
+                .build();
+        queueProducerService.convertAndSend(QueueMessageTopicNameConstants.DOCUMENT_UPLOAD, documentCriteria, Map.of());
         return ResponseEntity.ok(response);
     }
 
@@ -342,7 +354,12 @@ public class DocumentController {
 
         DocumentInstance documentInstance = uploadService.uploadFile(file, organizationId, projectId);
 
-        splitterBatchService.runAutoSplitter(projectId, null);
+        DocumentCriteria documentCriteria = DocumentCriteria
+                .builder()
+                .documentInstanceIds(List.of(String.valueOf(documentInstance.getId())))
+                .projectId(projectId.toString())
+                .build();
+        queueProducerService.convertAndSend("jobs."+documentSplitterJobName, documentCriteria, Map.of());
 
         return ResponseEntity.ok(documentInstance);
     }
