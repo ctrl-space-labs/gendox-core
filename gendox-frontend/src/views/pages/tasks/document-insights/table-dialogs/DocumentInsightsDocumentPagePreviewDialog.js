@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -40,17 +40,16 @@ import { DeleteConfirmDialog } from 'src/utils/dialogs/DeleteConfirmDialog'
 import WarningIcon from '@mui/icons-material/Warning'
 import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
 
-
 const DocumentPagePreviewDialog = ({
   open,
   onClose,
   activeDocument,
-  generateSingleDocument,
   loading,
   onExportCsv,
   isExportingCsv,
   onDelete,
-  reloadAll
+  reloadAll,
+  handleGenerate,
 }) => {
   const dispatch = useDispatch()
   const router = useRouter()
@@ -60,7 +59,6 @@ const DocumentPagePreviewDialog = ({
   const [showDetails, setShowDetails] = useState(true)
   const [showDocumentText, setShowDocumentText] = useState(false)
   const [confirmRegenerate, setConfirmRegenerate] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [promptValue, setPromptValue] = useState('')
   const [openAddDocDialog, setOpenAddDocDialog] = useState(false)
@@ -69,8 +67,12 @@ const DocumentPagePreviewDialog = ({
   const [hasBreakingChanges, setHasBreakingChanges] = useState(false)
   const [openConfirmAnswersDelete, setOpenConfirmAnswersDelete] = useState(false)
   const { supportingDocuments, isLoading } = useSelector(state => state.activeDocument)
-
+  const { isGeneratingCells } = useSelector(state => state.activeTask.generationState)
   const { sections, isBlurring } = useSelector(state => state.activeDocument)
+  console.log('isGeneratingCells:', isGeneratingCells)
+const isGenerating = isGeneratingCells[`${activeDocument?.id}_all`] === true
+
+
 
   useEffect(() => {
     if (activeDocument) {
@@ -158,43 +160,17 @@ const DocumentPagePreviewDialog = ({
   }
 
   const handleGenerateClick = () => {
-    const hasGeneratedContent = activeDocument.length > 0
-
-    if (hasGeneratedContent) {
-      // Show confirmation dialog for regenerate
+    if (activeDocument) {
       setConfirmRegenerate(true)
     } else {
       // Direct generate for first time
-      handleGenerate()
-    }
-  }
-
-  const handleGenerate = async () => {
-    if (generateSingleDocument && activeDocument) {
-      try {
-        setIsGenerating(true)
-        setConfirmRegenerate(false)
-        setShowDetails(false) // Close the config section
-        setShowDocumentText(false) // Close the document text section
-
-        await generateSingleDocument(activeDocument)
-
-        // Refresh the page nodes after generation
-        await fetchAnswerNodes(0, false)
-      } catch (error) {
-        console.error('Generation failed:', error)
-        // Error is already handled in the generation hook
-      } finally {
-        setIsGenerating(false)
-      }
-    } else {
-      console.warn('generateSingleDocument function not provided')
-      toast.error('Generation function not available')
+      handleGenerate({ documentsToGenerate: activeDocument, reGenerateExistingAnswers: true })
     }
   }
 
   const handleConfirmRegenerate = () => {
-    handleGenerate()
+    handleGenerate({ documentsToGenerate: activeDocument, reGenerateExistingAnswers: true })
+    setConfirmRegenerate(false)
   }
 
   const handleCancelRegenerate = () => {
@@ -520,7 +496,9 @@ const DocumentPagePreviewDialog = ({
                     {/* Header Row */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <DescriptionIcon color='primary' />
-                      <Typography sx={{ fontWeight: 600, flex: 1 }}>{<TruncatedText text={doc.title} cursor='default' />}</Typography>
+                      <Typography sx={{ fontWeight: 600, flex: 1 }}>
+                        {<TruncatedText text={doc.title} cursor='default' />}
+                      </Typography>
                     </Box>
 
                     {/* Footer Actions */}

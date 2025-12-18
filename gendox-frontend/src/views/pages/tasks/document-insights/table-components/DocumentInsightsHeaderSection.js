@@ -14,9 +14,7 @@ const HeaderSection = ({
   description,
   openAddDocument,
   onAddQuestion,
-  onGenerateNew,
-  onGenerateAll,
-  onGenerateSelected,
+  handleGenerate,
   disableGenerate,
   isPageLoading,
   onExportCsv,
@@ -35,8 +33,6 @@ const HeaderSection = ({
   const handleToggle = event => {
     setAnchorEl(prev => (prev ? null : event.currentTarget.parentElement))
   }
-
-  
 
   // Handle generation with confirmation check
   const handleGenerateClick = type => {
@@ -65,13 +61,26 @@ const HeaderSection = ({
 
     switch (type) {
       case 'all':
-        if (onGenerateAll) onGenerateAll()
+        handleGenerate({
+          documentsToGenerate: [],
+          questionsToGenerate: [],
+          reGenerateExistingAnswers: true
+        })
         break
       case 'new':
-        if (onGenerateNew) onGenerateNew()
+        handleGenerate({
+          documentsToGenerate: [],
+          questionsToGenerate: [],
+          reGenerateExistingAnswers: false
+        })
         break
       case 'selected':
-        if (onGenerateSelected) onGenerateSelected()
+        const selectedDocsObjects = documents.filter(doc => selectedDocuments.includes(doc.id))
+        handleGenerate({
+          documentsToGenerate: selectedDocsObjects,
+          questionsToGenerate: questions,
+          reGenerateExistingAnswers: true          
+        })
         break
     }
   }
@@ -98,7 +107,6 @@ const HeaderSection = ({
       }
     }
 
-   
     // Check if there are new fields (document-question combinations) that haven't been generated
     const totalCombinations = documents.length * questions.length
     const generatedCombinations = documents.reduce((count, doc) => {
@@ -111,7 +119,7 @@ const HeaderSection = ({
       text: `Generate New`,
       type: 'new',
       loading: generatingNew,
-      disabled: generatingAll || generatingNew || generatingSelected ||  questions.length === 0 || newFields === 0
+      disabled: generatingAll || generatingNew || generatingSelected || questions.length === 0 || newFields === 0
     }
   }
 

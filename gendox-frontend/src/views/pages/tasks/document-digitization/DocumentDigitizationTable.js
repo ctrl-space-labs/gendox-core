@@ -48,7 +48,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     const nodes = taskNodesDocumentList?.content || []
     return nodes.map(node => {
       const meta = node.nodeValue?.documentMetadata || {}
-      console.log('Document node metadata:', meta)
 
       return {
         id: node.id,

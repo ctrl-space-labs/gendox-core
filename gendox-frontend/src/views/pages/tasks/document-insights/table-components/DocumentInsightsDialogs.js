@@ -23,7 +23,8 @@ const DocumentInsightsDialogs = ({
   addQuestionMode,
   reloadAll,
   isExportingCsv,
-  onExportCsv
+  onExportCsv,
+  handleGenerate,
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
@@ -111,12 +112,12 @@ const DocumentInsightsDialogs = ({
         open={dialogs.pagePreview || false}
         onClose={() => onClose('pagePreview')}
         activeDocument={activeNode}
-        //generateSingleDocument={generateSingleDocument}
         loading={loading}
         isExportingCsv={isExportingCsv}
         onExportCsv={onExportCsv}
         onDelete={() => onOpen && onOpen('delete', activeNode)}
         reloadAll={reloadAll}
+        handleGenerate={handleGenerate}
       />
 
       {/* Delete Confirmation Dialog */}

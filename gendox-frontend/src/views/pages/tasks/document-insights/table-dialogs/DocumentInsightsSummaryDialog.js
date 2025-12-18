@@ -11,8 +11,7 @@ const SummaryDialog = ({ open, onClose, activeDocument }) => {
   const insightsSummary = activeDocument?.insightsSummary || {}
   const flagProps = getAnswerFlagProps(insightsSummary.answerFlagEnum)
 
-  console.log('insightsSummary', insightsSummary)
-  console.log('Active Document', activeDocument)
+  
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth='xl' aria-labelledby='summary-dialog-title'>
       <DialogTitle
