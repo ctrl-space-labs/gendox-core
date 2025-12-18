@@ -144,7 +144,7 @@ services:
 
   gendox-frontend:
     build:
-      context: ../../gendox-frontend
+      context: ./gendox-frontend
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_OIDC_AUTHORITY: ${NEXT_PUBLIC_GENDOX_OIDC_AUTHORITY}
