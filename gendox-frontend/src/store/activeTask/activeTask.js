@@ -98,13 +98,31 @@ const initialState = {
   projectTasks: [],
   selectedTask: null,
   isLoading: false,
+  generationState: {
+    isGeneratingAll: false,
+    isGeneratingCells: {} // Object: { "docId_questionId": true }
+  },
   error: null
 }
 
 const taskSlice = createSlice({
   name: 'task',
   initialState,
-  reducers: {},
+  reducers: {
+    setGeneratingAll: (state, action) => {
+      state.generationState.isGeneratingAll = action.payload
+    },
+    setGeneratingCells: (state, action) => {
+      state.generationState.isGeneratingCells = {
+        ...state.generationState.isGeneratingCells,
+        ...action.payload
+      }
+    },
+    clearGenerationState: state => {
+      state.generationState.isGeneratingAll = false
+      state.generationState.isGeneratingCells = {}
+    }
+  },
   extraReducers: builder => {
     builder
       .addCase(createTask.pending, state => {
@@ -145,5 +163,7 @@ const taskSlice = createSlice({
       })
   }
 })
+
+export const { setGeneratingAll, setGeneratingCells, clearGenerationState } = taskSlice.actions
 
 export default taskSlice.reducer

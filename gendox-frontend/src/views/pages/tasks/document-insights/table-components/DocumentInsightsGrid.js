@@ -17,7 +17,6 @@ const DocumentInsightsGrid = ({
   documents,
   questions,
   answers,
-  onGenerate,
   isLoadingAnswers,
   isPageLoading,
   page,
@@ -27,7 +26,7 @@ const DocumentInsightsGrid = ({
   totalDocuments,
   selectedDocuments = [],
   onSelectDocument = () => {},
-  onGenerateSingleAnswer = () => {},
+  handleGenerate,
   isGeneratingAll,
   isGeneratingCells = {}
 }) => {
@@ -40,7 +39,6 @@ const DocumentInsightsGrid = ({
   const sortedQuestions = useMemo(() => {
     return [...questions].sort((a, b) => a.order - b.order)
   }, [questions])
-
 
   const columns = useMemo(() => {
     return [
@@ -157,8 +155,6 @@ const DocumentInsightsGrid = ({
               }}
               title={params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
             >
-             
-
               {/* DOCUMENT TITLE */}
               <Tooltip title='View Document'>
                 <Box
@@ -173,7 +169,8 @@ const DocumentInsightsGrid = ({
                     userSelect: 'none'
                   }}
                 >
-                  {<TruncatedText text={params.value} /> || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
+                  {<TruncatedText text={params.value} /> ||
+                    (params.row.documentId ? 'Unknown Document' : 'Select Document')}
                 </Box>
               </Tooltip>
 
@@ -332,7 +329,7 @@ const DocumentInsightsGrid = ({
                 if (!isLoadingAnswers && !isPageLoading) {
                   if (!answerObj?.answerValue) {
                     // Trigger generate for this cell only
-                    onGenerateSingleAnswer(params.row, q)
+                    handleGenerate({ documentsToGenerate: params.row, questionsToGenerate: q })
                   } else {
                     openDialog('answerDetail', answerObj)
                   }
@@ -376,7 +373,7 @@ const DocumentInsightsGrid = ({
                     }}
                     onClick={e => {
                       e.stopPropagation()
-                      onGenerateSingleAnswer(params.row, q)
+                      handleGenerate({ documentsToGenerate: params.row, questionsToGenerate: q })
                     }}
                     aria-label={`Regenerate answer for ${q.text}`}
                   />
@@ -390,7 +387,6 @@ const DocumentInsightsGrid = ({
   }, [
     sortedQuestions,
     answers,
-    onGenerate,
     isLoadingAnswers,
     isPageLoading,
     documents,
@@ -399,7 +395,7 @@ const DocumentInsightsGrid = ({
     openDialog,
     isGeneratingAll,
     isGeneratingCells,
-    onGenerateSingleAnswer,
+    handleGenerate,
     theme
   ])
 

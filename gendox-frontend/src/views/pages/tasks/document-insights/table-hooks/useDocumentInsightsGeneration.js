@@ -1,44 +1,86 @@
 import { useCallback, useState } from 'react'
-import { useDispatch } from 'react-redux'
-import { executeTaskByType } from 'src/store/activeTask/activeTask'
+import { useDispatch, useSelector } from 'react-redux'
+import {
+  executeTaskByType,
+  setGeneratingAll,
+  setGeneratingCells,
+  clearGenerationState
+} from 'src/store/activeTask/activeTask'
 import { toast } from 'react-hot-toast'
 import { useGeneration as useGenerationContext } from '../../generation/GenerationContext'
+import { useRouter } from 'next/router'
+import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
 
-export default function useGeneration({
-  organizationId,
-  projectId,
-  taskId,
-  documents,
-  questions,
-  pollJobStatus,  
-  selectedDocuments,
-  setSelectedDocuments,
-  reloadAll,
-  token,
-}) {
+export default function useGeneration({ setSelectedDocuments, reloadAll, token }) {
+  const router = useRouter()
   const dispatch = useDispatch()
-  const { startGeneration, updateProgress, completeGeneration, failGeneration } = useGenerationContext()
-  const [isGeneratingAll, setIsGeneratingAll] = useState(false)
-  const [isGeneratingCells, setIsGeneratingCells] = useState({})
+  const { organizationId, taskId, projectId } = router.query
+  const { startGeneration, completeGeneration, failGeneration } = useGenerationContext()
+  const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
-   const handleGenerate = useCallback(
-    async ({ docs, questionsToGenerate, reGenerateExistingAnswers, isAll = false }) => {
-     console.log('Starting generation for documents:', docs, 'with questions:', questionsToGenerate, 'reGenerate:', reGenerateExistingAnswers, 'isAll:', isAll)
-      if (isAll) setIsGeneratingAll(true)
+  const { isGeneratingAll, isGeneratingCells } = useSelector(state => state.activeTask.generationState)
+
+  const handleGenerate = useCallback(
+    async ({ documentsToGenerate = [], questionsToGenerate = [], reGenerateExistingAnswers = true }) => {
+      // Normalization of inputs to arrays
+      const docsArray = !documentsToGenerate
+        ? []
+        : Array.isArray(documentsToGenerate)
+        ? documentsToGenerate
+        : [documentsToGenerate]
+
+      const questionsArray = !questionsToGenerate
+        ? []
+        : Array.isArray(questionsToGenerate)
+        ? questionsToGenerate
+        : [questionsToGenerate]
+
+      // Preparation & Validation
+      const documentIds = docsArray.map(d => d.id)
+      const questionIds = questionsArray.map(q => q.id)
+
+      // Global Generation == Generate All Documents & Generate New Documents
+      const isGlobalGeneration = documentIds.length === 0 && questionIds.length === 0
+
+      console.log('Starting generation:', {
+        type: isGlobalGeneration ? 'Global' : 'Selected',
+        docCount: documentIds.length,
+        questionCount: questionIds.length,
+        reGenerate: reGenerateExistingAnswers
+      })
+
+      if (isGlobalGeneration) {
+        // Generate ALL documents
+        if (reGenerateExistingAnswers) {
+          dispatch(setGeneratingAll(true))
+        } else {
+          // Generate only NEW documents
+          null
+        }
+      } else {
+        const cellsLoading = {}
+        // Generate single Document
+        if (questionsArray.length === 0) {
+          docsArray.forEach(doc => {
+            cellsLoading[`${doc.id}_all`] = true
+          })
+        } else {
+          // Generate Single Answer
+          docsArray.forEach(doc => {
+            questionsArray.forEach(q => {
+              cellsLoading[`${doc.id}_${q.id}`] = true
+            })
+          })
+        }
+
+        dispatch(setGeneratingCells(cellsLoading))
+      }
 
       try {
-        const docIds = Array.isArray(docs) ? docs.map(d => d.id) : [docs.id]
-
-        const questionIds = questionsToGenerate
-          ? Array.isArray(questionsToGenerate)
-            ? questionsToGenerate.map(q => q.id)
-            : [questionsToGenerate.id]
-          : questions.map(q => q.id)
-
         const criteria = {
           taskId,
-          documentNodeIds: docIds,
-          questionNodeIds: questionIds,
+          documentNodeIds: documentIds, // Empty array means all documents
+          questionNodeIds: questionIds, // Empty array means all questions
           reGenerateExistingAnswers
         }
 
@@ -46,83 +88,43 @@ export default function useGeneration({
           executeTaskByType({ organizationId, projectId, taskId, criteria, token })
         ).unwrap()
 
-        // Start tracking generation in GlobalGenerationStatus
-        const generationType = isAll ? 'all' : selectedDocuments?.length > 0 ? 'selected' : 'new'
-        startGeneration(taskId, null, generationType, docIds.length)
-
-
+        // Polling & Feedback
+        startGeneration(taskId, null, 'all', 2000)
         await pollJobStatus(jobExecutionId)
-        reloadAll()
 
-        // Complete generation tracking
+        reloadAll()
         completeGeneration(taskId, null)
-        toast.success(`Generation completed for ${docIds.length} document(s)`)
+
+        toast.success(
+          isGlobalGeneration
+            ? 'Generation completed for all documents'
+            : `Generation completed for ${documentsToGenerate.length} document(s)`
+        )
+
         setSelectedDocuments([])
       } catch (error) {
-        console.error('Failed to start generation:', error)
-        // Fail generation tracking
+        console.error('Generation Failed:', error)
         failGeneration(taskId, null, error.message || 'Generation failed')
         toast.error('Failed to start generation')
       } finally {
-        if (isAll) setIsGeneratingAll(false)
+        dispatch(clearGenerationState())
       }
     },
-    [dispatch, documents, questions, organizationId, projectId, taskId, pollJobStatus, token, setSelectedDocuments]
+    [
+      dispatch,
+      organizationId,
+      projectId,
+      taskId,
+      pollJobStatus,
+      startGeneration,
+      completeGeneration,
+      failGeneration,
+      reloadAll,
+      setSelectedDocuments
+    ]
   )
 
-  const handleGenerateSelected = useCallback(async () => {
-    const selectedDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
-    if (selectedDocs.length === 0) {
-      toast.error('No documents selected!')
-      return
-    }
-    const newCells = {}
-    selectedDocs.forEach(doc => {
-      questions.forEach(q => {
-        newCells[`${doc.id}_${q.id}`] = true
-      })
-    })
-    setIsGeneratingCells(cells => ({ ...cells, ...newCells }))
-
-    try {
-      await handleGenerate({ docs: selectedDocs, reGenerateExistingAnswers: true })
-    } finally {
-      // Clean up just those cells
-      setIsGeneratingCells(cells => {
-        const copy = { ...cells }
-        selectedDocs.forEach(doc => {
-          questions.forEach(q => {
-            delete copy[`${doc.id}_${q.id}`]
-          })
-        })
-        return copy
-      })
-    }
-  }, [documents, questions, selectedDocuments, handleGenerate])
-
-  const handleGenerateSingleAnswer = useCallback(
-    async (doc, question) => {
-      if (!doc || !question) {
-        toast.error('Document and question are required to generate an answer.')
-        return
-      }
-      const key = `${doc.id}_${question.id}`
-      setIsGeneratingCells(cells => ({ ...cells, [key]: true }))
-      try {
-        await handleGenerate({ docs: doc, questionsToGenerate: question, reGenerateExistingAnswers: true })
-      } finally {
-        setIsGeneratingCells(cells => {
-          const { [key]: _, ...rest } = cells
-          return rest
-        })
-      }
-    }, [handleGenerate])
-
-
-
   return {
-    handleGenerateSelected,
-    handleGenerateSingleAnswer,
     handleGenerate,
     isGeneratingAll,
     isGeneratingCells
