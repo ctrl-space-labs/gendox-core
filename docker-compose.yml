@@ -126,7 +126,7 @@ services:
         echo "Starting Keycloak..."
         exec /opt/keycloak/bin/kc.sh start \
           --http-relative-path="${KEYCLOAK_HTTP_RELATIVE_PATH}" \
-          --features=token-exchange \
+          --features="token-exchange,organization" \
           --hostname-strict=false \
           --https-key-store-file="$$KEYSTORE_FILE" \
           --https-key-store-password "${KEYSTORE_PASSWORD}" \
