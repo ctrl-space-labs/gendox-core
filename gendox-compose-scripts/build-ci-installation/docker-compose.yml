@@ -9,7 +9,7 @@ services:
     container_name: gendox-database
 #    command: -c config_file=/etc/postgresql.conf
     volumes:
-      - postgres-data-upgrade-v18:/var/lib/postgresql
+      - postgres-data:/var/lib/postgresql
     environment:
       POSTGRES_DB: ${DATABASE_NAME}
       POSTGRES_USER: ${DATABASE_USERNAME}
@@ -39,7 +39,7 @@ services:
       - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
     volumes:
       # Share Keycloak's keystore volume (read-only)
-      - keycloak-data-upgrade-v26:/opt/keycloak/conf:ro
+      - keycloak-data:/opt/keycloak/conf:ro
       # Custom truststore volume that will be used by gendox-core-api
       - gendox-truststore:/truststore
     command:
@@ -220,7 +220,7 @@ services:
     ports:
       - "${KEYCLOAK_PORT}:8443"
     volumes:
-      - keycloak-data-upgrade-v26:/opt/keycloak/conf
+      - keycloak-data:/opt/keycloak/conf
     restart: unless-stopped
 
 
@@ -256,6 +256,6 @@ networks:
   gendox_network:
 
 volumes:
-  postgres-data-upgrade-v18:
-  keycloak-data-upgrade-v26:
+  postgres-data:
+  keycloak-data:
   gendox-truststore:
