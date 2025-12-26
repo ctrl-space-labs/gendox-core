@@ -3,25 +3,25 @@ import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'react-hot-toast'
 import { useGeneration } from '../../generation/GenerationContext'
 import { useRouter } from 'next/router'
-import { useJobMonitor } from '../../generation/useJobMonitor'
+import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
 import {
   executeTaskByType,
   setDigitizationGenerating,
   clearDigitizationGenerationState
 } from 'src/store/activeTask/activeTask'
 
-export default function useDocumentDigitizationGeneration({ reloadAll, token, setSelectedDocuments, documentPages }) {
+export default function useDocumentDigitizationGeneration({
+  reloadAll,
+  token,
+  setSelectedDocuments,
+  documentPages
+}) {
   const router = useRouter()
   const dispatch = useDispatch()
   const { organizationId, taskId, projectId } = router.query
 
-  const { startGenerationMonitor, updateProgress, completeGeneration, failGeneration } = useGeneration()
-  const { pollJobExecution } = useJobMonitor({
-    organizationId,
-    projectId,
-    token,
-    reloadAll
-  })
+  const { startGeneration, updateProgress, completeGeneration, failGeneration } = useGeneration()
+  const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
   const { isDigitizationGenerating } = useSelector(state => state.activeTask.generationState)
   const [generatingDocuments, setGeneratingDocuments] = useState(new Set())
 
@@ -65,8 +65,8 @@ export default function useDocumentDigitizationGeneration({ reloadAll, token, se
           executeTaskByType({ organizationId, projectId, taskId, criteria, token })
         ).unwrap()
 
-        startGenerationMonitor(taskId, null, 'all', 2000)
-        await pollJobExecution(jobExecutionId)
+        startGeneration(taskId, null, 'all', 2000)
+        await pollJobStatus(jobExecutionId)
 
         reloadAll()
         completeGeneration(taskId, null)
@@ -91,8 +91,8 @@ export default function useDocumentDigitizationGeneration({ reloadAll, token, se
       organizationId,
       projectId,
       taskId,
-      pollJobExecution,
-      startGenerationMonitor,
+      pollJobStatus,
+      startGeneration,
       completeGeneration,
       failGeneration,
       reloadAll,

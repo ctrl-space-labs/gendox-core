@@ -9,7 +9,7 @@ import useExportFile from 'src/views/pages/tasks/helping-components/TaskExportFi
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
 import HeaderSection from './table-components/DocumentInsightsHeaderSection'
 import DialogManager from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsDialogs'
-import { useJobMonitor } from '../generation/useJobMonitor'
+import { useActiveJobMonitor } from '../generation/useActiveJobMonitor'
 
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
@@ -93,7 +93,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const reloadAll = useCallback(async () => {
     if (!organizationId || !projectId || !taskId) return
     setIsPageReloading(true)
-    setSelectedDocuments([])
     try {
       await dispatch(
         loadTaskInsightsData({
@@ -139,17 +138,14 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     reloadAll()
   }, [page, pageSize])
 
-  const { resumeStartedJobs } = useJobMonitor({
+  // Active Job Monitor Hook
+  useActiveJobMonitor({
     organizationId,
     projectId,
+    taskId,
     token,
     reloadAll
   })
-
-  useEffect(() => {
-    if (!organizationId || !projectId || !taskId) return
-    resumeStartedJobs({ taskId })
-  }, [organizationId, projectId, taskId, resumeStartedJobs])
 
   const handleSelectDocument = (docId, checked) => {
     if (docId === 'all') {
@@ -173,12 +169,11 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   }
 
   // Handle Generate Documents
-  const { handleGenerate, isInsightsGeneratingAll, isInsightsGeneratingNew, isInsightsGeneratingCells } =
-    useDocumentInsightsGeneration({
-      setSelectedDocuments,
-      reloadAll,
-      token
-    })
+  const { handleGenerate, isInsightsGeneratingAll, isInsightsGeneratingCells } = useDocumentInsightsGeneration({
+    setSelectedDocuments,
+    reloadAll,
+    token
+  })
 
   const { exportDocumentInsightCsv, exportSingleDocumentInsightCsv, isExportingCsv } = useExportFile({
     organizationId,
@@ -190,11 +185,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     documents
   })
 
-  const isGenerating =
-    isInsightsGeneratingAll ||
-    isInsightsGeneratingNew ||
-    Object.values(isInsightsGeneratingCells || {}).some(v => v === true)
-
   return (
     <>
       <Paper sx={{ p: 3, overflowX: 'auto', backgroundColor: 'action.hover', mb: 3 }}>
@@ -204,11 +194,14 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           onAddQuestion={() => openDialog('questionDetail', null, true)}
           openAddDocument={() => openDialog('newDoc')}
           handleGenerate={handleGenerate}
+          disableGenerate={documents.length === 0 || questions.length === 0}
           isPageLoading={isPageLoading}
           isExportingCsv={isExportingCsv}
           onExportCsv={exportDocumentInsightCsv}
           selectedDocuments={selectedDocuments}
-          isGenerating={isGenerating}
+          generatingAll={isInsightsGeneratingAll}
+          generatingNew={false}
+          generatingSelected={false}
           documents={documents}
           questions={questions}
           hasGeneratedContent={(docId, questionId) => {
@@ -238,11 +231,9 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             setPageSize={setPageSize}
             totalDocuments={totalDocuments}
             selectedDocuments={selectedDocuments}
-            setSelectedDocuments={setSelectedDocuments}
             onSelectDocument={handleSelectDocument}
             handleGenerate={handleGenerate}
             isGeneratingAll={isInsightsGeneratingAll}
-            isGeneratingNew={isInsightsGeneratingNew}
             isGeneratingCells={isInsightsGeneratingCells}
           />
         </Box>

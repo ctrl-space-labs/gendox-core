@@ -7,7 +7,6 @@ import DocumentsAddNewDialog from 'src/views/pages/tasks/helping-components/AddN
 import DocumentPagePreviewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentPagePreviewDialog'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import { updateTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
-import { toast } from 'react-hot-toast'
 
 const DocumentDigitizationDialogs = ({
   dialogs,
@@ -27,7 +26,7 @@ const DocumentDigitizationDialogs = ({
   onExportCsv,
   isExportingCsv,
   isDocumentGenerating,
-  isDigitizationGenerating = false
+  isDigitizationGenerating = false,
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
@@ -84,10 +83,7 @@ const DocumentDigitizationDialogs = ({
       await dispatch(deleteTaskNode({ organizationId, projectId, taskNodeId: nodeId, token })).unwrap()
       reloadAll()
       onClose('delete')
-    } catch (error) {
-      toast.error('Failed to delete item')
     } finally {
-      onClose('delete')
       setLoading(false)
     }
   }
@@ -127,7 +123,7 @@ const DocumentDigitizationDialogs = ({
         open={dialogs.pagePreview || false}
         onClose={() => onClose('pagePreview')}
         document={activeNode}
-        documentPages={documentPages}
+        documentPages={documentPages}        
         handleGenerate={handleGenerate}
         reloadAll={reloadAll}
         dialogLoading={dialogLoading}
@@ -141,9 +137,9 @@ const DocumentDigitizationDialogs = ({
         open={dialogs.delete}
         onClose={() => onClose('delete')}
         onConfirm={() => handleConfirmDelete(activeNode?.id)}
-        title='Confirm Removal'
-        contentText='Are you sure you want to remove this item? This action cannot be undone.'
-        confirmButtonText='Remove'
+        title='Confirm Deletion'
+        contentText='Are you sure you want to delete this item? This action cannot be undone.'
+        confirmButtonText='Delete'
         cancelButtonText='Cancel'
       />
     </>

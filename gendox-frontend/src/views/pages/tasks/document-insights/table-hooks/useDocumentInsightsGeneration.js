@@ -3,31 +3,22 @@ import { useDispatch, useSelector } from 'react-redux'
 import {
   executeTaskByType,
   setInsightsGeneratingAll,
-  setInsightsGeneratingNew,
   setInsightsGeneratingCells,
   clearInsightsGenerationState
 } from 'src/store/activeTask/activeTask'
 import { toast } from 'react-hot-toast'
 import { useGeneration as useGenerationContext } from '../../generation/GenerationContext'
 import { useRouter } from 'next/router'
-import { useJobMonitor } from '../../generation/useJobMonitor'
+import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
 
 export default function useGeneration({ setSelectedDocuments, reloadAll, token }) {
   const router = useRouter()
   const dispatch = useDispatch()
   const { organizationId, taskId, projectId } = router.query
-  const { startGenerationMonitor, completeGeneration, failGeneration } = useGenerationContext()
+  const { startGeneration, completeGeneration, failGeneration } = useGenerationContext()
+  const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
-  const { isInsightsGeneratingAll, isInsightsGeneratingNew, isInsightsGeneratingCells } = useSelector(
-    state => state.activeTask.generationState
-  )
-
-  const { pollJobExecution } = useJobMonitor({
-    organizationId,
-    projectId,
-    token,
-    reloadAll
-  })
+  const { isInsightsGeneratingAll, isInsightsGeneratingCells } = useSelector(state => state.activeTask.generationState)
 
   const handleGenerate = useCallback(
     async ({ documentsToGenerate = [], questionsToGenerate = [], reGenerateExistingAnswers = true }) => {
@@ -57,7 +48,7 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
           dispatch(setInsightsGeneratingAll(true))
         } else {
           // Generate only NEW documents
-          dispatch(setInsightsGeneratingNew(true))
+          null
         }
       } else {
         const cellsLoading = {}
@@ -91,8 +82,8 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
         ).unwrap()
 
         // Polling & Feedback
-        startGenerationMonitor(taskId, null, 'all', 2000)
-        await pollJobExecution(jobExecutionId)
+        startGeneration(taskId, null, 'all', 2000)
+        await pollJobStatus(jobExecutionId)
 
         reloadAll()
         completeGeneration(taskId, null)
@@ -117,8 +108,8 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
       organizationId,
       projectId,
       taskId,
-      pollJobExecution,
-      startGenerationMonitor,
+      pollJobStatus,
+      startGeneration,
       completeGeneration,
       failGeneration,
       reloadAll,
@@ -129,7 +120,6 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
   return {
     handleGenerate,
     isInsightsGeneratingAll,
-    isInsightsGeneratingNew,
     isInsightsGeneratingCells
   }
 }

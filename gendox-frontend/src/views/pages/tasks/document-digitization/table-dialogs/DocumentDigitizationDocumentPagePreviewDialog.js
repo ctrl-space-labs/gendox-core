@@ -67,6 +67,7 @@ const DocumentPagePreviewDialog = ({
   const { organizationId, taskId, projectId } = router.query
   const { taskNodesAnswerList } = useSelector(state => state.activeTaskNode)
 
+  console.log('Task Nodes Answer List:', taskNodesAnswerList)
 
   // Local State
   const [saving, setSaving] = useState(false)

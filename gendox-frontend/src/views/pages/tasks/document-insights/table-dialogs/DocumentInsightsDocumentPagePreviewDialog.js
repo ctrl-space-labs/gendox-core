@@ -27,7 +27,7 @@ import DownloadIcon from '@mui/icons-material/Download'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/router'
-import { isDocumentInsightsFileTypeSupported } from 'src/utils/tasks/fileFormats'
+import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 import CleanCollapse from 'src/views/custom-components/mui/collapse'
 import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
 import DocumentTextComponent from '../../helping-components/DocumentTextComponent'
@@ -39,7 +39,6 @@ import { updateTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
 import { DeleteConfirmDialog } from 'src/utils/dialogs/DeleteConfirmDialog'
 import WarningIcon from '@mui/icons-material/Warning'
 import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
-import { is } from 'date-fns/locale'
 
 const DocumentPagePreviewDialog = ({
   open,
@@ -68,18 +67,9 @@ const DocumentPagePreviewDialog = ({
   const [hasBreakingChanges, setHasBreakingChanges] = useState(false)
   const [openConfirmAnswersDelete, setOpenConfirmAnswersDelete] = useState(false)
   const { supportingDocuments, isLoading } = useSelector(state => state.activeDocument)
-  const { isInsightsGeneratingAll, isInsightsGeneratingNew } = useSelector(state => state.activeTask.generationState)
+  const { isInsightsGeneratingCells } = useSelector(state => state.activeTask.generationState)
   const { sections, isBlurring } = useSelector(state => state.activeDocument)
-
-  const isDocGenerating = useSelector(state => {
-    if (!activeDocument?.id) return false
-    const cells = state.activeTask.generationState.isInsightsGeneratingCells
-    if (cells[`${activeDocument.id}_all`] === true) return true
-    const prefix = `${activeDocument.id}_`
-    return Object.keys(cells).some(key => key.startsWith(prefix) && cells[key] === true)
-  })
-
-  const isGenerating = isDocGenerating || isInsightsGeneratingAll || isInsightsGeneratingNew
+  const isGenerating = isInsightsGeneratingCells[`${activeDocument?.id}_all`] === true
 
   useEffect(() => {
     if (activeDocument) {
@@ -280,7 +270,7 @@ const DocumentPagePreviewDialog = ({
                   title={
                     isGenerating
                       ? 'Generation in progress...'
-                      : !isDocumentInsightsFileTypeSupported(activeDocument?.url)
+                      : !isFileTypeSupported(activeDocument?.url)
                       ? 'This file format is not supported for generation'
                       : activeDocument.length > 0
                       ? 'Regenerate document answers'
@@ -292,9 +282,7 @@ const DocumentPagePreviewDialog = ({
                       size='small'
                       onClick={handleGenerateClick}
                       sx={{ mr: 1 }}
-                      disabled={
-                        !isDocumentInsightsFileTypeSupported(activeDocument?.url) || isGenerating || dialogLoading
-                      }
+                      disabled={!isFileTypeSupported(activeDocument?.url) || isGenerating || dialogLoading}
                     >
                       {isGenerating || dialogLoading ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
                     </IconButton>
