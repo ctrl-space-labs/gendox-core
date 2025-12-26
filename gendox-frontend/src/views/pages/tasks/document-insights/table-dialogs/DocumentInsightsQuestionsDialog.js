@@ -665,6 +665,7 @@ const QuestionsDialog = ({
         mode='supporting'
         onConfirm={newIds => handleAddSupportingDoc(newIds)}
         onUploadSuccess={newDocIds => handleAddSupportingDoc(newDocIds)}
+        taskType='document-insights'
       />
       <DeleteConfirmDialog
         open={openConfirmAnswersDelete}

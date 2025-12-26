@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import taskService from 'src/gendox-sdk/taskService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
+import { set } from 'nprogress'
 
 export const createTask = createAsyncThunk(
   'task/createTask',
@@ -99,8 +100,9 @@ const initialState = {
   selectedTask: null,
   isLoading: false,
   generationState: {
-    isGeneratingAll: false,
-    isGeneratingCells: {} // Object: { "docId_questionId": true }
+    isInsightsGeneratingAll: false,
+    isInsightsGeneratingCells: {}, // Object: { "docId_questionId": true }
+    isDigitizationGenerating: false
   },
   error: null
 }
@@ -109,18 +111,24 @@ const taskSlice = createSlice({
   name: 'task',
   initialState,
   reducers: {
-    setGeneratingAll: (state, action) => {
-      state.generationState.isGeneratingAll = action.payload
+    setInsightsGeneratingAll: (state, action) => {
+      state.generationState.isInsightsGeneratingAll = action.payload
     },
-    setGeneratingCells: (state, action) => {
-      state.generationState.isGeneratingCells = {
-        ...state.generationState.isGeneratingCells,
+    setInsightsGeneratingCells: (state, action) => {
+      state.generationState.isInsightsGeneratingCells = {
+        ...state.generationState.isInsightsGeneratingCells,
         ...action.payload
       }
     },
-    clearGenerationState: state => {
-      state.generationState.isGeneratingAll = false
-      state.generationState.isGeneratingCells = {}
+    clearInsightsGenerationState: state => {
+      state.generationState.isInsightsGeneratingAll = false
+      state.generationState.isInsightsGeneratingCells = {}
+    },
+    setDigitizationGenerating: (state, action) => {
+      state.generationState.isDigitizationGenerating = action.payload
+    },
+    clearDigitizationGenerationState: state => {
+      state.generationState.isDigitizationGenerating = false
     }
   },
   extraReducers: builder => {
@@ -164,6 +172,12 @@ const taskSlice = createSlice({
   }
 })
 
-export const { setGeneratingAll, setGeneratingCells, clearGenerationState } = taskSlice.actions
+export const {
+  setInsightsGeneratingAll,
+  setInsightsGeneratingCells,
+  clearInsightsGenerationState,
+  setDigitizationGenerating,
+  clearDigitizationGenerationState
+} = taskSlice.actions
 
 export default taskSlice.reducer

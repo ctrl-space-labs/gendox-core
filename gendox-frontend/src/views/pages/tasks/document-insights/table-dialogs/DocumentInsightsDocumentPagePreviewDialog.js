@@ -49,7 +49,7 @@ const DocumentPagePreviewDialog = ({
   isExportingCsv,
   onDelete,
   reloadAll,
-  handleGenerate,
+  handleGenerate
 }) => {
   const dispatch = useDispatch()
   const router = useRouter()
@@ -67,12 +67,9 @@ const DocumentPagePreviewDialog = ({
   const [hasBreakingChanges, setHasBreakingChanges] = useState(false)
   const [openConfirmAnswersDelete, setOpenConfirmAnswersDelete] = useState(false)
   const { supportingDocuments, isLoading } = useSelector(state => state.activeDocument)
-  const { isGeneratingCells } = useSelector(state => state.activeTask.generationState)
+  const { isInsightsGeneratingCells } = useSelector(state => state.activeTask.generationState)
   const { sections, isBlurring } = useSelector(state => state.activeDocument)
-  console.log('isGeneratingCells:', isGeneratingCells)
-const isGenerating = isGeneratingCells[`${activeDocument?.id}_all`] === true
-
-
+  const isGenerating = isInsightsGeneratingCells[`${activeDocument?.id}_all`] === true
 
   useEffect(() => {
     if (activeDocument) {
@@ -620,6 +617,7 @@ const isGenerating = isGeneratingCells[`${activeDocument?.id}_all`] === true
         mode='supporting'
         onConfirm={newIds => handleAddSupportingDoc(newIds)}
         onUploadSuccess={newDocIds => handleAddSupportingDoc(newDocIds)}
+        taskType='document-insights'
       />
 
       <DeleteConfirmDialog

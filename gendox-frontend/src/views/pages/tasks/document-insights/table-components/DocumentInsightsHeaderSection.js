@@ -34,26 +34,6 @@ const HeaderSection = ({
     setAnchorEl(prev => (prev ? null : event.currentTarget.parentElement))
   }
 
-  // Handle generation with confirmation check
-  const handleGenerateClick = type => {
-    let targetDocs = []
-
-    switch (type) {
-      case 'all':
-        targetDocs = documents.filter(doc => doc.id)
-        break
-      case 'new':
-        targetDocs = documents.filter(doc => !hasGeneratedContent(doc.id))
-        break
-      case 'selected':
-        targetDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
-        break
-    }
-
-    // Always show confirmation for all generation types
-    setConfirmGeneration(type)
-  }
-
   // Execute the actual generation
   const executeGeneration = type => {
     setConfirmGeneration(null)
@@ -79,7 +59,7 @@ const HeaderSection = ({
         handleGenerate({
           documentsToGenerate: selectedDocsObjects,
           questionsToGenerate: questions,
-          reGenerateExistingAnswers: true          
+          reGenerateExistingAnswers: true
         })
         break
     }
@@ -217,7 +197,7 @@ const HeaderSection = ({
                   startIcon={
                     buttonConfig.loading ? <CircularProgress size={20} color='inherit' /> : <RocketLaunchIcon />
                   }
-                  onClick={() => handleGenerateClick(buttonConfig.type)}
+                  onClick={() => setConfirmGeneration(buttonConfig.type)}
                   disabled={buttonConfig.disabled || isPageLoading || disableGenerate}
                   sx={{
                     fontWeight: 700,
@@ -269,7 +249,7 @@ const HeaderSection = ({
               {selectedDocuments.length > 0 && [
                 <MenuItem
                   key='generate-new'
-                  onClick={() => handleGenerateClick('new')}
+                  onClick={() => setConfirmGeneration('new')}
                   disabled={
                     generatingAll ||
                     generatingNew ||
@@ -298,7 +278,7 @@ const HeaderSection = ({
 
                 <MenuItem
                   key='generate-all'
-                  onClick={() => handleGenerateClick('all')}
+                  onClick={() => setConfirmGeneration('all')}
                   disabled={
                     generatingAll ||
                     generatingNew ||
@@ -322,7 +302,7 @@ const HeaderSection = ({
               {/* When main button is "Generate New" - show only Generate All */}
               {selectedDocuments.length === 0 && (
                 <MenuItem
-                  onClick={() => handleGenerateClick('all')}
+                  onClick={() => setConfirmGeneration('all')}
                   disabled={
                     generatingAll ||
                     generatingNew ||

@@ -3,13 +3,13 @@ import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { Box } from '@mui/material'
 import Paper from '@mui/material/Paper'
-import { loadTaskData } from 'src/store/activeTaskNode/activeTaskNode'
-import useGeneration from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsGeneration'
+import { loadTaskInsightsData } from 'src/store/activeTaskNode/activeTaskNode'
+import useDocumentInsightsGeneration from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsGeneration'
 import useExportFile from 'src/views/pages/tasks/helping-components/TaskExportFiles'
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
 import HeaderSection from './table-components/DocumentInsightsHeaderSection'
 import DialogManager from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsDialogs'
-import { useActiveJobMonitor } from './table-hooks/useActiveJobMonitor'
+import { useActiveJobMonitor } from '../generation/useActiveJobMonitor'
 
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
@@ -95,7 +95,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     setIsPageReloading(true)
     try {
       await dispatch(
-        loadTaskData({
+        loadTaskInsightsData({
           organizationId,
           projectId,
           taskId,
@@ -169,7 +169,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   }
 
   // Handle Generate Documents
-  const { handleGenerate, isGeneratingAll, isGeneratingCells } = useGeneration({
+  const { handleGenerate, isInsightsGeneratingAll, isInsightsGeneratingCells } = useDocumentInsightsGeneration({
     setSelectedDocuments,
     reloadAll,
     token
@@ -199,7 +199,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           isExportingCsv={isExportingCsv}
           onExportCsv={exportDocumentInsightCsv}
           selectedDocuments={selectedDocuments}
-          generatingAll={isGeneratingAll}
+          generatingAll={isInsightsGeneratingAll}
           generatingNew={false}
           generatingSelected={false}
           documents={documents}
@@ -233,8 +233,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             selectedDocuments={selectedDocuments}
             onSelectDocument={handleSelectDocument}
             handleGenerate={handleGenerate}
-            isGeneratingAll={isGeneratingAll}
-            isGeneratingCells={isGeneratingCells}
+            isGeneratingAll={isInsightsGeneratingAll}
+            isGeneratingCells={isInsightsGeneratingCells}
           />
         </Box>
       </Paper>

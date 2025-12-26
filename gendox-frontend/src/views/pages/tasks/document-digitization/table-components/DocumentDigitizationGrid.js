@@ -21,17 +21,16 @@ const DocumentDigitizationGrid = ({
   setPage,
   totalDocuments,
   selectedDocuments = [],
-  onSelectDocument = () => {}, 
+  onSelectDocument = () => {},
   isDocumentGenerating = () => false
 }) => {
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null)
   const [actionMenuDoc, setActionMenuDoc] = useState(null)
 
-
   const docPagesMap = useMemo(() => {
     const map = {}
     // documentPages can be either an array directly or an object with content property
-    const pages = Array.isArray(documentPages) ? documentPages : (documentPages?.content || [])
+    const pages = Array.isArray(documentPages) ? documentPages : documentPages?.content || []
     pages.forEach(page => {
       if (page && page.taskDocumentNodeId) {
         map[page.taskDocumentNodeId] = page
@@ -40,8 +39,7 @@ const DocumentDigitizationGrid = ({
     return map
   }, [documentPages])
 
-
-  const renderDigitizationStatus = (params) => {
+  const renderDigitizationStatus = params => {
     const docPage = docPagesMap[params.row.id]
     const hasPages = docPage && docPage.numberOfNodePages > 0
     const hasPrompt = params.row.prompt && params.row.prompt.trim()
@@ -49,21 +47,23 @@ const DocumentDigitizationGrid = ({
     const isSupported = isFileTypeSupported(params.row.url)
 
     return (
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: 'row', 
-        gap: 0.5,
-        alignItems: 'center',
-        flexWrap: 'wrap'
-      }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'row',
+          gap: 0.5,
+          alignItems: 'center',
+          flexWrap: 'wrap'
+        }}
+      >
         {!isSupported ? (
           <Chip
             icon={<BlockIcon sx={{ fontSize: '0.875rem' }} />}
-            label="Unsupported Format"
-            size="small"
-            color="default"
-            variant="filled"
-            sx={{ 
+            label='Unsupported Format'
+            size='small'
+            color='default'
+            variant='filled'
+            sx={{
               fontSize: '0.75rem',
               height: 24,
               fontWeight: 500,
@@ -75,11 +75,11 @@ const DocumentDigitizationGrid = ({
         ) : isGenerating ? (
           <Chip
             icon={<CircularProgress size={12} sx={{ color: 'white' }} />}
-            label="Generating..."
-            size="small"
-            color="info"
-            variant="filled"
-            sx={{ 
+            label='Generating...'
+            size='small'
+            color='info'
+            variant='filled'
+            sx={{
               fontSize: '0.75rem',
               height: 24,
               fontWeight: 500,
@@ -89,11 +89,11 @@ const DocumentDigitizationGrid = ({
         ) : hasPages ? (
           <Chip
             icon={<CheckCircleIcon sx={{ fontSize: '0.875rem' }} />}
-            label="Digitized"
-            size="small"
-            color="success"
-            variant="filled"
-            sx={{ 
+            label='Digitized'
+            size='small'
+            color='success'
+            variant='filled'
+            sx={{
               fontSize: '0.75rem',
               height: 24,
               fontWeight: 500,
@@ -103,11 +103,11 @@ const DocumentDigitizationGrid = ({
         ) : (
           <Chip
             icon={<ErrorIcon sx={{ fontSize: '0.875rem' }} />}
-            label="Not Digitized"
-            size="small"
-            color="error"
-            variant="filled"
-            sx={{ 
+            label='Not Digitized'
+            size='small'
+            color='error'
+            variant='filled'
+            sx={{
               fontSize: '0.75rem',
               height: 24,
               fontWeight: 500,
@@ -115,71 +115,73 @@ const DocumentDigitizationGrid = ({
             }}
           />
         )}
-        
-        {!isGenerating && isSupported && (hasPrompt ? (
-          <Chip
-            label="✓ Prompt"
-            size="small"
-            color="primary"
-            variant="filled"
-            onClick={(e) => {
-              e.stopPropagation()
-              openDialog('docDetail', params.row._doc, false)
-            }}
-            sx={{ 
-              fontSize: '0.75rem',
-              height: 22,
-              fontWeight: 500,
-              backgroundColor: 'primary.light',
-              color: 'primary.contrastText',
-              cursor: 'pointer',
-              '& .MuiChip-label': { px: 1.25 },
-              '&:hover': {
-                backgroundColor: 'primary.main'
-              }
-            }}
-          />
-        ) : (
-          <Chip
-            label="⚠ No prompt"
-            size="small"
-            color="warning"
-            variant="filled"
-            onClick={(e) => {
-              e.stopPropagation()
-              openDialog('docDetail', params.row._doc, true)
-            }}
-            sx={{ 
-              fontSize: '0.75rem',
-              height: 22,
-              fontWeight: 500,
-              cursor: 'pointer',
-              '& .MuiChip-label': { px: 1.25 },
-              '&:hover': {
-                backgroundColor: 'warning.main'
-              }
-            }}
-          />
-        ))}
+
+        {!isGenerating &&
+          isSupported &&
+          (hasPrompt ? (
+            <Chip
+              label='✓ Prompt'
+              size='small'
+              color='primary'
+              variant='filled'
+              onClick={e => {
+                e.stopPropagation()
+                openDialog('docDetail', params.row._doc, false)
+              }}
+              sx={{
+                fontSize: '0.75rem',
+                height: 22,
+                fontWeight: 500,
+                backgroundColor: 'primary.light',
+                color: 'primary.contrastText',
+                cursor: 'pointer',
+                '& .MuiChip-label': { px: 1.25 },
+                '&:hover': {
+                  backgroundColor: 'primary.main'
+                }
+              }}
+            />
+          ) : (
+            <Chip
+              label='⚠ No prompt'
+              size='small'
+              color='warning'
+              variant='filled'
+              onClick={e => {
+                e.stopPropagation()
+                openDialog('docDetail', params.row._doc, true)
+              }}
+              sx={{
+                fontSize: '0.75rem',
+                height: 22,
+                fontWeight: 500,
+                cursor: 'pointer',
+                '& .MuiChip-label': { px: 1.25 },
+                '&:hover': {
+                  backgroundColor: 'warning.main'
+                }
+              }}
+            />
+          ))}
       </Box>
     )
   }
 
-  const renderPageCount = (params) => {
+  const renderPageCount = params => {
     const docPage = docPagesMap[params.row.id]
     if (docPage && docPage.numberOfNodePages) {
       const { numberOfNodePages, documentPages } = docPage
       const missingPages = (documentPages ?? 0) - (numberOfNodePages ?? 0)
-      
+
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Badge badgeContent={numberOfNodePages} color="primary">
-            <DescriptionIcon color="action" />
+          <Badge badgeContent={numberOfNodePages} color='primary'>
+            <DescriptionIcon color='action' />
           </Badge>
-          <Typography variant="body2">
+          <Typography variant='body2'>
             {numberOfNodePages === 1 ? '1 page' : `${numberOfNodePages} pages`}
             {missingPages > 0 && (
-              <Typography component="span" variant="caption" color="warning.main" sx={{ ml: 1 }}>
+              <Typography component='span' variant='caption' color='warning.main' sx={{ ml: 1 }}>
                 ({missingPages} missing)
               </Typography>
             )}
@@ -188,12 +190,11 @@ const DocumentDigitizationGrid = ({
       )
     }
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant='body2' color='text.secondary'>
         No pages
       </Typography>
     )
   }
-
 
   const sortedDocuments = useMemo(() => {
     return [...documents].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
@@ -209,51 +210,45 @@ const DocumentDigitizationGrid = ({
         filterable: false,
         disableColumnMenu: true,
         renderHeader: () => {
-          const docsWithPrompts = documents.filter(doc => 
-            doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url)
-          )
-          const selectedDocsWithPrompts = selectedDocuments.filter(id => {
+          const supportingDocs = documents.filter(doc => isFileTypeSupported(doc.url))
+          const selectedSupportingDocs = supportingDocs.filter(id => {
             const doc = documents.find(d => d.id === id)
-            return doc?.prompt?.trim() && isFileTypeSupported(doc.url)
+            return doc?.id && isFileTypeSupported(doc.url)
           })
-          
+
           return (
-            <Tooltip title="Select all supported documents with prompts">
+            <Tooltip title='Select all supported documents'>
               <Checkbox
-                checked={docsWithPrompts.length > 0 && selectedDocsWithPrompts.length === docsWithPrompts.length}
-                indeterminate={selectedDocsWithPrompts.length > 0 && selectedDocsWithPrompts.length < docsWithPrompts.length}
-                onChange={(e) => {
+                checked={supportingDocs.length > 0 && selectedSupportingDocs.length === supportingDocs.length}
+                indeterminate={
+                  selectedSupportingDocs.length > 0 && selectedSupportingDocs.length < supportingDocs.length
+                }
+                onChange={e => {
                   if (e.target.checked) {
-                    onSelectDocument('all', docsWithPrompts.map(doc => doc.id))
+                    onSelectDocument(
+                      'all',
+                      supportingDocs.map(doc => doc.id)
+                    )
                   } else {
                     onSelectDocument('none', [])
                   }
                 }}
-                size="small"
+                size='small'
               />
             </Tooltip>
           )
         },
-        renderCell: (params) => {
+        renderCell: params => {
           const isSelected = selectedDocuments.includes(params.row.id)
-          const hasPrompt = params.row.prompt && params.row.prompt.trim()
           const isSupported = isFileTypeSupported(params.row.url)
-          const canSelect = hasPrompt && isSupported
-          
-          const tooltipTitle = !isSupported 
-            ? "This file format is not supported for generation"
-            : !hasPrompt 
-            ? "Please add a prompt to enable selection for generation" 
-            : ""
-          
           return (
-            <Tooltip title={tooltipTitle}>
+            <Tooltip title={!isSupported ? 'This file format is not supported for generation' : ''}>
               <span>
                 <Checkbox
                   checked={isSelected}
-                  onChange={(e) => onSelectDocument(params.row.id, e.target.checked)}
-                  disabled={!canSelect}
-                  size="small"
+                  onChange={e => onSelectDocument(params.row.id, e.target.checked)}
+                  disabled={!isSupported}
+                  size='small'
                 />
               </span>
             </Tooltip>
@@ -271,10 +266,10 @@ const DocumentDigitizationGrid = ({
         renderCell: params => {
           const isSelected = selectedDocuments.includes(params.row.id)
           const isGenerating = isDocumentGenerating(params.row.id)
-          
+
           return (
-            <Box 
-              sx={{ 
+            <Box
+              sx={{
                 fontWeight: 700,
                 color: isSelected ? 'primary.main' : isGenerating ? 'info.main' : 'text.primary',
                 cursor: 'pointer',
@@ -285,14 +280,12 @@ const DocumentDigitizationGrid = ({
                 py: 1,
                 gap: 1
               }}
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation()
                 openDialog('pagePreview', params.row._doc)
               }}
             >
-              {isGenerating && (
-                <CircularProgress size={16} color="info" />
-              )}
+              {isGenerating && <CircularProgress size={16} color='info' />}
               {params.value}
             </Box>
           )
@@ -314,11 +307,11 @@ const DocumentDigitizationGrid = ({
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
-        renderCell: (params) => {
+        renderCell: params => {
           return (
-            <Box 
+            <Box
               sx={{ cursor: 'pointer' }}
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation()
                 openDialog('pagePreview', params.row._doc)
               }}
@@ -335,17 +328,17 @@ const DocumentDigitizationGrid = ({
         sortable: false,
         filterable: false,
         disableColumnMenu: true,
-        renderCell: (params) => {
+        renderCell: params => {
           return (
             <IconButton
-              size="small"
-              onClick={(e) => {
+              size='small'
+              onClick={e => {
                 e.stopPropagation()
                 setActionMenuDoc(params.row._doc)
                 setActionMenuAnchor(e.currentTarget)
               }}
             >
-              <MoreVertIcon fontSize="small" />
+              <MoreVertIcon fontSize='small' />
             </IconButton>
           )
         }
@@ -419,8 +412,8 @@ const DocumentDigitizationGrid = ({
         componentsProps={{
           pagination: { showFirstButton: true, showLastButton: true }
         }}
-        loading={isLoading }
-        getRowClassName={(params) => {
+        loading={isLoading}
+        getRowClassName={params => {
           const isSelected = selectedDocuments.includes(params.row.id)
           return `${isSelected ? 'row-selected' : ''}`
         }}
@@ -463,7 +456,7 @@ const DocumentDigitizationGrid = ({
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         {actionMenuDoc && (
-          <>            
+          <>
             <MenuItem
               onClick={() => {
                 setActionMenuAnchor(null)
@@ -471,7 +464,7 @@ const DocumentDigitizationGrid = ({
                 setActionMenuDoc(null)
               }}
             >
-              <EditIcon sx={{ mr: 1 }} fontSize="small" />
+              <EditIcon sx={{ mr: 1 }} fontSize='small' />
               Edit Document
             </MenuItem>
             <MenuItem
@@ -482,7 +475,7 @@ const DocumentDigitizationGrid = ({
               }}
               sx={{ color: 'error.main' }}
             >
-              <DeleteOutlineIcon sx={{ mr: 1 }} fontSize="small" />
+              <DeleteOutlineIcon sx={{ mr: 1 }} fontSize='small' />
               Remove Document
             </MenuItem>
           </>

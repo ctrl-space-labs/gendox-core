@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   executeTaskByType,
-  setGeneratingAll,
-  setGeneratingCells,
-  clearGenerationState
+  setInsightsGeneratingAll,
+  setInsightsGeneratingCells,
+  clearInsightsGenerationState
 } from 'src/store/activeTask/activeTask'
 import { toast } from 'react-hot-toast'
 import { useGeneration as useGenerationContext } from '../../generation/GenerationContext'
@@ -18,7 +18,7 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
   const { startGeneration, completeGeneration, failGeneration } = useGenerationContext()
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
-  const { isGeneratingAll, isGeneratingCells } = useSelector(state => state.activeTask.generationState)
+  const { isInsightsGeneratingAll, isInsightsGeneratingCells } = useSelector(state => state.activeTask.generationState)
 
   const handleGenerate = useCallback(
     async ({ documentsToGenerate = [], questionsToGenerate = [], reGenerateExistingAnswers = true }) => {
@@ -42,17 +42,10 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
       // Global Generation == Generate All Documents & Generate New Documents
       const isGlobalGeneration = documentIds.length === 0 && questionIds.length === 0
 
-      console.log('Starting generation:', {
-        type: isGlobalGeneration ? 'Global' : 'Selected',
-        docCount: documentIds.length,
-        questionCount: questionIds.length,
-        reGenerate: reGenerateExistingAnswers
-      })
-
       if (isGlobalGeneration) {
         // Generate ALL documents
         if (reGenerateExistingAnswers) {
-          dispatch(setGeneratingAll(true))
+          dispatch(setInsightsGeneratingAll(true))
         } else {
           // Generate only NEW documents
           null
@@ -73,7 +66,7 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
           })
         }
 
-        dispatch(setGeneratingCells(cellsLoading))
+        dispatch(setInsightsGeneratingCells(cellsLoading))
       }
 
       try {
@@ -103,11 +96,11 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
 
         setSelectedDocuments([])
       } catch (error) {
-        console.error('Generation Failed:', error)
-        failGeneration(taskId, null, error.message || 'Generation failed')
+        console.error('Generation Failed to start generation:', error)
+        failGeneration(taskId, null, error.message || 'Failed to start generationd')
         toast.error('Failed to start generation')
       } finally {
-        dispatch(clearGenerationState())
+        dispatch(clearInsightsGenerationState())
       }
     },
     [
@@ -126,7 +119,7 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
 
   return {
     handleGenerate,
-    isGeneratingAll,
-    isGeneratingCells
+    isInsightsGeneratingAll,
+    isInsightsGeneratingCells
   }
 }

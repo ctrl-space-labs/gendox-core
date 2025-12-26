@@ -12,49 +12,20 @@ const HeaderSection = ({
   title,
   description,
   openAddDocument,
-  onGenerateNew,
-  onGenerateAll,
-  onGenerateSelected,
+  handleGenerate,
   disableGenerate,
   disableGenerateNew,
   isLoading,
   selectedDocuments,
-  generatingAll = false,
-  generatingNew = false,
-  generatingSelected = false,
+  isDigitizationGenerating = false,
   documents = [],
-  hasGeneratedContent = () => false,
+  hasGeneratedContent = () => false
 }) => {
   const [anchorEl, setAnchorEl] = useState(null)
   const [confirmGeneration, setConfirmGeneration] = useState(null) // 'all', 'new', 'selected', or null
 
   const handleToggle = event => {
     setAnchorEl(prev => (prev ? null : event.currentTarget.parentElement))
-  }
-
-  // Handle generation with confirmation check
-  const handleGenerateClick = type => {
-    let targetDocs = []
-
-    switch (type) {
-      case 'all':
-        targetDocs = documents.filter(
-          doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
-        )
-        break
-      case 'new':
-        const docsWithPrompts = documents.filter(
-          doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
-        )
-        targetDocs = docsWithPrompts.filter(doc => !hasGeneratedContent(doc.id))
-        break
-      case 'selected':
-        targetDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
-        break
-    }
-
-    // Always show confirmation for all generation types
-    setConfirmGeneration(type)
   }
 
   // Execute the actual generation
@@ -64,13 +35,14 @@ const HeaderSection = ({
 
     switch (type) {
       case 'all':
-        if (onGenerateAll) onGenerateAll()
+        handleGenerate({ documentsToGenerate: [], reGenerateExistingAnswers: true })
         break
       case 'new':
-        if (onGenerateNew) onGenerateNew()
+        handleGenerate({ documentsToGenerate: [], reGenerateExistingAnswers: false })
         break
       case 'selected':
-        if (onGenerateSelected) onGenerateSelected()
+        const selectedDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
+        handleGenerate({ documentsToGenerate: selectedDocs, reGenerateExistingAnswers: true })
         break
     }
   }
@@ -92,8 +64,8 @@ const HeaderSection = ({
       return {
         text: `Generate Selected (${selectedDocuments.length})`,
         type: 'selected',
-        loading: generatingSelected,
-        disabled: generatingAll || generatingNew || generatingSelected
+        loading: isDigitizationGenerating,
+        disabled: isDigitizationGenerating
       }
     }
 
@@ -107,8 +79,8 @@ const HeaderSection = ({
     return {
       text: `Generate New`,
       type: 'new',
-      loading: generatingNew,
-      disabled: generatingAll || generatingNew || generatingSelected || disableGenerateNew
+      loading: isDigitizationGenerating,
+      disabled: isDigitizationGenerating || disableGenerateNew
     }
   }
 
@@ -178,7 +150,7 @@ const HeaderSection = ({
                   startIcon={
                     buttonConfig.loading ? <CircularProgress size={20} color='inherit' /> : <RocketLaunchIcon />
                   }
-                  onClick={() => handleGenerateClick(buttonConfig.type)}
+                  onClick={() => setConfirmGeneration(buttonConfig.type)}
                   disabled={buttonConfig.disabled || isLoading || disableGenerate}
                   sx={{
                     fontWeight: 700,
@@ -230,11 +202,11 @@ const HeaderSection = ({
               {selectedDocuments.length > 0 && [
                 <MenuItem
                   key='generate-new'
-                  onClick={() => handleGenerateClick('new')}
-                  disabled={generatingAll || generatingNew || generatingSelected || isLoading || disableGenerateNew}
+                  onClick={() => setConfirmGeneration('new')}
+                  disabled={isDigitizationGenerating || isLoading || disableGenerateNew}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {generatingNew ? (
+                    {isDigitizationGenerating ? (
                       <CircularProgress size={16} color='primary' />
                     ) : (
                       <RocketLaunchIcon fontSize='small' color='primary' />
@@ -245,11 +217,9 @@ const HeaderSection = ({
 
                 <MenuItem
                   key='generate-all'
-                  onClick={() => handleGenerateClick('all')}
+                  onClick={() => setConfirmGeneration('all')}
                   disabled={
-                    generatingAll ||
-                    generatingNew ||
-                    generatingSelected ||
+                    isDigitizationGenerating ||
                     isLoading ||
                     (() => {
                       const docsWithPrompts = documents.filter(
@@ -260,7 +230,7 @@ const HeaderSection = ({
                   }
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {generatingAll ? (
+                    {isDigitizationGenerating ? (
                       <CircularProgress size={16} color='success' />
                     ) : (
                       <RocketLaunchIcon fontSize='small' color='success' />
@@ -273,11 +243,9 @@ const HeaderSection = ({
               {/* When main button is "Generate New" - show only Generate All */}
               {selectedDocuments.length === 0 && (
                 <MenuItem
-                  onClick={() => handleGenerateClick('all')}
+                  onClick={() => setConfirmGeneration('all')}
                   disabled={
-                    generatingAll ||
-                    generatingNew ||
-                    generatingSelected ||
+                    isDigitizationGenerating ||
                     isLoading ||
                     (() => {
                       const docsWithPrompts = documents.filter(
@@ -288,7 +256,7 @@ const HeaderSection = ({
                   }
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {generatingAll ? (
+                    {isDigitizationGenerating ? (
                       <CircularProgress size={16} color='success' />
                     ) : (
                       <RocketLaunchIcon fontSize='small' color='success' />

@@ -22,19 +22,16 @@ const DocumentDigitizationDialogs = ({
   setEditMode,
   editMode,
   documentPages = [],
-  generateSingleDocument,
+  handleGenerate,
   onExportCsv,
   isExportingCsv,
   isDocumentGenerating,
-  generatingAll = false,
-  generatingNew = false,
-  generatingSelected = false
+  isDigitizationGenerating = false,
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
-  const isGenRunningGlobal = generatingAll || generatingNew || generatingSelected
   const isGenRunningForActiveDoc = activeNode?.id ? isDocumentGenerating?.(activeNode.id) : false
-  const dialogLoading = Boolean(loading || isGenRunningGlobal || isGenRunningForActiveDoc)
+  const dialogLoading = Boolean(loading || isDigitizationGenerating || isGenRunningForActiveDoc)
 
   // SAVE document handler for DocumentDialog
   const handleUpdateDocument = async updatedDoc => {
@@ -97,7 +94,6 @@ const DocumentDigitizationDialogs = ({
       <DocumentsAddNewDialog
         open={dialogs.newDoc}
         onClose={() => onClose('newDoc')}
-        // existingDocuments={existingDocuments}
         existingDocumentIds={existingDocuments.map(d => d.documentId)}
         loading={loading}
         onConfirm={handleAddNewDocuments}
@@ -108,6 +104,7 @@ const DocumentDigitizationDialogs = ({
         onUploadSuccess={() => {
           reloadAll()
         }}
+        taskType='document-digitization'
       />
 
       {/* Document Details Dialog */}
@@ -126,11 +123,9 @@ const DocumentDigitizationDialogs = ({
         open={dialogs.pagePreview || false}
         onClose={() => onClose('pagePreview')}
         document={activeNode}
-        documentPages={documentPages}
-        generateSingleDocument={generateSingleDocument}
-        onDocumentUpdate={() => {
-          reloadAll()
-        }}
+        documentPages={documentPages}        
+        handleGenerate={handleGenerate}
+        reloadAll={reloadAll}
         dialogLoading={dialogLoading}
         onExportCsv={onExportCsv}
         isExportingCsv={isExportingCsv}
