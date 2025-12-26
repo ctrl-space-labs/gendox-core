@@ -24,7 +24,7 @@ const DocumentInsightsDialogs = ({
   reloadAll,
   isExportingCsv,
   onExportCsv,
-  handleGenerate,
+  handleGenerate
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
@@ -66,12 +66,13 @@ const DocumentInsightsDialogs = ({
       await dispatch(deleteTaskNode({ organizationId, projectId, taskNodeId: nodeId, token })).unwrap()
       reloadAll()
       onClose('delete')
+    } catch (error) {
+      toast.error('Failed to delete item')
     } finally {
+      onClose('delete')
       setLoading(false)
     }
   }
-
-  
 
   return (
     <>
@@ -126,9 +127,9 @@ const DocumentInsightsDialogs = ({
         open={dialogs.delete}
         onClose={() => onClose('delete')}
         onConfirm={() => handleConfirmDelete(activeNode?.id)}
-        title='Confirm Deletion'
-        contentText='Are you sure you want to delete this item? This action cannot be undone.'
-        confirmButtonText='Delete'
+        title='Confirm Removal'
+        contentText='Are you sure you want to remove this item? This action cannot be undone.'
+        confirmButtonText='Remove'
         cancelButtonText='Cancel'
         disableConfirm={loading}
       />
