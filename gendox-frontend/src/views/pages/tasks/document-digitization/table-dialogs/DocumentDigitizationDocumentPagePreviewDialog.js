@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, forwardRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -38,80 +38,176 @@ import DownloadIcon from '@mui/icons-material/Download'
 import BlockIcon from '@mui/icons-material/Block'
 import ErrorIcon from '@mui/icons-material/Error'
 import GendoxMarkdownRenderer from 'src/views/pages/markdown-renderer/GendoxMarkdownRenderer'
-import taskService from 'src/gendox-sdk/taskService'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/router'
 import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
-import useGenerateNewPagesGuard from 'src/views/pages/tasks/document-digitization/table-hooks/useGenerateNewPagesGuard'
 import TextareaAutosizeStyled from 'src/views/pages/tasks/helping-components/TextareaAutosizeStyled'
-import { updateTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
-import { useDispatch } from 'react-redux'
+import { updateTaskNode, fetchTaskNodesByCriteria } from 'src/store/activeTaskNode/activeTaskNode'
+import { useDispatch, useSelector } from 'react-redux'
+
+const PAGE_SIZE = 20
 
 const DocumentPagePreviewDialog = ({
   open,
   onClose,
   document,
   documentPages,
-  onDocumentUpdate,
-  generateSingleDocument,
+  reloadAll,
+  handleGenerate,
   dialogLoading,
   onExportCsv,
   isExportingCsv,
   onDelete
 }) => {
+  const router = useRouter()
   const dispatch = useDispatch()
-  const [loading, setLoading] = useState(false)
-  const [loadingMore, setLoadingMore] = useState(false)
+  const token = window.localStorage.getItem('accessToken')
+  const { organizationId, taskId, projectId } = router.query
+  const { taskNodesAnswerList } = useSelector(state => state.activeTaskNode)
+
+  console.log('Task Nodes Answer List:', taskNodesAnswerList)
+
+  // Local State
   const [saving, setSaving] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
-  const [pageNodes, setPageNodes] = useState([])
+
+  // Pagination State
+  const [pageNodes, setPageNodes] = useState([]) // Answer nodes for this document
   const [currentPage, setCurrentPage] = useState(0)
-  const [hasMore, setHasMore] = useState(false)
   const [totalElements, setTotalElements] = useState(0)
+  const [isInitialLoading, setIsInitialLoading] = useState(false)
+  const [isMoreLoading, setIsMoreLoading] = useState(false)
+
   const [editMode, setEditMode] = useState(false)
   const [showDocumentConfiguration, setShowDocumentConfiguration] = useState(true)
   const [promptValue, setPromptValue] = useState('')
   const [structureValue, setStructureValue] = useState('')
   const [confirmRegenerate, setConfirmRegenerate] = useState(false)
   const [currentDocument, setCurrentDocument] = useState(document || null)
-  const [isGenerating, setIsGenerating] = useState(false)
   const [pageFrom, setPageFrom] = useState('')
   const [pageTo, setPageTo] = useState('')
   const [pageRangeError, setPageRangeError] = useState('')
   const [selectAllPages, setSelectAllPages] = useState(false)
   const sectionRefs = useRef([])
-  const router = useRouter()
-
-  const PAGE_SIZE = 20
+  const prevDialogLoading = useRef(dialogLoading)
+  const currentPageRef = useRef(0)
+  const showLoadMore = pageNodes.length < totalElements
 
   const docPage = Array.isArray(documentPages)
     ? documentPages.find(page => page.taskDocumentNodeId === document?.id)
     : (documentPages?.content || []).find(page => page.taskDocumentNodeId === document?.id)
   const totalPages = docPage?.documentPages || 0
 
-  const parsedFrom = pageFrom && pageFrom.trim() ? parseInt(pageFrom, 10) : null
-  const parsedTo = pageTo && pageTo.trim() ? parseInt(pageTo, 10) : null
-  const allPagesFlag = selectAllPages || ((!pageFrom || pageFrom.trim() === '') && (!pageTo || pageTo.trim() === ''))
+  const fetchAnswerNodes = page => {
+    if (!organizationId || !projectId || !taskId || !document?.id) return
 
-  const { requestedExceedsGeneratedSingle, generateNewDisabledSingle } = useGenerateNewPagesGuard({
-    documentPages,
-    singleDoc: {
-      docId: currentDocument?.id,
-      pageFrom: parsedFrom,
-      pageTo: parsedTo,
-      allPages: allPagesFlag
+    // Set loading indicators
+    if (page === 0) setIsInitialLoading(true)
+    else setIsMoreLoading(true)
+
+    dispatch(
+      fetchTaskNodesByCriteria({
+        organizationId,
+        projectId,
+        taskId,
+        token,
+        criteria: {
+          taskId,
+          nodeTypeNames: ['ANSWER'],
+          nodeValueNodeDocumentId: document.id
+        },
+        page: page,
+        size: PAGE_SIZE
+      })
+    )
+      .unwrap()
+      .catch(err => {
+        console.error('Fetch failed', err)
+        toast.error('Failed to load pages')
+      })
+      .finally(() => {
+        if (page === 0) setIsInitialLoading(false)
+        else setIsMoreLoading(false)
+      })
+  }
+
+  useEffect(() => {
+    if (open && document?.id) {
+      // Reset state
+      setPageNodes([])
+      setCurrentPage(0)
+      currentPageRef.current = 0
+      setTotalElements(0)
+
+      // Fetch first page
+      fetchAnswerNodes(0)
     }
-  })
+  }, [open, document?.id])
 
-  const generateNewDisabled = generateNewDisabledSingle({
-    isSupported: isFileTypeSupported(currentDocument?.url),
-    hasPrompt: !!currentDocument?.prompt?.trim(),
-    isGenerating,
-    dialogLoading,
-    pageRangeError
-  })
+  // Fetch answer nodes on page change
+  useEffect(() => {
+    if (!taskNodesAnswerList?.content) return
+
+    const fetchedNodes = taskNodesAnswerList.content
+    // const fetchedPage = taskNodesAnswerList.number ?? taskNodesAnswerList.pageable?.pageNumber ?? 0
+    const total = taskNodesAnswerList.totalElements || 0
+
+    setTotalElements(total)
+
+    // filter nodes for this document
+    // (Extra safety in case state is stale from another request)
+    const validNodes = fetchedNodes
+      .filter(node => node.documentId == document?.documentId)
+      .sort((a, b) => (a.nodeValue?.order || 0) - (b.nodeValue?.order || 0))
+      .map(node => ({
+        id: node.id,
+        documentId: node.documentId || null,
+        documentNodeId: node.nodeValue?.nodeDocumentId || null,
+        message: node.nodeValue?.message || '',
+        order: node.nodeValue?.order || 0,
+        createdAt: node.createdAt
+      }))
+
+    if (validNodes.length === 0 && total > 0) {
+      // If data came but doesn't belong to this document, we ignore it
+      return
+    }
+
+    setPageNodes(prevNodes => {
+      let mergedNodes = []
+      // If it's page 0, we replace everything (Initial Load)
+      if (currentPageRef.current === 0) {
+        mergedNodes = validNodes
+      } else {
+        // For subsequent pages, we append only new nodes
+        const existingIds = new Set(prevNodes.map(n => n.id))
+        const uniqueNewNodes = validNodes.filter(n => !existingIds.has(n.id))
+        mergedNodes = [...prevNodes, ...uniqueNewNodes]
+      }
+
+      return mergedNodes.sort((a, b) => (a.order || 0) - (b.order || 0))
+    })
+  }, [taskNodesAnswerList, document?.documentId])
+
+  useEffect(() => {
+    if (prevDialogLoading.current && !dialogLoading) {
+      fetchAnswerNodes(0)
+
+      if (reloadAll) reloadAll()
+    }
+    prevDialogLoading.current = dialogLoading
+  }, [dialogLoading])
+
+  const handleLoadMore = () => {
+    if (!isMoreLoading && showLoadMore) {
+      const nextPage = currentPage + 1
+      setCurrentPage(nextPage)
+      currentPageRef.current = nextPage
+      fetchAnswerNodes(nextPage)
+    }
+  }
 
   // Validation function for page range
   const validatePageRange = (fromPage, toPage, updateState = true) => {
@@ -162,106 +258,6 @@ const DocumentPagePreviewDialog = ({
     }
   }, [open, document])
 
-  // Function to fetch answer nodes with pagination
-  const fetchAnswerNodes = async (page = 0, append = false) => {
-    if (!open || !document?.id) return
-
-    if (page === 0) {
-      setLoading(true)
-    } else {
-      setLoadingMore(true)
-    }
-
-    const token = window.localStorage.getItem('accessToken')
-    const { organizationId, projectId, taskId } = router.query
-
-    try {
-      // Fetch task nodes for this document with ANSWER node type
-      const response = await taskService.getTaskNodesByCriteria(
-        organizationId,
-        projectId,
-        taskId,
-        {
-          taskId,
-          nodeTypeNames: ['ANSWER'],
-          nodeValueNodeDocumentId: document.id
-        },
-        token,
-        page,
-        PAGE_SIZE
-      )
-      const data = response.data
-      const nodes = data?.content || []
-      const totalElements = data?.totalElements || 0
-      const totalPages = data?.totalPages || 0
-      const currentPageNum = data?.pageable?.pageNumber || page
-
-      // Filter nodes for this specific document and sort by page order (node_value.order)
-      const documentAnswerNodes = nodes
-        .filter(node => node.documentId === document.documentId)
-        .sort((a, b) => {
-          const orderA = a.nodeValue?.order || 0
-          const orderB = b.nodeValue?.order || 0
-          return orderA - orderB
-        })
-
-      // Update state
-      if (append) {
-        // Append new nodes to existing ones, avoiding duplicates
-        setPageNodes(prevNodes => {
-          const existingIds = new Set(prevNodes.map(node => node.id))
-          const newNodes = documentAnswerNodes.filter(node => !existingIds.has(node.id))
-          return [...prevNodes, ...newNodes]
-        })
-      } else {
-        setPageNodes(documentAnswerNodes)
-      }
-
-      setCurrentPage(currentPageNum)
-      setTotalElements(totalElements)
-      setHasMore(currentPageNum + 1 < totalPages)
-
-      // Don't show fallback demo content - let the empty state handle it
-      if (!append && documentAnswerNodes.length === 0) {
-        setPageNodes([])
-        setHasMore(false)
-      }
-    } catch (error) {
-      console.error('Error fetching answer nodes:', error)
-
-      if (!append) {
-        // On error, show empty state - the UI will handle showing appropriate message
-        setPageNodes([])
-        setHasMore(false)
-        toast.error('Failed to load document content. Please try again.')
-      }
-    } finally {
-      if (page === 0) {
-        setLoading(false)
-      } else {
-        setLoadingMore(false)
-      }
-    }
-  }
-
-  // Load more pages
-  const handleLoadMore = () => {
-    if (!loadingMore && hasMore) {
-      fetchAnswerNodes(currentPage + 1, true)
-    }
-  }
-
-  // Initial fetch when dialog opens
-  useEffect(() => {
-    if (open && document?.id) {
-      // Reset pagination state
-      setCurrentPage(0)
-      setHasMore(false)
-      setTotalElements(0)
-      fetchAnswerNodes(0, false)
-    }
-  }, [open, document, router.query])
-
   const handleClose = () => {
     if (editMode) {
       setEditMode(false)
@@ -276,7 +272,6 @@ const DocumentPagePreviewDialog = ({
     setFullscreen(false)
     setPageNodes([])
     setCurrentPage(0)
-    setHasMore(false)
     setTotalElements(0)
     onClose()
   }
@@ -364,9 +359,7 @@ const DocumentPagePreviewDialog = ({
       // Update local state to reflect changes immediately
       setCurrentDocument(updatedDocument)
 
-      if (onDocumentUpdate) {
-        onDocumentUpdate(updatedDocument)
-      }
+      reloadAll()
 
       setEditMode(false)
       toast.success('Document updated successfully!')
@@ -394,53 +387,16 @@ const DocumentPagePreviewDialog = ({
   }
 
   const handleGenerateClick = () => {
-    const hasGeneratedContent = pageNodes.length > 0
-
-    if (hasGeneratedContent) {
-      // Show confirmation dialog for regenerate
+    if (document) {
       setConfirmRegenerate(true)
     } else {
-      // Direct generate for first time
-      handleGenerate()
-    }
-  }
-
-  const handleGenerate = async () => {
-    if (generateSingleDocument && currentDocument) {
-      // Validate page range before generating
-      const isValid = validatePageRange(pageFrom, pageTo)
-      if (!isValid) {
-        toast.error('Please fix page range errors before generating')
-        return
-      }      
-
-      try {
-        setIsGenerating(true)
-        setConfirmRegenerate(false)
-        setShowDocumentConfiguration(false) // Close the config section
-
-        // Pass page range if specified
-        const pageFromValue = pageFrom && pageFrom.trim() ? pageFrom : null
-        const pageToValue = pageTo && pageTo.trim() ? pageTo : null
-
-        await generateSingleDocument(currentDocument, pageFromValue, pageToValue)
-
-        // Refresh the page nodes after generation
-        await fetchAnswerNodes(0, false)
-      } catch (error) {
-        console.error('Generation failed:', error)
-        // Error is already handled in the generation hook
-      } finally {
-        setIsGenerating(false)
-      }
-    } else {
-      console.warn('generateSingleDocument function not provided')
-      toast.error('Generation function not available')
+      handleGenerate({ documentsToGenerate: document, reGenerateExistingAnswers: true })
     }
   }
 
   const handleConfirmRegenerate = () => {
-    handleGenerate()
+    handleGenerate({ documentsToGenerate: document, reGenerateExistingAnswers: true })
+    setConfirmRegenerate(false)
   }
 
   const handleCancelRegenerate = () => {
@@ -452,7 +408,7 @@ const DocumentPagePreviewDialog = ({
   }
 
   const SectionCardContent = () => {
-    if (loading) {
+    if (isInitialLoading) {
       return (
         <Box
           sx={{
@@ -473,7 +429,6 @@ const DocumentPagePreviewDialog = ({
     }
 
     if (!pageNodes || pageNodes.length === 0) {
-      const hasPrompt = currentDocument?.prompt && currentDocument.prompt.trim()
       const isSupported = isFileTypeSupported(currentDocument?.url)
 
       return (
@@ -507,19 +462,6 @@ const DocumentPagePreviewDialog = ({
               </Typography>
               <Typography variant='body2' color='grey.600' sx={{ fontWeight: 500 }}>
                 📄 Supported formats: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, ODT, RTF
-              </Typography>
-            </>
-          ) : !hasPrompt ? (
-            <>
-              <Typography variant='h5' color='text.primary' sx={{ fontWeight: 600 }}>
-                No Prompt Configured
-              </Typography>
-              <Typography variant='body1' color='text.secondary' sx={{ maxWidth: 600 }}>
-                This document needs a prompt to generate answers. A prompt tells the AI how to process and analyze your
-                document content.
-              </Typography>
-              <Typography variant='body2' color='info.main' sx={{ fontWeight: 500 }}>
-                💡 Click the Edit button above to add a prompt and structure, then generate answers for this document.
               </Typography>
             </>
           ) : (
@@ -566,12 +508,10 @@ const DocumentPagePreviewDialog = ({
                 }}
               >
                 <DescriptionIcon fontSize='small' />
-                Page {pageNode.nodeValue?.order || index + 1}
+                Page {pageNode.order || index + 1}
               </Typography>
 
-              <GendoxMarkdownRenderer
-                markdownText={pageNode.nodeValue?.message || 'No answer content available for this page.'}
-              />
+              <GendoxMarkdownRenderer markdownText={pageNode.message || 'No answer content available for this page.'} />
             </CardContent>
             {index !== pageNodes.length - 1 && (
               <Divider
@@ -589,14 +529,14 @@ const DocumentPagePreviewDialog = ({
         ))}
 
         {/* Load More Button */}
-        {hasMore && (
+        {showLoadMore && (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <Button
               variant='outlined'
               size='large'
               onClick={handleLoadMore}
-              disabled={loadingMore}
-              startIcon={loadingMore ? <CircularProgress size={20} /> : null}
+              disabled={isMoreLoading}
+              startIcon={isMoreLoading ? <CircularProgress size={20} /> : null}
               sx={{
                 minWidth: 200,
                 fontWeight: 600,
@@ -606,7 +546,7 @@ const DocumentPagePreviewDialog = ({
                 }
               }}
             >
-              {loadingMore ? 'Loading More...' : `Load More Pages (${totalElements - pageNodes.length} remaining)`}
+              {isMoreLoading ? 'Loading More...' : `Load More Pages (${totalElements - pageNodes.length} remaining)`}
             </Button>
           </Box>
         )}
@@ -712,12 +652,10 @@ const DocumentPagePreviewDialog = ({
                 </Tooltip>
                 <Tooltip
                   title={
-                    isGenerating
+                    dialogLoading
                       ? 'Generation in progress...'
                       : !isFileTypeSupported(currentDocument?.url)
-                      ? 'This file format is not supported for generation'
-                      : !currentDocument.prompt?.trim()
-                      ? 'Add a prompt first to generate answers'
+                      ? 'This file format is not supported for generation'                      
                       : pageRangeError !== ''
                       ? `Fix page range error: ${pageRangeError}`
                       : pageNodes.length > 0
@@ -731,36 +669,16 @@ const DocumentPagePreviewDialog = ({
                       onClick={handleGenerateClick}
                       sx={{ mr: 1 }}
                       disabled={
-                        !isFileTypeSupported(currentDocument?.url) ||
-                        !currentDocument.prompt?.trim() ||
-                        isGenerating ||
+                        !isFileTypeSupported(currentDocument?.url) ||                        
                         dialogLoading ||
                         pageRangeError !== ''
                       }
                     >
-                      {isGenerating || dialogLoading ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
+                      {dialogLoading ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
                     </IconButton>
                   </span>
                 </Tooltip>
-                <Tooltip
-                  title={
-                    !isFileTypeSupported(currentDocument?.url)
-                      ? 'This file format is not supported for generation'
-                      : !currentDocument.prompt?.trim()
-                      ? 'Add a prompt first to generate answers'
-                      : pageRangeError !== ''
-                      ? `Fix page range error: ${pageRangeError}`
-                      : !requestedExceedsGeneratedSingle
-                      ? 'All selected pages have been generated'
-                      : 'Generate NEW pages'
-                  }
-                >
-                  <span>
-                    <IconButton size='small' onClick={handleGenerate} sx={{ mr: 1 }} disabled={generateNewDisabled}>
-                      {isGenerating || dialogLoading ? <CircularProgress size={20} /> : <AutoAwesomeIcon />}
-                    </IconButton>
-                  </span>
-                </Tooltip>{' '}
+
                 <Tooltip title='Remove document'>
                   <span>
                     <IconButton
@@ -804,7 +722,7 @@ const DocumentPagePreviewDialog = ({
       </AppBar>
 
       {/* Generation Progress Banner */}
-      {(isGenerating || dialogLoading) && (
+      {dialogLoading && (
         <Box
           sx={{
             backgroundColor: 'primary.main',
@@ -1118,16 +1036,16 @@ const DocumentPagePreviewDialog = ({
               py: 6,
               px: 4,
               minHeight: fullscreen ? 'calc(100vh - 200px)' : '50vh',
-              opacity: isGenerating ? 0.6 : 1,
+              opacity: dialogLoading ? 0.6 : 1,
               transition: 'opacity 0.3s ease',
-              pointerEvents: isGenerating ? 'none' : 'auto'
+              pointerEvents: dialogLoading ? 'none' : 'auto'
             }}
           >
             <SectionCardContent />
           </ResponsiveCardContent>
 
           {/* Subtle loading overlay for content area */}
-          {(isGenerating || dialogLoading) && (
+          {dialogLoading && (
             <Box
               sx={{
                 position: 'absolute',

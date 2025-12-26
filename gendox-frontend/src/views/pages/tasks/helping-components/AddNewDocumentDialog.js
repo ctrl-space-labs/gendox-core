@@ -23,7 +23,7 @@ import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 import UploaderDocuments from 'src/views/pages/tasks/helping-components/UploaderDocuments'
 import { fetchDocuments } from 'src/store/activeDocument/activeDocument'
 import { useDispatch, useSelector } from 'react-redux'
-import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
+import { getFileTypeValidator } from 'src/utils/tasks/taskUtils'
 
 const DocumentsAddNewDialog = ({
   open,
@@ -36,7 +36,8 @@ const DocumentsAddNewDialog = ({
   projectId,
   token,
   taskId,
-  mode = 'main'
+  mode = 'main',
+  taskType = 'document-digitization',
 }) => {
   const dispatch = useDispatch()
   const { projectDocuments, isBlurring } = useSelector(state => state.activeDocument)
@@ -48,6 +49,11 @@ const DocumentsAddNewDialog = ({
   const [selectedDocIds, setSelectedDocIds] = useState(new Set())
 
   const existingDocIds = useMemo(() => new Set(existingDocumentIds || []), [existingDocumentIds])
+
+  const isFileTypeSupported = useMemo(() => {
+    return getFileTypeValidator(taskType)
+  }, [taskType])
+  
 
   useEffect(() => {
     if (!open) {
@@ -96,7 +102,7 @@ const DocumentsAddNewDialog = ({
 
 const displayDocuments = useMemo(() => {
       return documents.filter(doc => isFileTypeSupported(doc.remoteUrl));
-  }, [documents])
+  }, [documents, isFileTypeSupported]);
  
 
   // Handlers
@@ -282,6 +288,7 @@ const displayDocuments = useMemo(() => {
             onClose={onClose}
             onUploadSuccess={onUploadSuccess}
             mode={mode}
+            taskType={taskType}
           />
         </DialogContent>
       </Dialog>

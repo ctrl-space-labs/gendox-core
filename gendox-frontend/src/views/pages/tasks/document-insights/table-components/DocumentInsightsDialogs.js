@@ -89,6 +89,7 @@ const DocumentInsightsDialogs = ({
         onUploadSuccess={() => {
           reloadAll()
         }}
+        taskType='document-insights'
       />
 
       {/* Answer Details Dialog */}

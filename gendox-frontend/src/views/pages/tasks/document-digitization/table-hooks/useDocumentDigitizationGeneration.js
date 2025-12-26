@@ -1,26 +1,28 @@
 import { useCallback, useState } from 'react'
-import { useDispatch } from 'react-redux'
-import { executeTaskByType } from 'src/store/activeTask/activeTask'
+import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'react-hot-toast'
 import { useGeneration } from '../../generation/GenerationContext'
+import { useRouter } from 'next/router'
+import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
+import {
+  executeTaskByType,
+  setDigitizationGenerating,
+  clearDigitizationGenerationState
+} from 'src/store/activeTask/activeTask'
 
 export default function useDocumentDigitizationGeneration({
-  organizationId,
-  projectId,
-  taskId,
-  documents,
-  pollJobStatus,
-  showTimeoutDialog,
+  reloadAll,
   token,
   setSelectedDocuments,
-  documentPages,
-  onGenerationComplete = () => {}
+  documentPages
 }) {
+  const router = useRouter()
   const dispatch = useDispatch()
+  const { organizationId, taskId, projectId } = router.query
+
   const { startGeneration, updateProgress, completeGeneration, failGeneration } = useGeneration()
-  const [generatingAll, setGeneratingAll] = useState(false)
-  const [generatingNew, setGeneratingNew] = useState(false)
-  const [generatingSelected, setGeneratingSelected] = useState(false)
+  const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
+  const { isDigitizationGenerating } = useSelector(state => state.activeTask.generationState)
   const [generatingDocuments, setGeneratingDocuments] = useState(new Set())
 
   // Helper function to check if document has been generated
@@ -37,225 +39,65 @@ export default function useDocumentDigitizationGeneration({
     [documentPages]
   )
 
-  // Helper function to execute generation with proper state management
-  const executeGeneration = useCallback(
-    async (
-      docs,
-      generationType,
-      reGenerateExistingAnswers = false,
-      pageFrom = null,
-      pageTo = null,
-      allPages = null
-    ) => {
-      let setLoading
-      switch (generationType) {
-        case 'all':
-          setLoading = setGeneratingAll
-          break
-        case 'new':
-          setLoading = setGeneratingNew
-          break
-        case 'selected':
-          setLoading = setGeneratingSelected
-          break
-        default:
-          setLoading = () => {}
-      }
+  const handleGenerate = useCallback(
+    async ({ documentsToGenerate = [], reGenerateExistingAnswers = true }) => {
+      const docsArray = !documentsToGenerate
+        ? []
+        : Array.isArray(documentsToGenerate)
+        ? documentsToGenerate
+        : [documentsToGenerate]
 
-      const docIds = Array.isArray(docs) ? docs.map(d => d.id) : [docs.id]
-      const documentId = docIds.length === 1 ? docIds[0] : null
+      const documentIds = docsArray.map(d => d.id)
 
-      // Start global generation tracking with document info
-      const documentNames = docs.map(doc => doc.name).join(', ')
-      const metadataForContext = {
-        documentNames,
-        totalDocuments: docs.length,
-        // retry metadata
-        selectedIds: docIds,
-        reGenerateExistingAnswers,
-        pageFrom: pageFrom ?? null,
-        pageTo: pageTo ?? null,
-        allPages: allPages ?? null,
-        generationType
-      }
+      // Global Generation == Generate All Documents & Generate New Documents
+      const isGlobalGeneration = documentIds.length === 0
 
-      startGeneration(taskId, documentId, generationType, metadataForContext)
-
-      // Set individual document loading states
-      setGeneratingDocuments(prev => new Set([...prev, ...docIds]))
-      setLoading(true)
+      console.log('Starting digitization generation for documents:', {
+        docCount: documentIds.length,
+        reGenerate: reGenerateExistingAnswers
+      })
 
       try {
-        const criteria = { taskId, documentNodeIds: docIds, reGenerateExistingAnswers }
-
-        // Add page range if provided
-        if (pageFrom !== null && pageFrom !== undefined && pageFrom !== '') {
-          criteria.pageFrom = parseInt(pageFrom, 10)
-        }
-        if (pageTo !== null && pageTo !== undefined && pageTo !== '') {
-          criteria.pageTo = parseInt(pageTo, 10)
-        }
+        dispatch(setDigitizationGenerating(true))
+        const criteria = { taskId, documentNodeIds: documentIds, reGenerateExistingAnswers }
 
         const jobExecutionId = await dispatch(
           executeTaskByType({ organizationId, projectId, taskId, criteria, token })
         ).unwrap()
 
-        const typeText =
-          generationType === 'all'
-            ? 'all'
-            : generationType === 'new'
-            ? 'new'
-            : generationType === 'selected'
-            ? 'selected'
-            : 'single'
+        startGeneration(taskId, null, 'all', 2000)
+        await pollJobStatus(jobExecutionId)
 
-        // Poll job status with progress updates - Let generation context handle lifecycle
-        await pollJobStatus(jobExecutionId, status => {
-          // Update progress if available from job status
-          if (status?.completedItems !== undefined) {
-            updateProgress(taskId, documentId, status.completedItems)
-          }
-        })
-
-        // Mark as completed in global context
-        completeGeneration(taskId, documentId)
+        reloadAll()
+        completeGeneration(taskId, null)
 
         toast.success(
-          `${typeText.charAt(0).toUpperCase() + typeText.slice(1)} generation completed for ${
-            docIds.length
-          } document(s)`
+          isGlobalGeneration
+            ? 'Generation completed for all documents'
+            : `Generation completed for ${documentsToGenerate.length} document(s)`
         )
 
-        // Call refresh callback to update data
-        onGenerationComplete()
-
-        if (generationType === 'selected') {
-          setSelectedDocuments([])
-        }
+        setSelectedDocuments([])
       } catch (error) {
         console.error('Failed to start generation:', error)
-        const errorMessage = error.message || 'Failed to start generation'
-
-        // Mark as failed in global context
-        failGeneration(taskId, documentId, errorMessage)
-
-        toast.error(errorMessage)
+        failGeneration(taskId, null, error.message || 'Failed to start generation')
+        toast.error('Failed to start generation')
       } finally {
-        // Remove individual document loading states
-        setGeneratingDocuments(prev => {
-          const newSet = new Set(prev)
-          docIds.forEach(id => newSet.delete(id))
-          return newSet
-        })
-        setLoading(false)
+        dispatch(clearDigitizationGenerationState())
       }
     },
     [
+      dispatch,
       organizationId,
       projectId,
       taskId,
       pollJobStatus,
-      token,
-      dispatch,
-      setSelectedDocuments,
       startGeneration,
-      updateProgress,
       completeGeneration,
       failGeneration,
-      onGenerationComplete
+      reloadAll,
+      setSelectedDocuments
     ]
-  )
-
-  // helper για να βρούμε τα counts από το documentPages
-  const getDocPageStats = useCallback(
-    docId => {
-      const dp = Array.isArray(documentPages)
-        ? documentPages.find(p => p.taskDocumentNodeId === docId)
-        : (documentPages?.content || []).find(p => p.taskDocumentNodeId === docId)
-
-      return {
-        total: dp?.documentPages ?? 0,
-        generated: dp?.numberOfNodePages ?? 0
-      }
-    },
-    [documentPages]
-  )
-
-  // Generate New: Only documents that haven't been generated yet
-  const generateNew = useCallback(async () => {
-    const docsWithPrompts = documents.filter(doc => doc.prompt && doc.prompt.trim())
-    const newDocs = docsWithPrompts.filter(doc => !hasGeneratedContent(doc.id))
-
-    const docsWithMissing = docsWithPrompts.filter(d => {
-      const { total, generated } = getDocPageStats(d.id)
-      return total > 0 && generated < total
-    })
-    if (docsWithMissing.length === 0) {
-      toast.success('No new pages to generate. All documents are fully processed.')
-      return
-    }
-    
-    await executeGeneration(docsWithMissing, 'new', false)
-  }, [documents, hasGeneratedContent, executeGeneration])
-
-  // Generate All: All documents with prompts, regenerate existing ones
-  const generateAll = useCallback(async () => {
-    const docsWithPrompts = documents.filter(doc => doc.prompt && doc.prompt.trim())
-
-    if (docsWithPrompts.length === 0) {
-      toast.error('No documents with prompts found.')
-      return
-    }
-
-    await executeGeneration(docsWithPrompts, 'all', true)
-  }, [documents, executeGeneration])
-
-  // Generate Selected: Only selected documents
-  const generateSelected = useCallback(
-    async (selectedDocuments = null) => {
-      let selectedDocs
-
-      if (selectedDocuments) {
-        // If selectedDocuments array is provided, use it
-        selectedDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
-      } else {
-        // If no array provided, assume we're using the current selection from state
-        selectedDocs = documents.filter(doc => selectedDocuments && selectedDocuments.includes(doc.id))
-      }
-
-      if (selectedDocs.length === 0) {
-        toast.error('No documents selected for generation.')
-        return
-      }
-
-      // Check if all selected docs have prompts
-      const docsWithoutPrompts = selectedDocs.filter(doc => !doc.prompt || !doc.prompt.trim())
-      if (docsWithoutPrompts.length > 0) {
-        toast.error(`${docsWithoutPrompts.length} selected document(s) don't have prompts. Please add prompts first.`)
-        return
-      }
-
-      // Determine if we need to regenerate (if any selected doc already has content)
-      const hasExistingContent = selectedDocs.some(doc => hasGeneratedContent(doc.id))
-
-      await executeGeneration(selectedDocs, 'selected', hasExistingContent)
-    },
-    [documents, hasGeneratedContent, executeGeneration]
-  )
-
-  // Generate single document (for dialog use)
-  const generateSingleDocument = useCallback(
-    async (document, pageFrom = null, pageTo = null) => {
-
-      if (!document.prompt || !document.prompt.trim()) {
-        toast.error('Document needs a prompt before generation.')
-        return
-      }
-
-      const hasContent = hasGeneratedContent(document.id)
-      await executeGeneration([document], 'single', hasContent, pageFrom, pageTo)
-    },
-    [hasGeneratedContent, executeGeneration]
   )
 
   // Helper function to check if a specific document is being generated
@@ -267,16 +109,11 @@ export default function useDocumentDigitizationGeneration({
   )
 
   return {
-    // New generation functions
-    generateNew,
-    generateAll,
-    generateSelected,
-    generateSingleDocument,
+    // Generation functions
+    handleGenerate,
 
     // Loading states
-    generatingAll,
-    generatingNew,
-    generatingSelected,
+    isDigitizationGenerating,
     generatingDocuments,
 
     // Helper functions
