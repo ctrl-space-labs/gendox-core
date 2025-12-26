@@ -48,6 +48,7 @@ public class DocumentDigitizationReader extends GendoxJpaPageReader<TaskDocument
         assert taskId != null;
         criteria = new TaskNodeCriteria();
         criteria.setTaskId(UUID.fromString(taskId));
+        criteria.setNodeTypeNames(List.of("DOCUMENT"));
 
         ObjectMapper mapper = new ObjectMapper();
 
@@ -60,7 +61,6 @@ public class DocumentDigitizationReader extends GendoxJpaPageReader<TaskDocument
                         new TypeReference<List<UUID>>() {
                         }
                 );
-//                criteria.setDocumentNodeIds(documentNodeIds);
                 criteria.setNodeIds(documentNodeIds);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to deserialize documentNodeIds JSON", e);

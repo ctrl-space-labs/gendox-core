@@ -61,7 +61,7 @@ public class TaskNodeService {
             int nextOrder = (maxOrder != null ? maxOrder : 0) + 1;
             taskNode.getNodeValue().setOrder(nextOrder);
         }
-        return taskNodeRepository.save(taskNode);
+        return taskNodeRepository.saveAndFlush(taskNode);
     }
 
     @Transactional
@@ -306,7 +306,6 @@ public class TaskNodeService {
         if (taskNodeIds == null || taskNodeIds.isEmpty()) {
             return;
         }
-//        List<TaskNode> nodesToDelete = taskNodeRepository.findAllById(taskNodeIds);
         taskNodeRepository.deleteAllByIds(taskNodeIds);
     }
 
