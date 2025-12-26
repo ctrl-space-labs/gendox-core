@@ -1,7 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react'
 import taskService from 'src/gendox-sdk/taskService'
 import { useGeneration as useGenerationContext } from './GenerationContext'
-import { toast } from 'react-hot-toast'
 
 export const useActiveJobMonitor = ({ organizationId, projectId, taskId, token, reloadAll }) => {
   const { startGeneration, completeGeneration } = useGenerationContext()
