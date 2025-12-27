@@ -27,7 +27,8 @@ const DocumentInsightsGrid = ({
   selectedDocuments = [],
   onSelectDocument = () => {},
   handleGenerate,
-  isGeneratingAll,
+  isGeneratingAll = false,
+  isGeneratingNew = false,
   isGeneratingCells = {}
 }) => {
   const theme = useTheme()
@@ -394,6 +395,7 @@ const DocumentInsightsGrid = ({
     onSelectDocument,
     openDialog,
     isGeneratingAll,
+    isGeneratingNew,
     isGeneratingCells,
     handleGenerate,
     theme
@@ -401,9 +403,9 @@ const DocumentInsightsGrid = ({
 
   const rows = useMemo(() => {
     const sortedDocs = [...documents].sort((a, b) => {
-      const dateA = new Date(a.updatedAt || a.updateAt || 0)
-      const dateB = new Date(b.updatedAt || b.updateAt || 0)
-      return dateB - dateA
+      const dateA = new Date(a.createdAt || a.createdAt || 0)
+      const dateB = new Date(b.createdAt || b.createdAt || 0)
+      return dateA - dateB
     })
     return sortedDocs.map(doc => {
       const row = {
@@ -462,6 +464,8 @@ const DocumentInsightsGrid = ({
         rows={rows}
         columns={columns}
         pagination
+        hideFooterSelectedRowCount
+        disableRowSelectionOnClick
         paginationMode='server'
         rowCount={totalDocuments}
         estimatedRowCount={totalDocuments}
@@ -469,12 +473,11 @@ const DocumentInsightsGrid = ({
         pageSizeOptions={[20]}
         onPaginationModelChange={({ page: newPage }) => {
           setPage(newPage)
-        }}
-        disableRowSelectionOnClick
+        }}        
         componentsProps={{
           pagination: { showFirstButton: true, showLastButton: true }
         }}
-        loading={isPageLoading}
+        loading={isPageLoading || isGeneratingNew}
         sx={{
           '& .MuiDataGrid-cell': {
             outline: 'none',

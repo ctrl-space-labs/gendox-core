@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import {
   executeTaskByType,
   setInsightsGeneratingAll,
+  setInsightsGeneratingNew,
   setInsightsGeneratingCells,
   clearInsightsGenerationState
 } from 'src/store/activeTask/activeTask'
@@ -18,7 +19,9 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
   const { startGeneration, completeGeneration, failGeneration } = useGenerationContext()
   const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
 
-  const { isInsightsGeneratingAll, isInsightsGeneratingCells } = useSelector(state => state.activeTask.generationState)
+  const { isInsightsGeneratingAll, isInsightsGeneratingNew, isInsightsGeneratingCells } = useSelector(
+    state => state.activeTask.generationState
+  )
 
   const handleGenerate = useCallback(
     async ({ documentsToGenerate = [], questionsToGenerate = [], reGenerateExistingAnswers = true }) => {
@@ -48,7 +51,7 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
           dispatch(setInsightsGeneratingAll(true))
         } else {
           // Generate only NEW documents
-          null
+          dispatch(setInsightsGeneratingNew(true))
         }
       } else {
         const cellsLoading = {}
@@ -120,6 +123,7 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
   return {
     handleGenerate,
     isInsightsGeneratingAll,
+    isInsightsGeneratingNew,
     isInsightsGeneratingCells
   }
 }

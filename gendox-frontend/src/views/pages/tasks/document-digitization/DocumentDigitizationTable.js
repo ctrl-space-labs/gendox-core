@@ -10,7 +10,6 @@ import HeaderSection from './table-components/DocumentDigitizationHeaderSection'
 import DialogManager from './table-components/DocumentDigitizationDialogs'
 import useDocumentDigitizationGeneration from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationGeneration'
 import useExportFile from 'src/views/pages/tasks/helping-components/TaskExportFiles'
-import useGenerateNewPagesGuard from 'src/views/pages/tasks/document-digitization/table-hooks/useGenerateNewPagesGuard'
 import { useActiveJobMonitor } from '../generation/useActiveJobMonitor'
 
 
@@ -20,7 +19,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const token = window.localStorage.getItem('accessToken')
   const { organizationId, taskId, projectId } = router.query
 
-  console.log('Selected Task in Digitization Table:', selectedTask)
 
   const {
     taskNodesDocumentList,
@@ -164,7 +162,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   }
 
   // Handle Generate Documents
-  const { handleGenerate, isDigitizationGenerating, hasGeneratedContent, isDocumentGenerating } =
+  const { handleGenerate, isDigitizationGenerating, isDocumentGenerating } =
     useDocumentDigitizationGeneration({
       reloadAll,
       token,
@@ -181,11 +179,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     documents
   })
 
-  const { disableGenerateFlag } = useGenerateNewPagesGuard({
-    documents,
-    selectedDocuments,
-    documentPages
-  })
+ 
 
   return (
     <>
@@ -195,13 +189,10 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
           description={selectedTask?.description}
           openAddDocument={() => openDialog('newDoc')}
           handleGenerate={handleGenerate}
-          disableGenerateNew={disableGenerateFlag}
-          disableGenerate={documents.length === 0}
           isLoading={showLoader}
           selectedDocuments={selectedDocuments}
           isDigitizationGenerating={isDigitizationGenerating}
           documents={documents}
-          hasGeneratedContent={hasGeneratedContent}
         />
 
         <Box

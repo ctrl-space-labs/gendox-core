@@ -2,7 +2,6 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import taskService from 'src/gendox-sdk/taskService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
-import { set } from 'nprogress'
 
 export const createTask = createAsyncThunk(
   'task/createTask',
@@ -101,6 +100,7 @@ const initialState = {
   isLoading: false,
   generationState: {
     isInsightsGeneratingAll: false,
+    isInsightsGeneratingNew: false,
     isInsightsGeneratingCells: {}, // Object: { "docId_questionId": true }
     isDigitizationGenerating: false
   },
@@ -114,6 +114,9 @@ const taskSlice = createSlice({
     setInsightsGeneratingAll: (state, action) => {
       state.generationState.isInsightsGeneratingAll = action.payload
     },
+    setInsightsGeneratingNew: (state, action) => {
+      state.generationState.isInsightsGeneratingNew = action.payload
+    },
     setInsightsGeneratingCells: (state, action) => {
       state.generationState.isInsightsGeneratingCells = {
         ...state.generationState.isInsightsGeneratingCells,
@@ -122,6 +125,7 @@ const taskSlice = createSlice({
     },
     clearInsightsGenerationState: state => {
       state.generationState.isInsightsGeneratingAll = false
+      state.generationState.isInsightsGeneratingNew = false
       state.generationState.isInsightsGeneratingCells = {}
     },
     setDigitizationGenerating: (state, action) => {
@@ -174,6 +178,7 @@ const taskSlice = createSlice({
 
 export const {
   setInsightsGeneratingAll,
+  setInsightsGeneratingNew,
   setInsightsGeneratingCells,
   clearInsightsGenerationState,
   setDigitizationGenerating,
