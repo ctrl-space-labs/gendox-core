@@ -1,8 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Box, Typography, Stack, Button, Tooltip, Divider, Menu, MenuItem, CircularProgress } from '@mui/material'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
-
 import DescriptionIcon from '@mui/icons-material/Description'
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
 import Icon from 'src/views/custom-components/mui/icon/icon'
@@ -15,29 +14,36 @@ const HeaderSection = ({
   openAddDocument,
   onAddQuestion,
   handleGenerate,
-  disableGenerate,
   isPageLoading,
   onExportCsv,
   isExportingCsv,
   selectedDocuments,
-  generatingAll = false,
-  generatingNew = false,
-  generatingSelected = false,
+  isGenerating = false,
   documents = [],
   questions = [],
   hasGeneratedContent = () => false
 }) => {
   const [anchorEl, setAnchorEl] = useState(null)
   const [confirmGeneration, setConfirmGeneration] = useState(null) // 'all', 'new', 'selected', or null
+  const [generatingType, setGeneratingType] = useState(null)
 
   const handleToggle = event => {
     setAnchorEl(prev => (prev ? null : event.currentTarget.parentElement))
   }
 
+  const disableGenerate = isPageLoading || documents.length === 0 || questions.length === 0 || isGenerating
+
+  useEffect(() => {
+    if (!isGenerating) {
+      setGeneratingType(null)
+    }
+  }, [isGenerating])
+
   // Execute the actual generation
   const executeGeneration = type => {
     setConfirmGeneration(null)
     setAnchorEl(null)
+    setGeneratingType(type)
 
     switch (type) {
       case 'all':
@@ -78,12 +84,28 @@ const HeaderSection = ({
 
   // Calculate button state and text
   const getMainButtonConfig = () => {
+    // when is generating, show loading state
+    if (isGenerating && generatingType) {
+      let loadingText = 'Generating...'
+      if (generatingType === 'all') loadingText = 'Generating All...'
+      if (generatingType === 'new') loadingText = 'Generating New...'
+      if (generatingType === 'selected') loadingText = `Generating (${selectedDocuments.length})...`
+
+      return {
+        text: loadingText,
+        type: generatingType,
+        loading: true,
+        disabled: true
+      }
+    }
+
+    // normal states
     if (selectedDocuments.length > 0) {
       return {
         text: `Generate Selected (${selectedDocuments.length})`,
         type: 'selected',
-        loading: generatingSelected,
-        disabled: generatingAll || generatingNew || generatingSelected
+        loading: isGenerating,
+        disabled: disableGenerate
       }
     }
 
@@ -98,8 +120,8 @@ const HeaderSection = ({
     return {
       text: `Generate New`,
       type: 'new',
-      loading: generatingNew,
-      disabled: generatingAll || generatingNew || generatingSelected || questions.length === 0 || newFields === 0
+      loading: isGenerating,
+      disabled: disableGenerate || newFields === 0
     }
   }
 
@@ -197,8 +219,8 @@ const HeaderSection = ({
                   startIcon={
                     buttonConfig.loading ? <CircularProgress size={20} color='inherit' /> : <RocketLaunchIcon />
                   }
-                  onClick={() => setConfirmGeneration(buttonConfig.type)}
-                  disabled={buttonConfig.disabled || isPageLoading || disableGenerate}
+                  onClick={() => !isGenerating && setConfirmGeneration(buttonConfig.type)}
+                  disabled={buttonConfig.disabled || disableGenerate}
                   sx={{
                     fontWeight: 700,
                     textTransform: 'uppercase',
@@ -214,7 +236,7 @@ const HeaderSection = ({
                   color='primary'
                   size='small'
                   onClick={handleToggle}
-                  disabled={isPageLoading || disableGenerate}
+                  disabled={disableGenerate}
                   sx={{
                     minWidth: '40px',
                     px: 0,
@@ -237,11 +259,6 @@ const HeaderSection = ({
               onClose={() => setAnchorEl(null)}
               anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
               transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-              PaperProps={{
-                sx: {
-                  width: anchorEl?.offsetWidth ?? 'auto'
-                }
-              }}
             >
               {/* Menu items based on main button state */}
 
@@ -251,10 +268,7 @@ const HeaderSection = ({
                   key='generate-new'
                   onClick={() => setConfirmGeneration('new')}
                   disabled={
-                    generatingAll ||
-                    generatingNew ||
-                    generatingSelected ||
-                    isPageLoading ||
+                    disableGenerate ||
                     (() => {
                       const newDocs = documents.filter(doc => !hasGeneratedContent(doc.id))
                       const totalCombinations = documents.length * questions.length
@@ -267,7 +281,7 @@ const HeaderSection = ({
                   }
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {generatingNew ? (
+                    {isGenerating ? (
                       <CircularProgress size={16} color='primary' />
                     ) : (
                       <RocketLaunchIcon fontSize='small' color='primary' />
@@ -276,20 +290,9 @@ const HeaderSection = ({
                   </Box>
                 </MenuItem>,
 
-                <MenuItem
-                  key='generate-all'
-                  onClick={() => setConfirmGeneration('all')}
-                  disabled={
-                    generatingAll ||
-                    generatingNew ||
-                    generatingSelected ||
-                    isPageLoading ||
-                    documents.length === 0 ||
-                    questions.length === 0
-                  }
-                >
+                <MenuItem key='generate-all' onClick={() => setConfirmGeneration('all')} disabled={disableGenerate}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {generatingAll ? (
+                    {isGenerating ? (
                       <CircularProgress size={16} color='success' />
                     ) : (
                       <RocketLaunchIcon fontSize='small' color='success' />
@@ -301,19 +304,9 @@ const HeaderSection = ({
 
               {/* When main button is "Generate New" - show only Generate All */}
               {selectedDocuments.length === 0 && (
-                <MenuItem
-                  onClick={() => setConfirmGeneration('all')}
-                  disabled={
-                    generatingAll ||
-                    generatingNew ||
-                    generatingSelected ||
-                    isPageLoading ||
-                    documents.length === 0 ||
-                    questions.length === 0
-                  }
-                >
+                <MenuItem onClick={() => setConfirmGeneration('all')} disabled={disableGenerate}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {generatingAll ? (
+                    {isGenerating ? (
                       <CircularProgress size={16} color='success' />
                     ) : (
                       <RocketLaunchIcon fontSize='small' color='success' />
@@ -323,9 +316,9 @@ const HeaderSection = ({
                 </MenuItem>
               )}
 
-              {(disableGenerate || isPageLoading) && (
+              {disableGenerate && (
                 <Box sx={{ px: 2, pb: 1, pt: 0.5, fontSize: '0.85rem', color: 'grey.600' }}>
-                  {isPageLoading ? 'Loading, please wait...' : 'Add documents and questions to enable generation.'}
+                  {isGenerating ? 'Loading, please wait...' : 'Add documents and questions to enable generation.'}
                 </Box>
               )}
             </Menu>

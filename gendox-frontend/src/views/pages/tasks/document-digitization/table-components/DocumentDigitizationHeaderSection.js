@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Box, Typography, Stack, Button, Tooltip, Divider, Menu, MenuItem, CircularProgress } from '@mui/material'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
@@ -13,25 +13,32 @@ const HeaderSection = ({
   description,
   openAddDocument,
   handleGenerate,
-  disableGenerate,
-  disableGenerateNew,
   isLoading,
   selectedDocuments,
   isDigitizationGenerating = false,
-  documents = [],
-  hasGeneratedContent = () => false
+  documents = []
 }) => {
   const [anchorEl, setAnchorEl] = useState(null)
   const [confirmGeneration, setConfirmGeneration] = useState(null) // 'all', 'new', 'selected', or null
+  const [generatingType, setGeneratingType] = useState(null)
 
   const handleToggle = event => {
     setAnchorEl(prev => (prev ? null : event.currentTarget.parentElement))
   }
 
+  const disableGenerate = isLoading || documents.length === 0 || isDigitizationGenerating
+
+  useEffect(() => {
+      if (!isDigitizationGenerating) {
+        setGeneratingType(null)
+      }
+    }, [isDigitizationGenerating])
+
   // Execute the actual generation
   const executeGeneration = type => {
     setConfirmGeneration(null)
     setAnchorEl(null)
+    setGeneratingType(type)
 
     switch (type) {
       case 'all':
@@ -60,27 +67,37 @@ const HeaderSection = ({
 
   // Calculate button state and text
   const getMainButtonConfig = () => {
+    // when is generating, show loading state
+    if (isDigitizationGenerating && generatingType) {
+      let loadingText = 'Generating...'
+      if (generatingType === 'all') loadingText = 'Generating All...'
+      if (generatingType === 'new') loadingText = 'Generating New...'
+      if (generatingType === 'selected') loadingText = `Generating (${selectedDocuments.length})...`
+
+      return {
+        text: loadingText,
+        type: generatingType,
+        loading: true,
+        disabled: true
+      }
+    }
+
+    // normal states
     if (selectedDocuments.length > 0) {
       return {
         text: `Generate Selected (${selectedDocuments.length})`,
         type: 'selected',
         loading: isDigitizationGenerating,
-        disabled: isDigitizationGenerating
+        disabled: disableGenerate
       }
     }
-
-    // Check if there are new (ungenerated) documents WITH prompts AND supported file types
-    const docsWithPrompts = documents.filter(
-      doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
-    )
-    const newDocsWithPrompts = docsWithPrompts.filter(doc => !hasGeneratedContent(doc.id))
 
     // Always default to "Generate New" as main button
     return {
       text: `Generate New`,
       type: 'new',
       loading: isDigitizationGenerating,
-      disabled: isDigitizationGenerating || disableGenerateNew
+      disabled: disableGenerate
     }
   }
 
@@ -151,7 +168,7 @@ const HeaderSection = ({
                     buttonConfig.loading ? <CircularProgress size={20} color='inherit' /> : <RocketLaunchIcon />
                   }
                   onClick={() => setConfirmGeneration(buttonConfig.type)}
-                  disabled={buttonConfig.disabled || isLoading || disableGenerate}
+                  disabled={buttonConfig.disabled || disableGenerate}
                   sx={{
                     fontWeight: 700,
                     textTransform: 'uppercase',
@@ -167,7 +184,7 @@ const HeaderSection = ({
                   color='primary'
                   size='small'
                   onClick={handleToggle}
-                  disabled={isLoading || disableGenerate}
+                  disabled={disableGenerate}
                   sx={{
                     minWidth: '40px',
                     px: 0,
@@ -190,11 +207,6 @@ const HeaderSection = ({
               onClose={() => setAnchorEl(null)}
               anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
               transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-              PaperProps={{
-                sx: {
-                  width: anchorEl?.offsetWidth ?? 'auto'
-                }
-              }}
             >
               {/* Menu items based on main button state */}
 
@@ -203,7 +215,7 @@ const HeaderSection = ({
                 <MenuItem
                   key='generate-new'
                   onClick={() => setConfirmGeneration('new')}
-                  disabled={isDigitizationGenerating || isLoading || disableGenerateNew}
+                  disabled={disableGenerate}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {isDigitizationGenerating ? (
@@ -219,8 +231,7 @@ const HeaderSection = ({
                   key='generate-all'
                   onClick={() => setConfirmGeneration('all')}
                   disabled={
-                    isDigitizationGenerating ||
-                    isLoading ||
+                    disableGenerate ||
                     (() => {
                       const docsWithPrompts = documents.filter(
                         doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
@@ -245,8 +256,7 @@ const HeaderSection = ({
                 <MenuItem
                   onClick={() => setConfirmGeneration('all')}
                   disabled={
-                    isDigitizationGenerating ||
-                    isLoading ||
+                    disableGenerate ||
                     (() => {
                       const docsWithPrompts = documents.filter(
                         doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
@@ -266,7 +276,7 @@ const HeaderSection = ({
                 </MenuItem>
               )}
 
-              {(disableGenerate || isLoading) && (
+              {disableGenerate && (
                 <Box sx={{ px: 2, pb: 1, pt: 0.5, fontSize: '0.85rem', color: 'grey.600' }}>
                   {isLoading ? 'Loading, please wait...' : 'Add documents to enable generation.'}
                 </Box>
