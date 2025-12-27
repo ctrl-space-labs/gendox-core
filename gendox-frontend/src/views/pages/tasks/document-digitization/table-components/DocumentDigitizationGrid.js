@@ -211,7 +211,7 @@ const DocumentDigitizationGrid = ({
         disableColumnMenu: true,
         renderHeader: () => {
           const supportingDocs = documents.filter(doc => isFileTypeSupported(doc.url))
-          const selectedSupportingDocs = supportingDocs.filter(id => {
+          const selectedSupportingDocs = selectedDocuments.filter(id => {
             const doc = documents.find(d => d.id === id)
             return doc?.id && isFileTypeSupported(doc.url)
           })
@@ -400,6 +400,8 @@ const DocumentDigitizationGrid = ({
         rows={rows}
         columns={columns}
         pagination
+        hideFooterSelectedRowCount
+        disableRowSelectionOnClick
         columnHeaderHeight={108}
         paginationMode='server'
         rowCount={totalDocuments}

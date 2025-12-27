@@ -169,7 +169,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   }
 
   // Handle Generate Documents
-  const { handleGenerate, isInsightsGeneratingAll, isInsightsGeneratingCells } = useDocumentInsightsGeneration({
+  const { handleGenerate, isInsightsGeneratingAll, isInsightsGeneratingNew, isInsightsGeneratingCells } = useDocumentInsightsGeneration({
     setSelectedDocuments,
     reloadAll,
     token
@@ -185,6 +185,9 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     documents
   })
 
+  const isGenerating = isInsightsGeneratingAll || isInsightsGeneratingNew || Object.values(isInsightsGeneratingCells || {}).some(v => v === true)
+  console.log('isGenerating:', isGenerating)
+
   return (
     <>
       <Paper sx={{ p: 3, overflowX: 'auto', backgroundColor: 'action.hover', mb: 3 }}>
@@ -194,14 +197,11 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           onAddQuestion={() => openDialog('questionDetail', null, true)}
           openAddDocument={() => openDialog('newDoc')}
           handleGenerate={handleGenerate}
-          disableGenerate={documents.length === 0 || questions.length === 0}
           isPageLoading={isPageLoading}
           isExportingCsv={isExportingCsv}
           onExportCsv={exportDocumentInsightCsv}
           selectedDocuments={selectedDocuments}
-          generatingAll={isInsightsGeneratingAll}
-          generatingNew={false}
-          generatingSelected={false}
+          isGenerating={isGenerating}
           documents={documents}
           questions={questions}
           hasGeneratedContent={(docId, questionId) => {
@@ -234,6 +234,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             onSelectDocument={handleSelectDocument}
             handleGenerate={handleGenerate}
             isGeneratingAll={isInsightsGeneratingAll}
+            isGeneratingNew={isInsightsGeneratingNew}
             isGeneratingCells={isInsightsGeneratingCells}
           />
         </Box>
