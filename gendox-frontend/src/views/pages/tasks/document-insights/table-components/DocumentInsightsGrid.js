@@ -25,6 +25,7 @@ const DocumentInsightsGrid = ({
   setPageSize,
   totalDocuments,
   selectedDocuments = [],
+  setSelectedDocuments,
   onSelectDocument = () => {},
   handleGenerate,
   isGeneratingAll = false,
@@ -228,8 +229,7 @@ const DocumentInsightsGrid = ({
               textOverflow: 'ellipsis',
               fontWeight: 600,
               flexGrow: 1
-            }}
-            // title={q.text}
+            }}            
           >
             <Box
               component='button'
@@ -282,9 +282,12 @@ const DocumentInsightsGrid = ({
           const questionId = q.id
           const answerObj = answers.find(a => a.documentNodeId === docId && a.questionNodeId === questionId)
           const cellKey = `${docId}_${questionId}`
-          const isGenerating = !!isGeneratingCells[cellKey]
+          const docKey = `${docId}_all`
+          // const isGenerating = !!isGeneratingCells[cellKey]
+          const isCellGenerating = !!isGeneratingCells[cellKey]
+          const isDocGenerating = !!isGeneratingCells[docKey]
 
-          if (isLoadingAnswers) {
+          if (isLoadingAnswers || isCellGenerating || isDocGenerating || isGeneratingAll || isGeneratingNew) {
             return (
               <Box
                 sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
@@ -293,15 +296,7 @@ const DocumentInsightsGrid = ({
               </Box>
             )
           }
-          if (isGenerating || isGeneratingAll) {
-            return (
-              <Box
-                sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
-              >
-                <CircularProgress size={20} />
-              </Box>
-            )
-          }
+          
 
           return (
             <Box
@@ -477,7 +472,7 @@ const DocumentInsightsGrid = ({
         componentsProps={{
           pagination: { showFirstButton: true, showLastButton: true }
         }}
-        loading={isPageLoading || isGeneratingNew}
+        loading={isPageLoading}
         sx={{
           '& .MuiDataGrid-cell': {
             outline: 'none',
@@ -529,6 +524,7 @@ const DocumentInsightsGrid = ({
               setDocumentMenuAnchor(null)
               openDialog('delete', documentMenuDoc)
               setDocumentMenuDoc(null)
+              setSelectedDocuments([])
             }}
             sx={{ color: 'error.main' }}
           >

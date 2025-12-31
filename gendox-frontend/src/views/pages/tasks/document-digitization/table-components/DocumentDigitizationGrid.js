@@ -21,6 +21,7 @@ const DocumentDigitizationGrid = ({
   setPage,
   totalDocuments,
   selectedDocuments = [],
+  setSelectedDocuments,
   onSelectDocument = () => {},
   isDocumentGenerating = () => false
 }) => {
@@ -474,6 +475,7 @@ const DocumentDigitizationGrid = ({
                 setActionMenuAnchor(null)
                 openDialog('delete', actionMenuDoc)
                 setActionMenuDoc(null)
+                setSelectedDocuments([])
               }}
               sx={{ color: 'error.main' }}
             >
