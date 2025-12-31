@@ -11,6 +11,7 @@ import DialogManager from './table-components/DocumentDigitizationDialogs'
 import useDocumentDigitizationGeneration from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationGeneration'
 import useExportFile from 'src/views/pages/tasks/helping-components/TaskExportFiles'
 import { useJobMonitor } from '../generation/useJobMonitor'
+import { set } from 'nprogress'
 
 const DocumentDigitizationTable = ({ selectedTask }) => {
   const router = useRouter()
@@ -76,6 +77,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
 
   const reloadAll = useCallback(async () => {
     if (!organizationId || !projectId || !taskId) return
+    setSelectedDocuments([])
     setIsPageLoading(true)
     try {
       await dispatch(
