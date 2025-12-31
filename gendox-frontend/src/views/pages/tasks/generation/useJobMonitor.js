@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import taskService from 'src/gendox-sdk/taskService'
 import { useGeneration as useGenerationContext } from 'src/views/pages/tasks/generation/GenerationContext'
-import { 
+import {
   setInsightsGeneratingAll,
   setDigitizationGenerating,
   clearInsightsGenerationState,
@@ -37,49 +37,48 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
 
       const startTime = Date.now()
 
-      try{
+      try {
+        while (activeModeRef.current === 'jobExecutionId') {
+          const elapsed = Date.now() - startTime
 
-      while (activeModeRef.current === 'jobExecutionId') {
-        const elapsed = Date.now() - startTime
+          if (elapsed > timeout) {
+            setShowTimeoutDialog(true)
+            dispatch(clearInsightsGenerationState())
+            dispatch(clearDigitizationGenerationState())
+            // stop()
+            // throw new Error('Job polling timed out')
+          }
 
-        if (elapsed > timeout) {
-          setShowTimeoutDialog(true)
-          dispatch(clearInsightsGenerationState())
-          dispatch(clearDigitizationGenerationState())
-          // stop()
-          // throw new Error('Job polling timed out')
+          let currentInterval
+          if (elapsed < 60000) currentInterval = 2000
+          // first minute
+          else if (elapsed < 600000) currentInterval = 5000
+          // first 10 minutes
+          else currentInterval = 10000 // after 10 minutes
+
+          await sleep(currentInterval)
+
+          const criteria = { jobExecutionIdsIn: [jobExecutionId] }
+          const response = await taskService.getJobsByCriteria(organizationId, projectId, criteria, token)
+
+          let status = response.data?.content?.[0]?.status
+          if (typeof status === 'string') status = status.trim().toUpperCase()
+
+          if (status === 'COMPLETED') {
+            setShowTimeoutDialog(false)
+            stop()
+            dispatch(clearInsightsGenerationState())
+            dispatch(clearDigitizationGenerationState())
+            return status
+          }
+
+          if (['FAILED', 'STOPPED', 'ABANDONED'].includes(status)) {
+            stop()
+            dispatch(clearInsightsGenerationState())
+            dispatch(clearDigitizationGenerationState())
+            throw new Error(`Job ended with status: ${status}`)
+          }
         }
-
-        let currentInterval
-        if (elapsed < 60000) currentInterval = 2000
-        // first minute
-        else if (elapsed < 600000) currentInterval = 5000
-        // first 10 minutes
-        else currentInterval = 10000 // after 10 minutes
-
-        await sleep(currentInterval)
-
-        const criteria = { jobExecutionIdsIn: [jobExecutionId] }
-        const response = await taskService.getJobsByCriteria(organizationId, projectId, criteria, token)
-
-        let status = response.data?.content?.[0]?.status
-        if (typeof status === 'string') status = status.trim().toUpperCase()
-
-        if (status === 'COMPLETED') {
-          setShowTimeoutDialog(false)
-          stop()
-          dispatch(clearInsightsGenerationState())
-          dispatch(clearDigitizationGenerationState())
-          return status
-        }
-
-        if (['FAILED', 'STOPPED', 'ABANDONED'].includes(status)) {
-          stop()
-          dispatch(clearInsightsGenerationState())
-          dispatch(clearDigitizationGenerationState())
-          throw new Error(`Job ended with status: ${status}`)
-        }
-      }
       } catch (error) {
         stop()
         throw error
@@ -160,7 +159,7 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
         if (isRunning) {
           dispatch(setInsightsGeneratingAll(true))
           dispatch(setDigitizationGenerating(true))
-          
+
           // Resume monitoring
           startGenerationMonitor(taskId, null, 'resumed', {
             documentNames: 'Background processing...',

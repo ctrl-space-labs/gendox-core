@@ -93,6 +93,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const reloadAll = useCallback(async () => {
     if (!organizationId || !projectId || !taskId) return
     setIsPageReloading(true)
+    setSelectedDocuments([])
     try {
       await dispatch(
         loadTaskInsightsData({
