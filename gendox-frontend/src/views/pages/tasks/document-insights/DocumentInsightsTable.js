@@ -9,7 +9,7 @@ import useExportFile from 'src/views/pages/tasks/helping-components/TaskExportFi
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
 import HeaderSection from './table-components/DocumentInsightsHeaderSection'
 import DialogManager from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsDialogs'
-import { useActiveJobMonitor } from '../generation/useActiveJobMonitor'
+import { useJobMonitor } from '../generation/useJobMonitor'
 
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
@@ -138,14 +138,17 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     reloadAll()
   }, [page, pageSize])
 
-  // Active Job Monitor Hook
-  useActiveJobMonitor({
+  const { resumeStartedJobs } = useJobMonitor({
     organizationId,
     projectId,
-    taskId,
     token,
     reloadAll
   })
+
+  useEffect(() => {
+    if (!organizationId || !projectId || !taskId) return
+    resumeStartedJobs({ taskId })
+  }, [organizationId, projectId, taskId, resumeStartedJobs])
 
   const handleSelectDocument = (docId, checked) => {
     if (docId === 'all') {
@@ -169,11 +172,12 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   }
 
   // Handle Generate Documents
-  const { handleGenerate, isInsightsGeneratingAll, isInsightsGeneratingNew, isInsightsGeneratingCells } = useDocumentInsightsGeneration({
-    setSelectedDocuments,
-    reloadAll,
-    token
-  })
+  const { handleGenerate, isInsightsGeneratingAll, isInsightsGeneratingNew, isInsightsGeneratingCells } =
+    useDocumentInsightsGeneration({
+      setSelectedDocuments,
+      reloadAll,
+      token
+    })
 
   const { exportDocumentInsightCsv, exportSingleDocumentInsightCsv, isExportingCsv } = useExportFile({
     organizationId,
@@ -185,8 +189,10 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     documents
   })
 
-  const isGenerating = isInsightsGeneratingAll || isInsightsGeneratingNew || Object.values(isInsightsGeneratingCells || {}).some(v => v === true)
-  console.log('isGenerating:', isGenerating)
+  const isGenerating =
+    isInsightsGeneratingAll ||
+    isInsightsGeneratingNew ||
+    Object.values(isInsightsGeneratingCells || {}).some(v => v === true)
 
   return (
     <>
@@ -231,6 +237,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             setPageSize={setPageSize}
             totalDocuments={totalDocuments}
             selectedDocuments={selectedDocuments}
+            setSelectedDocuments={setSelectedDocuments}
             onSelectDocument={handleSelectDocument}
             handleGenerate={handleGenerate}
             isGeneratingAll={isInsightsGeneratingAll}

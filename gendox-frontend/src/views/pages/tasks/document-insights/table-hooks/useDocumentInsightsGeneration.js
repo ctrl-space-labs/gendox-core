@@ -10,18 +10,24 @@ import {
 import { toast } from 'react-hot-toast'
 import { useGeneration as useGenerationContext } from '../../generation/GenerationContext'
 import { useRouter } from 'next/router'
-import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
+import { useJobMonitor } from '../../generation/useJobMonitor'
 
 export default function useGeneration({ setSelectedDocuments, reloadAll, token }) {
   const router = useRouter()
   const dispatch = useDispatch()
   const { organizationId, taskId, projectId } = router.query
-  const { startGeneration, completeGeneration, failGeneration } = useGenerationContext()
-  const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
+  const { startGenerationMonitor, completeGeneration, failGeneration } = useGenerationContext()
 
   const { isInsightsGeneratingAll, isInsightsGeneratingNew, isInsightsGeneratingCells } = useSelector(
     state => state.activeTask.generationState
   )
+
+  const { pollJobExecution } = useJobMonitor({
+    organizationId,
+    projectId,
+    token,
+    reloadAll
+  })
 
   const handleGenerate = useCallback(
     async ({ documentsToGenerate = [], questionsToGenerate = [], reGenerateExistingAnswers = true }) => {
@@ -85,8 +91,8 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
         ).unwrap()
 
         // Polling & Feedback
-        startGeneration(taskId, null, 'all', 2000)
-        await pollJobStatus(jobExecutionId)
+        startGenerationMonitor(taskId, null, 'all', 2000)
+        await pollJobExecution(jobExecutionId)
 
         reloadAll()
         completeGeneration(taskId, null)
@@ -111,8 +117,8 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
       organizationId,
       projectId,
       taskId,
-      pollJobStatus,
-      startGeneration,
+      pollJobExecution,
+      startGenerationMonitor,
       completeGeneration,
       failGeneration,
       reloadAll,

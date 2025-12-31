@@ -472,7 +472,7 @@ const DocumentInsightsGrid = ({
         componentsProps={{
           pagination: { showFirstButton: true, showLastButton: true }
         }}
-        loading={isPageLoading || isGeneratingNew}
+        loading={isPageLoading}
         sx={{
           '& .MuiDataGrid-cell': {
             outline: 'none',

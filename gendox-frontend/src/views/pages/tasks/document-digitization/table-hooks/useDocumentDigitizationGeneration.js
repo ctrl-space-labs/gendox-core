@@ -3,25 +3,25 @@ import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'react-hot-toast'
 import { useGeneration } from '../../generation/GenerationContext'
 import { useRouter } from 'next/router'
-import { useJobStatusPoller } from 'src/utils/tasks/useJobStatusPoller'
+import { useJobMonitor } from '../../generation/useJobMonitor'
 import {
   executeTaskByType,
   setDigitizationGenerating,
   clearDigitizationGenerationState
 } from 'src/store/activeTask/activeTask'
 
-export default function useDocumentDigitizationGeneration({
-  reloadAll,
-  token,
-  setSelectedDocuments,
-  documentPages
-}) {
+export default function useDocumentDigitizationGeneration({ reloadAll, token, setSelectedDocuments, documentPages }) {
   const router = useRouter()
   const dispatch = useDispatch()
   const { organizationId, taskId, projectId } = router.query
 
-  const { startGeneration, updateProgress, completeGeneration, failGeneration } = useGeneration()
-  const { pollJobStatus } = useJobStatusPoller({ organizationId, projectId, token })
+  const { startGenerationMonitor, updateProgress, completeGeneration, failGeneration } = useGeneration()
+  const { pollJobExecution } = useJobMonitor({
+    organizationId,
+    projectId,
+    token,
+    reloadAll
+  })
   const { isDigitizationGenerating } = useSelector(state => state.activeTask.generationState)
   const [generatingDocuments, setGeneratingDocuments] = useState(new Set())
 
@@ -65,8 +65,8 @@ export default function useDocumentDigitizationGeneration({
           executeTaskByType({ organizationId, projectId, taskId, criteria, token })
         ).unwrap()
 
-        startGeneration(taskId, null, 'all', 2000)
-        await pollJobStatus(jobExecutionId)
+        startGenerationMonitor(taskId, null, 'all', 2000)
+        await pollJobExecution(jobExecutionId)
 
         reloadAll()
         completeGeneration(taskId, null)
@@ -91,8 +91,8 @@ export default function useDocumentDigitizationGeneration({
       organizationId,
       projectId,
       taskId,
-      pollJobStatus,
-      startGeneration,
+      pollJobExecution,
+      startGenerationMonitor,
       completeGeneration,
       failGeneration,
       reloadAll,
