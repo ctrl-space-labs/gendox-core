@@ -10,8 +10,7 @@ import HeaderSection from './table-components/DocumentDigitizationHeaderSection'
 import DialogManager from './table-components/DocumentDigitizationDialogs'
 import useDocumentDigitizationGeneration from 'src/views/pages/tasks/document-digitization/table-hooks/useDocumentDigitizationGeneration'
 import useExportFile from 'src/views/pages/tasks/helping-components/TaskExportFiles'
-import { useActiveJobMonitor } from '../generation/useActiveJobMonitor'
-
+import { useJobMonitor } from '../generation/useJobMonitor'
 
 const DocumentDigitizationTable = ({ selectedTask }) => {
   const router = useRouter()
@@ -19,13 +18,9 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const token = window.localStorage.getItem('accessToken')
   const { organizationId, taskId, projectId } = router.query
 
-
-  const {
-    taskNodesDocumentList,
-    taskDocumentPages,
-    isLoading,
-    isLoadingDocumentPages,
-  } = useSelector(state => state.activeTaskNode)
+  const { taskNodesDocumentList, taskDocumentPages, isLoading, isLoadingDocumentPages } = useSelector(
+    state => state.activeTaskNode
+  )
 
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
@@ -64,10 +59,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
       }
     })
   }, [taskNodesDocumentList])
-
- 
-
-  
 
   // --- Document pages from Redux ---
   const documentPages = useMemo(() => {
@@ -111,13 +102,17 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     }
   }, [organizationId, projectId, taskId, reloadAll])
 
-  useActiveJobMonitor({
+  const { resumeStartedJobs } = useJobMonitor({
     organizationId,
     projectId,
-    taskId,
     token,
     reloadAll
   })
+
+  useEffect(() => {
+    if (!organizationId || !projectId || !taskId) return
+    resumeStartedJobs({ taskId })
+  }, [organizationId, projectId, taskId, resumeStartedJobs])
 
   useEffect(() => {
     router.replace(
@@ -162,13 +157,12 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   }
 
   // Handle Generate Documents
-  const { handleGenerate, isDigitizationGenerating, isDocumentGenerating } =
-    useDocumentDigitizationGeneration({
-      reloadAll,
-      token,
-      setSelectedDocuments,
-      documentPages
-    })
+  const { handleGenerate, isDigitizationGenerating, isDocumentGenerating } = useDocumentDigitizationGeneration({
+    reloadAll,
+    token,
+    setSelectedDocuments,
+    documentPages
+  })
 
   const { exportDocumentDigitizationCsv, isExportingCsv } = useExportFile({
     organizationId,
@@ -178,8 +172,6 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
     selectedTask,
     documents
   })
-
- 
 
   return (
     <>
@@ -212,6 +204,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
             setPageSize={setPageSize}
             totalDocuments={totalDocuments}
             selectedDocuments={selectedDocuments}
+            setSelectedDocuments={setSelectedDocuments}
             onSelectDocument={handleSelectDocument}
             isDocumentGenerating={isDocumentGenerating}
           />

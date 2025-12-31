@@ -11,7 +11,7 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 import { fetchTaskById } from 'src/store/activeTask/activeTask'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import DocumentInsightsTable from 'src/views/pages/tasks/document-insights/DocumentInsightsTable'
-import { GenerationProvider } from 'src/views/pages/tasks/generation/GenerationContext'
+import { GenerationMonitorProvider } from 'src/views/pages/tasks/generation/GenerationContext'
 import GlobalGenerationStatus from 'src/views/pages/tasks/generation/GlobalGenerationStatus'
 
 const DocumentInsights = () => {
@@ -34,7 +34,7 @@ const DocumentInsights = () => {
   }, [organizationId, projectId, taskId, token, dispatch])
 
   return (
-    <GenerationProvider>
+    <GenerationMonitorProvider>
       <GlobalGenerationStatus />
       <Card sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
         <ResponsiveCardContent sx={{ backgroundColor: 'background.paper' }}>
@@ -83,7 +83,7 @@ const DocumentInsights = () => {
         {/* Main content area */}
         <DocumentInsightsTable selectedTask={selectedTask} />
       </Card>
-    </GenerationProvider>
+    </GenerationMonitorProvider>
   )
 }
 

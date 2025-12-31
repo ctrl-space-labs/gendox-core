@@ -28,6 +28,8 @@ const HeaderSection = ({
 
   const disableGenerate = isLoading || documents.length === 0 || isDigitizationGenerating
 
+  
+
   useEffect(() => {
       if (!isDigitizationGenerating) {
         setGeneratingType(null)

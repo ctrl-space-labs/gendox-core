@@ -70,6 +70,12 @@ const GlobalGenerationStatus = ({ showTimeoutDialog = false, onRetryGeneration }
     }
   }
 
+  useEffect(() => {
+    if (activeGenerations.size === 0) {
+      setDismissed(false)
+    }
+  }, [activeGenerations.size])
+
   // Drag functionality
   const handleMouseDown = e => {
     if (e.target.closest('.drag-handle')) {
