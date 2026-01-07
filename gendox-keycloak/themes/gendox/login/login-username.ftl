@@ -53,10 +53,11 @@
                                 </label>
 
                                 <input tabindex="1" id="username"
-                                       aria-invalid="<#if messagesPerField.existsError('username')>true</#if>"
-                                       class="${properties.kcInputClass!}" name="username"
-                                       value="${(login.username!'')}"
-                                       type="text" autofocus autocomplete="off" />
+                                     aria-invalid="<#if messagesPerField.existsError('username')>true</#if>"
+                                     class="${properties.kcInputClass!}" name="username"
+                                     value="${(login.username!'')}"
+                                     type="text" autofocus autocomplete="username"
+                                     style="background-color: transparent; color: #fff; border: 1px solid #444;" />
 
                                 <#if messagesPerField.existsError('username')>
                                     <span id="input-error-username" class="${properties.kcInputErrorMessageClass!}" aria-live="polite" style="color: #ff6b6b; font-size: 0.9em; margin-top: 5px; display: block;">
