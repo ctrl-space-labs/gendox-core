@@ -63,8 +63,8 @@
                         <label for="username" class="${properties.kcLabelClass!}" style="color: #fff;">${msg("username")}</label>
 
                         <div style="position: relative;">
-                            <input id="username" class="${properties.kcInputClass!}" name="username" value="${(login.username!'')}" type="text" disabled
-                                   style="background-color: transparent; color: #fff; cursor: not-allowed; border: 1px solid #444; opacity: 0.7; padding-right: 100px;" />
+                            <input id="username" class="${properties.kcInputClass!}" name="username" value="${(login.username!'')}" type="text" readonly autocomplete="username"
+                                   style="background-color: transparent; color: #fff; cursor: default; border: 1px solid #444; opacity: 0.7; padding-right: 100px;" />
 
                             <div style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); z-index: 5;">
                                 <a href="${url.loginRestartFlowUrl}" style="text-decoration: none; color: #00bf8c; font-size: 0.85em; font-weight: 500;">
