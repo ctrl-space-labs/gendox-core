@@ -50,10 +50,10 @@ export const getAnswerFlagProps = flag => {
     case 'CRITICAL_ISSUE':
       return { label: 'Critical', chipColor: 'error' }
     case 'NA':
-      return { label: 'N/A', chipColor: 'primary' } // or 'info', 'warning', etc.
+      return { label: 'N/A', chipColor: 'secondary' } // or 'info', 'warning', etc.
     case '':
       return { label: 'See details', chipColor: 'info' }
     default:
-      return { label: 'Not generated', chipColor: 'primary' }
+      return { label: 'Not generated', chipColor: 'secondary' }
   }
 }
