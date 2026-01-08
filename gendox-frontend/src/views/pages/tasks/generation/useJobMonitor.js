@@ -290,47 +290,75 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
 
         const docIds = getJson('documentNodeIds')
         const qIds = getJson('questionNodeIds')
+
+        const targetDocs = docIds.length > 0 ? docIds : documents.map(d => d.id)
+        const targetQuestions = qIds.length > 0 ? qIds : questions.map(q => q.id)
+
         const isGlobal = docIds.length === 0 && qIds.length === 0
 
         // Calculate Cells Logic
         const cellsLoading = {}
+        let existingMap = null
 
-        if (isGlobal) {
-          // Optimization: Build existing answers Map only if not regenerate
-          let existingMap = null
-
-          existingMap = new Set()
-          answers.forEach(a => {
-            if (a.nodeValue?.nodeDocumentId && a.nodeValue?.nodeQuestionId) {
-              existingMap.add(`${a.nodeValue.nodeDocumentId}_${a.nodeValue.nodeQuestionId}`)
-            }
-          })
-
-          // Loop through Redux data
-          for (const doc of documents) {
-            for (const q of questions) {
-              const key = `${doc.id}_${q.id}`              
-              if (!existingMap?.has(key)) {
-                cellsLoading[key] = true
-              }
-            }
+        existingMap = new Set()
+        answers.forEach(a => {
+          if (a.nodeValue?.nodeDocumentId && a.nodeValue?.nodeQuestionId) {
+            existingMap.add(`${a.nodeValue.nodeDocumentId}_${a.nodeValue.nodeQuestionId}`)
           }
-        } else {
-          // Specific Logic (Concise)
-          if (qIds.length === 0) {
-            docIds.forEach(id => {
-              cellsLoading[`${id}_all`] = true
-            })
-          } else {
-            docIds.forEach(dId => {
-              qIds.forEach(qId => {
-                cellsLoading[`${dId}_${qId}`] = true
-              })
-            })
+        })
+
+        console.log("Target Docs:", targetDocs)
+        console.log("Target Questions:", targetQuestions)
+        console.log("Existing Map:", existingMap)
+
+        for (const docId of targetDocs) {
+          for (const qId of targetQuestions) {
+            const key = `${docId}_${qId}`
+            if (!existingMap?.has(key)) {
+              cellsLoading[key] = true
+            }
           }
         }
 
-        
+        console.log("Cells Loading:", cellsLoading)
+
+        // if (isGlobal) {
+        //   // Optimization: Build existing answers Map only if not regenerate
+        //   let existingMap = null
+        //
+        //   existingMap = new Set()
+        //   answers.forEach(a => {
+        //     if (a.nodeValue?.nodeDocumentId && a.nodeValue?.nodeQuestionId) {
+        //       existingMap.add(`${a.nodeValue.nodeDocumentId}_${a.nodeValue.nodeQuestionId}`)
+        //     }
+        //   })
+        //   console.log('IsGlobal Answers:', answers)
+        //
+        //   // Loop through Redux data
+        //   for (const doc of documents) {
+        //     for (const q of questions) {
+        //       const key = `${doc.id}_${q.id}`
+        //       if (!existingMap?.has(key)) {
+        //         cellsLoading[key] = true
+        //       }
+        //     }
+        //   }
+        // } else {
+        //   // Specific Logic (Concise)
+        //   if (qIds.length === 0) {
+        //     docIds.forEach(id => {
+        //       cellsLoading[`${id}_all`] = true
+        //     })
+        //   } else {
+        //     docIds.forEach(dId => {
+        //       qIds.forEach(qId => {
+        //         cellsLoading[`${dId}_${qId}`] = true
+        //       })
+        //     })
+        //   }
+        // }
+
+
         if (Object.keys(cellsLoading).length > 0) {
           dispatch(setInsightsGeneratingCells(cellsLoading))
         }
