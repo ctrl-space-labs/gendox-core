@@ -34,7 +34,7 @@ public class TaskCsvExportService {
     private final DocumentOnlyConverter documentOnlyConverter;
 
     @Autowired
-    public TaskCsvExportService(TaskNodeService taskNodeService , DocumentService documentService, DocumentOnlyConverter documentOnlyConverter) {
+    public TaskCsvExportService(TaskNodeService taskNodeService, DocumentService documentService, DocumentOnlyConverter documentOnlyConverter) {
         this.taskNodeService = taskNodeService;
         this.documentService = documentService;
         this.documentOnlyConverter = documentOnlyConverter;
@@ -60,9 +60,11 @@ public class TaskCsvExportService {
 
         // Write CSV
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
 
-        try {
+        try (OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
+            // Write UTF-8 BOM for Excel, this is the "ZERO WIDTH NO-BREAK SPACE" character in UTF-8
+            writer.write('\uFEFF');
+
             writeHeaderRows(writer, questionNodes);
             writeDataRows(writer, documentNodes, questionNodes, docIdToTitle, answerMatrix);
             writer.flush();
@@ -97,15 +99,18 @@ public class TaskCsvExportService {
         Map<UUID, String> docTitles = getDocumentTitles(new PageImpl<>(List.of(documentNode)));
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
 
-        try {
+
+        try (OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
+            // Write UTF-8 BOM for Excel, this is the "ZERO WIDTH NO-BREAK SPACE" character in UTF-8
+            writer.write('\uFEFF');
+
             // header: questions only
             writer.write("Document");
             for (TaskNode question : questionNodes) {
                 writer.write("," + escapeCsv(question.getNodeValue().getMessage()));
             }
-            writer.write("\n");
+            writer.write("\r\n");
 
             String docTitle = docTitles.getOrDefault(documentNode.getDocumentId(), documentNodeId.toString());
             writer.write(escapeCsv(docTitle));
@@ -117,7 +122,7 @@ public class TaskCsvExportService {
                 writer.write("," + escapeCsv(val != null ? val.getAnswerValue() : ""));
             }
 
-            writer.write("\n");
+            writer.write("\r\n");
             writer.flush();
 
             return new InputStreamResource(new ByteArrayInputStream(out.toByteArray()));
@@ -125,7 +130,6 @@ public class TaskCsvExportService {
             throw new RuntimeException("Failed to export single document CSV", e);
         }
     }
-
 
 
     private Map<UUID, String> getDocumentTitles(Page<TaskNode> documentNodes) throws GendoxException {
@@ -170,14 +174,14 @@ public class TaskCsvExportService {
             writer.write(",");
             writer.write(",");
         }
-        writer.write("\n");
+        writer.write("\r\n");
 
         // Second row: sub-headers
         writer.write("");
         for (int i = 0; i < questionNodes.getContent().size(); i++) {
             writer.write(",Answer,Flag,Message");
         }
-        writer.write("\n");
+        writer.write("\r\n");
     }
 
     private void writeDataRows(
@@ -201,7 +205,7 @@ public class TaskCsvExportService {
                 writer.write("," + escapeCsv(flagEnum));
                 writer.write("," + escapeCsv(message));
             }
-            writer.write("\n");
+            writer.write("\r\n");
         }
     }
 
@@ -274,12 +278,12 @@ public class TaskCsvExportService {
     ) throws Exception {
         // Header row
         writer.write("Document Title,Prompt,Structure");
-        
+
         // Add page columns for all pages that have answers
         List<Integer> sortedPages = pageAnswerMap.keySet().stream()
                 .sorted()
                 .toList();
-        
+
         for (Integer pageNum : sortedPages) {
             writer.write(",Page " + pageNum);
         }
