@@ -90,6 +90,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     }))
   }, [taskNodesAnswerList])
 
+  console.log('ANSWERS:', answers)
+
   const reloadAll = useCallback(async () => {
     if (!organizationId || !projectId || !taskId) return
     setIsPageReloading(true)
@@ -173,12 +175,11 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   }
 
   // Handle Generate Documents
-  const { handleGenerate, isInsightsGeneratingAll, isInsightsGeneratingNew, isInsightsGeneratingCells } =
-    useDocumentInsightsGeneration({
-      setSelectedDocuments,
-      reloadAll,
-      token
-    })
+  const { handleGenerate, isInsightsGeneratingCells } = useDocumentInsightsGeneration({
+    setSelectedDocuments,
+    reloadAll,
+    token
+  })
 
   const { exportDocumentInsightCsv, exportSingleDocumentInsightCsv, isExportingCsv } = useExportFile({
     organizationId,
@@ -190,10 +191,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     documents
   })
 
-  const isGenerating =
-    isInsightsGeneratingAll ||
-    isInsightsGeneratingNew ||
-    Object.values(isInsightsGeneratingCells || {}).some(v => v === true)
+  const isGenerating = Object.values(isInsightsGeneratingCells || {}).some(v => v === true)
 
   return (
     <>
@@ -241,8 +239,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             setSelectedDocuments={setSelectedDocuments}
             onSelectDocument={handleSelectDocument}
             handleGenerate={handleGenerate}
-            isGeneratingAll={isInsightsGeneratingAll}
-            isGeneratingNew={isInsightsGeneratingNew}
             isGeneratingCells={isInsightsGeneratingCells}
           />
         </Box>

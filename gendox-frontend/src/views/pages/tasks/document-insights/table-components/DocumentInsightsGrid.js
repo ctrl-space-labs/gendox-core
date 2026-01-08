@@ -9,7 +9,6 @@ import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
 import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
-import Summarize from '@mui/icons-material/Summarize'
 import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
 
 const DocumentInsightsGrid = ({
@@ -28,8 +27,6 @@ const DocumentInsightsGrid = ({
   setSelectedDocuments,
   onSelectDocument = () => {},
   handleGenerate,
-  isGeneratingAll = false,
-  isGeneratingNew = false,
   isGeneratingCells = {}
 }) => {
   const theme = useTheme()
@@ -287,7 +284,7 @@ const DocumentInsightsGrid = ({
           const isCellGenerating = !!isGeneratingCells[cellKey]
           const isDocGenerating = !!isGeneratingCells[docKey]
 
-          if (isLoadingAnswers || isCellGenerating || isDocGenerating || isGeneratingAll || isGeneratingNew) {
+          if (isLoadingAnswers || isCellGenerating || isDocGenerating) {
             return (
               <Box
                 sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
@@ -388,8 +385,6 @@ const DocumentInsightsGrid = ({
     selectedDocuments,
     onSelectDocument,
     openDialog,
-    isGeneratingAll,
-    isGeneratingNew,
     isGeneratingCells,
     handleGenerate,
     theme
