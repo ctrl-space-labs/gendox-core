@@ -259,9 +259,11 @@ public class TaskCsvExportService {
 
         // Write CSV
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
 
-        try {
+        try (OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
+            // Write UTF-8 BOM for Excel, this is the "ZERO WIDTH NO-BREAK SPACE" character in UTF-8
+            writer.write('\uFEFF');
+
             writeDocumentDigitizationCsv(writer, document, documentNode, pageAnswerMap);
             writer.flush();
             return new InputStreamResource(new ByteArrayInputStream(out.toByteArray()));
