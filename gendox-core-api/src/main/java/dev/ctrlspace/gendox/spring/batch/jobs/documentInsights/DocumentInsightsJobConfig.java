@@ -34,17 +34,25 @@ public class DocumentInsightsJobConfig {
     @Value("${gendox.batch-jobs.document-insights.job.steps.document-insights-step.name}")
     private String documentInsightsStepName;
 
+
+    @Value("${gendox.batch-jobs.document-insights.job.steps.delete-insights-answers-step.name}")
+    private String deleteInsightsAnswersStepName;
+    @Value("${gendox.batch-jobs.document-insights.job.steps.delete-insights-answers-step.chunk-size}")
+    private Integer deleteInsightsAnswersChunkSize;
+
     @Autowired
     private JobRepository jobRepository;
     @Autowired
     private UniqueInstanceDecider uniqueInstanceDecider;
 
     @Bean
-    public Job documentInsightsJob(Step documentInsightsStep,
+    public Job documentInsightsJob(Step deleteInsightsAnswersStep,
+                                   Step documentInsightsStep,
                                    Step insightsSummaryStep) {
 
         Flow documentInsightsFlow = new FlowBuilder<Flow>(documentInsightsJobName + "Flow")
-                .start(documentInsightsStep)
+                .start(deleteInsightsAnswersStep)
+                .next(documentInsightsStep)
                 .next(insightsSummaryStep)
                 .build();
 
@@ -63,6 +71,24 @@ public class DocumentInsightsJobConfig {
                 .from(uniqueInstanceDecider)
                 .on("DUPLICATE_EXECUTION").end("DUPLICATE_EXECUTION")
                 .end();
+    }
+
+    @Bean
+    public Step deleteInsightsAnswersStep(DeleteInsightsAnswersReader reader,
+                                     DeleteInsightsAnswersProcessor processor,
+                                     DeleteInsightsAnswersWriter writer,
+                                     TaskExecutor asyncBatchInsightsExecutor,
+                                     PlatformTransactionManager platformTransactionManager) {
+
+        StepBuilder stepBuilder = new StepBuilder(deleteInsightsAnswersStepName, jobRepository);
+
+        return stepBuilder
+                .<TaskDocumentQuestionsDTO, TaskAnswerBatchDTO>chunk(deleteInsightsAnswersChunkSize, platformTransactionManager)  // mass delete needs larger chunk size
+                .reader(reader)
+                .processor(processor)
+                .writer(writer)
+//                .taskExecutor(asyncBatchInsightsExecutor)  // task executor, has the side effect of running multiple delete transactions in parallel
+                .build();
     }
 
     @Bean

@@ -283,7 +283,9 @@ public class TaskNodeService {
 
     public Optional<TaskNode> findAnswerNodeByDocumentAndQuestionOptional(UUID taskId, UUID documentNodeId, UUID questionNodeId) {
         logger.info("Fetching answer node for task: {}, document: {}, question: {}", taskId, documentNodeId, questionNodeId);
-        return taskNodeRepository.findAnswerNodeByDocumentAndQuestion(taskId, documentNodeId, questionNodeId);
+        return taskNodeRepository.findAnswerNodesByDocumentIdsAndQuestionIds(taskId, List.of(documentNodeId), List.of(questionNodeId), Pageable.unpaged())
+                .stream()
+                .findFirst();
     }
 
     public Page<TaskNode> findAnswerNodesBatch(UUID taskId,

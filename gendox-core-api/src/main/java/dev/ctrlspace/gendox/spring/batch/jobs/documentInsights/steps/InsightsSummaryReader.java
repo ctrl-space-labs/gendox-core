@@ -19,6 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,10 +30,12 @@ public class InsightsSummaryReader extends GendoxJpaPageReader<TaskDocumentQuest
     private static final Logger logger = LoggerFactory.getLogger(InsightsSummaryReader.class);
     private TaskNodeCriteria criteria;
     private final TaskNodeService taskNodeService;
+    private final InsightsUtils insightsUtils;
 
     @Autowired
-    public InsightsSummaryReader(TaskNodeService taskNodeService) {
+    public InsightsSummaryReader(TaskNodeService taskNodeService, InsightsUtils insightsUtils) {
         this.taskNodeService = taskNodeService;
+        this.insightsUtils = insightsUtils;
     }
 
 
@@ -40,25 +43,8 @@ public class InsightsSummaryReader extends GendoxJpaPageReader<TaskDocumentQuest
     protected ExitStatus initializeJpaPredicate(JobParameters jobParameters) {
         String taskId = jobParameters.getString(JobExecutionParamConstants.TASK_ID);
         assert taskId != null;
-        criteria = new TaskNodeCriteria();
-        criteria.setTaskId(UUID.fromString(taskId));
-
-        ObjectMapper mapper = new ObjectMapper();
-
-        // Deserialize documentNodeIds list from JSON string
-        String documentNodeIdsJson = jobParameters.getString(JobExecutionParamConstants.DOCUMENT_NODE_IDS);
-        if (documentNodeIdsJson != null && !documentNodeIdsJson.isBlank()) {
-            try {
-                List<UUID> documentNodeIds = mapper.readValue(
-                        documentNodeIdsJson,
-                        new TypeReference<List<UUID>>() {
-                        }
-                );
-                criteria.setDocumentNodeIds(documentNodeIds);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to deserialize documentNodeIds JSON", e);
-            }
-        }
+        criteria = insightsUtils.fromJobParamsToTaskNodeCriteria(jobParameters, taskId);
+        criteria.setQuestionNodeIds(List.of()); // Set empty list to fetch all questions
 
         logger.debug("DocumentInsightsReader initialized with criteria: {}", criteria);
 

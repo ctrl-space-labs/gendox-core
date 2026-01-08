@@ -1,10 +1,11 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.steps;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDocumentQuestionsDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskNodeService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.GendoxJpaPageReader;
 import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import org.slf4j.Logger;
@@ -17,25 +18,21 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.UUID;
 
 @Component
 @StepScope
-public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQuestionsDTO> {
+public class DeleteInsightsAnswersReader extends GendoxJpaPageReader<TaskDocumentQuestionsDTO> {
 
-    private static final Logger logger = LoggerFactory.getLogger(DocumentInsightsReader.class);
+    private static final Logger logger = LoggerFactory.getLogger(DeleteInsightsAnswersReader.class);
     private TaskNodeCriteria criteria;
     private final TaskNodeService taskNodeService;
-    private final InsightsUtils insightsUtils;
 
     @Autowired
-    public DocumentInsightsReader(TaskNodeService taskNodeService, InsightsUtils insightsUtils) {
+    public DeleteInsightsAnswersReader(TaskNodeService taskNodeService) {
         this.taskNodeService = taskNodeService;
-        this.insightsUtils = insightsUtils;
     }
 
 
@@ -43,7 +40,40 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQues
     protected ExitStatus initializeJpaPredicate(JobParameters jobParameters) {
         String taskId = jobParameters.getString(JobExecutionParamConstants.TASK_ID);
         assert taskId != null;
-        criteria = insightsUtils.fromJobParamsToTaskNodeCriteria(jobParameters, taskId);
+        criteria = new TaskNodeCriteria();
+        criteria.setTaskId(UUID.fromString(taskId));
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        // Deserialize documentNodeIds list from JSON string
+        String documentNodeIdsJson = jobParameters.getString(JobExecutionParamConstants.DOCUMENT_NODE_IDS);
+        if (documentNodeIdsJson != null && !documentNodeIdsJson.isBlank()) {
+            try {
+                List<UUID> documentNodeIds = mapper.readValue(
+                        documentNodeIdsJson,
+                        new TypeReference<List<UUID>>() {
+                        }
+                );
+                criteria.setDocumentNodeIds(documentNodeIds);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to deserialize documentNodeIds JSON", e);
+            }
+        }
+
+        // Deserialize questionNodeIds list from JSON string
+        String questionNodeIdsJson = jobParameters.getString(JobExecutionParamConstants.QUESTION_NODE_IDS);
+        if (questionNodeIdsJson != null && !questionNodeIdsJson.isBlank()) {
+            try {
+                List<UUID> questionNodeIds = mapper.readValue(
+                        questionNodeIdsJson,
+                        new TypeReference<List<UUID>>() {
+                        }
+                );
+                criteria.setQuestionNodeIds(questionNodeIds);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to deserialize questionNodeIds JSON", e);
+            }
+        }
 
         logger.debug("DocumentInsightsReader initialized with criteria: {}", criteria);
 

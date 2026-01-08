@@ -207,6 +207,10 @@ gendox:
             name: documentInsightsStep
             chunk-size: 2
             pageable-size: 1000
+          delete-insights-answers-step:
+            name: deleteInsightsAnswersStep
+            chunk-size: 1000
+            pageable-size: 1000
     document-digitization:
       job:
         name: documentDigitizationJob
