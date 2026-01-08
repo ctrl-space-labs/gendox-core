@@ -1,9 +1,7 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   executeTaskByType,
-  setInsightsGeneratingAll,
-  setInsightsGeneratingNew,
   setInsightsGeneratingCells,
   clearInsightsGenerationState
 } from 'src/store/activeTask/activeTask'
@@ -18,6 +16,10 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
   const { organizationId, taskId, projectId } = router.query
   const { startGenerationMonitor, completeGeneration, failGeneration } = useGenerationContext()
 
+  const { taskNodesDocumentList, taskNodesQuestionList, taskNodesAnswerList } = useSelector(
+    state => state.activeTaskNode
+  )
+
   const { isInsightsGeneratingAll, isInsightsGeneratingNew, isInsightsGeneratingCells } = useSelector(
     state => state.activeTask.generationState
   )
@@ -28,6 +30,10 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
     token,
     reloadAll
   })
+
+  const documents = useMemo(() => taskNodesDocumentList?.content || [], [taskNodesDocumentList])
+  const questions = useMemo(() => taskNodesQuestionList?.content || [], [taskNodesQuestionList])
+  const answers = useMemo(() => taskNodesAnswerList?.content || [], [taskNodesAnswerList])
 
   const handleGenerate = useCallback(
     async ({ documentsToGenerate = [], questionsToGenerate = [], reGenerateExistingAnswers = true }) => {
@@ -48,35 +54,34 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
       const documentIds = docsArray.map(d => d.id)
       const questionIds = questionsArray.map(q => q.id)
 
-      // Global Generation == Generate All Documents & Generate New Documents
-      const isGlobalGeneration = documentIds.length === 0 && questionIds.length === 0
+      const targetDocs = documentIds.length > 0 ? docsArray : documents
+      const targetQuestions = questionIds.length > 0 ? questionsArray : questions
 
-      if (isGlobalGeneration) {
-        // Generate ALL documents
-        if (reGenerateExistingAnswers) {
-          dispatch(setInsightsGeneratingAll(true))
-        } else {
-          // Generate only NEW documents
-          dispatch(setInsightsGeneratingNew(true))
-        }
-      } else {
-        const cellsLoading = {}
-        // Generate single Document
-        if (questionsArray.length === 0) {
-          docsArray.forEach(doc => {
-            cellsLoading[`${doc.id}_all`] = true
-          })
-        } else {
-          // Generate Single Answer
-          docsArray.forEach(doc => {
-            questionsArray.forEach(q => {
-              cellsLoading[`${doc.id}_${q.id}`] = true
-            })
-          })
-        }
+      const isGlobal = documentIds.length === 0 && questionIds.length === 0
 
-        dispatch(setInsightsGeneratingCells(cellsLoading))
-      }
+      // Answers key: documentNodeId_questionNodeId
+      const existingAnswersMap = new Set()
+      answers.forEach(ans => {
+        if (ans.nodeValue?.nodeDocumentId && ans.nodeValue?.nodeQuestionId) {
+          existingAnswersMap.add(`${ans.nodeValue.nodeDocumentId}_${ans.nodeValue.nodeQuestionId}`)
+        }
+      })
+
+      // Determine which cells need generation
+      const cellsLoading = {}
+
+      targetDocs.forEach(doc => {
+        targetQuestions.forEach(q => {
+          const cellKey = `${doc.id}_${q.id}`
+          const hasAnswer = existingAnswersMap.has(cellKey)
+
+          if (!isGlobal || !hasAnswer) {
+            cellsLoading[cellKey] = true
+          }
+        })
+      })
+
+      dispatch(setInsightsGeneratingCells(cellsLoading))
 
       try {
         const criteria = {
@@ -97,11 +102,7 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
         reloadAll()
         completeGeneration(taskId, null)
 
-        toast.success(
-          isGlobalGeneration
-            ? 'Generation completed for all documents'
-            : `Generation completed for ${documentsToGenerate.length} document(s)`
-        )
+        toast.success(`Generation completed`)
 
         setSelectedDocuments([])
       } catch (error) {
@@ -122,14 +123,15 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
       completeGeneration,
       failGeneration,
       reloadAll,
-      setSelectedDocuments
+      setSelectedDocuments,
+      documents,
+      questions,
+      answers
     ]
   )
 
   return {
     handleGenerate,
-    isInsightsGeneratingAll,
-    isInsightsGeneratingNew,
     isInsightsGeneratingCells
   }
 }
