@@ -109,6 +109,7 @@ const DocumentInsightsGrid = ({
         filterable: false,
         disableColumnMenu: true,
         renderCell: params => {
+          const summaryFlag = params.row._doc?.insightsSummary?.answerFlagEnum
           return (
             <Tooltip title='View Summary'>
               <IconButton
@@ -117,9 +118,8 @@ const DocumentInsightsGrid = ({
                   e.stopPropagation()
                   openDialog('summaryDetail', params.row._doc)
                 }}
-                sx={{ color: theme.palette.primary.main }}
               >
-                <Summarize fontSize='small' />
+                {answerFlagEnum(summaryFlag, theme)}
               </IconButton>
             </Tooltip>
           )
@@ -229,7 +229,7 @@ const DocumentInsightsGrid = ({
               textOverflow: 'ellipsis',
               fontWeight: 600,
               flexGrow: 1
-            }}            
+            }}
           >
             <Box
               component='button'
@@ -296,7 +296,6 @@ const DocumentInsightsGrid = ({
               </Box>
             )
           }
-          
 
           return (
             <Box
@@ -468,7 +467,7 @@ const DocumentInsightsGrid = ({
         pageSizeOptions={[20]}
         onPaginationModelChange={({ page: newPage }) => {
           setPage(newPage)
-        }}        
+        }}
         componentsProps={{
           pagination: { showFirstButton: true, showLastButton: true }
         }}

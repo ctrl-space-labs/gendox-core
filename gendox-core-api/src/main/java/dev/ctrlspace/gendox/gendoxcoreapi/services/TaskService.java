@@ -103,7 +103,16 @@ public class TaskService {
                 TaskNode newQuestionNode = new TaskNode();
                 newQuestionNode.setTaskId(newTask.getId());
                 newQuestionNode.setNodeType(questionNode.getNodeType());
-                newQuestionNode.setNodeValue(questionNode.getNodeValue());
+
+                // Node Value
+                TaskNodeValueDTO newQuestionValue = new TaskNodeValueDTO();
+                if (questionNode.getNodeValue() != null) {
+                    // only order, questionTitle, message are relevant for question nodes
+                    newQuestionValue.setOrder(questionNode.getNodeValue().getOrder());
+                    newQuestionValue.setQuestionTitle(questionNode.getNodeValue().getQuestionTitle());
+                    newQuestionValue.setMessage(questionNode.getNodeValue().getMessage());
+                }
+                newQuestionNode.setNodeValue(newQuestionValue);
 
                 nodesToSave.add(newQuestionNode);
             }
@@ -118,7 +127,6 @@ public class TaskService {
                 TaskNode newDocumentNode = new TaskNode();
                 newDocumentNode.setTaskId(newTask.getId());
                 newDocumentNode.setNodeType(documentNode.getNodeType());
-                newDocumentNode.setNodeValue(documentNode.getNodeValue());
                 newDocumentNode.setDocumentId(documentNode.getDocumentId());
                 nodesToSave.add(newDocumentNode);
             }

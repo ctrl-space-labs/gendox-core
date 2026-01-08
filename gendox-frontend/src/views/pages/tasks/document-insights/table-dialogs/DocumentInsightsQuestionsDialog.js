@@ -17,7 +17,6 @@ import {
   Box,
   CircularProgress
 } from '@mui/material'
-import Icon from 'src/views/custom-components/mui/icon/icon'
 
 import { useTheme } from '@mui/material/styles'
 import AddIcon from '@mui/icons-material/Add'
