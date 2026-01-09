@@ -50,35 +50,15 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
         ? questionsToGenerate
         : [questionsToGenerate]
 
-      // Preparation & Validation
-      const documentIds = docsArray.map(d => d.id)
-      const questionIds = questionsArray.map(q => q.id)
+      const selectedDocumentIds = docsArray.map(d => d.id)
+      const selectedQuestionIds = questionsArray.map(q => q.id)
 
-      const targetDocs = documentIds.length > 0 ? docsArray : documents
-      const targetQuestions = questionIds.length > 0 ? questionsArray : questions
-
-      const isGlobal = documentIds.length === 0 && questionIds.length === 0
-
-      // Answers key: documentNodeId_questionNodeId
-      const existingAnswersMap = new Set()
-      answers.forEach(ans => {
-        if (ans.nodeValue?.nodeDocumentId && ans.nodeValue?.nodeQuestionId) {
-          existingAnswersMap.add(`${ans.nodeValue.nodeDocumentId}_${ans.nodeValue.nodeQuestionId}`)
-        }
-      })
-
-      // Determine which cells need generation
-      const cellsLoading = {}
-
-      targetDocs.forEach(doc => {
-        targetQuestions.forEach(q => {
-          const cellKey = `${doc.id}_${q.id}`
-          const hasAnswer = existingAnswersMap.has(cellKey)
-
-          if (!isGlobal || !hasAnswer) {
-            cellsLoading[cellKey] = true
-          }
-        })
+      const cellsLoading = buildCellsLoadingMap({
+        documents,
+        questions,
+        answers,
+        selectedDocumentIds,
+        selectedQuestionIds,
       })
 
       dispatch(setInsightsGeneratingCells(cellsLoading))
@@ -86,8 +66,8 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
       try {
         const criteria = {
           taskId,
-          documentNodeIds: documentIds, // Empty array means all documents
-          questionNodeIds: questionIds, // Empty array means all questions
+          documentNodeIds: selectedDocumentIds, // Empty array means all documents
+          questionNodeIds: selectedQuestionIds, // Empty array means all questions
           reGenerateExistingAnswers
         }
 
@@ -97,7 +77,13 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
 
         // Polling & Feedback
         startGenerationMonitor(taskId, null, 'all', 2000)
-        await pollJobByCriteria({jobExecutionId})
+        // TODO this is a hack, remove the as soon as the re-calculate the loaders is been implemented
+        setTimeout(reloadAll, 2000)  // initial reload after 2s
+
+        await pollJobByCriteria({
+          jobExecutionId,
+          onReload: reloadAll
+        })
 
         reloadAll()
         completeGeneration(taskId, null)
@@ -129,6 +115,37 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
       answers
     ]
   )
+
+
+  const buildCellsLoadingMap = ({
+                                  documents = [],
+                                  questions = [],
+                                  answers = [],
+                                  selectedDocumentIds = [],
+                                  selectedQuestionIds = [],
+                                }) => {
+    const targetDocIds =
+      selectedDocumentIds.length > 0 ? selectedDocumentIds : documents.map(d => d.id)
+    const targetQuestionIds =
+      selectedQuestionIds.length > 0 ? selectedQuestionIds : questions.map(q => q.id)
+
+    const existing = new Set()
+    for (const a of answers || []) {
+      const dId = a?.nodeValue?.nodeDocumentId
+      const qId = a?.nodeValue?.nodeQuestionId
+      if (dId && qId) existing.add(`${dId}_${qId}`)
+    }
+
+    const cellsLoading = {}
+    for (const dId of targetDocIds) {
+      for (const qId of targetQuestionIds) {
+        const key = `${dId}_${qId}`
+        if (!existing.has(key)) cellsLoading[key] = true
+      }
+    }
+
+    return cellsLoading
+  }
 
   return {
     handleGenerate,

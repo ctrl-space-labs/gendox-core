@@ -50,7 +50,8 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
              timeout = 14400000, // 4h
              onCompleted,        // optional: ({ status, job }) => void
              onTerminalError,    // optional: ({ status, job, error }) => void
-             onTimeout           // optional: () => void
+             onTimeout,           // optional: () => void
+             onReload         // optional: () => void
            } = {}) => {
       if (!organizationId || !projectId || !token) return
       if (!jobExecutionId && !taskId) return
@@ -112,7 +113,6 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
 
       try {
         while (runIdRef.current === myRunId && activeModeRef.current === 'criteria') {
-          console.log("Polling job with start time:", new Date(startTime).toISOString())
 
           const elapsed = Date.now() - startTime
 
@@ -158,6 +158,9 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
               // Continue loop; next iteration will poll by id
               continue
             }
+
+            // TODO: The onReload MUST re-calculate the loaders of the cells based on current documents/questions/answers state
+            // onReload?.()  // run the reload callback if provided
 
             // 3) Poll by jobExecutionId
             response = await taskService.getJobsByCriteria(
@@ -246,30 +249,13 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
         const docIds = getJson('documentNodeIds')
         const qIds = getJson('questionNodeIds')
 
-        const targetDocs = docIds.length > 0 ? docIds : documents.map(d => d.id)
-        const targetQuestions = qIds.length > 0 ? qIds : questions.map(q => q.id)
-
-        const isGlobal = docIds.length === 0 && qIds.length === 0
-
-        // Calculate Cells Logic
-        const cellsLoading = {}
-        let existingMap = null
-
-        existingMap = new Set()
-        answers.forEach(a => {
-          if (a.nodeValue?.nodeDocumentId && a.nodeValue?.nodeQuestionId) {
-            existingMap.add(`${a.nodeValue.nodeDocumentId}_${a.nodeValue.nodeQuestionId}`)
-          }
+        let cellsLoading = buildCellsLoadingMap({
+          documents,
+          questions,
+          answers,
+          selectedDocumentIds: docIds,
+          selectedQuestionIds: qIds
         })
-
-        for (const docId of targetDocs) {
-          for (const qId of targetQuestions) {
-            const key = `${docId}_${qId}`
-            if (!existingMap?.has(key)) {
-              cellsLoading[key] = true
-            }
-          }
-        }
 
 
         if (Object.keys(cellsLoading).length > 0) {
@@ -292,7 +278,8 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
             // TODO: check is failGeneration needs to be called here
             completeGeneration(taskId, null)
             reloadAll?.()
-          }
+          },
+          onReload: reloadAll
         })
       } catch (error) {
         dispatch(clearInsightsGenerationState())
@@ -310,6 +297,37 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
       answers
     ]
   )
+
+  const buildCellsLoadingMap = ({
+    documents = [],
+    questions = [],
+    answers = [],
+    selectedDocumentIds = [],
+    selectedQuestionIds = [],
+  }) => {
+    const targetDocIds =
+      selectedDocumentIds.length > 0 ? selectedDocumentIds : documents.map(d => d.id)
+    const targetQuestionIds =
+      selectedQuestionIds.length > 0 ? selectedQuestionIds : questions.map(q => q.id)
+
+    const existing = new Set()
+    for (const a of answers || []) {
+      const dId = a?.nodeValue?.nodeDocumentId
+      const qId = a?.nodeValue?.nodeQuestionId
+      if (dId && qId) existing.add(`${dId}_${qId}`)
+    }
+
+    const cellsLoading = {}
+    for (const dId of targetDocIds) {
+      for (const qId of targetQuestionIds) {
+        const key = `${dId}_${qId}`
+        if (!existing.has(key)) cellsLoading[key] = true
+      }
+    }
+
+    return cellsLoading
+  }
+
 
   // Cleanup on unmount
   useEffect(() => {

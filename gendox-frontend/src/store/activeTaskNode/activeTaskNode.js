@@ -485,7 +485,7 @@ const taskNodeSlice = createSlice({
           state.taskNodesList.content = state.taskNodesList.content.filter(n => n.id !== action.payload)
         }
       })
-      
+
 
   }
 })
