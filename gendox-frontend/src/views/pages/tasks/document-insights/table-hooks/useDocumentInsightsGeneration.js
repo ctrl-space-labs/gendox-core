@@ -24,7 +24,7 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
     state => state.activeTask.generationState
   )
 
-  const { pollJobExecution } = useJobMonitor({
+  const { pollJobByCriteria } = useJobMonitor({
     organizationId,
     projectId,
     token,
@@ -97,7 +97,7 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
 
         // Polling & Feedback
         startGenerationMonitor(taskId, null, 'all', 2000)
-        await pollJobExecution(jobExecutionId)
+        await pollJobByCriteria({jobExecutionId})
 
         reloadAll()
         completeGeneration(taskId, null)
@@ -118,7 +118,7 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
       organizationId,
       projectId,
       taskId,
-      pollJobExecution,
+      pollJobByCriteria,
       startGenerationMonitor,
       completeGeneration,
       failGeneration,

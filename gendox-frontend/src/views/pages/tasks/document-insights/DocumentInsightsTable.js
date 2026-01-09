@@ -90,7 +90,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     }))
   }, [taskNodesAnswerList])
 
-  console.log('ANSWERS:', answers)
+  // console.log('ANSWERS:', answers)
 
   const reloadAll = useCallback(async () => {
     if (!organizationId || !projectId || !taskId) return
@@ -134,9 +134,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       undefined,
       { shallow: true }
     )
-  }, [page, pageSize])
-
-  useEffect(() => {
     if (!organizationId || !projectId || !taskId) return
     reloadAll()
   }, [page, pageSize])
@@ -151,7 +148,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   useEffect(() => {
     if (!organizationId || !projectId || !taskId) return
     resumeStartedJobs({ taskId })
-  }, [organizationId, projectId, taskId, resumeStartedJobs])
+  }, [organizationId, projectId, taskId])
 
   const handleSelectDocument = (docId, checked) => {
     if (docId === 'all') {

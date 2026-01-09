@@ -36,229 +36,177 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
 
   const sleep = ms => new Promise(res => setTimeout(res, ms))
 
-  const pollJobExecution = useCallback(
-    async (jobExecutionId, { timeout = 14400000 } = {}) => {
-      if (!organizationId || !projectId || !token) return
+  /**
+   * Polls backend jobs until the matching execution reaches `COMPLETED`, using either a known `jobExecutionId` or discovering one via `taskId`.
+   * Dynamically adjusts polling interval over time and stops on timeout; invokes `onCompleted` on success or `onTerminalError` for non-running terminal statuses.
+   */
+  const pollJobByCriteria = useCallback(
+    async ({
+             jobExecutionId,
+             taskId,
 
-      // Set active mode
+             timeout = 14400000, // 4h
+             onCompleted,        // optional: ({ status, job }) => void
+             onTerminalError,    // optional: ({ status, job, error }) => void
+             onTimeout           // optional: () => void
+           } = {}) => {
+      if (!organizationId || !projectId || !token) return
+      if (!jobExecutionId && !taskId) return
+
       stop()
-      activeModeRef.current = 'jobExecutionId'
+      activeModeRef.current = 'criteria'
 
       const startTime = Date.now()
 
+
+      const normalizeStatus = (s) =>
+        typeof s === 'string' ? s.trim().toUpperCase() : undefined
+
+      const chooseInterval = (elapsedMs) => {
+        if (elapsedMs < 60000) return 2000
+        if (elapsedMs < 600000) return 5000
+        return 10000
+      }
+
+      const pickLatestJob = (content = []) => {
+        if (!Array.isArray(content) || content.length === 0) return null
+        const started = content.find((j) => normalizeStatus(j.status) === 'STARTED')
+        return started || content[0]
+      }
+
+      // 1) Resolve execution id (either provided or discovered)
+      let resolvedExecutionId = jobExecutionId
+
+      const buildDiscoveryCriteria = () => ({
+        status: 'STARTED', // reduce result set for discovery
+        matchAllParams: [
+          { paramName: 'projectId', paramValue: projectId },
+          { paramName: 'taskId', paramValue: taskId }
+        ]
+      })
+
+      const buildIdCriteria = (id) => ({
+        jobExecutionIdsIn: [id]
+      })
+
+      const terminalFail = (status, job, error) => {
+        stop()
+        dispatch(clearInsightsGenerationState())
+        dispatch(clearDigitizationGenerationState())
+        onTerminalError?.(error)
+        // throw error instanceof Error
+        //   ? error
+        //   : new Error(`Job ended with status: ${status}`)
+      }
+
+
       try {
-        while (activeModeRef.current === 'jobExecutionId') {
+        while (activeModeRef.current === 'criteria') {
           const elapsed = Date.now() - startTime
 
           if (elapsed > timeout) {
             setShowTimeoutDialog(true)
             dispatch(clearInsightsGenerationState())
             dispatch(clearDigitizationGenerationState())
-            // stop()
-            // throw new Error('Job polling timed out')
+            onTimeout?.()
+            stop()
+            return 'TIMEOUT'
           }
 
-          let currentInterval
-          if (elapsed < 60000) currentInterval = 2000
-          // first minute
-          else if (elapsed < 600000) currentInterval = 5000
-          // first 10 minutes
-          else currentInterval = 10000 // after 10 minutes
+          await sleep(chooseInterval(elapsed))
 
-          await sleep(currentInterval)
+          let response
+          try {
+            // 2) If we don't have jobExecutionId yet, discover it (STARTED only)
+            if (!resolvedExecutionId) {
+              response = await taskService.getJobsByCriteria(
+                organizationId,
+                projectId,
+                buildDiscoveryCriteria(),
+                token
+              )
 
-          const criteria = { jobExecutionIdsIn: [jobExecutionId] }
-          const response = await taskService.getJobsByCriteria(organizationId, projectId, criteria, token)
+              const job = pickLatestJob(response.data?.content || [])
+              if (!job) {
+                // nothing STARTED yet (or already finished before we could see it)
+                // keep polling until timeout (your rules said: stop only on COMPLETED)
+                continue
+              }
 
-          let status = response.data?.content?.[0]?.status
-          if (typeof status === 'string') status = status.trim().toUpperCase()
+              // If API uses a different field name, adjust here
+              resolvedExecutionId = job.jobExecutionId ?? job.id
+              if (!resolvedExecutionId) {
+                // Can't continue without an id -> treat as failed scenario
+                terminalFail(
+                  'FAILED',
+                  job,
+                  new Error('Could not resolve jobExecutionId from discovery result.')
+                )
+              }
+
+              // Continue loop; next iteration will poll by id
+              continue
+            }
+
+            // 3) Poll by jobExecutionId
+            response = await taskService.getJobsByCriteria(
+              organizationId,
+              projectId,
+              buildIdCriteria(resolvedExecutionId),
+              token
+            )
+          } catch (error) {
+            // Request-level failure (500, network, etc.) => terminal FAILED scenario
+            terminalFail(
+              'FAILED',
+              null,
+              new Error(
+                `Job polling request failed (treating as FAILED). ExecutionId=${resolvedExecutionId ?? 'unknown'}`
+              )
+            )
+          }
+
+          const content = response.data?.content || []
+          const job = pickLatestJob(content)
+
+          // if the backend returns nothing for an id query, we can't see status -> keep waiting
+          if (!job) continue
+
+          const status = normalizeStatus(job.status)
 
           if (status === 'COMPLETED') {
             setShowTimeoutDialog(false)
-            stop()
             dispatch(clearInsightsGenerationState())
             dispatch(clearDigitizationGenerationState())
+            onCompleted?.({ status, job })
+            stop()
             return status
           }
 
-          if (['FAILED', 'STOPPED', 'ABANDONED'].includes(status)) {
-            stop()
-            dispatch(clearInsightsGenerationState())
-            dispatch(clearDigitizationGenerationState())
-            throw new Error(`Job ended with status: ${status}`)
+          if (!['STARTED', 'STARTING', 'STOPPING'].includes(status)) {
+            terminalFail(status || 'UNKNOWN', job, new Error(`Job ended with status: ${status || 'UNKNOWN'}`))
+            return status
           }
+
+          // otherwise keep polling
         }
-      } catch (error) {
+      } catch (err) {
         stop()
-        throw error
+        throw err
       }
     },
-    [organizationId, projectId, token, stop]
-  )
-
-  /**
-   * Poll for jobs matching criteria until none are found
-   * (used for "criteria" mode monitoring)
-   * without jobExecutionId
-   */
-  const startCriteriaPolling = useCallback(
-    ({ taskId }) => {
-      if (!organizationId || !projectId || !taskId || !token) return
-      if (timerRef.current) return
-
-      activeModeRef.current = 'criteria'
-
-      const executePoll = async () => {
-        try {
-          // if mode changed, exit
-          if (activeModeRef.current !== 'criteria') return
-
-          const criteria = {
-            status: 'STARTED',
-            matchAllParams: [
-              { paramName: 'projectId', paramValue: projectId },
-              { paramName: 'taskId', paramValue: taskId }
-            ]
-          }
-
-          const response = await taskService.getJobsByCriteria(organizationId, projectId, criteria, token)
-          const isStillRunning = (response.data?.content?.length || 0) > 0
-
-          if (!isStillRunning) {
-            // completed
-            completeGeneration(taskId, null)
-            dispatch(clearInsightsGenerationState())
-            dispatch(clearDigitizationGenerationState())
-            reloadAll?.()
-            stop()
-            return
-          }
-
-          timerRef.current = setTimeout(executePoll, 3000)
-        } catch (error) {
-          console.error('Error polling job completion:', error)
-          stop()
-        }
-      }
-
-      executePoll()
-    },
-    [organizationId, projectId, token, reloadAll, completeGeneration, stop]
+    [organizationId, projectId, token, stop, dispatch]
   )
 
   /**
    * Resume STARTED jobs on component mount
    */
 
-  // const resumeStartedJobs = useCallback(
-  //   async ({ taskId }) => {
-  //     if (!organizationId || !projectId || !taskId || !token) return
-
-  //     try {
-  //       const criteria = {
-  //         status: 'STARTED',
-  //         matchAllParams: [
-  //           { paramName: 'projectId', paramValue: projectId },
-  //           { paramName: 'taskId', paramValue: taskId }
-  //         ]
-  //       }
-
-  //       const response = await taskService.getJobsByCriteria(organizationId, projectId, criteria, token)
-  //       const jobs = response.data?.content || []
-  //       const isRunning = jobs.length > 0
-
-  //       if (isRunning) {
-  //         // digitization
-  //         dispatch(setDigitizationGenerating(true))
-
-  //         // insights
-  //         const latestJobParams = jobs[0].batchJobExecutionParams || []
-
-  //         // find parameters
-  //         const getParamValues = paramName => {
-  //           const param = latestJobParams.find(p => p.parameterName === paramName)
-  //           // if param not found or empty, return empty array
-  //           if (!param || !param.parameterValue) return []
-  //           try {
-  //             return JSON.parse(param.parameterValue)
-  //           } catch (e) {
-  //             console.error(`Error parsing ${paramName}:`, e)
-  //             return []
-  //           }
-  //         }
-
-  //         const documentNodeIds = getParamValues('documentNodeIds')
-  //         const questionNodeIds = getParamValues('questionNodeIds')
-
-  //         // if both are empty, it's all or new generation
-  //         if (documentNodeIds.length === 0 && questionNodeIds.length === 0) {
-  //           // 1. Βρίσκουμε αν το job είναι Regenerate Existing (true) ή Generate New (false)
-  //           const reGenerateParam = latestJobParams.find(p => p.parameterName === 'reGenerateExistingAnswers')
-  //           const reGenerateExistingAnswers = reGenerateParam ? reGenerateParam.parameterValue === 'true' : false
-
-  //           // 2. Φτιάχνουμε ένα Set με τις υπάρχουσες απαντήσεις για γρήγορο έλεγχο
-  //           const existingAnswersMap = new Set()
-  //           answers.forEach(ans => {
-  //             if (ans.nodeValue?.nodeDocumentId && ans.nodeValue?.nodeQuestionId) {
-  //               existingAnswersMap.add(`${ans.nodeValue.nodeDocumentId}_${ans.nodeValue.nodeQuestionId}`)
-  //             }
-  //           })
-
-  //           const cellsLoading = {}
-
-  //           // 3. Ελέγχουμε ΟΛΑ τα documents και questions (αφού είναι global generation)
-  //           documents.forEach(doc => {
-  //             questions.forEach(q => {
-  //               const cellKey = `${doc.id}_${q.id}`
-  //               const hasAnswer = existingAnswersMap.has(cellKey)
-
-  //               // Λογική:
-  //               // Αν είναι regenerate=true -> Φόρτωσε τα όλα.
-  //               // Αν είναι regenerate=false -> Φόρτωσε ΜΟΝΟ αν ΔΕΝ υπάρχει απάντηση.
-  //               if (reGenerateExistingAnswers || !hasAnswer) {
-  //                 cellsLoading[cellKey] = true
-  //               }
-  //             })
-  //           })
-
-  //           dispatch(setInsightsGeneratingCells(cellsLoading))
-  //         } else {
-  //           const cellsLoading = {}
-
-  //           if (questionNodeIds.length === 0) {
-  //             documentNodeIds.forEach(docId => {
-  //               cellsLoading[`${docId}_all`] = true
-  //             })
-  //           } else {
-  //             documentNodeIds.forEach(docId => {
-  //               questionNodeIds.forEach(qId => {
-  //                 cellsLoading[`${docId}_${qId}`] = true
-  //               })
-  //             })
-  //           }
-
-  //           dispatch(setInsightsGeneratingCells(cellsLoading))
-  //         }
-
-  //         startGenerationMonitor(taskId, null, 'resumed', {
-  //           documentNames: 'Background processing...',
-  //           totalDocuments: 0
-  //         })
-
-  //         startCriteriaPolling({ taskId })
-  //       }
-  //     } catch (error) {
-  //       console.error('Failed to check running jobs:', error)
-  //       dispatch(clearInsightsGenerationState())
-  //       dispatch(clearDigitizationGenerationState())
-  //     }
-  //   },
-  //   [organizationId, projectId, token, startGenerationMonitor, startCriteriaPolling, dispatch]
-  // )
   const resumeStartedJobs = useCallback(
     async ({ taskId }) => {
       if (!organizationId || !projectId || !taskId || !token) return
 
+      let timestamp = new Date().toISOString()
       try {
         const criteria = {
           status: 'STARTED',
@@ -368,9 +316,20 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
           totalDocuments: 0
         })
 
-        startCriteriaPolling({ taskId })
+        // startCriteriaPolling({ taskId })
+        pollJobByCriteria({
+          taskId,
+          onCompleted: () => {
+            completeGeneration(taskId, null)
+            reloadAll?.()
+          },
+          onTerminalError: (error) => {
+            // TODO: check is failGeneration needs to be called here
+            completeGeneration(taskId, null)
+            reloadAll?.()
+          }
+        })
       } catch (error) {
-        console.error('Failed to resume jobs:', error)
         dispatch(clearInsightsGenerationState())
         dispatch(clearDigitizationGenerationState())
       }
@@ -381,7 +340,6 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
       token,
       dispatch,
       startGenerationMonitor,
-      startCriteriaPolling,
       documents,
       questions,
       answers
@@ -395,7 +353,7 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
 
   return {
     resumeStartedJobs, // for table
-    pollJobExecution, // for generate flow
+    pollJobByCriteria, // for generate flow
     showTimeoutDialog,
     setShowTimeoutDialog
   }

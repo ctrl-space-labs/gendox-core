@@ -16,7 +16,7 @@ export default function useDocumentDigitizationGeneration({ reloadAll, token, se
   const { organizationId, taskId, projectId } = router.query
 
   const { startGenerationMonitor, updateProgress, completeGeneration, failGeneration } = useGeneration()
-  const { pollJobExecution } = useJobMonitor({
+  const { pollJobByCriteria } = useJobMonitor({
     organizationId,
     projectId,
     token,
@@ -66,7 +66,7 @@ export default function useDocumentDigitizationGeneration({ reloadAll, token, se
         ).unwrap()
 
         startGenerationMonitor(taskId, null, 'all', 2000)
-        await pollJobExecution(jobExecutionId)
+        await pollJobByCriteria({jobExecutionId})
 
         reloadAll()
         completeGeneration(taskId, null)
@@ -91,7 +91,7 @@ export default function useDocumentDigitizationGeneration({ reloadAll, token, se
       organizationId,
       projectId,
       taskId,
-      pollJobExecution,
+      pollJobByCriteria,
       startGenerationMonitor,
       completeGeneration,
       failGeneration,
