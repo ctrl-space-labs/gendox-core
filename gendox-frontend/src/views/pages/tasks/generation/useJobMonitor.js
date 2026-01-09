@@ -20,6 +20,7 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
 
   const timerRef = useRef(null)
   const activeModeRef = useRef(null) // 'criteria' | 'jobExecutionId'
+  const runIdRef = useRef(0)
   const [showTimeoutDialog, setShowTimeoutDialog] = useState(false)
 
   const documents = useMemo(() => taskNodesDocumentList?.content || [], [taskNodesDocumentList])
@@ -27,6 +28,7 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
   const answers = useMemo(() => taskNodesAnswerList?.content || [], [taskNodesAnswerList])
 
   const stop = useCallback(() => {
+    runIdRef.current += 1
     if (timerRef.current) {
       clearTimeout(timerRef.current)
       timerRef.current = null
@@ -54,6 +56,7 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
       if (!jobExecutionId && !taskId) return
 
       stop()
+      const myRunId = runIdRef.current
       activeModeRef.current = 'criteria'
 
       const startTime = Date.now()
@@ -99,9 +102,18 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
         //   : new Error(`Job ended with status: ${status}`)
       }
 
+      const terminateComplete = (status, job) => {
+        setShowTimeoutDialog(false)
+        dispatch(clearInsightsGenerationState())
+        dispatch(clearDigitizationGenerationState())
+        onCompleted?.({ status, job })
+        stop()
+      }
 
       try {
-        while (activeModeRef.current === 'criteria') {
+        while (runIdRef.current === myRunId && activeModeRef.current === 'criteria') {
+          console.log("Polling job with start time:", new Date(startTime).toISOString())
+
           const elapsed = Date.now() - startTime
 
           if (elapsed > timeout) {
@@ -128,9 +140,8 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
 
               const job = pickLatestJob(response.data?.content || [])
               if (!job) {
-                // nothing STARTED yet (or already finished before we could see it)
-                // keep polling until timeout (your rules said: stop only on COMPLETED)
-                continue
+                terminateComplete("UNKNOWN", job)
+                return "UNKNOWN"
               }
 
               // If API uses a different field name, adjust here
@@ -175,11 +186,7 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
           const status = normalizeStatus(job.status)
 
           if (status === 'COMPLETED') {
-            setShowTimeoutDialog(false)
-            dispatch(clearInsightsGenerationState())
-            dispatch(clearDigitizationGenerationState())
-            onCompleted?.({ status, job })
-            stop()
+            terminateComplete(status, job)
             return status
           }
 
@@ -255,10 +262,6 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
           }
         })
 
-        console.log("Target Docs:", targetDocs)
-        console.log("Target Questions:", targetQuestions)
-        console.log("Existing Map:", existingMap)
-
         for (const docId of targetDocs) {
           for (const qId of targetQuestions) {
             const key = `${docId}_${qId}`
@@ -267,44 +270,6 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
             }
           }
         }
-
-        console.log("Cells Loading:", cellsLoading)
-
-        // if (isGlobal) {
-        //   // Optimization: Build existing answers Map only if not regenerate
-        //   let existingMap = null
-        //
-        //   existingMap = new Set()
-        //   answers.forEach(a => {
-        //     if (a.nodeValue?.nodeDocumentId && a.nodeValue?.nodeQuestionId) {
-        //       existingMap.add(`${a.nodeValue.nodeDocumentId}_${a.nodeValue.nodeQuestionId}`)
-        //     }
-        //   })
-        //   console.log('IsGlobal Answers:', answers)
-        //
-        //   // Loop through Redux data
-        //   for (const doc of documents) {
-        //     for (const q of questions) {
-        //       const key = `${doc.id}_${q.id}`
-        //       if (!existingMap?.has(key)) {
-        //         cellsLoading[key] = true
-        //       }
-        //     }
-        //   }
-        // } else {
-        //   // Specific Logic (Concise)
-        //   if (qIds.length === 0) {
-        //     docIds.forEach(id => {
-        //       cellsLoading[`${id}_all`] = true
-        //     })
-        //   } else {
-        //     docIds.forEach(dId => {
-        //       qIds.forEach(qId => {
-        //         cellsLoading[`${dId}_${qId}`] = true
-        //       })
-        //     })
-        //   }
-        // }
 
 
         if (Object.keys(cellsLoading).length > 0) {

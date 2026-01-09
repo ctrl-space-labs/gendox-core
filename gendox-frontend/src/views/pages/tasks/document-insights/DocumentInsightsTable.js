@@ -146,9 +146,16 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   })
 
   useEffect(() => {
-    if (!organizationId || !projectId || !taskId) return
+    if (!organizationId || !projectId || !taskId || !taskNodesDocumentList || !taskNodesQuestionList || !taskNodesAnswerList) return
+
+    const docsReady = Array.isArray(taskNodesDocumentList?.content) && taskNodesDocumentList.content.length > 0
+    const questionsReady = Array.isArray(taskNodesQuestionList?.content) && taskNodesQuestionList.content.length > 0
+    const answersReady = Array.isArray(taskNodesAnswerList?.content)
+
+    if (!docsReady || !questionsReady || !answersReady) return
+
     resumeStartedJobs({ taskId })
-  }, [organizationId, projectId, taskId])
+  }, [organizationId, projectId, taskId, taskNodesDocumentList, taskNodesQuestionList, taskNodesAnswerList])
 
   const handleSelectDocument = (docId, checked) => {
     if (docId === 'all') {
