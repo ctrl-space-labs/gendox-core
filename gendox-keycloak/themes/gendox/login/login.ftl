@@ -2,7 +2,7 @@
 <@layout.registrationLayout displayMessage=!messagesPerField.existsError('username','password') displayInfo=realm.password && realm.registrationAllowed && !registrationDisabled??; section>
 
     <#if section = "header">
-    <#-- Κενό Header -->
+    <#-- Keep header empty to avoid duplication -->
 
     <#elseif section = "form">
 
@@ -111,7 +111,7 @@
 
                         <div id="kc-form-buttons" class="${properties.kcFormGroupClass!}" style="margin-top: 25px;">
                             <input tabindex="6" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}"
-                                   name="login" id="kc-login" type="submit" value="${msg("doLogIn")}"
+                                   name="login" id="kc-login" type="submit" value="LOGIN"
                                    style="background-color: #00d68f; border: none; color: #ffffff; font-weight: bold; width: 100%; padding: 12px; border-radius: 5px; cursor: pointer;"/>
                         </div>
                     </form>
