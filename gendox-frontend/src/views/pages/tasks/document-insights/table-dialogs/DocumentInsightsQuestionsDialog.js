@@ -21,15 +21,15 @@ import {
 import { useTheme } from '@mui/material/styles'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
 import DescriptionIcon from '@mui/icons-material/Description'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import DeleteIcon from '@mui/icons-material/Delete'
 import ExpandableMarkdownSection from '../../helping-components/ExpandableMarkodownSection'
 import TextareaAutosizeStyled from '../../helping-components/TextareaAutosizeStyled'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import { fetchDocuments, resetSupportingDocuments } from 'src/store/activeDocument/activeDocument'
-import { updateTaskNode, createTaskNodesBatch } from 'src/store/activeTaskNode/activeTaskNode'
+import { updateTaskNode, createTaskNodesBatch, deleteTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
 import { toast } from 'react-hot-toast'
 import AddNewDocumentDialog from '../../helping-components/AddNewDocumentDialog'
 import CleanCollapse from 'src/views/custom-components/mui/collapse'
@@ -62,6 +62,7 @@ const QuestionsDialog = ({
   const [openAddDocDialog, setOpenAddDocDialog] = useState(false)
   const [dialogLoading, setDialogLoading] = useState(false)
   const [hasBreakingChanges, setHasBreakingChanges] = useState(false)
+  const [openDeleteQuestionConfirm, setOpenDeleteQuestionConfirm] = useState(false)
   const [openConfirmAnswersDelete, setOpenConfirmAnswersDelete] = useState(false)
   const { supportingDocuments, isLoading } = useSelector(state => state.activeDocument)
   const safeQuestions = Array.isArray(addNewQuestions) ? addNewQuestions : ['']
@@ -222,6 +223,29 @@ const QuestionsDialog = ({
     setAddNewQuestions(updated)
   }
 
+  const handleDeleteQuestion = async () => {
+    setDialogLoading(true)
+    try {
+      await dispatch(
+        deleteTaskNode({
+          organizationId,
+          projectId,
+          taskNodeId: activeQuestion.id,
+          token
+        })
+      ).unwrap()
+      toast.success('Question deleted successfully')
+      reloadAll()
+      onClose() // Close the dialog after deletion
+    } catch (error) {
+      console.error('Error deleting question:', error)
+      toast.error('Failed to delete question')
+    } finally {
+      setDialogLoading(false)
+      setOpenDeleteQuestionConfirm(false)
+    }
+  }
+
   const handleAddQuestion = () => {
     setAddNewQuestions([...addNewQuestions, { title: '', text: '' }])
   }
@@ -277,11 +301,26 @@ const QuestionsDialog = ({
       >
         {isAddMode ? 'Add Questions' : isEditMode ? 'Edit Question' : 'View Question'}
         {isViewMode ? (
-          <Tooltip title='Edit question'>
-            <IconButton aria-label='Edit question' onClick={() => setEditMode(true)} sx={{ color: 'primary.main' }}>
-              <EditIcon />
-            </IconButton>
-          </Tooltip>
+          <Box>
+            <Tooltip title='Edit question'>
+              <IconButton
+                aria-label='Edit question'
+                onClick={() => setEditMode(true)}
+                sx={{ color: 'primary.main', mr: 1 }}
+              >
+                <EditIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title='Delete question'>
+              <IconButton
+                aria-label='Delete question'
+                onClick={() => setOpenDeleteQuestionConfirm(true)}
+                sx={{ color: 'error.main' }}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
         ) : null}
       </DialogTitle>
 
@@ -573,7 +612,9 @@ const QuestionsDialog = ({
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <DescriptionIcon color='primary' />
-                          <Typography sx={{ fontWeight: 600, flex: 1 }}>{<TruncatedText text={doc.title} cursor='default' />}</Typography>
+                          <Typography sx={{ fontWeight: 600, flex: 1 }}>
+                            {<TruncatedText text={doc.title} cursor='default' />}
+                          </Typography>
                         </Box>
 
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
@@ -677,6 +718,15 @@ const QuestionsDialog = ({
         title='Confirm Question Update'
         contentText='You changed the question or its supporting documents. All related answers will be permanently deleted. Do you want to proceed?'
         confirmButtonText='Yes, continue'
+        cancelButtonText='Cancel'
+      />
+      <DeleteConfirmDialog
+        open={openDeleteQuestionConfirm}
+        onClose={() => setOpenDeleteQuestionConfirm(false)}
+        onConfirm={handleDeleteQuestion}
+        title='Remove Question'
+        contentText='Are you sure you want to remove this question? This action cannot be undone.'
+        confirmButtonText='Remove'
         cancelButtonText='Cancel'
       />
     </Dialog>
