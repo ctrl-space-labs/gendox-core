@@ -118,9 +118,13 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
         stop()
       }
 
+      // extra sleep to give time to BE to delete any old existing answers
+      let elapsed = Date.now() - startTime
+      await sleep(chooseInterval(elapsed))
+
       try {
         while (runIdRef.current === myRunId && activeModeRef.current === 'criteria') {
-          const elapsed = Date.now() - startTime
+          elapsed = Date.now() - startTime
 
           if (elapsed > timeout) {
             setShowTimeoutDialog(true)
