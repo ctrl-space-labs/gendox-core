@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, {useState, useEffect, useMemo, useCallback, useRef} from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { Box } from '@mui/material'
@@ -35,6 +35,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const [isPageReloading, setIsPageReloading] = useState(false)
 
   const totalDocuments = useMemo(() => taskNodesDocumentList?.totalElements || 0, [taskNodesDocumentList])
+
+  const hasResumedRef = useRef(false)
 
   // loaders
   const isDocumentsLoading = useMemo(
@@ -146,6 +148,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   })
 
   useEffect(() => {
+    if (hasResumedRef.current) return
+
     if (!organizationId || !projectId || !taskId || !taskNodesDocumentList || !taskNodesQuestionList || !taskNodesAnswerList) return
 
     const docsReady = Array.isArray(taskNodesDocumentList?.content) && taskNodesDocumentList.content.length > 0
@@ -154,6 +158,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
 
     if (!docsReady || !questionsReady || !answersReady) return
 
+    hasResumedRef.current = true
     resumeStartedJobs({ taskId })
   }, [organizationId, projectId, taskId, taskNodesDocumentList, taskNodesQuestionList, taskNodesAnswerList])
 
