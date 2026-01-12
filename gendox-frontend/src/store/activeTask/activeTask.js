@@ -111,7 +111,6 @@ const taskSlice = createSlice({
   reducers: {
     setInsightsGeneratingCells: (state, action) => {
       state.generationState.isInsightsGeneratingCells = {
-        ...state.generationState.isInsightsGeneratingCells,
         ...action.payload
       }
     },

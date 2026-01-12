@@ -60,7 +60,10 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
       onCompleted, // optional: ({ status, job }) => void
       onTerminalError, // optional: ({ status, job, error }) => void
       onTimeout, // optional: () => void
-      onReload // optional: () => void
+      onReload, // optional: () => void
+      selectedDocumentIds,
+      selectedQuestionIds,
+      forceLoader
     } = {}) => {
       if (!organizationId || !projectId || !token) return
       if (!jobExecutionId && !taskId) return
@@ -118,13 +121,9 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
         stop()
       }
 
-      // extra sleep to give time to BE to delete any old existing answers
-      let elapsed = Date.now() - startTime
-      await sleep(chooseInterval(elapsed))
-
       try {
         while (runIdRef.current === myRunId && activeModeRef.current === 'criteria') {
-          elapsed = Date.now() - startTime
+          let elapsed = Date.now() - startTime
 
           if (elapsed > timeout) {
             setShowTimeoutDialog(true)
@@ -195,7 +194,10 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
               p => p.parameterName === 'jobName' && p.parameterValue === 'documentInsightsJob'
             )
           ) {
-            await checkIntermediateAnswers(taskId, documentsRef.current, questionsRef.current)
+            await checkIntermediateAnswers(taskId, documentsRef.current, questionsRef.current,
+              selectedDocumentIds,
+              selectedQuestionIds,
+              forceLoader)
           }
 
           if (status === 'COMPLETED') {
@@ -251,24 +253,25 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
           dispatch(setDigitizationGenerating(true))
         }
 
+        const params = activeJob.batchJobExecutionParams || []
+        const getVal = name => params.find(p => p.parameterName === name)?.parameterValue
+        const getJson = name => {
+          try {
+            return JSON.parse(getVal(name) || '[]')
+          } catch {
+            return []
+          }
+        }
+
+        const docIds = getJson('documentNodeIds')
+        const qIds = getJson('questionNodeIds')
+
         // Insights
         if (
           activeJob.batchJobExecutionParams?.some(
             p => p.parameterName === 'jobName' && p.parameterValue === 'documentInsightsJob'
           )
         ) {
-          const params = activeJob.batchJobExecutionParams || []
-          const getVal = name => params.find(p => p.parameterName === name)?.parameterValue
-          const getJson = name => {
-            try {
-              return JSON.parse(getVal(name) || '[]')
-            } catch {
-              return []
-            }
-          }
-
-          const docIds = getJson('documentNodeIds')
-          const qIds = getJson('questionNodeIds')
 
           let cellsLoading = buildCellsLoadingMap({
             documents,
@@ -278,9 +281,8 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
             selectedQuestionIds: qIds,
           })
 
-          if (Object.keys(cellsLoading).length > 0) {
-            dispatch(setInsightsGeneratingCells(cellsLoading))
-          }
+          dispatch(setInsightsGeneratingCells(cellsLoading))
+
         }
 
         startGenerationMonitor(taskId, null, 'resumed', {
@@ -299,7 +301,10 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
             // TODO: check is failGeneration needs to be called here
             completeGeneration(taskId, null)
             reloadAll?.()
-          }
+          },
+          docIds,
+          qIds,
+          forceLoader: false
           // onReload: reloadAll
         })
       } catch (error) {
@@ -341,7 +346,10 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
     return cellsLoading
   }
 
-  const checkIntermediateAnswers = async (currentTaskId, currentDocs, currentQuestions) => {
+  const checkIntermediateAnswers = async (currentTaskId, currentDocs, currentQuestions,
+                                          selectedDocumentIds,
+                                          selectedQuestionIds,
+                                          forceLoader) => {
     if (
       !currentTaskId ||
       !currentDocs ||
@@ -374,16 +382,17 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
       const newAns = ansResult.content || []
       const keysDone = []
 
-      newAns.forEach(ans => {
-        if (ans.nodeValue?.answerValue) {
-          const key = `${ans.nodeValue.nodeDocumentId}_${ans.nodeValue.nodeQuestionId}`
-          keysDone.push(key)
-        }
+      const cellsLoading = buildCellsLoadingMap({
+        documents: currentDocs,
+        questions: currentQuestions,
+        answers: newAns,
+        selectedDocumentIds,
+        selectedQuestionIds,
+        forceLoader
       })
 
-      // Update store to remove loading state for completed cells
-      if (keysDone.length > 0) {
-        dispatch(removeInsightsGeneratingCells(keysDone))
+      if (Object.keys(cellsLoading).length > 0) {
+        dispatch(setInsightsGeneratingCells(cellsLoading))
       }
     } catch (e) {
       console.warn('Intermediate fetch skipped:', e)

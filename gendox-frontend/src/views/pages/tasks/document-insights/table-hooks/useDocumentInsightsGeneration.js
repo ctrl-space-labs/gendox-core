@@ -80,7 +80,10 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
         await pollJobByCriteria({
           jobExecutionId,
           taskId,
-          onReload: reloadAll
+          onReload: reloadAll,
+          selectedDocumentIds,
+          selectedQuestionIds,
+          forceLoader: false // must be false
         })
 
         reloadAll()
