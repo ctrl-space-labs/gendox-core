@@ -68,7 +68,7 @@ const DocumentPagePreviewDialog = ({
   const [hasBreakingChanges, setHasBreakingChanges] = useState(false)
   const [openConfirmAnswersDelete, setOpenConfirmAnswersDelete] = useState(false)
   const { supportingDocuments, isLoading } = useSelector(state => state.activeDocument)
-  const { isInsightsGeneratingAll, isInsightsGeneratingNew } = useSelector(state => state.activeTask.generationState)
+  const { isInsightsGeneratingCells } = useSelector(state => state.activeTask.generationState)
   const { sections, isBlurring } = useSelector(state => state.activeDocument)
 
   const isDocGenerating = useSelector(state => {
@@ -79,7 +79,8 @@ const DocumentPagePreviewDialog = ({
     return Object.keys(cells).some(key => key.startsWith(prefix) && cells[key] === true)
   })
 
-  const isGenerating = isDocGenerating || isInsightsGeneratingAll || isInsightsGeneratingNew
+  // TODO this is not working properly bc of the above selector
+  const isGenerating = isDocGenerating || Object.values(isInsightsGeneratingCells || {}).some(v => v === true)
 
   useEffect(() => {
     if (activeDocument) {

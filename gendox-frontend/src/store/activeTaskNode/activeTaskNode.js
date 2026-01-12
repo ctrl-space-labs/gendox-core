@@ -366,7 +366,6 @@ const initialState = {
   taskNodesRestList: [],
   taskDocumentPages: [],
   isLoading: false,
-  isLoadingAnswers: false,
   isLoadingDocumentPages: false,
   error: null
 }
@@ -407,19 +406,14 @@ const taskNodeSlice = createSlice({
 
       // by criteria: DOCUMENT / QUESTION / ANSWER / OTHER
       .addCase(fetchTaskNodesByCriteria.pending, (state, action) => {
-        const { criteria } = action.meta.arg
-        if (criteria.nodeTypeNames?.includes('ANSWER')) {
-          state.isLoadingAnswers = true
-        } else {
-          state.isLoading = true
-        }
+        state.isLoading = true
         state.error = null
       })
       .addCase(fetchTaskNodesByCriteria.fulfilled, (state, action) => {
         const { criteria } = action.meta.arg
 
         if (criteria.nodeTypeNames?.includes('ANSWER')) {
-          state.isLoadingAnswers = false
+          state.isLoading = false
           state.taskNodesAnswerList = action.payload
         }
         if (criteria.nodeTypeNames?.includes('DOCUMENT')) {
@@ -441,26 +435,18 @@ const taskNodeSlice = createSlice({
         }
       })
       .addCase(fetchTaskNodesByCriteria.rejected, (state, action) => {
-        const { criteria } = action.meta.arg
-        if (criteria.nodeTypeNames?.includes('ANSWER')) {
-          state.isLoadingAnswers = false
-        } else {
-          state.isLoading = false
-        }
+        state.isLoading = false
         state.error = action.payload
       })
 
       // explicit fetch answers
       .addCase(fetchAnswerTaskNodes.pending, state => {
-        state.isLoadingAnswers = true
         state.error = null
       })
       .addCase(fetchAnswerTaskNodes.fulfilled, (state, action) => {
-        state.isLoadingAnswers = false
         state.taskNodesAnswerList = action.payload
       })
       .addCase(fetchAnswerTaskNodes.rejected, (state, action) => {
-        state.isLoadingAnswers = false
         state.error = action.payload
       })
 
@@ -485,9 +471,6 @@ const taskNodeSlice = createSlice({
           state.taskNodesList.content = state.taskNodesList.content.filter(n => n.id !== action.payload)
         }
       })
-
-
   }
 })
-
 export default taskNodeSlice.reducer

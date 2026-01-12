@@ -16,7 +16,6 @@ const DocumentInsightsGrid = ({
   documents,
   questions,
   answers,
-  isLoadingAnswers,
   isPageLoading,
   page,
   pageSize,
@@ -283,8 +282,11 @@ const DocumentInsightsGrid = ({
           // const isGenerating = !!isGeneratingCells[cellKey]
           const isCellGenerating = !!isGeneratingCells[cellKey]
           const isDocGenerating = !!isGeneratingCells[docKey]
+          const isGenerating = isCellGenerating || isDocGenerating
 
-          if (isLoadingAnswers || isCellGenerating || isDocGenerating) {
+          // console.log('Rendering cell', { cellKey, isCellGenerating, isDocGenerating, isGenerating })
+
+          if (isGenerating) {
             return (
               <Box
                 sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
@@ -298,12 +300,13 @@ const DocumentInsightsGrid = ({
             <Box
               sx={{
                 width: '100%',
+                height: '100%',
                 padding: '4px 8px',
                 fontSize: '0.875rem',
                 backgroundColor: 'transparent',
                 color: 'inherit',
-                cursor: isLoadingAnswers || isPageLoading ? 'default' : 'pointer',
-                opacity: isLoadingAnswers || isPageLoading ? 0.5 : 1,
+                cursor: isPageLoading ? 'default' : 'pointer',
+                opacity: isPageLoading ? 0.5 : 1,
                 userSelect: 'none',
                 borderRadius: 1,
                 border: '1px solid transparent',
@@ -318,16 +321,16 @@ const DocumentInsightsGrid = ({
                 }
               }}
               onClick={() => {
-                if (!isLoadingAnswers && !isPageLoading) {
-                  if (!answerObj?.answerValue) {
-                    // Trigger generate for this cell only
-                    handleGenerate({ documentsToGenerate: params.row, questionsToGenerate: q })
-                  } else {
-                    openDialog('answerDetail', answerObj)
-                  }
+                if (isPageLoading) return
+
+                if (!answerObj?.answerValue) {
+                  handleGenerate({ documentsToGenerate: params.row, questionsToGenerate: q })
+                } else {
+                  openDialog('answerDetail', answerObj)
                 }
               }}
             >
+              
               {answerFlagEnum(answerObj?.answerFlagEnum, theme)}
               <Tooltip
                 title={!answerObj ? 'Click to generate this answer' : 'Click to see answer details'}
@@ -379,7 +382,6 @@ const DocumentInsightsGrid = ({
   }, [
     sortedQuestions,
     answers,
-    isLoadingAnswers,
     isPageLoading,
     documents,
     selectedDocuments,

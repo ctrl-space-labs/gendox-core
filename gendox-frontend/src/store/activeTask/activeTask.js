@@ -99,8 +99,6 @@ const initialState = {
   selectedTask: null,
   isLoading: false,
   generationState: {
-    isInsightsGeneratingAll: false,
-    isInsightsGeneratingNew: false,
     isInsightsGeneratingCells: {}, // Object: { "docId_questionId": true }
     isDigitizationGenerating: false
   },
@@ -110,22 +108,22 @@ const initialState = {
 const taskSlice = createSlice({
   name: 'task',
   initialState,
-  reducers: {
-    setInsightsGeneratingAll: (state, action) => {
-      state.generationState.isInsightsGeneratingAll = action.payload
-    },
-    setInsightsGeneratingNew: (state, action) => {
-      state.generationState.isInsightsGeneratingNew = action.payload
-    },
+  reducers: {    
     setInsightsGeneratingCells: (state, action) => {
       state.generationState.isInsightsGeneratingCells = {
         ...state.generationState.isInsightsGeneratingCells,
         ...action.payload
       }
     },
+    removeInsightsGeneratingCells: (state, action) => {
+      // action.payload is an array of keys to remove
+      if (Array.isArray(action.payload)) {
+        action.payload.forEach(key => {
+          delete state.generationState.isInsightsGeneratingCells[key]
+        })
+      }
+    },
     clearInsightsGenerationState: state => {
-      state.generationState.isInsightsGeneratingAll = false
-      state.generationState.isInsightsGeneratingNew = false
       state.generationState.isInsightsGeneratingCells = {}
     },
     setDigitizationGenerating: (state, action) => {
@@ -133,7 +131,7 @@ const taskSlice = createSlice({
     },
     clearDigitizationGenerationState: state => {
       state.generationState.isDigitizationGenerating = false
-    }
+    },
   },
   extraReducers: builder => {
     builder
@@ -177,9 +175,8 @@ const taskSlice = createSlice({
 })
 
 export const {
-  setInsightsGeneratingAll,
-  setInsightsGeneratingNew,
   setInsightsGeneratingCells,
+  removeInsightsGeneratingCells,
   clearInsightsGenerationState,
   setDigitizationGenerating,
   clearDigitizationGenerationState

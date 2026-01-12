@@ -16,7 +16,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const dispatch = useDispatch()
   const token = window.localStorage.getItem('accessToken')
   const { organizationId, taskId, projectId } = router.query
-  const { taskNodesDocumentList, taskNodesQuestionList, taskNodesAnswerList, isLoading, isLoadingAnswers } =
+  const { taskNodesDocumentList, taskNodesQuestionList, taskNodesAnswerList, isLoading } =
     useSelector(state => state.activeTaskNode)
 
   const [page, setPage] = useState(0)
@@ -47,9 +47,9 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     [isLoading, taskNodesQuestionList]
   )
 
-  const isAnswersLoading = isLoadingAnswers
 
-  const isPageLoading = isDocumentsLoading || isQuestionsLoading || isAnswersLoading || isPageReloading
+
+  const isPageLoading = isDocumentsLoading || isQuestionsLoading || isPageReloading
 
   // --- Extract normalized lists from Redux ---
   const documents = useMemo(() => {
@@ -233,7 +233,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             questions={questions}
             answers={answers}
             isPageLoading={isPageLoading}
-            isLoadingAnswers={isLoadingAnswers}
             page={page}
             pageSize={pageSize}
             setPage={setPage}

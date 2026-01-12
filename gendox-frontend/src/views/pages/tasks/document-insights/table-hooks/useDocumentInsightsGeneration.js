@@ -20,9 +20,7 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
     state => state.activeTaskNode
   )
 
-  const { isInsightsGeneratingAll, isInsightsGeneratingNew, isInsightsGeneratingCells } = useSelector(
-    state => state.activeTask.generationState
-  )
+  const { isInsightsGeneratingCells } = useSelector(state => state.activeTask.generationState)
 
   const { pollJobByCriteria } = useJobMonitor({
     organizationId,
@@ -59,6 +57,7 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
         answers,
         selectedDocumentIds,
         selectedQuestionIds,
+        forceLoader: reGenerateExistingAnswers
       })
 
       dispatch(setInsightsGeneratingCells(cellsLoading))
@@ -77,11 +76,10 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
 
         // Polling & Feedback
         startGenerationMonitor(taskId, null, 'all', 2000)
-        // TODO this is a hack, remove the as soon as the re-calculate the loaders is been implemented
-        setTimeout(reloadAll, 2000)  // initial reload after 2s
 
         await pollJobByCriteria({
           jobExecutionId,
+          taskId,
           onReload: reloadAll
         })
 
@@ -116,26 +114,25 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
     ]
   )
 
-
   const buildCellsLoadingMap = ({
-                                  documents = [],
-                                  questions = [],
-                                  answers = [],
-                                  selectedDocumentIds = [],
-                                  selectedQuestionIds = [],
-                                }) => {
-    const targetDocIds =
-      selectedDocumentIds.length > 0 ? selectedDocumentIds : documents.map(d => d.id)
-    const targetQuestionIds =
-      selectedQuestionIds.length > 0 ? selectedQuestionIds : questions.map(q => q.id)
+    documents = [],
+    questions = [],
+    answers = [],
+    selectedDocumentIds = [],
+    selectedQuestionIds = [],
+    forceLoader = false
+  }) => {
+    const targetDocIds = selectedDocumentIds.length > 0 ? selectedDocumentIds : documents.map(d => d.id)
+    const targetQuestionIds = selectedQuestionIds.length > 0 ? selectedQuestionIds : questions.map(q => q.id)
 
     const existing = new Set()
-    for (const a of answers || []) {
-      const dId = a?.nodeValue?.nodeDocumentId
-      const qId = a?.nodeValue?.nodeQuestionId
-      if (dId && qId) existing.add(`${dId}_${qId}`)
+    if (!forceLoader) {
+      for (const a of answers || []) {
+        const dId = a?.nodeValue?.nodeDocumentId
+        const qId = a?.nodeValue?.nodeQuestionId
+        if (dId && qId) existing.add(`${dId}_${qId}`)
+      }
     }
-
     const cellsLoading = {}
     for (const dId of targetDocIds) {
       for (const qId of targetQuestionIds) {
