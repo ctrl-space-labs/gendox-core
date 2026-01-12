@@ -111,6 +111,13 @@ public class TaskService {
                     newQuestionValue.setOrder(questionNode.getNodeValue().getOrder());
                     newQuestionValue.setQuestionTitle(questionNode.getNodeValue().getQuestionTitle());
                     newQuestionValue.setMessage(questionNode.getNodeValue().getMessage());
+
+                    if (questionNode.getNodeValue().getDocumentMetadata().getSupportingDocumentIds() != null) {
+                        newQuestionValue.setDocumentMetadata(new TaskDocumentMetadataDTO());
+                        newQuestionValue.getDocumentMetadata().setSupportingDocumentIds(
+                                new ArrayList<>(questionNode.getNodeValue().getDocumentMetadata().getSupportingDocumentIds())
+                        );
+                    }
                 }
                 newQuestionNode.setNodeValue(newQuestionValue);
 
@@ -129,6 +136,14 @@ public class TaskService {
                 newDocumentNode.setNodeType(documentNode.getNodeType());
                 newDocumentNode.setDocumentId(documentNode.getDocumentId());
                 nodesToSave.add(newDocumentNode);
+                if (documentNode.getNodeValue().getDocumentMetadata().getSupportingDocumentIds() != null) {
+                    TaskNodeValueDTO newDocumentValue = new TaskNodeValueDTO();
+                    newDocumentValue.setDocumentMetadata(new TaskDocumentMetadataDTO());
+                    newDocumentValue.getDocumentMetadata().setSupportingDocumentIds(
+                            new ArrayList<>(documentNode.getNodeValue().getDocumentMetadata().getSupportingDocumentIds())
+                    );
+                    newDocumentNode.setNodeValue(newDocumentValue);
+                }
             }
         }
 

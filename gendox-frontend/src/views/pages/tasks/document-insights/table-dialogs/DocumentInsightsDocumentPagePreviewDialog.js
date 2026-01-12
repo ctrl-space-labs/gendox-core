@@ -79,9 +79,7 @@ const DocumentPagePreviewDialog = ({
     return Object.keys(cells).some(key => key.startsWith(prefix) && cells[key] === true)
   })
 
-  // TODO this is not working properly bc of the above selector
-  const isGenerating = isDocGenerating || Object.values(isInsightsGeneratingCells || {}).some(v => v === true)
-
+ 
   useEffect(() => {
     if (activeDocument) {
       dispatch(fetchDocument({ documentId: activeDocument.documentId, token }))
@@ -279,7 +277,7 @@ const DocumentPagePreviewDialog = ({
               {!editMode && (
                 <Tooltip
                   title={
-                    isGenerating
+                    isDocGenerating
                       ? 'Generation in progress...'
                       : !isDocumentInsightsFileTypeSupported(activeDocument?.url)
                       ? 'This file format is not supported for generation'
@@ -294,10 +292,10 @@ const DocumentPagePreviewDialog = ({
                       onClick={handleGenerateClick}
                       sx={{ mr: 1 }}
                       disabled={
-                        !isDocumentInsightsFileTypeSupported(activeDocument?.url) || isGenerating || dialogLoading
+                        !isDocumentInsightsFileTypeSupported(activeDocument?.url) || isDocGenerating || dialogLoading
                       }
                     >
-                      {isGenerating || dialogLoading ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
+                      {isDocGenerating || dialogLoading ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
                     </IconButton>
                   </span>
                 </Tooltip>
@@ -346,7 +344,7 @@ const DocumentPagePreviewDialog = ({
       </AppBar>
 
       {/* Generation Progress Banner */}
-      {(isGenerating || dialogLoading) && (
+      {(isDocGenerating || dialogLoading) && (
         <Box
           sx={{
             backgroundColor: 'primary.main',
@@ -556,9 +554,9 @@ const DocumentPagePreviewDialog = ({
                   py: 6,
                   px: 4,
                   minHeight: fullscreen ? 'calc(100vh - 200px)' : '50vh',
-                  opacity: isGenerating ? 0.6 : 1,
+                  opacity: isDocGenerating ? 0.6 : 1,
                   transition: 'opacity 0.3s ease',
-                  pointerEvents: isGenerating ? 'none' : 'auto'
+                  pointerEvents: isDocGenerating ? 'none' : 'auto'
                 }}
               >
                 <DocumentTextComponent
@@ -572,7 +570,7 @@ const DocumentPagePreviewDialog = ({
               </ResponsiveCardContent>
 
               {/* Subtle loading overlay for content area */}
-              {(isGenerating || dialogLoading) && (
+              {(isDocGenerating || dialogLoading) && (
                 <Box
                   sx={{
                     position: 'absolute',
