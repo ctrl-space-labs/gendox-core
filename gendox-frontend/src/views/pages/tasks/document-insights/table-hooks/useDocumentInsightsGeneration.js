@@ -22,7 +22,7 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
 
   const { isInsightsGeneratingCells } = useSelector(state => state.activeTask.generationState)
 
-  const { pollJobByCriteria } = useJobMonitor({
+  const { pollJobByCriteria, buildCellsLoadingMap } = useJobMonitor({
     organizationId,
     projectId,
     token,
@@ -113,36 +113,6 @@ export default function useGeneration({ setSelectedDocuments, reloadAll, token }
       answers
     ]
   )
-
-  const buildCellsLoadingMap = ({
-    documents = [],
-    questions = [],
-    answers = [],
-    selectedDocumentIds = [],
-    selectedQuestionIds = [],
-    forceLoader = false
-  }) => {
-    const targetDocIds = selectedDocumentIds.length > 0 ? selectedDocumentIds : documents.map(d => d.id)
-    const targetQuestionIds = selectedQuestionIds.length > 0 ? selectedQuestionIds : questions.map(q => q.id)
-
-    const existing = new Set()
-    if (!forceLoader) {
-      for (const a of answers || []) {
-        const dId = a?.nodeValue?.nodeDocumentId
-        const qId = a?.nodeValue?.nodeQuestionId
-        if (dId && qId) existing.add(`${dId}_${qId}`)
-      }
-    }
-    const cellsLoading = {}
-    for (const dId of targetDocIds) {
-      for (const qId of targetQuestionIds) {
-        const key = `${dId}_${qId}`
-        if (!existing.has(key)) cellsLoading[key] = true
-      }
-    }
-
-    return cellsLoading
-  }
 
   return {
     handleGenerate,

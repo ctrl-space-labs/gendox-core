@@ -312,16 +312,19 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
     answers = [],
     selectedDocumentIds = [],
     selectedQuestionIds = [],
+    forceLoader = false
   }) => {
     const targetDocIds = selectedDocumentIds.length > 0 ? selectedDocumentIds : documents.map(d => d.id)
     const targetQuestionIds = selectedQuestionIds.length > 0 ? selectedQuestionIds : questions.map(q => q.id)
 
     const existing = new Set()
+    if (!forceLoader) {
       for (const a of answers || []) {
         const dId = a?.nodeValue?.nodeDocumentId
         const qId = a?.nodeValue?.nodeQuestionId
         if (dId && qId) existing.add(`${dId}_${qId}`)
       }
+    }
 
     const cellsLoading = {}
     for (const dId of targetDocIds) {
@@ -392,6 +395,7 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
     resumeStartedJobs, // for table
     pollJobByCriteria, // for generate flow
     showTimeoutDialog,
-    setShowTimeoutDialog
+    setShowTimeoutDialog,
+    buildCellsLoadingMap
   }
 }
