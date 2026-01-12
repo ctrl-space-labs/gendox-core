@@ -60,8 +60,9 @@
 
                     <#-- USERNAME (Disabled Input - Transparent) -->
                     <div class="${properties.kcFormGroupClass!}">
-                        <label for="username" class="${properties.kcLabelClass!}" style="color: #fff;">${msg("username")}</label>
-
+                        <label for="username" class="${properties.kcLabelClass!}" style="color: #fff; display: block; margin-bottom: 5px;">
+                            <#if !realm.loginWithEmailAllowed>${msg("username")}<#elseif !realm.registrationEmailAsUsername>${msg("usernameOrEmail")}<#else>${msg("email")}</#if>
+                        </label>
                         <div style="position: relative;">
                             <input id="username" class="${properties.kcInputClass!}" name="username" value="${(login.username!'')}"
                                 type="text" readonly autocomplete="username" tabindex="-1"
@@ -69,7 +70,7 @@
 
                             <div style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); z-index: 5;">
                                 <a href="${url.loginRestartFlowUrl}" style="text-decoration: none; color: #00bf8c; font-size: 0.85em; font-weight: 500;">
-                                    Return login
+                                    Change Email
                                 </a>
                             </div>
                         </div>
