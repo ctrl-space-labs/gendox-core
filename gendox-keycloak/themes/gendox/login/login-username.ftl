@@ -39,14 +39,14 @@
                         <img src="${url.resourcesPath}/img/gendoxLogo.png" alt="Logo" style="max-width: 100px;">
                     </div>
                     <div class="title-container">
-                        <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #fff;">Welcome to Gendox! 👋🏻</h1>
+                        <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #fff;">Welcome to Gendox!!! 👋🏻</h1>
                         <p class="subtitle" style="color: #aab2bd; font-size: 14px;">Please sign in to your account and start the adventure</p>
                     </div>
                 </div>
 
                 <#if realm.password>
                     <form id="kc-form-login" onsubmit="login.disabled = true; return true;" action="${url.loginAction}" method="post">
-                       <#-- <#if !usernameHidden??> -->
+                        <#if !usernameHidden??>
                             <div class="${properties.kcFormGroupClass!}" style="margin-bottom: 20px;">
                                 <label for="username" class="${properties.kcLabelClass!}" style="color: #fff; display: block; margin-bottom: 5px;">
                                     <#if !realm.loginWithEmailAllowed>${msg("username")}<#elseif !realm.registrationEmailAsUsername>${msg("usernameOrEmail")}<#else>${msg("email")}</#if>
@@ -65,7 +65,7 @@
                                     </span>
                                 </#if>
                             </div>
-                       <#-- </#if> -->
+                        </#if>
 
                         <div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">
                             <div id="kc-form-options">
