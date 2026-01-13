@@ -130,9 +130,9 @@ services:
           --hostname-strict=false \
           --https-key-store-file="$$KEYSTORE_FILE" \
           --https-key-store-password "${KEYSTORE_PASSWORD}" \
-          --spi-theme-static-max-age=600 \
-          --spi-theme-cache-themes=true \
-          --spi-theme-cache-templates=true
+          --spi-theme-static-max-age=-1 \
+          --spi-theme-cache-themes=false \
+          --spi-theme-cache-templates=false
     networks:
       - gendox_network
     ports:
