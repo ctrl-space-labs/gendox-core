@@ -1,17 +1,16 @@
 <#import "template.ftl" as layout>
 <@layout.registrationLayout displayMessage=!messagesPerField.existsError('username') displayInfo=(realm.password && realm.registrationAllowed && !registrationDisabled??); section>
 
-    <#--================ CUSTOM USERNAME LOGIN FORM ==================-->
     <#if section = "header">
+    <#-- Κενό header -->
 
     <#elseif section = "form">
 
-        <#-- 🔥 CSS FIX: Random styles --->
         <style>
-            /* 1. we hide the default header */
+            /* Hide default header */
             header { display: none !important; }
 
-            /* 2. Set background color for the whole page */
+            /* Input Styles */
             input[type="text"], input[type="password"] {
                 background-color: transparent !important;
                 border: 1px solid #6b7280 !important;
@@ -20,11 +19,17 @@
                 height: 42px !important;
             }
 
-            /* 3. Set focus styles */
+            /* Focus Styles */
             input[type="text"]:focus, input[type="password"]:focus {
                 border-color: #00d68f !important;
                 background-color: rgba(255,255,255,0.05) !important;
                 outline: none !important;
+            }
+
+            /* Error Styles */
+            input.pf-m-error, input[aria-invalid="true"] {
+                border-color: #ff6b6b !important;
+                color: #ff6b6b !important;
             }
 
             label { color: #ddd !important; }
@@ -33,7 +38,7 @@
         <div id="kc-form">
             <div id="kc-form-wrapper">
 
-                <#-- CUSTOM HEADER (LOGO + TITLE) -->
+                <#-- CUSTOM HEADER -->
                 <div style="text-align: center; margin-bottom: 30px;">
                     <div class="logo-container" style="margin-bottom: 20px;">
                         <img src="${url.resourcesPath}/img/gendoxLogo.png" alt="Logo" style="max-width: 100px;">
@@ -54,7 +59,8 @@
 
                                 <input tabindex="1" id="username"
                                      aria-invalid="<#if messagesPerField.existsError('username')>true</#if>"
-                                     class="${properties.kcInputClass!}" name="username"
+                                     class="${properties.kcInputClass!} <#if messagesPerField.existsError('username')>pf-m-error</#if>"
+                                     name="username"
                                      value="${(login.username!'')}"
                                      type="text" autofocus autocomplete="username"
                                      style="background-color: transparent; color: #fff; border: 1px solid #444;" />
@@ -88,6 +94,14 @@
                                    name="login" id="kc-login" type="submit" value="NEXT"
                                    style="background-color: #00d68f; border: none; color: #ffffff; font-weight: bold; width: 100%; padding: 12px; border-radius: 5px; cursor: pointer;"/>
                         </div>
+
+                        <#-- 🔥 ΝΕΟ ΚΟΥΜΠΙ: START OVER -->
+                        <div style="text-align: center; margin-top: 15px;">
+                            <a href="${url.loginRestartFlowUrl}" style="color: #aab2bd; text-decoration: none; font-size: 0.9em; cursor: pointer;" onmouseover="this.style.color='#00d68f'" onmouseout="this.style.color='#aab2bd'">
+                                ↻ Start Over
+                            </a>
+                        </div>
+
                     </form>
                 </#if>
             </div>
