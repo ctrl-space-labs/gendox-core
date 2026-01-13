@@ -46,7 +46,7 @@
 
                 <#if realm.password>
                     <form id="kc-form-login" onsubmit="login.disabled = true; return true;" action="${url.loginAction}" method="post">
-                        <#if !usernameHidden??>
+                       <#-- <#if !usernameHidden??> -->
                             <div class="${properties.kcFormGroupClass!}" style="margin-bottom: 20px;">
                                 <label for="username" class="${properties.kcLabelClass!}" style="color: #fff; display: block; margin-bottom: 5px;">
                                     <#if !realm.loginWithEmailAllowed>${msg("username")}<#elseif !realm.registrationEmailAsUsername>${msg("usernameOrEmail")}<#else>${msg("email")}</#if>
@@ -65,7 +65,7 @@
                                     </span>
                                 </#if>
                             </div>
-                        </#if>
+                       <#-- </#if> -->
 
                         <div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">
                             <div id="kc-form-options">
