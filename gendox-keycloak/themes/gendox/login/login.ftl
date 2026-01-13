@@ -10,7 +10,7 @@
                           method="post">
 
                         <!-- Username Input -->
-                        <#if !usernameHidden??>
+                        <!--   <#if !usernameHidden??> -->
                             <div class="${properties.kcFormGroupClass!}">
                                 <label for="username"
                                        class="${properties.kcLabelClass!}"><#if !realm.loginWithEmailAllowed>${msg("username")}<#elseif !realm.registrationEmailAsUsername>${msg("usernameOrEmail")}<#else>${msg("email")}</#if></label>
@@ -27,7 +27,7 @@
                                 </#if>
 
                             </div>
-                        </#if>
+                          <!--  </#if> -->
 
 
                         <!-- Password Input -->
