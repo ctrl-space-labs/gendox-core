@@ -2,7 +2,7 @@
 <@layout.registrationLayout displayMessage=!messagesPerField.existsError('username') displayInfo=(realm.password && realm.registrationAllowed && !registrationDisabled??); section>
 
     <#if section = "header">
-    <#-- Κενό header -->
+    <#-- Κενό Header -->
 
     <#elseif section = "form">
 
@@ -26,10 +26,18 @@
                 outline: none !important;
             }
 
-            /* Error Styles */
+            /* Error Styles (Red Border) */
             input.pf-m-error, input[aria-invalid="true"] {
                 border-color: #ff6b6b !important;
                 color: #ff6b6b !important;
+            }
+
+            /* Error Message Color */
+            #input-error-username {
+                color: #ff6b6b;
+                font-size: 0.9em;
+                margin-top: 5px;
+                display: block;
             }
 
             label { color: #ddd !important; }
@@ -44,7 +52,7 @@
                         <img src="${url.resourcesPath}/img/gendoxLogo.png" alt="Logo" style="max-width: 100px;">
                     </div>
                     <div class="title-container">
-                        <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #fff;">Welcome to Gendox!!! 👋🏻</h1>
+                        <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #fff;">Welcome to Gendox! 👋🏻</h1>
                         <p class="subtitle" style="color: #aab2bd; font-size: 14px;">Please sign in to your account and start the adventure</p>
                     </div>
                 </div>
@@ -65,8 +73,10 @@
                                      type="text" autofocus autocomplete="username"
                                      style="background-color: transparent; color: #fff; border: 1px solid #444;" />
 
+                                <#-- ERROR MESSAGE (Εμφανίζεται αν υπάρχει λάθος) -->
                                 <#if messagesPerField.existsError('username')>
-                                    <span id="input-error-username" class="${properties.kcInputErrorMessageClass!}" aria-live="polite" style="color: #ff6b6b; font-size: 0.9em; margin-top: 5px; display: block;">
+                                    <span id="input-error-username" class="${properties.kcInputErrorMessageClass!}" aria-live="polite">
+                                        <#-- Εδώ μπορείς να αλλάξεις το μήνυμα αν θες κάτι συγκεκριμένο, αλλιώς παίρνει του Keycloak -->
                                         ${kcSanitize(messagesPerField.get('username'))?no_esc}
                                     </span>
                                 </#if>
@@ -89,17 +99,23 @@
                             </div>
                         </div>
 
+                        <#-- 🔥 DYNAMIC BUTTON LOGIC 🔥 -->
                         <div id="kc-form-buttons" class="${properties.kcFormGroupClass!}" style="margin-top: 25px;">
-                            <input tabindex="4" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}"
-                                   name="login" id="kc-login" type="submit" value="NEXT"
-                                   style="background-color: #00d68f; border: none; color: #ffffff; font-weight: bold; width: 100%; padding: 12px; border-radius: 5px; cursor: pointer;"/>
-                        </div>
 
-                        <#-- 🔥 ΝΕΟ ΚΟΥΜΠΙ: START OVER -->
-                        <div style="text-align: center; margin-top: 15px;">
-                            <a href="${url.loginRestartFlowUrl}" style="color: #aab2bd; text-decoration: none; font-size: 0.9em; cursor: pointer;" onmouseover="this.style.color='#00d68f'" onmouseout="this.style.color='#aab2bd'">
-                                ↻ Start Over
-                            </a>
+                            <#if messagesPerField.existsError('username')>
+                                <#-- ΚΑΤΑΣΤΑΣΗ ERROR: Κρύβουμε το NEXT, δείχνουμε το TRY AGAIN -->
+                                <a href="${url.loginRestartFlowUrl}"
+                                   class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}"
+                                   style="background-color: #00d68f; border: none; color: #ffffff; font-weight: bold; width: 100%; padding: 12px; border-radius: 5px; cursor: pointer; text-decoration: none; display: block; text-align: center;">
+                                    TRY AGAIN
+                                </a>
+                            <#else>
+                                <#-- ΚΑΤΑΣΤΑΣΗ NORMAL: Δείχνουμε το NEXT -->
+                                <input tabindex="4" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}"
+                                       name="login" id="kc-login" type="submit" value="NEXT"
+                                       style="background-color: #00d68f; border: none; color: #ffffff; font-weight: bold; width: 100%; padding: 12px; border-radius: 5px; cursor: pointer;"/>
+                            </#if>
+
                         </div>
 
                     </form>
