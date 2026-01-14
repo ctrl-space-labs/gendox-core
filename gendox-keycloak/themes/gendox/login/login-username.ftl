@@ -2,7 +2,7 @@
 <@layout.registrationLayout displayMessage=!messagesPerField.existsError('username') displayInfo=(realm.password && realm.registrationAllowed && !registrationDisabled??); section>
 
     <#if section = "header">
-    <#-- Κενό Header -->
+        <#-- Empty Header -->
 
     <#elseif section = "form">
 
@@ -59,29 +59,52 @@
 
                 <#if realm.password>
                     <form id="kc-form-login" onsubmit="login.disabled = true; return true;" action="${url.loginAction}" method="post">
-                        <#if !usernameHidden??>
-                            <div class="${properties.kcFormGroupClass!}" style="margin-bottom: 20px;">
-                                <label for="username" class="${properties.kcLabelClass!}" style="color: #fff; display: block; margin-bottom: 5px;">
-                                    <#if !realm.loginWithEmailAllowed>${msg("username")}<#elseif !realm.registrationEmailAsUsername>${msg("usernameOrEmail")}<#else>${msg("email")}</#if>
-                                </label>
 
+                        <#-- USERNAME INPUT (always rendered; readonly when usernameHidden??) -->
+                        <div class="${properties.kcFormGroupClass!}" style="margin-bottom: 20px;">
+                            <label for="username" class="${properties.kcLabelClass!}" style="color: #fff; display: block; margin-bottom: 5px;">
+                                <#if !realm.loginWithEmailAllowed>
+                                    ${msg("username")}
+                                <#elseif !realm.registrationEmailAsUsername>
+                                    ${msg("usernameOrEmail")}
+                                <#else>
+                                    ${msg("email")}
+                                </#if>
+                            </label>
+
+                            <div style="position: relative;">
                                 <input tabindex="1" id="username"
-                                     aria-invalid="<#if messagesPerField.existsError('username')>true</#if>"
-                                     class="${properties.kcInputClass!} <#if messagesPerField.existsError('username')>pf-m-error</#if>"
-                                     name="username"
-                                     value="${(login.username!'')}"
-                                     type="text" autofocus autocomplete="username"
-                                     style="background-color: transparent; color: #fff; border: 1px solid #444;" />
+                                       aria-invalid="<#if messagesPerField.existsError('username','password')>true</#if>"
+                                       class="${properties.kcInputClass!} <#if messagesPerField.existsError('username','password')>pf-m-error</#if>"
+                                       name="username"
+                                       value="${(login.username!'')}"
+                                       type="text" autofocus autocomplete="username"
+                                       <#if usernameHidden??>readonly="readonly" tabindex="-1"</#if>
+                                       style="background-color: transparent; color: #fff; border: 1px solid #444;
+                                              <#if usernameHidden??>opacity: 0.7; padding-right: 110px; pointer-events: none;</#if>" />
 
-                                <#-- ERROR MESSAGE (Εμφανίζεται αν υπάρχει λάθος) -->
-                                <#if messagesPerField.existsError('username')>
-                                    <span id="input-error-username" class="${properties.kcInputErrorMessageClass!}" aria-live="polite">
-                                        <#-- Εδώ μπορείς να αλλάξεις το μήνυμα αν θες κάτι συγκεκριμένο, αλλιώς παίρνει του Keycloak -->
-                                        ${kcSanitize(messagesPerField.get('username'))?no_esc}
-                                    </span>
+                                <#-- When username is locked by Keycloak, allow user to restart and change email -->
+                                <#if usernameHidden??>
+                                    <div style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); z-index: 5;">
+                                        <a href="${url.loginRestartFlowUrl}"
+                                           style="text-decoration: none; color: #00bf8c; font-size: 0.85em; font-weight: 500;">
+                                            Change email
+                                        </a>
+                                    </div>
                                 </#if>
                             </div>
-                        </#if>
+
+                            <#-- ERROR MESSAGE (shows username OR username/password errors) -->
+                            <#if messagesPerField.existsError('username','password')>
+                                <span id="input-error-username" class="${properties.kcInputErrorMessageClass!}" aria-live="polite">
+                                    ${kcSanitize(messagesPerField.getFirstError('username','password'))?no_esc}
+                                </span>
+                            <#elseif messagesPerField.existsError('username')>
+                                <span id="input-error-username" class="${properties.kcInputErrorMessageClass!}" aria-live="polite">
+                                    ${kcSanitize(messagesPerField.get('username'))?no_esc}
+                                </span>
+                            </#if>
+                        </div>
 
                         <div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">
                             <div id="kc-form-options">
@@ -102,16 +125,16 @@
                         <#-- 🔥 DYNAMIC BUTTON LOGIC 🔥 -->
                         <div id="kc-form-buttons" class="${properties.kcFormGroupClass!}" style="margin-top: 25px;">
 
-                            <#if messagesPerField.existsError('username')>
-                                <#-- ΚΑΤΑΣΤΑΣΗ ERROR: Κρύβουμε το NEXT, δείχνουμε το TRY AGAIN -->
+                            <#-- If Keycloak is returning to username step with an error, show TRY AGAIN -->
+                            <#if messagesPerField.existsError('username','password') || messagesPerField.existsError('username')>
                                 <a href="${url.loginRestartFlowUrl}"
                                    class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}"
                                    style="background-color: #00d68f; border: none; color: #ffffff; font-weight: bold; width: 100%; padding: 12px; border-radius: 5px; cursor: pointer; text-decoration: none; display: block; text-align: center;">
                                     TRY AGAIN
                                 </a>
                             <#else>
-                                <#-- ΚΑΤΑΣΤΑΣΗ NORMAL: Δείχνουμε το NEXT -->
-                                <input tabindex="4" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}"
+                                <input tabindex="4"
+                                       class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}"
                                        name="login" id="kc-login" type="submit" value="NEXT"
                                        style="background-color: #00d68f; border: none; color: #ffffff; font-weight: bold; width: 100%; padding: 12px; border-radius: 5px; cursor: pointer;"/>
                             </#if>
@@ -131,25 +154,8 @@
         </#if>
 
     <#elseif section = "socialProviders" >
-        <#if realm.password && social?? && social.providers?has_content>
-            <div id="kc-social-providers" class="${properties.kcFormSocialAccountSectionClass!}">
-                <hr style="border-color: #444;"/>
-                <h4 style="color: #aab2bd;">${msg("identity-provider-login-label")}</h4>
-
-                <ul class="${properties.kcFormSocialAccountListClass!} <#if social.providers?size gt 3>${properties.kcFormSocialAccountListGridClass!}</#if>">
-                    <#list social.providers as p>
-                        <a id="social-${p.alias}" class="${properties.kcFormSocialAccountListButtonClass!} <#if social.providers?size gt 3>${properties.kcFormSocialAccountGridItem!}</#if>"
-                                type="button" href="${p.loginUrl}">
-                            <#if p.iconClasses?has_content>
-                                <i class="${properties.kcCommonLogoIdP!} ${p.iconClasses!}" aria-hidden="true"></i>
-                                <span class="${properties.kcFormSocialAccountNameClass!} kc-social-icon-text">${p.displayName!}</span>
-                            <#else>
-                                <span class="${properties.kcFormSocialAccountNameClass!}">${p.displayName!}</span>
-                            </#if>
-                        </a>
-                    </#list>
-                </ul>
-            </div>
-        </#if>
+        <#-- If you want to hide IdP buttons completely, keep this section empty. -->
+        <#-- Otherwise, restore your previous socialProviders block. -->
     </#if>
+
 </@layout.registrationLayout>

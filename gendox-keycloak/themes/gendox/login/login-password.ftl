@@ -1,5 +1,5 @@
 <#import "template.ftl" as layout>
-<@layout.registrationLayout displayMessage=!messagesPerField.existsError('password') displayInfo=false; section>
+<@layout.registrationLayout displayMessage=!messagesPerField.existsError('username','password') displayInfo=false; section>
 
     <#if section = "show-username">
         <style>
@@ -81,7 +81,7 @@
                         <label for="password" class="${properties.kcLabelClass!}" style="color: #fff;">${msg("password")}</label>
 
                         <div class="${properties.kcInputGroup!}" style="position: relative;">
-                            <input tabindex="2" id="password" class="${properties.kcInputClass!} <#if messagesPerField.existsError('password')>pf-m-error</#if>"
+                            <input tabindex="2" id="password" class="${properties.kcInputClass!} <#if messagesPerField.existsError('username','password')>pf-m-error</#if>"
                                    name="password" type="password" autocomplete="current-password" autofocus
                                    style="background-color: transparent; color: #fff; border: 1px solid #444;" />
 
@@ -96,7 +96,7 @@
                             </button>
                         </div>
 
-                        <#if messagesPerField.existsError('password')>
+                        <#if messagesPerField.existsError('username','password')>
                             <span id="input-error-password" class="${properties.kcInputErrorMessageClass!}" aria-live="polite" style="color: #ff6b6b;">
                                 ${kcSanitize(messagesPerField.getFirstError('password'))?no_esc}
                             </span>
