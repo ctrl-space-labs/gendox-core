@@ -287,6 +287,17 @@ public class DocumentController {
         documentService.deleteDocument(documentId, projectId);
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @DeleteMapping("/organizations/{organizationId}/projects/{projectId}/documents")
+    @Operation(summary = "Delete documents by IDs",
+            description = "Delete documents by ids. " +
+                    "This operation permanently removes the documents and their associated sections and metadata.")
+    public void deleteDocuments(@RequestParam List<UUID> documentIds,
+                                @PathVariable UUID projectId) throws GendoxException {
+        documentService.deleteAllDocumentInstances(documentIds);
+    }
+
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedDocumentIdFromPathVariable')")
     @DeleteMapping("/documents/{documentId}/sections/{sectionId}")
@@ -359,7 +370,7 @@ public class DocumentController {
                 .documentInstanceIds(List.of(String.valueOf(documentInstance.getId())))
                 .projectId(projectId.toString())
                 .build();
-        queueProducerService.convertAndSend("jobs."+documentSplitterJobName, documentCriteria, Map.of());
+        queueProducerService.convertAndSend("jobs." + documentSplitterJobName, documentCriteria, Map.of());
 
         return ResponseEntity.ok(documentInstance);
     }
