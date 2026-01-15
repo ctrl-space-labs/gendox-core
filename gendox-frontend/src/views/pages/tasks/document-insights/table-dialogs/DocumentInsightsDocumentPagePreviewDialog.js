@@ -79,7 +79,7 @@ const DocumentPagePreviewDialog = ({
     return Object.keys(cells).some(key => key.startsWith(prefix) && cells[key] === true)
   })
 
- 
+
   useEffect(() => {
     if (activeDocument) {
       dispatch(fetchDocument({ documentId: activeDocument.documentId, token }))
@@ -515,7 +515,7 @@ const DocumentPagePreviewDialog = ({
                         <Button
                           variant='outlined'
                           size='small'
-                          href={`http://localhost:3000/gendox/document-instance/?organizationId=${organizationId}&documentId=${doc.id}&projectId=${projectId}`}
+                          href={`/gendox/document-instance/?organizationId=${organizationId}&documentId=${doc.id}&projectId=${projectId}`}
                           target='_blank'
                           sx={{ textTransform: 'none' }}
                         >

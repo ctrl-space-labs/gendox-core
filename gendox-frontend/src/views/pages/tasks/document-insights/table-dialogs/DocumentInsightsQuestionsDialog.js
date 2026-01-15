@@ -621,7 +621,7 @@ const QuestionsDialog = ({
                           <Button
                             variant='outlined'
                             size='small'
-                            href={`http://localhost:3000/gendox/document-instance/?organizationId=${organizationId}&documentId=${doc.id}&projectId=${projectId}`}
+                            href={`/gendox/document-instance/?organizationId=${organizationId}&documentId=${doc.id}&projectId=${projectId}`}
                             target='_blank'
                             sx={{ textTransform: 'none' }}
                           >
