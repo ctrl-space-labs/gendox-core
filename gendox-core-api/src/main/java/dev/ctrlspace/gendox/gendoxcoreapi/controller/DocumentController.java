@@ -277,7 +277,8 @@ public class DocumentController {
 
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
-            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedDocumentIdFromPathVariable')")
     @DeleteMapping("/organizations/{organizationId}/projects/{projectId}/documents/{documentId}")
     @Operation(summary = "Delete document by ID",
             description = "Delete an existing document by specifying its unique ID. " +
@@ -288,7 +289,8 @@ public class DocumentController {
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
-            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable') " +
+            "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedDocumentIdsFromRequestParams')")
     @DeleteMapping("/organizations/{organizationId}/projects/{projectId}/documents")
     @Operation(summary = "Delete documents by IDs",
             description = "Delete documents by ids. " +

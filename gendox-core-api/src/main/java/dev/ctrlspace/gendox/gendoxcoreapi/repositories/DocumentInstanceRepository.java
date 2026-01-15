@@ -60,7 +60,13 @@ public interface DocumentInstanceRepository extends JpaRepository<DocumentInstan
             "WHERE di.id = :documentId AND pd.project_id IN (:projectIds)")
     boolean existsByDocumentIdAndProjectIds(@Param("documentId") UUID documentId, @Param("projectIds") List<UUID> projectIds);
 
-
+    @Query(value = """
+                SELECT (COUNT(DISTINCT pd.document_id) = cardinality(CAST(:documentIds AS uuid[]))) AS all_belong
+                FROM gendox_core.project_documents pd
+                WHERE pd.document_id = ANY(CAST(:documentIds AS uuid[]))
+                  AND pd.project_id  = ANY(CAST(:projectIds  AS uuid[]))
+            """, nativeQuery = true)
+    boolean areAllDocumentIdsInAnyProject(@Param("documentIds") UUID[] documentIds, @Param("projectIds")  UUID[] projectIds);
 
 
     @Modifying
