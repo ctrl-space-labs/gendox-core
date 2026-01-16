@@ -6,7 +6,7 @@
 
     <groupId>groupId</groupId>
     <artifactId>gendox-core</artifactId>
-    <version>0.10.0</version>
+    <version>0.10.1</version>
 
     <properties>
         <maven.compiler.source>25</maven.compiler.source>
