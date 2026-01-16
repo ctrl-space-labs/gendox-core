@@ -98,13 +98,40 @@ const initialState = {
   projectTasks: [],
   selectedTask: null,
   isLoading: false,
+  generationState: {
+    isInsightsGeneratingCells: {}, // Object: { "docId_questionId": true }
+    isDigitizationGenerating: false
+  },
   error: null
 }
 
 const taskSlice = createSlice({
   name: 'task',
   initialState,
-  reducers: {},
+  reducers: {
+    setInsightsGeneratingCells: (state, action) => {
+      state.generationState.isInsightsGeneratingCells = {
+        ...action.payload
+      }
+    },
+    removeInsightsGeneratingCells: (state, action) => {
+      // action.payload is an array of keys to remove
+      if (Array.isArray(action.payload)) {
+        action.payload.forEach(key => {
+          delete state.generationState.isInsightsGeneratingCells[key]
+        })
+      }
+    },
+    clearInsightsGenerationState: state => {
+      state.generationState.isInsightsGeneratingCells = {}
+    },
+    setDigitizationGenerating: (state, action) => {
+      state.generationState.isDigitizationGenerating = action.payload
+    },
+    clearDigitizationGenerationState: state => {
+      state.generationState.isDigitizationGenerating = false
+    },
+  },
   extraReducers: builder => {
     builder
       .addCase(createTask.pending, state => {
@@ -145,5 +172,13 @@ const taskSlice = createSlice({
       })
   }
 })
+
+export const {
+  setInsightsGeneratingCells,
+  removeInsightsGeneratingCells,
+  clearInsightsGenerationState,
+  setDigitizationGenerating,
+  clearDigitizationGenerationState
+} = taskSlice.actions
 
 export default taskSlice.reducer

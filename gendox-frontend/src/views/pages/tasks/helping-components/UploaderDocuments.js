@@ -19,11 +19,11 @@ import documentService from 'src/gendox-sdk/documentService'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { fetchTaskNodesByCriteria } from 'src/store/activeTaskNode/activeTaskNode'
 import taskService from 'src/gendox-sdk/taskService'
-import {
-  isDocumentDigitizationFileTypeSupported,
-  DOCUMENT_DIGITIZATION_SUPPORTED_MIME_TYPES,
-  getDocumentDigitizationUnsupportedFormatMessage
-} from 'src/utils/fileFormats'
+import { 
+  isFileTypeSupported, 
+  getSupportedMimeTypes, 
+  getUnsupportedFormatMessage 
+} from 'src/utils/tasks/fileFormats'
 
 // Styled containers using rem units
 const ModalWrapper = styled(Box)(({ theme }) => ({
@@ -123,7 +123,7 @@ const FileItem = ({ file, onDelete }) => {
   )
 }
 
-const UploaderDocuments = ({ closeUploader, taskId, onClose, onUploadSuccess, mode = 'main' }) => {
+const UploaderDocuments = ({ closeUploader, taskId, onClose, onUploadSuccess, mode, taskType }) => {
   const router = useRouter()
   const dispatch = useDispatch()
   const { organizationId, projectId } = router.query
@@ -147,12 +147,13 @@ const UploaderDocuments = ({ closeUploader, taskId, onClose, onUploadSuccess, mo
     getInputProps,
     open: triggerFileSelect
   } = useDropzone({
-    onDrop: (acceptedFiles, rejectedFiles) => {
-      const supportedFiles = acceptedFiles.filter(file => isDocumentDigitizationFileTypeSupported(file.name))
-      const unsupportedFiles = acceptedFiles.filter(file => !isDocumentDigitizationFileTypeSupported(file.name))
+    accept: getSupportedMimeTypes(taskType),
+    onDrop: (acceptedFiles) => {
+      const supportedFiles = acceptedFiles.filter(file => isFileTypeSupported(file.name, taskType))
+      const unsupportedFiles = acceptedFiles.filter(file => !isFileTypeSupported(file.name, taskType))
 
       if (unsupportedFiles.length > 0) {
-        setErrorMessage(getDocumentDigitizationUnsupportedFormatMessage(unsupportedFiles))
+        setErrorMessage(getUnsupportedFormatMessage(unsupportedFiles, taskType))
       }
 
       if (supportedFiles.length > 0) {
@@ -165,8 +166,7 @@ const UploaderDocuments = ({ closeUploader, taskId, onClose, onUploadSuccess, mo
         setFileQueue(prev => [...prev, ...enrichedFiles])
         setErrorMessage('') // Clear any previous error
       }
-    },
-    accept: DOCUMENT_DIGITIZATION_SUPPORTED_MIME_TYPES,
+    },    
     noClick: true,
     noKeyboard: true,
     multiple: true

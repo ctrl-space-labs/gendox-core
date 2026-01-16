@@ -61,7 +61,7 @@ public class TaskNodeService {
             int nextOrder = (maxOrder != null ? maxOrder : 0) + 1;
             taskNode.getNodeValue().setOrder(nextOrder);
         }
-        return taskNodeRepository.save(taskNode);
+        return taskNodeRepository.saveAndFlush(taskNode);
     }
 
     @Transactional
@@ -86,6 +86,11 @@ public class TaskNodeService {
         TaskNode existing = taskNodeRepository.findById(taskNodeDTO.getId())
                 .orElseThrow(() -> new GendoxException("TASK_NODE_NOT_FOUND", "Node not found", HttpStatus.NOT_FOUND));
         logger.info("Updating task node: {} with data: {}", existing.getId(), taskNodeDTO);
+
+        // check for Answer nodes to delete if document insights task questions or documents changed
+        if (TaskTypeConstants.DOCUMENT_INSIGHTS.equalsIgnoreCase(task.getTaskType().getName())) {
+            deleteRelatedAnswerNodes(existing, taskNodeDTO);
+        }
 
         // ---- LEVEL 1: Primitive attributes -----
         if (taskNodeDTO.getParentNodeId() != null) {
@@ -171,11 +176,6 @@ public class TaskNodeService {
 
                 }
             }
-        }
-
-        // check for Answer nodes to delete if document insights task questions or documents changed
-        if (TaskTypeConstants.DOCUMENT_INSIGHTS.equalsIgnoreCase(task.getTaskType().getName())) {
-            deleteRelatedAnswerNodes(existing, taskNodeDTO);
         }
 
         return taskNodeRepository.save(existing);
@@ -283,7 +283,9 @@ public class TaskNodeService {
 
     public Optional<TaskNode> findAnswerNodeByDocumentAndQuestionOptional(UUID taskId, UUID documentNodeId, UUID questionNodeId) {
         logger.info("Fetching answer node for task: {}, document: {}, question: {}", taskId, documentNodeId, questionNodeId);
-        return taskNodeRepository.findAnswerNodeByDocumentAndQuestion(taskId, documentNodeId, questionNodeId);
+        return taskNodeRepository.findAnswerNodesByDocumentIdsAndQuestionIds(taskId, List.of(documentNodeId), List.of(questionNodeId), Pageable.unpaged())
+                .stream()
+                .findFirst();
     }
 
     public Page<TaskNode> findAnswerNodesBatch(UUID taskId,
@@ -306,7 +308,6 @@ public class TaskNodeService {
         if (taskNodeIds == null || taskNodeIds.isEmpty()) {
             return;
         }
-//        List<TaskNode> nodesToDelete = taskNodeRepository.findAllById(taskNodeIds);
         taskNodeRepository.deleteAllByIds(taskNodeIds);
     }
 
@@ -389,6 +390,10 @@ public class TaskNodeService {
         TaskNodeValueDTO incomingValue = taskNodeDTO.getNodeValue();
         TaskDocumentMetadataDTO incomingMetadata = incomingValue.getDocumentMetadata();
 
+        // Handle nulls for existing values
+        TaskNodeValueDTO existingValue = existing.getNodeValue() != null ? existing.getNodeValue() : new TaskNodeValueDTO();
+        TaskDocumentMetadataDTO existingMetadata = existingValue.getDocumentMetadata() != null ? existingValue.getDocumentMetadata() : new TaskDocumentMetadataDTO();
+
 
         TaskNodeCriteria.TaskNodeCriteriaBuilder criteriaBuilder = TaskNodeCriteria.builder()
                 .taskId(existing.getTaskId())
@@ -398,10 +403,16 @@ public class TaskNodeService {
 
         // Check for QUESTION node changes
         if (TaskNodeTypeConstants.QUESTION.equals(existing.getNodeType().getName())) {
-            boolean messageChanged = incomingValue.getMessage() != null;
-            boolean supportingDocsChanged = incomingMetadata.getSupportingDocumentIds() != null;
+
+
+            boolean messageChanged = incomingValue.getMessage() != null
+                    && !incomingValue.getMessage().equals(existingValue.getMessage());
+
+
+            boolean supportingDocsChanged = isSupportingDocsChanged(incomingMetadata, existingMetadata);
 
             if (messageChanged || supportingDocsChanged) {
+                logger.info("Detected change in Question Message or Supporting Docs. MessageChanged: {}, DocsChanged: {}", messageChanged, supportingDocsChanged);
                 criteriaBuilder.questionNodeIds(List.of(existing.getId()));
                 shouldSearch = true;
             }
@@ -409,8 +420,11 @@ public class TaskNodeService {
 
         // Check for DOCUMENT node changes
         if (TaskNodeTypeConstants.DOCUMENT.equals(existing.getNodeType().getName())) {
-            boolean supportingDocsChanged = incomingMetadata.getSupportingDocumentIds() != null;
-            boolean promptChanged = incomingMetadata.getPrompt() != null;
+
+            boolean supportingDocsChanged = isSupportingDocsChanged(incomingMetadata, existingMetadata);
+
+            boolean promptChanged = incomingMetadata.getPrompt() != null
+                    && !incomingMetadata.getPrompt().equals(existingMetadata.getPrompt());
 
             if (supportingDocsChanged || promptChanged) {
                 criteriaBuilder.documentNodeIds(List.of(existing.getId()));
@@ -430,6 +444,18 @@ public class TaskNodeService {
                     answerNodes.getTotalElements(), existing.getId());
             deleteAnswerTaskNodes(answerNodes);
         }
+    }
+
+    private static boolean isSupportingDocsChanged(TaskDocumentMetadataDTO incomingMetadata, TaskDocumentMetadataDTO existingMetadata) {
+        Set<UUID> incomingDocsSet = incomingMetadata.getSupportingDocumentIds() != null
+                ? new HashSet<>(incomingMetadata.getSupportingDocumentIds())
+                : new HashSet<>();
+        Set<UUID> existingDocsSet = existingMetadata.getSupportingDocumentIds() != null
+                ? new HashSet<>(existingMetadata.getSupportingDocumentIds())
+                : new HashSet<>();
+
+        return incomingMetadata.getSupportingDocumentIds() != null
+                && !incomingDocsSet.equals(existingDocsSet);
     }
 
 

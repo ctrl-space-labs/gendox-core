@@ -284,6 +284,17 @@ const getAnswerTaskNodes = async (organizationId, projectId, taskId, answerTaskN
   )
 }
 
+/**
+ * Get Answer Task Nodes
+ * @param organizationId
+ * @param  projectId
+ * @param taskId
+ * @param criteria
+ * @param token
+ * @param page
+ * @param size
+ * @returns {Promise<axios.AxiosResponse<void>>}
+ */
 const executeTaskByType = async (organizationId, projectId, taskId, criteria, token) => {
   return axios.post(apiRequests.executeTaskByType(organizationId, projectId, taskId), criteria, {
     headers: {

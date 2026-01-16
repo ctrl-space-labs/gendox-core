@@ -2,15 +2,10 @@ version: '3'
 
 services:
   gendox-database:
-    build:
-      context: ../../database
-      dockerfile: Dockerfile
-    image: gendox-database:latest
+    image: ctrlspacelabs/gendox-database:latest
     container_name: gendox-database
-#    command: -c config_file=/etc/postgresql.conf
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-#      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf  # Doen't work, update them using queries
+      - postgres-data:/var/lib/postgresql
     environment:
       POSTGRES_DB: ${DATABASE_NAME}
       POSTGRES_USER: ${DATABASE_USERNAME}
@@ -23,26 +18,85 @@ services:
       - "${DATABASE_PORT}:5432"
     healthcheck:
       test: psql -h localhost -p 5432 -U $DATABASE_USERNAME -d $DATABASE_NAME -t -c "SELECT * from gendox_core.flyway_schema_history" | grep . || exit 1
-      interval: 40s
+      interval: 10s
       timeout: 30s
       retries: 30
-      start_period: 60s
+      start_period: 15s
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------
+  # service that builds a custom truststore for gendox-core-api that
+  # includes self-signed certificate from keycloak
+  # -------------------------------------------------------------------
+  gendox-truststore-init:
+    image: eclipse-temurin:25-jdk
+    container_name: gendox-truststore-init
+    environment:
+      - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
+    volumes:
+      # Share Keycloak's keystore volume (read-only)
+      - keycloak-data:/opt/keycloak/conf:ro
+      # Custom truststore volume that will be used by gendox-core-api
+      - gendox-truststore:/truststore
+    command:
+      - /bin/bash
+      - -c
+      - |
+        set -e
+
+        KEYSTORE_FILE=/opt/keycloak/conf/server.keystore
+        TRUSTSTORE_DIR=/truststore
+        TRUSTSTORE_FILE=$$TRUSTSTORE_DIR/cacerts
+        KEYCLOAK_CERT=$$TRUSTSTORE_DIR/keycloak.pem
+
+        echo "Waiting for Keycloak keystore at $$KEYSTORE_FILE..."
+        until [ -f "$$KEYSTORE_FILE" ]; do
+          echo "Keycloak keystore not found yet, retrying in 5s..."
+          sleep 5
+        done
+
+        echo "Exporting certificate from Keycloak keystore..."
+        keytool -exportcert \
+          -rfc \
+          -alias server \
+          -keystore "$$KEYSTORE_FILE" \
+          -storepass "$$KEYSTORE_PASSWORD" \
+          -file "$$KEYCLOAK_CERT"
+
+        echo "Copying default JVM cacerts to custom truststore..."
+        mkdir -p "$$TRUSTSTORE_DIR"
+        cp "$$JAVA_HOME/lib/security/cacerts" "$$TRUSTSTORE_FILE"
+
+        echo "Importing Keycloak certificate into custom truststore..."
+        keytool -importcert \
+          -noprompt \
+          -alias keycloak-local \
+          -file "$$KEYCLOAK_CERT" \
+          -keystore "$$TRUSTSTORE_FILE" \
+          -storepass changeit
+
+        echo "Custom truststore ready at $$TRUSTSTORE_FILE"
+    networks:
+      - gendox_network
+    restart: "no"
 
   gendox-core-api:
-    build:
-      context: ../../gendox-core-api
-      dockerfile: Dockerfile
-      args:
-        - PROVEN_AI_GIT_REPOSITORY=${PROVEN_AI_GIT_REPOSITORY}
-        - PROVEN_AI_GIT_BRANCH=${PROVEN_AI_GIT_BRANCH}
-    image: gendox-core-api:latest
+    image: ctrlspacelabs/gendox-core-api:latest
     container_name: gendox-core-api
     volumes:
       - ~/.aws/:/root/.aws:ro
+      # Mount the custom truststore (read-only) created by gendox-truststore-init
+      - gendox-truststore:/opt/gendox-truststore:ro
     depends_on:
       gendox-database:
         condition: service_healthy
-    environment: # Gendox environment variables
+      gendox-keycloak:
+        condition: service_healthy
+      gendox-truststore-init:
+        condition: service_completed_successfully
+    environment:
+      # Append trustStore config to the existing JVM options
+      - JAVA_TOOL_OPTIONS=-Xms512m -Xmx1536m -Djavax.net.ssl.trustStore=/opt/gendox-truststore/cacerts -Djavax.net.ssl.trustStorePassword=changeit
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_USERNAME=${DATABASE_USERNAME}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
@@ -54,6 +108,11 @@ services:
       - COHERE_KEY=${COHERE_KEY}
       - RSA_KEY_PATH=${RSA_KEY_PATH}
       - GROQ_KEY=${GROQ_KEY}
+      - ANTHROPIC_KEY=${ANTHROPIC_KEY}
+      - GEMINI_KEY=${GEMINI_KEY}
+      - MISTRAL_KEY=${MISTRAL_KEY}
+      - VOYAGE_KEY=${VOYAGE_KEY}
+      - GCLOUD_CLIENT_SECRET=${GCLOUD_CLIENT_SECRET}
       - GENDOX_SPRING_EMAIL_HOST=${GENDOX_SPRING_EMAIL_HOST}
       - GENDOX_SPRING_EMAIL_PORT=${GENDOX_SPRING_EMAIL_PORT}
       - GENDOX_SPRING_EMAIL_USERNAME=${GENDOX_SPRING_EMAIL_USERNAME}
@@ -61,19 +120,27 @@ services:
       - PROVEN_AI_ENABLED=${PROVEN_AI_ENABLED}
       - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
       - FILE_STORAGE_PATH=${FILE_STORAGE_PATH}
     networks:
       - gendox_network
     ports:
-      - "${APIS_PORT}:8080"
-    restart: on-failure
+      - "${GENDOX_BACKEND_PORT}:8080"
+    restart: unless-stopped
+
 
   gendox-keycloak:
-    build:
-      context: ../../gendox-keycloak
-      dockerfile: Dockerfile
-    image: gendox-keycloak:latest
+    image: ctrlspacelabs/gendox-keycloak:latest
     container_name: gendox-keycloak
+    healthcheck:
+      test: [ "CMD-SHELL", "echo > /dev/tcp/localhost/8443 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    depends_on:
+      gendox-database:
+        condition: service_healthy
     environment:
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
@@ -82,19 +149,19 @@ services:
       - KC_DB_USERNAME=${KC_DB_USERNAME}
       - KC_DB_PASSWORD=${KC_DB_PASSWORD}
       - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
+      - KEYSTORE_FILE=/opt/keycloak/conf/server.keystore
+      - KC_CACHE=local
     entrypoint: [ ]
     command:
       - /bin/bash
       - -c
       - |
-        KEYSTORE_FILE=/opt/keycloak/conf/server.keystore
-        # If keystore exists but is empty OR invalid -> delete it
-        if [ -f "$KEYSTORE_FILE" ] && { [ ! -s "$KEYSTORE_FILE" ] || ! keytool -list -keystore "$KEYSTORE_FILE" -storepass "${KEYSTORE_PASSWORD}" > /dev/null 2>&1; }; then
+        if [ -f "$$KEYSTORE_FILE" ] && { [ ! -s "$$KEYSTORE_FILE" ] || ! keytool -list -keystore "$$KEYSTORE_FILE" -storepass "${KEYSTORE_PASSWORD}" > /dev/null 2>&1; }; then
           echo "Keystore is empty or invalid. Deleting it."
-          rm -f "$KEYSTORE_FILE"
+          rm -f "$$KEYSTORE_FILE"
         fi
-        if [ ! -f "$KEYSTORE_FILE" ]; then
-          echo "Generating new keystore and key pair..."
+        if [ ! -f "$$KEYSTORE_FILE" ]; then
+          echo "Generating new keystore and key pair.."
           keytool -genkeypair \
             -storepass "${KEYSTORE_PASSWORD}" \
             -storetype PKCS12 \
@@ -103,27 +170,75 @@ services:
             -dname "CN=localhost" \
             -alias server \
             -validity 365 \
-            -ext "SAN=DNS:localhost,IP:127.0.0.1" \
-            -keystore "$KEYSTORE_FILE" \
+            -ext "SAN=DNS:localhost,IP:127.0.0.1,DNS:gendox-keycloak" \
+            -keystore "$$KEYSTORE_FILE" \
             -noprompt
         else
           echo "Using existing valid keystore."
         fi
-        exec /opt/keycloak/bin/kc.sh start \
+        echo "Starting Keycloak..."
+        /opt/keycloak/bin/kc.sh start \
           --http-relative-path="${KEYCLOAK_HTTP_RELATIVE_PATH}" \
           --features=token-exchange \
           --hostname-strict=false \
-          --https-key-store-file="$KEYSTORE_FILE" \
+          --https-key-store-file="$$KEYSTORE_FILE" \
           --https-key-store-password "${KEYSTORE_PASSWORD}" \
           --spi-theme-static-max-age=600 \
           --spi-theme-cache-themes=true \
-          --spi-theme-cache-templates=true
+          --spi-theme-cache-templates=true &
+
+        KEYCLOAK_PID=$!
+
+        is_keycloak_ready() {
+          (echo > /dev/tcp/localhost/8443) >/dev/null 2>&1
+        }
+
+        echo 'Waiting for Keycloak to be ready...'
+        until is_keycloak_ready; do
+          echo 'Keycloak not ready yet. Retrying in 5 seconds...'
+          sleep 5
+        done
+
+        echo 'Keycloak is ready. Running initialization script.'
+        cd /opt/keycloak/custom-conf && bash gendox-local-init.sh
+
+        wait $$KEYCLOAK_PID
     networks:
       - gendox_network
     ports:
       - "${KEYCLOAK_PORT}:8443"
     volumes:
       - keycloak-data:/opt/keycloak/conf
+    restart: unless-stopped
+
+
+#  Frontend needs to be built with proper environment variables
+  gendox-frontend:
+    build:
+      context: ../../gendox-frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_OIDC_AUTHORITY: ${NEXT_PUBLIC_GENDOX_OIDC_AUTHORITY}
+        NEXT_PUBLIC_OIDC_CLIENT_ID: ${NEXT_PUBLIC_GENDOX_OIDC_CLIENT_ID}
+        NEXT_PUBLIC_OIDC_REDIRECT_URI: ${NEXT_PUBLIC_GENDOX_OIDC_REDIRECT_URI}
+        NEXT_PUBLIC_OIDC_POST_LOGOUT_REDIRECT_URI: ${NEXT_PUBLIC_GENDOX_OIDC_POST_LOGOUT_REDIRECT_URI}
+        NEXT_PUBLIC_OIDC_SILENT_REDIRECT_URI: ${NEXT_PUBLIC_GENDOX_OIDC_SILENT_REDIRECT_URI}
+        NEXT_PUBLIC_GENDOX_URL: ${NEXT_PUBLIC_GENDOX_BACKEND_URL}
+        NEXT_PUBLIC_PROVEN_AI_URL: ${NEXT_PUBLIC_PROVEN_AI_FRONTEND_URL}
+    image: gendox-frontend:latest
+    container_name: gendox-frontend
+    environment:
+      NEXT_PUBLIC_OIDC_AUTHORITY: ${NEXT_PUBLIC_GENDOX_OIDC_AUTHORITY}
+      NEXT_PUBLIC_OIDC_CLIENT_ID: ${NEXT_PUBLIC_GENDOX_OIDC_CLIENT_ID}
+      NEXT_PUBLIC_OIDC_REDIRECT_URI: ${NEXT_PUBLIC_GENDOX_OIDC_REDIRECT_URI}
+      NEXT_PUBLIC_OIDC_POST_LOGOUT_REDIRECT_URI: ${NEXT_PUBLIC_GENDOX_OIDC_POST_LOGOUT_REDIRECT_URI}
+      NEXT_PUBLIC_OIDC_SILENT_REDIRECT_URI: ${NEXT_PUBLIC_GENDOX_OIDC_SILENT_REDIRECT_URI}
+      NEXT_PUBLIC_GENDOX_URL: ${NEXT_PUBLIC_GENDOX_BACKEND_URL}
+      NEXT_PUBLIC_PROVEN_AI_URL: ${NEXT_PUBLIC_PROVEN_AI_FRONTEND_URL}
+    ports:
+      - "${GENDOX_FRONTEND_PORT}:80"
+    networks:
+      - gendox_network
 
 networks:
   gendox_network:
@@ -131,3 +246,4 @@ networks:
 volumes:
   postgres-data:
   keycloak-data:
+  gendox-truststore:

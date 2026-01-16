@@ -5,16 +5,16 @@ const GenerationContext = createContext()
 export const useGeneration = () => {
   const context = useContext(GenerationContext)
   if (!context) {
-    throw new Error('useGeneration must be used within a GenerationProvider')
+    throw new Error('useGeneration must be used within a GenerationMonitorProvider')
   }
   return context
 }
 
-export const GenerationProvider = ({ children }) => {
+export const GenerationMonitorProvider = ({ children }) => {
   const [activeGenerations, setActiveGenerations] = useState(new Map())
   const keyOf = (taskId, documentId) => `${taskId}-${documentId ?? 'all'}`
 
-  const startGeneration = (taskId, documentId, type, metadata = null) => {
+  const startGenerationMonitor = (taskId, documentId, type, metadata = null) => {
     const key = `${taskId}-${documentId ?? 'all'}`
     setActiveGenerations(
       prev =>
@@ -40,8 +40,6 @@ export const GenerationProvider = ({ children }) => {
         )
     )
   }
-
-
 
   const updateProgress = (taskId, documentId, completedItems) => {
     const key = `${taskId}-${documentId ?? 'all'}`
@@ -126,7 +124,7 @@ export const GenerationProvider = ({ children }) => {
     <GenerationContext.Provider
       value={{
         activeGenerations,
-        startGeneration,
+        startGenerationMonitor,
         updateProgress,
         completeGeneration,
         failGeneration,

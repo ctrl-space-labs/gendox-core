@@ -75,19 +75,20 @@ public class TaskEdgeService {
         for (AnswerCreationDTO dto : newAnswerDTOs) {
             // Convert DTO to entity and save
             TaskNode answerNode = taskNodeConverter.toEntity(dto.getNewAnswer());
-            TaskNode savedAnswerNode = taskNodeRepository.save(answerNode);
+            TaskNode savedAnswerNode = taskNodeRepository.saveAndFlush(answerNode);
 
             // Create edge to document node
-            if (!(dto.getDocumentNode() == null)) {
+            if (dto.getDocumentNode() != null) {
                 TaskEdge docEdge = new TaskEdge();
                 docEdge.setFromNode(savedAnswerNode);
-                docEdge.setToNode(dto.getDocumentNode());
+                TaskNode docNodeRef = taskNodeRepository.getReferenceById(dto.getDocumentNode().getId());
+                docEdge.setToNode(docNodeRef);
                 docEdge.setRelationType(answersRelationType);
                 edgesToSave.add(docEdge);
             }
 
             // Create edge to question node
-            if (!(dto.getQuestionNode() == null)) {
+            if (dto.getQuestionNode() != null) {
                 TaskEdge questionEdge = new TaskEdge();
                 questionEdge.setFromNode(savedAnswerNode);
                 questionEdge.setToNode(dto.getQuestionNode());

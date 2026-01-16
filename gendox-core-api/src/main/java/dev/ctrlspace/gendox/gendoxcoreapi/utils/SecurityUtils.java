@@ -17,6 +17,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
+import jakarta.servlet.Filter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.codec.binary.Base32;
 import org.jetbrains.annotations.Nullable;
@@ -132,8 +133,12 @@ public class SecurityUtils {
             return canAccessThread(authority, userProfile, UUID.fromString(accessCriteria.getThreadId()));
         }
 
-        if (accessCriteria.getDocumentId() != null && !accessCriteria.getDocumentId().isEmpty()) {
-            return canAccessDocument(authority, userProfile, UUID.fromString(accessCriteria.getDocumentId()));
+        if (accessCriteria.getDocumentIds() != null && !accessCriteria.getDocumentIds().isEmpty()) {
+            return canAccessDocuments(authority, userProfile, accessCriteria.getDocumentIds()
+                    .stream()
+                    .map(UUID::fromString)
+                    .collect(Collectors.toSet())
+            );
         }
 
 
@@ -197,6 +202,21 @@ public class SecurityUtils {
                 .collect(Collectors.toList());
 
         return documentInstanceRepository.existsByDocumentIdAndProjectIds(documentId, authorizedProjectIds);
+    }
+
+    private boolean canAccessDocuments(String authority, UserProfile userProfile, Set<UUID> documentIds) {
+
+        Set<UUID> authorizedProjectIds = userProfile
+                .getOrganizations()
+                .stream()
+                .filter(org -> org.getAuthorities().contains(authority))
+                .flatMap(org -> org.getProjects().stream())
+                .map(project -> UUID.fromString(project.getId()))
+                .collect(Collectors.toSet());
+
+        return documentInstanceRepository.areAllDocumentIdsInAnyProject(
+                documentIds.toArray(UUID[]::new),
+                authorizedProjectIds.toArray(UUID[]::new));
     }
 
 
@@ -327,7 +347,7 @@ public class SecurityUtils {
                 .orgIds(new HashSet<>())
                 .projectIds(new HashSet<>())
                 .threadId(threadId)
-                .documentId(new String())
+                .documentIds(List.of())
                 .build();
     }
 
@@ -346,6 +366,21 @@ public class SecurityUtils {
         return getRequestedDocumentIdAccessCriteria(documentId);
     }
 
+    private AccessCriteria getRequestedDocumentIdsFromRequestParam() {
+        HttpServletRequest request = getCurrentHttpRequest();
+
+        // for: ?documentIds=uuid1&documentIds=uuid2
+        String[] values = request.getParameterValues("documentIds");
+
+        List<String> documentIds = Collections.emptyList();
+        if (values != null && values.length > 0) {
+            documentIds = Arrays.stream(values)
+                    .toList();
+        }
+
+        return getRequestedDocumentIdsAccessCriteria(documentIds);
+    }
+
     public AccessCriteria getRequestedDocumentIdAccessCriteria(String documentId) {
 
         String documentIdParam = Objects.toString(documentId, "");
@@ -354,7 +389,21 @@ public class SecurityUtils {
                 .orgIds(Collections.emptySet())
                 .projectIds(Collections.emptySet())
                 .threadId("")
-                .documentId(documentIdParam)
+                .documentIds(List.of(documentIdParam))
+                .build();
+    }
+
+    public AccessCriteria getRequestedDocumentIdsAccessCriteria(List<String> documentIds) {
+
+        List<String> documentIdsParam = documentIds.stream()
+                .map(dId -> Objects.toString(dId, ""))
+                .collect(Collectors.toList());
+
+        return AccessCriteria.builder()
+                .orgIds(Collections.emptySet())
+                .projectIds(Collections.emptySet())
+                .threadId("")
+                .documentIds(documentIdsParam)
                 .build();
     }
 
@@ -380,6 +429,7 @@ public class SecurityUtils {
 
         public static final String THREAD_ID_FROM_PATH_VARIABLE = "getRequestedThreadIdFromPathVariable";
         public static final String DOCUMENT_ID_FROM_PATH_VARIABLE = "getRequestedDocumentIdFromPathVariable";
+        public static final String DOCUMENT_IDS_FROM_REQUEST_PARAMS = "getRequestedDocumentIdsFromRequestParams";
     }
 
 
@@ -417,6 +467,10 @@ public class SecurityUtils {
 
         if (AccessCriteriaGetterFunction.DOCUMENT_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
             accessCriteria = getRequestedDocumentIdFromPathVariable();
+        }
+
+        if (AccessCriteriaGetterFunction.DOCUMENT_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)) {
+            accessCriteria = getRequestedDocumentIdsFromRequestParam();
         }
 
         if (!(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserProfile)) {

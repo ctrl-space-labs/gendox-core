@@ -367,13 +367,16 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         boolean isGpt51       = name.startsWith("gpt-5.1");
         boolean isGpt5        = name.startsWith("gpt-5") && !isGpt51;
         boolean isGemini25Pro = name.contains("gemini-2.5-pro");
+        boolean isGemini3Pro = name.startsWith("gemini-3-pro");
+        boolean isGemini3Flash = name.startsWith("gemini-3-flash");
 
         if (tokens >= 32_768L) return "high";
+        if (tokens >= 8_192L && isGemini3Pro)  return "high";
         if (tokens >= 8_192L)  return "medium";
         if (tokens >= 1_024L)  return "low";
 
-        if (isGpt5)        return "minimal"; // GPT-5 min is "minimal"
-        if (isGemini25Pro) return "low";     // Gemini 2.5 Pro: no "none", min "low"
+        if (isGpt5 || isGemini3Flash)        return "minimal"; // GPT-5 min is "minimal"
+        if (isGemini25Pro || isGemini3Pro) return "low";     // Gemini 2.5 Pro: no "none", min "low"
 
         // GPT-5.1 and others (that support it) can get "none"
         return "none";

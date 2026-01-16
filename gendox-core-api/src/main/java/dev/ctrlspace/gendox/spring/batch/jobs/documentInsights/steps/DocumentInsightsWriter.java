@@ -46,7 +46,8 @@ public class DocumentInsightsWriter implements ItemWriter<TaskAnswerBatchDTO> {
                 .toList();
 
 
-        //Delete existing answer edges and nodes
+        // Legacy: Delete existing answer edges and nodes has already been done in previous step, in DeleteInsightsAnswersWriter
+        // Delete existing answer edges and nodes
         if (!answerIdsToDelete.isEmpty()) {
             taskEdgeService.deleteTaskEdgesByFromNodeIds(answerIdsToDelete);
             taskNodeService.deleteTaskNodesByIds(answerIdsToDelete);

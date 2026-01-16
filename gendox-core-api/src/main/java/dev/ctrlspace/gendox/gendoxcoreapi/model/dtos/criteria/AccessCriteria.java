@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -14,5 +16,5 @@ public class AccessCriteria {
     private Set<String> orgIds;
     private Set<String> projectIds;
     private String threadId;
-    private String documentId;
+    private List<String> documentIds;
 }

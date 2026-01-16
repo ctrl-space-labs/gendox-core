@@ -114,16 +114,28 @@ public class IntegrationManager {
     }
 
     private void updateMap(Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> projectMap, Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map) throws GendoxException {
+        // Some update services may return keys with empty lists. Treat those as "no update".
+        boolean hasUpdates = projectMap != null && projectMap.entrySet().stream()
+                .anyMatch(e -> e.getValue() != null && !e.getValue().isEmpty());
+
+        if (!hasUpdates) {
+            logger.debug("No integration updates found");
+            return;
+        }
 
         logger.debug("Integration update found");
         for (Map.Entry<ProjectIntegrationDTO, List<IntegratedFileDTO>> entry : projectMap.entrySet()) {
-            if (!entry.getValue().isEmpty()) {
-                // Merge lists if the key already exists
-                map.merge(entry.getKey(), entry.getValue(), (existingList, newList) -> {
-                    existingList.addAll(newList); // Combine existing and new lists
-                    return existingList;
-                });
+            List<IntegratedFileDTO> files = entry.getValue();
+            if (files == null || files.isEmpty()) {
+                continue;
             }
+
+            // Merge lists if the key already exists
+            map.merge(entry.getKey(), files, (existingList, newList) -> {
+                existingList.addAll(newList); // Combine existing and new lists
+                return existingList;
+            });
+
             logger.debug("Integration update found for project: {}", entry.getKey().getProjectId());
         }
 

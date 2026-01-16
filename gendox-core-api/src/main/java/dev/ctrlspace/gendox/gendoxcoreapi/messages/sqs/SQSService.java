@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.s3BucketIntegration;
+package dev.ctrlspace.gendox.gendoxcoreapi.messages.sqs;
 
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.Message;

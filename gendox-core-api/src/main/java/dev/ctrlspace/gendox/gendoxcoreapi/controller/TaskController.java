@@ -24,6 +24,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 
@@ -324,7 +325,7 @@ public class TaskController {
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                .contentType(MediaType.parseMediaType("text/csv"))
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
                 .body(fileResource);
     }
 
@@ -346,7 +347,7 @@ public class TaskController {
         String filename = "task_" + taskId + "_answers.csv";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                .contentType(MediaType.parseMediaType("text/csv"))
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
                 .body(fileResource);
     }
 

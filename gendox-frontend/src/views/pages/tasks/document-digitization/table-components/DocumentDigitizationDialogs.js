@@ -7,6 +7,7 @@ import DocumentsAddNewDialog from 'src/views/pages/tasks/helping-components/AddN
 import DocumentPagePreviewDialog from 'src/views/pages/tasks/document-digitization/table-dialogs/DocumentDigitizationDocumentPagePreviewDialog'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import { updateTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
+import { toast } from 'react-hot-toast'
 
 const DocumentDigitizationDialogs = ({
   dialogs,
@@ -22,19 +23,16 @@ const DocumentDigitizationDialogs = ({
   setEditMode,
   editMode,
   documentPages = [],
-  generateSingleDocument,
+  handleGenerate,
   onExportCsv,
   isExportingCsv,
   isDocumentGenerating,
-  generatingAll = false,
-  generatingNew = false,
-  generatingSelected = false
+  isDigitizationGenerating = false
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
-  const isGenRunningGlobal = generatingAll || generatingNew || generatingSelected
   const isGenRunningForActiveDoc = activeNode?.id ? isDocumentGenerating?.(activeNode.id) : false
-  const dialogLoading = Boolean(loading || isGenRunningGlobal || isGenRunningForActiveDoc)
+  const dialogLoading = Boolean(loading || isDigitizationGenerating || isGenRunningForActiveDoc)
 
   // SAVE document handler for DocumentDialog
   const handleUpdateDocument = async updatedDoc => {
@@ -86,7 +84,10 @@ const DocumentDigitizationDialogs = ({
       await dispatch(deleteTaskNode({ organizationId, projectId, taskNodeId: nodeId, token })).unwrap()
       reloadAll()
       onClose('delete')
+    } catch (error) {
+      toast.error('Failed to delete item')
     } finally {
+      onClose('delete')
       setLoading(false)
     }
   }
@@ -97,7 +98,6 @@ const DocumentDigitizationDialogs = ({
       <DocumentsAddNewDialog
         open={dialogs.newDoc}
         onClose={() => onClose('newDoc')}
-        // existingDocuments={existingDocuments}
         existingDocumentIds={existingDocuments.map(d => d.documentId)}
         loading={loading}
         onConfirm={handleAddNewDocuments}
@@ -108,6 +108,7 @@ const DocumentDigitizationDialogs = ({
         onUploadSuccess={() => {
           reloadAll()
         }}
+        taskType='document-digitization'
       />
 
       {/* Document Details Dialog */}
@@ -127,10 +128,8 @@ const DocumentDigitizationDialogs = ({
         onClose={() => onClose('pagePreview')}
         document={activeNode}
         documentPages={documentPages}
-        generateSingleDocument={generateSingleDocument}
-        onDocumentUpdate={() => {
-          reloadAll()
-        }}
+        handleGenerate={handleGenerate}
+        reloadAll={reloadAll}
         dialogLoading={dialogLoading}
         onExportCsv={onExportCsv}
         isExportingCsv={isExportingCsv}
@@ -142,9 +141,9 @@ const DocumentDigitizationDialogs = ({
         open={dialogs.delete}
         onClose={() => onClose('delete')}
         onConfirm={() => handleConfirmDelete(activeNode?.id)}
-        title='Confirm Deletion'
-        contentText='Are you sure you want to delete this item? This action cannot be undone.'
-        confirmButtonText='Delete'
+        title='Confirm Removal'
+        contentText='Are you sure you want to remove this item? This action cannot be undone.'
+        confirmButtonText='Remove'
         cancelButtonText='Cancel'
       />
     </>

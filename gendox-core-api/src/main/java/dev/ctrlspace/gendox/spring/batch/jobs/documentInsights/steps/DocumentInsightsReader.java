@@ -30,10 +30,12 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQues
     private static final Logger logger = LoggerFactory.getLogger(DocumentInsightsReader.class);
     private TaskNodeCriteria criteria;
     private final TaskNodeService taskNodeService;
+    private final InsightsUtils insightsUtils;
 
     @Autowired
-    public DocumentInsightsReader(TaskNodeService taskNodeService) {
+    public DocumentInsightsReader(TaskNodeService taskNodeService, InsightsUtils insightsUtils) {
         this.taskNodeService = taskNodeService;
+        this.insightsUtils = insightsUtils;
     }
 
 
@@ -41,40 +43,7 @@ public class DocumentInsightsReader extends GendoxJpaPageReader<TaskDocumentQues
     protected ExitStatus initializeJpaPredicate(JobParameters jobParameters) {
         String taskId = jobParameters.getString(JobExecutionParamConstants.TASK_ID);
         assert taskId != null;
-        criteria = new TaskNodeCriteria();
-        criteria.setTaskId(UUID.fromString(taskId));
-
-        ObjectMapper mapper = new ObjectMapper();
-
-        // Deserialize documentNodeIds list from JSON string
-        String documentNodeIdsJson = jobParameters.getString(JobExecutionParamConstants.DOCUMENT_NODE_IDS);
-        if (documentNodeIdsJson != null && !documentNodeIdsJson.isBlank()) {
-            try {
-                List<UUID> documentNodeIds = mapper.readValue(
-                        documentNodeIdsJson,
-                        new TypeReference<List<UUID>>() {
-                        }
-                );
-                criteria.setDocumentNodeIds(documentNodeIds);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to deserialize documentNodeIds JSON", e);
-            }
-        }
-
-        // Deserialize questionNodeIds list from JSON string
-        String questionNodeIdsJson = jobParameters.getString(JobExecutionParamConstants.QUESTION_NODE_IDS);
-        if (questionNodeIdsJson != null && !questionNodeIdsJson.isBlank()) {
-            try {
-                List<UUID> questionNodeIds = mapper.readValue(
-                        questionNodeIdsJson,
-                        new TypeReference<List<UUID>>() {
-                        }
-                );
-                criteria.setQuestionNodeIds(questionNodeIds);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to deserialize questionNodeIds JSON", e);
-            }
-        }
+        criteria = insightsUtils.fromJobParamsToTaskNodeCriteria(jobParameters, taskId);
 
         logger.debug("DocumentInsightsReader initialized with criteria: {}", criteria);
 

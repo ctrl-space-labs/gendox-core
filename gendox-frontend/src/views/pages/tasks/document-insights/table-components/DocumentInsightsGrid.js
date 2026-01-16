@@ -9,7 +9,6 @@ import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
 import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
-import Summarize from '@mui/icons-material/Summarize'
 import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
 
 const DocumentInsightsGrid = ({
@@ -17,8 +16,6 @@ const DocumentInsightsGrid = ({
   documents,
   questions,
   answers,
-  onGenerate,
-  isLoadingAnswers,
   isPageLoading,
   page,
   pageSize,
@@ -26,9 +23,9 @@ const DocumentInsightsGrid = ({
   setPageSize,
   totalDocuments,
   selectedDocuments = [],
+  setSelectedDocuments,
   onSelectDocument = () => {},
-  onGenerateSingleAnswer = () => {},
-  isGeneratingAll,
+  handleGenerate,
   isGeneratingCells = {}
 }) => {
   const theme = useTheme()
@@ -40,7 +37,6 @@ const DocumentInsightsGrid = ({
   const sortedQuestions = useMemo(() => {
     return [...questions].sort((a, b) => a.order - b.order)
   }, [questions])
-
 
   const columns = useMemo(() => {
     return [
@@ -109,6 +105,7 @@ const DocumentInsightsGrid = ({
         filterable: false,
         disableColumnMenu: true,
         renderCell: params => {
+          const summaryFlag = params.row._doc?.insightsSummary?.answerFlagEnum
           return (
             <Tooltip title='View Summary'>
               <IconButton
@@ -117,9 +114,8 @@ const DocumentInsightsGrid = ({
                   e.stopPropagation()
                   openDialog('summaryDetail', params.row._doc)
                 }}
-                sx={{ color: theme.palette.primary.main }}
               >
-                <Summarize fontSize='small' />
+                {answerFlagEnum(summaryFlag, theme)}
               </IconButton>
             </Tooltip>
           )
@@ -157,8 +153,6 @@ const DocumentInsightsGrid = ({
               }}
               title={params.value || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
             >
-             
-
               {/* DOCUMENT TITLE */}
               <Tooltip title='View Document'>
                 <Box
@@ -173,7 +167,8 @@ const DocumentInsightsGrid = ({
                     userSelect: 'none'
                   }}
                 >
-                  {<TruncatedText text={params.value} /> || (params.row.documentId ? 'Unknown Document' : 'Select Document')}
+                  {<TruncatedText text={params.value} /> ||
+                    (params.row.documentId ? 'Unknown Document' : 'Select Document')}
                 </Box>
               </Tooltip>
 
@@ -231,7 +226,6 @@ const DocumentInsightsGrid = ({
               fontWeight: 600,
               flexGrow: 1
             }}
-            // title={q.text}
           >
             <Box
               component='button'
@@ -284,18 +278,15 @@ const DocumentInsightsGrid = ({
           const questionId = q.id
           const answerObj = answers.find(a => a.documentNodeId === docId && a.questionNodeId === questionId)
           const cellKey = `${docId}_${questionId}`
-          const isGenerating = !!isGeneratingCells[cellKey]
+          const docKey = `${docId}_all`
+          // const isGenerating = !!isGeneratingCells[cellKey]
+          const isCellGenerating = !!isGeneratingCells[cellKey]
+          const isDocGenerating = !!isGeneratingCells[docKey]
+          const isGenerating = isCellGenerating || isDocGenerating
 
-          if (isLoadingAnswers) {
-            return (
-              <Box
-                sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
-              >
-                <CircularProgress size={20} />
-              </Box>
-            )
-          }
-          if (isGenerating || isGeneratingAll) {
+          // console.log('Rendering cell', { cellKey, isCellGenerating, isDocGenerating, isGenerating })
+
+          if (isGenerating) {
             return (
               <Box
                 sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
@@ -309,12 +300,13 @@ const DocumentInsightsGrid = ({
             <Box
               sx={{
                 width: '100%',
+                height: '100%',
                 padding: '4px 8px',
                 fontSize: '0.875rem',
                 backgroundColor: 'transparent',
                 color: 'inherit',
-                cursor: isLoadingAnswers || isPageLoading ? 'default' : 'pointer',
-                opacity: isLoadingAnswers || isPageLoading ? 0.5 : 1,
+                cursor: isPageLoading ? 'default' : 'pointer',
+                opacity: isPageLoading ? 0.5 : 1,
                 userSelect: 'none',
                 borderRadius: 1,
                 border: '1px solid transparent',
@@ -329,16 +321,16 @@ const DocumentInsightsGrid = ({
                 }
               }}
               onClick={() => {
-                if (!isLoadingAnswers && !isPageLoading) {
-                  if (!answerObj?.answerValue) {
-                    // Trigger generate for this cell only
-                    onGenerateSingleAnswer(params.row, q)
-                  } else {
-                    openDialog('answerDetail', answerObj)
-                  }
+                if (isPageLoading) return
+
+                if (!answerObj?.answerValue) {
+                  handleGenerate({ documentsToGenerate: params.row, questionsToGenerate: q })
+                } else {
+                  openDialog('answerDetail', answerObj)
                 }
               }}
             >
+              
               {answerFlagEnum(answerObj?.answerFlagEnum, theme)}
               <Tooltip
                 title={!answerObj ? 'Click to generate this answer' : 'Click to see answer details'}
@@ -376,7 +368,7 @@ const DocumentInsightsGrid = ({
                     }}
                     onClick={e => {
                       e.stopPropagation()
-                      onGenerateSingleAnswer(params.row, q)
+                      handleGenerate({ documentsToGenerate: params.row, questionsToGenerate: q })
                     }}
                     aria-label={`Regenerate answer for ${q.text}`}
                   />
@@ -390,24 +382,21 @@ const DocumentInsightsGrid = ({
   }, [
     sortedQuestions,
     answers,
-    onGenerate,
-    isLoadingAnswers,
     isPageLoading,
     documents,
     selectedDocuments,
     onSelectDocument,
     openDialog,
-    isGeneratingAll,
     isGeneratingCells,
-    onGenerateSingleAnswer,
+    handleGenerate,
     theme
   ])
 
   const rows = useMemo(() => {
     const sortedDocs = [...documents].sort((a, b) => {
-      const dateA = new Date(a.updatedAt || a.updateAt || 0)
-      const dateB = new Date(b.updatedAt || b.updateAt || 0)
-      return dateB - dateA
+      const dateA = new Date(a.createdAt || a.createdAt || 0)
+      const dateB = new Date(b.createdAt || b.createdAt || 0)
+      return dateA - dateB
     })
     return sortedDocs.map(doc => {
       const row = {
@@ -466,6 +455,8 @@ const DocumentInsightsGrid = ({
         rows={rows}
         columns={columns}
         pagination
+        hideFooterSelectedRowCount
+        disableRowSelectionOnClick
         paginationMode='server'
         rowCount={totalDocuments}
         estimatedRowCount={totalDocuments}
@@ -474,7 +465,6 @@ const DocumentInsightsGrid = ({
         onPaginationModelChange={({ page: newPage }) => {
           setPage(newPage)
         }}
-        disableRowSelectionOnClick
         componentsProps={{
           pagination: { showFirstButton: true, showLastButton: true }
         }}
@@ -530,6 +520,7 @@ const DocumentInsightsGrid = ({
               setDocumentMenuAnchor(null)
               openDialog('delete', documentMenuDoc)
               setDocumentMenuDoc(null)
+              setSelectedDocuments([])
             }}
             sx={{ color: 'error.main' }}
           >

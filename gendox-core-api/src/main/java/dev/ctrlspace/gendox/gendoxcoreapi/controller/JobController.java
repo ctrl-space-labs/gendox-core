@@ -31,6 +31,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -155,10 +158,43 @@ public class JobController {
     public Page<BatchJobExecution> getJobsByCriteria(@PathVariable UUID projectId, BatchExecutionCriteria jobCriteria, Pageable pageable) throws GendoxException {
 
         if (!securityUtils.isSuperAdmin()) {
-            jobCriteria.getMatchAllParams().add(new BatchExecutionParamCriteria(JobExecutionParamConstants.PROJECT_ID, projectId.toString()));
+            upsertMatchAllParam(
+                    jobCriteria,
+                    JobExecutionParamConstants.PROJECT_ID,
+                    projectId.toString()
+            );
         }
 
         return jobUtils.getJobsByCriteria(jobCriteria, pageable);
+    }
+
+    private void upsertMatchAllParam(BatchExecutionCriteria jobCriteria, String paramName, String paramValue) {
+        List<BatchExecutionParamCriteria> params = jobCriteria.getMatchAllParams();
+        if (params == null) {
+            params = new ArrayList<>();
+            jobCriteria.setMatchAllParams(params);
+        }
+
+        var matches = params.stream()
+                .filter(Objects::nonNull)
+                .filter(c -> Objects.equals(paramName, c.getParamName()))
+                .toList();
+
+        if (matches.isEmpty()) {
+            params.add(new BatchExecutionParamCriteria(paramName, paramValue));
+            return;
+        }
+
+        // Replace value on the first match
+        BatchExecutionParamCriteria kept = matches.get(0);
+        kept.setParamValue(paramValue);
+
+        // Remove any duplicate entries (keep only the first)
+        params.removeIf(c ->
+                c != null
+                        && Objects.equals(paramName, c.getParamName())
+                        && c != kept
+        );
     }
 
 

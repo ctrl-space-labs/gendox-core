@@ -3,6 +3,7 @@ import taskService from 'src/gendox-sdk/taskService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 import { fetchDocuments } from '../activeDocument/activeDocument'
+import { is } from 'date-fns/locale'
 
 // -------- Thunks for TaskNodes --------
 
@@ -149,8 +150,8 @@ export const deleteTaskNode = createAsyncThunk(
   }
 )
 
-export const loadTaskData = createAsyncThunk(
-  'taskNode/loadTaskData',
+export const loadTaskDigitizationData = createAsyncThunk(
+  'taskNode/loadTaskDigitizationData',
   async ({ organizationId, projectId, taskId, token, docsPage, docsPageSize }, thunkAPI) => {
     try {
       //
@@ -202,12 +203,100 @@ export const loadTaskData = createAsyncThunk(
               title: full?.title,
               remoteUrl: full?.remoteUrl,
               prompt: node.nodeValue?.documentMetadata?.prompt || '',
-              structure : node.nodeValue?.documentMetadata?.structure || '',
+              structure: node.nodeValue?.documentMetadata?.structure || '',
               pageFrom: node.nodeValue?.documentMetadata?.pageFrom || null,
               pageTo: node.nodeValue?.documentMetadata?.pageTo || null,
-              allPages : node.nodeValue?.documentMetadata?.allPages || false,
-              supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || [],
+              allPages: node.nodeValue?.documentMetadata?.allPages || false,
+              supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || []
+            }
+          }
+        }
+      })
+      thunkAPI.dispatch({
+        type: 'taskNode/updateMergedDocuments',
+        payload: mergedDocumentNodes
+      })
 
+      // 3️⃣ Fetch document pages
+      await thunkAPI
+        .dispatch(
+          fetchDocumentPages({
+            organizationId,
+            projectId,
+            taskId,
+            token,
+            page: 0,
+            size: 2147483647 // max int to fetch all questions
+          })
+        )
+        .unwrap()
+
+      return true
+    } catch (error) {
+      toast.error('Failed to load task data.')
+      return thunkAPI.rejectWithValue(error)
+    }
+  }
+)
+
+export const loadTaskInsightsData = createAsyncThunk(
+  'taskNode/loadTaskInsightsData',
+  async ({ organizationId, projectId, taskId, token, docsPage, docsPageSize }, thunkAPI) => {
+    try {
+      //
+      // 1️⃣ Fetch DOCUMENT task nodes
+      //
+      const docsResult = await thunkAPI
+        .dispatch(
+          fetchTaskNodesByCriteria({
+            organizationId,
+            projectId,
+            taskId,
+            token,
+            criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
+            page: docsPage,
+            size: docsPageSize
+          })
+        )
+        .unwrap()
+
+      const documentNodes = docsResult.content || []
+      const documentIds = documentNodes.map(n => n.documentId).filter(Boolean)
+
+      //
+      // 2️⃣ Fetch full documents
+      //
+      if (documentIds.length > 0) {
+        await thunkAPI
+          .dispatch(
+            fetchDocuments({
+              organizationId,
+              projectId,
+              documentIds,
+              token,
+              target: 'taskDocuments'
+            })
+          )
+          .unwrap()
+      }
+      const fullDocs = thunkAPI.getState().activeDocument.taskDocuments
+
+      const mergedDocumentNodes = documentNodes.map(node => {
+        const full = fullDocs.find(d => d.id === node.documentId)
+        return {
+          ...node,
+          nodeValue: {
+            ...node.nodeValue,
+            documentMetadata: {
+              ...(node.nodeValue?.documentMetadata || {}),
+              title: full?.title,
+              remoteUrl: full?.remoteUrl,
+              prompt: node.nodeValue?.documentMetadata?.prompt || '',
+              structure: node.nodeValue?.documentMetadata?.structure || '',
+              pageFrom: node.nodeValue?.documentMetadata?.pageFrom || null,
+              pageTo: node.nodeValue?.documentMetadata?.pageTo || null,
+              allPages: node.nodeValue?.documentMetadata?.allPages || false,
+              supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || []
             }
           }
         }
@@ -277,7 +366,7 @@ const initialState = {
   taskNodesRestList: [],
   taskDocumentPages: [],
   isLoading: false,
-  isLoadingAnswers: false,
+  isLoadingDocumentPages: false,
   error: null
 }
 
@@ -317,19 +406,14 @@ const taskNodeSlice = createSlice({
 
       // by criteria: DOCUMENT / QUESTION / ANSWER / OTHER
       .addCase(fetchTaskNodesByCriteria.pending, (state, action) => {
-        const { criteria } = action.meta.arg
-        if (criteria.nodeTypeNames?.includes('ANSWER')) {
-          state.isLoadingAnswers = true
-        } else {
-          state.isLoading = true
-        }
+        state.isLoading = true
         state.error = null
       })
       .addCase(fetchTaskNodesByCriteria.fulfilled, (state, action) => {
         const { criteria } = action.meta.arg
 
         if (criteria.nodeTypeNames?.includes('ANSWER')) {
-          state.isLoadingAnswers = false
+          state.isLoading = false
           state.taskNodesAnswerList = action.payload
         }
         if (criteria.nodeTypeNames?.includes('DOCUMENT')) {
@@ -351,40 +435,32 @@ const taskNodeSlice = createSlice({
         }
       })
       .addCase(fetchTaskNodesByCriteria.rejected, (state, action) => {
-        const { criteria } = action.meta.arg
-        if (criteria.nodeTypeNames?.includes('ANSWER')) {
-          state.isLoadingAnswers = false
-        } else {
-          state.isLoading = false
-        }
+        state.isLoading = false
         state.error = action.payload
       })
 
       // explicit fetch answers
       .addCase(fetchAnswerTaskNodes.pending, state => {
-        state.isLoadingAnswers = true
         state.error = null
       })
       .addCase(fetchAnswerTaskNodes.fulfilled, (state, action) => {
-        state.isLoadingAnswers = false
         state.taskNodesAnswerList = action.payload
       })
       .addCase(fetchAnswerTaskNodes.rejected, (state, action) => {
-        state.isLoadingAnswers = false
         state.error = action.payload
       })
 
       // document pages
       .addCase(fetchDocumentPages.pending, state => {
-        state.isLoading = true
+        state.isLoadingDocumentPages = true
         state.error = null
       })
       .addCase(fetchDocumentPages.fulfilled, (state, action) => {
-        state.isLoading = false
+        state.isLoadingDocumentPages = false
         state.taskDocumentPages = action.payload
       })
       .addCase(fetchDocumentPages.rejected, (state, action) => {
-        state.isLoading = false
+        state.isLoadingDocumentPages = false
         state.error = action.payload
       })
 
@@ -397,5 +473,4 @@ const taskNodeSlice = createSlice({
       })
   }
 })
-
 export default taskNodeSlice.reducer

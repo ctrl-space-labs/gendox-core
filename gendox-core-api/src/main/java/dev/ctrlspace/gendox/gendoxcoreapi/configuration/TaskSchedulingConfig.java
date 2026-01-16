@@ -1,7 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.messages.QueueMessageTopicNameConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.messages.postgres.QueueConsumerService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DailyUsageAggregationResultDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.BackendMaintenanceTaskService;
+import dev.ctrlspace.gendox.spring.batch.services.SplitterAndTrainingBatchService;
 import net.javacrumbs.shedlock.core.LockProvider;
 import net.javacrumbs.shedlock.provider.jdbctemplate.JdbcTemplateLockProvider;
 import net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock;
@@ -24,6 +27,8 @@ import java.time.Instant;
 @EnableSchedulerLock(defaultLockAtMostFor = "PT1M")
 public class TaskSchedulingConfig {
 
+    private final QueueConsumerService queueConsumerService;
+    private final SplitterAndTrainingBatchService splitterAndTrainingBatchService;
     Logger logger = LoggerFactory.getLogger(TaskSchedulingConfig.class);
 
     private BackendMaintenanceTaskService backendMaintenanceTaskService;
@@ -35,9 +40,11 @@ public class TaskSchedulingConfig {
 
 
     public TaskSchedulingConfig(BackendMaintenanceTaskService backendMaintenanceTaskService,
-                                @Value("${gendox.maintenance.daily-usage-aggregator.fixed-delay:10s}") Duration fixedDelay) {
+                                @Value("${gendox.maintenance.daily-usage-aggregator.fixed-delay:10s}") Duration fixedDelay, QueueConsumerService queueConsumerService, SplitterAndTrainingBatchService splitterAndTrainingBatchService) {
         this.backendMaintenanceTaskService = backendMaintenanceTaskService;
         this.fixedDelay = fixedDelay;
+        this.queueConsumerService = queueConsumerService;
+        this.splitterAndTrainingBatchService = splitterAndTrainingBatchService;
     }
 
     @Bean
@@ -64,6 +71,14 @@ public class TaskSchedulingConfig {
             logger.debug("Daily usage aggregation task completed: {}", results);
             logger.debug("Rest assured, this task runs every {}", fixedDelay);
         }
+    }
+
+
+    @Scheduled(fixedDelayString = "${queue.documents.upload.poll-ms:10s}")
+    public void autoTrainingJobPoller() {
+        queueConsumerService.pollTopicOnce(QueueMessageTopicNameConstants.DOCUMENT_UPLOAD,
+                500,
+                splitterAndTrainingBatchService::runSplitterAndTrainingForBatchOfFiles);
     }
 
 

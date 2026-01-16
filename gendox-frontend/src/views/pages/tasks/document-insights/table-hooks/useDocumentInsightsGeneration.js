@@ -1,44 +1,72 @@
-import { useCallback, useState } from 'react'
-import { useDispatch } from 'react-redux'
-import { executeTaskByType } from 'src/store/activeTask/activeTask'
+import { useCallback, useMemo } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import {
+  executeTaskByType,
+  setInsightsGeneratingCells,
+  clearInsightsGenerationState
+} from 'src/store/activeTask/activeTask'
 import { toast } from 'react-hot-toast'
 import { useGeneration as useGenerationContext } from '../../generation/GenerationContext'
+import { useRouter } from 'next/router'
+import { useJobMonitor } from '../../generation/useJobMonitor'
 
-export default function useGeneration({
-  organizationId,
-  projectId,
-  taskId,
-  documents,
-  questions,
-  pollJobStatus,  
-  selectedDocuments,
-  setSelectedDocuments,
-  reloadAll,
-  token,
-}) {
+export default function useGeneration({ setSelectedDocuments, reloadAll, token }) {
+  const router = useRouter()
   const dispatch = useDispatch()
-  const { startGeneration, updateProgress, completeGeneration, failGeneration } = useGenerationContext()
-  const [isGeneratingAll, setIsGeneratingAll] = useState(false)
-  const [isGeneratingCells, setIsGeneratingCells] = useState({})
+  const { organizationId, taskId, projectId } = router.query
+  const { startGenerationMonitor, completeGeneration, failGeneration } = useGenerationContext()
 
-   const handleGenerate = useCallback(
-    async ({ docs, questionsToGenerate, reGenerateExistingAnswers, isAll = false }) => {
-     console.log('Starting generation for documents:', docs, 'with questions:', questionsToGenerate, 'reGenerate:', reGenerateExistingAnswers, 'isAll:', isAll)
-      if (isAll) setIsGeneratingAll(true)
+  const { taskNodesDocumentList, taskNodesQuestionList, taskNodesAnswerList } = useSelector(
+    state => state.activeTaskNode
+  )
+
+  const { isInsightsGeneratingCells } = useSelector(state => state.activeTask.generationState)
+
+  const { pollJobByCriteria, buildCellsLoadingMap } = useJobMonitor({
+    organizationId,
+    projectId,
+    token,
+    reloadAll
+  })
+
+  const documents = useMemo(() => taskNodesDocumentList?.content || [], [taskNodesDocumentList])
+  const questions = useMemo(() => taskNodesQuestionList?.content || [], [taskNodesQuestionList])
+  const answers = useMemo(() => taskNodesAnswerList?.content || [], [taskNodesAnswerList])
+
+  const handleGenerate = useCallback(
+    async ({ documentsToGenerate = [], questionsToGenerate = [], reGenerateExistingAnswers = true }) => {
+      // Normalization of inputs to arrays
+      const docsArray = !documentsToGenerate
+        ? []
+        : Array.isArray(documentsToGenerate)
+        ? documentsToGenerate
+        : [documentsToGenerate]
+
+      const questionsArray = !questionsToGenerate
+        ? []
+        : Array.isArray(questionsToGenerate)
+        ? questionsToGenerate
+        : [questionsToGenerate]
+
+      const selectedDocumentIds = docsArray.map(d => d.id)
+      const selectedQuestionIds = questionsArray.map(q => q.id)
+
+      const cellsLoading = buildCellsLoadingMap({
+        documents,
+        questions,
+        answers,
+        selectedDocumentIds,
+        selectedQuestionIds,
+        forceLoader: reGenerateExistingAnswers
+      })
+
+      dispatch(setInsightsGeneratingCells(cellsLoading))
 
       try {
-        const docIds = Array.isArray(docs) ? docs.map(d => d.id) : [docs.id]
-
-        const questionIds = questionsToGenerate
-          ? Array.isArray(questionsToGenerate)
-            ? questionsToGenerate.map(q => q.id)
-            : [questionsToGenerate.id]
-          : questions.map(q => q.id)
-
         const criteria = {
           taskId,
-          documentNodeIds: docIds,
-          questionNodeIds: questionIds,
+          documentNodeIds: selectedDocumentIds, // Empty array means all documents
+          questionNodeIds: selectedQuestionIds, // Empty array means all questions
           reGenerateExistingAnswers
         }
 
@@ -46,85 +74,51 @@ export default function useGeneration({
           executeTaskByType({ organizationId, projectId, taskId, criteria, token })
         ).unwrap()
 
-        // Start tracking generation in GlobalGenerationStatus
-        const generationType = isAll ? 'all' : selectedDocuments?.length > 0 ? 'selected' : 'new'
-        startGeneration(taskId, null, generationType, docIds.length)
+        // Polling & Feedback
+        startGenerationMonitor(taskId, null, 'all', 2000)
 
+        await pollJobByCriteria({
+          jobExecutionId,
+          taskId,
+          onReload: reloadAll,
+          selectedDocumentIds,
+          selectedQuestionIds,
+          forceLoader: false // must be false
+        })
 
-        await pollJobStatus(jobExecutionId)
         reloadAll()
-
-        // Complete generation tracking
         completeGeneration(taskId, null)
-        toast.success(`Generation completed for ${docIds.length} document(s)`)
+
+        toast.success(`Generation completed`)
+
         setSelectedDocuments([])
       } catch (error) {
-        console.error('Failed to start generation:', error)
-        // Fail generation tracking
-        failGeneration(taskId, null, error.message || 'Generation failed')
+        console.error('Generation Failed to start generation:', error)
+        failGeneration(taskId, null, error.message || 'Failed to start generationd')
         toast.error('Failed to start generation')
       } finally {
-        if (isAll) setIsGeneratingAll(false)
+        dispatch(clearInsightsGenerationState())
       }
     },
-    [dispatch, documents, questions, organizationId, projectId, taskId, pollJobStatus, token, setSelectedDocuments]
+    [
+      dispatch,
+      organizationId,
+      projectId,
+      taskId,
+      pollJobByCriteria,
+      startGenerationMonitor,
+      completeGeneration,
+      failGeneration,
+      reloadAll,
+      setSelectedDocuments,
+      documents,
+      questions,
+      answers
+    ]
   )
 
-  const handleGenerateSelected = useCallback(async () => {
-    const selectedDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
-    if (selectedDocs.length === 0) {
-      toast.error('No documents selected!')
-      return
-    }
-    const newCells = {}
-    selectedDocs.forEach(doc => {
-      questions.forEach(q => {
-        newCells[`${doc.id}_${q.id}`] = true
-      })
-    })
-    setIsGeneratingCells(cells => ({ ...cells, ...newCells }))
-
-    try {
-      await handleGenerate({ docs: selectedDocs, reGenerateExistingAnswers: true })
-    } finally {
-      // Clean up just those cells
-      setIsGeneratingCells(cells => {
-        const copy = { ...cells }
-        selectedDocs.forEach(doc => {
-          questions.forEach(q => {
-            delete copy[`${doc.id}_${q.id}`]
-          })
-        })
-        return copy
-      })
-    }
-  }, [documents, questions, selectedDocuments, handleGenerate])
-
-  const handleGenerateSingleAnswer = useCallback(
-    async (doc, question) => {
-      if (!doc || !question) {
-        toast.error('Document and question are required to generate an answer.')
-        return
-      }
-      const key = `${doc.id}_${question.id}`
-      setIsGeneratingCells(cells => ({ ...cells, [key]: true }))
-      try {
-        await handleGenerate({ docs: doc, questionsToGenerate: question, reGenerateExistingAnswers: true })
-      } finally {
-        setIsGeneratingCells(cells => {
-          const { [key]: _, ...rest } = cells
-          return rest
-        })
-      }
-    }, [handleGenerate])
-
-
-
   return {
-    handleGenerateSelected,
-    handleGenerateSingleAnswer,
     handleGenerate,
-    isGeneratingAll,
-    isGeneratingCells
+    isInsightsGeneratingCells
   }
 }

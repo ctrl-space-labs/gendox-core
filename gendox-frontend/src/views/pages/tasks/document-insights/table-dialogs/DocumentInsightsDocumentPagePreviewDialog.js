@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -27,7 +27,7 @@ import DownloadIcon from '@mui/icons-material/Download'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/router'
-import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
+import { isDocumentInsightsFileTypeSupported } from 'src/utils/tasks/fileFormats'
 import CleanCollapse from 'src/views/custom-components/mui/collapse'
 import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
 import DocumentTextComponent from '../../helping-components/DocumentTextComponent'
@@ -39,18 +39,18 @@ import { updateTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
 import { DeleteConfirmDialog } from 'src/utils/dialogs/DeleteConfirmDialog'
 import WarningIcon from '@mui/icons-material/Warning'
 import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
-
+import { is } from 'date-fns/locale'
 
 const DocumentPagePreviewDialog = ({
   open,
   onClose,
   activeDocument,
-  generateSingleDocument,
   loading,
   onExportCsv,
   isExportingCsv,
   onDelete,
-  reloadAll
+  reloadAll,
+  handleGenerate
 }) => {
   const dispatch = useDispatch()
   const router = useRouter()
@@ -60,7 +60,6 @@ const DocumentPagePreviewDialog = ({
   const [showDetails, setShowDetails] = useState(true)
   const [showDocumentText, setShowDocumentText] = useState(false)
   const [confirmRegenerate, setConfirmRegenerate] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [promptValue, setPromptValue] = useState('')
   const [openAddDocDialog, setOpenAddDocDialog] = useState(false)
@@ -69,8 +68,17 @@ const DocumentPagePreviewDialog = ({
   const [hasBreakingChanges, setHasBreakingChanges] = useState(false)
   const [openConfirmAnswersDelete, setOpenConfirmAnswersDelete] = useState(false)
   const { supportingDocuments, isLoading } = useSelector(state => state.activeDocument)
-
+  const { isInsightsGeneratingCells } = useSelector(state => state.activeTask.generationState)
   const { sections, isBlurring } = useSelector(state => state.activeDocument)
+
+  const isDocGenerating = useSelector(state => {
+    if (!activeDocument?.id) return false
+    const cells = state.activeTask.generationState.isInsightsGeneratingCells
+    if (cells[`${activeDocument.id}_all`] === true) return true
+    const prefix = `${activeDocument.id}_`
+    return Object.keys(cells).some(key => key.startsWith(prefix) && cells[key] === true)
+  })
+
 
   useEffect(() => {
     if (activeDocument) {
@@ -158,43 +166,17 @@ const DocumentPagePreviewDialog = ({
   }
 
   const handleGenerateClick = () => {
-    const hasGeneratedContent = activeDocument.length > 0
-
-    if (hasGeneratedContent) {
-      // Show confirmation dialog for regenerate
+    if (activeDocument) {
       setConfirmRegenerate(true)
     } else {
       // Direct generate for first time
-      handleGenerate()
-    }
-  }
-
-  const handleGenerate = async () => {
-    if (generateSingleDocument && activeDocument) {
-      try {
-        setIsGenerating(true)
-        setConfirmRegenerate(false)
-        setShowDetails(false) // Close the config section
-        setShowDocumentText(false) // Close the document text section
-
-        await generateSingleDocument(activeDocument)
-
-        // Refresh the page nodes after generation
-        await fetchAnswerNodes(0, false)
-      } catch (error) {
-        console.error('Generation failed:', error)
-        // Error is already handled in the generation hook
-      } finally {
-        setIsGenerating(false)
-      }
-    } else {
-      console.warn('generateSingleDocument function not provided')
-      toast.error('Generation function not available')
+      handleGenerate({ documentsToGenerate: activeDocument, reGenerateExistingAnswers: true })
     }
   }
 
   const handleConfirmRegenerate = () => {
-    handleGenerate()
+    handleGenerate({ documentsToGenerate: activeDocument, reGenerateExistingAnswers: true })
+    setConfirmRegenerate(false)
   }
 
   const handleCancelRegenerate = () => {
@@ -295,9 +277,9 @@ const DocumentPagePreviewDialog = ({
               {!editMode && (
                 <Tooltip
                   title={
-                    isGenerating
+                    isDocGenerating
                       ? 'Generation in progress...'
-                      : !isFileTypeSupported(activeDocument?.url)
+                      : !isDocumentInsightsFileTypeSupported(activeDocument?.url)
                       ? 'This file format is not supported for generation'
                       : activeDocument.length > 0
                       ? 'Regenerate document answers'
@@ -309,9 +291,11 @@ const DocumentPagePreviewDialog = ({
                       size='small'
                       onClick={handleGenerateClick}
                       sx={{ mr: 1 }}
-                      disabled={!isFileTypeSupported(activeDocument?.url) || isGenerating || dialogLoading}
+                      disabled={
+                        !isDocumentInsightsFileTypeSupported(activeDocument?.url) || isDocGenerating || dialogLoading
+                      }
                     >
-                      {isGenerating || dialogLoading ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
+                      {isDocGenerating || dialogLoading ? <CircularProgress size={20} /> : <RocketLaunchIcon />}
                     </IconButton>
                   </span>
                 </Tooltip>
@@ -360,7 +344,7 @@ const DocumentPagePreviewDialog = ({
       </AppBar>
 
       {/* Generation Progress Banner */}
-      {(isGenerating || dialogLoading) && (
+      {(isDocGenerating || dialogLoading) && (
         <Box
           sx={{
             backgroundColor: 'primary.main',
@@ -520,7 +504,9 @@ const DocumentPagePreviewDialog = ({
                     {/* Header Row */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <DescriptionIcon color='primary' />
-                      <Typography sx={{ fontWeight: 600, flex: 1 }}>{<TruncatedText text={doc.title} cursor='default' />}</Typography>
+                      <Typography sx={{ fontWeight: 600, flex: 1 }}>
+                        {<TruncatedText text={doc.title} cursor='default' />}
+                      </Typography>
                     </Box>
 
                     {/* Footer Actions */}
@@ -529,7 +515,7 @@ const DocumentPagePreviewDialog = ({
                         <Button
                           variant='outlined'
                           size='small'
-                          href={`http://localhost:3000/gendox/document-instance/?organizationId=${organizationId}&documentId=${doc.id}&projectId=${projectId}`}
+                          href={`/gendox/document-instance/?organizationId=${organizationId}&documentId=${doc.id}&projectId=${projectId}`}
                           target='_blank'
                           sx={{ textTransform: 'none' }}
                         >
@@ -568,9 +554,9 @@ const DocumentPagePreviewDialog = ({
                   py: 6,
                   px: 4,
                   minHeight: fullscreen ? 'calc(100vh - 200px)' : '50vh',
-                  opacity: isGenerating ? 0.6 : 1,
+                  opacity: isDocGenerating ? 0.6 : 1,
                   transition: 'opacity 0.3s ease',
-                  pointerEvents: isGenerating ? 'none' : 'auto'
+                  pointerEvents: isDocGenerating ? 'none' : 'auto'
                 }}
               >
                 <DocumentTextComponent
@@ -584,7 +570,7 @@ const DocumentPagePreviewDialog = ({
               </ResponsiveCardContent>
 
               {/* Subtle loading overlay for content area */}
-              {(isGenerating || dialogLoading) && (
+              {(isDocGenerating || dialogLoading) && (
                 <Box
                   sx={{
                     position: 'absolute',
@@ -642,6 +628,7 @@ const DocumentPagePreviewDialog = ({
         mode='supporting'
         onConfirm={newIds => handleAddSupportingDoc(newIds)}
         onUploadSuccess={newDocIds => handleAddSupportingDoc(newDocIds)}
+        taskType='document-insights'
       />
 
       <DeleteConfirmDialog

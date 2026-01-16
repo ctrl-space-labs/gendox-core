@@ -19,7 +19,7 @@ spring:
 
 gendox:
   domains:
-    frontend: https://dev.gendox.ctrlspace.dev
+    frontend: https://dev-app.gendox.dev
   documents:
     wordCount: 300
 

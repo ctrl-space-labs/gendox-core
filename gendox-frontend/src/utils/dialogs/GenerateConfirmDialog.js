@@ -41,10 +41,9 @@ const GENERATION_CONFIGS = {
     showWarning: true
   }),
   document: {
-    title: 'Regenerate Document Answers',
-    description: 'This document already has generated answers. Regenerating will replace all existing answers with new ones.',
-    warning: '⚠️ This action cannot be undone. All current answers will be lost.',
-    buttonText: 'Regenerate Answers',
+    title: 'Generate / Regenerate Document Answers',
+    description: 'This document may already have generated answers. Generating will replace any existing answers with new ones.',
+    buttonText: 'Generate Answers',
     buttonColor: 'warning',
     showWarning: true
   }

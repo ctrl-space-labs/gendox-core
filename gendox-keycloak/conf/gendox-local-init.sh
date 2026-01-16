@@ -4,10 +4,10 @@
 # Configuration Variables
 # ============================================
 
-# Admin credentials
-ADMIN_USER="gendox_admin"
-ADMIN_PASSWORD="changeit"
-KEYCLOAK_URL="http://localhost:8080/idp"
+# Admin credentials (defaults can be overridden by container env)
+ADMIN_USER="${KEYCLOAK_ADMIN:-gendox_admin}"
+ADMIN_PASSWORD="${KEYCLOAK_ADMIN_PASSWORD:-changeit}"
+KEYCLOAK_URL="${KEYCLOAK_URL:-https://localhost:8443/${KEYCLOAK_HTTP_RELATIVE_PATH:-idp}}"
 
 # Realm name
 REALM_NAME="gendox-idp-prod"
@@ -33,22 +33,29 @@ KCADM="../bin/kcadm.sh"
 # Script Execution
 # ============================================
 
+# Ensure jq is available
+if ! command -v jq >/dev/null 2>&1; then
+  echo "jq is required but not found on PATH"
+  exit 1
+fi
+
 # Login
 echo "Logging into $KEYCLOAK_URL as user $ADMIN_USER of realm master"
-$KCADM config credentials --server "$KEYCLOAK_URL" \
+$KCADM config credentials --insecure \
+                          --server "$KEYCLOAK_URL" \
                           --realm master \
                           --user "$ADMIN_USER" \
                           --password "$ADMIN_PASSWORD"
 
 # Create Realm if it doesn't exist
 echo "Checking if realm '$REALM_NAME' exists..."
-if ! $KCADM get realms/"$REALM_NAME" > /dev/null 2>&1; then
+if ! $KCADM get realms/"$REALM_NAME" --insecure > /dev/null 2>&1; then
   echo "Creating realm '$REALM_NAME'..."
-  $KCADM create realms -s realm="$REALM_NAME" -s enabled=true
+  $KCADM create realms --insecure -s realm="$REALM_NAME" -s enabled=true
   echo "Realm '$REALM_NAME' created successfully."
   # Set default realm settings
   echo "Setting default realm settings for '$REALM_NAME'..."
-  $KCADM update realms/"$REALM_NAME" \
+  $KCADM update realms/"$REALM_NAME" --insecure \
       -s registrationAllowed=true \
       -s resetPasswordAllowed=true \
       -s rememberMe=false \
@@ -71,11 +78,11 @@ create_pkce_client() {
 
   echo "Processing PKCE client '$CLIENT_ID'..."
 
-  CLIENT_UUID=$($KCADM get clients -r "$REALM_NAME" -q clientId="$CLIENT_ID" --fields id --format json | jq -r '.[0].id')
+  CLIENT_UUID=$($KCADM get clients --insecure -r "$REALM_NAME" -q clientId="$CLIENT_ID" --fields id --format json | jq -r '.[0].id')
 
   if [ "$CLIENT_UUID" = "null" ] || [ -z "$CLIENT_UUID" ]; then
     echo "Creating PKCE client '$CLIENT_ID'..."
-    $KCADM create clients -r "$REALM_NAME" -f - <<EOF
+    $KCADM create clients --insecure -r "$REALM_NAME" -f - <<EOF
 {
   "clientId": "$CLIENT_ID",
   "enabled": true,
@@ -107,11 +114,11 @@ create_private_client() {
 
   echo "Processing private client '$CLIENT_ID'..."
 
-  CLIENT_UUID=$($KCADM get clients -r "$REALM_NAME" -q clientId="$CLIENT_ID" --fields id --format json | jq -r '.[0].id')
+  CLIENT_UUID=$($KCADM get clients --insecure -r "$REALM_NAME" -q clientId="$CLIENT_ID" --fields id --format json | jq -r '.[0].id')
 
   if [ "$CLIENT_UUID" = "null" ] || [ -z "$CLIENT_UUID" ]; then
     echo "Creating private client '$CLIENT_ID'..."
-    $KCADM create clients -r "$REALM_NAME" \
+    $KCADM create clients --insecure -r "$REALM_NAME" \
         -s clientId="$CLIENT_ID" \
         -s enabled=true \
         -s publicClient=false \
@@ -135,8 +142,8 @@ assign_role_to_service_account() {
   echo "Assigning role '$ROLE_NAME' to service account '$SERVICE_ACCOUNT_USERNAME'..."
 
   # Check if role is already assigned
-  if ! $KCADM get-roles -r "$REALM_NAME" --uusername "$SERVICE_ACCOUNT_USERNAME" --cclientid realm-management | grep -q "\"$ROLE_NAME\""; then
-    $KCADM add-roles -r "$REALM_NAME" --uusername "$SERVICE_ACCOUNT_USERNAME" --cclientid realm-management --rolename "$ROLE_NAME"
+  if ! $KCADM get-roles --insecure -r "$REALM_NAME" --uusername "$SERVICE_ACCOUNT_USERNAME" --cclientid realm-management | grep -q "\"$ROLE_NAME\""; then
+    $KCADM add-roles --insecure -r "$REALM_NAME" --uusername "$SERVICE_ACCOUNT_USERNAME" --cclientid realm-management --rolename "$ROLE_NAME"
     echo "Role '$ROLE_NAME' assigned to '$SERVICE_ACCOUNT_USERNAME'."
   else
     echo "Role '$ROLE_NAME' already assigned to '$SERVICE_ACCOUNT_USERNAME'."

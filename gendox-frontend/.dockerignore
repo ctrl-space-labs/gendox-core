@@ -1,0 +1,15 @@
+# Local environment files - should not be copied into Docker build
+# These will be provided via Docker build args instead
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Other files that shouldn't be in the image
+node_modules
+.next
+out
+.git
+.gitignore
+.DS_Store

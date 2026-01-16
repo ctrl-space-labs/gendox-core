@@ -19,13 +19,9 @@ import Box from '@mui/material/Box'
 import CreateOrEditTaskDialog from './CreateOrEditTaskDialog'
 import DuplicateTaskDialog from './DuplicateTaskDialog'
 import { deleteTask } from 'src/store/activeTask/activeTask'
+import { TASK_TYPE_MAP } from 'src/utils/tasks/taskUtils'
 
-// Map your codes to user-friendly labels + colors
-const TASK_TYPE_MAP = {
-  DEEP_RESEARCH: { label: 'Deep Research', color: 'primary' },
-  DOCUMENT_INSIGHTS: { label: 'Document Insights', color: 'success' },
-  DOCUMENT_DIGITIZATION: { label: 'Document Digitization', color: 'warning' }
-}
+
 
 const TasksList = ({ projectTasks, page }) => {
   const dispatch = useDispatch()

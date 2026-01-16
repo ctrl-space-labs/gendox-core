@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Box, Typography, Stack, Button, Tooltip, Divider, Menu, MenuItem, CircularProgress } from '@mui/material'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
@@ -12,65 +12,46 @@ const HeaderSection = ({
   title,
   description,
   openAddDocument,
-  onGenerateNew,
-  onGenerateAll,
-  onGenerateSelected,
-  disableGenerate,
-  disableGenerateNew,
+  handleGenerate,
   isLoading,
   selectedDocuments,
-  generatingAll = false,
-  generatingNew = false,
-  generatingSelected = false,
-  documents = [],
-  hasGeneratedContent = () => false,
+  isDigitizationGenerating = false,
+  documents = []
 }) => {
   const [anchorEl, setAnchorEl] = useState(null)
   const [confirmGeneration, setConfirmGeneration] = useState(null) // 'all', 'new', 'selected', or null
+  const [generatingType, setGeneratingType] = useState(null)
 
   const handleToggle = event => {
     setAnchorEl(prev => (prev ? null : event.currentTarget.parentElement))
   }
 
-  // Handle generation with confirmation check
-  const handleGenerateClick = type => {
-    let targetDocs = []
+  const disableGenerate = isLoading || documents.length === 0 || isDigitizationGenerating
 
-    switch (type) {
-      case 'all':
-        targetDocs = documents.filter(
-          doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
-        )
-        break
-      case 'new':
-        const docsWithPrompts = documents.filter(
-          doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
-        )
-        targetDocs = docsWithPrompts.filter(doc => !hasGeneratedContent(doc.id))
-        break
-      case 'selected':
-        targetDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
-        break
-    }
+  
 
-    // Always show confirmation for all generation types
-    setConfirmGeneration(type)
-  }
+  useEffect(() => {
+      if (!isDigitizationGenerating) {
+        setGeneratingType(null)
+      }
+    }, [isDigitizationGenerating])
 
   // Execute the actual generation
   const executeGeneration = type => {
     setConfirmGeneration(null)
     setAnchorEl(null)
+    setGeneratingType(type)
 
     switch (type) {
       case 'all':
-        if (onGenerateAll) onGenerateAll()
+        handleGenerate({ documentsToGenerate: [], reGenerateExistingAnswers: true })
         break
       case 'new':
-        if (onGenerateNew) onGenerateNew()
+        handleGenerate({ documentsToGenerate: [], reGenerateExistingAnswers: false })
         break
       case 'selected':
-        if (onGenerateSelected) onGenerateSelected()
+        const selectedDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
+        handleGenerate({ documentsToGenerate: selectedDocs, reGenerateExistingAnswers: true })
         break
     }
   }
@@ -88,27 +69,37 @@ const HeaderSection = ({
 
   // Calculate button state and text
   const getMainButtonConfig = () => {
+    // when is generating, show loading state
+    if (isDigitizationGenerating && generatingType) {
+      let loadingText = 'Generating...'
+      if (generatingType === 'all') loadingText = 'Generating All...'
+      if (generatingType === 'new') loadingText = 'Generating New...'
+      if (generatingType === 'selected') loadingText = `Generating (${selectedDocuments.length})...`
+
+      return {
+        text: loadingText,
+        type: generatingType,
+        loading: true,
+        disabled: true
+      }
+    }
+
+    // normal states
     if (selectedDocuments.length > 0) {
       return {
         text: `Generate Selected (${selectedDocuments.length})`,
         type: 'selected',
-        loading: generatingSelected,
-        disabled: generatingAll || generatingNew || generatingSelected
+        loading: isDigitizationGenerating,
+        disabled: disableGenerate
       }
     }
-
-    // Check if there are new (ungenerated) documents WITH prompts AND supported file types
-    const docsWithPrompts = documents.filter(
-      doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
-    )
-    const newDocsWithPrompts = docsWithPrompts.filter(doc => !hasGeneratedContent(doc.id))
 
     // Always default to "Generate New" as main button
     return {
       text: `Generate New`,
       type: 'new',
-      loading: generatingNew,
-      disabled: generatingAll || generatingNew || generatingSelected || disableGenerateNew
+      loading: isDigitizationGenerating,
+      disabled: disableGenerate
     }
   }
 
@@ -178,8 +169,8 @@ const HeaderSection = ({
                   startIcon={
                     buttonConfig.loading ? <CircularProgress size={20} color='inherit' /> : <RocketLaunchIcon />
                   }
-                  onClick={() => handleGenerateClick(buttonConfig.type)}
-                  disabled={buttonConfig.disabled || isLoading || disableGenerate}
+                  onClick={() => setConfirmGeneration(buttonConfig.type)}
+                  disabled={buttonConfig.disabled || disableGenerate}
                   sx={{
                     fontWeight: 700,
                     textTransform: 'uppercase',
@@ -195,7 +186,7 @@ const HeaderSection = ({
                   color='primary'
                   size='small'
                   onClick={handleToggle}
-                  disabled={isLoading || disableGenerate}
+                  disabled={disableGenerate}
                   sx={{
                     minWidth: '40px',
                     px: 0,
@@ -218,11 +209,6 @@ const HeaderSection = ({
               onClose={() => setAnchorEl(null)}
               anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
               transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-              PaperProps={{
-                sx: {
-                  width: anchorEl?.offsetWidth ?? 'auto'
-                }
-              }}
             >
               {/* Menu items based on main button state */}
 
@@ -230,11 +216,11 @@ const HeaderSection = ({
               {selectedDocuments.length > 0 && [
                 <MenuItem
                   key='generate-new'
-                  onClick={() => handleGenerateClick('new')}
-                  disabled={generatingAll || generatingNew || generatingSelected || isLoading || disableGenerateNew}
+                  onClick={() => setConfirmGeneration('new')}
+                  disabled={disableGenerate}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {generatingNew ? (
+                    {isDigitizationGenerating ? (
                       <CircularProgress size={16} color='primary' />
                     ) : (
                       <RocketLaunchIcon fontSize='small' color='primary' />
@@ -245,12 +231,9 @@ const HeaderSection = ({
 
                 <MenuItem
                   key='generate-all'
-                  onClick={() => handleGenerateClick('all')}
+                  onClick={() => setConfirmGeneration('all')}
                   disabled={
-                    generatingAll ||
-                    generatingNew ||
-                    generatingSelected ||
-                    isLoading ||
+                    disableGenerate ||
                     (() => {
                       const docsWithPrompts = documents.filter(
                         doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
@@ -260,7 +243,7 @@ const HeaderSection = ({
                   }
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {generatingAll ? (
+                    {isDigitizationGenerating ? (
                       <CircularProgress size={16} color='success' />
                     ) : (
                       <RocketLaunchIcon fontSize='small' color='success' />
@@ -273,12 +256,9 @@ const HeaderSection = ({
               {/* When main button is "Generate New" - show only Generate All */}
               {selectedDocuments.length === 0 && (
                 <MenuItem
-                  onClick={() => handleGenerateClick('all')}
+                  onClick={() => setConfirmGeneration('all')}
                   disabled={
-                    generatingAll ||
-                    generatingNew ||
-                    generatingSelected ||
-                    isLoading ||
+                    disableGenerate ||
                     (() => {
                       const docsWithPrompts = documents.filter(
                         doc => doc.prompt && doc.prompt.trim() && isFileTypeSupported(doc.url || doc.name)
@@ -288,7 +268,7 @@ const HeaderSection = ({
                   }
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {generatingAll ? (
+                    {isDigitizationGenerating ? (
                       <CircularProgress size={16} color='success' />
                     ) : (
                       <RocketLaunchIcon fontSize='small' color='success' />
@@ -298,7 +278,7 @@ const HeaderSection = ({
                 </MenuItem>
               )}
 
-              {(disableGenerate || isLoading) && (
+              {disableGenerate && (
                 <Box sx={{ px: 2, pb: 1, pt: 0.5, fontSize: '0.85rem', color: 'grey.600' }}>
                   {isLoading ? 'Loading, please wait...' : 'Add documents to enable generation.'}
                 </Box>
