@@ -12,6 +12,7 @@ import globalSearch from 'src/store/globalSearch/globalSearch'
 import activeTask from 'src/store/activeTask/activeTask'
 import activeTaskNode from 'src/store/activeTaskNode/activeTaskNode'
 import activeTaskEdge from 'src/store/activeTaskEdge/activeTaskEdge'
+import seaScope from 'src/store/seaScope/seaScope'
 
 const reducer = {
   userData,
@@ -23,7 +24,8 @@ const reducer = {
   globalSearch,
   activeTask,
   activeTaskNode,
-  activeTaskEdge
+  activeTaskEdge,
+  seaScope
 }
 
 
