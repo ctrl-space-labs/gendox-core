@@ -1,18 +1,17 @@
 import { configureStore } from '@reduxjs/toolkit'
-import logger from 'redux-logger';
-
+import logger from 'redux-logger'
 
 import userData from 'src/store/userData/userData'
 import activeOrganization from 'src/store/activeOrganization/activeOrganization'
 import activeProject from 'src/store/activeProject/activeProject'
 import activeDocument from 'src/store/activeDocument/activeDocument'
 import gendoxChat from 'src/store/chat/gendoxChat'
-import activeProjectAgent from "src/store/activeProjectAgent/activeProjectAgent.js";
+import activeProjectAgent from 'src/store/activeProjectAgent/activeProjectAgent.js'
 import globalSearch from 'src/store/globalSearch/globalSearch'
 import activeTask from 'src/store/activeTask/activeTask'
 import activeTaskNode from 'src/store/activeTaskNode/activeTaskNode'
 import activeTaskEdge from 'src/store/activeTaskEdge/activeTaskEdge'
-import seaScope from 'src/store/seaScope/seaScope'
+import earthObservation from 'src/store/earthObservation/earthObservation'
 
 const reducer = {
   userData,
@@ -25,12 +24,11 @@ const reducer = {
   activeTask,
   activeTaskNode,
   activeTaskEdge,
-  seaScope
+  earthObservation
 }
 
-
 export const store = configureStore({
-  reducer ,
+  reducer,
   //  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(logger),
   devTools: process.env.NODE_ENV !== 'production'
 })

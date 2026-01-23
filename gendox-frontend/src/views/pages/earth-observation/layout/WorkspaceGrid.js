@@ -24,7 +24,7 @@ import {
   restoreChat,
   minimizeEditor,
   restoreEditor
-} from 'src/store/seaScope/seaScope'
+} from 'src/store/earthObservation/earthObservation'
 
 // -------------------- MINIMUM SIZES (τύπου screenshot)
 const LINE_H = 34
@@ -52,7 +52,7 @@ const clampSplitY = (ratio, totalH) => {
 
 export default function WorkspaceGrid() {
   const dispatch = useDispatch()
-  const { layoutMode, splitX, splitY, chatMin, editorMin } = useSelector(s => s.seaScope)
+  const { layoutMode, splitX, splitY, chatMin, editorMin } = useSelector(s => s.earthObservation)
 
   const rootRef = useRef(null)
   const rightRef = useRef(null)

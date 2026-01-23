@@ -4,6 +4,7 @@ import Typography from '@mui/material/Typography'
 import { styled, alpha } from '@mui/material/styles'
 import WorkspaceShell from './layout/WorkspaceShell'
 import WorkspaceGrid from './layout/WorkspaceGrid'
+import GeeAuthGuard from './GeeAuthGuard'
 
 const PageWrapper = styled(Box)(({ theme }) => ({
   height: '100%',
@@ -28,24 +29,26 @@ const GlassSurface = styled(Box)(({ theme }) => ({
   padding: 0
 }))
 
-const SeaScopeWorkspacePage = () => {
+const EarthObservationWorkspacePage = () => {
   return (
     <PageWrapper>
       {/* Top Title row (like Gendox style header) */}
       <Box sx={{ px: 2, pt: 2, pb: 1 }}>
         <Typography variant='h3' sx={{ fontWeight: 700 }}>
-          Sea Scope
+          Earth Observation
         </Typography>
       </Box>
 
       {/* Main glass surface (fills the remaining height) */}
       <GlassSurface>
-        <WorkspaceShell>
-          <WorkspaceGrid />
-        </WorkspaceShell>
+        <GeeAuthGuard>
+          <WorkspaceShell>
+            <WorkspaceGrid />
+          </WorkspaceShell>
+        </GeeAuthGuard>
       </GlassSurface>
     </PageWrapper>
   )
 }
 
-export default SeaScopeWorkspacePage
+export default EarthObservationWorkspacePage

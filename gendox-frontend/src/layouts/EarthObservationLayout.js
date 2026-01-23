@@ -8,7 +8,7 @@ import { useSettings } from 'src/@core/hooks/useSettings'
 import GendoxAppBrand from './components/shared-components/GendoxAppBrand'
 import VerticalNavButtons from 'src/layouts/components/VerticalNavButton'
 
-const SeaScopeLayout = ({ children }) => {
+const EarthObservationLayout = ({ children }) => {
   const theme = useTheme()
   const { settings, saveSettings } = useSettings()
   const { ChatButton, NewProjectButton } = VerticalNavButtons
@@ -86,4 +86,4 @@ const SeaScopeLayout = ({ children }) => {
   )
 }
 
-export default SeaScopeLayout
+export default EarthObservationLayout

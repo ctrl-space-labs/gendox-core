@@ -7,6 +7,7 @@ const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContai
 const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false })
 
 export default function MapPanel() {
+  
   return (
     <Box sx={{ height: '100%', width: '100%' }}>
       <MapContainer

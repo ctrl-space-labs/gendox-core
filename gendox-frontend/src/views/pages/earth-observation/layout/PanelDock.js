@@ -1,11 +1,11 @@
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import { useDispatch, useSelector } from 'react-redux'
-import { PANELS, restorePanel } from 'src/store/seaScope/seaScope'
+import { PANELS, restorePanel } from 'src/store/earthObservation/earthObservation'
 
 export default function PanelDock() {
   const dispatch = useDispatch()
-  const minimized = useSelector(state => state.seaScope.minimized)
+  const minimized = useSelector(state => state.earthObservation.minimized)
 
   const items = [
     { id: PANELS.MAP, label: 'Map' },
@@ -24,12 +24,7 @@ export default function PanelDock() {
       }}
     >
       {items.map(item => (
-        <Button
-          key={item.id}
-          size='small'
-          variant='outlined'
-          onClick={() => dispatch(restorePanel(item.id))}
-        >
+        <Button key={item.id} size='small' variant='outlined' onClick={() => dispatch(restorePanel(item.id))}>
           Restore {item.label}
         </Button>
       ))}

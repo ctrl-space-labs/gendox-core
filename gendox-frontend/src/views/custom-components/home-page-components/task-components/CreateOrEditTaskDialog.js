@@ -45,7 +45,12 @@ const TASK_OPTIONS = [
     value: 'DOCUMENT_DIGITIZATION',
     label: 'Digitize scanned documents page-by-page',
     description: 'Convert scanned documents into editable digital formats.'
-  }
+  },
+  {
+    value: 'EARTH_OBSERVATION',
+    label: 'Analyze Earth Observation data',
+    description: 'Process and analyze satellite imagery and geospatial data.'
+  },
   // {
   //   value: 'DEEP_RESEARCH',
   //   label: 'Conduct deep research and analysis',

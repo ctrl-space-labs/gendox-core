@@ -1,11 +1,14 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.EOScriptConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.TaskEdgeConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.TaskNodeConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.EOScript;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.EOScriptDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDuplicateDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
@@ -37,6 +40,8 @@ public class TaskController {
     private final TaskCsvExportService taskCsvExportService;
     private final TaskNodeService taskNodeService;
     private final TaskEdgeService taskEdgeService;
+    private final EOScriptConverter eoScriptConverter;
+    private final EOScriptService eoScriptService;
 
 
     @Autowired
@@ -45,13 +50,17 @@ public class TaskController {
                           TaskEdgeConverter taskEdgeConverter,
                           TaskCsvExportService taskCsvExportService,
                           TaskNodeService taskNodeService,
-                          TaskEdgeService taskEdgeService) {
+                          TaskEdgeService taskEdgeService,
+                          EOScriptConverter eoScriptConverter,
+                          EOScriptService eoScriptService) {
         this.taskService = taskService;
         this.taskNodeConverter = taskNodeConverter;
         this.taskEdgeConverter = taskEdgeConverter;
         this.taskCsvExportService = taskCsvExportService;
         this.taskNodeService = taskNodeService;
         this.taskEdgeService = taskEdgeService;
+        this.eoScriptConverter = eoScriptConverter;
+        this.eoScriptService = eoScriptService;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -373,6 +382,71 @@ public class TaskController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(fileResource);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PostMapping(
+            value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/eo-scripts",
+            produces = {"application/json"}
+    )
+    @ResponseStatus(HttpStatus.CREATED)
+    public EOScript createEOScript(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID taskId,
+            @RequestBody EOScriptDTO eoScriptDTO
+    ) throws GendoxException {
+
+        Task task = taskService.getTaskById(taskId);
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException(
+                    "INVALID_PROJECT",
+                    "Task does not belong to the specified project",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        // Force taskId from path (not from client)
+        eoScriptDTO.setTaskId(taskId);
+        eoScriptDTO.setIsLatestVersion(null); // defensive: service decides this
+
+        EOScript eoScript = eoScriptConverter.toEntity(eoScriptDTO);
+        EOScript saved = eoScriptService.createNewEOScript(eoScript);
+
+        return saved;
+    }
+
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @GetMapping(
+            value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/eo-scripts/latest",
+            produces = {"application/json"}
+    )
+    public EOScript getLatestEOScript(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID taskId
+    ) throws GendoxException {
+
+        Task task = taskService.getTaskById(taskId);
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException(
+                    "INVALID_PROJECT",
+                    "Task does not belong to the specified project",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        EOScript latest = eoScriptService.getLatestEOScript(taskId);
+        if (latest == null) {
+            throw new GendoxException(
+                    "EO_SCRIPT_NOT_FOUND",
+                    "No EO Script found for the specified task",
+                    HttpStatus.NOT_FOUND
+            );
+        }
+
+        return latest;
     }
 
 

@@ -452,6 +452,42 @@ const documentDigitizationExportCSV = async (organizationId, projectId, taskId, 
   return response.data // This is the CSV blob
 }
 
+
+/**
+ * Create EOScript for a Task
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param eoScriptPayload {title, description, scriptContent}
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<EOScript>>}
+ */
+const createEOScript = async (organizationId, projectId, taskId, eoScriptPayload, token) => {
+  return axios.post(apiRequests.createEOScript(organizationId, projectId, taskId), eoScriptPayload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
+ * Get latest EOScript for a Task
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<EOScript>>}
+ */
+const getLatestEOScript = async (organizationId, projectId, taskId, token) => {
+  return axios.get(apiRequests.getLatestEOScript(organizationId, projectId, taskId), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
 export default {
   createTask,
   duplicateTask,
@@ -475,5 +511,7 @@ export default {
   deleteTask,
   documentInsightsExportAllCSV,
   documentInsightsExportCSV,
-  documentDigitizationExportCSV
+  documentDigitizationExportCSV,
+  createEOScript,
+  getLatestEOScript
 }
