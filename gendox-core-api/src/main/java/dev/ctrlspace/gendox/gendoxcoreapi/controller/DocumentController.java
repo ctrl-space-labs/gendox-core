@@ -372,7 +372,7 @@ public class DocumentController {
                 .documentInstanceIds(List.of(String.valueOf(documentInstance.getId())))
                 .projectId(projectId.toString())
                 .build();
-        queueProducerService.convertAndSend("jobs." + documentSplitterJobName, documentCriteria, Map.of());
+        queueProducerService.convertAndSend(QueueMessageTopicNameConstants.DOCUMENT_UPLOAD, documentCriteria, Map.of());
 
         return ResponseEntity.ok(documentInstance);
     }
