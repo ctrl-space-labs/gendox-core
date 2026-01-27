@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -24,7 +25,6 @@ public class EOScriptService {
     }
 
 
-
     public List<EOScript> getEOScriptsByTaskId(UUID taskId) {
         logger.info("Fetching EOScripts for task id: {}", taskId);
         return eoScriptRepository.findByTask_IdOrderByCreatedAtDesc(taskId);
@@ -36,9 +36,23 @@ public class EOScriptService {
                 .orElse(null);
     }
 
-@Transactional
+    @Transactional
     public EOScript createNewEOScript(EOScript eoScript) {
         UUID taskId = eoScript.getTask().getId();
+
+        // Find latest
+        EOScript latest = eoScriptRepository
+                .findFirstByTask_IdOrderByCreatedAtDesc(taskId)
+                .orElse(null);
+
+        String newContent = normalize(eoScript.getScriptContent());
+        String latestContent = latest == null ? null : normalize(latest.getScriptContent());
+
+        // If same content, don't create new version
+        if (latest != null && Objects.equals(newContent, latestContent)) {
+            logger.info("EOScript not created: content is identical to latest for taskId={}", taskId);
+            return latest;
+        }
 
         // 1️⃣ Mark all previous scripts as NOT latest
         eoScriptRepository.markAllAsNotLatest(taskId);
@@ -51,9 +65,11 @@ public class EOScriptService {
     }
 
 
-
-
-
+    private String normalize(String s) {
+        if (s == null) return null;
+        // Trim and normalize line endings
+        return s.trim().replaceAll("\\r\\n", "\n");
+    }
 
 
 }
