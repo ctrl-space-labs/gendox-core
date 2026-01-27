@@ -33,7 +33,6 @@ export default function GeeAuthGuard({ children }) {
       null,
       null,
       () => {
-        console.log('GEE Initialized Successfully')
         dispatch(setGeeReady(true))
         setLoading(false)
       },
@@ -59,7 +58,6 @@ export default function GeeAuthGuard({ children }) {
     const safetyTimer = setTimeout(() => {
       setLoading(currentLoading => {
         if (currentLoading) {
-          console.log('GEE check timed out. Showing login button.')
           return false
         }
         return currentLoading
@@ -87,7 +85,6 @@ export default function GeeAuthGuard({ children }) {
     ee.data.authenticateViaOauth(
       CLIENT_ID,
       authResult => {
-        console.log('Auth Success:', authResult)
         // After successful login, initialize
         runInitialize()
       },

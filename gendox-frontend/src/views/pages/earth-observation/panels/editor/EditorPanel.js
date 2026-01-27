@@ -9,7 +9,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/router'
 import { DEFAULT_GEE_CODE } from './geeDefaults'
 import { registerGeeCompletions } from './monacoGeeProvider'
-import { setMapData, createEOScriptThunk } from 'src/store/earthObservation/earthObservation' 
+import { setMapData, createEOScriptThunk, fetchLatestEOScriptThunk } from 'src/store/earthObservation/earthObservation' 
 import { executeGeeCode } from '../../utils/geeRunner'
 import { tooltip } from 'leaflet'
 
@@ -20,19 +20,25 @@ export default function EditorPanel() {
   const { organizationId, taskId, projectId } = router.query
   const editorRef = useRef(null)
   const providerDisposableRef = useRef(null)
-  const { createEOScriptLoading } = useSelector((state) => state.earthObservation)
+  const { createEOScriptLoading, latestEOScriptLoading, latestEOScript } = useSelector((state) => state.earthObservation)
 
   const [code, setCode] = useState(DEFAULT_GEE_CODE)
 
+
   useEffect(() => {
-    const saved = localStorage.getItem('earthObservationGeeCode')
+      dispatch(fetchLatestEOScriptThunk(
+        { organizationId: organizationId, projectId: projectId, taskId: taskId, token: token }
+      ))
+    }, [dispatch, organizationId, projectId, taskId, token])
+
+  useEffect(() => {
+    const saved = latestEOScript?.scriptContent
     if (saved) setCode(saved)
-  }, [])
+  }, [latestEOScript])
 
   const onChange = value => {
     const v = value ?? ''
     setCode(v)
-    localStorage.setItem('earthObservationGeeCode', v)
   }
 
   const handleEditorDidMount = (editor, monaco) => {
@@ -82,10 +88,10 @@ export default function EditorPanel() {
           size='small'
           variant='contained'
           onClick={onRun}
-          disabled={createEOScriptLoading}
-          startIcon={createEOScriptLoading && <CircularProgress size={16} color='inherit' />}
+          disabled={createEOScriptLoading || latestEOScriptLoading}
+          startIcon={createEOScriptLoading || latestEOScriptLoading ? <CircularProgress size={16} color='inherit' /> : null}
         >
-          {createEOScriptLoading ? 'Processing...' : 'Run'}
+          {createEOScriptLoading || latestEOScriptLoading ? 'Processing...' : 'Run'}
         </Button>
       </Stack>
 
