@@ -10,6 +10,7 @@ import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
 import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
+import { has } from 'lodash'
 
 const DocumentInsightsGrid = ({
   openDialog,
@@ -26,7 +27,8 @@ const DocumentInsightsGrid = ({
   setSelectedDocuments,
   onSelectDocument = () => {},
   handleGenerate,
-  isGeneratingCells = {}
+  isGeneratingCells = {},
+  isGenerating
 }) => {
   const theme = useTheme()
   const [documentMenuAnchor, setDocumentMenuAnchor] = useState(null)
@@ -279,14 +281,12 @@ const DocumentInsightsGrid = ({
           const answerObj = answers.find(a => a.documentNodeId === docId && a.questionNodeId === questionId)
           const cellKey = `${docId}_${questionId}`
           const docKey = `${docId}_all`
-          // const isGenerating = !!isGeneratingCells[cellKey]
           const isCellGenerating = !!isGeneratingCells[cellKey]
           const isDocGenerating = !!isGeneratingCells[docKey]
-          const isGenerating = isCellGenerating || isDocGenerating
+          const hasAnswer = !!answerObj
+          const isGenerateBlocked = !hasAnswer && isGenerating
 
-          // console.log('Rendering cell', { cellKey, isCellGenerating, isDocGenerating, isGenerating })
-
-          if (isGenerating) {
+          if (isCellGenerating || isDocGenerating) {
             return (
               <Box
                 sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
@@ -330,14 +330,25 @@ const DocumentInsightsGrid = ({
                 }
               }}
             >
-              
               {answerFlagEnum(answerObj?.answerFlagEnum, theme)}
               <Tooltip
-                title={!answerObj ? 'Click to generate this answer' : 'Click to see answer details'}
+                title={
+                  hasAnswer
+                    ? 'Click to see answer details'
+                    : isGenerating
+                    ? 'Generation in progress'
+                    : 'Click to generate this answer'
+                }
                 arrow
                 placement='top'
               >
-                <span>
+                <span
+                  style={{
+                    cursor: isGenerateBlocked ? 'not-allowed' : 'pointer',
+                    opacity: isGenerateBlocked ? 0.5 : 1,
+                    userSelect: 'none'
+                  }}
+                >
                   {!answerObj ? (
                     <em>Click to generate</em>
                   ) : answerObj.answerValue === '' ? (
@@ -348,7 +359,7 @@ const DocumentInsightsGrid = ({
                 </span>
               </Tooltip>
               {answerObj && (
-                <Tooltip title='Regenerate answer'>
+                <Tooltip title={isGenerating ? 'Generation in progress' : 'Regenerate answer'}>
                   <ReplayIcon
                     className='regenerate-icon'
                     sx={{
@@ -356,17 +367,18 @@ const DocumentInsightsGrid = ({
                       right: 4,
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      cursor: 'pointer',
-                      color: 'primary.main',
                       fontSize: '1.2rem',
-                      opacity: 0,
-                      pointerEvents: 'none',
+                      opacity: isGenerating ? 0.3 : 0,
+                      pointerEvents: isGenerating ? 'none' : 'auto',
+                      cursor: isGenerating ? 'not-allowed' : 'pointer',
+                      color: isGenerating ? 'action.disabled' : 'primary.main',
                       transition: 'opacity 0.25s ease',
                       '&:hover': {
-                        color: 'primary.dark'
+                        color: isGenerating ? 'action.disabled' : 'primary.dark'
                       }
                     }}
                     onClick={e => {
+                      if (isGenerating) return
                       e.stopPropagation()
                       handleGenerate({ documentsToGenerate: params.row, questionsToGenerate: q })
                     }}

@@ -248,6 +248,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             onSelectDocument={handleSelectDocument}
             handleGenerate={handleGenerate}
             isGeneratingCells={isInsightsGeneratingCells}
+            isGenerating={isGenerating}
           />
         </Box>
       </Paper>
