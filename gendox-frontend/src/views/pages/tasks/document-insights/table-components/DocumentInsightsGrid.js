@@ -220,51 +220,51 @@ const DocumentInsightsGrid = ({
           return (
             <Box
               sx={{
+                position: 'relative',
                 width: '100%',
+                height: '100%', // ✅ important
+                flex: 1, // ✅ important
                 minWidth: 0,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 0.5,
                 '&:hover .header-actions': { opacity: 1, pointerEvents: 'auto' }
               }}
             >
-              {/* Title (takes remaining space) */}
+              {/* Title (normal flow) */}
               <Box
                 onClick={() => openDialog('questionDetail', q)}
                 sx={{
                   minWidth: 0,
-                  flex: '1 1 auto',
+                  flexGrow: 1,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                   fontWeight: 600,
                   cursor: 'pointer',
+                  pr: '52px', // ✅ reserve space for right actions
                   '&:hover': { textDecoration: 'underline' }
                 }}
               >
-                <TruncatedText text={q.title || q.text} />
+                <TruncatedText text={q.title || q.text} disableTooltip />
               </Box>
 
-              {/* Actions pinned to the right */}
+              {/* Actions fixed to the right edge */}
               <Box
                 className='header-actions'
                 sx={{
-                  marginLeft: 'auto', // ✅ pushes it to the far right
-                  flex: '0 0 auto',
+                  position: 'absolute',
+                  right: 0,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 0.25,
-                  px: 0.25,
-                  borderRadius: 1,
-                  backgroundColor: 'rgba(255,255,255,0.06)',
-                  backdropFilter: 'blur(4px)',
                   opacity: 0,
                   pointerEvents: 'none',
-                  transition: 'opacity 0.15s ease, background-color 0.15s ease'
+                  transition: 'opacity 0.15s ease'
                 }}
               >
                 <Tooltip title={isFirst ? 'Already first' : 'Move left'} arrow>
-                  {/* span needed so Tooltip works on disabled button */}
                   <span>
                     <IconButton
                       size='small'
@@ -273,7 +273,13 @@ const DocumentInsightsGrid = ({
                         e.stopPropagation()
                         onMoveQuestion(q.id, 'LEFT')
                       }}
-                      sx={{ width: 24, height: 24, '&.Mui-disabled': { opacity: 0.25 } }}
+                      sx={{
+                        width: 20,
+                        height: 20,
+                        padding: 0,
+                        borderRadius: '50%',
+                        '&.Mui-disabled': { opacity: 0.25 }
+                      }}
                     >
                       <ChevronLeftIcon sx={{ fontSize: 18 }} />
                     </IconButton>
@@ -289,25 +295,17 @@ const DocumentInsightsGrid = ({
                         e.stopPropagation()
                         onMoveQuestion(q.id, 'RIGHT')
                       }}
-                      sx={{ width: 24, height: 24, '&.Mui-disabled': { opacity: 0.25 } }}
+                      sx={{
+                        width: 20,
+                        height: 20,
+                        padding: 0,
+                        borderRadius: '50%',
+                        '&.Mui-disabled': { opacity: 0.25 }
+                      }}
                     >
                       <ChevronRightIcon sx={{ fontSize: 18 }} />
                     </IconButton>
                   </span>
-                </Tooltip>
-
-                <Tooltip title='More actions' arrow>
-                  <IconButton
-                    size='small'
-                    onClick={e => {
-                      e.stopPropagation()
-                      setQuestionMenuItem(q)
-                      setQuestionMenuAnchor(e.currentTarget)
-                    }}
-                    sx={{ width: 24, height: 24 }}
-                  >
-                    <MoreVertIcon sx={{ fontSize: 18 }} />
-                  </IconButton>
                 </Tooltip>
               </Box>
             </Box>
@@ -521,6 +519,13 @@ const DocumentInsightsGrid = ({
         }}
         loading={isPageLoading}
         sx={{
+          '& .MuiDataGrid-columnHeaderTitleContainer': {
+            width: '100% !important'
+          },
+          '& .MuiDataGrid-columnHeaderTitleContainerContent': {
+            width: '100% !important',
+            flex: 1
+          },
           '& .MuiDataGrid-cell': {
             outline: 'none',
             transition: 'background-color 0.15s ease',
