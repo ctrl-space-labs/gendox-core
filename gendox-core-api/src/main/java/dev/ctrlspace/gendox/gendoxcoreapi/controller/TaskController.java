@@ -375,5 +375,16 @@ public class TaskController {
                 .body(fileResource);
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PutMapping("/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/questions/order")
+    @ResponseStatus(HttpStatus.OK)
+    public void reorderQuestionColumns(@PathVariable UUID organizationId,
+                                       @PathVariable UUID projectId,
+                                       @PathVariable UUID taskId,
+                                       @RequestBody ReorderTaskQuestionNodesDTO dto) throws GendoxException {
+
+        taskNodeService.reorderQuestionNodes(taskId, projectId, dto.getOrderedQuestionNodeIds());
+    }
+
 
 }

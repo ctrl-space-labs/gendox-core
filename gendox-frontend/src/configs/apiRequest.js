@@ -12,7 +12,7 @@ export default {
   getPublicUsers: (page = 0, size = 10000) => `${url}users/public?page=${page}&size=${size}`,
 
   getProjectById: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}`,
-  
+
   getProjectsByOrganization: organizationId => `${url}organizations/${organizationId}/projects`,
 
   findDocumentsByCriteria: (organizationId, projectId, page, size, sort = 'createdAt,desc') =>
@@ -211,11 +211,14 @@ export default {
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`,
 
   documentInsightsExportAllCSV: (organizationId, projectId, taskId) =>
-  `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/insights/export-csv`,
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/insights/export-csv`,
 
   documentInsightsExportCSV: (organizationId, projectId, taskId, documentNodeId) =>
-  `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/insights/export-csv`,
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/insights/export-csv`,
 
   documentDigitizationExportCSV: (organizationId, projectId, taskId, documentNodeId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/digitization/export-csv`
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/digitization/export-csv`,
+
+  reorderTaskQuestionNodes: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/questions/order`
 }

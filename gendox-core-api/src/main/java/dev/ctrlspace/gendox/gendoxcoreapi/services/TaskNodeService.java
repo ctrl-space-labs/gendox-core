@@ -569,5 +569,43 @@ public class TaskNodeService {
         return documentsById;
     }
 
+    @Transactional
+    public void reorderQuestionNodes(UUID taskId, UUID projectId, List<UUID> orderedQuestionNodeIds) throws GendoxException {
+
+        if (orderedQuestionNodeIds == null || orderedQuestionNodeIds.isEmpty()) {
+            throw new GendoxException("EMPTY_ORDER", "Ordered list is empty", HttpStatus.BAD_REQUEST);
+        }
+
+
+        // Load all QUESTION nodes of this task
+        List<TaskNode> questionNodes = taskNodeRepository.findAllByTaskIdAndNodeTypeName(taskId, TaskNodeTypeConstants.QUESTION);
+
+        if (questionNodes.size() != orderedQuestionNodeIds.size()) {
+            throw new GendoxException("ORDER_SIZE_MISMATCH",
+                    "Payload ids count does not match existing question nodes count",
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        // Validate: no duplicates in payload
+        Set<UUID> payloadSet = new HashSet<>(orderedQuestionNodeIds);
+        if (payloadSet.size() != orderedQuestionNodeIds.size()) {
+            throw new GendoxException("DUPLICATE_IDS", "Duplicate ids in payload", HttpStatus.BAD_REQUEST);
+        }
+
+        // Validate: payload ids == existing ids
+        Set<UUID> existingSet = questionNodes.stream().map(TaskNode::getId).collect(Collectors.toSet());
+        if (!existingSet.equals(payloadSet)) {
+            throw new GendoxException("INVALID_IDS", "Payload ids do not match task question nodes", HttpStatus.BAD_REQUEST);
+        }
+
+        // Apply order = index (choose if you want 1-based or 0-based)
+        // Your createTaskNode uses max + 1 => looks like 1-based order.
+        for (int i = 0; i < orderedQuestionNodeIds.size(); i++) {
+            UUID nodeId = orderedQuestionNodeIds.get(i);
+            int newOrder = i + 1; // keep consistent with existing logic
+            taskNodeRepository.updateNodeOrder(nodeId, newOrder);
+        }
+    }
+
 
 }

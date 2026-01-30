@@ -10,7 +10,8 @@ import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
 import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
-import { has } from 'lodash'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 
 const DocumentInsightsGrid = ({
   openDialog,
@@ -28,7 +29,8 @@ const DocumentInsightsGrid = ({
   onSelectDocument = () => {},
   handleGenerate,
   isGeneratingCells = {},
-  isGenerating
+  isGenerating,
+  onMoveQuestion = () => {}
 }) => {
   const theme = useTheme()
   const [documentMenuAnchor, setDocumentMenuAnchor] = useState(null)
@@ -201,7 +203,7 @@ const DocumentInsightsGrid = ({
       },
 
       // Dynamic question columns
-      ...sortedQuestions.map(q => ({
+      ...sortedQuestions.map((q, idx) => ({
         field: `q_${q.id}`,
         headerName: <TruncatedText text={q.text} />,
         width: 240,
@@ -211,69 +213,106 @@ const DocumentInsightsGrid = ({
         disableColumnMenu: true,
         cellClassName: 'answer-cell',
 
-        renderHeader: params => (
-          <Box
-            sx={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              gap: 1.5,
-              pr: 1,
-              userSelect: 'none',
-              cursor: 'default',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              fontWeight: 600,
-              flexGrow: 1
-            }}
-          >
-            <Box
-              component='button'
-              type='button'
-              onClick={() => openDialog('questionDetail', q)}
-              aria-label={`View question details for ${q.text}`}
-              sx={{
-                all: 'unset',
-                cursor: 'pointer',
-                flexGrow: 1,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                paddingRight: '28px',
-                '&:hover, &:focus-visible': {
-                  textDecoration: 'underline',
-                  outline: 'none'
-                }
-              }}
-            >
-              <TruncatedText text={q.title || q.text} />
-            </Box>
+        renderHeader: () => {
+          const isFirst = idx === 0
+          const isLast = idx === sortedQuestions.length - 1
 
-            {/* Hover-reveal Vertical Icon */}
-            <IconButton
-              size='small'
-              className='vertical-icon'
+          return (
+            <Box
               sx={{
-                position: 'absolute',
-                right: 4,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                opacity: 0,
-                pointerEvents: 'none',
-                transition: 'opacity 0.25s ease'
-              }}
-              onClick={e => {
-                e.stopPropagation()
-                setQuestionMenuItem(q)
-                setQuestionMenuAnchor(e.currentTarget)
+                width: '100%',
+                minWidth: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                '&:hover .header-actions': { opacity: 1, pointerEvents: 'auto' }
               }}
             >
-              <MoreVertIcon fontSize='small' />
-            </IconButton>
-          </Box>
-        ),
+              {/* Title (takes remaining space) */}
+              <Box
+                onClick={() => openDialog('questionDetail', q)}
+                sx={{
+                  minWidth: 0,
+                  flex: '1 1 auto',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  '&:hover': { textDecoration: 'underline' }
+                }}
+              >
+                <TruncatedText text={q.title || q.text} />
+              </Box>
+
+              {/* Actions pinned to the right */}
+              <Box
+                className='header-actions'
+                sx={{
+                  marginLeft: 'auto', // ✅ pushes it to the far right
+                  flex: '0 0 auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.25,
+                  px: 0.25,
+                  borderRadius: 1,
+                  backgroundColor: 'rgba(255,255,255,0.06)',
+                  backdropFilter: 'blur(4px)',
+                  opacity: 0,
+                  pointerEvents: 'none',
+                  transition: 'opacity 0.15s ease, background-color 0.15s ease'
+                }}
+              >
+                <Tooltip title={isFirst ? 'Already first' : 'Move left'} arrow>
+                  {/* span needed so Tooltip works on disabled button */}
+                  <span>
+                    <IconButton
+                      size='small'
+                      disabled={isFirst}
+                      onClick={e => {
+                        e.stopPropagation()
+                        onMoveQuestion(q.id, 'LEFT')
+                      }}
+                      sx={{ width: 24, height: 24, '&.Mui-disabled': { opacity: 0.25 } }}
+                    >
+                      <ChevronLeftIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+
+                <Tooltip title={isLast ? 'Already last' : 'Move right'} arrow>
+                  <span>
+                    <IconButton
+                      size='small'
+                      disabled={isLast}
+                      onClick={e => {
+                        e.stopPropagation()
+                        onMoveQuestion(q.id, 'RIGHT')
+                      }}
+                      sx={{ width: 24, height: 24, '&.Mui-disabled': { opacity: 0.25 } }}
+                    >
+                      <ChevronRightIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+
+                <Tooltip title='More actions' arrow>
+                  <IconButton
+                    size='small'
+                    onClick={e => {
+                      e.stopPropagation()
+                      setQuestionMenuItem(q)
+                      setQuestionMenuAnchor(e.currentTarget)
+                    }}
+                    sx={{ width: 24, height: 24 }}
+                  >
+                    <MoreVertIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
+          )
+        },
 
         renderCell: params => {
           const docId = params.id
