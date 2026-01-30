@@ -1,17 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
-import CircularProgress from '@mui/material/CircularProgress' 
+import CircularProgress from '@mui/material/CircularProgress'
 import Editor from '@monaco-editor/react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/router'
 import { DEFAULT_GEE_CODE } from './geeDefaults'
 import { registerGeeCompletions } from './monacoGeeProvider'
-import { setMapData, createEOScriptThunk, fetchLatestEOScriptThunk } from 'src/store/earthObservation/earthObservation' 
-import { executeGeeCode } from '../../utils/geeRunner'
-import { tooltip } from 'leaflet'
+import { fetchLatestEOScriptThunk } from 'src/store/earthObservation/earthObservation'
+import GeeRunner from '../../GeeRunner'
 
 export default function EditorPanel() {
   const router = useRouter()
@@ -20,16 +18,17 @@ export default function EditorPanel() {
   const { organizationId, taskId, projectId } = router.query
   const editorRef = useRef(null)
   const providerDisposableRef = useRef(null)
-  const { createEOScriptLoading, latestEOScriptLoading, latestEOScript } = useSelector((state) => state.earthObservation)
+  const { latestEOScriptLoading, latestEOScript } = useSelector(
+    state => state.earthObservation
+  )
 
   const [code, setCode] = useState(DEFAULT_GEE_CODE)
 
-
   useEffect(() => {
-      dispatch(fetchLatestEOScriptThunk(
-        { organizationId: organizationId, projectId: projectId, taskId: taskId, token: token }
-      ))
-    }, [dispatch, organizationId, projectId, taskId, token])
+    dispatch(
+      fetchLatestEOScriptThunk({ organizationId: organizationId, projectId: projectId, taskId: taskId, token: token })
+    )
+  }, [dispatch, organizationId, projectId, taskId, token])
 
   useEffect(() => {
     const saved = latestEOScript?.scriptContent
@@ -47,55 +46,42 @@ export default function EditorPanel() {
     providerDisposableRef.current = registerGeeCompletions(monaco)
   }
 
-  // --- Run GEE Code ---
-  const onRun = async () => {
-    const currentCode = editorRef.current?.getValue?.() ?? code
-    if (!currentCode) return
-
-    try {
-      console.log('[GEE RUN] Executing...')      
-      const result = await executeGeeCode(currentCode)
-      dispatch(setMapData(result))
-
-      // Save the EOScript to backend
-      if (organizationId && projectId && taskId && token) {
-        dispatch(
-          createEOScriptThunk({
-            organizationId,
-            projectId,
-            taskId,
-            eoScriptPayload: {
-              title: 'Latest GEE Script',
-              description: 'Auto-saved from Editor Run',
-              scriptContent: currentCode
-            },
-            token
-          })
-        )
-      }
-    } catch (error) {
-      console.error('[GEE RUN] Error:', error)
-      tooltip('Error executing GEE code. Check console for details.').openOn()
-    } 
-  }
+ 
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      
+
       <Stack direction='row' alignItems='center' justifyContent='space-between' sx={{ mb: 1, px: 1, pt: 1 }}>
         <Typography sx={{ fontWeight: 700, fontSize: 13, opacity: 0.85 }}>Earth Engine JavaScript</Typography>
 
-        <Button
-          size='small'
-          variant='contained'
-          onClick={onRun}
-          disabled={createEOScriptLoading || latestEOScriptLoading}
-          startIcon={createEOScriptLoading || latestEOScriptLoading ? <CircularProgress size={16} color='inherit' /> : null}
-        >
-          {createEOScriptLoading || latestEOScriptLoading ? 'Processing...' : 'Run'}
-        </Button>
+        
+        <GeeRunner
+          code={code}
+          getCurrentCode={() => editorRef.current?.getValue?.() ?? code}
+          organizationId={organizationId}
+          projectId={projectId}
+          taskId={taskId}
+          token={token}
+        />
       </Stack>
 
-      <Box sx={{ flex: 1, minHeight: 0 }}>
+      <Box sx={{ flex: 1, minHeight: 0, position: 'relative' }}>
+        {latestEOScriptLoading && (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(0,0,0,0.35)'
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        )}
         <Editor
           height='100%'
           defaultLanguage='javascript'
@@ -108,7 +94,8 @@ export default function EditorPanel() {
             fontSize: 13,
             wordWrap: 'on',
             automaticLayout: true,
-            tabSize: 2
+            tabSize: 2,
+            readOnly: latestEOScriptLoading
           }}
         />
       </Box>

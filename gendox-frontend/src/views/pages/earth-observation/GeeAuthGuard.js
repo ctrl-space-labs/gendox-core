@@ -12,7 +12,7 @@ import Typography from '@mui/material/Typography'
 import CircularProgress from '@mui/material/CircularProgress'
 import Box from '@mui/material/Box'
 
-import { setGeeReady } from 'src/store/earthObservation/earthObservation'
+import { setGeeReady, setGeeOAuthToken } from 'src/store/earthObservation/earthObservation'
 import commonConfig from 'src/configs/common.config.js'
 
 const CLIENT_ID = commonConfig.GEE_clientId
@@ -33,6 +33,22 @@ export default function GeeAuthGuard({ children }) {
       null,
       null,
       () => {
+        const currentToken = ee.data.getAuthToken()
+
+        if (currentToken) {
+          // Extract just the token string
+          let finalToken = currentToken
+
+          if (typeof currentToken === 'object' && currentToken.access_token) {
+            finalToken = currentToken.access_token
+          } else if (typeof currentToken === 'string' && currentToken.startsWith('Bearer ')) {
+            finalToken = currentToken.replace('Bearer ', '')
+          }
+
+          dispatch(setGeeOAuthToken(finalToken))
+        }
+        
+
         dispatch(setGeeReady(true))
         setLoading(false)
       },
@@ -85,6 +101,9 @@ export default function GeeAuthGuard({ children }) {
     ee.data.authenticateViaOauth(
       CLIENT_ID,
       authResult => {
+        if (authResult && authResult.access_token) {
+          dispatch(setGeeOAuthToken(authResult.access_token)) // Save the token in Redux
+        }
         // After successful login, initialize
         runInitialize()
       },

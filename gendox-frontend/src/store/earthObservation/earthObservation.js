@@ -32,7 +32,9 @@ const initialState = {
   latestEOScriptError: null,
 
   createEOScriptLoading: false,
-  createEOScriptError: null
+  createEOScriptError: null,
+
+  geeOAuthToken: null
 }
 
 export const fetchLatestEOScriptThunk = createAsyncThunk(
@@ -122,6 +124,10 @@ const slice = createSlice({
     },
     setLatestEOScript: (state, action) => {
       state.latestEOScript = action.payload
+    },
+
+    setGeeOAuthToken: (state, action) => {
+      state.geeOAuthToken = action.payload
     }
   },
   extraReducers: builder => {
@@ -184,7 +190,8 @@ export const {
   setGeeReady,
   setMapLayer,
   setMapData,
-  setLatestEOScript
+  setLatestEOScript,
+  setGeeOAuthToken
 } = slice.actions
 
 export default slice.reducer

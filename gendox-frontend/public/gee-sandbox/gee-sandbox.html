@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>GEE Sandbox</title>
+
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+    default-src 'none'; 
+    script-src 'unsafe-inline' 'unsafe-eval' https://ajax.googleapis.com https://apis.google.com; 
+    connect-src https://earthengine.googleapis.com https://*.googleapis.com https://*.google.com;
+    img-src data: blob: *;
+    style-src 'unsafe-inline';
+  "
+    />
+
+    <script src="https://ajax.googleapis.com/ajax/libs/earthengine/0.1.347/earthengine-api.min.js"></script>
+  </head>
+  <body>
+    <script>
+      console.log('[Sandbox] Iframe Loaded (JSON Object Fix)')
+      let layerAdded = false
+
+      const ProxyMap = {
+        addLayer: (image, visParams = {}, name) => {
+          console.log(`[Sandbox] Map.addLayer called for: ${name}`)
+          layerAdded = true
+
+          try {
+            // 1. check for Geometry/Feature/FeatureCollection and convert to Image
+            if (image instanceof ee.Geometry || image instanceof ee.Feature || image instanceof ee.FeatureCollection) {
+              const color = visParams.color || 'red'
+              image = ee
+                .Image()
+                .paint(image, 2)
+                .visualize({ palette: [color] })
+              visParams = {}
+            }
+
+            // 2. Ensure image is an ee.Image
+            image = ee.Image(image)
+
+            // 3. Get map tiles using the HIGH-LEVEL Image API.
+            // Passing raw JSON objects to ee.data.getMapId can break (e.g. a.split is not a function).
+            // The Image API handles serialization correctly.
+
+            // Normalize vis params to what the API expects.
+            const normalizedVisParams = { ...(visParams || {}) }
+            if (Array.isArray(normalizedVisParams.palette)) {
+              normalizedVisParams.palette = normalizedVisParams.palette.join(',')
+            }
+            if (Array.isArray(normalizedVisParams.bands)) {
+              normalizedVisParams.bands = normalizedVisParams.bands.join(',')
+            }
+
+            console.log('[Sandbox] Requesting Map ID...', normalizedVisParams)
+
+            const eeImg = ee.Image(image)
+
+            console.log('visParams:', normalizedVisParams)
+
+            // Prefer ee.Image.getMap (returns urlFormat in some builds), otherwise ee.Image.getMapId.
+            const getMapFn =
+              typeof eeImg.getMap === 'function'
+                ? eeImg.getMap.bind(eeImg)
+                : typeof eeImg.getMapId === 'function'
+                ? eeImg.getMapId.bind(eeImg)
+                : null
+
+            if (!getMapFn) {
+              throw new Error('Earth Engine Image map function not available (getMap/getMapId missing).')
+            }
+
+            getMapFn(normalizedVisParams, (map, error) => {
+              if (error) {
+                console.error('[Sandbox] GEE Error:', error)
+                window.parent.postMessage({ type: 'ERROR', message: error.message || String(error) }, '*')
+                return
+              }
+
+              // Different EE builds return slightly different shapes.
+              // We want a Leaflet URL template like .../{z}/{x}/{y}
+              const urlFormat = map && (map.urlFormat || map.url || (map.tiles && map.tiles[0] && map.tiles[0].url))
+
+              if (!urlFormat) {
+                console.warn('[Sandbox] Map response without urlFormat:', map)
+                window.parent.postMessage({ type: 'ERROR', message: 'Map response missing urlFormat.' }, '*')
+                return
+              }
+
+              console.log('[Sandbox] Success URL:', urlFormat)
+              window.parent.postMessage({ type: 'SUCCESS', payload: { url: urlFormat } }, '*')
+            })
+          } catch (err) {
+            console.error('[Sandbox] addLayer crash:', err)
+            window.parent.postMessage({ type: 'ERROR', message: 'addLayer Error: ' + err.message }, '*')
+          }
+        },
+
+        setCenter: (lon, lat, zoom) => {
+          console.log(`[Sandbox] setCenter: ${lon}, ${lat}, ${zoom}`)
+          window.parent.postMessage({ type: 'CENTER', payload: { center: { lon, lat, zoom } } }, '*')
+        },
+        centerObject: () => {},
+        setOptions: () => {},
+        add: () => {},
+        getScale: () => 1000,
+        getZoom: () => 6
+      }
+
+      window.addEventListener('message', event => {
+        const { type, code, token } = event.data
+
+        if (type === 'EXECUTE') {
+          layerAdded = false
+
+          try {
+            ee.data.setAuthToken(null, 'Bearer', token)
+
+            ee.initialize(
+              null,
+              null,
+              () => {
+                try {
+                  const userFunc = new Function('ee', 'Map', code)
+                  userFunc(ee, ProxyMap)
+
+                  setTimeout(() => {
+                    if (!layerAdded) {
+                      window.parent.postMessage({ type: 'SUCCESS', payload: { url: null } }, '*')
+                    }
+                  }, 500)
+                } catch (runErr) {
+                  window.parent.postMessage({ type: 'ERROR', message: 'Runtime Error: ' + runErr.message }, '*')
+                }
+              },
+              initErr => {
+                window.parent.postMessage({ type: 'ERROR', message: 'Init Failed: ' + initErr }, '*')
+              }
+            )
+          } catch (err) {
+            window.parent.postMessage({ type: 'ERROR', message: err.message }, '*')
+          }
+        }
+      })
+
+      window.parent.postMessage({ type: 'IFRAME_READY' }, '*')
+    </script>
+  </body>
+</html>
