@@ -4,12 +4,11 @@ import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ChatThreadDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ChatThreadLastMessageDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageMetadataDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ChatThreadCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.MessageCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ChatThreadService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageLocalContextService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,12 +32,15 @@ public class ChatThreadController {
     private ChatThreadService chatThreadService;
     private SecurityUtils securityUtils;
     private MessageService messageService;
+    private MessageLocalContextService messageLocalContextService;
 
 
     @Autowired
     public ChatThreadController(ChatThreadService chatThreadService,
                                 SecurityUtils securityUtils,
-                                MessageService messageService) {
+                                MessageService messageService,
+                                MessageLocalContextService messageLocalContextService) {
+        this.messageLocalContextService = messageLocalContextService;
         this.chatThreadService = chatThreadService;
         this.securityUtils = securityUtils;
         this.messageService = messageService;
@@ -119,6 +121,23 @@ public class ChatThreadController {
     public void deActiveChatThread(@PathVariable UUID organizationId, @PathVariable UUID threadId) throws GendoxException {
         chatThreadService.deActiveChatThread(threadId);
     }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') " +
+            "|| @securityUtils.isPublicThread(#threadId)")
+    @PostMapping("/organizations/{organizationId}/threads/{threadId}/messages/attachments")
+    @Operation(summary = "Get attachments for messages (batch)",
+            description = "Given a list of messageIds, returns attachments grouped by messageId.")
+    public MessageAttachmentsResponseDTO getMessageAttachments(
+            @PathVariable UUID threadId,
+            @RequestBody MessageAttachmentsRequestDTO request
+    ) {
+        //TODO
+        // need VALIDATION for messageIds (not null, not empty, valid UUIDs) - can be done with a custom validator annotation if needed
+
+
+        return messageLocalContextService.getAttachmentsByMessageIds(request.getMessageIds());
+    }
+
 
     private void handleCriteriaForAuthenticatedUser(ChatThreadCriteria criteria, Authentication authentication) {
         // Override the memberIds with the current user's ID

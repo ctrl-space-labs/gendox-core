@@ -1,8 +1,6 @@
 import axios from 'axios'
 import apiRequests from 'src/configs/apiRequest.js'
 
-
-
 /**
  * Get all documents by criteria
  * @param organizationId
@@ -110,14 +108,16 @@ const uploadDocument = async (organizationId, projectId, formData, token) => {
  * @param {string} organizationId
  * @param {string} projectId
  * @param {File} file - The single file to upload
+ * @param {boolean} messageAttachment - Flag indicating if the upload is a message attachment
  * @param {string} token - Authorization bearer token
  * @returns {Promise<AxiosResponse>}
  */
-const uploadSingleDocument = async (organizationId, projectId, file, token) => {
+const uploadSingleDocument = async (organizationId, projectId, file, token, messageAttachment = false) => {
   const formData = new FormData()
   formData.append('file', file)
 
   return axios.post(apiRequests.uploadSingleDocument(organizationId, projectId), formData, {
+    params: { messageAttachment },
     headers: {
       'Content-Type': 'multipart/form-data',
       Authorization: `Bearer ${token}`
@@ -201,5 +201,5 @@ export default {
   deleteDocument,
   deleteDocumentSection,
   triggerJobs,
-  findDocumentsByCriteria,
+  findDocumentsByCriteria
 }

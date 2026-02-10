@@ -2,7 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContext;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContextDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,5 +23,5 @@ public class CompletionQuestionRequest {
     private String questionText;
     // Used as a dto only. The local context will be serialized in another fields in the completion template
     @JsonIgnore
-    private MessageLocalContext questionSupportingDocsLocalContext;
+    private MessageLocalContextDTO questionSupportingDocsLocalContext;
 }

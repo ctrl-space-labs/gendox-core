@@ -137,7 +137,7 @@ public class IntegrationConfiguration {
                                 // handle uploaded files
                                 if (file.getMultipartFile() != null) {
                                     logger.debug("Uploading document: {} for project: {}", file.getMultipartFile().getName(), project.getId());
-                                    uploadService.uploadFile(file.getMultipartFile(), project.getOrganizationId(), project.getId());
+                                    uploadService.uploadFile(file.getMultipartFile(), project.getOrganizationId(), project.getId(), false);
                                     logger.debug("Uploaded document: {} successfully", file.getMultipartFile().getName());
                                 } else {  // handle external files that the content is not downloaded here
                                     logger.debug("Upserting extrernal document Instance: {} for project: {}", file.getExternalFile().getContentId(), project.getId());

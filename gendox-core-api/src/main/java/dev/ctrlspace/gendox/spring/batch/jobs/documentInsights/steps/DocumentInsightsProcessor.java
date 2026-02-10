@@ -8,11 +8,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageLocalContextConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContext;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContextDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
@@ -55,6 +55,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     private EncodingRegistry encodingRegistry;
     private Project project;
     private final DocumentService documentService;
+    private MessageLocalContextConverter messageLocalContextConverter;
 
     @Autowired
     public DocumentInsightsProcessor(TypeService typeService,
@@ -66,7 +67,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                                      MessageService messageService,
                                      DocumentSectionService documentSectionService,
                                      TaskNodeService taskNodeService,
-                                     DocumentService documentService) {
+                                     DocumentService documentService,
+                                     MessageLocalContextConverter messageLocalContextConverter) {
         this.typeService = typeService;
         this.taskService = taskService;
         this.objectMapper = objectMapper;
@@ -77,6 +79,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         this.documentSectionService = documentSectionService;
         this.taskNodeService = taskNodeService;
         this.documentService = documentService;
+        this.messageLocalContextConverter = messageLocalContextConverter;
     }
 
     @Override
@@ -124,7 +127,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         Page<DocumentInstance> mainDocSupportingDocuments = getSupportingDocuments(
                 documentGroupWithQuestions.getDocumentNode());
 
-        MessageLocalContext mainDocSupportingDocumentsContext = generateLocalContextForQuestion(
+        MessageLocalContextDTO mainDocSupportingDocumentsContext = generateLocalContextForQuestion(
                 documentGroupWithQuestions.getDocumentNode(),
                 mainDocSupportingDocuments,
                 "main-document");
@@ -153,7 +156,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 //  Extract all hardcoded strings to properties files
                 //  Overwrite the default agent settings, from the settings in the task
 
-                List<MessageLocalContext> supportingDocumentsContext = new ArrayList<>();
+                List<MessageLocalContextDTO> supportingDocumentsContext = new ArrayList<>();
                 supportingDocumentsContext.add(mainDocSupportingDocumentsContext);
                 supportingDocumentsContext.addAll(questionChunk.stream().map(CompletionQuestionRequest::getQuestionSupportingDocsLocalContext).toList());
                 supportingDocumentsContext.removeIf(Objects::isNull);
@@ -246,7 +249,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     private Message buildPromptMessageForSections(List<DocumentInstanceSection> sectionGroup,
                                                   String questionsPrompt,
                                                   ChatThread newThread,
-                                                  List<MessageLocalContext> localContext,
+                                                  List<MessageLocalContextDTO> localContext,
                                                   Task task,
                                                   TaskNode documentNode) {
         String textSections = sectionGroup.stream()
@@ -283,14 +286,15 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         message.setProjectId(project.getId());
         message.setCreatedBy(project.getProjectAgent().getUserId());
         message.setUpdatedBy(project.getProjectAgent().getUserId());
-        message = messageService.createMessage(message);
+        message.setLocalContexts(
+                messageLocalContextConverter.toEntities(message, localContext)
+        );
 
-        // add after creations as the local context is not saved
-        message.setLocalContexts(localContext);
+        message = messageService.createMessage(message);
         return message;
     }
 
-    private static void addDocumentPromptIfExists(List<MessageLocalContext> localContext, TaskNode documentNode) {
+    private static void addDocumentPromptIfExists(List<MessageLocalContextDTO> localContext, TaskNode documentNode) {
         if (Optional.ofNullable(documentNode)
                 .map(n -> n.getNodeValue())
                 .map(v -> v.getDocumentMetadata())
@@ -299,8 +303,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 .isPresent()) {
 
 
-            MessageLocalContext documentPrompt = MessageLocalContext.builder()
-                    .contextType(Type.builder().name("**Instructions to follow, and information to know, for this specific [Main Document]**").build())
+            MessageLocalContextDTO documentPrompt = MessageLocalContextDTO.builder()
+                    .contextType("**Instructions to follow, and information to know, for this specific [Main Document]**")
                     .value("""
                             
                             \"\"\"\"\"
@@ -312,10 +316,10 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         }
     }
 
-    private static void addTaskPromptIfExists(List<MessageLocalContext> localContext, Task task) {
+    private static void addTaskPromptIfExists(List<MessageLocalContextDTO> localContext, Task task) {
         if (task.getTaskPrompt() != null && !task.getTaskPrompt().isBlank()) {
-            MessageLocalContext taskPrompt = MessageLocalContext.builder()
-                    .contextType(Type.builder().name("**General instructions to follow for the processing**").build())
+            MessageLocalContextDTO taskPrompt = MessageLocalContextDTO.builder()
+                    .contextType("**General instructions to follow for the processing**")
                     .value("""
                             
                             \"\"\"\"\"
@@ -327,9 +331,9 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         }
     }
 
-    private static void addMainDocumentText(List<MessageLocalContext> localContext, String textSections) {
-        MessageLocalContext mainDocumentContext = MessageLocalContext.builder()
-                .contextType(Type.builder().name("**[Main Document] Text**").build())
+    private static void addMainDocumentText(List<MessageLocalContextDTO> localContext, String textSections) {
+        MessageLocalContextDTO mainDocumentContext = MessageLocalContextDTO.builder()
+                .contextType("**[Main Document] Text**")
                 .value("""
                         
                         \"\"\"\"\"
@@ -460,7 +464,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
             int qTokens = countQuestionTokens(enc, text, supportingDocuments);
 
-            MessageLocalContext localContext = generateLocalContextForQuestion(q, supportingDocuments, "questions");
+            MessageLocalContextDTO localContext = generateLocalContextForQuestion(q, supportingDocuments, "questions");
 
             CompletionQuestionRequest req = CompletionQuestionRequest.builder()
                     .questionId(q.getId())
@@ -538,7 +542,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
      * @param supportingDocumentDirName like 'questions' will return -> ./supporting-documents/questions/[question_id]/doc_name.pdf
      * @return
      */
-    private static @Nullable MessageLocalContext generateLocalContextForQuestion(TaskNode q, Page<DocumentInstance> supportingDocuments, String supportingDocumentDirName) {
+    private static @Nullable MessageLocalContextDTO generateLocalContextForQuestion(TaskNode q, Page<DocumentInstance> supportingDocuments, String supportingDocumentDirName) {
         if (q.getNodeValue().getDocumentMetadata() == null ||
                 q.getNodeValue().getDocumentMetadata().getSupportingDocumentIds() == null ||
                 q.getNodeValue().getDocumentMetadata().getSupportingDocumentIds().isEmpty()) {
@@ -556,8 +560,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                     .append(" | UUID=").append(doc.getId())
                     .append("\n");
         }
-        MessageLocalContext localContext = MessageLocalContext.builder()
-                .contextType(Type.builder().name("Supporting Documents").build())
+        MessageLocalContextDTO localContext = MessageLocalContextDTO.builder()
+                .contextType("Supporting Documents")
                 .value(sb.toString())
                 .build();
         return localContext;

@@ -59,6 +59,9 @@ export default {
   getThreadMessagesByCriteria: (threadId, page = 0, size = 10, sort = 'createdAt,desc') =>
     `${url}threads/${threadId}/messages?page=${page}&size=${size}&sort=${sort}`,
 
+  getThreadMessageAttachmentsBatch: (organizationId, threadId) => 
+    `${url}organizations/${organizationId}/threads/${threadId}/messages/attachments`,
+
   documentSections: documentId => `${url}documents/${documentId}/sections`,
 
   documentInstance: (organizationId, projectId, documentId) =>

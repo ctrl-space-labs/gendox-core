@@ -4,7 +4,8 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContext;
+//import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContext;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageLocalContext;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -81,8 +82,12 @@ public class Message {
     private List<MessageSection> messageSections;
 
     // TODO save this to database, find better name
-    @Transient
+//    @Transient
+//    @JsonProperty("localContexts")
+//    private List<MessageLocalContext> localContexts = new ArrayList<>();
     @JsonProperty("localContexts")
+    @JsonManagedReference(value = "message_local_contexts")
+    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MessageLocalContext> localContexts = new ArrayList<>();
 
     // TODO save this to database, find better name

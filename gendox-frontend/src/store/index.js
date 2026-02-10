@@ -12,6 +12,7 @@ import activeTask from 'src/store/activeTask/activeTask'
 import activeTaskNode from 'src/store/activeTaskNode/activeTaskNode'
 import activeTaskEdge from 'src/store/activeTaskEdge/activeTaskEdge'
 import earthObservation from 'src/store/earthObservation/earthObservation'
+import chatAttachments from 'src/store/chatAttachments/chatAttachments'
 
 const reducer = {
   userData,
@@ -24,11 +25,27 @@ const reducer = {
   activeTask,
   activeTaskNode,
   activeTaskEdge,
-  earthObservation
+  earthObservation,
+  chatAttachments
 }
 
 export const store = configureStore({
   reducer,
-  //  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(logger),
+  middleware: getDefaultMiddleware =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: [
+          'chatAttachments/enqueueFiles',
+          'chatAttachments/uploadQueuedAttachments/pending',
+          'chatAttachments/uploadQueuedAttachments/fulfilled',
+          'chatAttachments/uploadQueuedAttachments/rejected'
+        ],
+        ignoredPaths: [
+          'chatAttachments.items',
+          'chatAttachments.items.*.file',
+          'chatAttachments.items.*.previewUrl'
+        ]
+      }
+    }),
   devTools: process.env.NODE_ENV !== 'production'
 })

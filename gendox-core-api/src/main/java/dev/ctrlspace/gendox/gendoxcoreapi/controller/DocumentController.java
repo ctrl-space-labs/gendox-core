@@ -334,7 +334,7 @@ public class DocumentController {
 
         List<DocumentInstance> uploadedDocumentInstances = new ArrayList<>();
         for (MultipartFile file : files) {
-            DocumentInstance uploaded = uploadService.uploadFile(file, organizationId, projectId);
+            DocumentInstance uploaded = uploadService.uploadFile(file, organizationId, projectId, false);
             uploadedDocumentInstances.add(uploaded);
         }
 
@@ -356,6 +356,7 @@ public class DocumentController {
     @Operation(summary = "Upload a single document file",
             description = "Upload a single file and return the created or updated DocumentInstance.")
     public ResponseEntity<DocumentInstance> uploadSingleFile(@RequestParam("file") MultipartFile file,
+                                                             @RequestParam(value = "messageAttachment", required = false, defaultValue = "false") boolean messageAttachment,
                                                              @PathVariable UUID organizationId,
                                                              @PathVariable UUID projectId)
             throws IOException, GendoxException, JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
@@ -365,14 +366,14 @@ public class DocumentController {
             return ResponseEntity.badRequest().build();
         }
 
-        DocumentInstance documentInstance = uploadService.uploadFile(file, organizationId, projectId);
+        DocumentInstance documentInstance = uploadService.uploadFile(file, organizationId, projectId, messageAttachment);
 
         DocumentCriteria documentCriteria = DocumentCriteria
                 .builder()
                 .documentInstanceIds(List.of(String.valueOf(documentInstance.getId())))
                 .projectId(projectId.toString())
                 .build();
-        queueProducerService.convertAndSend("jobs." + documentSplitterJobName, documentCriteria, Map.of());
+        queueProducerService.convertAndSend(QueueMessageTopicNameConstants.DOCUMENT_UPLOAD, documentCriteria, Map.of());
 
         return ResponseEntity.ok(documentInstance);
     }

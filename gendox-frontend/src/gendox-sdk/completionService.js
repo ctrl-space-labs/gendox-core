@@ -1,7 +1,7 @@
 import axios from 'axios'
 import apiRequests from 'src/configs/apiRequest'
 
-const postCompletionMessage = async (projectId, threadId, message, localContexts, token) => {
+const postCompletionMessage = async (projectId, threadId, message, localContexts, documentInstanceIds = [], token) => {
   let headers = {
     'Content-Type': 'application/json'
   }
@@ -14,7 +14,8 @@ const postCompletionMessage = async (projectId, threadId, message, localContexts
     {
       value: message,
       threadId: threadId,
-      localContexts: localContexts
+      localContexts: localContexts,
+      documentInstanceIds: documentInstanceIds
     },
     { headers }
   )

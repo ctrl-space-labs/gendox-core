@@ -81,7 +81,6 @@ export const fetchThreads = createAsyncThunk(
         // No projects means no threads to fetch.
         return []
       }
-      
 
       // 3. For unauthenticated users, check for local thread IDs.
       let localThreadIds = null
@@ -118,16 +117,15 @@ export const loadThread = createAsyncThunk(
         return _createNewThread(state, projectId, organizationId)
       }
 
-        // If the threadId is the same as the current threadId, return the current thread
-        let currentThread = await _fetchExistingThreadWithMessages(
-          threadId,
-          projectId,
-          organizationId,
-          dispatch,
-          token,
-          state
-        )
-
+      // If the threadId is the same as the current threadId, return the current thread
+      let currentThread = await _fetchExistingThreadWithMessages(
+        threadId,
+        projectId,
+        organizationId,
+        dispatch,
+        token,
+        state
+      )
 
       return currentThread
     } catch (error) {
@@ -153,7 +151,7 @@ export const fetchMessageMetadata = createAsyncThunk(
 export const sendMessage = createAsyncThunk(
   'gendoxChat/sendMessage',
   async (
-    { user, currentThread, message, organizationId, iFrameMessageManager, token },
+    { user, currentThread, message, uploadedDocs = [], organizationId, iFrameMessageManager, token },
     { getState, dispatch, rejectWithValue }
   ) => {
     if (!user?.id) {
@@ -169,7 +167,8 @@ export const sendMessage = createAsyncThunk(
       addMessage({
         createdBy: user.id,
         value: message,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        attachments: uploadedDocs
       })
     )
 
@@ -187,20 +186,19 @@ export const sendMessage = createAsyncThunk(
       200
     )
 
+    const documentInstanceIds = (uploadedDocs || []).map(d => d?.documentId).filter(Boolean)
+
     // Send the message to the server
     const response = await completionService.postCompletionMessage(
       projectId,
       threadId,
       message,
       chatLocalContextResponses,
+      documentInstanceIds,
       token
     )
 
-
-    const {
-      messages: apiMessages = [],
-      threadId: responseThreadId
-    } = response.data
+    const { messages: apiMessages = [], threadId: responseThreadId } = response.data
 
     // sending PostMessage notification
     iFrameMessageManager.messageManager.sendMessage({
@@ -211,17 +209,14 @@ export const sendMessage = createAsyncThunk(
     const toolCallsToProcess = []
 
     apiMessages.forEach(message => {
-
-      dispatch(
-        addMessage(message)
-      )
+      dispatch(addMessage(message))
 
       // If this message invoked any tool calls, stash them for later
       if (Array.isArray(message?.toolCalls) && message?.toolCalls.length) {
         message.toolCalls.forEach(call => {
           toolCallsToProcess.push({
-            threadId:       responseThreadId,
-            messageId:      message.id,
+            threadId: responseThreadId,
+            messageId: message.id,
             ...call
           })
         })
@@ -409,6 +404,25 @@ async function _fetchExistingThreadWithMessages(threadId, projectId, organizatio
 
   // sort messages by time ascending
   chatMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+
+  const messageIds = chatMessages.map(m => m.messageId).filter(Boolean)
+  let attachmentsByMessageId = {}
+  if (messageIds.length > 0) {
+    try {
+      const attRes = await chatThreadService.getMessageAttachmentsBatch(organizationId, threadId, messageIds, token)
+      attachmentsByMessageId = attRes?.data?.attachmentsByMessageId || {}
+    } catch (e) {
+      console.error('Failed to fetch message attachments batch:', e)
+      attachmentsByMessageId = {}
+    }
+  }
+  chatMessages = chatMessages.map(m => {
+    const att = attachmentsByMessageId?.[m.messageId] || []
+    return {
+      ...m,
+      attachments: att
+    }
+  })
 
   let currentThread = {
     id: threadId,

@@ -64,14 +64,18 @@ public class UploadService {
 
 
     @Transactional
-    public DocumentInstance uploadFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException, GendoxException {
+    public DocumentInstance uploadFile(MultipartFile file, UUID organizationId, UUID projectId, Boolean messageAttachment) throws IOException, GendoxException {
         String fileName = file.getOriginalFilename();
         String cleanFileName = documentUtils.cleanFileName(fileName);
         String fullFilePath = documentUtils.saveFile(file, organizationId, projectId);
 
         DocumentInstanceDTO instanceDTO = createDocumentInstanceDTO(file, organizationId, cleanFileName, fullFilePath);
 
-        return upsertDocumentInstance(projectId, instanceDTO);
+        if (messageAttachment != null && messageAttachment) {
+            return createAttachmentDocumentInstance(instanceDTO);
+        } else {
+            return upsertDocumentInstance(projectId, instanceDTO);
+        }
     }
 
     private DocumentInstanceDTO createDocumentInstanceDTO(MultipartFile file, UUID organizationId, String fileName, String fullFilePath) throws IOException, GendoxException {
@@ -108,7 +112,15 @@ public class UploadService {
         DocumentInstance newInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
         newInstance = documentService.createDocumentInstance(newInstance);
         projectDocumentService.createProjectDocument(projectId, newInstance.getId());
-        auditLogsService.createAuditLog(newInstance.getOrganizationId(), projectId, "DOCUMENT_CREATE",documentInstanceDTO.getFileSizeBytes());
+        auditLogsService.createAuditLog(newInstance.getOrganizationId(), projectId, "DOCUMENT_CREATE", documentInstanceDTO.getFileSizeBytes());
+        return newInstance;
+    }
+
+    private DocumentInstance createAttachmentDocumentInstance(DocumentInstanceDTO documentInstanceDTO) throws GendoxException, IOException {
+        UUID documentInstanceId = UUID.randomUUID();
+        documentInstanceDTO.setId(documentInstanceId);
+        DocumentInstance newInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
+        newInstance = documentService.createDocumentInstance(newInstance);
         return newInstance;
     }
 
@@ -116,7 +128,7 @@ public class UploadService {
         documentInstanceDTO.setId(existingInstance.getId());
         DocumentInstance updatedInstance = documentInstanceConverter.toEntity(documentInstanceDTO);
         updatedInstance = documentService.updateDocument(updatedInstance);
-        auditLogsService.createAuditLog(existingInstance.getOrganizationId(), projectId, "DOCUMENT_UPDATE",documentInstanceDTO.getFileSizeBytes());
+        auditLogsService.createAuditLog(existingInstance.getOrganizationId(), projectId, "DOCUMENT_UPDATE", documentInstanceDTO.getFileSizeBytes());
         return updatedInstance;
     }
 
