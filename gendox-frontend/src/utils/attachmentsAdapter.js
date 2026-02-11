@@ -23,20 +23,46 @@ const defaultGetHttpUrlForRemote = doc => {
   return null
 }
 
-export const toMessageAttachmentUI = (doc, getHttpUrlForRemote = defaultGetHttpUrlForRemote) => {
-  const img = isImageDoc(doc)
-  const httpUrl = getHttpUrlForRemote(doc)
+export const toMessageAttachmentUI = (a) => {
+  const title = a.title || a.name || 'attachment'
+  const mimeType = a.mimeType || a.fileType?.name || ''
+  const lower = title.toLowerCase()
+
+  const ext = getExtFromRemoteUrl(a.remoteUrl)
+  const documentType = ext ? ext.toUpperCase() : 'FILE'
+
+  const isImage =
+    mimeType.toLowerCase().includes('image') ||
+    lower.endsWith('.png') ||
+    lower.endsWith('.jpg') ||
+    lower.endsWith('.jpeg') ||
+    lower.endsWith('.gif') ||
+    lower.endsWith('.webp')
 
   return {
-    id: doc.documentId || doc.id,
-    documentId: doc.documentId || doc.id,
-    name: doc.title || 'file',
-    kind: img ? 'image' : 'file',
-    // not a mimeType – but you show it as a “type label”
-    mimeType: doc.fileType?.name || null,
-    previewUrl: img ? httpUrl : null,
-    url: httpUrl,          // useful for click/open
-    remoteUrl: doc.remoteUrl,
-    externalUrl: doc.externalUrl
+    id: a.documentId || a.id,              
+    documentId: a.documentId,
+    title,
+    mimeType,
+    kind: isImage ? 'image' : 'file',
+    documentType,
+    previewUrl: a.previewUrl || null,
+    previewStatus: a.previewStatus || (a.previewUrl ? 'ready' : 'idle')
   }
+}
+
+const getExtFromRemoteUrl = (remoteUrl) => {
+  if (!remoteUrl) return null
+
+  // remove query/hash if ever exists
+  const clean = remoteUrl.split('?')[0].split('#')[0]
+
+  // get last path segment
+  const fileName = clean.split('/').pop() || ''
+
+  // extract ext
+  const dotIndex = fileName.lastIndexOf('.')
+  if (dotIndex === -1) return null
+
+  return fileName.slice(dotIndex + 1).toLowerCase()
 }

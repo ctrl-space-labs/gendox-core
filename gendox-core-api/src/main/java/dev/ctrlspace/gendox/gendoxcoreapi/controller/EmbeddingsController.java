@@ -184,7 +184,7 @@ public class EmbeddingsController {
                 messageLocalContextConverter.toEntities(message, completionRequestDTO.getLocalContexts())
         );
 
-        // 2) contexts από attachments
+        // 2) contexts from attached documents
         contexts.addAll(
                 messageLocalContextService.buildContextsFromDocumentIds(
                         message,
@@ -193,11 +193,7 @@ public class EmbeddingsController {
                 )
         );
         message.setLocalContexts(contexts);
-
-
         Message savedMessage = messageService.createMessage(message);
-
-
 
         return completionService.getCompletionSearch(savedMessage, project);
     }

@@ -129,18 +129,18 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         int endPage = totalPages - 1;
         Integer pageFromParam = documentMetadata.getPageFrom();
         Integer pageToParam = documentMetadata.getPageTo();
-        
+
         if (pageFromParam != null) {
             startPage = Math.max(0, pageFromParam - 1); // Convert from 1-based to 0-based
         }
-        
+
         if (pageToParam != null) {
             endPage = Math.min(totalPages - 1, pageToParam - 1); // Convert from 1-based to 0-based
         }
-        
+
         if (startPage > endPage) {
-            logger.warn("Invalid page range: pageFrom {} is greater than pageTo {} for document {}", 
-                       startPage + 1, endPage + 1, documentInstance.getId());
+            logger.warn("Invalid page range: pageFrom {} is greater than pageTo {} for document {}",
+                    startPage + 1, endPage + 1, documentInstance.getId());
             return null;
         }
 
@@ -200,7 +200,6 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
         logger.debug("Processing document node: {}, instance id: {}, prompt: {}, structure: {}",
                 documentNode.getId(), documentInstance.getId(), promptPreview, structure);
-
 
 
         return batch;

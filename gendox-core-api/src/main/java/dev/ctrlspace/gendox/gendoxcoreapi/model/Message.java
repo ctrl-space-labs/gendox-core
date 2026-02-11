@@ -73,18 +73,11 @@ public class Message {
     @Column(name = "tool_calls", columnDefinition = "JSONB")
     private JsonNode toolCalls;
 
-
-
-
     //    @JsonBackReference(value = "message")
     @JsonManagedReference(value = "message")
     @OneToMany(mappedBy = "message")
     private List<MessageSection> messageSections;
 
-    // TODO save this to database, find better name
-//    @Transient
-//    @JsonProperty("localContexts")
-//    private List<MessageLocalContext> localContexts = new ArrayList<>();
     @JsonProperty("localContexts")
     @JsonManagedReference(value = "message_local_contexts")
     @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)

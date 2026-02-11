@@ -10,6 +10,26 @@ export const uploadQueuedAttachments = createAsyncThunk(
           const res = await documentService.uploadSingleDocument(organizationId, projectId, item.file, token, true)
           const doc = res.data
 
+          let previewUrl = null
+          const name = (doc.title || '').toLowerCase()
+          const ft = (doc.fileType?.name || '').toLowerCase()
+          const isImage =
+            ft.includes('image') ||
+            name.endsWith('.png') ||
+            name.endsWith('.jpg') ||
+            name.endsWith('.jpeg') ||
+            name.endsWith('.gif') ||
+            name.endsWith('.webp')
+
+          if (isImage) {
+            try {
+              const blobRes = await documentService.viewDocumentContent(organizationId, projectId, doc.id, token)
+              previewUrl = URL.createObjectURL(blobRes.data)
+            } catch (e) {
+              console.error('preview fetch failed', e)
+            }
+          }
+
           return {
             id: item.id,
             uploadedDoc: {
@@ -18,7 +38,9 @@ export const uploadQueuedAttachments = createAsyncThunk(
               remoteUrl: doc.remoteUrl,
               externalUrl: doc.externalUrl,
               fileSizeBytes: doc.fileSizeBytes,
-              fileType: doc.fileType
+              fileType: doc.fileType,
+              previewUrl,
+              previewStatus: previewUrl ? 'ready' : 'idle'
             }
           }
         })

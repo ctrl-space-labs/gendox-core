@@ -190,6 +190,34 @@ const triggerJobs = async (organizationId, projectId, token, jobName, projectIdP
   })
 }
 
+/**
+ * View document bytes (inline preview) as blob.
+ * Use for image/pdf preview with Bearer token.
+ */
+const viewDocumentContent = async (organizationId, projectId, documentId, token) => {
+  return axios.get(apiRequests.viewDocumentContent(organizationId, projectId, documentId), {
+    responseType: 'blob',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  })
+}
+
+/**
+ * Download document bytes as blob.
+ * Use for "Download" button.
+ */
+const downloadDocument = async (organizationId, projectId, documentId, token) => {
+  return axios.get(apiRequests.downloadDocument(organizationId, projectId, documentId), {
+    responseType: 'blob',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  })
+}
+
+
+
 export default {
   getDocumentById,
   getSectionsByDocumentId,
@@ -201,5 +229,7 @@ export default {
   deleteDocument,
   deleteDocumentSection,
   triggerJobs,
-  findDocumentsByCriteria
+  findDocumentsByCriteria,
+  viewDocumentContent,
+  downloadDocument
 }

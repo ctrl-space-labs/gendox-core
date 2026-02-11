@@ -4,6 +4,7 @@ import { generalConstants } from 'src/utils/generalConstants'
 import chatConverter from '../../converters/chat.converter'
 import chatThreadService from '../../gendox-sdk/chatThreadService'
 import completionService from '../../gendox-sdk/completionService'
+import documentService from '../../gendox-sdk/documentService'
 
 const initialChatState = {
   threads: null,
@@ -259,6 +260,80 @@ export const fetchThreadId = createAsyncThunk('gendoxChat/fetchThreadId', async 
   console.log('fetchThreadId called')
 })
 
+export const hydrateAttachmentPreviews = createAsyncThunk(
+  'gendoxChat/hydrateAttachmentPreviews',
+  async ({ threadId, organizationId, projectId, token, messages }, { dispatch }) => {
+    if (!Array.isArray(messages) || messages.length === 0) return
+
+    const isImageAttachment = a => {
+      const ft = (a?.fileType?.name || '').toLowerCase()
+      const title = (a?.title || '').toLowerCase()
+      return (
+        ft.includes('image') ||
+        title.endsWith('.png') ||
+        title.endsWith('.jpg') ||
+        title.endsWith('.jpeg') ||
+        title.endsWith('.gif') ||
+        title.endsWith('.webp')
+      )
+    }
+
+    const queue = []
+    const msgs = [...messages].reverse()
+
+    for (const m of msgs) {
+      const atts = Array.isArray(m.attachments) ? m.attachments : []
+      for (const a of atts) {
+        if (!a?.documentId) continue
+        if (!isImageAttachment(a)) continue
+        if (a.previewUrl) continue
+        queue.push({ messageId: m.messageId, documentId: a.documentId })
+      }
+    }
+
+    const CONCURRENCY = 3
+    let idx = 0
+
+    const worker = async () => {
+      while (idx < queue.length) {
+        const item = queue[idx++]
+
+        dispatch(
+          chatActions.setAttachmentPreviewStatus({
+            messageId: item.messageId,
+            documentId: item.documentId,
+            previewStatus: 'loading'
+          })
+        )
+
+        try {
+          const res = await documentService.viewDocumentContent(organizationId, projectId, item.documentId, token)
+          const blobUrl = URL.createObjectURL(res.data)
+
+          dispatch(
+            chatActions.setAttachmentPreview({
+              messageId: item.messageId,
+              documentId: item.documentId,
+              previewUrl: blobUrl
+            })
+          )
+        } catch (e) {
+          dispatch(
+            chatActions.setAttachmentPreviewStatus({
+              messageId: item.messageId,
+              documentId: item.documentId,
+              previewStatus: 'error'
+            })
+          )
+        }
+      }
+    }
+
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()))
+  }
+)
+
+
 const gendoxChatSlice = createSlice({
   name: 'gendoxChat',
   initialState: initialChatState,
@@ -276,6 +351,16 @@ const gendoxChatSlice = createSlice({
       state.isLoadingMetadata = null
     },
     removeCurrentThread: state => {
+      const revokeThreadPreviewUrls = thread => {
+        const msgs = thread?.messages || []
+        msgs.forEach(m => {
+          const atts = m?.attachments || []
+          atts.forEach(a => {
+            if (a?.previewUrl) URL.revokeObjectURL(a.previewUrl)
+          })
+        })
+      }
+      revokeThreadPreviewUrls(state.currentThread)
       state.currentThread = null
     },
     updateCurrentThreadWithAgent: state => {
@@ -302,6 +387,30 @@ const gendoxChatSlice = createSlice({
     },
     clearCurrentMessageMetadata: state => {
       state.currentMessageMetadata = ''
+    },
+    setAttachmentPreviewStatus: (state, action) => {
+      const { messageId, documentId, previewStatus } = action.payload
+      const msgs = state.currentThread?.messages || []
+      const msg = msgs.find(m => m.messageId === messageId)
+      if (!msg) return
+      const att = (msg.attachments || []).find(a => a.documentId === documentId)
+      if (!att) return
+      att.previewStatus = previewStatus
+    },
+
+    setAttachmentPreview: (state, action) => {
+      const { messageId, documentId, previewUrl } = action.payload
+      const msgs = state.currentThread?.messages || []
+      const msg = msgs.find(m => m.messageId === messageId)
+      if (!msg) return
+      const att = (msg.attachments || []).find(a => a.documentId === documentId)
+      if (!att) return
+
+      // revoke old preview URL if exists to avoid memory leaks
+      if (att.previewUrl) URL.revokeObjectURL(att.previewUrl)
+
+      att.previewUrl = previewUrl
+      att.previewStatus = 'ready'
     }
   },
   extraReducers: builder => {
@@ -416,11 +525,17 @@ async function _fetchExistingThreadWithMessages(threadId, projectId, organizatio
       attachmentsByMessageId = {}
     }
   }
+
+  // 1) attach attachments
   chatMessages = chatMessages.map(m => {
     const att = attachmentsByMessageId?.[m.messageId] || []
     return {
       ...m,
-      attachments: att
+      attachments: att.map(a => ({
+        ...a,
+        previewUrl: a.previewUrl || null,
+        previewStatus: 'idle'
+      }))
     }
   })
 

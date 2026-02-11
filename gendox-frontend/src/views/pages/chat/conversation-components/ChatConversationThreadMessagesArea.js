@@ -23,21 +23,58 @@ const ThreadMessagesArea = ({
   chatInsightView
 }) => {
   const containerRef = useRef(null)
+  const didInitialScrollRef = useRef(false)
+  const prevThreadIdRef = useRef(null)
+  const prevLenRef = useRef(0)
+
+  const getScrollEl = () => {
+    const ref = containerRef.current
+    if (!ref) return null
+    if (ref instanceof HTMLElement) return ref
+    return ref._container || ref.container || ref.el || null
+  }
 
   const scrollToBottom = () => {
-    if (containerRef.current) {
-      containerRef.current.scrollTo({ top: containerRef.current.scrollHeight, behavior: 'auto' })
-    }
+    const el = getScrollEl()
+    if (!el) return false
+    el.scrollTo({ top: el.scrollHeight, behavior: 'auto' })
+    return true
   }
 
   useEffect(() => {
+    const threadId = currentThread?.threadId || currentThread?.id || null
+
+    // reset when thread changes
+    if (threadId && threadId !== prevThreadIdRef.current) {
+      prevThreadIdRef.current = threadId
+      didInitialScrollRef.current = false
+    }
+
+    if (isLoadingMessages) return
+    if (!threadId) return
+    if (didInitialScrollRef.current) return
+
     scrollToBottom()
-    // run it 2 times, the delay is to let the layout settle,
-    // for big threads, it takes time for the whole thread to be rendered and calculate the height
-    setTimeout(() => {
+    requestAnimationFrame(scrollToBottom)
+    setTimeout(scrollToBottom, 120)
+
+    didInitialScrollRef.current = true
+  }, [isLoadingMessages, currentThread?.threadId, currentThread?.messages?.length])
+
+  useEffect(() => {
+    if (isLoadingMessages) return
+
+    const len = currentThread?.messages?.length || 0
+    const prev = prevLenRef.current
+    prevLenRef.current = len
+
+    // only when a NEW message is appended
+    if (len > prev) {
       scrollToBottom()
-    }, 500)
-  }, [currentThread?.messages])
+      requestAnimationFrame(scrollToBottom)
+      setTimeout(scrollToBottom, 80)
+    }
+  }, [currentThread?.messages?.length, isLoadingMessages])
 
   /**
    * Turn the raw message list that comes from the server into a list that
@@ -170,7 +207,13 @@ const ThreadMessagesArea = ({
                     >
                       {' '}
                       {/* ✅ attachments OUTSIDE bubble */}
-                      <MessageAttachments attachments={uiAttachments} isMyMessage={isMyMessage} theme={theme} />
+                      <MessageAttachments
+                        attachments={uiAttachments}
+                        isMyMessage={isMyMessage}
+                        theme={theme}
+                        currentThread={currentThread}
+                        token={token}
+                      />
                       {/* ✅ bubble ONLY text */}
                       {hasText && (
                         <Box

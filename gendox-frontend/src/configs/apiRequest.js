@@ -226,5 +226,12 @@ export default {
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/eo-scripts`,
 
   getLatestEOScript: (organizationId, projectId, taskId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/eo-scripts/latest`
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/eo-scripts/latest`,
+
+    // Document content (inline preview) + download
+  viewDocumentContent: (organizationId, projectId, documentId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}/content`,
+
+  downloadDocument: (organizationId, projectId, documentId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}/download`,
 }
