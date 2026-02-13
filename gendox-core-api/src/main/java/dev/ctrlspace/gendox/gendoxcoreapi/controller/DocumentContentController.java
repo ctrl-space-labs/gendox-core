@@ -41,14 +41,13 @@ public class DocumentContentController {
         this.downloadService = downloadService;
     }
 
-//    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')" +
-//            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedDocumentIdFromPathVariable')")
-    @GetMapping("/organizations/{organizationId}/projects/{projectId}/documents/{documentId}/content")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') " +
+            "|| @securityUtils.isPublicThread(#threadId)")
+    @GetMapping("threads/{threadId}/documents/{documentId}/content")
     @Operation(summary = "View document content (inline)",
             description = "Streams the document bytes as inline content, suitable for previews (img/iframe).")
     public ResponseEntity<Resource> viewDocumentContent(
-            @PathVariable UUID organizationId,
-            @PathVariable UUID projectId,
+            @PathVariable UUID threadId,
             @PathVariable UUID documentId
     ) throws GendoxException {
         logger.debug("Received request to view content for documentId: {}", documentId);
@@ -71,19 +70,17 @@ public class DocumentContentController {
                 .body(resource);
     }
 
-    //    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
-//            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')" +
-//            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedDocumentIdFromPathVariable')")
-    @GetMapping("/organizations/{organizationId}/projects/{projectId}/documents/{documentId}/download")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') " +
+            "|| @securityUtils.isPublicThread(#threadId)")
+    @GetMapping("threads/{threadId}/documents/{documentId}/download")
     @Operation(summary = "Download document (attachment)",
             description = "Forces download of the document bytes (Content-Disposition: attachment).")
     public ResponseEntity<Resource> downloadDocument(
-            @PathVariable UUID organizationId,
-            @PathVariable UUID projectId,
+            @PathVariable UUID threadId,
             @PathVariable UUID documentId
     ) throws GendoxException {
 
-        logger.info("Download request for documentId: {}, projectId: {}, organizationId: {}", documentId, projectId, organizationId);
+        logger.info("Download request for documentId: {}, threadId: {}", documentId, threadId);
         DocumentInstance doc = documentService.getDocumentInstanceById(documentId);
 
         String remoteUrl = doc.getRemoteUrl();

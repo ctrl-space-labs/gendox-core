@@ -62,9 +62,7 @@ const GendoxChat = props => {
 
     dispatch(
       hydrateAttachmentPreviews({
-        threadId: currentThread.threadId,
-        organizationId: currentThread.organizationId,
-        projectId: currentThread.projectId,
+        threadId: currentThread.threadId,        
         token,
         messages: currentThread.messages
       })

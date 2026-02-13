@@ -72,7 +72,7 @@ const ChatInputSection = ({ auth, token, currentThread, organizationId, projectI
     dispatch(enqueueFiles(newItems))
 
     // 2) upload immediately those that just got added
-    dispatch(uploadQueuedAttachments({ items: newItems, organizationId, projectId, token }))
+    dispatch(uploadQueuedAttachments({ items: newItems, threadId: currentThread.threadId, organizationId, projectId, token }))
   }
 
   const handlePaste = createPasteHandler(addFiles)

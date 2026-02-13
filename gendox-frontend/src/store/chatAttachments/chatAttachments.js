@@ -3,7 +3,7 @@ import documentService from 'src/gendox-sdk/documentService'
 
 export const uploadQueuedAttachments = createAsyncThunk(
   'chatAttachments/uploadQueuedAttachments',
-  async ({ items, organizationId, projectId, token }, { rejectWithValue }) => {
+  async ({ items, threadId, organizationId, projectId, token }, { rejectWithValue }) => {
     try {
       const results = await Promise.all(
         items.map(async item => {
@@ -23,7 +23,7 @@ export const uploadQueuedAttachments = createAsyncThunk(
 
           if (isImage) {
             try {
-              const blobRes = await documentService.viewDocumentContent(organizationId, projectId, doc.id, token)
+              const blobRes = await documentService.viewDocumentContent(threadId, doc.id, token)
               previewUrl = URL.createObjectURL(blobRes.data)
             } catch (e) {
               console.error('preview fetch failed', e)

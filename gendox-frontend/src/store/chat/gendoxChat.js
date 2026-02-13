@@ -262,7 +262,7 @@ export const fetchThreadId = createAsyncThunk('gendoxChat/fetchThreadId', async 
 
 export const hydrateAttachmentPreviews = createAsyncThunk(
   'gendoxChat/hydrateAttachmentPreviews',
-  async ({ threadId, organizationId, projectId, token, messages }, { dispatch }) => {
+  async ({ threadId, token, messages }, { dispatch }) => {
     if (!Array.isArray(messages) || messages.length === 0) return
 
     const isImageAttachment = a => {
@@ -307,7 +307,7 @@ export const hydrateAttachmentPreviews = createAsyncThunk(
         )
 
         try {
-          const res = await documentService.viewDocumentContent(organizationId, projectId, item.documentId, token)
+          const res = await documentService.viewDocumentContent(threadId, item.documentId, token)
           const blobUrl = URL.createObjectURL(res.data)
 
           dispatch(

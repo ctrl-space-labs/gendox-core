@@ -229,9 +229,9 @@ export default {
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/eo-scripts/latest`,
 
     // Document content (inline preview) + download
-  viewDocumentContent: (organizationId, projectId, documentId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}/content`,
+  viewDocumentContent: (threadId, documentId) =>
+    `${url}threads/${threadId}/documents/${documentId}/content`,
 
-  downloadDocument: (organizationId, projectId, documentId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}/download`,
+  downloadDocument: (threadId, documentId) =>
+    `${url}threads/${threadId}/documents/${documentId}/download`,
 }

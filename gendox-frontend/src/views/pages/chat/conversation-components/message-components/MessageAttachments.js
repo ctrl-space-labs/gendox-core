@@ -32,8 +32,7 @@ const MessageAttachments = ({ attachments, currentThread, token }) => {
 
     try {
       const res = await documentService.downloadDocument(
-        currentThread?.organizationId,
-        currentThread?.projectId,
+        currentThread?.threadId,
         documentId,
         token
       )
