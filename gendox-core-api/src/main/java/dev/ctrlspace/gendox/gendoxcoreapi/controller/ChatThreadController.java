@@ -129,11 +129,10 @@ public class ChatThreadController {
             description = "Given a list of messageIds, returns attachments grouped by messageId.")
     public MessageAttachmentsResponseDTO getMessageAttachments(
             @PathVariable UUID threadId,
-            @RequestBody MessageAttachmentsRequestDTO request
+            @Valid @RequestBody MessageAttachmentsRequestDTO request
     ) {
         //TODO
-        // need VALIDATION for messageIds (not null, not empty, valid UUIDs) - can be done with a custom validator annotation if needed
-
+        // need VALIDATION
 
         return messageLocalContextService.getAttachmentsByMessageIds(request.getMessageIds());
     }

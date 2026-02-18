@@ -60,6 +60,7 @@ const ChatConversation = props => {
           themeConfig={themeConfig}
           handleInsightsToggle={props.handleInsightsToggle}
           isLoadingMessages={isLoadingMessages}
+          chatInsightView={props.chatInsightView}
         />
 
         {/* This Box will take up the remaining space */}

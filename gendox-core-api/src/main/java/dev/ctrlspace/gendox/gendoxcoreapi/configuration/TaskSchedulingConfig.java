@@ -1,6 +1,5 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.configuration;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.messages.QueueMessageTopicNameConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.messages.postgres.QueueConsumerService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DailyUsageAggregationResultDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.BackendMaintenanceTaskService;
@@ -11,6 +10,7 @@ import net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,14 +37,25 @@ public class TaskSchedulingConfig {
     private Instant lastDebugHeartbeat = Instant.MIN;
     private static final Duration LOG_HEARTBEAT_INTERVAL = Duration.ofHours(1);
     private Duration fixedDelay;
+    private final String documentUploadTopicName;
+    private final String attachmentUploadTopicName;
 
 
+
+    @Autowired
     public TaskSchedulingConfig(BackendMaintenanceTaskService backendMaintenanceTaskService,
-                                @Value("${gendox.maintenance.daily-usage-aggregator.fixed-delay:10s}") Duration fixedDelay, QueueConsumerService queueConsumerService, SplitterAndTrainingBatchService splitterAndTrainingBatchService) {
+                                @Value("${gendox.maintenance.daily-usage-aggregator.fixed-delay:10s}") Duration fixedDelay,
+                                QueueConsumerService queueConsumerService,
+                                SplitterAndTrainingBatchService splitterAndTrainingBatchService,
+                                @Value("${gendox.topics.document-upload}") String documentUploadTopicName,
+                                @Value("${gendox.topics.attachment-upload}") String attachmentUploadTopicName
+    ) {
         this.backendMaintenanceTaskService = backendMaintenanceTaskService;
         this.fixedDelay = fixedDelay;
         this.queueConsumerService = queueConsumerService;
         this.splitterAndTrainingBatchService = splitterAndTrainingBatchService;
+        this.documentUploadTopicName = documentUploadTopicName;
+        this.attachmentUploadTopicName = attachmentUploadTopicName;
     }
 
     @Bean
@@ -76,9 +87,16 @@ public class TaskSchedulingConfig {
 
     @Scheduled(fixedDelayString = "${queue.documents.upload.poll-ms:10s}")
     public void autoTrainingJobPoller() {
-        queueConsumerService.pollTopicOnce(QueueMessageTopicNameConstants.DOCUMENT_UPLOAD,
+        queueConsumerService.pollTopicOnce(documentUploadTopicName,
                 500,
                 splitterAndTrainingBatchService::runSplitterAndTrainingForBatchOfFiles);
+
+        queueConsumerService.pollTopicOnce(
+                attachmentUploadTopicName,
+                500,
+                splitterAndTrainingBatchService::runSplitterAndTrainingForBatchOfFiles
+        );
+
     }
 
 

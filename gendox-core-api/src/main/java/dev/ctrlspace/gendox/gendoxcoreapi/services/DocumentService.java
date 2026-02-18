@@ -76,8 +76,10 @@ public class DocumentService {
 
 
     public Page<DocumentInstance> getAllDocuments(DocumentCriteria criteria, Pageable pageable) throws GendoxException {
+        Page<DocumentInstance> page = documentInstanceRepository.findAll(DocumentPredicates.build(criteria), pageable);
+        logger.info("Fetched {} docs, criteria={}", page.getNumberOfElements(), criteria);
 
-        return documentInstanceRepository.findAll(DocumentPredicates.build(criteria), pageable);
+        return page;
 
     }
 

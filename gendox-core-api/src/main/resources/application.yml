@@ -106,6 +106,10 @@ gendox:
   domains:
     frontend: https://app.gendox.dev
 
+  topics:
+    document-upload: documents.upload
+    attachment-upload: attachment.upload
+
   emails:
     contact-email: contact@ctrlspace.dev
   documents:

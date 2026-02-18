@@ -4,7 +4,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithoutDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentOnlyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.messages.QueueMessageTopicNameConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.messages.postgres.QueueProducerService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
@@ -13,7 +12,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionOrderDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
-import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,9 +52,8 @@ public class DocumentController {
     private DocumentSectionService documentSectionService;
     private DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter;
     private QueueProducerService queueProducerService;
-
-    @Value("${gendox.batch-jobs.document-splitter.job.name}")
-    private String documentSplitterJobName;
+    private final String documentUploadTopicName;
+    private final String attachmentUploadTopicName;
 
 
     @Autowired
@@ -67,7 +64,10 @@ public class DocumentController {
                               DocumentSectionService documentSectionService,
                               DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter,
                               DocumentOnlyConverter documentOnlyConverter,
-                              QueueProducerService queueProducerService) {
+                              QueueProducerService queueProducerService,
+                              @Value("${gendox.topics.document-upload}") String documentUploadTopicName,
+                              @Value("${gendox.topics.attachment-upload}") String attachmentUploadTopicName
+    ) {
         this.documentService = documentService;
         this.documentInstanceConverter = documentInstanceConverter;
         this.uploadService = uploadService;
@@ -76,6 +76,8 @@ public class DocumentController {
         this.documentInstanceSectionWithoutDocumentConverter = documentInstanceSectionWithoutDocumentConverter;
         this.documentOnlyConverter = documentOnlyConverter;
         this.queueProducerService = queueProducerService;
+        this.documentUploadTopicName = documentUploadTopicName;
+        this.attachmentUploadTopicName = attachmentUploadTopicName;
     }
 
 
@@ -346,7 +348,7 @@ public class DocumentController {
                 .documentInstanceIds(uploadedDocumentInstances.stream().map(d -> String.valueOf(d.getId())).toList())
                 .projectId(projectId.toString())
                 .build();
-        queueProducerService.convertAndSend(QueueMessageTopicNameConstants.DOCUMENT_UPLOAD, documentCriteria, Map.of());
+        queueProducerService.convertAndSend(documentUploadTopicName, documentCriteria, Map.of());
         return ResponseEntity.ok(response);
     }
 
@@ -370,11 +372,15 @@ public class DocumentController {
 
         DocumentCriteria documentCriteria = DocumentCriteria
                 .builder()
-                .documentInstanceIds(List.of(String.valueOf(documentInstance.getId())))
-                .projectId(projectId.toString())
+                .documentInstanceId(String.valueOf(documentInstance.getId()))
+                .projectId(messageAttachment ? null : projectId.toString())
                 .build();
-        queueProducerService.convertAndSend(QueueMessageTopicNameConstants.DOCUMENT_UPLOAD, documentCriteria, Map.of());
 
+        if (messageAttachment) {
+            queueProducerService.convertAndSend(attachmentUploadTopicName, documentCriteria, Map.of());
+        } else {
+            queueProducerService.convertAndSend(documentUploadTopicName, documentCriteria, Map.of());
+        }
         return ResponseEntity.ok(documentInstance);
     }
 

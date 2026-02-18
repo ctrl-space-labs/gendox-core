@@ -4,9 +4,9 @@ import Box from '@mui/material/Box'
 
 
 const gendoxChatConfig = {
-  authProviderOption: 'IFrameAuthProvider',
-  embedView: true,
-  chatUrlPath: '/gendox/embed/embedded-chat',
+  // authProviderOption: 'IFrameAuthProvider',
+  embedView: false,
+  chatUrlPath: '/gendox/tasks/earth-observation/workspace',
   chatInsightView: false,
   hideSidebar: true,
 }
