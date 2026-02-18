@@ -41,8 +41,9 @@ public class DocumentContentController {
         this.downloadService = downloadService;
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') " +
-            "|| @securityUtils.isPublicThread(#threadId)")
+    @PreAuthorize("@securityUtils.threadHasDocumentInMessageLocalContext(#threadId, #documentId) && " +
+            "(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') " +
+            "|| @securityUtils.isPublicThread(#threadId))")
     @GetMapping("threads/{threadId}/documents/{documentId}/content")
     @Operation(summary = "View document content (inline)",
             description = "Streams the document bytes as inline content, suitable for previews (img/iframe).")
@@ -70,8 +71,10 @@ public class DocumentContentController {
                 .body(resource);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') " +
-            "|| @securityUtils.isPublicThread(#threadId)")
+
+    @PreAuthorize("@securityUtils.threadHasDocumentInMessageLocalContext(#threadId, #documentId) && " +
+            "(@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedThreadIdFromPathVariable') " +
+            "|| @securityUtils.isPublicThread(#threadId))")
     @GetMapping("threads/{threadId}/documents/{documentId}/download")
     @Operation(summary = "Download document (attachment)",
             description = "Forces download of the document bytes (Content-Disposition: attachment).")

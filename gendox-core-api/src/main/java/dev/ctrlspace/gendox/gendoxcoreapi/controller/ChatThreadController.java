@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.UUID;
 
 @RestController
@@ -130,9 +131,21 @@ public class ChatThreadController {
     public MessageAttachmentsResponseDTO getMessageAttachments(
             @PathVariable UUID threadId,
             @Valid @RequestBody MessageAttachmentsRequestDTO request
-    ) {
-        //TODO
-        // need VALIDATION
+    ) throws GendoxException {
+        List<UUID> normalized = request.getMessageIds().stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (normalized.isEmpty()) {
+            throw new GendoxException("MESSAGE_IDS_REQUIRED", "messageIds must not be empty", HttpStatus.BAD_REQUEST);
+        }
+
+        // Validate that all messageIds belong to the thread (and exist)
+        boolean ok = messageService.areAllMessagesInThread(threadId, normalized);
+        if (!ok) {
+            throw new GendoxException("FORBIDDEN", "Some messageIds do not belong to this thread", HttpStatus.FORBIDDEN);
+        }
 
         return messageLocalContextService.getAttachmentsByMessageIds(request.getMessageIds());
     }

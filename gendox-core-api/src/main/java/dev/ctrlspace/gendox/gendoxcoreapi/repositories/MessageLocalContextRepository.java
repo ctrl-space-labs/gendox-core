@@ -14,13 +14,23 @@ import java.util.UUID;
 public interface MessageLocalContextRepository extends JpaRepository<MessageLocalContext, UUID>, QuerydslPredicateExecutor<MessageLocalContext> {
 
     @Query("""
-        select mlc
-        from MessageLocalContext mlc
-        join fetch mlc.message m
-        left join fetch mlc.document d
-        where m.id in :messageIds
-          and d is not null
-    """)
+                select mlc
+                from MessageLocalContext mlc
+                join fetch mlc.message m
+                left join fetch mlc.document d
+                where m.id in :messageIds
+                  and d is not null
+            """)
     List<MessageLocalContext> findAllByMessageIdsWithDocument(List<UUID> messageIds);
+
+    boolean existsByMessage_ThreadIdAndDocument_Id(UUID threadId, UUID documentId);
+
+    @Query("""
+              select (count(mlc) > 0)
+              from MessageLocalContext mlc
+              where mlc.message.threadId = :threadId
+                and mlc.document.id = :documentId
+            """)
+    boolean existsDocumentInThread(UUID threadId, UUID documentId);
 
 }

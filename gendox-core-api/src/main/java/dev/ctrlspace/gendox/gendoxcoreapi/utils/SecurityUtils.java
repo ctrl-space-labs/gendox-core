@@ -1,23 +1,18 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
+
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageLocalContextService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
-import jakarta.servlet.Filter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.codec.binary.Base32;
 import org.jetbrains.annotations.Nullable;
@@ -47,17 +42,20 @@ public class SecurityUtils {
     private ProjectAgentService projectAgentService;
     private DocumentInstanceRepository documentInstanceRepository;
     private UserOrganizationService userOrganizationService;
+    private MessageLocalContextService messageLocalContextService;
 
     @Autowired
     public SecurityUtils(ChatThreadRepository chatThreadRepository,
                          ProjectAgentService projectAgentService,
                          DocumentInstanceRepository documentInstanceRepository,
-                         UserOrganizationService userOrganizationService
+                         UserOrganizationService userOrganizationService,
+                         MessageLocalContextService messageLocalContextService
     ) {
         this.chatThreadRepository = chatThreadRepository;
         this.projectAgentService = projectAgentService;
         this.documentInstanceRepository = documentInstanceRepository;
         this.userOrganizationService = userOrganizationService;
+        this.messageLocalContextService = messageLocalContextService;
     }
 
 
@@ -418,6 +416,13 @@ public class SecurityUtils {
         return chatThreadRepository.existsByIdAndPublicThreadIsTrue(threadId);
     }
 
+    public boolean threadHasDocumentInMessageLocalContext(UUID threadId, UUID documentId) {
+        if (threadId == null || documentId == null) return false;
+
+        return messageLocalContextService
+                .isDocumentAttachedToThread(threadId, documentId);
+    }
+
 
     public class AccessCriteriaGetterFunction {
 
@@ -484,11 +489,12 @@ public class SecurityUtils {
 
 
     /**
-     *  Use to check for Authorization with provided AccessCriteria, this is used inside services
-     *  the other #hasAuthority is used in @PreAuthorize annotations.
+     * Use to check for Authorization with provided AccessCriteria, this is used inside services
+     * the other #hasAuthority is used in @PreAuthorize annotations.
+     * <p>
+     * To generate the AccessCriteria, you can use the related getter methods in this class.
+     * *
      *
-     *  To generate the AccessCriteria, you can use the related getter methods in this class.
-     *  *
      * @param userProfile
      * @param authority
      * @param accessCriteria
@@ -506,7 +512,6 @@ public class SecurityUtils {
         }
         return can(authority, userProfile, accessCriteria);
     }
-
 
 
     public UUID getUserId() {

@@ -142,5 +142,13 @@ public class MessageLocalContextService {
                 .build();
     }
 
+    @Transactional
+    public boolean isDocumentAttachedToThread(UUID threadId, UUID documentId) {
+        if (threadId == null || documentId == null) return false;
+
+        return messageLocalContextRepository
+                .existsByMessage_ThreadIdAndDocument_Id(threadId, documentId);
+    }
+
 
 }
