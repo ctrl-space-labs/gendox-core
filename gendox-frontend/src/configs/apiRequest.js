@@ -1,3 +1,4 @@
+import { remove } from 'nprogress'
 import commonConfig from 'src/configs/common.config.js'
 import { duplicateTask } from 'src/store/activeTask/activeTask'
 
@@ -66,6 +67,9 @@ export default {
 
   documentInstance: (organizationId, projectId, documentId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}`,
+
+  removeChatDocument: (organizationId, threadId, documentId) => 
+    `${url}organizations/${organizationId}/threads/${threadId}/documents/${documentId}/chat-documents`,
 
   documentSection: (documentId, sectionId) => `${url}documents/${documentId}/sections/${sectionId}`,
 

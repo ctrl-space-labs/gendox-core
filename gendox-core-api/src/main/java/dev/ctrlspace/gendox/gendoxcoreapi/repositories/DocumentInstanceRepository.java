@@ -73,6 +73,9 @@ public interface DocumentInstanceRepository extends JpaRepository<DocumentInstan
     @Query(nativeQuery = true, value = "DELETE FROM gendox_core.document_instance WHERE id IN :documentIds")
     void deleteAllByIds(@Param("documentIds") List<UUID> documentIds);
 
+    @Query("select d.organizationId from DocumentInstance d where d.id = :documentId")
+    UUID findOrganizationIdByDocumentId(@Param("documentId") UUID documentId);
+
 
 }
 

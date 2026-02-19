@@ -72,7 +72,9 @@ const ChatInputSection = ({ auth, token, currentThread, organizationId, projectI
     dispatch(enqueueFiles(newItems))
 
     // 2) upload immediately those that just got added
-    dispatch(uploadQueuedAttachments({ items: newItems, threadId: currentThread.threadId, organizationId, projectId, token }))
+    dispatch(
+      uploadQueuedAttachments({ items: newItems, threadId: currentThread.threadId, organizationId, projectId, token })
+    )
   }
 
   const handlePaste = createPasteHandler(addFiles)
@@ -88,7 +90,7 @@ const ChatInputSection = ({ auth, token, currentThread, organizationId, projectI
           attachmentId,
           documentId: item.uploadedDoc.documentId,
           organizationId,
-          projectId,
+          threadId: currentThread.threadId,
           token
         })
       )
@@ -103,6 +105,12 @@ const ChatInputSection = ({ auth, token, currentThread, organizationId, projectI
   useEffect(() => {
     attachmentsRef.current = attachments
   }, [attachments])
+
+  // Clear attachments when switching thread
+  useEffect(() => {
+    // when thread changes
+    dispatch(clearAll())
+  }, [currentThread?.threadId, dispatch])
 
   useEffect(() => {
     return () => {
@@ -210,7 +218,7 @@ const ChatInputSection = ({ auth, token, currentThread, organizationId, projectI
       {/* Attachments preview row (like ChatGPT squares) */}
       {attachments.length > 0 && (
         <Box sx={{ position: 'relative' }}>
-          {/* μόνο τα attachments θολώνουν */}
+          {/* only attachments row, no need to blur the whole input when uploading */}
           <AttachmentsRow attachments={attachments} onRemove={removeAttachment} />
         </Box>
       )}{' '}

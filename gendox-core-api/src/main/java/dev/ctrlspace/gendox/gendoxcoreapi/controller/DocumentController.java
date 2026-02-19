@@ -290,6 +290,22 @@ public class DocumentController {
         documentService.deleteDocument(documentId, projectId);
     }
 
+
+    @PreAuthorize("(@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromDocumentIdPathVariable') || " +
+            "@securityUtils.isPublicThread(#threadId))")
+    @DeleteMapping("/organizations/{organizationId}/threads/{threadId}/documents/{documentId}/chat-documents")
+    @Operation(
+            summary = "Delete a chat thread document by ID",
+            description = "Delete an existing chat thread document by specifying its unique ID. " +
+                    "This operation permanently removes the document and its associated sections and metadata from the chat thread."
+    )
+    public void deleteChatThreadDocument(@PathVariable UUID organizationId,
+                                         @PathVariable UUID threadId,
+                                         @PathVariable UUID documentId) throws GendoxException {
+        documentService.deleteDocument(documentId, organizationId);
+    }
+
+
     @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
             "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable') " +
             "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedDocumentIdsFromRequestParams')")

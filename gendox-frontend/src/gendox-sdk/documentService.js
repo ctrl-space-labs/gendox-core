@@ -159,6 +159,23 @@ const deleteDocument = async (organizationId, projectId, documentId, token) => {
 }
 
 /**
+ * Delete chat document from thread
+ * @param organizationId
+ * @param threadId
+ * @param documentId
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<String>>}
+ */
+const deleteChatDocument = async (organizationId, threadId, documentId, token) => {
+  return axios.delete(apiRequests.removeChatDocument(organizationId, threadId, documentId), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
  * delete Document Section
  * @param documentId
  * @param sectionId
@@ -227,6 +244,7 @@ export default {
   uploadSingleDocument,
   updateSectionsOrder,
   deleteDocument,
+  deleteChatDocument,
   deleteDocumentSection,
   triggerJobs,
   findDocumentsByCriteria,

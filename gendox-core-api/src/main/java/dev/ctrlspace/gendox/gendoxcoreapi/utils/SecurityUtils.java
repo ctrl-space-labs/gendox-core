@@ -423,6 +423,40 @@ public class SecurityUtils {
                 .isDocumentAttachedToThread(threadId, documentId);
     }
 
+    private AccessCriteria getRequestedOrgIdFromDocumentIdPathVariable() {
+        HttpServletRequest request = getCurrentHttpRequest();
+        Map<String, String> uriTemplateVariables = (Map<String, String>) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+
+        String documentIdStr = null;
+        if (uriTemplateVariables != null) {
+            documentIdStr = uriTemplateVariables.get(QueryParamNames.DOCUMENT_INSTANCE_ID);
+        }
+
+        if (documentIdStr == null || documentIdStr.isBlank()) {
+            return new AccessCriteria();
+        }
+
+        UUID documentId;
+        try {
+            documentId = UUID.fromString(documentIdStr);
+        } catch (Exception e) {
+            return new AccessCriteria();
+        }
+
+
+        UUID orgId = documentInstanceRepository.findOrganizationIdByDocumentId(documentId);
+        if (orgId == null) {
+            return new AccessCriteria();
+        }
+
+        return AccessCriteria.builder()
+                .orgIds(Set.of(orgId.toString()))
+                .projectIds(Collections.emptySet())
+                .threadId("")
+                .documentIds(Collections.emptyList())
+                .build();
+    }
+
 
     public class AccessCriteriaGetterFunction {
 
@@ -435,6 +469,7 @@ public class SecurityUtils {
         public static final String THREAD_ID_FROM_PATH_VARIABLE = "getRequestedThreadIdFromPathVariable";
         public static final String DOCUMENT_ID_FROM_PATH_VARIABLE = "getRequestedDocumentIdFromPathVariable";
         public static final String DOCUMENT_IDS_FROM_REQUEST_PARAMS = "getRequestedDocumentIdsFromRequestParams";
+        public static final String ORG_ID_FROM_DOCUMENT_ID_PATH_VARIABLE = "getRequestedOrgIdFromDocumentIdPathVariable";
     }
 
 
@@ -476,6 +511,10 @@ public class SecurityUtils {
 
         if (AccessCriteriaGetterFunction.DOCUMENT_IDS_FROM_REQUEST_PARAMS.equals(getterFunction)) {
             accessCriteria = getRequestedDocumentIdsFromRequestParam();
+        }
+
+        if (AccessCriteriaGetterFunction.ORG_ID_FROM_DOCUMENT_ID_PATH_VARIABLE.equals(getterFunction)) {
+            accessCriteria = getRequestedOrgIdFromDocumentIdPathVariable();
         }
 
         if (!(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserProfile)) {
