@@ -463,7 +463,6 @@ export default function WorkspaceGrid() {
             display: 'flex',
             flex: 1,
             minWidth: 0,
-            minHeight: 0,
             alignItems: 'stretch',
             '& > *': {
               flex: 1,

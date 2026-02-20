@@ -2,11 +2,12 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import Icon from 'src/views/custom-components/mui/icon/icon'
-import { useTheme } from '@mui/material/styles'
+import { alpha, useTheme } from '@mui/material/styles'
 import Tooltip from '@mui/material/Tooltip'
 
 export default function PanelFrame({ title, children, onMaximize, onMinimize, onRestore }) {
   const theme = useTheme()
+
   return (
     <Box
       sx={{
@@ -14,50 +15,64 @@ export default function PanelFrame({ title, children, onMaximize, onMinimize, on
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 2,
-        background: (theme.palette.background.paper, 0.6),
+        background: alpha(theme.palette.background.paper, 0.6),
         backdropFilter: 'blur(8px)',
+        border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
         boxShadow: (theme.palette.common.white, 0.04),
-        overflow: 'hidden'
+        overflow: 'hidden',
       }}
     >
+      {/* Header */}
       <Box
         sx={{
           px: 2,
-          py: 1.25,
+          py: 0.75,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: (theme.palette.common.white, 0.05)
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+          flexShrink: 0,
         }}
       >
-        <Typography sx={{ fontWeight: 800, fontSize: 13 }}>{title}</Typography>
+        <Typography
+          sx={{
+            fontWeight: 700,
+            fontSize: 11,
+            letterSpacing: '0.07em',
+            textTransform: 'uppercase',
+            opacity: 0.6,
+          }}
+        >
+          {title}
+        </Typography>
 
-        <Box sx={{ display: 'flex', gap: 0.5 }}>
+        <Box sx={{ display: 'flex', gap: 0.25 }}>
           {onMinimize && (
             <Tooltip title='Minimize'>
-              <IconButton size='small' onClick={onMinimize}>
+              <IconButton size='small' onClick={onMinimize} sx={{ opacity: 0.45, '&:hover': { opacity: 1 } }}>
                 <Icon icon='mdi:minus' />
               </IconButton>
             </Tooltip>
           )}
           {onMaximize && (
             <Tooltip title='Maximize'>
-              <IconButton size='small' onClick={onMaximize}>
-                <Icon icon='mdi:arrow-expand-all' />
+              <IconButton size='small' onClick={onMaximize} sx={{ opacity: 0.45, '&:hover': { opacity: 1 } }}>
+                <Icon icon='mdi:fullscreen' />
               </IconButton>
             </Tooltip>
           )}
           {onRestore && (
-            <Tooltip title='Restore'>
-              <IconButton size='small' onClick={onRestore}>
-                <Icon icon='mdi:arrow-collapse-all' />
+            <Tooltip title='Restore layout'>
+              <IconButton size='small' onClick={onRestore} sx={{ opacity: 0.45, '&:hover': { opacity: 1 } }}>
+                <Icon icon='mdi:fullscreen-exit' />
               </IconButton>
             </Tooltip>
           )}
         </Box>
       </Box>
 
-      <Box sx={{ flex: 1, minHeight: 0, p: 2, overflow: 'auto' }}>{children}</Box>
+      {/* Content — p:0 and overflow:hidden so map/editor/chat fill the frame correctly */}
+      <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>{children}</Box>
     </Box>
   )
 }
