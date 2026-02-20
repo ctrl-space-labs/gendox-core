@@ -14,8 +14,9 @@ export default function GeeRunner({
   token
 }) {
   const dispatch = useDispatch()
+  const geeToken = window.localStorage.getItem('gee_access_token')
 
-  const { createEOScriptLoading, latestEOScriptLoading, geeOAuthToken } = useSelector(
+  const { createEOScriptLoading, latestEOScriptLoading } = useSelector(
     state => state.earthObservation
   )
 
@@ -62,7 +63,7 @@ export default function GeeRunner({
             {
               type: 'EXECUTE',
               code: pendingCodeRef.current,
-              token: geeOAuthToken
+              token: geeToken
             },
             '*'
           )
@@ -111,7 +112,7 @@ export default function GeeRunner({
 
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [dispatch, geeOAuthToken, organizationId, projectId, taskId, token])
+  }, [dispatch, organizationId, projectId, taskId, token])
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
