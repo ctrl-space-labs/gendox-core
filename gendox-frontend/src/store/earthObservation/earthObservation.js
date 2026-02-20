@@ -27,6 +27,9 @@ const initialState = {
   isGeeReady: false,
   mapLayerUrl: null,
   mapCenter: null,
+  eoScripts: [],
+  eoScriptsLoading: false,
+  eoScriptsError: null,
   latestEOScript: null,
   latestEOScriptLoading: false,
   latestEOScriptError: null,
@@ -35,6 +38,20 @@ const initialState = {
   createEOScriptError: null
 }
 
+export const fetchEOScriptsThunk = createAsyncThunk(
+  'earthObservation/fetchEOScripts',
+  async ({ organizationId, projectId, taskId, token }, { rejectWithValue }) => {
+    try {
+      const res = await taskService.getEOScripts(organizationId, projectId, taskId, token)
+      return res.data
+    } catch (err) {
+      if (err?.response?.status === 404) return []
+      toast.error(getErrorMessage(err))
+      return rejectWithValue(err?.response?.data?.message || err?.message || 'Failed to fetch EOScripts')
+    }
+  }
+)
+
 export const fetchLatestEOScriptThunk = createAsyncThunk(
   'earthObservation/fetchLatestEOScript',
   async ({ organizationId, projectId, taskId, token }, { rejectWithValue }) => {
@@ -42,6 +59,7 @@ export const fetchLatestEOScriptThunk = createAsyncThunk(
       const res = await taskService.getLatestEOScript(organizationId, projectId, taskId, token)
       return res.data
     } catch (err) {
+      if (err?.response?.status === 404) return null
       toast.error(getErrorMessage(err))
       return rejectWithValue(err?.response?.data?.message || err?.message || 'Failed to fetch latest EOScript')
     }
@@ -123,9 +141,36 @@ const slice = createSlice({
     setLatestEOScript: (state, action) => {
       state.latestEOScript = action.payload
     },
+    resetEOScriptState: state => {
+      state.eoScripts = []
+      state.eoScriptsLoading = false
+      state.eoScriptsError = null
+      state.latestEOScript = null
+      state.latestEOScriptLoading = false
+      state.latestEOScriptError = null
+      state.createEOScriptLoading = false
+      state.createEOScriptError = null
+      state.mapLayerUrl = null
+      state.mapCenter = null
+    },
 
   },
   extraReducers: builder => {
+    // --- fetch all ---
+    builder
+      .addCase(fetchEOScriptsThunk.pending, state => {
+        state.eoScriptsLoading = true
+        state.eoScriptsError = null
+      })
+      .addCase(fetchEOScriptsThunk.fulfilled, (state, action) => {
+        state.eoScriptsLoading = false
+        state.eoScripts = action.payload
+      })
+      .addCase(fetchEOScriptsThunk.rejected, (state, action) => {
+        state.eoScriptsLoading = false
+        state.eoScriptsError = action.payload || 'Failed to fetch EOScripts'
+      })
+
     // --- fetch latest ---
     builder
       .addCase(fetchLatestEOScriptThunk.pending, state => {
@@ -161,6 +206,10 @@ const slice = createSlice({
       .addCase(createEOScriptThunk.fulfilled, (state, action) => {
         state.createEOScriptLoading = false
         state.latestEOScript = action.payload
+        // Keep eoScripts list in sync: prepend (dedup by id in case backend returned existing)
+        if (action.payload?.id) {
+          state.eoScripts = [action.payload, ...state.eoScripts.filter(s => s.id !== action.payload.id)]
+        }
       })
       .addCase(createEOScriptThunk.rejected, (state, action) => {
         state.createEOScriptLoading = false
@@ -185,7 +234,8 @@ export const {
   setGeeReady,
   setMapLayer,
   setMapData,
-  setLatestEOScript
+  setLatestEOScript,
+  resetEOScriptState
 } = slice.actions
 
 export default slice.reducer

@@ -11,7 +11,8 @@ export default function GeeRunner({
   organizationId,
   projectId,
   taskId,
-  token
+  token,
+  scriptName
 }) {
   const dispatch = useDispatch()
   const geeToken = window.localStorage.getItem('gee_access_token')
@@ -28,6 +29,12 @@ export default function GeeRunner({
   const pendingCodeRef = useRef(null)
   const iframeRef = useRef(null)
   const lastRunCodeRef = useRef('')
+  const scriptNameRef = useRef(scriptName)
+
+  // Keep scriptNameRef in sync with the prop (avoids stale closure in handleMessage)
+  useEffect(() => {
+    scriptNameRef.current = scriptName
+  }, [scriptName])
 
   // 3. O Handler for "Run Code" button
   const handleRun = () => {
@@ -90,8 +97,13 @@ export default function GeeRunner({
               projectId,
               taskId,
               eoScriptPayload: {
-                title: 'Latest GEE Script',
-                description: 'Auto-saved from Editor Run',
+                title: scriptNameRef.current || 'New Script',
+                description: (() => {
+                  const d = new Date()
+                  const pad = n => String(n).padStart(2, '0')
+                  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+                  return `Run-Saved – ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+                })(),
                 scriptContent: lastRunCodeRef.current
               },
               token

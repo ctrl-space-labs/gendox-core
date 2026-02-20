@@ -39,6 +39,7 @@ public class EOScriptService {
     @Transactional
     public EOScript createNewEOScript(EOScript eoScript) {
         UUID taskId = eoScript.getTask().getId();
+        String title = eoScript.getTitle();
 
         // Find latest
         EOScript latest = eoScriptRepository
@@ -47,9 +48,11 @@ public class EOScriptService {
 
         String newContent = normalize(eoScript.getScriptContent());
         String latestContent = latest == null ? null : normalize(latest.getScriptContent());
+        String newTitle = normalize(title);
+        String latestTitle = latest == null ? null : normalize(latest.getTitle());
 
         // If same content, don't create new version
-        if (latest != null && Objects.equals(newContent, latestContent)) {
+        if (latest != null && Objects.equals(newContent, latestContent) && Objects.equals(newTitle, latestTitle)) {
             logger.info("EOScript not created: content is identical to latest for taskId={}", taskId);
             return latest;
         }

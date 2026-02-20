@@ -229,6 +229,9 @@ export default {
   createEOScript: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/eo-scripts`,
 
+  getEOScripts: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/eo-scripts`,
+
   getLatestEOScript: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/eo-scripts/latest`,
 

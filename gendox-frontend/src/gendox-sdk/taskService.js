@@ -472,6 +472,23 @@ const createEOScript = async (organizationId, projectId, taskId, eoScriptPayload
 }
 
 /**
+ * Get all EOScripts for a Task (ordered by createdAt desc)
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<EOScript[]>>}
+ */
+const getEOScripts = async (organizationId, projectId, taskId, token) => {
+  return axios.get(apiRequests.getEOScripts(organizationId, projectId, taskId), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
  * Get latest EOScript for a Task
  * @param organizationId
  * @param projectId
@@ -513,5 +530,6 @@ export default {
   documentInsightsExportCSV,
   documentDigitizationExportCSV,
   createEOScript,
+  getEOScripts,
   getLatestEOScript
 }

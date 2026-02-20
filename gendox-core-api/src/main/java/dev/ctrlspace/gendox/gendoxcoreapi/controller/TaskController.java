@@ -411,9 +411,32 @@ public class TaskController {
         eoScriptDTO.setIsLatestVersion(null); // defensive: service decides this
 
         EOScript eoScript = eoScriptConverter.toEntity(eoScriptDTO);
-        EOScript saved = eoScriptService.createNewEOScript(eoScript);
 
-        return saved;
+        return eoScriptService.createNewEOScript(eoScript);
+    }
+
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @GetMapping(
+            value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/eo-scripts",
+            produces = {"application/json"}
+    )
+    public List<EOScript> getEOScripts(
+            @PathVariable UUID organizationId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID taskId
+    ) throws GendoxException {
+
+        Task task = taskService.getTaskById(taskId);
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException(
+                    "INVALID_PROJECT",
+                    "Task does not belong to the specified project",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        return eoScriptService.getEOScriptsByTaskId(taskId);
     }
 
 
