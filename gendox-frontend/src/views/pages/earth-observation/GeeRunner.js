@@ -59,6 +59,11 @@ export default function GeeRunner({
     const handleMessage = event => {
       // Ignore unrelated messages
       if (!event.data || !event.data.type) return
+      // Sandboxed iframes without allow-same-origin have a null origin, so we
+      // check event.source instead of event.origin to verify the message comes
+      // from our specific iframe instance and not another window.
+      if (iframeRef.current && event.source !== iframeRef.current.contentWindow) return
+
 
       const { type, payload, message } = event.data
 
@@ -148,7 +153,7 @@ export default function GeeRunner({
           key={iframeKey}
           // ADD ?v=4 AT THE END
           src='/gee-sandbox/gee-sandbox.html?v=4'
-          sandbox='allow-scripts allow-same-origin'
+          sandbox='allow-scripts'
           style={{ display: 'none' }}
         />
       )}
