@@ -154,8 +154,7 @@ export default function GeeRunner({
         <iframe
           ref={iframeRef}
           key={iframeKey}
-          // ADD ?v=4 AT THE END
-          src='/gee-sandbox/gee-sandbox.html?v=4'
+          src='/gee-sandbox/gee-sandbox.html'
           sandbox='allow-scripts'
           style={{ display: 'none' }}
         />
