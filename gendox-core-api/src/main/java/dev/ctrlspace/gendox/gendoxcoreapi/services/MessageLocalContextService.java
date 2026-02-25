@@ -134,7 +134,7 @@ public class MessageLocalContextService {
                                 )
                         ));
 
-        // ensure messages with 0 attachments are present (optional αλλά ωραίο)
+        // ensure messages with 0 attachments are present
         normalized.forEach(id -> map.putIfAbsent(id, new ArrayList<>()));
 
         return MessageAttachmentsResponseDTO.builder()

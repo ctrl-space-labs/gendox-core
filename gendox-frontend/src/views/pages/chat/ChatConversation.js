@@ -43,7 +43,7 @@ const ChatConversation = props => {
         p: '0 !important',
         width: '100%'
       }}
-    >      
+    >
       <Box
         component='main'
         sx={{

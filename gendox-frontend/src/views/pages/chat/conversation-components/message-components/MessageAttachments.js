@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react'
-import { Box, Typography, Dialog, IconButton } from '@mui/material'
+import { Box, Typography, Dialog, IconButton, Skeleton } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import documentService from 'src/gendox-sdk/documentService'
@@ -102,19 +102,7 @@ const MessageAttachments = ({ attachments, currentThread, token }) => {
                       }}
                     />
                   ) : (
-                    <Box
-                      sx={{
-                        width: '100%',
-                        height: 160,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        opacity: 0.7,
-                        fontSize: 12
-                      }}
-                    >
-                      Loading preview...
-                    </Box>
+                    <Skeleton variant='rectangular' width='100%' height={160} animation='wave' />
                   )}
                 </Box>
               ))}

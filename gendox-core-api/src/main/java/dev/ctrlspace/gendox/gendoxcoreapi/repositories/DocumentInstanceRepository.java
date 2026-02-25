@@ -76,6 +76,9 @@ public interface DocumentInstanceRepository extends JpaRepository<DocumentInstan
     @Query("select d.organizationId from DocumentInstance d where d.id = :documentId")
     UUID findOrganizationIdByDocumentId(@Param("documentId") UUID documentId);
 
+    @Query("select case when count(d) > 0 then true else false end from DocumentInstance d where d.id = :documentId and d.createdBy = :userId")
+    boolean existsByIdAndCreatedBy(@Param("documentId") UUID documentId, @Param("userId") UUID userId);
+
 
 }
 

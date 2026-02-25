@@ -423,6 +423,21 @@ public class SecurityUtils {
                 .isDocumentAttachedToThread(threadId, documentId);
     }
 
+    /**
+     * Returns true if the currently authenticated user is the one who uploaded the document.
+     * Used to allow preview of just-uploaded attachments before they are added to a message local context.
+     */
+    public boolean isDocumentCreatedByCurrentUser(UUID documentId) {
+        if (documentId == null) return false;
+        try {
+            UUID currentUserId = getUserId();
+            if (currentUserId == null) return false;
+            return documentInstanceRepository.existsByIdAndCreatedBy(documentId, currentUserId);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private AccessCriteria getRequestedOrgIdFromDocumentIdPathVariable() {
         HttpServletRequest request = getCurrentHttpRequest();
         Map<String, String> uriTemplateVariables = (Map<String, String>) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);

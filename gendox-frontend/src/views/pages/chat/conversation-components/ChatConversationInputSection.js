@@ -11,7 +11,8 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Divider
+  Divider,
+  Tooltip
 } from '@mui/material'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import { sendMessage } from 'src/store/chat/gendoxChat'
@@ -70,6 +71,7 @@ const ChatInputSection = ({ auth, token, currentThread, organizationId, projectI
 
     // 1) into Redux
     dispatch(enqueueFiles(newItems))
+
 
     // 2) upload immediately those that just got added
     dispatch(
@@ -232,9 +234,11 @@ const ChatInputSection = ({ auth, token, currentThread, organizationId, projectI
         }}
       >
         {/* Plus button to open menu */}
-        <IconButton onClick={openPlusMenu} disabled={isSending}>
-          <Icon icon='mdi:plus' />
-        </IconButton>
+        <Tooltip title='Add attachments' placement='top'>
+          <IconButton onClick={openPlusMenu} disabled={isSending}>
+            <Icon icon='mdi:plus' />
+          </IconButton>
+        </Tooltip>
 
         <Menu
           anchorEl={plusMenuAnchorEl}
@@ -316,9 +320,11 @@ const ChatInputSection = ({ auth, token, currentThread, organizationId, projectI
         />
 
         {/* Send button (icon) */}
-        <IconButton onClick={handleSend} disabled={isSending || isUploading || isDeleting}>
-          {isSending || isUploading || isDeleting ? <CircularProgress size={20} /> : <Icon icon='mdi:send' />}
-        </IconButton>
+        <Tooltip title={isSending ? 'Sending...' : 'Send'} placement='top'>
+          <IconButton onClick={handleSend} disabled={isSending || isUploading || isDeleting}>
+            {isSending || isUploading || isDeleting ? <CircularProgress size={20} /> : <Icon icon='mdi:send' />}
+          </IconButton>
+        </Tooltip>
       </Box>
       {/* Drag overlay text */}
       {isDragging && (
