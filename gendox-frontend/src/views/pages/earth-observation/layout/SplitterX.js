@@ -11,8 +11,19 @@ export default function SplitterX({ onDrag }) {
     e.preventDefault()
     setDragging(true)
     const startX = e.clientX
+    let pendingDx = 0
+    let rafScheduled = false
 
-    const move = ev => onDrag(ev.clientX - startX)
+    const move = ev => {
+      pendingDx = ev.clientX - startX
+      if (rafScheduled) return
+      rafScheduled = true
+      requestAnimationFrame(() => {
+        onDrag(pendingDx)
+        rafScheduled = false
+      })
+    }
+
     const up = () => {
       setDragging(false)
       window.removeEventListener('pointermove', move)

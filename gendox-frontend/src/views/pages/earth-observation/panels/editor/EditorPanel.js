@@ -18,6 +18,7 @@ import { Icon } from '@iconify/react'
 import Editor from '@monaco-editor/react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/router'
+import { useAuth } from 'src/authentication/useAuth'
 import { registerGeeCompletions } from './monacoGeeProvider'
 import { fetchLatestEOScriptThunk, fetchEOScriptsThunk, resetEOScriptState, createEOScriptThunk } from 'src/store/earthObservation/earthObservation'
 import GeeRunner from '../../GeeRunner'
@@ -37,7 +38,8 @@ function fmtRelative(isoString) {
 export default function EditorPanel() {
   const router = useRouter()
   const dispatch = useDispatch()
-  const token = window.localStorage.getItem('accessToken')
+  const { oidcAuthState } = useAuth()
+  const token = oidcAuthState?.user?.access_token
   const { organizationId, taskId, projectId } = router.query
   const editorRef = useRef(null)
   const providerDisposableRef = useRef(null)
@@ -360,7 +362,7 @@ export default function EditorPanel() {
                 Start your first script
               </Typography>
               <Typography variant='body2' color='text.secondary'>
-                Give it a name and click Create. 
+                Give it a name and click Create.
               </Typography>
             </Box>
 

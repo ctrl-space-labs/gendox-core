@@ -11,8 +11,19 @@ export default function SplitterY({ onDrag }) {
     e.preventDefault()
     setDragging(true)
     const startY = e.clientY
+    let pendingDy = 0
+    let rafScheduled = false
 
-    const move = ev => onDrag(ev.clientY - startY)
+    const move = ev => {
+      pendingDy = ev.clientY - startY
+      if (rafScheduled) return
+      rafScheduled = true
+      requestAnimationFrame(() => {
+        onDrag(pendingDy)
+        rafScheduled = false
+      })
+    }
+
     const up = () => {
       setDragging(false)
       window.removeEventListener('pointermove', move)

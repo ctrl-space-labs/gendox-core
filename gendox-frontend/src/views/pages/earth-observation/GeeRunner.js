@@ -15,18 +15,17 @@ export default function GeeRunner({
   scriptName
 }) {
   const dispatch = useDispatch()
-  const geeToken = window.localStorage.getItem('gee_access_token')
 
-  const { createEOScriptLoading, latestEOScriptLoading } = useSelector(
-    state => state.earthObservation
-  )
+  const createEOScriptLoading = useSelector(state => state.earthObservation.createEOScriptLoading)
+  const latestEOScriptLoading = useSelector(state => state.earthObservation.latestEOScriptLoading)
 
-  // 1. State για το iframe
+  // 1. State for iframe management
   const [iframeKey, setIframeKey] = useState(0) //  counter for iframe reloads
   const [isRunning, setIsRunning] = useState(false)
 
   // 2. Refs for communication with iframe
   const pendingCodeRef = useRef(null)
+  const pendingTokenRef = useRef(null)
   const iframeRef = useRef(null)
   const lastRunCodeRef = useRef('')
   const scriptNameRef = useRef(scriptName)
@@ -36,7 +35,7 @@ export default function GeeRunner({
     scriptNameRef.current = scriptName
   }, [scriptName])
 
-  // 3. O Handler for "Run Code" button
+  // 3. Handler for "Run Code" button
   const handleRun = () => {
     const currentCode = (getCurrentCode?.() ?? code ?? '').trim()
     if (!currentCode) return
@@ -46,6 +45,10 @@ export default function GeeRunner({
 
     // Keep the last run code (for save after SUCCESS)
     lastRunCodeRef.current = currentCode
+
+    // Read the GEE token fresh at click time so the useEffect closure never
+    // uses a stale token (e.g. after a silent token refresh).
+    pendingTokenRef.current = window.localStorage.getItem('gee_access_token')
 
     // Store the code we want to run in the iframe
     pendingCodeRef.current = currentCode
@@ -75,7 +78,7 @@ export default function GeeRunner({
             {
               type: 'EXECUTE',
               code: pendingCodeRef.current,
-              token: geeToken
+              token: pendingTokenRef.current
             },
             '*'
           )

@@ -19,12 +19,10 @@
   </head>
   <body>
     <script>
-      console.log('[Sandbox] Iframe Loaded (JSON Object Fix)')
       let layerAdded = false
 
       const ProxyMap = {
         addLayer: (image, visParams = {}, name) => {
-          console.log(`[Sandbox] Map.addLayer called for: ${name}`)
           layerAdded = true
 
           try {
@@ -54,11 +52,7 @@
               normalizedVisParams.bands = normalizedVisParams.bands.join(',')
             }
 
-            console.log('[Sandbox] Requesting Map ID...', normalizedVisParams)
-
             const eeImg = ee.Image(image)
-
-            console.log('visParams:', normalizedVisParams)
 
             // Prefer ee.Image.getMap (returns urlFormat in some builds), otherwise ee.Image.getMapId.
             const getMapFn =
@@ -89,7 +83,6 @@
                 return
               }
 
-              console.log('[Sandbox] Success URL:', urlFormat)
               window.parent.postMessage({ type: 'SUCCESS', payload: { url: urlFormat } }, '*')
             })
           } catch (err) {
@@ -99,7 +92,6 @@
         },
 
         setCenter: (lon, lat, zoom) => {
-          console.log(`[Sandbox] setCenter: ${lon}, ${lat}, ${zoom}`)
           window.parent.postMessage({ type: 'CENTER', payload: { center: { lon, lat, zoom } } }, '*')
         },
         centerObject: () => {},

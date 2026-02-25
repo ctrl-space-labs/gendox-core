@@ -21,11 +21,11 @@ const GeeLayer = ({ url }) => {
 export default function MapPanel() {
   const mapLayerUrl = useSelector((state) => state.earthObservation.mapLayerUrl)
   const mapCenter = useSelector((state) => state.earthObservation.mapCenter)
-  
+
   return (
     <Box sx={{ height: '100%', width: '100%' }}>
       <MapContainer
-        center={[37.9838, 23.7275]} 
+        center={[37.9838, 23.7275]}
         zoom={6}
         style={{ height: '100%', width: '100%' }}
       >
