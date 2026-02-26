@@ -452,6 +452,28 @@ const documentDigitizationExportCSV = async (organizationId, projectId, taskId, 
   return response.data // This is the CSV blob
 }
 
+/**
+ * Reorder Question Nodes (Document Insights columns)
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param orderedQuestionNodeIds {UUID[]} array of TaskNode ids in the desired order
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<void>>}
+ */
+const reorderTaskQuestionNodes = async (organizationId, projectId, taskId, orderedQuestionNodeIds, token) => {
+  return axios.put(
+    apiRequests.reorderTaskQuestionNodes(organizationId, projectId, taskId),
+    { orderedQuestionNodeIds },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token
+      }
+    }
+  )
+}
+
 
 /**
  * Create EOScript for a Task
@@ -528,6 +550,8 @@ export default {
   deleteTask,
   documentInsightsExportAllCSV,
   documentInsightsExportCSV,
+  documentDigitizationExportCSV,
+  reorderTaskQuestionNodes,
   documentDigitizationExportCSV,
   createEOScript,
   getEOScripts,

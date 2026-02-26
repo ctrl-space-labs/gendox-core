@@ -10,6 +10,8 @@ import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
 import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 
 const DocumentInsightsGrid = ({
   openDialog,
@@ -26,7 +28,9 @@ const DocumentInsightsGrid = ({
   setSelectedDocuments,
   onSelectDocument = () => {},
   handleGenerate,
-  isGeneratingCells = {}
+  isGeneratingCells = {},
+  isGenerating,
+  onMoveQuestion = () => {}
 }) => {
   const theme = useTheme()
   const [documentMenuAnchor, setDocumentMenuAnchor] = useState(null)
@@ -199,7 +203,7 @@ const DocumentInsightsGrid = ({
       },
 
       // Dynamic question columns
-      ...sortedQuestions.map(q => ({
+      ...sortedQuestions.map((q, idx) => ({
         field: `q_${q.id}`,
         headerName: <TruncatedText text={q.text} />,
         width: 240,
@@ -209,69 +213,104 @@ const DocumentInsightsGrid = ({
         disableColumnMenu: true,
         cellClassName: 'answer-cell',
 
-        renderHeader: params => (
-          <Box
-            sx={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              gap: 1.5,
-              pr: 1,
-              userSelect: 'none',
-              cursor: 'default',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              fontWeight: 600,
-              flexGrow: 1
-            }}
-          >
-            <Box
-              component='button'
-              type='button'
-              onClick={() => openDialog('questionDetail', q)}
-              aria-label={`View question details for ${q.text}`}
-              sx={{
-                all: 'unset',
-                cursor: 'pointer',
-                flexGrow: 1,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                paddingRight: '28px',
-                '&:hover, &:focus-visible': {
-                  textDecoration: 'underline',
-                  outline: 'none'
-                }
-              }}
-            >
-              <TruncatedText text={q.title || q.text} />
-            </Box>
+        renderHeader: () => {
+          const isFirst = idx === 0
+          const isLast = idx === sortedQuestions.length - 1
 
-            {/* Hover-reveal Vertical Icon */}
-            <IconButton
-              size='small'
-              className='vertical-icon'
+          return (
+            <Box
               sx={{
-                position: 'absolute',
-                right: 4,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                opacity: 0,
-                pointerEvents: 'none',
-                transition: 'opacity 0.25s ease'
-              }}
-              onClick={e => {
-                e.stopPropagation()
-                setQuestionMenuItem(q)
-                setQuestionMenuAnchor(e.currentTarget)
+                position: 'relative',
+                width: '100%',
+                height: '100%', // ✅ important
+                flex: 1, // ✅ important
+                minWidth: 0,
+                display: 'flex',
+                alignItems: 'center',
+                '&:hover .header-actions': { opacity: 1, pointerEvents: 'auto' }
               }}
             >
-              <MoreVertIcon fontSize='small' />
-            </IconButton>
-          </Box>
-        ),
+              {/* Title (normal flow) */}
+              <Box
+                onClick={() => openDialog('questionDetail', q)}
+                sx={{
+                  minWidth: 0,
+                  flexGrow: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  pr: '52px', // ✅ reserve space for right actions
+                  '&:hover': { textDecoration: 'underline' }
+                }}
+              >
+                <TruncatedText text={q.title || q.text} disableTooltip />
+              </Box>
+
+              {/* Actions fixed to the right edge */}
+              <Box
+                className='header-actions'
+                sx={{
+                  position: 'absolute',
+                  right: 0,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.25,
+                  opacity: 0,
+                  pointerEvents: 'none',
+                  transition: 'opacity 0.15s ease'
+                }}
+              >
+                <Tooltip title={isFirst ? 'Already first' : 'Move left'} arrow>
+                  <span>
+                    <IconButton
+                      size='small'
+                      disabled={isFirst}
+                      onClick={e => {
+                        e.stopPropagation()
+                        onMoveQuestion(q.id, 'LEFT')
+                      }}
+                      sx={{
+                        width: 20,
+                        height: 20,
+                        padding: 0,
+                        borderRadius: '50%',
+                        '&.Mui-disabled': { opacity: 0.25 }
+                      }}
+                    >
+                      <ChevronLeftIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+
+                <Tooltip title={isLast ? 'Already last' : 'Move right'} arrow>
+                  <span>
+                    <IconButton
+                      size='small'
+                      disabled={isLast}
+                      onClick={e => {
+                        e.stopPropagation()
+                        onMoveQuestion(q.id, 'RIGHT')
+                      }}
+                      sx={{
+                        width: 20,
+                        height: 20,
+                        padding: 0,
+                        borderRadius: '50%',
+                        '&.Mui-disabled': { opacity: 0.25 }
+                      }}
+                    >
+                      <ChevronRightIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Box>
+            </Box>
+          )
+        },
 
         renderCell: params => {
           const docId = params.id
@@ -279,14 +318,12 @@ const DocumentInsightsGrid = ({
           const answerObj = answers.find(a => a.documentNodeId === docId && a.questionNodeId === questionId)
           const cellKey = `${docId}_${questionId}`
           const docKey = `${docId}_all`
-          // const isGenerating = !!isGeneratingCells[cellKey]
           const isCellGenerating = !!isGeneratingCells[cellKey]
           const isDocGenerating = !!isGeneratingCells[docKey]
-          const isGenerating = isCellGenerating || isDocGenerating
+          const hasAnswer = !!answerObj
+          const isGenerateBlocked = !hasAnswer && isGenerating
 
-          // console.log('Rendering cell', { cellKey, isCellGenerating, isDocGenerating, isGenerating })
-
-          if (isGenerating) {
+          if (isCellGenerating || isDocGenerating) {
             return (
               <Box
                 sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
@@ -330,14 +367,25 @@ const DocumentInsightsGrid = ({
                 }
               }}
             >
-              
               {answerFlagEnum(answerObj?.answerFlagEnum, theme)}
               <Tooltip
-                title={!answerObj ? 'Click to generate this answer' : 'Click to see answer details'}
+                title={
+                  hasAnswer
+                    ? 'Click to see answer details'
+                    : isGenerating
+                    ? 'Generation in progress'
+                    : 'Click to generate this answer'
+                }
                 arrow
                 placement='top'
               >
-                <span>
+                <span
+                  style={{
+                    cursor: isGenerateBlocked ? 'not-allowed' : 'pointer',
+                    opacity: isGenerateBlocked ? 0.5 : 1,
+                    userSelect: 'none'
+                  }}
+                >
                   {!answerObj ? (
                     <em>Click to generate</em>
                   ) : answerObj.answerValue === '' ? (
@@ -348,7 +396,7 @@ const DocumentInsightsGrid = ({
                 </span>
               </Tooltip>
               {answerObj && (
-                <Tooltip title='Regenerate answer'>
+                <Tooltip title={isGenerating ? 'Generation in progress' : 'Regenerate answer'}>
                   <ReplayIcon
                     className='regenerate-icon'
                     sx={{
@@ -356,17 +404,18 @@ const DocumentInsightsGrid = ({
                       right: 4,
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      cursor: 'pointer',
-                      color: 'primary.main',
                       fontSize: '1.2rem',
-                      opacity: 0,
-                      pointerEvents: 'none',
+                      opacity: isGenerating ? 0.3 : 0,
+                      pointerEvents: isGenerating ? 'none' : 'auto',
+                      cursor: isGenerating ? 'not-allowed' : 'pointer',
+                      color: isGenerating ? 'action.disabled' : 'primary.main',
                       transition: 'opacity 0.25s ease',
                       '&:hover': {
-                        color: 'primary.dark'
+                        color: isGenerating ? 'action.disabled' : 'primary.dark'
                       }
                     }}
                     onClick={e => {
+                      if (isGenerating) return
                       e.stopPropagation()
                       handleGenerate({ documentsToGenerate: params.row, questionsToGenerate: q })
                     }}
@@ -470,6 +519,13 @@ const DocumentInsightsGrid = ({
         }}
         loading={isPageLoading}
         sx={{
+          '& .MuiDataGrid-columnHeaderTitleContainer': {
+            width: '100% !important'
+          },
+          '& .MuiDataGrid-columnHeaderTitleContainerContent': {
+            width: '100% !important',
+            flex: 1
+          },
           '& .MuiDataGrid-cell': {
             outline: 'none',
             transition: 'background-color 0.15s ease',

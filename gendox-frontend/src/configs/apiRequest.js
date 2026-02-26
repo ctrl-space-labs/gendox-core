@@ -60,7 +60,7 @@ export default {
   getThreadMessagesByCriteria: (threadId, page = 0, size = 10, sort = 'createdAt,desc') =>
     `${url}threads/${threadId}/messages?page=${page}&size=${size}&sort=${sort}`,
 
-  getThreadMessageAttachmentsBatch: (organizationId, threadId) => 
+  getThreadMessageAttachmentsBatch: (organizationId, threadId) =>
     `${url}organizations/${organizationId}/threads/${threadId}/messages/attachments`,
 
   documentSections: documentId => `${url}documents/${documentId}/sections`,
@@ -68,7 +68,7 @@ export default {
   documentInstance: (organizationId, projectId, documentId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}`,
 
-  removeChatDocument: (organizationId, threadId, documentId) => 
+  removeChatDocument: (organizationId, threadId, documentId) =>
     `${url}organizations/${organizationId}/threads/${threadId}/documents/${documentId}/chat-documents`,
 
   documentSection: (documentId, sectionId) => `${url}documents/${documentId}/sections/${sectionId}`,
@@ -225,6 +225,9 @@ export default {
 
   documentDigitizationExportCSV: (organizationId, projectId, taskId, documentNodeId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/digitization/export-csv`,
+
+  reorderTaskQuestionNodes: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/questions/order`
 
   createEOScript: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/eo-scripts`,

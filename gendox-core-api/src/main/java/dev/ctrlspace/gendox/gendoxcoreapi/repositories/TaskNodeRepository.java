@@ -124,4 +124,18 @@ public interface TaskNodeRepository extends JpaRepository<TaskNode, UUID>, Query
             @Param("answerNodeTypeId") Long answerNodeTypeId);
 
 
+    @Modifying
+    @Transactional
+    @Query(value = """
+    UPDATE gendox_core.task_nodes
+    SET node_value = jsonb_set(
+        COALESCE(node_value, '{}'::jsonb),
+        '{order}',
+        to_jsonb(CAST(:orderValue AS int)),
+        true
+    )
+    WHERE id = :nodeId
+    """, nativeQuery = true)
+    void updateNodeOrder(@Param("nodeId") UUID nodeId, @Param("orderValue") Integer orderValue);
+
 }

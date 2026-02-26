@@ -367,7 +367,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         boolean isGpt51       = name.startsWith("gpt-5.1");
         boolean isGpt5        = name.startsWith("gpt-5") && !isGpt51;
         boolean isGemini25Pro = name.contains("gemini-2.5-pro");
-        boolean isGemini3Pro = name.startsWith("gemini-3-pro");
+        boolean isGemini3Pro = name.startsWith("gemini-3-pro") || name.startsWith("gemini-3.1-pro");
         boolean isGemini3Flash = name.startsWith("gemini-3-flash");
 
         if (tokens >= 32_768L) return "high";

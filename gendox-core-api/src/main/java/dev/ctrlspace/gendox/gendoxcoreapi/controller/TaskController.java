@@ -385,6 +385,17 @@ public class TaskController {
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PutMapping("/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/questions/order")
+    @ResponseStatus(HttpStatus.OK)
+    public void reorderQuestionColumns(@PathVariable UUID organizationId,
+                                       @PathVariable UUID projectId,
+                                       @PathVariable UUID taskId,
+                                       @RequestBody ReorderTaskQuestionNodesDTO dto) throws GendoxException {
+
+        taskNodeService.reorderQuestionNodes(taskId, projectId, dto.getOrderedQuestionNodeIds());
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @PostMapping(
             value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/eo-scripts",
             produces = {"application/json"}
