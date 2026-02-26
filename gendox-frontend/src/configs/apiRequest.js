@@ -227,7 +227,7 @@ export default {
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/digitization/export-csv`,
 
   reorderTaskQuestionNodes: (organizationId, projectId, taskId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/questions/order`
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/questions/order`,
 
   createEOScript: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/eo-scripts`,
