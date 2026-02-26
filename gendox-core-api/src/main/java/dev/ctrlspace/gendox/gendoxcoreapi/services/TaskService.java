@@ -70,12 +70,12 @@ public class TaskService {
         if (task.getMaxSectionsChunkTokens() == null) {
             task.setMaxSectionsChunkTokens(this.maxSectionsChunkTokens);
         }
-        logger.info("Creating new task: {}", task);
+        logger.debug("Creating new task: {}", task);
         return taskRepository.save(task);
     }
 
     public Task duplicateTask(UUID projectId, TaskDuplicateDTO taskDuplicateDTO) throws GendoxException {
-        logger.info("Duplicating task {} with options: keepQuestions={}, keepDocuments={}",
+        logger.debug("Duplicating task {} with options: keepQuestions={}, keepDocuments={}",
                 taskDuplicateDTO.getTaskId(), taskDuplicateDTO.isKeepQuestions(), taskDuplicateDTO.isKeepDocuments());
 
         Task original = taskRepository.findById(taskDuplicateDTO.getTaskId())
@@ -156,18 +156,18 @@ public class TaskService {
 
 
     public List<Task> getAllTasksByProjectId(UUID projectId) {
-        logger.info("Fetching all tasks for project: {}", projectId);
+        logger.debug("Fetching all tasks for project: {}", projectId);
         return taskRepository.findAllByProjectId(projectId);
     }
 
     public Task getTaskById(UUID taskId) {
-        logger.info("Fetching task by ID: {}", taskId);
+        logger.debug("Fetching task by ID: {}", taskId);
         return taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
     }
 
     public Task updateTask(UUID taskId, TaskDTO taskDTO) throws GendoxException {
-        logger.info("Updating task: {}", taskId);
+        logger.debug("Updating task: {}", taskId);
 
         Task existingTask = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found for update"));
@@ -239,7 +239,7 @@ public class TaskService {
 
     @Transactional
     public void deleteTask(UUID taskId) throws GendoxException {
-        logger.info("Deleting task: {}", taskId);
+        logger.debug("Deleting task: {}", taskId);
 
         // Fetch the task to delete
         Task taskToDelete = taskRepository.findById(taskId)

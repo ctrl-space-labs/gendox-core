@@ -165,7 +165,7 @@ public class ProjectAgentService {
             projectAgent.setSemanticSearchModel(aiModelService.getByName(AiModelConstants.OPENAI_EMBEDDING_V3_SMALL));
         }
         if (projectAgent.getCompletionModel() == null) {
-            projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GEMINI_2_FLASH));
+            projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_5_NANO));
         }
         if (projectAgent.getModerationModel() == null) {
             projectAgent.setModerationModel(aiModelService.getByName(AiModelConstants.OMNI_MODERATION));
@@ -174,10 +174,10 @@ public class ProjectAgentService {
             projectAgent.setRerankModel(aiModelService.getByName(AiModelConstants.VOYAGE_RERANK_2));
         }
         if (projectAgent.getAdvancedSearchModel() == null) {
-            projectAgent.setAdvancedSearchModel(aiModelService.getByName(AiModelConstants.GEMINI_2_FLASH));
+            projectAgent.setAdvancedSearchModel(aiModelService.getByName(AiModelConstants.GPT_5_NANO));
         }
         if (projectAgent.getModerationCheck() == null) {
-            projectAgent.setModerationCheck(true);
+            projectAgent.setModerationCheck(false);
         }
         if (projectAgent.getRerankEnable() == null) {
             projectAgent.setRerankEnable(false);
