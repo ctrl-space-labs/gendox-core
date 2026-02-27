@@ -83,7 +83,6 @@
       if (event.data && event.data.type === 'gendox.events.initialization.request') {
         const message = { type: 'gendox.events.initialization.response', page: '...' }
         iframeWindow.contentWindow.postMessage(message, gendoxSrc)
-        console.log('Received message from iframe', event.data)
       }
     }
 

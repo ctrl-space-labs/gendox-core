@@ -20,6 +20,7 @@
   <body>
     <script>
       let layerAdded = false
+      let mapCenter = null  // stored when user calls Map.setCenter()
 
       const ProxyMap = {
         addLayer: (image, visParams = {}, name) => {
@@ -84,6 +85,39 @@
               }
 
               window.parent.postMessage({ type: 'SUCCESS', payload: { url: urlFormat } }, '*')
+
+              // Request a static thumbnail asynchronously so the map tiles
+              // appear immediately while the thumbnail is still being generated.
+              // A region is required — without it GEE renders a blank image.
+              // We derive the region from the center+zoom the user set via Map.setCenter().
+              // Skip the thumbnail entirely if the user script never called Map.setCenter().
+              if (mapCenter) try {
+                const thumbParams = { dimensions: '512', format: 'png' }
+                if (normalizedVisParams.bands)            thumbParams.bands   = normalizedVisParams.bands
+                if (normalizedVisParams.min !== undefined) thumbParams.min    = normalizedVisParams.min
+                if (normalizedVisParams.max !== undefined) thumbParams.max    = normalizedVisParams.max
+                if (normalizedVisParams.palette)           thumbParams.palette = normalizedVisParams.palette
+
+                // At zoom z a 512-px wide tile covers 360/2^z degrees of longitude.
+                // We use the same value for latitude (clamped) to get a square region.
+                const halfDeg = 360 / Math.pow(2, mapCenter.zoom || 6)
+                thumbParams.region = ee.Geometry.Rectangle([
+                  Math.max(-180, mapCenter.lon - halfDeg),
+                  Math.max(-90,  mapCenter.lat - halfDeg),
+                  Math.min(180,  mapCenter.lon + halfDeg),
+                  Math.min(90,   mapCenter.lat + halfDeg)
+                ])
+
+                eeImg.getThumbURL(thumbParams, (thumbUrl, thumbErr) => {
+                  if (thumbErr || !thumbUrl) {
+                    console.warn('[Sandbox] Thumbnail error:', thumbErr)
+                    return
+                  }
+                  window.parent.postMessage({ type: 'THUMBNAIL', payload: { url: thumbUrl } }, '*')
+                })
+              } catch (thumbEx) {
+                console.warn('[Sandbox] getThumbURL unavailable:', thumbEx)
+              }  // end if (mapCenter)
             })
           } catch (err) {
             console.error('[Sandbox] addLayer crash:', err)
@@ -92,6 +126,7 @@
         },
 
         setCenter: (lon, lat, zoom) => {
+          mapCenter = { lon, lat, zoom }  // save for thumbnail region
           window.parent.postMessage({ type: 'CENTER', payload: { center: { lon, lat, zoom } } }, '*')
         },
         centerObject: () => {},
@@ -106,6 +141,7 @@
 
         if (type === 'EXECUTE') {
           layerAdded = false
+          mapCenter = null  // reset for new run
 
           try {
             ee.data.setAuthToken(null, 'Bearer', token)

@@ -26,6 +26,7 @@ const initialState = {
 
   isGeeReady: false,
   mapLayerUrl: null,
+  mapThumbnailUrl: null,
   mapCenter: null,
   eoScripts: [],
   eoScriptsLoading: false,
@@ -138,6 +139,9 @@ const slice = createSlice({
       if (action.payload.url) state.mapLayerUrl = action.payload.url
       if (action.payload.center) state.mapCenter = action.payload.center
     },
+    setMapThumbnail: (state, action) => {
+      state.mapThumbnailUrl = action.payload
+    },
     setLatestEOScript: (state, action) => {
       state.latestEOScript = action.payload
     },
@@ -151,6 +155,7 @@ const slice = createSlice({
       state.createEOScriptLoading = false
       state.createEOScriptError = null
       state.mapLayerUrl = null
+      state.mapThumbnailUrl = null
       state.mapCenter = null
     },
 
@@ -234,6 +239,7 @@ export const {
   setGeeReady,
   setMapLayer,
   setMapData,
+  setMapThumbnail,
   setLatestEOScript,
   resetEOScriptState
 } = slice.actions

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { setMapData, createEOScriptThunk } from 'src/store/earthObservation/earthObservation' 
+import { setMapData, setMapThumbnail, createEOScriptThunk } from 'src/store/earthObservation/earthObservation'
 import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
@@ -41,7 +41,8 @@ export default function GeeRunner({
     if (!currentCode) return
 
     setIsRunning(true)
-    dispatch(setMapData({ url: null })) // clear previous map
+    dispatch(setMapData({ url: null }))        // clear previous map layer
+    dispatch(setMapThumbnail(null))            // clear previous thumbnail
 
     // Keep the last run code (for save after SUCCESS)
     lastRunCodeRef.current = currentCode
@@ -122,7 +123,34 @@ export default function GeeRunner({
         setIsRunning(false)
       }
 
-      // C. Error
+      // C. Thumbnail ready — the URL from GEE requires a Bearer token to open,
+      // so we fetch it here (where we have the token) and convert it to a
+      // base64 data URL that can be used directly in an <img> tag and sent to chat.
+      if (type === 'THUMBNAIL') {
+        const thumbUrl = payload?.url
+        if (!thumbUrl) return
+
+        const geeToken = window.localStorage.getItem('gee_access_token')
+        if (!geeToken) return
+
+        fetch(thumbUrl, { headers: { Authorization: 'Bearer ' + geeToken } })
+          .then(res => {
+            if (!res.ok) throw new Error('HTTP ' + res.status)
+            return res.blob()
+          })
+          .then(
+            blob =>
+              new Promise(resolve => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result)
+                reader.readAsDataURL(blob)
+              })
+          )
+          .then(dataUrl => dispatch(setMapThumbnail(dataUrl)))
+          .catch(err => console.warn('GEE thumbnail fetch failed:', err))
+      }
+
+      // D. Error
       if (type === 'ERROR') {
         console.error('GEE Script Error:', message)
         alert('Script Error: ' + message)

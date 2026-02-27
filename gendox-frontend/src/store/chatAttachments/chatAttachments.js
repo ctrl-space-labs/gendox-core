@@ -21,7 +21,7 @@ export const uploadQueuedAttachments = createAsyncThunk(
             name.endsWith('.gif') ||
             name.endsWith('.webp')
 
-          if (isImage) {
+          if (isImage && threadId) {
             try {
               const blobRes = await documentService.viewDocumentContent(threadId, doc.id, token)
               previewUrl = URL.createObjectURL(blobRes.data)
