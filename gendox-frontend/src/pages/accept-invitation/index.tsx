@@ -14,6 +14,11 @@ const AcceptInvitationPage = () => {
   const [counter, setCounter] = useState(3)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const { email, token } = router.query
@@ -49,8 +54,8 @@ const AcceptInvitationPage = () => {
     return () => clearInterval(interval)
   }, [router.query])
 
-  if (loading) {
-    return <Progress value={undefined} className="h-1.5 rounded mb-2" />
+  if (!mounted || loading) {
+    return <div className="h-1.5" />
   }
 
   return (
