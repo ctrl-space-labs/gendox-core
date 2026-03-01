@@ -13,13 +13,10 @@ function SharedAccessRoute({ children, pageLoader }) {
   const router = useRouter()
   const { loading } = useAuth()
 
-  // Wait until the router is ready to render anything
-  if (!router.isReady) {
-    return null
-  }
-
-  // Show loading placeholder while determining authentication state
-  if (loading) {
+  // Show loader while router initializes or auth state is loading.
+  // Using pageLoader (not null) ensures SSR and client render the same
+  // markup, preventing React 19 hydration mismatches.
+  if (!router.isReady || loading) {
     return pageLoader
   }
 

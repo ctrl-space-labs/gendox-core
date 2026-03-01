@@ -19,12 +19,7 @@ const gendoxChatConfig = {
 const EmbeddedChatPage = () => {
   const { settings, saveSettings } = useSettings()
   const [isOpen, setIsOpen] = useState(false)
-  const [mounted, setMounted] = useState(false)
   const iFrameMessageManager = useIFrameMessageManager()
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     const originalSettings = settings
@@ -56,10 +51,6 @@ const EmbeddedChatPage = () => {
       setIsOpen(nextState)
       setTimeout(sendMessage, 320)
     }
-  }
-
-  if (!mounted) {
-    return <div />
   }
 
   const backgroundImage =
