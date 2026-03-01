@@ -128,6 +128,7 @@ const InformationGeneralOrganizationSettings = () => {
               <Label htmlFor="organization-name">Name</Label>
               <Input
                 id="organization-name"
+                placeholder="e.g. acme-corp"
                 value={name}
                 onChange={handleNameChange}
               />
@@ -137,6 +138,7 @@ const InformationGeneralOrganizationSettings = () => {
               <Label htmlFor="organization-displayName">Display Name</Label>
               <Input
                 id="organization-displayName"
+                placeholder="e.g. Acme Corporation"
                 value={displayName}
                 onChange={handleDisplayNameChange}
               />
@@ -146,6 +148,7 @@ const InformationGeneralOrganizationSettings = () => {
               <Label htmlFor="organization-address">Address</Label>
               <Input
                 id="organization-address"
+                placeholder="e.g. 123 Main St, City"
                 value={address}
                 onChange={handleAddressChange}
               />
@@ -155,6 +158,7 @@ const InformationGeneralOrganizationSettings = () => {
               <Label htmlFor="organization-phone">Phone</Label>
               <Input
                 id="organization-phone"
+                placeholder="e.g. +1 (555) 123-4567"
                 value={phone}
                 onChange={handlePhoneChange}
               />

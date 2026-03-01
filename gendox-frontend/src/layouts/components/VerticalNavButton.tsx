@@ -20,10 +20,13 @@ const ChatButton = () => {
   return (
     <div className="px-2 pt-2">
       <Link href={chatUrl} className="block">
-        <button className="gendox-gradient-bg w-full flex items-center justify-center gap-3 py-3 px-4 text-lg font-medium cursor-pointer border-0">
+        <Button
+          className="gendox-gradient-bg w-full gap-3 py-3 px-4 text-lg font-medium border-0 hover:opacity-90 transition-opacity"
+          size="lg"
+        >
           <Sparkles className="h-5 w-5" />
           Chat
-        </button>
+        </Button>
       </Link>
     </div>
   )

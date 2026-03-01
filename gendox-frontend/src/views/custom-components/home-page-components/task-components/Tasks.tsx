@@ -6,6 +6,7 @@ import { Plus, Info } from "lucide-react"
 import { debounce } from "lodash"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import {
   Tooltip,
   TooltipContent,
@@ -19,7 +20,6 @@ import { fetchTasks, createTask } from "src/store/activeTask/activeTask"
 import { isValidOrganizationAndProject } from "src/utils/validators"
 import { localStorageConstants } from "src/utils/generalConstants"
 import SearchBar from "src/utils/SearchBar"
-import { ResponsiveCardContent } from "src/utils/responsiveCardContent"
 
 const Tasks = () => {
   const { user } = useAuth() as any
@@ -77,9 +77,6 @@ const Tasks = () => {
     setCurrentPage(0)
   }, [projectId])
 
-  const handleDialogOpen = () => setDialogOpen(true)
-  const handleDialogClose = () => setDialogOpen(false)
-
   const handleCreateTask = async (taskData: any) => {
     if (!organizationId || !projectId) return
     const payload = {
@@ -98,7 +95,7 @@ const Tasks = () => {
         })
       ).unwrap()
       toast.success("Task created successfully!")
-      handleDialogClose()
+      setDialogOpen(false)
       ;(dispatch as any)(fetchTasks({ organizationId, projectId, token }))
       setSearchText("")
     } catch (error: any) {
@@ -108,25 +105,25 @@ const Tasks = () => {
 
   return (
     <TooltipProvider>
-      <ResponsiveCardContent
-        className={`bg-accent ${
+      <Card
+        className={`p-6 ${
           isLoading ? "blur-sm" : ""
         } transition-all duration-300`}
         aria-busy={isLoading}
       >
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-2 mb-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
           <div className="flex items-center gap-1">
-            <h5 className="text-xl font-bold">Document Analytics Tasks</h5>
+            <h3 className="text-lg font-semibold">Document Analytics Tasks</h3>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-primary h-8 w-8"
-                  aria-label="info about tasks"
+                  className="h-7 w-7 text-muted-foreground"
+                  aria-label="Info about tasks"
                 >
-                  <Info className="h-4 w-4" />
+                  <Info className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -135,7 +132,7 @@ const Tasks = () => {
             </Tooltip>
           </div>
 
-          <Button onClick={handleDialogOpen} disabled={isLoading}>
+          <Button size="sm" onClick={() => setDialogOpen(true)} disabled={isLoading}>
             <Plus className="h-4 w-4 mr-2" />
             Create New Task
           </Button>
@@ -143,27 +140,26 @@ const Tasks = () => {
 
         {/* Search */}
         {projectTasks.length > 0 && (
-          <div className="mb-3">
+          <div className="mb-4">
             <SearchBar
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Search tasks"
+              placeholder="Search tasks..."
               clearable
-              className="max-w-[400px]"
+              className="max-w-sm"
             />
           </div>
         )}
 
         {/* Content */}
         {isLoading ? (
-          <div className="flex-grow flex justify-center items-center">
+          <div className="flex justify-center items-center py-12">
             <Spinner size="lg" />
           </div>
         ) : filteredTasks.length === 0 ? (
-          <div className="p-4 text-center text-muted-foreground">
-            <p className="text-sm mb-2 italic">
-              There are currently no tasks available. Consider creating a new
-              task to begin organizing your work efficiently.
+          <div className="py-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              No tasks yet. Create a new task to start organizing your work.
             </p>
           </div>
         ) : (
@@ -177,11 +173,11 @@ const Tasks = () => {
         {/* Create Task Dialog */}
         <CreateTaskDialog
           open={dialogOpen}
-          onClose={handleDialogClose}
+          onClose={() => setDialogOpen(false)}
           onSave={handleCreateTask}
           initialData={{ title: "", description: "", taskType: "" }}
         />
-      </ResponsiveCardContent>
+      </Card>
     </TooltipProvider>
   )
 }

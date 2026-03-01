@@ -41,7 +41,6 @@ const PlansGeneralOrganizationSettings = () => {
                   <Button
                     variant="outline"
                     onClick={manageSubscription}
-                    className="px-6 py-3 text-lg"
                   >
                     Manage Subscription
                   </Button>
@@ -63,8 +62,8 @@ const PlansGeneralOrganizationSettings = () => {
         {organizationPlan ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {organizationPlan?.status === "CANCELLED" && (
-              <div className="col-span-full p-2 text-yellow-600 rounded mb-2">
-                <p>
+              <div className="col-span-full p-4 bg-destructive/10 text-destructive rounded-md mb-2">
+                <p className="text-sm font-medium">
                   Your subscription has been cancelled. Please renew your
                   subscription to continue using the service without
                   interruption.
@@ -74,7 +73,7 @@ const PlansGeneralOrganizationSettings = () => {
 
             {/* Plan Info Section */}
             <div className="col-span-full">
-              <h3 className="text-lg font-semibold mb-2 text-primary">
+              <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
                 Plan Information
               </h3>
             </div>
@@ -117,7 +116,7 @@ const PlansGeneralOrganizationSettings = () => {
 
             {/* Date Section */}
             <div className="col-span-full">
-              <h3 className="text-lg font-semibold mb-2 text-primary">
+              <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
                 Subscription Dates
               </h3>
             </div>
@@ -152,7 +151,7 @@ const PlansGeneralOrganizationSettings = () => {
 
             {/* Rate Limits Section */}
             <div className="col-span-full">
-              <h3 className="text-lg font-semibold mb-2 text-primary">
+              <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
                 API Rate Limits
               </h3>
             </div>
@@ -184,7 +183,7 @@ const PlansGeneralOrganizationSettings = () => {
 
             {/* Additional Info Section */}
             <div className="col-span-full">
-              <h3 className="text-lg font-semibold mb-2 text-primary">
+              <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
                 Additional Information
               </h3>
             </div>
@@ -225,14 +224,14 @@ const PlansGeneralOrganizationSettings = () => {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center min-h-[200px] text-center">
-            <p className="text-lg font-semibold mb-2 text-muted-foreground">
-              No active subscription plan found.
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <p className="text-sm text-muted-foreground mb-4">
+              No active subscription plan found. Manage your subscription to
+              unlock features.
             </p>
             <Button
               variant="outline"
               onClick={manageSubscription}
-              className="px-6 py-3 text-lg"
             >
               Manage Subscription
             </Button>

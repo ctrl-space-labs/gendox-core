@@ -232,7 +232,7 @@ const DocumentSections = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="mb-6 text-primary"
+            className="text-muted-foreground"
             onClick={!editMode ? handleGoBack : handleToggleEdit}
           >
             <ArrowLeft className="h-5 w-5" />
@@ -246,7 +246,7 @@ const DocumentSections = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="mb-6 text-primary"
+              className="text-muted-foreground"
               onClick={handleToggleEdit}
             >
               <Pencil className="h-5 w-5" />
@@ -261,7 +261,7 @@ const DocumentSections = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="mb-6 text-primary"
+                className="text-muted-foreground"
                 onClick={addNewSection}
               >
                 <PlusSquare className="h-5 w-5" />
@@ -274,7 +274,7 @@ const DocumentSections = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="mb-6 text-primary"
+                className="text-muted-foreground"
                 onClick={handleToggleMinimizeAll}
               >
                 {areAllMinimized ? (
@@ -295,26 +295,24 @@ const DocumentSections = () => {
 
   return (
     <TooltipProvider>
-      <Card className="bg-transparent shadow-none border-none">
-        <ResponsiveCardContent className="bg-card">
+      <div className="space-y-6 py-6 px-4 sm:px-8">
+        <Card className="p-6">
           <div
             className={`flex justify-between items-center ${
-              isBlurring || isUpdatingOrder ? "blur-md" : ""
+              isBlurring || isUpdatingOrder ? "blur-sm" : ""
             } transition-all duration-300`}
           >
-            <h2 className="text-2xl font-semibold mb-6 text-left">
-              {document ? document.title : "No Selected Document"} Document
+            <h2 className="text-2xl font-semibold tracking-tight">
+              {document ? document.title : "No Selected Document"}
             </h2>
             <IconButtons />
           </div>
-        </ResponsiveCardContent>
-
-        <div className="h-5" />
+        </Card>
 
         {!editMode ? (
           <ResponsiveCardContent
             className={`bg-accent/50 pt-3 pb-3 mb-6 ${
-              isBlurring || isUpdatingOrder ? "blur-md" : ""
+              isBlurring || isUpdatingOrder ? "blur-sm" : ""
             } transition-all duration-300 ${
               sectionId === highlightedSectionId
                 ? "border-2 border-primary"
@@ -355,7 +353,7 @@ const DocumentSections = () => {
                               : "bg-transparent"
                           } ${
                             isUpdatingOrder || isBlurring
-                              ? "blur-md"
+                              ? "blur-sm"
                               : ""
                           } transition-all duration-300`}
                         >
@@ -393,10 +391,10 @@ const DocumentSections = () => {
           </DragDropContext>
         )}
 
-        <div className="py-2 bg-accent/50 text-center">
+        <div className="py-2 text-center">
           <IconButtons />
         </div>
-      </Card>
+      </div>
     </TooltipProvider>
   )
 }

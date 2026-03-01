@@ -14,6 +14,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useAuth } from "src/authentication/useAuth"
 import { generateIdenticon } from "src/utils/identiconUtil"
 import userService from "src/gendox-sdk/userService"
@@ -39,7 +45,6 @@ const ProfileCard = ({ userData }: ProfileCardProps) => {
     [userData.email]
   )
 
-  const [openEdit, setOpenEdit] = useState(false)
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
 
   const handleLogout = () => {
@@ -73,6 +78,7 @@ const ProfileCard = ({ userData }: ProfileCardProps) => {
   )
 
   return (
+    <TooltipProvider>
     <Card>
       <CardContent className="pt-6">
         {/* Avatar and Name */}
@@ -84,7 +90,7 @@ const ProfileCard = ({ userData }: ProfileCardProps) => {
             </AvatarFallback>
           </Avatar>
           <h6 className="text-lg font-semibold mb-1">{userData.name}</h6>
-          <Badge variant="outline" className="text-destructive border-destructive rounded-[5px] text-sm font-semibold">
+          <Badge variant="secondary">
             {userData.role}
           </Badge>
         </div>
@@ -127,41 +133,23 @@ const ProfileCard = ({ userData }: ProfileCardProps) => {
         </div>
 
         {/* Buttons */}
-        <div className="flex justify-center mt-4 gap-4">
-          <Button
-            disabled={isDemo}
-            onClick={() => setOpenEdit(true)}
-          >
-            Edit
-          </Button>
+        <div className="flex justify-center mt-4 gap-3">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <Button disabled>Edit</Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Coming soon</TooltipContent>
+          </Tooltip>
           <Button
             variant="outline"
             className="text-destructive border-destructive hover:bg-destructive/10"
             onClick={() => setOpenDeleteDialog(true)}
           >
-            Delete
+            Delete Account
           </Button>
         </div>
-
-        {/* Edit User Dialog */}
-        <Dialog open={openEdit} onOpenChange={setOpenEdit}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="text-center">
-                Edit User Information
-              </DialogTitle>
-              <DialogDescription className="text-center">
-                This feature is not available yet. We&apos;re working hard to
-                get it up and running soon. Stay tuned!
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="justify-center">
-              <Button variant="outline" onClick={() => setOpenEdit(false)}>
-                Cancel
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
@@ -189,6 +177,7 @@ const ProfileCard = ({ userData }: ProfileCardProps) => {
         </Dialog>
       </CardContent>
     </Card>
+    </TooltipProvider>
   )
 }
 

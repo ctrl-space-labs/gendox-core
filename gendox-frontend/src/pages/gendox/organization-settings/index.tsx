@@ -2,9 +2,8 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/router"
 import { useSelector, useDispatch } from "react-redux"
 import { useAuth } from "src/authentication/useAuth"
+import { Building2 } from "lucide-react"
 import { localStorageConstants } from "src/utils/generalConstants"
-import { Card } from "@/components/ui/card"
-import { ResponsiveCardContent } from "src/utils/responsiveCardContent"
 import {
   fetchOrganization,
   fetchAiModelProviders,
@@ -21,7 +20,6 @@ const OrganizationSettings = () => {
   const dispatch = useDispatch()
   const router = useRouter()
   const { organizationId } = router.query
-  const [isBlurring, setIsBlurring] = useState(false)
 
   const organization = useSelector(
     (state: any) => state.activeOrganization.activeOrganization
@@ -46,24 +44,24 @@ const OrganizationSettings = () => {
   }, [organizationId, router, dispatch])
 
   return (
-    <Card
-      className={`bg-transparent shadow-none border-none ${
-        isBlurring ? "blur-sm" : ""
-      } transition-all duration-300`}
-    >
-      <ResponsiveCardContent className="bg-card">
-        <div className="text-left">
-          <h4 className="text-2xl font-semibold text-muted-foreground mb-2">
-            Organization Settings
-          </h4>
-          <h6 className="text-lg font-normal text-primary">
-            {organization?.name || "No Selected"}
-          </h6>
+    <div className="space-y-6 py-6 px-4 sm:px-8">
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+          <Building2 className="h-5 w-5 text-primary" />
         </div>
-      </ResponsiveCardContent>
-      <div className="h-5" />
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">
+            Organization Settings
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {organization?.name || "No organization selected"}
+          </p>
+        </div>
+      </div>
+
       <OrganizationSettingsCard />
-    </Card>
+    </div>
   )
 }
 

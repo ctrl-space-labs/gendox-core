@@ -17,6 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import { useAuth } from "src/authentication/useAuth"
 import { fetchProject } from "src/store/activeProject/activeProject"
 import { fetchOrganization } from "src/store/activeOrganization/activeOrganization"
@@ -106,9 +107,11 @@ const OrganizationsDropdown = ({ settings }: OrganizationsDropdownProps) => {
         {visibleOrganizations.map((organization: any) => (
           <Tooltip key={organization.id}>
             <TooltipTrigger asChild>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => handleOrganizations(organization)}
-                className="focus:outline-none"
+                className="rounded-full p-0 h-10 w-10"
               >
                 <Avatar
                   className={cn(
@@ -121,7 +124,7 @@ const OrganizationsDropdown = ({ settings }: OrganizationsDropdownProps) => {
                     {organization.name.substring(0, 4)}
                   </AvatarFallback>
                 </Avatar>
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent>{organization.name}</TooltipContent>
           </Tooltip>
@@ -130,13 +133,13 @@ const OrganizationsDropdown = ({ settings }: OrganizationsDropdownProps) => {
         {overflowCount > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="focus:outline-none">
-                <Avatar className="h-10 w-10 text-xs bg-gray-500 text-white border-2 border-card">
-                  <AvatarFallback className="bg-gray-500 text-white text-xs">
+              <Button variant="ghost" size="icon" className="rounded-full p-0 h-10 w-10">
+                <Avatar className="h-10 w-10 text-xs bg-muted text-muted-foreground border-2 border-card">
+                  <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                     +{overflowCount}
                   </AvatarFallback>
                 </Avatar>
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               {sortByField([...organizations], "name", activeOrganizationId).map(

@@ -160,6 +160,7 @@ const ApiKeysAdvancedOrganizationSettings = () => {
   const handleCopy = (apiKeyId: string, apiKey: string) => {
     copyToClipboard(apiKey);
     setCopiedKeyId(apiKeyId);
+    toast.success("API key copied to clipboard");
     setTimeout(() => {
       setCopiedKeyId(null);
     }, 2000);
@@ -230,7 +231,7 @@ const ApiKeysAdvancedOrganizationSettings = () => {
                         size="icon"
                         className={`h-8 w-8 ${
                           copiedKeyId === item.id
-                            ? "text-green-600"
+                            ? "text-primary"
                             : ""
                         }`}
                         onClick={() => handleCopy(item.id, item.apiKey)}

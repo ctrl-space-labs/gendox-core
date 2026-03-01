@@ -5,6 +5,7 @@ import { MoreVertical, FileText, ChevronUp, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import {
   DropdownMenu,
@@ -101,8 +102,8 @@ const DocumentsGrid = ({
       })
 
       return (
-        <div key={document.id} className="col-span-12 sm:col-span-6 md:col-span-4">
-          <div className="p-5 shadow-md h-full flex rounded-md flex-col items-start relative bg-card">
+        <div key={document.id} className="col-span-12 sm:col-span-6 lg:col-span-4">
+          <Card className="p-5 h-full flex flex-col relative hover:shadow-md transition-shadow">
             {/* Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -114,8 +115,9 @@ const DocumentsGrid = ({
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
+              <DropdownMenuContent align="end">
                 <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
                   onClick={() => {
                     setSelectedDocument(document)
                     setConfirmDelete(true)
@@ -126,36 +128,38 @@ const DocumentsGrid = ({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <div className="mb-5 flex items-center">
-              <div className="mr-3 h-[34px] w-[34px] rounded-md bg-primary/10 flex items-center justify-center">
+            {/* Title */}
+            <div className="flex items-center gap-3 mb-4 pr-8">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                 <FileText className="h-4 w-4 text-primary" />
               </div>
               <Link
                 href={`/gendox/document-instance/?organizationId=${organizationId}&documentId=${document.id}&projectId=${projectId}`}
-                className="text-base font-semibold no-underline hover:text-primary cursor-pointer"
+                className="text-sm font-semibold no-underline hover:text-primary transition-colors truncate"
               >
                 <TruncatedText text={document.title} />
               </Link>
             </div>
-            <ul className="mt-0 mb-5 pl-7 space-y-2">
-              <li className="text-primary">
-                <span className="text-inherit">
-                  {documentAuthor
-                    ? documentAuthor.user.name
-                    : "Unknown Author"}
-                </span>
-              </li>
-              <li className="text-primary">
-                <span className="text-inherit">
-                  {documentAuthor
-                    ? documentAuthor.user.email
-                    : "Unknown E-mail"}
-                </span>
-              </li>
-            </ul>
 
-            <p className="mt-auto">{`Created ${relativeDate}`}</p>
-          </div>
+            {/* Author Info */}
+            <div className="space-y-1 text-sm text-muted-foreground mb-4">
+              <p>
+                {documentAuthor
+                  ? documentAuthor.user.name
+                  : "Unknown Author"}
+              </p>
+              <p className="text-xs">
+                {documentAuthor
+                  ? documentAuthor.user.email
+                  : "Unknown Email"}
+              </p>
+            </div>
+
+            {/* Date */}
+            <p className="mt-auto text-xs text-muted-foreground">
+              Created {relativeDate}
+            </p>
+          </Card>
         </div>
       )
     })
@@ -164,7 +168,7 @@ const DocumentsGrid = ({
   return (
     <TooltipProvider>
       <div
-        className={`grid grid-cols-12 gap-6 ${
+        className={`grid grid-cols-12 gap-4 ${
           isBlurring ? "blur-sm" : ""
         } transition-all duration-300`}
       >
@@ -176,14 +180,20 @@ const DocumentsGrid = ({
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   onClick={toggleShowAll}
-                  className="text-primary"
+                  className="text-muted-foreground"
                 >
                   {showAll ? (
-                    <ChevronUp className="h-5 w-5" />
+                    <>
+                      <ChevronUp className="h-4 w-4 mr-1" />
+                      Show Less
+                    </>
                   ) : (
-                    <ChevronDown className="h-5 w-5" />
+                    <>
+                      <ChevronDown className="h-4 w-4 mr-1" />
+                      Show More
+                    </>
                   )}
                 </Button>
               </TooltipTrigger>

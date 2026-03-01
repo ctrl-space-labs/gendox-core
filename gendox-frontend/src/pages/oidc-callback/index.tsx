@@ -18,6 +18,18 @@ const OidcCallbackPage = () => {
       })
       .catch((error: any) => {
         console.error('Error handling OIDC redirect callback:', error)
+
+        // Stale OIDC state (e.g. authority URL changed) — clear storage
+        // and restart the login flow so the user isn't stuck.
+        if (
+          error?.message?.includes('No matching state') ||
+          error?.message?.includes('No state in response')
+        ) {
+          console.warn('Clearing stale OIDC state and restarting login...')
+          userManager.clearStaleState().catch(() => {})
+          userManager.removeUser().catch(() => {})
+          window.location.href = '/gendox/home'
+        }
       })
   }, [])
 

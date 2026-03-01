@@ -1,39 +1,34 @@
 import type { ReactElement } from "react"
 import Link from "next/link"
+import { ServerCrash, ArrowLeft } from "lucide-react"
 import BlankLayout from "src/@core/layouts/BlankLayout"
-import FooterIllustrations from "src/views/pages/misc/FooterIllustrations"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 
 const Error500 = () => {
   return (
-    <div className="content-center">
-      <div className="p-5 flex flex-col items-center text-center">
-        <div className="md:w-auto w-[90vw]">
-          <h1 className="text-8xl font-bold text-foreground">500</h1>
-          <h5 className="text-2xl font-medium mb-1">Internal server error</h5>
-          <p className="text-sm text-muted-foreground">
-            Oops, something went wrong!
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <Card className="w-full max-w-md text-center">
+        <CardContent className="pt-10 pb-10 px-8">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 mx-auto mb-6">
+            <ServerCrash className="h-8 w-8 text-destructive" />
+          </div>
+          <h1 className="text-6xl font-bold text-foreground mb-2">500</h1>
+          <h2 className="text-xl font-semibold mb-2">
+            Internal Server Error
+          </h2>
+          <p className="text-sm text-muted-foreground mb-8">
+            Something went wrong on our end. Please try again later or contact
+            support if the problem persists.
           </p>
-        </div>
-        <img
-          height={487}
-          alt="error-illustration"
-          src="/images/pages/500.png"
-          className="mb-10 lg:mt-13 lg:h-auto md:h-[400px] h-[350px]"
-        />
-        <Link href="/">
-          <Button className="px-6">Back to Home</Button>
-        </Link>
-      </div>
-      <FooterIllustrations
-        image={
-          <img
-            alt="tree"
-            src="/images/pages/tree-3.png"
-            className="absolute left-0 bottom-20 lg:bottom-0"
-          />
-        }
-      />
+          <Link href="/gendox/home">
+            <Button>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Home
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   )
 }

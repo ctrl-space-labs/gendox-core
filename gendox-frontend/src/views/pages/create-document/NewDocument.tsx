@@ -43,46 +43,47 @@ const NewDocument = ({
   })
 
   return (
-    <div>
-      <div className="py-2 px-4 flex items-center border-b border-border">
-        <div className="flex items-center w-full">
-          <Label
-            className={`mr-3 whitespace-nowrap shrink-0 min-w-[80px] ${
-              titleError ? "text-destructive" : "text-primary"
-            }`}
-          >
-            Name:{" "}
-            {titleError && (
-              <span className="text-destructive text-xs">
-                <sup className="text-[0.7rem] relative -top-1">* required</sup>
-              </span>
-            )}
-          </Label>
-          <Input
-            value={documentTitle}
-            id="title-input"
-            onChange={(e) => setDocumentTitle(e.target.value)}
-            className="flex-grow border-none shadow-none focus-visible:ring-0"
-          />
-        </div>
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="title-input">
+          Document Title <span className="text-destructive">*</span>
+        </Label>
+        <Input
+          value={documentTitle}
+          id="title-input"
+          placeholder="e.g. Getting Started Guide"
+          onChange={(e) => setDocumentTitle(e.target.value)}
+          className={titleError ? "border-destructive" : ""}
+        />
+        {titleError && (
+          <p className="text-xs text-destructive">
+            Document title is required.
+          </p>
+        )}
       </div>
 
       {/* Markdown Editor */}
-      <div className="[&_.mde-header]:bg-transparent [&_.mde-textarea]:bg-transparent [&_.mde-preview]:bg-transparent [&_.mde-toolbar]:bg-transparent [&_.mde-toolbar_button]:bg-transparent [&_.mde-toolbar_button]:border-none [&_.mde-toolbar_button]:shadow-none [&_.react-mde]:bg-transparent">
-        <ReactMde
-          value={markdownValue}
-          onChange={setMarkdownValue}
-          selectedTab={selectedTab}
-          onTabChange={setSelectedTab}
-          generateMarkdownPreview={(markdown) =>
-            Promise.resolve(converter.makeHtml(markdown))
-          }
-          childProps={{
-            writeButton: {
-              tabIndex: -1,
-            },
-          }}
-        />
+      <div className="space-y-2">
+        <Label>Content</Label>
+        <div className="rounded-md border [&_.mde-header]:bg-transparent [&_.mde-textarea]:bg-transparent [&_.mde-preview]:bg-transparent [&_.mde-toolbar]:bg-transparent [&_.mde-toolbar_button]:bg-transparent [&_.mde-toolbar_button]:border-none [&_.mde-toolbar_button]:shadow-none [&_.react-mde]:bg-transparent [&_.react-mde]:border-none">
+          <ReactMde
+            value={markdownValue}
+            onChange={setMarkdownValue}
+            selectedTab={selectedTab}
+            onTabChange={setSelectedTab}
+            generateMarkdownPreview={(markdown) =>
+              Promise.resolve(converter.makeHtml(markdown))
+            }
+            childProps={{
+              writeButton: {
+                tabIndex: -1,
+              },
+            }}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Write using Markdown syntax. Switch to Preview to see the formatted output.
+        </p>
       </div>
     </div>
   )

@@ -176,6 +176,7 @@ const GeneralProjectSettings = () => {
                 <Label htmlFor="project-name">Project Name</Label>
                 <Input
                   id="project-name"
+                  placeholder="e.g. Customer Support Knowledge Base"
                   value={name}
                   onChange={handleNameChange}
                   className="mt-1"
@@ -189,6 +190,7 @@ const GeneralProjectSettings = () => {
                 </Label>
                 <Textarea
                   id="project-description"
+                  placeholder="Describe the purpose of this project..."
                   rows={4}
                   value={description}
                   onChange={handleDescriptionChange}
@@ -196,29 +198,22 @@ const GeneralProjectSettings = () => {
                 />
               </div>
 
-              {/* Auto-training checkbox */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="autoTraining"
-                        checked={autoTraining}
-                        onCheckedChange={handleAutoTrainingChange}
-                      />
-                      <Label htmlFor="autoTraining" className="cursor-pointer">
-                        auto-training
-                      </Label>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    Enable auto-training for the project. If checked, uploaded
-                    files will be automatically processed without manual
-                    trigger. This may increase processing costs depending on
-                    usage.
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {/* Auto-training */}
+              <div className="flex items-center space-x-3 rounded-lg border p-4">
+                <Checkbox
+                  id="autoTraining"
+                  checked={autoTraining}
+                  onCheckedChange={handleAutoTrainingChange}
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="autoTraining" className="cursor-pointer">
+                    Auto-Training
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically process uploaded files without manual trigger.
+                  </p>
+                </div>
+              </div>
 
               {/* Buttons row */}
               <div className="flex items-center gap-2 flex-wrap">

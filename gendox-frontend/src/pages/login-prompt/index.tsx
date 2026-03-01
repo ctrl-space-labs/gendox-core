@@ -1,12 +1,14 @@
-import { useEffect, type ReactElement } from "react"
+import { useEffect, useState, type ReactElement } from "react"
 import { useRouter } from "next/router"
-import { Lock } from "lucide-react"
+import { Lock, ExternalLink } from "lucide-react"
 import BlankLayout from "src/@core/layouts/BlankLayout"
 import { routeTypes } from "src/authentication/components/RouteHandler"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 
 const LoginPromptPage = () => {
   const router = useRouter()
+  const [popupBlocked, setPopupBlocked] = useState(false)
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -15,7 +17,6 @@ const LoginPromptPage = () => {
         return
       }
       if (event.data && event.data.type === "LOGIN_SUCCESS") {
-        console.log("Login Success event received.")
         router.push("/")
       }
     }
@@ -37,19 +38,41 @@ const LoginPromptPage = () => {
     )
 
     if (!popup) {
-      console.error("Popup blocked. Please allow popups for this site.")
+      setPopupBlocked(true)
     }
   }
 
   return (
-    <div className="h-screen flex items-center flex-col justify-center">
-      <h1 className="text-3xl font-bold text-foreground">
-        Authentication Required
-      </h1>
-      <Button onClick={handleLoginClick} className="mt-4">
-        <Lock className="mr-2 h-4 w-4" />
-        Login
-      </Button>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <Card className="w-full max-w-md text-center">
+        <CardContent className="pt-10 pb-10 px-8">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mx-auto mb-6">
+            <Lock className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold mb-2">Authentication Required</h1>
+          <p className="text-sm text-muted-foreground mb-8">
+            You need to sign in to access this content. Click the button below
+            to open the login window.
+          </p>
+          <Button onClick={handleLoginClick} size="lg">
+            <Lock className="h-4 w-4 mr-2" />
+            Sign In
+          </Button>
+
+          {popupBlocked && (
+            <div className="mt-4 p-3 rounded-md bg-destructive/10 text-sm text-destructive">
+              <p className="font-medium mb-1">Popup blocked</p>
+              <p className="text-xs">
+                Please allow popups for this site, or{" "}
+                <a href="/login" className="underline inline-flex items-center gap-1">
+                  open the login page directly
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

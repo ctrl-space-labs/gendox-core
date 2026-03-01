@@ -7,10 +7,10 @@ interface UserIconProps {
 
 const UserIcon = ({ icon, iconProps }: UserIconProps) => {
   if (typeof icon === "string") {
-    return <Icon icon={icon} style={{ fontSize: "1.5rem" }} {...iconProps} />
+    return <Icon icon={icon} className="h-6 w-6" {...iconProps} />
   }
   const IconTag = icon
-  return <IconTag {...iconProps} style={{ fontSize: "1.5rem", ...iconProps?.style }} />
+  return <IconTag className="h-6 w-6" {...iconProps} />
 }
 
 export default UserIcon

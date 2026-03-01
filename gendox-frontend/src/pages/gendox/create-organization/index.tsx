@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useRouter } from "next/router"
+import { Building2, RotateCcw, Loader2 } from "lucide-react"
 import { useAuth } from "src/authentication/useAuth"
 import { localStorageConstants } from "src/utils/generalConstants"
 import organizationService from "src/gendox-sdk/organizationService"
@@ -8,15 +9,14 @@ import { getErrorMessage } from "src/utils/errorHandler"
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Spinner } from "@/components/ui/spinner"
 
 const CreateOrganization = () => {
   const auth = useAuth()
@@ -58,65 +58,109 @@ const CreateOrganization = () => {
     }
   }
 
+  const handleReset = () => {
+    setName("")
+    setDisplayName("")
+    setAddress("")
+    setPhone("")
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create New Organization</CardTitle>
-      </CardHeader>
-      <Separator />
-      <form onSubmit={handleSubmit}>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="organization-name">Name</Label>
-              <Input
-                id="organization-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+    <div className="flex justify-center py-8 px-4">
+      <Card className="w-full max-w-2xl">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <Building2 className="h-5 w-5 text-primary" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="organization-displayName">Display Name</Label>
-              <Input
-                id="organization-displayName"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="organization-address">Address</Label>
-              <Input
-                id="organization-address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="organization-phone">Phone</Label>
-              <Input
-                id="organization-phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
+            <div>
+              <CardTitle className="text-xl">
+                Create New Organization
+              </CardTitle>
+              <CardDescription>
+                Organizations let you manage projects, team members, and
+                billing in one place.
+              </CardDescription>
             </div>
           </div>
-        </CardContent>
-        <CardFooter className="flex gap-2">
-          {loading ? (
-            <Spinner size="sm" />
-          ) : (
-            <>
-              <Button type="submit" size="lg">
-                Submit
-              </Button>
-              <Button type="reset" variant="outline" size="lg">
-                Reset
-              </Button>
-            </>
-          )}
-        </CardFooter>
-      </form>
-    </Card>
+        </CardHeader>
+        <Separator />
+        <form onSubmit={handleSubmit}>
+          <CardContent className="pt-6 space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="organization-name">
+                  Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="organization-name"
+                  placeholder="e.g. acme-corp"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  A unique identifier for your organization.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="organization-displayName">Display Name</Label>
+                <Input
+                  id="organization-displayName"
+                  placeholder="e.g. Acme Corporation"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  How your organization appears to others.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="organization-address">Address</Label>
+                <Input
+                  id="organization-address"
+                  placeholder="e.g. 123 Main St, City"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="organization-phone">Phone</Label>
+                <Input
+                  id="organization-phone"
+                  placeholder="e.g. +1 (555) 123-4567"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+            </div>
+          </CardContent>
+          <Separator />
+          <div className="flex items-center justify-end gap-3 p-6">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleReset}
+              disabled={loading}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reset
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Building2 className="mr-2 h-4 w-4" />
+              )}
+              {loading ? "Creating..." : "Create Organization"}
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </div>
   )
 }
 

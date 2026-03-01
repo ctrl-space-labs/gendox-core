@@ -1,15 +1,11 @@
 # Stage 1: Build the Next.js static site
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# # Copy dependency files and install dependencies
+# Copy dependency files and install dependencies
 COPY package.json yarn.lock ./
-RUN yarn install
-
-# # Copy dependency files and install dependencies with increased timeout for slow connections (g)
-# COPY package.json yarn.lock ./
-# RUN yarn config set network-timeout 600000 && yarn install
+RUN yarn install --frozen-lockfile
 
 # Copy the rest of the application code
 COPY . .
@@ -22,6 +18,7 @@ ARG NEXT_PUBLIC_OIDC_POST_LOGOUT_REDIRECT_URI
 ARG NEXT_PUBLIC_OIDC_SILENT_REDIRECT_URI
 ARG NEXT_PUBLIC_GENDOX_URL
 ARG NEXT_PUBLIC_PROVEN_AI_URL
+ARG NEXT_PUBLIC_PROVEN_AI_ENABLED
 
 # Expose them to the build so Next.js picks them up
 ENV NEXT_PUBLIC_OIDC_AUTHORITY=${NEXT_PUBLIC_OIDC_AUTHORITY}
@@ -31,6 +28,7 @@ ENV NEXT_PUBLIC_OIDC_POST_LOGOUT_REDIRECT_URI=${NEXT_PUBLIC_OIDC_POST_LOGOUT_RED
 ENV NEXT_PUBLIC_OIDC_SILENT_REDIRECT_URI=${NEXT_PUBLIC_OIDC_SILENT_REDIRECT_URI}
 ENV NEXT_PUBLIC_GENDOX_URL=${NEXT_PUBLIC_GENDOX_URL}
 ENV NEXT_PUBLIC_PROVEN_AI_URL=${NEXT_PUBLIC_PROVEN_AI_URL}
+ENV NEXT_PUBLIC_PROVEN_AI_ENABLED=${NEXT_PUBLIC_PROVEN_AI_ENABLED}
 
 # Build and export the static site
 RUN yarn build
@@ -40,6 +38,9 @@ FROM nginx:alpine
 
 # Remove default Nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
+
+# Copy custom Nginx config for SPA routing
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy static site output from the builder stage (default output directory is "out")
 COPY --from=builder /app/out /usr/share/nginx/html

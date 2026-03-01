@@ -1,48 +1,32 @@
 import type { ReactElement } from "react"
-import { useRouter } from "next/router"
 import Link from "next/link"
+import { FileQuestion, ArrowLeft } from "lucide-react"
 import BlankLayout from "src/@core/layouts/BlankLayout"
-import FooterIllustrations from "src/views/pages/misc/FooterIllustrations"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 
 const Error404 = () => {
-  const router = useRouter()
-
-  const handleBackToHome = () => {
-    router.push("/gendox/home/")
-  }
-
   return (
-    <div className="content-center">
-      <div className="p-5 flex flex-col items-center text-center">
-        <div className="md:w-auto w-[90vw]">
-          <h1 className="text-8xl font-bold text-foreground">404</h1>
-          <h5 className="text-2xl font-medium mb-1">Page Not Found</h5>
-          <p className="text-sm text-muted-foreground">
-            We couldn&prime;t find the page you are looking for.
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <Card className="w-full max-w-md text-center">
+        <CardContent className="pt-10 pb-10 px-8">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mx-auto mb-6">
+            <FileQuestion className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h1 className="text-6xl font-bold text-foreground mb-2">404</h1>
+          <h2 className="text-xl font-semibold mb-2">Page Not Found</h2>
+          <p className="text-sm text-muted-foreground mb-8">
+            The page you&apos;re looking for doesn&apos;t exist or has been
+            moved.
           </p>
-        </div>
-        <img
-          height={487}
-          alt="error-illustration"
-          src="/images/pages/404.png"
-          className="mb-10 lg:mt-13 lg:h-auto md:h-[400px] h-[350px]"
-        />
-        <Link href="/">
-          <Button onClick={handleBackToHome} className="px-6">
-            Back to Home
-          </Button>
-        </Link>
-      </div>
-      <FooterIllustrations
-        image={
-          <img
-            alt="tree"
-            src="/images/pages/tree.png"
-            className="absolute left-0 bottom-20 lg:bottom-0"
-          />
-        }
-      />
+          <Link href="/gendox/home">
+            <Button>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Home
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   )
 }

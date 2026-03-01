@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import { generateIdenticon } from "src/utils/identiconUtil"
 import { useAuth } from "src/authentication/useAuth"
 import { localStorageConstants } from "src/utils/generalConstants"
@@ -50,16 +51,15 @@ const UserDropdown = ({ settings }: UserDropdownProps) => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="relative ml-2 cursor-pointer focus:outline-none">
+        <Button variant="ghost" size="icon" className="relative ml-2 rounded-full h-10 w-10 p-0">
           <Avatar className="h-10 w-10">
             <AvatarImage src={identiconSrc} alt={auth.user?.name || "User"} />
             <AvatarFallback>
               {auth.user?.name?.charAt(0) || "U"}
             </AvatarFallback>
           </Avatar>
-          {/* Online indicator */}
           <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-success ring-2 ring-card" />
-        </button>
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         {auth.user && (

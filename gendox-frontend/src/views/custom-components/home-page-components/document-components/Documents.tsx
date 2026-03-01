@@ -2,15 +2,15 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/router"
 import { useDispatch, useSelector } from "react-redux"
 import { useAuth } from "src/authentication/useAuth"
-import { LayoutGrid, List } from "lucide-react"
+import { LayoutGrid, List, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { ResponsiveCardContent } from "src/utils/responsiveCardContent"
 import DocumentsGrid from "./DocumentsGrid"
 import DocumentsList from "./DocumentsList"
 import { localStorageConstants } from "src/utils/generalConstants"
@@ -19,7 +19,6 @@ import { isValidOrganizationAndProject } from "src/utils/validators"
 
 const Documents = () => {
   const { user } = useAuth() as any
-
   const router = useRouter()
   const dispatch = useDispatch()
 
@@ -37,6 +36,7 @@ const Documents = () => {
   const [currentPage, setCurrentPage] = useState(0)
   const [showAll, setShowAll] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const hasProject = projectId && projectId !== "null"
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640)
@@ -81,34 +81,49 @@ const Documents = () => {
     }
   }
 
-  return projectId && projectId !== "null" ? (
+  if (!hasProject) {
+    return (
+      <Card className="p-12 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 mx-auto mb-4">
+          <FileText className="h-6 w-6 text-primary" />
+        </div>
+        <h3 className="text-xl font-semibold mb-2">
+          Welcome to Gendox
+        </h3>
+        <p className="text-sm text-muted-foreground max-w-md mx-auto">
+          Select a project from the sidebar, or create a new one to get
+          started with your documents and AI agents.
+        </p>
+      </Card>
+    )
+  }
+
+  return (
     <TooltipProvider>
-      <ResponsiveCardContent
-        className={`bg-accent ${
+      <Card
+        className={`p-6 ${
           isBlurring ? "blur-sm" : ""
         } transition-all duration-300`}
         aria-busy={isBlurring}
       >
-        {/* Header Section */}
+        {/* Header */}
         <div
           className={`flex justify-between items-center ${
             documents.length ? "mb-4" : ""
           }`}
         >
-          <h5 className="text-xl font-semibold text-left">Recent Documents</h5>
+          <h3 className="text-lg font-semibold">Recent Documents</h3>
           {documents.length > 0 && (
-            <div className="flex gap-2">
+            <div className="flex gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant="ghost"
+                    variant={viewMode === "grid" ? "secondary" : "ghost"}
                     size="icon"
                     onClick={() => setViewMode("grid")}
-                    className={
-                      viewMode === "grid" ? "text-primary" : "text-muted-foreground"
-                    }
+                    className="h-8 w-8"
                   >
-                    <LayoutGrid className="h-6 w-6" />
+                    <LayoutGrid className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Grid View</TooltipContent>
@@ -117,16 +132,12 @@ const Documents = () => {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant="ghost"
+                      variant={viewMode === "list" ? "secondary" : "ghost"}
                       size="icon"
                       onClick={() => setViewMode("list")}
-                      className={
-                        viewMode === "list"
-                          ? "text-primary"
-                          : "text-muted-foreground"
-                      }
+                      className="h-8 w-8"
                     >
-                      <List className="h-6 w-6" />
+                      <List className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>List View</TooltipContent>
@@ -147,22 +158,25 @@ const Documents = () => {
           <DocumentsList documents={documents} page={currentPage} />
         )}
 
-        {showAll && (
-          <div className="flex justify-center mt-4">
+        {/* Pagination */}
+        {showAll && totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-4">
             <Button
-              variant="ghost"
+              variant="outline"
+              size="sm"
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 0}
-              className="mr-2"
             >
               Previous
             </Button>
-            <p className="mt-1.5">{`Page ${currentPage + 1} of ${totalPages}`}</p>
+            <span className="text-sm text-muted-foreground px-2">
+              Page {currentPage + 1} of {totalPages}
+            </span>
             <Button
-              variant="ghost"
+              variant="outline"
+              size="sm"
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages - 1}
-              className="ml-2"
             >
               Next
             </Button>
@@ -171,28 +185,17 @@ const Documents = () => {
 
         {/* Empty State */}
         {!documents.length && (
-          <p className="text-sm text-center mt-40 text-muted-foreground">
-            No documents available. Please create or upload new documents.
-          </p>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted mb-4">
+              <FileText className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              No documents yet. Create or upload documents to get started.
+            </p>
+          </div>
         )}
-      </ResponsiveCardContent>
+      </Card>
     </TooltipProvider>
-  ) : (
-    <div
-      className="flex text-center items-center flex-col bg-cover py-24"
-      style={{
-        backgroundImage: `url(/images/pages/pages-header-bg-light.png)`,
-      }}
-    >
-      <h5 className="font-semibold text-2xl text-primary">
-        Hello, would you like to create a new document?
-      </h5>
-      <div className="mt-10">
-        <p className="text-sm">
-          or choose an action from the buttons above
-        </p>
-      </div>
-    </div>
   )
 }
 

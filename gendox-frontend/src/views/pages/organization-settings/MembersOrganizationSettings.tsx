@@ -353,18 +353,20 @@ const MembersOrganizationSettings = () => {
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search..."
+            placeholder="Search members..."
             value={searchText}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-8 pr-8 h-9 w-64"
+            className="pl-8 pr-8 h-9 w-full sm:w-64"
           />
           {searchText && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => handleSearch("")}
-              className="absolute right-2.5 top-2.5"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
             >
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
+              <X className="h-4 w-4" />
+            </Button>
           )}
         </div>
       </div>

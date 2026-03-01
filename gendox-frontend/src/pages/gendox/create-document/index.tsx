@@ -1,15 +1,16 @@
 import { useState } from "react"
 import { useRouter } from "next/router"
-import { ArrowLeft, Save } from "lucide-react"
+import { ArrowLeft, Save, FileText, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
 import documentService from "src/gendox-sdk/documentService"
 import NewDocument from "src/views/pages/create-document/NewDocument"
 import { getErrorMessage } from "src/utils/errorHandler"
@@ -73,48 +74,32 @@ const CreateDocument = () => {
   }
 
   return (
-    <TooltipProvider>
-      <Card className="bg-transparent shadow-none border-none">
-        <div className="bg-card rounded-md p-4 sm:p-6">
-          <div className="flex justify-between items-center">
-            <h4 className="text-2xl font-semibold mb-6 text-left">
-              Create New Document
-            </h4>
-            <div className="inline-flex gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleGoBack}
-                    className="mb-6 text-primary"
-                  >
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Back</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleSave}
-                    className="mb-6 text-primary"
-                  >
-                    <Save className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Save Document</TooltipContent>
-              </Tooltip>
+    <div className="flex justify-center py-8 px-4">
+      <Card className="w-full max-w-4xl">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">
+                  Create New Document
+                </CardTitle>
+                <CardDescription>
+                  Write your content in Markdown and save it to your project.
+                </CardDescription>
+              </div>
             </div>
+            <Button variant="outline" size="sm" onClick={handleGoBack}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
           </div>
-        </div>
-
-        <div className="h-5" />
-
-        <div
-          className={`bg-card rounded-md py-3 mb-6 p-4 sm:p-6 transition-all duration-300 ${
+        </CardHeader>
+        <Separator />
+        <CardContent
+          className={`pt-6 transition-all duration-300 ${
             isCreatingDocument ? "blur-sm" : ""
           }`}
         >
@@ -125,9 +110,27 @@ const CreateDocument = () => {
             setMarkdownValue={setDocumentValue}
             titleError={titleError}
           />
+        </CardContent>
+        <Separator />
+        <div className="flex items-center justify-end gap-3 p-6">
+          <Button
+            variant="ghost"
+            onClick={handleGoBack}
+            disabled={isCreatingDocument}
+          >
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={isCreatingDocument}>
+            {isCreatingDocument ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            {isCreatingDocument ? "Saving..." : "Save Document"}
+          </Button>
         </div>
       </Card>
-    </TooltipProvider>
+    </div>
   )
 }
 

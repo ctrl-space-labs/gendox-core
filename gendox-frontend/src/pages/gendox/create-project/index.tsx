@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useRouter } from "next/router"
+import { FolderPlus, RotateCcw, Loader2 } from "lucide-react"
 import { useAuth } from "src/authentication/useAuth"
 import { localStorageConstants } from "src/utils/generalConstants"
 import projectService from "src/gendox-sdk/projectService"
@@ -8,9 +9,9 @@ import { getErrorMessage } from "src/utils/errorHandler"
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,7 +19,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { Spinner } from "@/components/ui/spinner"
 
 const ProjectCreate = () => {
   const auth = useAuth()
@@ -64,25 +64,60 @@ const ProjectCreate = () => {
     }
   }
 
+  const handleReset = () => {
+    setName("")
+    setDescription("")
+    setAutoTraining(true)
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create New Project</CardTitle>
-      </CardHeader>
-      <Separator />
-      <form onSubmit={handleSubmit}>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="flex justify-center py-8 px-4">
+      <Card className="w-full max-w-2xl">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <FolderPlus className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">Create New Project</CardTitle>
+              <CardDescription>
+                Set up a new project to organize your documents and AI agents.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <Separator />
+        <form onSubmit={handleSubmit}>
+          <CardContent className="pt-6 space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="project-name">Name *</Label>
+              <Label htmlFor="project-name">
+                Project Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="project-name"
+                placeholder="e.g. Customer Support Knowledge Base"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
-            <div className="flex items-center space-x-2 pt-6">
+
+            <div className="space-y-2">
+              <Label htmlFor="project-description">Description</Label>
+              <Textarea
+                id="project-description"
+                placeholder="Describe the purpose of this project..."
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                A brief description helps collaborators understand this
+                project&apos;s purpose.
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-3 rounded-lg border p-4">
               <Checkbox
                 id="autoTraining"
                 checked={autoTraining}
@@ -90,35 +125,40 @@ const ProjectCreate = () => {
                   setAutoTraining(checked as boolean)
                 }
               />
-              <Label htmlFor="autoTraining">Auto-Training</Label>
+              <div className="space-y-0.5">
+                <Label htmlFor="autoTraining" className="cursor-pointer">
+                  Auto-Training
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Automatically train the AI agent when new documents are
+                  uploaded.
+                </p>
+              </div>
             </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="project-description">Description</Label>
-              <Textarea
-                id="project-description"
-                rows={4}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
+          </CardContent>
+          <Separator />
+          <div className="flex items-center justify-end gap-3 p-6">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleReset}
+              disabled={loading}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reset
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FolderPlus className="mr-2 h-4 w-4" />
+              )}
+              {loading ? "Creating..." : "Create Project"}
+            </Button>
           </div>
-        </CardContent>
-        <CardFooter className="flex gap-2">
-          {loading ? (
-            <Spinner size="sm" />
-          ) : (
-            <>
-              <Button type="submit" size="lg">
-                Submit
-              </Button>
-              <Button type="reset" variant="outline" size="lg">
-                Reset
-              </Button>
-            </>
-          )}
-        </CardFooter>
-      </form>
-    </Card>
+        </form>
+      </Card>
+    </div>
   )
 }
 
