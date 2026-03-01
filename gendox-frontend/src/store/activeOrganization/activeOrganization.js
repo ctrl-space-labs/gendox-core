@@ -5,7 +5,7 @@ import subscriptionPlanService from 'src/gendox-sdk/subscriptionPlanService'
 import apiKeyService from 'src/gendox-sdk/apiKeyService'
 import organizationWebSiteService from 'src/gendox-sdk/organizationWebSiteService'
 import { getErrorMessage } from 'src/utils/errorHandler'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 // Define an async thunk for fetching an organization by ID
 export const fetchOrganization = createAsyncThunk(

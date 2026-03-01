@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import projectService from 'src/gendox-sdk/projectService'
 import { getErrorMessage } from 'src/utils/errorHandler'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import typesService from "../../gendox-sdk/typesService";
 
 // Async thunk to fetch AI models for the project agent

@@ -2,7 +2,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import projectService from 'src/gendox-sdk/projectService'
 import organizationService from 'src/gendox-sdk/organizationService'
 import { getErrorMessage } from 'src/utils/errorHandler'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 export const fetchProject = createAsyncThunk(
   'activeProject/fetchProject',

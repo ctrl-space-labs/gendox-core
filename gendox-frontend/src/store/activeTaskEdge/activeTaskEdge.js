@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import taskService from 'src/gendox-sdk/taskService'
 import { getErrorMessage } from 'src/utils/errorHandler'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 export const createTaskEdge = createAsyncThunk(
   'taskEdge/create',

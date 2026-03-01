@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import searchService from 'src/gendox-sdk/searchService'
 import { getErrorMessage } from 'src/utils/errorHandler'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 // 1. Fetch closer sections from the backend
 export const fetchCloserSectionsFromProject = createAsyncThunk(

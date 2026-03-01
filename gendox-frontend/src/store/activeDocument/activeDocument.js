@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import documentService from 'src/gendox-sdk/documentService'
 import { getErrorMessage } from 'src/utils/errorHandler'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 // Define an async thunk for fetching an organization by ID
 export const fetchDocument = createAsyncThunk(
