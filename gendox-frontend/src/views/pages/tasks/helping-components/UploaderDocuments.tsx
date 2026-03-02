@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react"
 import { useRouter } from "next/router"
 import { useDispatch } from "react-redux"
-import { Upload, FileText, Trash2, X } from "lucide-react"
+import { Upload, FileText, Trash2 } from "lucide-react"
 import { useDropzone } from "react-dropzone"
 import { toast } from "sonner"
 
@@ -215,20 +215,6 @@ const UploaderDocuments = ({
 
   return (
     <div className="flex w-full max-w-[90vw] flex-col items-center rounded-lg bg-background p-4 min-w-[20rem]">
-      {/* Header */}
-      <div className="mb-4 flex w-full items-center justify-between px-1">
-        <h2 className="flex-1 text-xl font-semibold">Upload Documents</h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={closeUploader}
-          aria-label="close"
-          className="text-primary"
-        >
-          <X className="h-5 w-5" />
-        </Button>
-      </div>
-
       {/* Drop zone - desktop only */}
       {!isMobile && (
         <div

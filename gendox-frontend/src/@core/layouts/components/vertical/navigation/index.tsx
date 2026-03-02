@@ -33,13 +33,13 @@ const Navigation = (props: NavigationProps) => {
   const [currentActiveGroup, setCurrentActiveGroup] = useState<string[]>([])
 
   const navContent = (
-    <>
+    <div className="flex flex-col h-full">
       <VerticalNavHeader {...props} />
-      <div className="ml-2 h-full relative overflow-y-auto">
+      <div className="ml-2 flex-1 min-h-0 overflow-y-auto">
           {typeof beforeVerticalNavMenuContent === "function"
             ? beforeVerticalNavMenuContent(props)
             : beforeVerticalNavMenuContent ?? null}
-          <div className="h-full flex flex-col justify-between">
+          <div className="flex flex-col justify-between">
             {userVerticalNavMenuContent ? (
               userVerticalNavMenuContent(props)
             ) : (
@@ -58,7 +58,7 @@ const Navigation = (props: NavigationProps) => {
             ? afterVerticalNavMenuContent(props)
             : afterVerticalNavMenuContent ?? null}
       </div>
-    </>
+    </div>
   )
 
   // Mobile: use Sheet (slide-over drawer)
@@ -79,7 +79,7 @@ const Navigation = (props: NavigationProps) => {
   // Desktop: permanent sidebar
   return (
     <aside
-      className="layout-vertical-nav overflow-x-hidden transition-[width] duration-250 ease-in-out bg-background [&_ul]:list-none"
+      className="layout-vertical-nav h-full overflow-x-hidden transition-[width] duration-250 ease-in-out bg-background [&_ul]:list-none"
       style={{ "--nav-width": `${navWidth}px`, width: "var(--nav-width)" } as React.CSSProperties}
     >
       {navContent}

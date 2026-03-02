@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react'
+import React, { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import {
   ColumnDef,
@@ -24,6 +24,12 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from '@/components/ui/tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Spinner } from '@/components/ui/spinner'
 import {
   MoreVertical,
@@ -101,24 +107,6 @@ const DocumentDigitizationGrid = ({
   onSelectDocument = () => {},
   isDocumentGenerating = () => false
 }: DocumentDigitizationGridProps) => {
-  const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null)
-  const [actionMenuDoc, setActionMenuDoc] = useState<DocumentData | null>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  // Close action menu on outside click
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setActionMenuOpen(null)
-        setActionMenuDoc(null)
-      }
-    }
-    if (actionMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [actionMenuOpen])
-
   const docPagesMap = useMemo(() => {
     const map: Record<string, DocumentPage> = {}
     const pages = Array.isArray(documentPages) ? documentPages : documentPages?.content || []
@@ -357,56 +345,40 @@ const DocumentDigitizationGrid = ({
         header: '',
         size: 60,
         cell: ({ row }) => {
-          const docId = row.original.id
-
           return (
-            <div className="relative" ref={actionMenuOpen === docId ? menuRef : undefined}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setActionMenuDoc(row.original._doc)
-                  setActionMenuOpen(docId)
-                }}
-              >
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-
-              {actionMenuOpen === docId && actionMenuDoc && (
-                <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-md border bg-popover shadow-md">
-                  <button
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-accent"
-                    onClick={() => {
-                      setActionMenuOpen(null)
-                      openDialog('docDetail', actionMenuDoc, true)
-                      setActionMenuDoc(null)
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                    Edit Document
-                  </button>
-                  <button
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-accent text-destructive"
-                    onClick={() => {
-                      setActionMenuOpen(null)
-                      openDialog('delete', actionMenuDoc)
-                      setActionMenuDoc(null)
-                      setSelectedDocuments([])
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Remove Document
-                  </button>
-                </div>
-              )}
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => openDialog('docDetail', row.original._doc, true)}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit Document
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => {
+                    openDialog('delete', row.original._doc)
+                    setSelectedDocuments([])
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remove Document
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )
         }
       }
     ]
-  }, [documents, selectedDocuments, docPagesMap, actionMenuOpen, actionMenuDoc])
+  }, [documents, selectedDocuments, docPagesMap])
 
   const pageCount = Math.ceil(totalDocuments / pageSize)
 

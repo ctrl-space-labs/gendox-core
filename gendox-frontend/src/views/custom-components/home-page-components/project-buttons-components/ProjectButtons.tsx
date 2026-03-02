@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog"
 import {
   Tooltip,
@@ -60,6 +63,12 @@ const ProjectButtons = () => {
 
       <Dialog open={showUploader} onOpenChange={setShowUploader}>
         <DialogContent className="max-w-[90vw] sm:max-w-lg p-0">
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle>Upload Document</DialogTitle>
+            <DialogDescription className="sr-only">
+              Upload a new document to the project
+            </DialogDescription>
+          </DialogHeader>
           <UploaderDocument closeUploader={() => setShowUploader(false)} />
         </DialogContent>
       </Dialog>

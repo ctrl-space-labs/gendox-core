@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react'
+import React, { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import {
   useReactTable,
@@ -22,6 +22,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Spinner } from '@/components/ui/spinner'
 import {
   Trash,
@@ -71,29 +77,6 @@ const DocumentInsightsGrid = ({
   handleGenerate,
   isGeneratingCells = {}
 }: DocumentInsightsGridProps) => {
-  const [documentMenuAnchor, setDocumentMenuAnchor] = useState<{ x: number; y: number } | null>(null)
-  const [documentMenuDoc, setDocumentMenuDoc] = useState<any>(null)
-  const [questionMenuAnchor, setQuestionMenuAnchor] = useState<{ x: number; y: number } | null>(null)
-  const [questionMenuItem, setQuestionMenuItem] = useState<any>(null)
-  const docMenuRef = useRef<HTMLDivElement>(null)
-  const questionMenuRef = useRef<HTMLDivElement>(null)
-
-  // Close menus on outside click
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (docMenuRef.current && !docMenuRef.current.contains(event.target as Node)) {
-        setDocumentMenuAnchor(null)
-        setDocumentMenuDoc(null)
-      }
-      if (questionMenuRef.current && !questionMenuRef.current.contains(event.target as Node)) {
-        setQuestionMenuAnchor(null)
-        setQuestionMenuItem(null)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
   const sortedQuestions = useMemo(() => {
     return [...questions].sort((a, b) => a.order - b.order)
   }, [questions])
@@ -263,18 +246,33 @@ const DocumentInsightsGrid = ({
                 </Tooltip>
               </TooltipProvider>
 
-              {/* Hover-reveal vertical icon */}
-              <button
-                className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200 p-1 rounded hover:bg-accent"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setDocumentMenuDoc(row.original._doc)
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  setDocumentMenuAnchor({ x: rect.right, y: rect.bottom })
-                }}
-              >
-                <MoreVertical className="h-4 w-4" />
-              </button>
+              {/* Document actions menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200 p-1 rounded hover:bg-accent"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => openDialog('pagePreview', row.original._doc)}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    View Document
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => {
+                      openDialog('delete', row.original._doc)
+                      setSelectedDocuments([])
+                    }}
+                  >
+                    <Trash className="h-4 w-4 mr-2" />
+                    Remove Document
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )
         }
@@ -297,18 +295,30 @@ const DocumentInsightsGrid = ({
               <TruncatedText text={q.title || q.text} />
             </button>
 
-            {/* Hover-reveal Vertical Icon */}
-            <button
-              className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200 p-1 rounded hover:bg-accent"
-              onClick={(e) => {
-                e.stopPropagation()
-                setQuestionMenuItem(q)
-                const rect = e.currentTarget.getBoundingClientRect()
-                setQuestionMenuAnchor({ x: rect.right, y: rect.bottom })
-              }}
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button>
+            {/* Question actions menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200 p-1 rounded hover:bg-accent"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => openDialog('questionDetail', q)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  View Question
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => openDialog('delete', q)}
+                >
+                  <Trash className="h-4 w-4 mr-2" />
+                  Delete Question
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ),
         cell: ({ row }: { row: any }) => {
@@ -536,70 +546,6 @@ const DocumentInsightsGrid = ({
         </div>
       </div>
 
-      {/* Document Context Menu */}
-      {documentMenuAnchor && documentMenuDoc && (
-        <div
-          ref={docMenuRef}
-          className="fixed z-50 min-w-[180px] rounded-md border bg-popover shadow-md py-1"
-          style={{ top: documentMenuAnchor.y, left: documentMenuAnchor.x - 180 }}
-        >
-          <button
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent"
-            onClick={() => {
-              setDocumentMenuAnchor(null)
-              openDialog('pagePreview', documentMenuDoc)
-              setDocumentMenuDoc(null)
-            }}
-          >
-            <FileText className="h-4 w-4" />
-            View Document
-          </button>
-          <button
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent text-destructive"
-            onClick={() => {
-              setDocumentMenuAnchor(null)
-              openDialog('delete', documentMenuDoc)
-              setDocumentMenuDoc(null)
-              setSelectedDocuments([])
-            }}
-          >
-            <Trash className="h-4 w-4" />
-            Remove Document
-          </button>
-        </div>
-      )}
-
-      {/* Question Context Menu */}
-      {questionMenuAnchor && questionMenuItem && (
-        <div
-          ref={questionMenuRef}
-          className="fixed z-50 min-w-[180px] rounded-md border bg-popover shadow-md py-1"
-          style={{ top: questionMenuAnchor.y, left: questionMenuAnchor.x - 180 }}
-        >
-          <button
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent"
-            onClick={() => {
-              setQuestionMenuAnchor(null)
-              openDialog('questionDetail', questionMenuItem)
-              setQuestionMenuItem(null)
-            }}
-          >
-            <FileText className="h-4 w-4" />
-            View Question
-          </button>
-          <button
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent text-destructive"
-            onClick={() => {
-              setQuestionMenuAnchor(null)
-              openDialog('delete', questionMenuItem)
-              setQuestionMenuItem(null)
-            }}
-          >
-            <Trash className="h-4 w-4" />
-            Delete Question
-          </button>
-        </div>
-      )}
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -6,9 +6,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Spinner } from '@/components/ui/spinner'
-import { Rocket, ChevronDown, FileText, ScanLine, Download } from 'lucide-react'
-import { Icon } from '@iconify/react'
+import { Rocket, ChevronDown, FileText, ScanLine, Download, ClipboardCheck } from 'lucide-react'
 import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
 
 interface HeaderSectionProps {
@@ -42,10 +47,8 @@ const HeaderSection = ({
   questions = [],
   hasGeneratedContent = () => false
 }: HeaderSectionProps) => {
-  const [menuOpen, setMenuOpen] = useState(false)
   const [confirmGeneration, setConfirmGeneration] = useState<string | null>(null)
   const [generatingType, setGeneratingType] = useState<string | null>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
 
   const disableGenerate = isPageLoading || documents.length === 0 || questions.length === 0 || isGenerating
 
@@ -55,22 +58,8 @@ const HeaderSection = ({
     }
   }, [isGenerating])
 
-  // Close menu on outside click
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false)
-      }
-    }
-    if (menuOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [menuOpen])
-
   const executeGeneration = (type: string) => {
     setConfirmGeneration(null)
-    setMenuOpen(false)
     setGeneratingType(type)
 
     switch (type) {
@@ -164,7 +153,7 @@ const HeaderSection = ({
       {/* Title + Description */}
       <div className="mb-3 flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <Icon icon="mdi:clipboard-check-outline" className="text-2xl text-primary" />
+          <ClipboardCheck className="h-8 w-8 text-primary" />
           <h4 className="text-2xl font-bold text-foreground">
             {title || 'Document Insights'}
           </h4>
@@ -256,7 +245,7 @@ const HeaderSection = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <div className="flex w-full relative" ref={menuRef}>
+                  <div className="flex w-full">
                     <Button
                       className="flex-1 rounded-r-none font-bold uppercase"
                       onClick={() => !isGenerating && setConfirmGeneration(buttonConfig.type)}
@@ -270,63 +259,57 @@ const HeaderSection = ({
                       {buttonConfig.text}
                     </Button>
 
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="rounded-l-none -ml-px h-10 w-10"
-                      onClick={() => setMenuOpen(!menuOpen)}
-                      disabled={disableGenerate}
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-
-                    {/* Dropdown Menu */}
-                    {menuOpen && (
-                      <div className="absolute top-full left-0 mt-1 z-50 min-w-[200px] rounded-md border bg-popover shadow-md">
-                        {/* When main button is "Generate Selected" - show Generate New and Generate All */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="rounded-l-none -ml-px h-10 w-10"
+                          disabled={disableGenerate}
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
                         {selectedDocuments.length > 0 && (
                           <>
-                            <button
-                              className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent disabled:opacity-50 disabled:pointer-events-none"
+                            <DropdownMenuItem
                               onClick={() => setConfirmGeneration('new')}
                               disabled={isNewDisabled()}
                             >
                               {isGenerating ? (
-                                <Spinner size="sm" />
+                                <Spinner size="sm" className="mr-2" />
                               ) : (
-                                <Rocket className="h-4 w-4 text-primary" />
+                                <Rocket className="h-4 w-4 mr-2 text-primary" />
                               )}
                               Generate New
-                            </button>
-                            <button
-                              className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent disabled:opacity-50 disabled:pointer-events-none"
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                               onClick={() => setConfirmGeneration('all')}
                               disabled={disableGenerate}
                             >
                               {isGenerating ? (
-                                <Spinner size="sm" />
+                                <Spinner size="sm" className="mr-2" />
                               ) : (
-                                <Rocket className="h-4 w-4 text-primary" />
+                                <Rocket className="h-4 w-4 mr-2 text-primary" />
                               )}
                               Generate All
-                            </button>
+                            </DropdownMenuItem>
                           </>
                         )}
 
-                        {/* When main button is "Generate New" - show only Generate All */}
                         {selectedDocuments.length === 0 && (
-                          <button
-                            className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent disabled:opacity-50 disabled:pointer-events-none"
+                          <DropdownMenuItem
                             onClick={() => setConfirmGeneration('all')}
                             disabled={disableGenerate}
                           >
                             {isGenerating ? (
-                              <Spinner size="sm" />
+                              <Spinner size="sm" className="mr-2" />
                             ) : (
-                              <Rocket className="h-4 w-4 text-primary" />
+                              <Rocket className="h-4 w-4 mr-2 text-primary" />
                             )}
                             Generate All
-                          </button>
+                          </DropdownMenuItem>
                         )}
 
                         {disableGenerate && (
@@ -334,8 +317,8 @@ const HeaderSection = ({
                             {isGenerating ? 'Loading, please wait...' : 'Add documents and questions to enable generation.'}
                           </div>
                         )}
-                      </div>
-                    )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </span>
               </TooltipTrigger>

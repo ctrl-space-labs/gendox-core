@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useRouter } from "next/router"
 import { useDispatch } from "react-redux"
-import { CloudUpload, FileText, Trash2, X } from "lucide-react"
+import { CloudUpload, FileText, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { useDropzone } from "react-dropzone"
 import { Button } from "@/components/ui/button"
@@ -110,19 +110,6 @@ const UploaderDocument = ({ closeUploader }: UploaderDocumentProps) => {
 
   return (
     <div className="flex flex-col items-center p-4 bg-card rounded-lg min-w-[20rem] w-full max-w-[90vw]">
-      <div className="w-full flex justify-between items-center px-1 mb-4">
-        <h5 className="text-lg font-semibold flex-grow">Upload Document</h5>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={closeUploader}
-          className="text-primary"
-          aria-label="close"
-        >
-          <X className="h-5 w-5" />
-        </Button>
-      </div>
-
       {/* Drag and drop zone - desktop only */}
       {!isMobile && (
         <div

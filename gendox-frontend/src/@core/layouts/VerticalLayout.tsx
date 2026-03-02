@@ -47,7 +47,7 @@ const VerticalLayout = (props: VerticalLayoutProps) => {
 
   return (
     <>
-      <div className="layout-wrapper h-full flex">
+      <div className="layout-wrapper h-screen flex overflow-hidden">
         {settings.navBarContent !== "hidden" && (
           <Navigation
             navWidth={navWidth}
@@ -57,7 +57,7 @@ const VerticalLayout = (props: VerticalLayoutProps) => {
             {...props}
           />
         )}
-        <div className="layout-content-wrapper flex-grow min-w-0 flex min-h-screen flex-col">
+        <div className="layout-content-wrapper flex-grow min-w-0 flex flex-col overflow-y-auto">
           <LayoutAppBar toggleNavVisibility={toggleNavVisibility} {...props} />
 
           <main
