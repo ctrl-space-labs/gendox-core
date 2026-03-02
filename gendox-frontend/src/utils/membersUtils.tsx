@@ -12,7 +12,6 @@ export interface UserTypeStatusEntry {
 
 export interface MemberRoleStatusEntry {
   title: string;
-  color: string;
   icon: string;
 }
 
@@ -45,11 +44,11 @@ export const userTypeStatus: Record<string, UserTypeStatusEntry> = {
 };
 
 export const memberRoleStatus: Record<string, MemberRoleStatusEntry> = {
-  ROLE_OWNER: { title: "Owner", color: "#673ab7", icon: "mdi:shield-account" },
-  ROLE_ADMIN: { title: "Admin", color: "#1976d2", icon: "mdi:shield-crown-outline" },
-  ROLE_READER: { title: "Read Only", color: "#4caf50", icon: "mdi:smart-card-reader-outline" },
-  ROLE_EDITOR: { title: "Editor", color: "#ff9800", icon: "mdi:pencil-outline" },
-  UNKNOWN: { title: "UNKNOWN", color: "#f44336", icon: "mdi:account-question" },
+  ROLE_OWNER: { title: "Owner", icon: "mdi:shield-account" },
+  ROLE_ADMIN: { title: "Admin", icon: "mdi:shield-crown-outline" },
+  ROLE_READER: { title: "Read Only", icon: "mdi:smart-card-reader-outline" },
+  ROLE_EDITOR: { title: "Editor", icon: "mdi:pencil-outline" },
+  UNKNOWN: { title: "UNKNOWN", icon: "mdi:account-question" },
 };
 
 // ─── Utilities ────────────────────────────────────────────────────────────────

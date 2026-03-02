@@ -91,9 +91,9 @@ interface FormValues {
 }
 
 const FreeBadge = () => (
-  <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary font-semibold text-xs rounded-md">
+  <Badge variant="secondary" className="ml-2 bg-primary/10 text-primary">
     Free
-  </span>
+  </Badge>
 )
 
 const ModelSelectField = ({

@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Badge } from "@/components/ui/badge"
 import {
   Tooltip,
   TooltipContent,
@@ -344,9 +345,9 @@ const CreateTaskDialog = ({
                               {model.aiModelProvider?.name}
                             </span>
                             {model.modelTierType?.name === "FREE_MODEL" && (
-                              <span className="ml-2 px-1.5 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded">
+                              <Badge variant="secondary" className="ml-2 bg-primary/10 text-primary">
                                 Free
-                              </span>
+                              </Badge>
                             )}
                           </div>
                         </SelectItem>

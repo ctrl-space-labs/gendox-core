@@ -694,7 +694,7 @@ const DocumentPagePreviewDialog = ({
                   <div className="flex items-center gap-1 flex-wrap">
                     {/* File Type Status */}
                     {!isFileTypeSupported(currentDocument?.url || '') && (
-                      <Badge variant="secondary" className="text-xs h-6 bg-gray-400 text-white">
+                      <Badge variant="secondary" className="text-xs h-6">
                         <Ban className="h-3.5 w-3.5 mr-1" />
                         Unsupported Format
                       </Badge>
@@ -730,7 +730,7 @@ const DocumentPagePreviewDialog = ({
                     {/* Structure Status */}
                     {isFileTypeSupported(currentDocument?.url || '') &&
                       (currentDocument?.structure && currentDocument.structure.trim() ? (
-                        <Badge className="text-xs h-6 bg-blue-500 text-white">
+                        <Badge variant="default" className="text-xs h-6">
                           <Network className="h-3.5 w-3.5 mr-1" />
                           Structure
                         </Badge>

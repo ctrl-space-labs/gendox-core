@@ -256,17 +256,17 @@ const DocumentDigitizationGrid = ({
           return (
             <div className="flex flex-row gap-1 items-center flex-wrap">
               {!isSupported ? (
-                <Badge variant="secondary" className="text-xs h-6 bg-gray-400 text-white">
+                <Badge variant="secondary" className="text-xs h-6">
                   <Ban className="h-3.5 w-3.5 mr-1" />
                   Unsupported Format
                 </Badge>
               ) : isGenerating ? (
-                <Badge className="text-xs h-6 bg-blue-500 text-white">
+                <Badge variant="default" className="text-xs h-6">
                   <Spinner size="sm" className="mr-1" />
                   Generating...
                 </Badge>
               ) : hasPages ? (
-                <Badge className="text-xs h-6 bg-green-500 text-white">
+                <Badge variant="default" className="text-xs h-6">
                   <CheckCircle className="h-3.5 w-3.5 mr-1" />
                   Digitized
                 </Badge>
@@ -291,7 +291,8 @@ const DocumentDigitizationGrid = ({
                   </Badge>
                 ) : (
                   <Badge
-                    className="text-xs h-[22px] bg-yellow-500 text-white cursor-pointer hover:bg-yellow-600"
+                    variant="outline"
+                    className="text-xs h-[22px] text-muted-foreground cursor-pointer hover:bg-accent"
                     onClick={(e) => {
                       e.stopPropagation()
                       openDialog('docDetail', row.original._doc, true)
