@@ -1,7 +1,6 @@
 import { useRef, useState, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import VerticalNavItems from "./VerticalNavItems"
 import VerticalNavHeader from "./VerticalNavHeader"
 
@@ -36,8 +35,7 @@ const Navigation = (props: NavigationProps) => {
   const navContent = (
     <>
       <VerticalNavHeader {...props} />
-      <div className="ml-2 h-full relative overflow-hidden">
-        <ScrollArea className="h-full">
+      <div className="ml-2 h-full relative overflow-y-auto">
           {typeof beforeVerticalNavMenuContent === "function"
             ? beforeVerticalNavMenuContent(props)
             : beforeVerticalNavMenuContent ?? null}
@@ -56,11 +54,10 @@ const Navigation = (props: NavigationProps) => {
               </ul>
             )}
           </div>
-        </ScrollArea>
+          {typeof afterVerticalNavMenuContent === "function"
+            ? afterVerticalNavMenuContent(props)
+            : afterVerticalNavMenuContent ?? null}
       </div>
-      {typeof afterVerticalNavMenuContent === "function"
-        ? afterVerticalNavMenuContent(props)
-        : afterVerticalNavMenuContent ?? null}
     </>
   )
 
@@ -71,7 +68,7 @@ const Navigation = (props: NavigationProps) => {
         <SheetContent
           side="left"
           className="layout-vertical-nav p-0 bg-background border-r-0"
-          style={{ width: navWidth }}
+          style={{ "--nav-width": `${navWidth}px`, width: "var(--nav-width)" } as React.CSSProperties}
         >
           {navContent}
         </SheetContent>
@@ -83,7 +80,7 @@ const Navigation = (props: NavigationProps) => {
   return (
     <aside
       className="layout-vertical-nav overflow-x-hidden transition-[width] duration-250 ease-in-out bg-background [&_ul]:list-none"
-      style={{ width: navWidth }}
+      style={{ "--nav-width": `${navWidth}px`, width: "var(--nav-width)" } as React.CSSProperties}
     >
       {navContent}
     </aside>

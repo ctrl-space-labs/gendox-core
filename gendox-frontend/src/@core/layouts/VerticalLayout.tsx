@@ -62,7 +62,7 @@ const VerticalLayout = (props: VerticalLayoutProps) => {
 
           <main
             className={cn(
-              "layout-page-content flex-grow w-full p-6 sm:px-4 transition-[padding] duration-250 ease-in-out",
+              "layout-page-content flex-grow w-full px-4 py-4 sm:px-6 sm:py-6 transition-[padding] duration-250 ease-in-out",
               contentWidth === "boxed" && "mx-auto max-w-[1440px] xl:max-w-full"
             )}
           >
