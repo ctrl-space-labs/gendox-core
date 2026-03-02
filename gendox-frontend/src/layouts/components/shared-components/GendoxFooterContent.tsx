@@ -7,7 +7,7 @@ const GendoxFooterContent = () => {
           href="https://www.ctrlspace.dev/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-primary hover:underline"
+          className="text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
         >
           Ctrl+Space Labs
         </a>
@@ -17,7 +17,7 @@ const GendoxFooterContent = () => {
           href="https://ctrl-space-labs.github.io/gendox-core"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-muted-foreground hover:text-foreground hover:underline"
+          className="text-muted-foreground hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
         >
           Documentation
         </a>
@@ -25,7 +25,7 @@ const GendoxFooterContent = () => {
           href="https://www.ctrlspace.dev/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-muted-foreground hover:text-foreground hover:underline"
+          className="text-muted-foreground hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
         >
           Support
         </a>
@@ -33,7 +33,7 @@ const GendoxFooterContent = () => {
           href="https://themeselection.com/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-muted-foreground hover:text-foreground hover:underline"
+          className="text-muted-foreground hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
         >
           ThemeSelection
         </a>

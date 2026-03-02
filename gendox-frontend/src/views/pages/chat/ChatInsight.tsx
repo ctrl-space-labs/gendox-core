@@ -93,7 +93,7 @@ const ChatInsight = ({
   }
 
   return (
-    <div className="shrink-0 bg-accent/50 border-l border-border rounded-r-md flex flex-col h-full w-[400px]">
+    <div className="shrink-0 bg-accent/50 border-l border-border rounded-r-md flex flex-col h-full w-[350px] lg:w-[400px]">
       {infoContent}
     </div>
   )

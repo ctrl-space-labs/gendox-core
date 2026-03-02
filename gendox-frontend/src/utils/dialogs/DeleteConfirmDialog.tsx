@@ -36,22 +36,17 @@ export const DeleteConfirmDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="relative">
         <DialogHeader>
           <DialogTitle className="text-primary">{title}</DialogTitle>
         </DialogHeader>
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center z-10">
-            <Spinner size="md" />
-          </div>
-        )}
         <DialogDescription
           className={cn("transition-all duration-300", isLoading && "blur-sm")}
         >
           {contentText}
         </DialogDescription>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isLoading}>
             {cancelButtonText}
           </Button>
           <Button
@@ -59,6 +54,7 @@ export const DeleteConfirmDialog = ({
             onClick={onConfirm}
             disabled={isLoading}
           >
+            {isLoading && <Spinner size="sm" className="mr-2" />}
             {confirmButtonText}
           </Button>
         </DialogFooter>

@@ -1,6 +1,6 @@
 import { X } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface InsightHeaderProps {
   closeInsightsToggle: () => void
@@ -20,42 +20,22 @@ const InsightHeader = ({
 
   return (
     <div className="h-[60px] shrink-0 border-b border-border flex items-center justify-center relative">
-      <div className="inline-flex items-center justify-center p-0.5 rounded-full bg-card">
-        {/* "Agent" tab */}
-        <Button
-          variant="outline"
-          size="sm"
-          className={cn(
-            "rounded-full mr-1 px-3 py-1 h-auto",
-            selectedChatInsightsTab === "Agent"
-              ? "border-primary text-primary"
-              : "border-muted-foreground text-muted-foreground"
-          )}
-          onClick={() => setSelectedChatInsightsTab("Agent")}
-        >
-          Agent
-        </Button>
-
-        {/* "Sources" tab */}
-        <Button
-          variant="outline"
-          size="sm"
-          className={cn(
-            "rounded-full px-3 py-1 h-auto",
-            selectedChatInsightsTab === "Sources"
-              ? "border-primary text-primary"
-              : "border-muted-foreground text-muted-foreground"
-          )}
-          onClick={() => setSelectedChatInsightsTab("Sources")}
-        >
-          {metadataCount} Sources
-        </Button>
-      </div>
+      <Tabs value={selectedChatInsightsTab} onValueChange={setSelectedChatInsightsTab}>
+        <TabsList className="rounded-full">
+          <TabsTrigger value="Agent" className="rounded-full">
+            Agent
+          </TabsTrigger>
+          <TabsTrigger value="Sources" className="rounded-full">
+            {metadataCount} Sources
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <Button
         variant="ghost"
         size="icon"
         className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7"
+        aria-label="Close insights panel"
         onClick={closeInsightsToggle}
       >
         <X className="h-4 w-4" />

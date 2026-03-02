@@ -29,7 +29,7 @@
   padding-block: 0.625rem;
   padding-inline: 1.25rem;
   /*background: linear-gradient(-45deg, #ffa63d, #ff3d77, #338aff, #3cf0c5);*/
-  background: linear-gradient(-45deg, #08B68D, #22D3A9);
+  background: linear-gradient(-45deg, hsl(var(--primary)), var(--gendox-primary-gradient));
   background-size: 600%;
   animation: anime 12s linear infinite;
 }

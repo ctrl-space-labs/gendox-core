@@ -85,7 +85,7 @@ const VerticalNavLink = ({
         className={cn(
           "w-full flex items-center rounded-[5px] py-2 px-3.5 pl-5 transition-opacity duration-250 ease-in-out text-foreground no-underline",
           active &&
-            "shadow-md bg-gradient-to-r from-[var(--gendox-primary-gradient)] to-primary text-white [&_*]:text-white",
+            "shadow-md bg-gradient-to-r from-[var(--gendox-primary-gradient)] to-primary text-primary-foreground [&_*]:text-primary-foreground",
           !active && "hover:bg-accent",
           item.disabled && "pointer-events-none"
         )}

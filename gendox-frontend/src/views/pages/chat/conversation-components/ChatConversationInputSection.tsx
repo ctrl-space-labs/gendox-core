@@ -83,7 +83,8 @@ const ChatInputSection = ({
           variant="ghost"
           size="icon"
           onClick={handleSend}
-          className={isSending ? "blur-sm" : ""}
+          disabled={isSending || !message.trim()}
+          aria-label="Send message"
         >
           <Send className="h-5 w-5" />
         </Button>

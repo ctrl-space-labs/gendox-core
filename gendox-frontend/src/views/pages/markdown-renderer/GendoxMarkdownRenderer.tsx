@@ -19,7 +19,7 @@ const GendoxMarkdownRenderer = ({
     classNameOverrides[tag] || defaultCn
 
   return (
-    <div className={cn("markdown-container", getCn("container"))}>
+    <div className={cn("markdown-container text-foreground", getCn("container"))}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, rehypeHighlight]}

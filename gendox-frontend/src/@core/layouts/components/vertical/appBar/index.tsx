@@ -14,7 +14,7 @@ const LayoutAppBar = (props: LayoutAppBarProps) => {
   const { contentWidth } = settings
 
   return (
-    <header className="layout-navbar flex items-center justify-center px-6 sm:px-4 bg-transparent text-foreground min-h-16">
+    <header className="layout-navbar flex items-center justify-center px-4 sm:px-6 bg-transparent text-foreground min-h-16">
       <div
         className={cn(
           "navbar-content-container w-full rounded-b-[10px] transition-all duration-250 ease-in-out",
