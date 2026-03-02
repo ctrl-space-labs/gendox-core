@@ -54,9 +54,9 @@ const GendoxHome = () => {
                   size="icon"
                   onClick={hasProject ? handleSettingsClick : undefined}
                   disabled={!hasProject}
-                  className="shrink-0"
+                  className="shrink-0 h-9 w-9"
                 >
-                  <Cog className="h-5 w-5" />
+                  <Cog className="h-6 w-6" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
