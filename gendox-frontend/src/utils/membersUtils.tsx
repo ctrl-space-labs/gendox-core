@@ -1,7 +1,6 @@
-import React, { useMemo } from "react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import React from "react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { generateIdenticon } from "@/utils/identiconUtil";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -79,19 +78,15 @@ const hashCode = (str: string): number => {
 export const renderClientAvatar = (user: RenderClientAvatarUser): React.ReactElement => {
   const uniqueValue = user.id ?? user.email ?? user.userName ?? "default";
   const colorIndex = Math.abs(hashCode(uniqueValue)) % colorOptions.length;
-  const { fg, bg, tailwind } = colorOptions[colorIndex];
+  const { tailwind } = colorOptions[colorIndex];
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const src = useMemo(
-    () => generateIdenticon(uniqueValue, fg, bg, Math.round(0.12 * 255)),
-    [uniqueValue, fg, bg]
-  );
+  const displayName = user.userName ?? user.email ?? "U";
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
     <Avatar className={cn("mr-3 h-8 w-8", tailwind)}>
-      <AvatarImage src={src} alt={uniqueValue} />
-      <AvatarFallback className={tailwind}>
-        {uniqueValue.charAt(0).toUpperCase()}
+      <AvatarFallback className={cn("text-xs font-semibold", tailwind)}>
+        {initial}
       </AvatarFallback>
     </Avatar>
   );

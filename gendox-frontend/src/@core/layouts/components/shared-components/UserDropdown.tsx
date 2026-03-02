@@ -1,7 +1,5 @@
-import { useState, useMemo } from "react"
 import { useRouter } from "next/router"
 import { User, Plus, Settings, LogOut } from "lucide-react"
-import { cn } from "@/lib/utils"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,9 +7,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { generateIdenticon } from "src/utils/identiconUtil"
 import { useAuth } from "src/authentication/useAuth"
 import { localStorageConstants } from "src/utils/generalConstants"
 
@@ -31,10 +28,12 @@ const UserDropdown = ({ settings }: UserDropdownProps) => {
     ) as string
   }
 
-  const identiconSrc = useMemo(
-    () => generateIdenticon(auth?.user?.id),
-    [auth?.user?.id]
-  )
+  const initials = auth?.user?.name
+    ?.split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "U"
 
   const handleNavigate = (url: string) => {
     router.push(url)
@@ -53,9 +52,8 @@ const UserDropdown = ({ settings }: UserDropdownProps) => {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" aria-label="User menu" className="relative ml-2 rounded-full h-10 w-10 p-0">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={identiconSrc} alt={auth.user?.name || "User"} />
-            <AvatarFallback>
-              {auth.user?.name?.charAt(0) || "U"}
+            <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+              {initials}
             </AvatarFallback>
           </Avatar>
           <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-success ring-2 ring-card" />
@@ -66,12 +64,8 @@ const UserDropdown = ({ settings }: UserDropdownProps) => {
           <>
             <div className="flex items-center gap-3 px-4 py-3">
               <Avatar className="h-10 w-10">
-                <AvatarImage
-                  src={identiconSrc}
-                  alt={auth.user.name}
-                />
-                <AvatarFallback>
-                  {auth.user.name?.charAt(0) || "U"}
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                  {initials}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">

@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
-import { Building2, Briefcase } from "lucide-react"
+import { Building2, Briefcase, User, Mail, Shield } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useAuth } from "src/authentication/useAuth"
-import { generateIdenticon } from "src/utils/identiconUtil"
 import userService from "src/gendox-sdk/userService"
 import { getErrorMessage } from "src/utils/errorHandler"
 import { useSettings } from "src/@core/context/settingsContext"
@@ -40,12 +39,14 @@ const ProfileCard = ({ userData }: ProfileCardProps) => {
       : null
   const { logout } = useAuth()
 
-  const identiconSrc = useMemo(
-    () => generateIdenticon(userData.id),
-    [userData.email]
-  )
-
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
+
+  const initials = userData.name
+    ?.split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "?"
 
   const handleLogout = () => {
     logout()
@@ -82,58 +83,71 @@ const ProfileCard = ({ userData }: ProfileCardProps) => {
     <Card>
       <CardContent className="pt-6">
         {/* Avatar and Name */}
-        <div className="flex flex-col items-center gap-1 p-8">
-          <Avatar className="w-[120px] h-[120px] rounded-md mb-4">
-            <AvatarImage src={identiconSrc} alt={userData.name} />
-            <AvatarFallback className="text-2xl rounded-md">
-              {userData.name?.charAt(0)}
+        <div className="flex flex-col items-center gap-2 py-6">
+          <Avatar className="h-20 w-20">
+            <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-semibold">
+              {initials}
             </AvatarFallback>
           </Avatar>
-          <h6 className="text-lg font-semibold mb-1">{userData.name}</h6>
-          <Badge variant="secondary">
-            {userData.role}
-          </Badge>
+          <h6 className="text-lg font-semibold">{userData.name}</h6>
+          <Badge variant="secondary">{userData.role}</Badge>
         </div>
 
         <Separator />
 
         {/* Stats */}
-        <div className="flex justify-center gap-6 py-4">
+        <div className="flex justify-center gap-8 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center h-10 w-10 rounded-md bg-primary/10 text-primary">
-              <Building2 className="h-5 w-5" />
+            <div className="flex items-center justify-center h-9 w-9 rounded-full bg-primary/10 text-primary">
+              <Building2 className="h-4 w-4" />
             </div>
             <div>
-              <p className="font-bold mt-1">{userData.organizations.length}</p>
-              <p className="text-sm text-muted-foreground">Organizations</p>
+              <p className="font-bold leading-tight">{userData.organizations.length}</p>
+              <p className="text-xs text-muted-foreground">Organizations</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center h-10 w-10 rounded-md bg-primary/10 text-primary">
-              <Briefcase className="h-5 w-5" />
+            <div className="flex items-center justify-center h-9 w-9 rounded-full bg-primary/10 text-primary">
+              <Briefcase className="h-4 w-4" />
             </div>
             <div>
-              <p className="font-bold mt-1">{totalProjects}</p>
-              <p className="text-sm text-muted-foreground">Projects</p>
+              <p className="font-bold leading-tight">{totalProjects}</p>
+              <p className="text-xs text-muted-foreground">Projects</p>
             </div>
           </div>
         </div>
+
+        <Separator />
 
         {/* Details */}
-        <div className="mt-3 py-8 space-y-1">
-          <p className="text-sm">
-            Username: <strong>{userData.userName}</strong>
-          </p>
-          <p className="text-sm">
-            Email: <strong>{userData.email}</strong>
-          </p>
-          <p className="text-sm">
-            Role: <strong>{userData.role}</strong>
-          </p>
+        <div className="py-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <User className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Username</p>
+              <p className="text-sm font-medium truncate">{userData.userName}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Email</p>
+              <p className="text-sm font-medium truncate">{userData.email}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Role</p>
+              <p className="text-sm font-medium">{userData.role}</p>
+            </div>
+          </div>
         </div>
 
+        <Separator />
+
         {/* Buttons */}
-        <div className="flex justify-center mt-4 gap-3">
+        <div className="flex justify-center pt-4 gap-3">
           <Tooltip>
             <TooltipTrigger asChild>
               <span>
