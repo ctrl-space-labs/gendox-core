@@ -503,224 +503,186 @@ const AiAgentProjectSettings = () => {
                 </TooltipProvider>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {/* Left column: numeric inputs, checkboxes, conditional selectors */}
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label>Max Tokens</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                          Tokens
-                        </span>
-                        <Input
-                          type="number"
-                          className="pl-16"
-                          {...register("maxToken", { valueAsNumber: true })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label>Temperature</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                          temp:
-                        </span>
-                        <Input
-                          type="number"
-                          className="pl-14"
-                          max={1}
-                          min={0}
-                          step={0.01}
-                          {...register("temperature", {
-                            valueAsNumber: true,
-                          })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label>Top p</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                          top P
-                        </span>
-                        <Input
-                          type="number"
-                          className="pl-14"
-                          max={1}
-                          min={0}
-                          step={0.01}
-                          {...register("topP", { valueAsNumber: true })}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Empty spacer cell */}
-                    <div />
-
-                    <div className="space-y-1.5">
-                      <Label>Max Search Limit</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                          sections:
-                        </span>
-                        <Input
-                          type="number"
-                          className="pl-20"
-                          {...register("maxSearchLimit", {
-                            valueAsNumber: true,
-                          })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label>Max Completion Limit</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                          sections:
-                        </span>
-                        <Input
-                          type="number"
-                          className="pl-20"
-                          {...register("maxCompletionLimit", {
-                            valueAsNumber: true,
-                          })}
-                        />
-                      </div>
-                      {errors.maxCompletionLimit && (
-                        <p className="text-xs text-destructive">
-                          {errors.maxCompletionLimit.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Moderation Check */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
-                    <div className="flex items-center space-x-2">
-                      <Controller
-                        name="moderationCheck"
-                        control={control}
-                        render={({ field }) => (
-                          <Checkbox
-                            id="moderationCheck"
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        )}
-                      />
-                      <Label htmlFor="moderationCheck" className="cursor-pointer">
-                        Moderation Check
-                      </Label>
-                    </div>
-
-                    {watch("moderationCheck") && (
-                      <Controller
-                        name="moderationModel"
-                        control={control}
-                        render={({ field }) => (
-                          <ModelSelectField
-                            label="Moderation Model"
-                            value={field.value}
-                            models={moderationModels}
-                            onValueChange={(val) =>
-                              setValue("moderationModel", val)
-                            }
-                          />
-                        )}
-                      />
-                    )}
-                  </div>
-
-                  {/* Advanced Search */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
-                    <div className="flex items-center space-x-2">
-                      <Controller
-                        name="advancedSearchEnable"
-                        control={control}
-                        render={({ field }) => (
-                          <Checkbox
-                            id="advancedSearchEnable"
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        )}
-                      />
-                      <Label
-                        htmlFor="advancedSearchEnable"
-                        className="cursor-pointer"
-                      >
-                        Advanced Search
-                      </Label>
-                    </div>
-
-                    {watch("advancedSearchEnable") && (
-                      <Controller
-                        name="advancedSearchModel"
-                        control={control}
-                        render={({ field }) => (
-                          <ModelSelectField
-                            label="Advanced Search Model"
-                            value={field.value}
-                            models={completionModels}
-                            onValueChange={(val) =>
-                              setValue("advancedSearchModel", val)
-                            }
-                          />
-                        )}
-                      />
-                    )}
-                  </div>
-
-                  {/* Rerank Search Results */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
-                    <div className="flex items-center space-x-2">
-                      <Controller
-                        name="rerankEnable"
-                        control={control}
-                        render={({ field }) => (
-                          <Checkbox
-                            id="rerankEnable"
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        )}
-                      />
-                      <Label htmlFor="rerankEnable" className="cursor-pointer">
-                        Rerank Search Results
-                      </Label>
-                    </div>
-
-                    {watch("rerankEnable") && (
-                      <Controller
-                        name="rerankModel"
-                        control={control}
-                        render={({ field }) => (
-                          <ModelSelectField
-                            label="Rerank Model"
-                            value={field.value}
-                            models={rerankModels}
-                            onValueChange={(val) =>
-                              setValue("rerankModel", val)
-                            }
-                          />
-                        )}
-                      />
-                    )}
-                  </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {/* Row 1 */}
+                <div className="space-y-1.5">
+                  <Label>Max Tokens</Label>
+                  <Input
+                    type="number"
+                    placeholder="500"
+                    {...register("maxToken", { valueAsNumber: true })}
+                  />
                 </div>
 
-                {/* Right column: Agent Behavior */}
                 <div className="space-y-1.5">
+                  <Label>Temperature</Label>
+                  <Input
+                    type="number"
+                    placeholder="0.8"
+                    max={1}
+                    min={0}
+                    step={0.01}
+                    {...register("temperature", { valueAsNumber: true })}
+                  />
+                </div>
+
+                {/* Agent Behavior spans 3 rows on the right */}
+                <div className="space-y-1.5 lg:row-span-3">
                   <Label>Agent Behavior</Label>
                   <Textarea
-                    rows={10}
                     {...register("agentBehavior")}
-                    className="min-h-[250px]"
+                    className="min-h-[200px] lg:min-h-[calc(100%-1.75rem)]"
                   />
+                </div>
+
+                {/* Row 2 */}
+                <div className="space-y-1.5">
+                  <Label>Top p</Label>
+                  <Input
+                    type="number"
+                    placeholder="0.4"
+                    max={1}
+                    min={0}
+                    step={0.01}
+                    {...register("topP", { valueAsNumber: true })}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Max Search Limit</Label>
+                  <Input
+                    type="number"
+                    placeholder="5"
+                    {...register("maxSearchLimit", { valueAsNumber: true })}
+                  />
+                </div>
+
+                {/* Row 3 */}
+                <div className="space-y-1.5">
+                  <Label>Max Completion Limit</Label>
+                  <Input
+                    type="number"
+                    placeholder="5"
+                    {...register("maxCompletionLimit", { valueAsNumber: true })}
+                  />
+                  {errors.maxCompletionLimit && (
+                    <p className="text-xs text-destructive">
+                      {errors.maxCompletionLimit.message}
+                    </p>
+                  )}
+                </div>
+
+                <div />
+              </div>
+
+              {/* Checkboxes with conditional model selectors */}
+              <div className="space-y-4 mt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                  <div className="flex items-center space-x-2 h-10">
+                    <Controller
+                      name="moderationCheck"
+                      control={control}
+                      render={({ field }) => (
+                        <Checkbox
+                          id="moderationCheck"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
+                    />
+                    <Label htmlFor="moderationCheck" className="cursor-pointer">
+                      Moderation Check
+                    </Label>
+                  </div>
+                  {watch("moderationCheck") && (
+                    <Controller
+                      name="moderationModel"
+                      control={control}
+                      render={({ field }) => (
+                        <ModelSelectField
+                          label="Moderation Model"
+                          value={field.value}
+                          models={moderationModels}
+                          onValueChange={(val) =>
+                            setValue("moderationModel", val)
+                          }
+                        />
+                      )}
+                    />
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                  <div className="flex items-center space-x-2 h-10">
+                    <Controller
+                      name="advancedSearchEnable"
+                      control={control}
+                      render={({ field }) => (
+                        <Checkbox
+                          id="advancedSearchEnable"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
+                    />
+                    <Label
+                      htmlFor="advancedSearchEnable"
+                      className="cursor-pointer"
+                    >
+                      Advanced Search
+                    </Label>
+                  </div>
+                  {watch("advancedSearchEnable") && (
+                    <Controller
+                      name="advancedSearchModel"
+                      control={control}
+                      render={({ field }) => (
+                        <ModelSelectField
+                          label="Advanced Search Model"
+                          value={field.value}
+                          models={completionModels}
+                          onValueChange={(val) =>
+                            setValue("advancedSearchModel", val)
+                          }
+                        />
+                      )}
+                    />
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                  <div className="flex items-center space-x-2 h-10">
+                    <Controller
+                      name="rerankEnable"
+                      control={control}
+                      render={({ field }) => (
+                        <Checkbox
+                          id="rerankEnable"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
+                    />
+                    <Label htmlFor="rerankEnable" className="cursor-pointer">
+                      Rerank Search Results
+                    </Label>
+                  </div>
+                  {watch("rerankEnable") && (
+                    <Controller
+                      name="rerankModel"
+                      control={control}
+                      render={({ field }) => (
+                        <ModelSelectField
+                          label="Rerank Model"
+                          value={field.value}
+                          models={rerankModels}
+                          onValueChange={(val) =>
+                            setValue("rerankModel", val)
+                          }
+                        />
+                      )}
+                    />
+                  )}
                 </div>
               </div>
 
