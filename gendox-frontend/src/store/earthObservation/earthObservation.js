@@ -28,6 +28,7 @@ const initialState = {
   mapLayerUrl: null,
   mapThumbnailUrl: null,
   mapCenter: null,
+  drawnGeometries: { type: 'GeometryCollection', geometries: [] },
   eoScripts: [],
   eoScriptsLoading: false,
   eoScriptsError: null,
@@ -142,6 +143,21 @@ const slice = createSlice({
     setMapThumbnail: (state, action) => {
       state.mapThumbnailUrl = action.payload
     },
+    addDrawnGeometry: (state, action) => {
+      state.drawnGeometries.geometries.push(action.payload)
+    },
+    removeDrawnGeometry: (state, action) => {
+      state.drawnGeometries.geometries.splice(action.payload, 1)
+    },
+    clearDrawnGeometries: state => {
+      state.drawnGeometries = { type: 'GeometryCollection', geometries: [] }
+    },
+    updateDrawnGeometry: (state, action) => {
+      const { index, geometry } = action.payload
+      if (state.drawnGeometries.geometries[index] !== undefined) {
+        state.drawnGeometries.geometries[index] = geometry
+      }
+    },
     setLatestEOScript: (state, action) => {
       state.latestEOScript = action.payload
     },
@@ -240,6 +256,10 @@ export const {
   setMapLayer,
   setMapData,
   setMapThumbnail,
+  addDrawnGeometry,
+  removeDrawnGeometry,
+  clearDrawnGeometries,
+  updateDrawnGeometry,
   setLatestEOScript,
   resetEOScriptState
 } = slice.actions
