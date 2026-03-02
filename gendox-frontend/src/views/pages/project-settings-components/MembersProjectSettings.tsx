@@ -4,9 +4,11 @@ import { MoreVertical, Shield, ShieldCheck, Pencil, BookOpen, HelpCircle } from 
 import { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 
+import { cn } from "@/lib/utils"
 import { Card, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,11 +43,11 @@ interface MemberRow {
 }
 
 const roleIconMap: Record<string, React.ReactNode> = {
-  ROLE_OWNER: <Shield className="h-4 w-4 mr-2 text-purple-600" />,
-  ROLE_ADMIN: <ShieldCheck className="h-4 w-4 mr-2 text-blue-600" />,
-  ROLE_EDITOR: <Pencil className="h-4 w-4 mr-2 text-orange-500" />,
-  ROLE_READER: <BookOpen className="h-4 w-4 mr-2 text-green-500" />,
-  UNKNOWN: <HelpCircle className="h-4 w-4 mr-2 text-red-500" />,
+  ROLE_OWNER: <Shield className="h-4 w-4 mr-2 text-primary" />,
+  ROLE_ADMIN: <ShieldCheck className="h-4 w-4 mr-2 text-primary" />,
+  ROLE_EDITOR: <Pencil className="h-4 w-4 mr-2 text-muted-foreground" />,
+  ROLE_READER: <BookOpen className="h-4 w-4 mr-2 text-muted-foreground" />,
+  UNKNOWN: <HelpCircle className="h-4 w-4 mr-2 text-destructive" />,
 }
 
 const userTypeBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -259,18 +261,15 @@ const MembersProjectSettings = () => {
       <CardHeader />
       <div className="relative">
         <div
-          className={`${
-            isMembersLoading || isDeletingMember ? "blur-sm" : ""
-          } transition-all duration-300`}
+          className={cn("transition-all duration-300", (isMembersLoading || isDeletingMember) && "blur-sm")}
         >
           <div className="px-4">
             <div className="mb-4">
-              <input
-                type="text"
+              <Input
                 placeholder="Search members..."
                 value={searchText}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="flex h-9 w-full max-w-sm rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="w-full max-w-sm"
               />
             </div>
             <DataTable

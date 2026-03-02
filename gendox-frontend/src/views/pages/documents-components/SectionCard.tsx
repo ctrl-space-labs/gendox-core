@@ -1,6 +1,7 @@
 import React, { forwardRef } from "react"
 import { useSelector } from "react-redux"
 import { Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 import GendoxMarkdownRenderer from "../markdown-renderer/GendoxMarkdownRenderer"
 
@@ -36,11 +37,10 @@ const SectionCard = forwardRef<HTMLDivElement, SectionCardProps>(
           <React.Fragment key={section.id || index}>
             <div
               ref={index === targetIndex ? ref : null}
-              className={`overflow-auto p-4 ${
-                section.id === highlightedSectionId
-                  ? "bg-accent"
-                  : "bg-transparent"
-              }`}
+              className={cn(
+                "overflow-auto p-4",
+                section.id === highlightedSectionId ? "bg-accent" : "bg-transparent"
+              )}
             >
               <h3 className="text-lg font-semibold mb-2 text-left text-primary">
                 {section.documentSectionMetadata.title === "Default Title"

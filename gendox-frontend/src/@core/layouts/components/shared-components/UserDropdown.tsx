@@ -51,7 +51,7 @@ const UserDropdown = ({ settings }: UserDropdownProps) => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative ml-2 rounded-full h-10 w-10 p-0">
+        <Button variant="ghost" size="icon" aria-label="User menu" className="relative ml-2 rounded-full h-10 w-10 p-0">
           <Avatar className="h-10 w-10">
             <AvatarImage src={identiconSrc} alt={auth.user?.name || "User"} />
             <AvatarFallback>

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react"
-import { MoreVertical, Pencil, Copy, Trash2 } from "lucide-react"
+import { MoreVertical, Pencil, Copy, Trash2, FileText } from "lucide-react"
 import { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -203,23 +204,18 @@ const TasksList = ({ projectTasks, page }: TasksListProps) => {
   return (
     <TooltipProvider>
       <Card
-        className={`relative ${
-          isDeleting ? "blur-sm" : ""
-        } transition-all duration-300`}
+        className={cn("relative transition-all duration-300", isDeleting && "blur-sm")}
       >
         {isDeleting && (
           <Progress value={100} className="absolute top-0 left-0 right-0 h-1" />
         )}
 
         {!projectTasks || projectTasks.length === 0 ? (
-          <div className="p-4 text-center text-muted-foreground">
-            <div className="text-5xl mb-2" role="img" aria-label="Empty inbox">
-              📭
-            </div>
-            <h6 className="text-base font-bold mb-1">No tasks here yet!</h6>
+          <div className="p-8 text-center text-muted-foreground">
+            <FileText className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
+            <h6 className="text-base font-semibold mb-1">No tasks yet</h6>
             <p className="text-sm">
-              Looks like you don&apos;t have any tasks yet. Why not create one
-              and get started? 🚀
+              Create your first task to get started.
             </p>
           </div>
         ) : (

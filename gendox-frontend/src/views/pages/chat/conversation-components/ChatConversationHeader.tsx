@@ -1,4 +1,5 @@
 import { Menu } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { AgentAvatar } from "src/views/pages/chat/utils/chatUtils"
 
@@ -20,9 +21,10 @@ const ChatConversationHeader = ({
 }: ChatConversationHeaderProps) => {
   return (
     <div
-      className={`p-4 flex items-center justify-between border-b border-border h-[60px] ${
-        isLoadingMessages ? "blur-sm" : ""
-      }`}
+      className={cn(
+        "p-4 flex items-center justify-between border-b border-border h-[60px]",
+        isLoadingMessages && "blur-sm"
+      )}
     >
       {/* Left group */}
       <div className="flex items-center">

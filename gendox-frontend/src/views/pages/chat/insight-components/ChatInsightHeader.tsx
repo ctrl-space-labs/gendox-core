@@ -1,6 +1,6 @@
 import { X } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 
 interface InsightHeaderProps {
   closeInsightsToggle: () => void
@@ -22,30 +22,34 @@ const InsightHeader = ({
     <div className="h-[60px] shrink-0 border-b border-border flex items-center justify-center relative">
       <div className="inline-flex items-center justify-center p-0.5 rounded-full bg-card">
         {/* "Agent" tab */}
-        <Badge
+        <Button
           variant="outline"
-          className={`cursor-pointer rounded-full mr-1 px-3 py-1 ${
+          size="sm"
+          className={cn(
+            "rounded-full mr-1 px-3 py-1 h-auto",
             selectedChatInsightsTab === "Agent"
               ? "border-primary text-primary"
               : "border-muted-foreground text-muted-foreground"
-          }`}
+          )}
           onClick={() => setSelectedChatInsightsTab("Agent")}
         >
           Agent
-        </Badge>
+        </Button>
 
         {/* "Sources" tab */}
-        <Badge
+        <Button
           variant="outline"
-          className={`cursor-pointer rounded-full px-3 py-1 ${
+          size="sm"
+          className={cn(
+            "rounded-full px-3 py-1 h-auto",
             selectedChatInsightsTab === "Sources"
               ? "border-primary text-primary"
               : "border-muted-foreground text-muted-foreground"
-          }`}
+          )}
           onClick={() => setSelectedChatInsightsTab("Sources")}
         >
           {metadataCount} Sources
-        </Badge>
+        </Button>
       </div>
 
       <Button

@@ -79,8 +79,9 @@ const ChatInsightSourcesContent = ({
     <TooltipProvider key={key}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
-            className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-accent/50 text-left"
+          <Button
+            variant="ghost"
+            className="w-full h-auto justify-start gap-3 p-2"
             onClick={() => handleSourceClick(sectionMetadata)}
           >
             <div className="h-5 w-5 rounded bg-primary/10 flex items-center justify-center shrink-0">
@@ -97,7 +98,7 @@ const ChatInsightSourcesContent = ({
             <div className="h-5 w-5 rounded bg-primary/10 flex items-center justify-center shrink-0">
               <ExternalLink className="h-3 w-3 text-primary" />
             </div>
-          </button>
+          </Button>
         </TooltipTrigger>
         <TooltipContent>
           <p>{sectionMetadata.sectionTitle}</p>

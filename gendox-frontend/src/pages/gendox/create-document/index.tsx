@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useRouter } from "next/router"
 import { ArrowLeft, Save, FileText, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 import {
   Card,
   CardContent,
@@ -99,9 +100,7 @@ const CreateDocument = () => {
         </CardHeader>
         <Separator />
         <CardContent
-          className={`pt-6 transition-all duration-300 ${
-            isCreatingDocument ? "blur-sm" : ""
-          }`}
+          className={cn("pt-6 transition-all duration-300", isCreatingDocument && "blur-sm")}
         >
           <NewDocument
             documentTitle={documentTitle}

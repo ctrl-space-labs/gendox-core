@@ -3,6 +3,7 @@ import { isValid, parseISO, format } from "date-fns"
 import { MoreVertical } from "lucide-react"
 import { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -188,7 +189,7 @@ const DocumentsList = ({ documents, page }: DocumentsListProps) => {
 
   return (
     <Card
-      className={`${isBlurring ? "blur-sm" : ""} transition-all duration-300`}
+      className={cn("transition-all duration-300", isBlurring && "blur-sm")}
     >
       <CardContent className="p-0">
         <DataTable

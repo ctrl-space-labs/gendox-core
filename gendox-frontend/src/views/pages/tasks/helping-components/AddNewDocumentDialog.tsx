@@ -222,15 +222,13 @@ const DocumentsAddNewDialog = ({
                       : "Unknown date"
                     return (
                       <React.Fragment key={doc.id}>
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
                           onClick={() => handleToggleSelect(doc)}
                           disabled={isDisabled}
                           className={cn(
-                            "flex w-full items-center justify-between px-4 py-3 text-left transition-colors duration-300",
-                            isDisabled
-                              ? "cursor-not-allowed opacity-50"
-                              : "cursor-pointer hover:bg-accent",
+                            "flex w-full h-auto items-center justify-between px-4 py-3 rounded-none",
+                            isDisabled && "opacity-50",
                             isSelected &&
                               !isDisabled &&
                               "bg-primary/10 text-primary"
@@ -259,12 +257,12 @@ const DocumentsAddNewDialog = ({
                               </span>
                             )}
                             {!isSupported && !isAlreadySelected && (
-                              <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                              <span className="text-xs text-muted-foreground">
                                 Unsupported format
                               </span>
                             )}
                           </div>
-                        </button>
+                        </Button>
                         {index < displayDocuments.length - 1 && (
                           <Separator />
                         )}

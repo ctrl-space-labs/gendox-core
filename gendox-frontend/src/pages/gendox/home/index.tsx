@@ -1,6 +1,7 @@
 import { useRouter } from "next/router"
 import { useSelector } from "react-redux"
 import { Cog } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -33,9 +34,7 @@ const GendoxHome = () => {
         <Card className="p-6">
           <div className="flex justify-between items-center">
             <div
-              className={`flex-grow ${
-                isBlurring ? "blur-sm" : ""
-              } transition-all duration-300`}
+              className={cn("flex-grow transition-all duration-300", isBlurring && "blur-sm")}
             >
               <h2 className="text-2xl font-semibold tracking-tight">
                 {hasProject

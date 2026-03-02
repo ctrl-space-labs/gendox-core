@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { cn } from '@/lib/utils'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'sonner'
@@ -209,7 +210,7 @@ const DocumentDigitizationTable = ({ selectedTask }: DocumentDigitizationTablePr
         />
 
         <div
-          className={`min-w-[800px] ${showLoader ? 'blur-sm' : ''} transition-all duration-300`}
+          className={cn("min-w-[800px] transition-all duration-300", showLoader && "blur-sm")}
         >
           <DocumentDigitizationGrid
             openDialog={openDialog}

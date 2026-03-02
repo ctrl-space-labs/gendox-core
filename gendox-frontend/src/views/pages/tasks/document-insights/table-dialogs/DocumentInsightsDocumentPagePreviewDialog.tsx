@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { cn } from '@/lib/utils'
 import {
   Dialog,
   DialogContent,
@@ -222,11 +223,12 @@ const DocumentPagePreviewDialog = ({
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent
-        className={`p-0 flex flex-col ${
+        className={cn(
+          "p-0 flex flex-col",
           fullscreen
-            ? 'fixed inset-0 w-screen h-screen max-w-none rounded-none translate-x-0 translate-y-0 left-0 top-0'
-            : 'sm:max-w-4xl h-[90vh]'
-        }`}
+            ? "fixed inset-0 w-screen h-screen max-w-none rounded-none translate-x-0 translate-y-0 left-0 top-0"
+            : "sm:max-w-4xl h-[90vh]"
+        )}
       >
         {/* AppBar / Toolbar */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background">
@@ -383,7 +385,7 @@ const DocumentPagePreviewDialog = ({
         <div className="flex-1 overflow-y-auto p-0">
           {/* BREAKING CHANGES WARNING */}
           {hasBreakingChanges && editMode && (
-            <div className="p-2 mx-4 mt-2 rounded border border-yellow-500 text-yellow-700 dark:text-yellow-400 flex items-center gap-2 bg-background">
+            <div className="p-2 mx-4 mt-2 rounded border border-destructive text-destructive flex items-center gap-2 bg-background">
               <AlertTriangle className="h-5 w-5 flex-shrink-0" />
               <p className="font-semibold text-sm">
                 You changed the question or supporting documents. All related answers will be deleted when you save.
@@ -536,9 +538,11 @@ const DocumentPagePreviewDialog = ({
                 <div className="border-t border-border p-4 bg-accent/30">
                   <div className="flex-1 overflow-auto relative">
                     <ResponsiveCardContent
-                      className={`bg-transparent py-6 px-4 ${
-                        fullscreen ? 'min-h-[calc(100vh-200px)]' : 'min-h-[50vh]'
-                      } ${isDocGenerating ? 'opacity-60 pointer-events-none' : ''} transition-opacity duration-300`}
+                      className={cn(
+                        "bg-transparent py-6 px-4 transition-opacity duration-300",
+                        fullscreen ? "min-h-[calc(100vh-200px)]" : "min-h-[50vh]",
+                        isDocGenerating && "opacity-60 pointer-events-none"
+                      )}
                     >
                       <DocumentTextComponent
                         sections={sections}

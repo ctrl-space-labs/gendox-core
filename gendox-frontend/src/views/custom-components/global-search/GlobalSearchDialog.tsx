@@ -12,9 +12,9 @@ import {
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Tooltip,
   TooltipContent,
@@ -268,30 +268,16 @@ const GlobalSearchDialog = ({
 
         {/* ---- Tab switcher ---- */}
         <div className="flex justify-end px-4 py-3">
-          <div className="inline-flex items-center gap-1 rounded-full bg-muted p-1">
-            <button
-              onClick={() => setActiveTab('agents')}
-              className={cn(
-                'rounded-full px-4 py-1 text-sm font-medium transition-colors',
-                activeTab === 'agents'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              Agents
-            </button>
-            <button
-              onClick={() => setActiveTab('documents')}
-              className={cn(
-                'rounded-full px-4 py-1 text-sm font-medium transition-colors',
-                activeTab === 'documents'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              Documents
-            </button>
-          </div>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ActiveTab)}>
+            <TabsList className="rounded-full">
+              <TabsTrigger value="agents" className="rounded-full">
+                Agents
+              </TabsTrigger>
+              <TabsTrigger value="documents" className="rounded-full">
+                Documents
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* ---- Results area ---- */}
@@ -302,14 +288,15 @@ const GlobalSearchDialog = ({
               {activeTab === 'agents' &&
                 (agentOptions.length > 0 ? (
                   agentOptions.map(option => (
-                    <button
+                    <Button
                       key={option.optionId}
+                      variant="ghost"
                       onClick={e => {
                         e.stopPropagation()
                         closeGlobalSearchDialog()
                         router.push(option.link)
                       }}
-                      className="w-full flex items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-accent transition-colors"
+                      className="w-full h-auto justify-start gap-3 rounded-md px-3 py-2"
                     >
                       <ItemAvatar>
                         <User className="h-3.5 w-3.5" />
@@ -338,7 +325,7 @@ const GlobalSearchDialog = ({
                           <TooltipContent>Chat with Agent</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                    </button>
+                    </Button>
                   ))
                 ) : (
                   <EmptyState
@@ -351,14 +338,15 @@ const GlobalSearchDialog = ({
               {/* Documents list */}
               {activeTab === 'documents' &&
                 projectDocumentOptions.map(option => (
-                  <button
+                  <Button
                     key={`${option.optionId}-${option.title}`}
+                    variant="ghost"
                     onClick={e => {
                       e.stopPropagation()
                       closeGlobalSearchDialog()
                       router.push(option.link)
                     }}
-                    className="w-full flex items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-accent transition-colors"
+                    className="w-full h-auto justify-start gap-3 rounded-md px-3 py-2"
                   >
                     <ItemAvatar>
                       <FileText className="h-3.5 w-3.5" />
@@ -387,7 +375,7 @@ const GlobalSearchDialog = ({
                         <TooltipContent>Access Document</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                  </button>
+                  </Button>
                 ))}
             </div>
           ) : null}

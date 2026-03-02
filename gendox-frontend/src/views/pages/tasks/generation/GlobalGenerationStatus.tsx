@@ -256,7 +256,7 @@ const GlobalGenerationStatus = ({
           <span className="flex-1 text-sm font-semibold">
             {getStatusText()}
             {showTimeoutDialog && (
-              <span className="ml-2 font-bold text-yellow-300">
+              <span className="ml-2 font-bold text-destructive">
                 <br /> This is taking too long. If it&apos;s not expected,
                 please contact the administrator.
               </span>

@@ -1,4 +1,5 @@
 import { useSelector } from "react-redux";
+import { cn } from "@/lib/utils";
 
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,9 +35,7 @@ const PlansGeneralOrganizationSettings = () => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
-                  className={`${
-                    isBlurring ? "blur-[6px]" : ""
-                  } transition-all duration-300`}
+                  className={cn("transition-all duration-300", isBlurring && "blur-[6px]")}
                 >
                   <Button
                     variant="outline"
@@ -55,9 +54,7 @@ const PlansGeneralOrganizationSettings = () => {
       </div>
 
       <CardContent
-        className={`${
-          isBlurring ? "blur-[6px]" : ""
-        } transition-all duration-300`}
+        className={cn("transition-all duration-300", isBlurring && "blur-[6px]")}
       >
         {organizationPlan ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

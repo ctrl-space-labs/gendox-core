@@ -11,7 +11,7 @@ import ChatInsightHeader from "./insight-components/ChatInsightHeader"
 import ChatInsightSourcesContent from "./insight-components/ChatInsightSourcesContent"
 import ChatInsightAgentContent from "./insight-components/ChatInsightsAgentContent"
 
-const rightDrawerWidth = 400
+// Chat insight panel width
 
 interface ChatInsightProps {
   mobileInfoOpen: boolean
@@ -93,10 +93,7 @@ const ChatInsight = ({
   }
 
   return (
-    <div
-      className="shrink-0 bg-accent/50 border-l border-border rounded-r-md flex flex-col h-full"
-      style={{ width: rightDrawerWidth }}
-    >
+    <div className="shrink-0 bg-accent/50 border-l border-border rounded-r-md flex flex-col h-full w-[400px]">
       {infoContent}
     </div>
   )

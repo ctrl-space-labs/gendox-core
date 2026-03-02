@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
   Tooltip,
   TooltipContent,
@@ -33,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 import { fetchAiModels } from "src/store/activeProjectAgent/activeProjectAgent"
 import { localStorageConstants } from "src/utils/generalConstants"
 import { sortModels } from "src/utils/sortModels"
@@ -212,36 +214,35 @@ const CreateTaskDialog = ({
           <Separator />
           <div className="space-y-4 py-2">
             {!editMode ? (
-              <div className="space-y-2">
+              <RadioGroup
+                value={task.taskType}
+                onValueChange={(value) => handleChange("taskType", value)}
+                className="space-y-2"
+              >
                 {TASK_OPTIONS.map((option) => (
-                  <div
+                  <Label
                     key={option.value}
-                    className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                    htmlFor={`task-type-${option.value}`}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
                       task.taskType === option.value
                         ? "border-primary border-2 bg-primary/10"
                         : "border-border hover:border-primary"
-                    }`}
-                    onClick={() => handleChange("taskType", option.value)}
+                    )}
                   >
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        checked={task.taskType === option.value}
-                        onChange={() =>
-                          handleChange("taskType", option.value)
-                        }
-                        className="accent-primary"
-                      />
-                      <div>
-                        <p className="font-medium">{option.label}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {option.description}
-                        </p>
-                      </div>
+                    <RadioGroupItem
+                      value={option.value}
+                      id={`task-type-${option.value}`}
+                    />
+                    <div>
+                      <p className="font-medium">{option.label}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {option.description}
+                      </p>
                     </div>
-                  </div>
+                  </Label>
                 ))}
-              </div>
+              </RadioGroup>
             ) : (
               <div className="border rounded-lg p-3 bg-card cursor-not-allowed select-none mt-2">
                 <p className="font-bold text-muted-foreground">
@@ -296,9 +297,10 @@ const CreateTaskDialog = ({
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="icon">
                     <ChevronDown
-                      className={`h-5 w-5 transition-transform duration-300 ${
-                        showAdvanced ? "rotate-180" : ""
-                      }`}
+                      className={cn(
+                        "h-5 w-5 transition-transform duration-300",
+                        showAdvanced && "rotate-180"
+                      )}
                     />
                   </Button>
                 </CollapsibleTrigger>
@@ -342,7 +344,7 @@ const CreateTaskDialog = ({
                               {model.aiModelProvider?.name}
                             </span>
                             {model.modelTierType?.name === "FREE_MODEL" && (
-                              <span className="ml-2 px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded">
+                              <span className="ml-2 px-1.5 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded">
                                 Free
                               </span>
                             )}

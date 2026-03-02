@@ -13,6 +13,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 import { useAuth } from "@/authentication/useAuth";
 import { DataTable } from "@/components/ui/data-table";
@@ -60,11 +61,11 @@ interface MemberRow {
 }
 
 const roleIconMap: Record<string, React.ReactNode> = {
-  ROLE_OWNER: <ShieldCheck className="h-4 w-4" />,
-  ROLE_ADMIN: <ShieldAlert className="h-4 w-4" />,
-  ROLE_EDITOR: <Pencil className="h-4 w-4" />,
-  ROLE_READER: <BookOpen className="h-4 w-4" />,
-  UNKNOWN: <HelpCircle className="h-4 w-4" />,
+  ROLE_OWNER: <ShieldCheck className="h-4 w-4 text-primary" />,
+  ROLE_ADMIN: <ShieldAlert className="h-4 w-4 text-primary" />,
+  ROLE_EDITOR: <Pencil className="h-4 w-4 text-muted-foreground" />,
+  ROLE_READER: <BookOpen className="h-4 w-4 text-muted-foreground" />,
+  UNKNOWN: <HelpCircle className="h-4 w-4 text-destructive" />,
 };
 
 const MembersOrganizationSettings = () => {
@@ -246,9 +247,7 @@ const MembersOrganizationSettings = () => {
           return (
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1 text-sm">
-                <span style={{ color: status.color }}>
-                  {roleIconMap[role] || roleIconMap.UNKNOWN}
-                </span>
+                {roleIconMap[role] || roleIconMap.UNKNOWN}
                 {status.title}
               </span>
 
@@ -279,10 +278,7 @@ const MembersOrganizationSettings = () => {
                                 handleChangeUserRole(row.original, roleKey)
                               }
                             >
-                              <span
-                                className="mr-2"
-                                style={{ color: roleStatus.color }}
-                              >
+                              <span className="mr-2">
                                 {roleIconMap[roleKey] || roleIconMap.UNKNOWN}
                               </span>
                               {roleStatus ? roleStatus.title : roleKey}
@@ -344,9 +340,7 @@ const MembersOrganizationSettings = () => {
 
   return (
     <Card
-      className={`pt-6 pb-6 ${
-        isFetchingMembers ? "blur-sm" : ""
-      } transition-all duration-300`}
+      className={cn("pt-6 pb-6 transition-all duration-300", isFetchingMembers && "blur-sm")}
     >
       {/* Search toolbar */}
       <div className="flex flex-wrap items-center justify-end gap-2 px-4 pb-4">

@@ -1,4 +1,5 @@
 import React from "react"
+import { cn } from "@/lib/utils"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeRaw from "rehype-raw"
@@ -18,7 +19,7 @@ const GendoxMarkdownRenderer = ({
     classNameOverrides[tag] || defaultCn
 
   return (
-    <div className={`markdown-container ${getCn("container")}`}>
+    <div className={cn("markdown-container", getCn("container"))}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, rehypeHighlight]}

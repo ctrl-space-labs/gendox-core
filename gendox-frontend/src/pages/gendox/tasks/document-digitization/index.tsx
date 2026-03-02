@@ -2,6 +2,7 @@ import { useEffect } from "react"
 import { useRouter } from "next/router"
 import { useSelector, useDispatch } from "react-redux"
 import { ArrowLeft, Info } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -53,9 +54,7 @@ const DocumentDigitization = () => {
       <Card className="bg-transparent shadow-none border-none">
         <ResponsiveCardContent className="bg-card">
           <div
-            className={`flex justify-between items-center ${
-              isLoading ? "blur-sm" : ""
-            } transition-all duration-300`}
+            className={cn("flex justify-between items-center transition-all duration-300", isLoading && "blur-sm")}
           >
             <div className="flex items-center">
               <h2 className="text-2xl font-semibold text-left">

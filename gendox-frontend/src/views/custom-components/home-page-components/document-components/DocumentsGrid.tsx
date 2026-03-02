@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { MoreVertical, FileText, ChevronUp, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -168,9 +169,7 @@ const DocumentsGrid = ({
   return (
     <TooltipProvider>
       <div
-        className={`grid grid-cols-12 gap-4 ${
-          isBlurring ? "blur-sm" : ""
-        } transition-all duration-300`}
+        className={cn("grid grid-cols-12 gap-4 transition-all duration-300", isBlurring && "blur-sm")}
       >
         {renderDocuments()}
         {documents.length > 3 && (

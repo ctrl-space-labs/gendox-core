@@ -33,6 +33,7 @@ const AppBarContent = ({
             variant="ghost"
             size="icon"
             onClick={toggleNavVisibility}
+            aria-label="Toggle navigation menu"
             className="-ml-2 sm:mr-3"
           >
             <Menu className="h-5 w-5" />

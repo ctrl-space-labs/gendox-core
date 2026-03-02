@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { cn } from '@/lib/utils'
 import {
   Dialog,
   DialogContent
@@ -427,7 +428,7 @@ const DocumentPagePreviewDialog = ({
       return (
         <div className="flex items-center justify-center min-h-[400px] flex-col gap-6 text-center px-8">
           {!isSupported ? (
-            <Ban className="h-20 w-20 text-gray-400" />
+            <Ban className="h-20 w-20 text-muted-foreground" />
           ) : (
             <FileText className="h-20 w-20 text-muted-foreground" />
           )}
@@ -440,7 +441,7 @@ const DocumentPagePreviewDialog = ({
                 document digitization. Supported formats include PDF, Word documents, PowerPoint presentations, and
                 Excel files.
               </p>
-              <p className="text-sm text-gray-600 font-medium">
+              <p className="text-sm text-muted-foreground font-medium">
                 Supported formats: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, ODT, RTF
               </p>
             </>
@@ -451,7 +452,7 @@ const DocumentPagePreviewDialog = ({
                 This document has a prompt configured but no answers have been generated yet. Use the generate function
                 to process this document and create answer nodes.
               </p>
-              <p className="text-sm text-green-500 font-medium">
+              <p className="text-sm text-primary font-medium">
                 Prompt is ready - Click &quot;Generate&quot; to process this document
               </p>
             </>
@@ -503,11 +504,12 @@ const DocumentPagePreviewDialog = ({
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent
-        className={`p-0 gap-0 flex flex-col ${
+        className={cn(
+          "p-0 gap-0 flex flex-col",
           fullscreen
-            ? 'w-screen h-screen max-w-none rounded-none'
-            : 'max-w-5xl h-[90vh]'
-        }`}
+            ? "w-screen h-screen max-w-none rounded-none"
+            : "max-w-5xl h-[90vh]"
+        )}
       >
         {/* Custom AppBar / Toolbar */}
         <div className="flex items-center px-4 py-2 border-b bg-background shrink-0">
@@ -522,7 +524,7 @@ const DocumentPagePreviewDialog = ({
 
           <div className="flex items-center gap-1">
             {pageNodes.length > 0 && (
-              <Badge variant="outline" className="mr-2 text-green-500 border-green-500">
+              <Badge variant="outline" className="mr-2 text-primary border-primary">
                 {(() => {
                   const numberOfNodePages = docPage?.numberOfNodePages || pageNodes.length
                   const documentPagesCount = docPage?.documentPages || 0
@@ -706,7 +708,7 @@ const DocumentPagePreviewDialog = ({
                           Prompt
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-xs h-6 text-yellow-500 border-yellow-500">
+                        <Badge variant="outline" className="text-xs h-6 text-muted-foreground border-muted-foreground">
                           No Prompt
                         </Badge>
                       ))}
@@ -714,7 +716,7 @@ const DocumentPagePreviewDialog = ({
                     {/* Generation Status */}
                     {isFileTypeSupported(currentDocument?.url || '') &&
                       (pageNodes.length > 0 ? (
-                        <Badge className="text-xs h-6 bg-green-500 text-white">
+                        <Badge className="text-xs h-6 bg-primary text-primary-foreground">
                           <CheckCircle className="h-3.5 w-3.5 mr-1" />
                           Generated
                         </Badge>
@@ -825,11 +827,11 @@ const DocumentPagePreviewDialog = ({
                           min={1}
                           max={totalPages}
                           disabled={!editMode || selectAllPages}
-                          className={`h-9 ${
-                            pageRangeError && pageFrom && pageFrom.trim() !== ''
-                              ? 'border-destructive'
-                              : ''
-                          } ${editMode ? 'bg-background' : 'bg-muted/50'}`}
+                          className={cn(
+                            "h-9",
+                            pageRangeError && pageFrom && pageFrom.trim() !== '' && "border-destructive",
+                            editMode ? "bg-background" : "bg-muted/50"
+                          )}
                         />
                         <span className="text-xs text-muted-foreground">From Page</span>
                       </div>
@@ -844,11 +846,11 @@ const DocumentPagePreviewDialog = ({
                           min={1}
                           max={totalPages}
                           disabled={!editMode || selectAllPages}
-                          className={`h-9 ${
-                            pageRangeError && pageTo && pageTo.trim() !== ''
-                              ? 'border-destructive'
-                              : ''
-                          } ${editMode ? 'bg-background' : 'bg-muted/50'}`}
+                          className={cn(
+                            "h-9",
+                            pageRangeError && pageTo && pageTo.trim() !== '' && "border-destructive",
+                            editMode ? "bg-background" : "bg-muted/50"
+                          )}
                         />
                         <span className="text-xs text-muted-foreground">To Page</span>
                       </div>
@@ -865,9 +867,11 @@ const DocumentPagePreviewDialog = ({
 
           <div className="flex-1 overflow-auto relative">
             <ResponsiveCardContent
-              className={`bg-muted/30 py-12 px-8 ${
-                fullscreen ? 'min-h-[calc(100vh-200px)]' : 'min-h-[50vh]'
-              } ${dialogLoading ? 'opacity-60 pointer-events-none' : ''} transition-opacity duration-300`}
+              className={cn(
+                "bg-muted/30 py-12 px-8 transition-opacity duration-300",
+                fullscreen ? "min-h-[calc(100vh-200px)]" : "min-h-[50vh]",
+                dialogLoading && "opacity-60 pointer-events-none"
+              )}
             >
               <SectionCardContent />
             </ResponsiveCardContent>

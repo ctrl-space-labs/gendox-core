@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import { generateIdenticon } from "@/utils/identiconUtil";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -88,7 +89,7 @@ export const renderClientAvatar = (user: RenderClientAvatarUser): React.ReactEle
   );
 
   return (
-    <Avatar className={`mr-3 h-8 w-8 ${tailwind}`}>
+    <Avatar className={cn("mr-3 h-8 w-8", tailwind)}>
       <AvatarImage src={src} alt={uniqueValue} />
       <AvatarFallback className={tailwind}>
         {uniqueValue.charAt(0).toUpperCase()}

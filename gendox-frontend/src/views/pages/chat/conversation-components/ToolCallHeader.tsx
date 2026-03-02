@@ -1,5 +1,7 @@
 import { useState } from "react"
-import { Wrench, ChevronDown } from "lucide-react"
+import { Wrench, ChevronDown, CornerDownRight } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import {
   Collapsible,
   CollapsibleContent,
@@ -34,25 +36,29 @@ const ToolCallHeader = ({ header, outputs }: ToolCallHeaderProps) => {
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="w-full mb-1">
       <CollapsibleTrigger asChild>
-        <button className="inline-flex items-center cursor-pointer border border-border border-l-4 border-l-primary rounded px-2 py-1 min-h-[32px] select-none">
-          <Wrench className="h-4 w-4 mr-1 text-primary" />
-          <span className="flex-1 text-sm leading-tight">
+        <Button
+          variant="outline"
+          className="justify-start border-l-4 border-l-primary px-2 py-1 min-h-[32px] h-auto"
+        >
+          <Wrench className="h-4 w-4 mr-1 text-primary shrink-0" />
+          <span className="flex-1 text-sm leading-tight text-left">
             calling {calls.map((c) => c.function.name).join(", ")}
           </span>
           <ChevronDown
-            className={`h-4 w-4 transition-transform duration-150 ${
-              open ? "rotate-180" : ""
-            }`}
+            className={cn(
+              "h-4 w-4 transition-transform duration-150 shrink-0",
+              open && "rotate-180"
+            )}
           />
-        </button>
+        </Button>
       </CollapsibleTrigger>
 
       <CollapsibleContent>
         <div className="mt-1 ml-4 border-l-2 border-border pl-2">
           {calls.map((call) => (
             <div key={call.id} className="mb-2">
-              <span className="block text-xs text-muted-foreground mb-0.5">
-                &#8627; args
+              <span className="flex items-center gap-1 text-xs text-muted-foreground mb-0.5">
+                <CornerDownRight className="h-3 w-3" /> args
               </span>
               <pre className="m-0 text-xs whitespace-pre-wrap break-all">
                 {JSON.stringify(call.function.arguments, null, 2)}

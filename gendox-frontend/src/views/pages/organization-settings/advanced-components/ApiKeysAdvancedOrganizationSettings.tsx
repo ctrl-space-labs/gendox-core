@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { useRouter } from "next/router";
 import { useSelector, useDispatch } from "react-redux";
 import { Info, Plus, Copy, Check, Pencil, Trash2 } from "lucide-react";
@@ -229,11 +230,10 @@ const ApiKeysAdvancedOrganizationSettings = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className={`h-8 w-8 ${
-                          copiedKeyId === item.id
-                            ? "text-primary"
-                            : ""
-                        }`}
+                        className={cn(
+                          "h-8 w-8",
+                          copiedKeyId === item.id && "text-primary"
+                        )}
                         onClick={() => handleCopy(item.id, item.apiKey)}
                       >
                         {copiedKeyId === item.id ? (

@@ -5,6 +5,12 @@ import { cn } from "@/lib/utils"
 import { useSettings } from "src/@core/context/settingsContext"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { handleURLQueries } from "src/@core/layouts/utils"
 import themeConfig from "src/configs/themeConfig"
 import UserIcon from "src/layouts/components/UserIcon"
@@ -81,7 +87,7 @@ const VerticalNavLink = ({
           active &&
             "shadow-md bg-gradient-to-r from-[var(--gendox-primary-gradient)] to-primary text-white [&_*]:text-white",
           !active && "hover:bg-accent",
-          item.disabled ? "pointer-events-none" : "cursor-pointer"
+          item.disabled && "pointer-events-none"
         )}
       >
         {IconTag && (
@@ -119,18 +125,26 @@ const VerticalNavLink = ({
           )}
 
           {onOpenMenu && (
-            <span
-              className="inline-flex"
-              onClick={(e) => {
-                e.stopPropagation()
-                e.preventDefault()
-                onOpenMenu(e, item)
-              }}
-            >
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    aria-label="More options"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      e.preventDefault()
+                      onOpenMenu(e, item)
+                    }}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>More options</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
         </div>
       </Link>

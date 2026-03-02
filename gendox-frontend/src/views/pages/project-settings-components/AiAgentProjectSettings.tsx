@@ -9,6 +9,7 @@ import {
   Braces,
   ArrowRight,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
@@ -18,6 +19,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Badge } from "@/components/ui/badge"
 import {
   Select,
@@ -89,7 +91,7 @@ interface FormValues {
 }
 
 const FreeBadge = () => (
-  <span className="ml-2 px-2 py-0.5 bg-teal-50 text-teal-800 font-semibold text-xs rounded-md">
+  <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary font-semibold text-xs rounded-md">
     Free
   </span>
 )
@@ -366,9 +368,7 @@ const AiAgentProjectSettings = () => {
       <CardHeader />
       <div className="relative">
         <div
-          className={`${
-            isLoading ? "blur-sm" : ""
-          } transition-all duration-300`}
+          className={cn("transition-all duration-300", isLoading && "blur-sm")}
         >
           <form onSubmit={handleSubmit(onSubmit)}>
             <CardContent className="space-y-5">
@@ -470,7 +470,7 @@ const AiAgentProjectSettings = () => {
                 Basic and Pro models require an API key for their providers.{" "}
                 <Link
                   href={`/gendox/organization-settings/?organizationId=${organizationId}&tab=advancedSettings`}
-                  className="text-blue-600 underline font-medium"
+                  className="text-primary underline font-medium"
                 >
                   Go to Advanced Settings
                 </Link>
@@ -771,16 +771,18 @@ const AiAgentProjectSettings = () => {
                           >
                             <Braces className="h-3.5 w-3.5" />
                             {toolSchemaObj.name}
-                            <button
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               type="button"
-                              className="ml-1 hover:text-destructive"
+                              className="ml-1 h-5 w-5 hover:text-destructive"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleDeleteTool(idx)
                               }}
                             >
                               <X className="h-3.5 w-3.5" />
-                            </button>
+                            </Button>
                           </Badge>
                         </TooltipTrigger>
                         <TooltipContent className="max-w-[300px] whitespace-pre-line">
@@ -897,29 +899,35 @@ const AiAgentProjectSettings = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="flex gap-4">
+                <RadioGroup
+                  value={watch("selected")}
+                  onValueChange={(value) => setValue("selected", value)}
+                  className="flex gap-4"
+                >
                   {AgentPrivate.map((item) => (
-                    <button
+                    <Label
                       key={item.value}
-                      type="button"
-                      className="flex items-center gap-2 cursor-pointer"
-                      onClick={() => setValue("selected", item.value)}
+                      htmlFor={`agent-privacy-${item.value}`}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                        watch("selected") === item.value
+                          ? "border-primary border-2 bg-primary/10"
+                          : "border-border hover:border-primary"
+                      )}
                     >
-                      <input
-                        type="radio"
-                        checked={watch("selected") === item.value}
-                        readOnly
-                        className="h-4 w-4 text-primary"
+                      <RadioGroupItem
+                        value={item.value}
+                        id={`agent-privacy-${item.value}`}
                       />
-                      <div className="ml-1">
+                      <div>
                         <p className="text-sm font-medium">{item.title}</p>
                         <p className="text-xs text-muted-foreground">
                           {item.content}
                         </p>
                       </div>
-                    </button>
+                    </Label>
                   ))}
-                </div>
+                </RadioGroup>
 
                 {provenAiEnabled && (
                   <div className="flex items-end">

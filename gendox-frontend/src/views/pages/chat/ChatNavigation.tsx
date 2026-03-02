@@ -10,7 +10,7 @@ import ChatAgents from "src/views/pages/chat/navigation-components/ChatAgents"
 import ChatThreads from "src/views/pages/chat/navigation-components/ChatThreads"
 import ChatNavigationSearch from "src/views/pages/chat/navigation-components/ChatNavigationSearch"
 
-const drawerWidth = 350
+// Chat sidebar width — keep in sync between mobile Sheet and desktop aside
 
 interface ChatNavigationProps {
   mobileOpen: boolean
@@ -78,7 +78,7 @@ const ChatNavigation = ({
   if (hidden) {
     return (
       <Sheet open={mobileOpen} onOpenChange={(isOpen) => !isOpen && onClose()}>
-        <SheetContent side="left" style={{ width: drawerWidth }} className="p-0">
+        <SheetContent side="left" className="p-0 w-[350px]">
           {sidebarContent}
         </SheetContent>
       </Sheet>
@@ -86,10 +86,7 @@ const ChatNavigation = ({
   }
 
   return (
-    <div
-      className="shrink-0 bg-card border-r border-border rounded-l-md"
-      style={{ width: drawerWidth }}
-    >
+    <div className="shrink-0 bg-card border-r border-border rounded-l-md w-[350px]">
       {sidebarContent}
     </div>
   )

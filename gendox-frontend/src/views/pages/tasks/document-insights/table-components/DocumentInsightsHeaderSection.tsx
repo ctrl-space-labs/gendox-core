@@ -306,7 +306,7 @@ const HeaderSection = ({
                               {isGenerating ? (
                                 <Spinner size="sm" />
                               ) : (
-                                <Rocket className="h-4 w-4 text-green-500" />
+                                <Rocket className="h-4 w-4 text-primary" />
                               )}
                               Generate All
                             </button>
@@ -323,7 +323,7 @@ const HeaderSection = ({
                             {isGenerating ? (
                               <Spinner size="sm" />
                             ) : (
-                              <Rocket className="h-4 w-4 text-green-500" />
+                              <Rocket className="h-4 w-4 text-primary" />
                             )}
                             Generate All
                           </button>

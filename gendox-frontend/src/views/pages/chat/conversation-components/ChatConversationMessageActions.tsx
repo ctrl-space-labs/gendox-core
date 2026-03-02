@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Copy, FileText, Globe } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -83,9 +84,7 @@ const MessageActions = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={`h-7 w-7 ${
-                    copyActive ? "text-primary" : ""
-                  }`}
+                  className={cn("h-7 w-7", copyActive && "text-primary")}
                   onClick={handleCopy}
                 >
                   <Copy className="h-3.5 w-3.5" />

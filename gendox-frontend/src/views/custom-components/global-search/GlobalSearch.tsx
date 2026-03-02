@@ -20,26 +20,27 @@ const GlobalSearch = ({ hidden, user }: GlobalSearchProps) => {
   }
 
   return (
-    <div
-      onClick={openGlobalSearchDialog}
-      className="flex cursor-pointer items-center"
-    >
-      <Button variant="ghost" size="icon" className="shrink-0">
+    <>
+      <Button
+        variant="ghost"
+        onClick={openGlobalSearchDialog}
+        aria-label="Global Search"
+        className="flex items-center gap-2 shrink-0"
+      >
         <Search className="h-5 w-5" />
+        {!hidden && (
+          <span className="text-muted-foreground text-sm select-none">
+            Global Search
+          </span>
+        )}
       </Button>
-
-      {!hidden && (
-        <span className="text-muted-foreground text-sm select-none">
-          Global Search
-        </span>
-      )}
 
       <GlobalSearchDialog
         globalSearchDialogOpen={globalSearchDialogOpen}
         closeGlobalSearchDialog={closeGlobalSearchDialog}
         user={user}
       />
-    </div>
+    </>
   )
 }
 

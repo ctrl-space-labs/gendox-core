@@ -103,7 +103,7 @@ const OrganizationsDropdown = ({ settings }: OrganizationsDropdownProps) => {
 
   return (
     <TooltipProvider>
-      <div className="flex items-center ml-2 cursor-pointer -space-x-2">
+      <div className="flex items-center ml-2 -space-x-2" role="group" aria-label="Organizations">
         {visibleOrganizations.map((organization: any) => (
           <Tooltip key={organization.id}>
             <TooltipTrigger asChild>
@@ -117,7 +117,7 @@ const OrganizationsDropdown = ({ settings }: OrganizationsDropdownProps) => {
                   className={cn(
                     "h-10 w-10 text-xs bg-primary text-primary-foreground border-2 border-card transition-transform hover:scale-110",
                     organization.id === activeOrganizationId &&
-                      "shadow-[0_0_8px_gold]"
+                      "ring-2 ring-primary ring-offset-2 ring-offset-background"
                   )}
                 >
                   <AvatarFallback className="bg-primary text-primary-foreground text-xs">
@@ -133,7 +133,7 @@ const OrganizationsDropdown = ({ settings }: OrganizationsDropdownProps) => {
         {overflowCount > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full p-0 h-10 w-10">
+              <Button variant="ghost" size="icon" aria-label={`${overflowCount} more organizations`} className="rounded-full p-0 h-10 w-10">
                 <Avatar className="h-10 w-10 text-xs bg-muted text-muted-foreground border-2 border-card">
                   <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                     +{overflowCount}

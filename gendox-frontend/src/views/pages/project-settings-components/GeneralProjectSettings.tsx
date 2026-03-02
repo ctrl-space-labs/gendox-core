@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from "react-redux"
 import { Brain, ArrowRight } from "lucide-react"
 import { toast } from "sonner"
 
+import { cn } from "@/lib/utils"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -163,11 +164,10 @@ const GeneralProjectSettings = () => {
       <CardHeader />
       <div className="relative">
         <div
-          className={`${
-            isDeletingProject || isUpdatingProject || isBlurring
-              ? "blur-sm"
-              : ""
-          } transition-all duration-300`}
+          className={cn(
+            "transition-all duration-300",
+            (isDeletingProject || isUpdatingProject || isBlurring) && "blur-sm"
+          )}
         >
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-5">

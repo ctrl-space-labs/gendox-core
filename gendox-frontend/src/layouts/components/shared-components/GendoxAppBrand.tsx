@@ -4,7 +4,7 @@ const GendoxAppBrand = () => {
   return (
     <Link
       href="/gendox/home"
-      className="no-underline flex items-center cursor-pointer p-5"
+      className="no-underline flex items-center p-5"
     >
       <img
         src="/images/gendoxLogo.svg"

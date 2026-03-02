@@ -3,6 +3,7 @@ import { useRouter } from "next/router"
 import { useDispatch, useSelector } from "react-redux"
 import { useAuth } from "src/authentication/useAuth"
 import { LayoutGrid, List, FileText } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -101,16 +102,12 @@ const Documents = () => {
   return (
     <TooltipProvider>
       <Card
-        className={`p-6 ${
-          isBlurring ? "blur-sm" : ""
-        } transition-all duration-300`}
+        className={cn("p-6 transition-all duration-300", isBlurring && "blur-sm")}
         aria-busy={isBlurring}
       >
         {/* Header */}
         <div
-          className={`flex justify-between items-center ${
-            documents.length ? "mb-4" : ""
-          }`}
+          className={cn("flex justify-between items-center", documents.length && "mb-4")}
         >
           <h3 className="text-lg font-semibold">Recent Documents</h3>
           {documents.length > 0 && (

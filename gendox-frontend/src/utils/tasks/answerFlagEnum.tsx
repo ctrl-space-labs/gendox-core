@@ -31,23 +31,23 @@ export interface AnswerFlagProps {
 export const answerFlagEnum = (flag: AnswerFlag | string, _theme?: unknown): React.ReactElement => {
   switch (flag) {
     case 'INFO':
-      return <Info size={16} className='text-blue-500' aria-label='Info' />
+      return <Info size={16} className='text-primary' aria-label='Info' />
     case 'OK':
-      return <CheckCircle size={16} className='text-green-500' aria-label='OK' />
+      return <CheckCircle size={16} className='text-primary' aria-label='OK' />
     case 'WARNING':
       return <AlertTriangle size={16} className='text-amber-500' aria-label='Warning' />
     case 'MINOR_ISSUE':
       return <AlertCircle size={16} className='text-amber-700' aria-label='Minor Issue' />
     case 'MAJOR_ISSUE':
-      return <AlertCircle size={16} className='text-red-500' aria-label='Major Issue' />
+      return <AlertCircle size={16} className='text-destructive' aria-label='Major Issue' />
     case 'CRITICAL_ISSUE':
-      return <AlertCircle size={16} className='text-red-500' aria-label='Critical Issue' />
+      return <AlertCircle size={16} className='text-destructive' aria-label='Critical Issue' />
     case 'NA':
-      return <HelpCircle size={16} className='text-gray-400' aria-label='N/A' />
+      return <HelpCircle size={16} className='text-muted-foreground' aria-label='N/A' />
     case '':
-      return <Info size={16} className='text-blue-500' aria-label='See details' />
+      return <Info size={16} className='text-primary' aria-label='See details' />
     default:
-      return <PlayCircle size={16} className='text-indigo-400' aria-label='Click Generate' />
+      return <PlayCircle size={16} className='text-muted-foreground' aria-label='Click Generate' />
   }
 }
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { cn } from '@/lib/utils'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { loadTaskInsightsData } from 'src/store/activeTaskNode/activeTaskNode'
@@ -224,7 +225,7 @@ const DocumentInsightsTable = ({ selectedTask }: DocumentInsightsTableProps) => 
         />
 
         <div
-          className={`min-w-[800px] ${isLoading ? 'blur-sm' : ''} transition-[filter] duration-300`}
+          className={cn("min-w-[800px] transition-[filter] duration-300", isLoading && "blur-sm")}
         >
           <DocumentInsightsGrid
             openDialog={openDialog}

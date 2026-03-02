@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import { cn } from "@/lib/utils"
 
 interface DeleteConfirmDialogProps {
   open: boolean
@@ -45,7 +46,7 @@ export const DeleteConfirmDialog = ({
           </div>
         )}
         <DialogDescription
-          className={`${isLoading ? "blur-sm" : ""} transition-all duration-300`}
+          className={cn("transition-all duration-300", isLoading && "blur-sm")}
         >
           {contentText}
         </DialogDescription>

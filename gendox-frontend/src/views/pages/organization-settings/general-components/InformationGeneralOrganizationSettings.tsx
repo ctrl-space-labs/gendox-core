@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
+import { cn } from "@/lib/utils";
 import { localStorageConstants } from "@/utils/generalConstants";
 import { CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -119,9 +120,7 @@ const InformationGeneralOrganizationSettings = () => {
       </div>
       <form onSubmit={handleSubmit}>
         <CardContent
-          className={`${
-            isBlurring ? "blur-[6px]" : ""
-          } transition-all duration-300`}
+          className={cn("transition-all duration-300", isBlurring && "blur-[6px]")}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-2">
@@ -190,9 +189,7 @@ const InformationGeneralOrganizationSettings = () => {
         </CardContent>
 
         <CardFooter
-          className={`justify-end gap-2 p-2 ${
-            isBlurring ? "blur-[6px]" : ""
-          } transition-all duration-300`}
+          className={cn("justify-end gap-2 p-2 transition-all duration-300", isBlurring && "blur-[6px]")}
         >
           <Button
             variant="outline"

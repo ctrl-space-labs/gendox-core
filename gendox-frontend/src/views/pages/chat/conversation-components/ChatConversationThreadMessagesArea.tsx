@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, Fragment } from "react"
 import { Loader2, MessageCircle } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import GendoxMarkdownRenderer from "src/views/pages/markdown-renderer/GendoxMarkdownRenderer"
 import MessageActions from "src/views/pages/chat/conversation-components/ChatConversationMessageActions"
@@ -142,30 +143,34 @@ const ThreadMessagesArea = ({
               return (
                 <Fragment key={index}>
                   <div
-                    className={`flex ${
+                    className={cn(
+                      "flex items-start",
                       isMyMessage ? "flex-row-reverse" : "flex-row"
-                    } items-start`}
+                    )}
                   >
                     <div
-                      className={`max-w-[90%] p-[0.6875rem] rounded-lg shadow ${
+                      className={cn(
+                        "max-w-[90%] p-[0.6875rem] rounded-lg shadow",
                         isMyMessage
                           ? "bg-primary text-primary-foreground"
                           : "bg-card text-card-foreground"
-                      }`}
+                      )}
                     >
                       <GendoxMarkdownRenderer
                         markdownText={message.message}
                         classNameOverrides={{
-                          container: `text-sm ${
+                          container: cn(
+                            "text-sm",
                             isMyMessage
                               ? "text-primary-foreground"
                               : "text-card-foreground"
-                          }`,
-                          p: `text-sm mb-0 ${
+                          ),
+                          p: cn(
+                            "text-sm mb-0",
                             isMyMessage
                               ? "text-primary-foreground"
                               : "text-card-foreground"
-                          }`,
+                          ),
                         }}
                       />
                     </div>

@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react'
+import { cn } from '@/lib/utils'
 import {
   ColumnDef,
   flexRender,
@@ -222,13 +223,14 @@ const DocumentDigitizationGrid = ({
 
           return (
             <div
-              className={`font-bold cursor-pointer w-full flex items-center py-1 gap-2 ${
+              className={cn(
+                "font-bold cursor-pointer w-full flex items-center py-1 gap-2",
                 isSelected
-                  ? 'text-primary'
+                  ? "text-primary"
                   : isGenerating
-                  ? 'text-blue-500'
-                  : 'text-foreground'
-              }`}
+                  ? "text-primary"
+                  : "text-foreground"
+              )}
               onClick={(e) => {
                 e.stopPropagation()
                 openDialog('pagePreview', row.original._doc)
@@ -325,7 +327,7 @@ const DocumentDigitizationGrid = ({
                   <span className="text-sm">
                     {numberOfNodePages === 1 ? '1 page' : `${numberOfNodePages} pages`}
                     {missingPages > 0 && (
-                      <span className="text-xs text-yellow-500 ml-1">
+                      <span className="text-xs text-muted-foreground ml-1">
                         ({missingPages} missing)
                       </span>
                     )}
@@ -437,9 +439,10 @@ const DocumentDigitizationGrid = ({
 
   return (
     <div
-      className={`relative w-full overflow-x-auto rounded transition-all duration-300 ${
-        isLoading ? 'blur-sm' : ''
-      }`}
+      className={cn(
+        "relative w-full overflow-x-auto rounded transition-all duration-300",
+        isLoading && "blur-sm"
+      )}
     >
       {isLoading && (
         <div className="absolute inset-0 z-10 flex justify-center items-center rounded">
@@ -469,9 +472,10 @@ const DocumentDigitizationGrid = ({
                 return (
                   <TableRow
                     key={row.id}
-                    className={`transition-all duration-200 ${
-                      isSelected ? 'bg-primary/5 hover:bg-primary/10' : ''
-                    }`}
+                    className={cn(
+                      "transition-all duration-200",
+                      isSelected && "bg-primary/5 hover:bg-primary/10"
+                    )}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="whitespace-normal leading-relaxed py-2">

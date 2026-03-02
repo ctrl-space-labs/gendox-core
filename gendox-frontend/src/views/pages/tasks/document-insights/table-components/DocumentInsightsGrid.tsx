@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react'
+import { cn } from '@/lib/utils'
 import {
   useReactTable,
   getCoreRowModel,
@@ -244,13 +245,14 @@ const DocumentInsightsGrid = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span
-                      className={`whitespace-nowrap overflow-hidden text-ellipsis flex-grow select-none ${
+                      className={cn(
+                        "whitespace-nowrap overflow-hidden text-ellipsis flex-grow select-none",
                         isSelected
-                          ? 'text-primary font-semibold'
+                          ? "text-primary font-semibold"
                           : row.original.documentId
-                          ? 'text-foreground font-normal'
-                          : 'text-primary font-semibold'
-                      }`}
+                          ? "text-foreground font-normal"
+                          : "text-primary font-semibold"
+                      )}
                     >
                       {row.original.name
                         ? <TruncatedText text={row.original.name} />
@@ -331,11 +333,10 @@ const DocumentInsightsGrid = ({
 
           return (
             <div
-              className={`w-full h-full px-2 py-1 text-sm bg-transparent cursor-${
-                isPageLoading ? 'default' : 'pointer'
-              } ${
-                isPageLoading ? 'opacity-50' : 'opacity-100'
-              } select-none rounded border border-transparent flex items-center gap-2 relative pr-8 group`}
+              className={cn(
+                "w-full h-full px-2 py-1 text-sm bg-transparent select-none rounded border border-transparent flex items-center gap-2 relative pr-8 group",
+                isPageLoading ? "cursor-default opacity-50" : "cursor-pointer opacity-100"
+              )}
               onClick={() => {
                 if (isPageLoading) return
 
@@ -433,9 +434,10 @@ const DocumentInsightsGrid = ({
 
   return (
     <div
-      className={`relative w-full overflow-x-auto rounded transition-[filter] duration-300 ${
-        isPageLoading ? 'blur-sm' : ''
-      }`}
+      className={cn(
+        "relative w-full overflow-x-auto rounded transition-[filter] duration-300",
+        isPageLoading && "blur-sm"
+      )}
       style={{ minHeight: 650 }}
     >
       {isPageLoading && (

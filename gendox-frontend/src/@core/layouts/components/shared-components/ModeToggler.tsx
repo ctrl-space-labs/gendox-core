@@ -22,7 +22,7 @@ const ModeToggler = ({ settings, saveSettings }: ModeTogglerProps) => {
       variant="ghost"
       size="icon"
       onClick={handleModeToggle}
-      aria-haspopup="true"
+      aria-label={`Switch to ${settings.mode === "light" ? "dark" : "light"} mode`}
     >
       {settings.mode === "dark" ? (
         <Sun className="h-5 w-5" />

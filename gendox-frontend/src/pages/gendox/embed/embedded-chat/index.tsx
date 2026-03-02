@@ -4,6 +4,7 @@ import { useSettings } from "src/@core/context/settingsContext"
 import BlankLayout from "src/@core/layouts/BlankLayout"
 import PoweredByGendox from "src/layouts/components/shared-components/PoweredByGendox"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { useIFrameMessageManager } from "src/authentication/context/IFrameMessageManagerContext"
 import GendoxChat from "src/views/pages/chat/GendoxChat"
 import { routeTypes } from "src/authentication/components/RouteHandler"
@@ -62,29 +63,28 @@ const EmbeddedChatPage = () => {
     <>
       {/* Bubble button to toggle chat window */}
       {!isOpen && (
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={toggleChatWindow}
-          className="fixed bottom-0 right-0 rounded-full z-[999] flex items-center justify-center cursor-pointer bg-transparent border-none"
+          aria-label="Open chat"
+          className="fixed bottom-0 right-0 rounded-full z-[999] h-12 w-12"
         >
           <img
             src="/images/gendoxLogo.svg"
             alt="Chat Icon"
-            className="w-full h-full rounded-full"
+            className="h-full w-full rounded-full"
           />
-        </button>
+        </Button>
       )}
 
       {/* Chat window */}
       <div
-        className={`flex flex-col h-screen w-screen fixed bottom-0 right-0 z-[1000] transition-transform duration-300 ease-in-out ${
+        className={cn(
+          "flex flex-col h-screen w-screen fixed bottom-0 right-0 z-[1000] transition-transform duration-300 ease-in-out bg-cover bg-center bg-no-repeat",
           isOpen ? "translate-y-0" : "translate-y-full"
-        }`}
-        style={{
-          backgroundImage,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-        }}
+        )}
+        style={{ backgroundImage }}
       >
         {/* "X" button to close the chat window */}
         {isOpen && (

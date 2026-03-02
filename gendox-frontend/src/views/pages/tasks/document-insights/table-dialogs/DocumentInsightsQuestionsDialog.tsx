@@ -338,7 +338,7 @@ const QuestionsDialog = ({
 
           {/* BREAKING CHANGES WARNING */}
           {hasBreakingChanges && isEditMode && (
-            <div className="mb-3 p-2 rounded border border-yellow-500 text-yellow-700 dark:text-yellow-400 flex items-center gap-2">
+            <div className="mb-3 p-2 rounded border border-destructive text-destructive flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 flex-shrink-0" />
               <p className="font-semibold text-sm">
                 You changed the question or supporting documents. All related answers will be deleted when you save.

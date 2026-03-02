@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner"
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd"
 
+import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -298,9 +299,7 @@ const DocumentSections = () => {
       <div className="space-y-6 py-6 px-4 sm:px-8">
         <Card className="p-6">
           <div
-            className={`flex justify-between items-center ${
-              isBlurring || isUpdatingOrder ? "blur-sm" : ""
-            } transition-all duration-300`}
+            className={cn("flex justify-between items-center transition-all duration-300", (isBlurring || isUpdatingOrder) && "blur-sm")}
           >
             <h2 className="text-2xl font-semibold tracking-tight">
               {document ? document.title : "No Selected Document"}
@@ -311,13 +310,11 @@ const DocumentSections = () => {
 
         {!editMode ? (
           <ResponsiveCardContent
-            className={`bg-accent/50 pt-3 pb-3 mb-6 ${
-              isBlurring || isUpdatingOrder ? "blur-sm" : ""
-            } transition-all duration-300 ${
-              sectionId === highlightedSectionId
-                ? "border-2 border-primary"
-                : ""
-            }`}
+            className={cn(
+              "bg-accent/50 pt-3 pb-3 mb-6 transition-all duration-300",
+              (isBlurring || isUpdatingOrder) && "blur-sm",
+              sectionId === highlightedSectionId && "border-2 border-primary"
+            )}
           >
             <SectionCard
               ref={sectionCardRef}
@@ -347,15 +344,13 @@ const DocumentSections = () => {
                               (sectionRefs.current[index] = el)
                           )}
                           {...provided.draggableProps}
-                          className={`mb-6 ${
+                          className={cn(
+                            "mb-6 transition-all duration-300",
                             section.id === highlightedSectionId
                               ? "bg-accent border-2 border-primary"
-                              : "bg-transparent"
-                          } ${
-                            isUpdatingOrder || isBlurring
-                              ? "blur-sm"
-                              : ""
-                          } transition-all duration-300`}
+                              : "bg-transparent",
+                            (isUpdatingOrder || isBlurring) && "blur-sm"
+                          )}
                         >
                           <div className="flex justify-between items-center">
                             <div className="flex-1" {...provided.dragHandleProps}>

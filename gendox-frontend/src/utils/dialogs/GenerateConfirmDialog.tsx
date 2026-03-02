@@ -1,4 +1,4 @@
-import { Rocket } from "lucide-react"
+import { Rocket, AlertTriangle, Info } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -105,14 +105,14 @@ export const GenerateConfirmDialog = ({
           <p className="text-sm text-muted-foreground">{description}</p>
 
           {showWarning && warning && (
-            <p className="text-sm font-medium text-destructive">
-              &#9888;&#65039; {warning}
+            <p className="text-sm font-medium text-destructive flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 shrink-0" /> {warning}
             </p>
           )}
 
           {!showWarning && info && (
-            <p className="text-sm font-medium text-blue-500">
-              &#8505;&#65039; {info}
+            <p className="text-sm font-medium text-primary flex items-center gap-1.5">
+              <Info className="h-4 w-4 shrink-0" /> {info}
             </p>
           )}
         </div>

@@ -5,6 +5,7 @@ import { useAuth } from "src/authentication/useAuth"
 import { Plus, Info } from "lucide-react"
 import { debounce } from "lodash"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -106,9 +107,7 @@ const Tasks = () => {
   return (
     <TooltipProvider>
       <Card
-        className={`p-6 ${
-          isLoading ? "blur-sm" : ""
-        } transition-all duration-300`}
+        className={cn("p-6 transition-all duration-300", isLoading && "blur-sm")}
         aria-busy={isLoading}
       >
         {/* Header */}

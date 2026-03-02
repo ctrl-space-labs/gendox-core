@@ -1,4 +1,5 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
 
 export const formatTimestamp = (timestamp: string) => {
   return new Date(timestamp).toLocaleString()
@@ -19,11 +20,10 @@ interface AgentAvatarProps {
 
 export const AgentAvatar = ({ fullName, isSelected }: AgentAvatarProps) => (
   <Avatar
-    className={`h-10 w-10 ${
-      isSelected
-        ? "bg-primary/20 text-primary"
-        : "bg-primary/10 text-primary"
-    }`}
+    className={cn(
+      "h-10 w-10",
+      isSelected ? "bg-primary/20 text-primary" : "bg-primary/10 text-primary"
+    )}
   >
     <AvatarFallback
       className={

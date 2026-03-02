@@ -4,6 +4,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
 interface TruncatedTextProps {
   text: string
@@ -37,7 +38,7 @@ const TruncatedText = ({
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className={`${cursor} ${className}`}>{displayText}</span>
+          <span className={cn(cursor, className)}>{displayText}</span>
         </TooltipTrigger>
         <TooltipContent side="top">{tooltipLimitedText}</TooltipContent>
       </Tooltip>

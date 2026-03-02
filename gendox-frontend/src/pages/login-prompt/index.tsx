@@ -64,10 +64,12 @@ const LoginPromptPage = () => {
               <p className="font-medium mb-1">Popup blocked</p>
               <p className="text-xs">
                 Please allow popups for this site, or{" "}
-                <a href="/login" className="underline inline-flex items-center gap-1">
-                  open the login page directly
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+                <Button variant="link" asChild className="h-auto p-0 text-xs text-destructive">
+                  <a href="/login" className="inline-flex items-center gap-1">
+                    open the login page directly
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </Button>
               </p>
             </div>
           )}
