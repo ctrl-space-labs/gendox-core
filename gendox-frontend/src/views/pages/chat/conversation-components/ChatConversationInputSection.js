@@ -93,6 +93,7 @@ const ChatInputSection = ({ auth, token, currentThread, organizationId, projectI
           documentId: item.uploadedDoc.documentId,
           organizationId,
           threadId: currentThread.threadId,
+          projectId,
           token
         })
       )

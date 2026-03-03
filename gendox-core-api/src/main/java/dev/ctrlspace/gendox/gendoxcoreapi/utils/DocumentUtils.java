@@ -75,10 +75,13 @@ public class DocumentUtils {
         return documentIsccCode;
     }
 
-    public String saveFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException {
+    public String saveFile(MultipartFile file, UUID organizationId, UUID projectId, String prefix) throws IOException {
         String fileName = file.getOriginalFilename();
         String cleanFileName = Paths.get(fileName).getFileName().toString();
         String filePathPrefix = organizationId + "/" + projectId;
+        if (prefix != null) {
+            filePathPrefix = filePathPrefix + "/" + prefix;
+        }
         String fullFilePath = uploadDir + "/" + filePathPrefix + "/" + cleanFileName;
 
         createLocalFileDirectory(filePathPrefix);

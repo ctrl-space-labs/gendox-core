@@ -137,7 +137,7 @@ public class IntegrationConfiguration {
                                 // handle uploaded files
                                 if (file.getMultipartFile() != null) {
                                     logger.debug("Uploading document: {} for project: {}", file.getMultipartFile().getName(), project.getId());
-                                    uploadService.uploadFile(file.getMultipartFile(), project.getOrganizationId(), project.getId(), false);
+                                    uploadService.uploadFile(file.getMultipartFile(), project.getOrganizationId(), project.getId());
                                     logger.debug("Uploaded document: {} successfully", file.getMultipartFile().getName());
                                 } else {  // handle external files that the content is not downloaded here
                                     logger.debug("Upserting extrernal document Instance: {} for project: {}", file.getExternalFile().getContentId(), project.getId());
@@ -152,7 +152,7 @@ public class IntegrationConfiguration {
                                             .documentIsccCode(documentUtils.getISCCCodeForApiIntegrationFile())
                                             .build();
 
-                                    uploadService.upsertDocumentInstance(project.getId(), documentInstanceDTO);
+                                    uploadService.upsertDocumentInstance(project.getId(), documentInstanceDTO, false, null);
                                     logger.debug("extrernal document uploaded document: {} successfully", file.getExternalFile().getContentId());
 
                                 }

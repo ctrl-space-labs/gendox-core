@@ -12,6 +12,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionOrderDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,7 @@ import java.util.*;
 @RestController
 public class DocumentController {
 
+    private final SecurityUtils securityUtils;
     Logger logger = LoggerFactory.getLogger(DocumentController.class);
 
     @Value("${gendox.documents.allowed.extensions}")
@@ -66,8 +68,8 @@ public class DocumentController {
                               DocumentOnlyConverter documentOnlyConverter,
                               QueueProducerService queueProducerService,
                               @Value("${gendox.topics.document-upload}") String documentUploadTopicName,
-                              @Value("${gendox.topics.attachment-upload}") String attachmentUploadTopicName
-    ) {
+                              @Value("${gendox.topics.attachment-upload}") String attachmentUploadTopicName,
+                              SecurityUtils securityUtils) {
         this.documentService = documentService;
         this.documentInstanceConverter = documentInstanceConverter;
         this.uploadService = uploadService;
@@ -78,6 +80,7 @@ public class DocumentController {
         this.queueProducerService = queueProducerService;
         this.documentUploadTopicName = documentUploadTopicName;
         this.attachmentUploadTopicName = attachmentUploadTopicName;
+        this.securityUtils = securityUtils;
     }
 
 
@@ -291,21 +294,6 @@ public class DocumentController {
     }
 
 
-    @PreAuthorize("(@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromDocumentIdPathVariable') || " +
-            "@securityUtils.isPublicThread(#threadId))")
-    @DeleteMapping("/organizations/{organizationId}/threads/{threadId}/documents/{documentId}/chat-documents")
-    @Operation(
-            summary = "Delete a chat thread document by ID",
-            description = "Delete an existing chat thread document by specifying its unique ID. " +
-                    "This operation permanently removes the document and its associated sections and metadata from the chat thread."
-    )
-    public void deleteChatThreadDocument(@PathVariable UUID organizationId,
-                                         @PathVariable UUID threadId,
-                                         @PathVariable UUID documentId) throws GendoxException {
-        documentService.deleteDocument(documentId, organizationId);
-    }
-
-
     @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
             "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable') " +
             "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedDocumentIdsFromRequestParams')")
@@ -352,7 +340,7 @@ public class DocumentController {
 
         List<DocumentInstance> uploadedDocumentInstances = new ArrayList<>();
         for (MultipartFile file : files) {
-            DocumentInstance uploaded = uploadService.uploadFile(file, organizationId, projectId, false);
+            DocumentInstance uploaded = uploadService.uploadFile(file, organizationId, projectId);
             uploadedDocumentInstances.add(uploaded);
         }
 
@@ -375,6 +363,7 @@ public class DocumentController {
             description = "Upload a single file and return the created or updated DocumentInstance.")
     public ResponseEntity<DocumentInstance> uploadSingleFile(@RequestParam("file") MultipartFile file,
                                                              @RequestParam(value = "messageAttachment", required = false, defaultValue = "false") boolean messageAttachment,
+                                                             @RequestParam(value = "threadId", required = false ) UUID threadId,
                                                              @PathVariable UUID organizationId,
                                                              @PathVariable UUID projectId)
             throws IOException, GendoxException, JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
@@ -384,7 +373,8 @@ public class DocumentController {
             return ResponseEntity.badRequest().build();
         }
 
-        DocumentInstance documentInstance = uploadService.uploadFile(file, organizationId, projectId, messageAttachment);
+        UUID userId = securityUtils.getUserId();
+        DocumentInstance documentInstance = uploadService.uploadFile(file, organizationId, projectId, messageAttachment, userId, threadId);
 
         DocumentCriteria documentCriteria = DocumentCriteria
                 .builder()

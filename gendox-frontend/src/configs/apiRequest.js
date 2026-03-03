@@ -68,9 +68,6 @@ export default {
   documentInstance: (organizationId, projectId, documentId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}`,
 
-  removeChatDocument: (organizationId, threadId, documentId) =>
-    `${url}organizations/${organizationId}/threads/${threadId}/documents/${documentId}/chat-documents`,
-
   documentSection: (documentId, sectionId) => `${url}documents/${documentId}/sections/${sectionId}`,
 
   getDocumentById: documentId => `${url}documents/${documentId}`,

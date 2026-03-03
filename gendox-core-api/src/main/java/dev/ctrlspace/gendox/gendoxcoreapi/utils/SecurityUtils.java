@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadDocumentsRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageLocalContextService;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
 @Component("securityUtils")
 public class SecurityUtils {
 
+    private final ChatThreadDocumentsRepository chatThreadDocumentsRepository;
     Logger logger = org.slf4j.LoggerFactory.getLogger(SecurityUtils.class);
 
     private ChatThreadRepository chatThreadRepository;
@@ -49,13 +51,14 @@ public class SecurityUtils {
                          ProjectAgentService projectAgentService,
                          DocumentInstanceRepository documentInstanceRepository,
                          UserOrganizationService userOrganizationService,
-                         MessageLocalContextService messageLocalContextService
-    ) {
+                         MessageLocalContextService messageLocalContextService,
+                         ChatThreadDocumentsRepository chatThreadDocumentsRepository) {
         this.chatThreadRepository = chatThreadRepository;
         this.projectAgentService = projectAgentService;
         this.documentInstanceRepository = documentInstanceRepository;
         this.userOrganizationService = userOrganizationService;
         this.messageLocalContextService = messageLocalContextService;
+        this.chatThreadDocumentsRepository = chatThreadDocumentsRepository;
     }
 
 
@@ -212,9 +215,25 @@ public class SecurityUtils {
                 .map(project -> UUID.fromString(project.getId()))
                 .collect(Collectors.toSet());
 
-        return documentInstanceRepository.areAllDocumentIdsInAnyProject(
+        boolean areAllInProjectDocuments = documentInstanceRepository.areAllDocumentIdsInAnyProject(
                 documentIds.toArray(UUID[]::new),
                 authorizedProjectIds.toArray(UUID[]::new));
+        if (areAllInProjectDocuments) {
+            return true;
+        }
+
+        boolean areAllInChatDocuments = chatThreadDocumentsRepository.areAllDocumentIdsInAnyProject(documentIds.toArray(UUID[]::new),
+                authorizedProjectIds.toArray(UUID[]::new));
+
+        if (areAllInChatDocuments) {
+            return true;
+        }
+        // missing the case that some are in project documents and some in chat documents,
+        // but it is not intended to be used like that, for now :)
+        // if needed, it can be done with one query in the future
+
+        return false;
+
     }
 
 

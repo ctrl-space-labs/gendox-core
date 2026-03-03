@@ -55,9 +55,9 @@ export const uploadQueuedAttachments = createAsyncThunk(
 
 export const deleteUploadedAttachment = createAsyncThunk(
   'chatAttachments/deleteUploadedAttachment',
-  async ({ attachmentId, documentId, organizationId, threadId, token }, { rejectWithValue }) => {
+  async ({ attachmentId, documentId, organizationId, projectId, token }, { rejectWithValue }) => {
     try {
-      await documentService.deleteChatDocument(organizationId, threadId, documentId, token)
+      await documentService.deleteDocument(organizationId, projectId, documentId, token)
       return { attachmentId }
     } catch (e) {
       return rejectWithValue({ attachmentId, error: e?.message || 'Delete failed' })
