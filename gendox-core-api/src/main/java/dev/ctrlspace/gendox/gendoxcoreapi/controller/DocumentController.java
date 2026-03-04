@@ -12,7 +12,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionOrderDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +40,6 @@ import java.util.*;
 @RestController
 public class DocumentController {
 
-    private final SecurityUtils securityUtils;
     Logger logger = LoggerFactory.getLogger(DocumentController.class);
 
     @Value("${gendox.documents.allowed.extensions}")
@@ -55,8 +53,8 @@ public class DocumentController {
     private DocumentSectionService documentSectionService;
     private DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter;
     private QueueProducerService queueProducerService;
+
     private final String documentUploadTopicName;
-    private final String attachmentUploadTopicName;
 
 
     @Autowired
@@ -68,9 +66,7 @@ public class DocumentController {
                               DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter,
                               DocumentOnlyConverter documentOnlyConverter,
                               QueueProducerService queueProducerService,
-                              @Value("${gendox.topics.document-upload}") String documentUploadTopicName,
-                              @Value("${gendox.topics.attachment-upload}") String attachmentUploadTopicName,
-                              SecurityUtils securityUtils) {
+                              @Value("${gendox.topics.document-upload}") String documentUploadTopicName) {
         this.documentService = documentService;
         this.documentInstanceConverter = documentInstanceConverter;
         this.uploadService = uploadService;
@@ -80,8 +76,6 @@ public class DocumentController {
         this.documentOnlyConverter = documentOnlyConverter;
         this.queueProducerService = queueProducerService;
         this.documentUploadTopicName = documentUploadTopicName;
-        this.attachmentUploadTopicName = attachmentUploadTopicName;
-        this.securityUtils = securityUtils;
     }
 
 
@@ -374,23 +368,7 @@ public class DocumentController {
             return ResponseEntity.badRequest().build();
         }
 
-        UUID userId = securityUtils.getUserId();
-        DocumentInstance documentInstance = uploadService.uploadFile(file, organizationId, projectId, messageAttachment, userId, threadId);
-
-        DocumentCriteria.DocumentCriteriaBuilder documentCriteriaBuilder = DocumentCriteria
-                .builder()
-                .documentInstanceId(String.valueOf(documentInstance.getId()))
-                .projectId(projectId.toString());
-
-        if (messageAttachment)  {
-            // split inline
-            // files uploaded for messages need to synchronously be split ASAP, so the content is available for message completion
-            // also chat thread documents are not part of the knowledge base, so they don't get selected by the split and training jobs
-            documentSectionService.splitDocumentAndCreateSections(documentInstance, true);
-        } else {
-            // queue for splitting and training
-            queueProducerService.convertAndSend(documentUploadTopicName, documentCriteriaBuilder.build(), Map.of());
-        }
+        DocumentInstance documentInstance = documentService.uploadSingleFile(file, messageAttachment, threadId, organizationId, projectId);
 
         return ResponseEntity.ok(documentInstance);
     }

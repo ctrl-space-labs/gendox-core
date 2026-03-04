@@ -23,6 +23,8 @@ public interface DocumentInstanceRepository extends JpaRepository<DocumentInstan
             "WHERE dis.id = :sectionId")
     String findRemoteUrlBySectionId(@Param("sectionId") UUID sectionId);
 
+    Optional<DocumentInstance> findByOrganizationIdAndRemoteUrl(UUID organizationId, String remoteUrl);
+
 
     @Query(nativeQuery = true, value = "SELECT di.* " +
             "FROM gendox_core.document_instance di " +

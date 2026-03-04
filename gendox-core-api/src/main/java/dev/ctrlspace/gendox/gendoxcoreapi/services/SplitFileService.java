@@ -9,6 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,7 +29,7 @@ public class SplitFileService {
 
 
     @Autowired
-    public SplitFileService(DocumentService documentService,
+    public SplitFileService(@Lazy DocumentService documentService,
                             DownloadService downloadService,
                             ProjectAgentService projectAgentService,
                             ServiceSelector serviceSelector) {

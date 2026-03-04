@@ -58,7 +58,7 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
     @Override
     public SectionEmbeddingDTO process(DocumentInstanceSection item) throws Exception {
         logger.debug("Start processing section: {}", item.getId());
-        ProjectAgent projectAgent = projectAgentService.getAgentByDocumentId(item.getId());
+        ProjectAgent projectAgent = projectAgentService.getAgentByDocumentId(item.getDocumentInstance().getId());
         EmbeddingResponse embeddingResponse;
         String sectionSha256Hash;
 

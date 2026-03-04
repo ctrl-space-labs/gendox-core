@@ -11,6 +11,7 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,7 +34,7 @@ public class UploadService {
 
 
     @Autowired
-    public UploadService(DocumentService documentService,
+    public UploadService(@Lazy DocumentService documentService,
                          ProjectDocumentService projectDocumentService,
                          TypeService typeService,
                          AuditLogsService auditLogsService,
@@ -99,9 +100,8 @@ public class UploadService {
 
 
     public DocumentInstance upsertDocumentInstance(UUID projectId, DocumentInstanceDTO documentInstanceDTO, Boolean isMessageAttachment, @Nullable UUID threadId) throws GendoxException, IOException {
-        String documentNameByRemoteUrl = documentUtils.extractDocumentNameFromUrl(documentInstanceDTO.getRemoteUrl());
         DocumentInstance existingInstance =
-                documentService.getDocumentByFileName(projectId, documentInstanceDTO.getOrganizationId(), documentNameByRemoteUrl);
+                documentService.getDocumentByRemoteUrl(documentInstanceDTO.getOrganizationId(), documentInstanceDTO.getRemoteUrl());
 
         if (existingInstance == null) {
             return createNewDocumentInstance(projectId, documentInstanceDTO, isMessageAttachment, threadId);

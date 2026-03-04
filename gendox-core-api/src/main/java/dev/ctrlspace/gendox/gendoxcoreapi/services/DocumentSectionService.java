@@ -74,7 +74,7 @@ public class DocumentSectionService {
                                   Encoding gpt4oEncoding,
                                   CryptographyUtils cryptographyUtils,
                                   SplitFileService splitFileService,
-                                  DocumentService documentService,
+                                  @Lazy DocumentService documentService,
                                   AuditLogsService auditLogsService
     ) {
         this.typeService = typeService;
@@ -421,7 +421,7 @@ public class DocumentSectionService {
         String fileContent = downloadService.readDocumentContent(documentInstance.getRemoteUrl());
 
         if (changeCheckFlag) {
-            boolean hasChanged = documentUtils.hasChanged(documentInstance.getDocumentSha256Hash(), fileContent);
+            boolean hasChanged = documentUtils.hasChanged(fileContent, documentInstance.getDocumentSha256Hash());
             if (!hasChanged) {
                 logger.trace("Document {} has not changed since last split. Skipping section creation.", documentInstance.getId());
                 return this.getSectionsByDocument(documentInstance.getId());
