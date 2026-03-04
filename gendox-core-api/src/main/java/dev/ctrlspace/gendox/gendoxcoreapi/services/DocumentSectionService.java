@@ -418,7 +418,16 @@ public class DocumentSectionService {
     @Transactional(rollbackOn = Exception.class)
     public List<DocumentInstanceSection> splitDocumentAndCreateSections(DocumentInstance documentInstance, boolean changeCheckFlag) throws GendoxException, IOException, NoSuchAlgorithmException {
 
-        String fileContent = downloadService.readDocumentContent(documentInstance.getRemoteUrl());
+        String fileContent;
+        try {
+            fileContent = downloadService.readDocumentContent(documentInstance.getRemoteUrl());
+        } catch (GendoxException e) {
+            if ("ERROR_IMAGE_FILE_TYPE".equals(e.getErrorCode())) {
+                fileContent = ""; // For image files, no sections will be created
+            } else {
+                throw e;
+            }
+        }
 
         if (changeCheckFlag) {
             boolean hasChanged = documentUtils.hasChanged(fileContent, documentInstance.getDocumentSha256Hash());
@@ -432,6 +441,7 @@ public class DocumentSectionService {
         logger.debug("Creating {} sections for document instance {}", contentSections.size(), documentInstance.getId());
 
         int totalTokens = gpt4oEncoding.countTokens(fileContent);
+        // TODO in case of image files, the hash is always for the "" string, not the actual file content.
         String contentSHA256 = cryptographyUtils.calculateSHA256(fileContent);
         
         documentInstance.setTotalTokens((long)totalTokens);

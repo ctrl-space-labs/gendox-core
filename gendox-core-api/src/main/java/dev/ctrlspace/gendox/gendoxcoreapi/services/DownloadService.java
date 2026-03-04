@@ -45,10 +45,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Stream;
 
 @Service
@@ -191,6 +188,8 @@ public class DownloadService {
             return readDocContent(resource);
         } else if (isXlsFile(fileExtension) || isXlsxFile(fileExtension)) {
             return readExcelContent(resource);
+        } else if (isImageFile(fileExtension)) {
+            throw new GendoxException("ERROR_IMAGE_FILE_TYPE", "File type " + fileExtension + " is an image and cannot be converted to text.", HttpStatus.UNSUPPORTED_MEDIA_TYPE );
         } else {
             throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Unsupported file type: " + fileExtension, HttpStatus.BAD_REQUEST);
         }
@@ -447,8 +446,13 @@ public class DownloadService {
     }
 
     private boolean isXlsxFile(String extension) {
-
         return ".xlsx".equals(extension);
-
     }
+
+    private boolean isImageFile(String extension) {
+        return Set.of( ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".avif", ".heic", ".heif", ".jxl", ".ico", ".svg" )
+                .contains(extension);
+    }
+
+
 }
