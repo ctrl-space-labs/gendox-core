@@ -1,7 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
 
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.DownloadService;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import javax.imageio.IIOImage;
@@ -16,12 +21,28 @@ import java.awt.image.Kernel;
 import java.awt.image.RescaleOp;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Base64;
 
 @Component
 public class ImageUtils {
 
 
+    private final DownloadService downloadService;
+
+    public ImageUtils(@Lazy DownloadService downloadService) {
+        this.downloadService = downloadService;
+    }
+
+    /**
+     *  For OCR preprocessing
+     *  Converts a jpeg to a base64 string with a data URI prefix, applying the specified quality (0.0 to 1.0).
+     *
+     * @param src
+     * @param quality
+     * @return
+     * @throws IOException
+     */
     public String toBase64Jpeg(BufferedImage src, float quality) throws IOException {
 
 
@@ -38,6 +59,16 @@ public class ImageUtils {
             writer.dispose();
         }
         return "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(baos.toByteArray());
+    }
+
+    public String toBase64(Resource resource, String fileExtension) throws IOException, GendoxException {
+
+        try (InputStream in = resource.getInputStream()) {
+            byte[] imageBytes = in.readAllBytes();
+            String base64 = Base64.getEncoder().encodeToString(imageBytes);
+            String mimeType = getImageMimeType(fileExtension);
+            return "data:" + mimeType + ";base64," + base64;
+        }
     }
 
     public BufferedImage scaleToMaxSide(BufferedImage src, int maxSide) {
@@ -107,4 +138,29 @@ public class ImageUtils {
         ConvolveOp sharpen = new ConvolveOp(new Kernel(3, 3, sharpKernel), ConvolveOp.EDGE_NO_OP, null);
         return sharpen.filter(contrasted, null);
     }
+
+
+    private String getImageMimeType(String extension) throws GendoxException {
+        return switch (extension.toLowerCase()) {
+            case ".jpg", ".jpeg" -> "image/jpeg";
+            case ".png" -> "image/png";
+            case ".gif" -> "image/gif";
+            case ".bmp" -> "image/bmp";
+            case ".tif", ".tiff" -> "image/tiff";
+            case ".webp" -> "image/webp";
+            case ".avif" -> "image/avif";
+            case ".heic" -> "image/heic";
+            case ".heif" -> "image/heif";
+            case ".svg" -> "image/svg+xml";
+            case ".ico" -> "image/x-icon";
+            default -> throw new GendoxException(
+                    "ERROR_UNSUPPORTED_IMAGE_FILE_TYPE",
+                    "Unsupported image file type: " + extension,
+                    HttpStatus.UNSUPPORTED_MEDIA_TYPE
+            );
+        };
+    }
+
+
+
 }

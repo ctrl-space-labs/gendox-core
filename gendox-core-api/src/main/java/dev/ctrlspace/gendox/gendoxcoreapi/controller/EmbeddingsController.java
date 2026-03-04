@@ -6,12 +6,14 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRequestDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService;
 import io.micrometer.observation.annotation.Observed;
 import jakarta.servlet.http.HttpServletRequest;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,10 +28,7 @@ import io.swagger.v3.oas.annotations.Operation;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 public class EmbeddingsController {
@@ -59,8 +58,7 @@ public class EmbeddingsController {
                                 SubscriptionValidationService subscriptionValidationService,
                                 ProjectService projectService,
                                 MessageLocalContextConverter messageLocalContextConverter,
-                                MessageLocalContextService messageLocalContextService
-    ) {
+                                MessageLocalContextService messageLocalContextService) {
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
         this.completionService = completionService;
@@ -194,6 +192,9 @@ public class EmbeddingsController {
         );
         message.setLocalContexts(contexts);
         Message savedMessage = messageService.createMessage(message);
+
+        List<ContentPart> attachedImages = messageLocalContextService.getImageContentPartsFromLocalContext(message);
+        savedMessage.setAdditionalResources(attachedImages);
 
         return completionService.getCompletionSearch(savedMessage, project);
     }

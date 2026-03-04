@@ -4,11 +4,13 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageLocalContext;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageAttachmentDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageAttachmentsResponseDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.MessageLocalContextRepository;
 import jakarta.transaction.Transactional;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -20,12 +22,14 @@ import java.util.stream.Collectors;
 public class MessageLocalContextService {
     private final DocumentInstanceRepository documentInstanceRepository;
     private final MessageLocalContextRepository messageLocalContextRepository;
+    private final DownloadService downloadService;
 
     @Autowired
     public MessageLocalContextService(DocumentInstanceRepository documentInstanceRepository,
-                                      MessageLocalContextRepository messageLocalContextRepository) {
+                                      MessageLocalContextRepository messageLocalContextRepository, DownloadService downloadService) {
         this.documentInstanceRepository = documentInstanceRepository;
         this.messageLocalContextRepository = messageLocalContextRepository;
+        this.downloadService = downloadService;
     }
 
     /**
@@ -151,4 +155,32 @@ public class MessageLocalContextService {
     }
 
 
+    public @NotNull List<ContentPart> getImageContentPartsFromLocalContext(Message message) {
+        List<ContentPart> attachedImages = message.getLocalContexts().stream()
+                .filter(c -> "ATTACHED_DOCUMENT".equals(c.getContextTypeName()))
+                .map(c -> c.getDocument())
+                .filter(Objects::nonNull)
+                .filter(d -> {
+                    try {
+                        return downloadService.isImageFile(downloadService.getFileExtension(d.getRemoteUrl(), null));
+                    } catch (GendoxException e) {
+                        return false;
+                    }
+                })
+                .map(d -> {
+                    try {
+                        return ContentPart.builder()
+                                .type("image_url")
+                                .imageUrl(ContentPart.ImageInput.builder()
+                                        .url(downloadService.readDocumentImageToBase64(d.getRemoteUrl()))
+                                        .build())
+                                .build();
+                    } catch (Exception e) {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        return attachedImages;
+    }
 }

@@ -196,6 +196,22 @@ public class DownloadService {
 
     }
 
+    public String readDocumentImageToBase64(String documentUrl) throws GendoxException, IOException {
+        Resource resource = openResource(documentUrl);
+
+        String fileExtension = getFileExtension(documentUrl, resource);
+
+        if (!isImageFile(fileExtension)) {
+            throw new GendoxException(
+                    "ERROR_NOT_IMAGE_FILE_TYPE",
+                    "File type " + fileExtension + " is not an image and cannot be converted to Base64.",
+                    HttpStatus.UNSUPPORTED_MEDIA_TYPE
+            );
+        }
+
+        return imageUtils.toBase64(resource, fileExtension);
+    }
+
     /**
      * It "prints" the document pages to Base64-encoded JPEG images.
      *
@@ -263,7 +279,7 @@ public class DownloadService {
     }
 
 
-    private @NotNull String getFileExtension(String documentUrl, Resource resource) throws GendoxException {
+    public @NotNull String getFileExtension(String documentUrl, Resource resource) throws GendoxException {
         String fileExtension = getFileExtension(documentUrl);
         if (fileExtension == null) {
             fileExtension = getFileExtension(resource.getFilename());
@@ -449,7 +465,7 @@ public class DownloadService {
         return ".xlsx".equals(extension);
     }
 
-    private boolean isImageFile(String extension) {
+    public boolean isImageFile(String extension) {
         return Set.of( ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".avif", ".heic", ".heif", ".jxl", ".ico", ".svg" )
                 .contains(extension);
     }
