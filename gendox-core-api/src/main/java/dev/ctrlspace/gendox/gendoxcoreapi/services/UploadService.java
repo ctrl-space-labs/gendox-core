@@ -3,33 +3,16 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.AuditLogs;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectDocument;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
-import dev.ctrlspace.gendox.provenAi.utils.MockUniqueIdentifierServiceAdapter;
-import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
-import dev.ctrlspace.provenai.iscc.IsccCodeResponse;
-import dev.ctrlspace.provenai.iscc.IsccCodeService;
 import jakarta.annotation.Nullable;
-import org.jetbrains.annotations.NotNull;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.io.WritableResource;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDate;
-
 
 import java.io.*;
 import java.util.UUID;
@@ -84,7 +67,7 @@ public class UploadService {
      * @throws IOException
      * @throws GendoxException
      */
-    @Transactional
+    @Transactional(rollbackOn = Exception.class)
     public DocumentInstance uploadFile(MultipartFile file, UUID organizationId, UUID projectId, Boolean messageAttachment,
                                        @Nullable UUID userId,
                                        @Nullable UUID threadId) throws IOException, GendoxException {

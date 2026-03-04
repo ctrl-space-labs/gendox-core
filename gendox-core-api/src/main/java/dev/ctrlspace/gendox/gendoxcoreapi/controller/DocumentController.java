@@ -35,6 +35,7 @@ import io.swagger.v3.oas.annotations.Operation;
 
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 @RestController
@@ -366,7 +367,7 @@ public class DocumentController {
                                                              @RequestParam(value = "threadId", required = false ) UUID threadId,
                                                              @PathVariable UUID organizationId,
                                                              @PathVariable UUID projectId)
-            throws IOException, GendoxException, JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
+            throws IOException, GendoxException, JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, NoSuchAlgorithmException {
 
 
         if (file.isEmpty()) {
@@ -376,17 +377,21 @@ public class DocumentController {
         UUID userId = securityUtils.getUserId();
         DocumentInstance documentInstance = uploadService.uploadFile(file, organizationId, projectId, messageAttachment, userId, threadId);
 
-        DocumentCriteria documentCriteria = DocumentCriteria
+        DocumentCriteria.DocumentCriteriaBuilder documentCriteriaBuilder = DocumentCriteria
                 .builder()
                 .documentInstanceId(String.valueOf(documentInstance.getId()))
-                .projectId(messageAttachment ? null : projectId.toString())
-                .build();
+                .projectId(projectId.toString());
 
-        if (messageAttachment) {
-            queueProducerService.convertAndSend(attachmentUploadTopicName, documentCriteria, Map.of());
+        if (messageAttachment)  {
+            // split inline
+            // files uploaded for messages need to synchronously be split ASAP, so the content is available for message completion
+            // also chat thread documents are not part of the knowledge base, so they don't get selected by the split and training jobs
+            documentSectionService.splitDocumentAndCreateSections(documentInstance, true);
         } else {
-            queueProducerService.convertAndSend(documentUploadTopicName, documentCriteria, Map.of());
+            // queue for splitting and training
+            queueProducerService.convertAndSend(documentUploadTopicName, documentCriteriaBuilder.build(), Map.of());
         }
+
         return ResponseEntity.ok(documentInstance);
     }
 

@@ -104,11 +104,6 @@ public class GendoxCoreApiApplication {
         return objectMapper;
     }
 
-    @Bean
-    public EncodingRegistry encodingRegistry() {
-        return Encodings.newDefaultEncodingRegistry();
-    }
-
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private abstract class IgnoreHibernatePropertiesInJackson{ }
 

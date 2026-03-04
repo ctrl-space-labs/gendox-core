@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import com.knuddels.jtokkit.api.Encoding;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionOrderDTO;
@@ -7,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSe
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentSectionMetadataRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentInstanceSectionPredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.provenAi.utils.MockUniqueIdentifierServiceAdapter;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
@@ -24,8 +26,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class DocumentSectionService {
@@ -44,6 +47,12 @@ public class DocumentSectionService {
 
     @Value("${proven-ai.sdk.iscc.enabled}")
     private Boolean isccEnabled;
+    private DownloadService downloadService;
+    private Encoding gpt4oEncoding;
+    private CryptographyUtils cryptographyUtils;
+    private SplitFileService splitFileService;
+    private DocumentService documentService;
+    private AuditLogsService auditLogsService;
 
 
     @Lazy
@@ -60,7 +69,13 @@ public class DocumentSectionService {
                                   MessageService messageService,
                                   IsccCodeService isccCodeService,
                                   DocumentUtils documentUtils,
-                                  EntityManager entityManager
+                                  EntityManager entityManager,
+                                  DownloadService downloadService,
+                                  Encoding gpt4oEncoding,
+                                  CryptographyUtils cryptographyUtils,
+                                  SplitFileService splitFileService,
+                                  DocumentService documentService,
+                                  AuditLogsService auditLogsService
     ) {
         this.typeService = typeService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
@@ -70,6 +85,12 @@ public class DocumentSectionService {
         this.isccCodeService = isccCodeService;
         this.documentUtils = documentUtils;
         this.entityManager = entityManager;
+        this.downloadService = downloadService;
+        this.gpt4oEncoding = gpt4oEncoding;
+        this.cryptographyUtils = cryptographyUtils;
+        this.splitFileService = splitFileService;
+        this.documentService = documentService;
+        this.auditLogsService = auditLogsService;
     }
 
 
@@ -379,4 +400,52 @@ public class DocumentSectionService {
     public void deleteMetadata(DocumentSectionMetadata metadata) throws GendoxException {
         documentSectionMetadataRepository.delete(metadata);
     }
+
+
+    /**
+     *  End-to-End split of document:
+     *  * Read document content
+     *  * Check if has changed since last split (by comparing document hash)
+     *  * If changed, split document into sections
+     *  * calculate new hash, total tokens and update document instance
+     *  * Create Sections
+     *
+     * @param documentInstance
+     * @param changeCheckFlag flag to enable checking if the document has changed since last split.
+     * @return
+     * @throws GendoxException
+     */
+    @Transactional(rollbackOn = Exception.class)
+    public List<DocumentInstanceSection> splitDocumentAndCreateSections(DocumentInstance documentInstance, boolean changeCheckFlag) throws GendoxException, IOException, NoSuchAlgorithmException {
+
+        String fileContent = downloadService.readDocumentContent(documentInstance.getRemoteUrl());
+
+        if (changeCheckFlag) {
+            boolean hasChanged = documentUtils.hasChanged(documentInstance.getDocumentSha256Hash(), fileContent);
+            if (!hasChanged) {
+                logger.trace("Document {} has not changed since last split. Skipping section creation.", documentInstance.getId());
+                return this.getSectionsByDocument(documentInstance.getId());
+            }
+        }
+
+        List<String> contentSections = splitFileService.splitDocument(documentInstance, fileContent);
+        logger.debug("Creating {} sections for document instance {}", contentSections.size(), documentInstance.getId());
+
+        int totalTokens = gpt4oEncoding.countTokens(fileContent);
+        String contentSHA256 = cryptographyUtils.calculateSHA256(fileContent);
+        
+        documentInstance.setTotalTokens((long)totalTokens);
+        documentInstance.setDocumentSha256Hash(contentSHA256);
+        documentInstance = documentService.saveDocumentInstance(documentInstance);
+
+        List<DocumentInstanceSection> documentSections =
+                this.createSections(documentInstance, contentSections);
+
+        auditLogsService.createAuditLog(documentInstance.getOrganizationId(),
+                null,"CREATE_DOCUMENT_SECTIONS", (long) documentSections.size());
+
+        
+        return documentSections;
+    }
+
 }

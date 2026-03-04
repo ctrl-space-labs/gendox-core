@@ -91,12 +91,6 @@ public class TaskSchedulingConfig {
                 500,
                 splitterAndTrainingBatchService::runSplitterAndTrainingForBatchOfFiles);
 
-        queueConsumerService.pollTopicOnce(
-                attachmentUploadTopicName,
-                500,
-                splitterAndTrainingBatchService::runSplitterAndTrainingForBatchOfFiles
-        );
-
     }
 
 

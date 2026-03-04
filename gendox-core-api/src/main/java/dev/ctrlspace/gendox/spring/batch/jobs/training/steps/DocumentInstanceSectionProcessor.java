@@ -8,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Template;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.EmbeddingTemplateAuthor;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Component;
 @Component
 @StepScope
 public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentInstanceSection, SectionEmbeddingDTO> {
+    private final ProjectAgentService projectAgentService;
     Logger logger = LoggerFactory.getLogger(DocumentInstanceSectionProcessor.class);
 
     private EmbeddingService embeddingService;
@@ -43,20 +45,20 @@ public class DocumentInstanceSectionProcessor implements ItemProcessor<DocumentI
                                             ProjectAgentRepository projectAgentRepository,
                                             TemplateRepository templateRepository,
                                             CryptographyUtils cryptographyUtils,
-                                            DocumentUtils documentUtils) {
+                                            DocumentUtils documentUtils, ProjectAgentService projectAgentService) {
         this.embeddingService = embeddingService;
         this.projectAgentRepository = projectAgentRepository;
         this.templateRepository = templateRepository;
         this.cryptographyUtils = cryptographyUtils;
         this.documentUtils = documentUtils;
+        this.projectAgentService = projectAgentService;
     }
 
 
     @Override
     public SectionEmbeddingDTO process(DocumentInstanceSection item) throws Exception {
         logger.debug("Start processing section: {}", item.getId());
-        ProjectAgent projectAgent = projectAgentRepository.findAgentByDocumentInstanceId(item.getDocumentInstance().getId())
-                .orElse(null);
+        ProjectAgent projectAgent = projectAgentService.getAgentByDocumentId(item.getId());
         EmbeddingResponse embeddingResponse;
         String sectionSha256Hash;
 

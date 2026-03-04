@@ -21,8 +21,19 @@ public interface ProjectAgentRepository extends JpaRepository<ProjectAgent, UUID
     //is public agent
     Boolean existsByProjectIdAndPrivateAgentIsFalse(UUID projectId);
 
-    @Query("SELECT pa FROM ProjectAgent pa JOIN pa.project p JOIN p.projectDocuments pd WHERE pd.documentId = :documentInstanceId")
-    Optional<ProjectAgent> findAgentByDocumentInstanceId(@Param("documentInstanceId") UUID documentInstanceId);
+    @Query("SELECT pa " +
+            "       FROM ProjectAgent pa " +
+            "       JOIN pa.project p JOIN p.projectDocuments pd " +
+            "       WHERE pd.documentId = :documentInstanceId")
+    Optional<ProjectAgent> findAgentByProjectDocumentInstanceId(@Param("documentInstanceId") UUID documentInstanceId);
+
+    @Query("SELECT pa " +
+            "    FROM ProjectAgent pa " +
+            "    JOIN pa.project p " +
+            "    JOIN ChatThreadDocument ctd ON ctd.project.id = p.id " +
+            "    WHERE ctd.documentId = :documentInstanceId")
+    Optional<ProjectAgent> findAgentByChatThreadDocumentInstanceId(@Param("documentInstanceId") UUID documentInstanceId);
+
 
 
 }

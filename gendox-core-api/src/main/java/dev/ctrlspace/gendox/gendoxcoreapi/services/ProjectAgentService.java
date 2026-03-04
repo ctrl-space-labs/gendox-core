@@ -16,6 +16,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import dev.ctrlspace.provenai.ssi.issuer.VerifiablePresentationBuilder;
 import id.walt.crypto.keys.jwk.JWKKey;
+import jakarta.annotation.Nullable;
 import kotlinx.serialization.json.Json;
 import kotlinx.serialization.json.JsonPrimitive;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -94,9 +95,23 @@ public class ProjectAgentService {
         return projectAgentRepository.existsByProjectIdAndPrivateAgentIsFalse(projectId);
     }
 
-    public ProjectAgent getAgentByDocumentId(UUID documentId) {
-        return projectAgentRepository.findAgentByDocumentInstanceId(documentId)
-                .orElse(null);
+    /**
+     *  Gets the agent that the Document is connected to.
+     *  * It first check in project documents
+     *  * and then in chat thread documents
+     *
+     * @param documentId
+     * @return
+     */
+    public @Nullable ProjectAgent getAgentByDocumentId(UUID documentId) {
+        Optional<ProjectAgent> projectDocumentsAgent = projectAgentRepository.findAgentByProjectDocumentInstanceId(documentId);
+        if (projectDocumentsAgent.isPresent()) {
+            return projectDocumentsAgent.get();
+        }
+
+        Optional<ProjectAgent> chatThreadDocumentsAgent = projectAgentRepository.findAgentByChatThreadDocumentInstanceId(documentId);
+
+        return chatThreadDocumentsAgent.orElse(null);
     }
 
     public ProjectAgent getAgentById(UUID agentId) {

@@ -7,14 +7,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ApiKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.ApiKeyService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.DownloadService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationWebSiteService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.ContentDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
 import jakarta.persistence.EntityManager;
@@ -37,6 +32,7 @@ import java.util.UUID;
 @StepScope
 public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance, DocumentSectionDTO> {
 
+    private final SplitFileService splitFileService;
     Logger logger = LoggerFactory.getLogger(DocumentSplitterProcessor.class);
     @Value("#{jobParameters['skipUnchangedDocs']}")
     protected Boolean skipUnchangedDocs;
@@ -62,7 +58,7 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
                                      CryptographyUtils cryptographyUtils,
                                      ApiKeyService apiKeyService,
                                      OrganizationWebSiteService organizationWebSiteService,
-                                     EncodingRegistry encodingRegistry) {
+                                     EncodingRegistry encodingRegistry, SplitFileService splitFileService) {
         this.serviceSelector = serviceSelector;
         this.projectAgentService = projectAgentService;
         this.downloadService = downloadService;
@@ -74,6 +70,7 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
 
 
         this.enc = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
+        this.splitFileService = splitFileService;
     }
 
 
@@ -82,6 +79,10 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         logger.trace("Start processing document: {}", instance.getId());
 
         try {
+            // TODO DocumentSectionService#splitDocumentAndCreateSections also is splitting the document,
+            //   merge those methods somehow. The challenge is that this job is performant for 1000s of documents,
+            //   by separating the splitting and the writing. While the service method is performant for single documents
+
             // Step 1: Fetch content
             String fileContent = fetchContent(instance);
 
@@ -99,7 +100,7 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
             instance.setTotalTokens((long)totalTokens);
 
             // Step 3: Split content into sections
-            List<String> contentSections = splitContent(instance, fileContent);
+            List<String> contentSections = splitFileService.splitDocument(instance, fileContent);
 
             return new DocumentSectionDTO(instance, contentSections, true);
 
@@ -143,21 +144,6 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
             instance.setDocumentSha256Hash(newHash); // Update the hash
         }
         return true;
-    }
-
-    private List<String> splitContent(DocumentInstance instance, String fileContent) throws GendoxException {
-        ProjectAgent agent = projectAgentService.getAgentByDocumentId(instance.getId());
-        DocumentSplitter splitter = serviceSelector.getDocumentSplitterByName(agent.getDocumentSplitterType().getName());
-
-        if (splitter == null) {
-            throw new GendoxException(
-                    "DOCUMENT_SPLITTER_NOT_FOUND",
-                    "No document splitter found for agent " + agent.getId(),
-                    HttpStatus.NOT_FOUND
-            );
-        }
-
-        return splitter.split(fileContent);
     }
 
 
