@@ -28,6 +28,7 @@ const initialState = {
   mapLayerUrl: null,
   mapThumbnailUrl: null,
   mapCenter: null,
+  geeRunError: null,
   drawnGeometries: { type: 'GeometryCollection', geometries: [] },
   eoScripts: [],
   eoScriptsLoading: false,
@@ -143,6 +144,9 @@ const slice = createSlice({
     setMapThumbnail: (state, action) => {
       state.mapThumbnailUrl = action.payload
     },
+    setGeeRunError: (state, action) => {
+      state.geeRunError = action.payload
+    },
     addDrawnGeometry: (state, action) => {
       state.drawnGeometries.geometries.push(action.payload)
     },
@@ -173,6 +177,7 @@ const slice = createSlice({
       state.mapLayerUrl = null
       state.mapThumbnailUrl = null
       state.mapCenter = null
+      state.geeRunError = null
     },
 
   },
@@ -256,6 +261,7 @@ export const {
   setMapLayer,
   setMapData,
   setMapThumbnail,
+  setGeeRunError,
   addDrawnGeometry,
   removeDrawnGeometry,
   clearDrawnGeometries,

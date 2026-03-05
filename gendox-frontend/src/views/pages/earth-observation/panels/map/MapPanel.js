@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
@@ -19,6 +18,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import FileDownloadIcon from '@mui/icons-material/FileDownload'
 
 import {
   setMapThumbnail,
@@ -201,7 +201,7 @@ export default function MapPanel() {
         />
       </MapContainer>
 
-      {/* ── Drawing toolbar (centered at top, like GEE) ── */}
+      {/* ── Top-center toolbar column (drawing + snapshot) ── */}
       <Box
         sx={{
           position: 'absolute',
@@ -210,68 +210,122 @@ export default function MapPanel() {
           transform: 'translateX(-50%)',
           zIndex: 1000,
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          gap: 0.5,
-          bgcolor: 'background.paper',
-          border: 1,
-          borderColor: 'divider',
-          borderRadius: 1,
-          px: 1,
-          py: 0.5,
-          boxShadow: 2
+          gap: 0.5
         }}
       >
-        <Tooltip title='Point'>
-          <IconButton size='small' sx={toolBtnSx('point')} onClick={() => handleSelectTool('point')}>
-            <RadioButtonUncheckedIcon sx={{ fontSize: 15 }} />
-          </IconButton>
-        </Tooltip>
+        {/* Drawing toolbar */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            bgcolor: 'background.paper',
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 1,
+            px: 1,
+            py: 0.5,
+            boxShadow: 2
+          }}
+        >
+          <Tooltip title='Point'>
+            <IconButton size='small' sx={toolBtnSx('point')} onClick={() => handleSelectTool('point')}>
+              <RadioButtonUncheckedIcon sx={{ fontSize: 15 }} />
+            </IconButton>
+          </Tooltip>
 
-        <Tooltip title='LinearRing'>
-          <IconButton size='small' sx={toolBtnSx('linearRing')} onClick={() => handleSelectTool('linearRing')}>
-            <TimelineIcon sx={{ fontSize: 15 }} />
-          </IconButton>
-        </Tooltip>
+          <Tooltip title='LinearRing'>
+            <IconButton size='small' sx={toolBtnSx('linearRing')} onClick={() => handleSelectTool('linearRing')}>
+              <TimelineIcon sx={{ fontSize: 15 }} />
+            </IconButton>
+          </Tooltip>
 
-        <Tooltip title='Polygon'>
-          <IconButton size='small' sx={toolBtnSx('polygon')} onClick={() => handleSelectTool('polygon')}>
-            <HexagonIcon sx={{ fontSize: 15 }} />
-          </IconButton>
-        </Tooltip>
+          <Tooltip title='Polygon'>
+            <IconButton size='small' sx={toolBtnSx('polygon')} onClick={() => handleSelectTool('polygon')}>
+              <HexagonIcon sx={{ fontSize: 15 }} />
+            </IconButton>
+          </Tooltip>
 
-        {/* Done / Cancel — shown only when drawing a line or polygon */}
-        {activeTool && activeTool !== 'point' && (
-          <>
-            <Divider orientation='vertical' flexItem sx={{ mx: 0.5 }} />
-            <Tooltip title={canFinish ? 'Finish' : `Need ${activeTool === 'linearRing' ? 2 : 3}+ points`}>
-              <span>
+          {/* Done / Cancel — shown only when drawing a line or polygon */}
+          {activeTool && activeTool !== 'point' && (
+            <>
+              <Divider orientation='vertical' flexItem sx={{ mx: 0.5 }} />
+              <Tooltip title={canFinish ? 'Finish' : `Need ${activeTool === 'linearRing' ? 2 : 3}+ points`}>
+                <span>
+                  <IconButton
+                    size='small'
+                    disabled={!canFinish}
+                    onClick={handleFinish}
+                    sx={{ width: 30, height: 30, p: 0, border: 1, borderColor: 'divider', color: 'success.main' }}
+                  >
+                    <CheckIcon sx={{ fontSize: 15 }} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title='Cancel'>
                 <IconButton
                   size='small'
-                  disabled={!canFinish}
-                  onClick={handleFinish}
-                  sx={{ width: 30, height: 30, p: 0, border: 1, borderColor: 'divider', color: 'success.main' }}
+                  onClick={handleCancel}
+                  sx={{ width: 30, height: 30, p: 0, border: 1, borderColor: 'divider', color: 'error.main' }}
                 >
-                  <CheckIcon sx={{ fontSize: 15 }} />
+                  <CloseIcon sx={{ fontSize: 15 }} />
                 </IconButton>
-              </span>
+              </Tooltip>
+              <Typography variant='caption' sx={{ ml: 0.5, color: 'text.secondary', fontSize: '0.65rem' }}>
+                {pendingVertices.length} pt{pendingVertices.length !== 1 ? 's' : ''}
+              </Typography>
+            </>
+          )}
+        </Box>
+
+        {/* Snapshot toolbar — appears below drawing toolbar when a thumbnail exists */}
+        {mapThumbnailUrl && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              bgcolor: 'background.paper',
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1,
+              px: 1,
+              py: 0.5,
+              boxShadow: 2
+            }}
+          >
+            <img
+              src={mapThumbnailUrl}
+              alt='GEE snapshot'
+              style={{ width: 44, height: 30, objectFit: 'cover', borderRadius: 2, display: 'block' }}
+            />
+            <Divider orientation='vertical' flexItem sx={{ mx: 0.25 }} />
+            <Tooltip title='Download'>
+              <IconButton size='small' onClick={handleDownload} sx={{ width: 30, height: 30, p: 0 }}>
+                <FileDownloadIcon sx={{ fontSize: 15 }} />
+              </IconButton>
             </Tooltip>
-            <Tooltip title='Cancel'>
+            <Tooltip title='Copy image'>
+              <IconButton size='small' onClick={handleCopyImage} sx={{ width: 30, height: 30, p: 0 }}>
+                <ContentCopyIcon sx={{ fontSize: 15 }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title='Dismiss'>
               <IconButton
                 size='small'
-                onClick={handleCancel}
-                sx={{ width: 30, height: 30, p: 0, border: 1, borderColor: 'divider', color: 'error.main' }}
+                onClick={() => dispatch(setMapThumbnail(null))}
+                sx={{ width: 30, height: 30, p: 0 }}
               >
                 <CloseIcon sx={{ fontSize: 15 }} />
               </IconButton>
             </Tooltip>
-            <Typography variant='caption' sx={{ ml: 0.5, color: 'text.secondary', fontSize: '0.65rem' }}>
-              {pendingVertices.length} pt{pendingVertices.length !== 1 ? 's' : ''}
-            </Typography>
-          </>
+          </Box>
         )}
       </Box>
 
-      {/* ── Geometry Inspector (bottom-right, GEE style) ── */}
+      {/* ── Geometry Inspector (top-right, GEE style) ── */}
       {geometries.length > 0 && (
         <Box
           sx={{
@@ -340,7 +394,7 @@ export default function MapPanel() {
                       cursor: 'pointer',
                       bgcolor: isSelected ? 'action.selected' : 'transparent',
                       borderLeft: isSelected ? '2px solid' : '2px solid transparent',
-                      borderColor: isSelected ? '#FF6F00' : 'transparent',
+                      borderColor: isSelected ? 'primary.light' : 'transparent',
                       '&:hover': { bgcolor: isSelected ? 'action.selected' : 'action.hover' }
                     }}
                   >
@@ -351,7 +405,7 @@ export default function MapPanel() {
                         fontFamily: 'monospace',
                         pl: 1,
                         fontSize: '0.68rem',
-                        color: isSelected ? '#FF6F00' : 'text.primary'
+                        color: isSelected ? 'primary.light' : 'text.primary'
                       }}
                     >
                       {geomSummary(geom, i)}
@@ -386,57 +440,6 @@ export default function MapPanel() {
               })}
             </Box>
           )}
-        </Box>
-      )}
-
-      {/* ── Thumbnail overlay (bottom-left) ── */}
-      {mapThumbnailUrl && (
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: 28,
-            left: 12,
-            zIndex: 1000,
-            bgcolor: 'background.paper',
-            borderRadius: 1,
-            boxShadow: 4,
-            p: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 1,
-            width: 190
-          }}
-        >
-          <img
-            src={mapThumbnailUrl}
-            alt='GEE result thumbnail'
-            style={{ width: '100%', borderRadius: 4, display: 'block' }}
-          />
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <Button
-              size='small'
-              variant='outlined'
-              sx={{ flex: 1, fontSize: '0.68rem', py: 0.25, minWidth: 0 }}
-              onClick={handleDownload}
-            >
-              Download
-            </Button>
-            <Button
-              size='small'
-              variant='contained'
-              sx={{ flex: 1, fontSize: '0.68rem', py: 0.25, minWidth: 0 }}
-              onClick={handleCopyImage}
-            >
-              Copy
-            </Button>
-            <Button
-              size='small'
-              sx={{ minWidth: 'auto', px: 0.75, py: 0.25, fontSize: '0.68rem' }}
-              onClick={() => dispatch(setMapThumbnail(null))}
-            >
-              ✕
-            </Button>
-          </Box>
         </Box>
       )}
     </Box>

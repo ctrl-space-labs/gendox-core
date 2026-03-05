@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { setMapData, setMapThumbnail, createEOScriptThunk } from 'src/store/earthObservation/earthObservation'
+import { setMapData, setMapThumbnail, setGeeRunError, createEOScriptThunk } from 'src/store/earthObservation/earthObservation'
 import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
@@ -18,6 +18,7 @@ export default function GeeRunner({
 
   const createEOScriptLoading = useSelector(state => state.earthObservation.createEOScriptLoading)
   const latestEOScriptLoading = useSelector(state => state.earthObservation.latestEOScriptLoading)
+
 
   // 1. State for iframe management
   const [iframeKey, setIframeKey] = useState(0) //  counter for iframe reloads
@@ -43,6 +44,7 @@ export default function GeeRunner({
     setIsRunning(true)
     dispatch(setMapData({ url: null }))        // clear previous map layer
     dispatch(setMapThumbnail(null))            // clear previous thumbnail
+    dispatch(setGeeRunError(null))             // clear previous error
 
     // Keep the last run code (for save after SUCCESS)
     lastRunCodeRef.current = currentCode
@@ -153,7 +155,7 @@ export default function GeeRunner({
       // D. Error
       if (type === 'ERROR') {
         console.error('GEE Script Error:', message)
-        alert('Script Error: ' + message)
+        dispatch(setGeeRunError(message))
         setIsRunning(false)
       }
     }
@@ -174,7 +176,7 @@ export default function GeeRunner({
         {isRunning || createEOScriptLoading || latestEOScriptLoading ? 'Processing...' : 'Run Code'}
       </Button>
 
-      {/* The Iframe. 
+      {/* The Iframe.
          - key={iframeKey}: Each time it changes, the iframe is destroyed & recreated.
          - If iframeKey is 0 (initial state), we don't load it at all (optional).
       */}
