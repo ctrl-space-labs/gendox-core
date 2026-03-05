@@ -23,6 +23,7 @@ const initialState = {
   // minimized -> lines
   chatMin: false,
   editorMin: false,
+  mapMin: false,
 
   isGeeReady: false,
   mapLayerUrl: null,
@@ -93,6 +94,7 @@ const slice = createSlice({
     // layout modes
     maximizeMap: state => {
       state.layoutMode = LAYOUT.MAP_MAX
+      state.mapMin = false
     },
     maximizeChat: state => {
       state.layoutMode = LAYOUT.CHAT_MAX
@@ -103,7 +105,10 @@ const slice = createSlice({
       state.editorMin = false
     },
     minimizeMap: state => {
-      state.layoutMode = LAYOUT.MAP_MIN
+      state.mapMin = true
+    },
+    restoreMap: state => {
+      state.mapMin = false
     },
     restoreDefault: state => {
       state.layoutMode = LAYOUT.DEFAULT
@@ -250,6 +255,7 @@ export const {
   maximizeChat,
   maximizeEditor,
   minimizeMap,
+  restoreMap,
   restoreDefault,
   setSplitX,
   setSplitY,

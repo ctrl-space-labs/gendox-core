@@ -5,7 +5,7 @@ import Icon from 'src/views/custom-components/mui/icon/icon'
 import { alpha, useTheme } from '@mui/material/styles'
 import Tooltip from '@mui/material/Tooltip'
 
-export default function PanelFrame({ title, children, onMaximize, onMinimize, onRestore, collapsed = false }) {
+export default function PanelFrame({ title, children, onMaximize, onMinimize, onRestore, collapsed = false, isMaximized = false }) {
   const theme = useTheme()
 
   return (
@@ -48,21 +48,24 @@ export default function PanelFrame({ title, children, onMaximize, onMinimize, on
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 0.25 }}>
-          {!collapsed && onMinimize && (
+          {/* Minimize: shown in default state (not minimized, not maximized) */}
+          {!collapsed && !isMaximized && onMinimize && (
             <Tooltip title='Minimize'>
               <IconButton size='small' onClick={onMinimize} sx={{ opacity: 0.45, '&:hover': { opacity: 1 } }}>
                 <Icon icon='mdi:minus' />
               </IconButton>
             </Tooltip>
           )}
-          {collapsed && onRestore && (
+          {/* Restore: shown when minimized OR maximized */}
+          {(collapsed || isMaximized) && onRestore && (
             <Tooltip title='Restore'>
               <IconButton size='small' onClick={onRestore} sx={{ opacity: 0.45, '&:hover': { opacity: 1 } }}>
                 <Icon icon='mdi:fullscreen-exit' />
               </IconButton>
             </Tooltip>
           )}
-          {onMaximize && (
+          {/* Maximize: shown in default and minimized states (not when maximized) */}
+          {!isMaximized && onMaximize && (
             <Tooltip title='Maximize'>
               <IconButton size='small' onClick={onMaximize} sx={{ opacity: 0.45, '&:hover': { opacity: 1 } }}>
                 <Icon icon='mdi:fullscreen' />
