@@ -150,39 +150,25 @@ export default function WorkspaceGrid() {
             gap: 1.5
           }}
         >
-          {chatMin ? (
-            <PanelLine
-              title='Chat'
-              onClick={() => dispatch(restoreChat())}
-              onRestore={() => dispatch(restoreChat())}
-              onMaximize={() => dispatch(maximizeChat())}
-            />
-          ) : (
-            <PanelFrame
-              title='Chat'
-              onMaximize={() => dispatch(maximizeChat())}
-              onMinimize={() => dispatch(minimizeChat())}
-            >
-              <ChatPanel />
-            </PanelFrame>
-          )}
+          <PanelFrame
+            title='Chat'
+            collapsed={chatMin}
+            onMaximize={() => dispatch(maximizeChat())}
+            onMinimize={() => dispatch(minimizeChat())}
+            onRestore={() => dispatch(restoreChat())}
+          >
+            <ChatPanel />
+          </PanelFrame>
 
-          {editorMin ? (
-            <PanelLine
-              title='Editor'
-              onClick={() => dispatch(restoreEditor())}
-              onRestore={() => dispatch(restoreEditor())}
-              onMaximize={() => dispatch(maximizeEditor())}
-            />
-          ) : (
-            <PanelFrame
-              title='Editor'
-              onMaximize={() => dispatch(maximizeEditor())}
-              onMinimize={() => dispatch(minimizeEditor())}
-            >
-              <EditorPanel />
-            </PanelFrame>
-          )}
+          <PanelFrame
+            title='Editor'
+            collapsed={editorMin}
+            onMaximize={() => dispatch(maximizeEditor())}
+            onMinimize={() => dispatch(minimizeEditor())}
+            onRestore={() => dispatch(restoreEditor())}
+          >
+            <EditorPanel />
+          </PanelFrame>
         </Box>
       </Box>
     )
@@ -420,13 +406,13 @@ export default function WorkspaceGrid() {
           gap: 1.5
         }}
       >
-        {/* Chat */}
+        {/* Editor */}
         <Box
           sx={{
-            minHeight: chatMin ? LINE_H : `${CHAT_MIN_H}px`,
+            minHeight: editorMin ? LINE_H : `${EDITOR_MIN_H}px`,
             display: 'flex',
-            flexBasis: chatMin ? LINE_H : `${splitY * 100}%`,
-            flexGrow: 0,
+            flexBasis: editorMin ? LINE_H : chatMin ? 'auto' : `${splitY * 100}%`,
+            flexGrow: chatMin ? 1 : 0,
             flexShrink: 0,
             alignItems: 'stretch',
             '& > *': {
@@ -436,32 +422,27 @@ export default function WorkspaceGrid() {
             }
           }}
         >
-          {chatMin ? (
-            <PanelLine
-              title='Chat'
-              onClick={() => dispatch(restoreChat())}
-              onRestore={() => dispatch(restoreChat())}
-              onMaximize={() => dispatch(maximizeChat())}
-            />
-          ) : (
-            <PanelFrame
-              title='Chat'
-              onMaximize={() => dispatch(maximizeChat())}
-              onMinimize={() => dispatch(minimizeChat())}
-            >
-              <ChatPanel />
-            </PanelFrame>
-          )}
+          <PanelFrame
+            title='Editor'
+            collapsed={editorMin}
+            onMaximize={() => dispatch(maximizeEditor())}
+            onMinimize={() => dispatch(minimizeEditor())}
+            onRestore={() => dispatch(restoreEditor())}
+          >
+            <EditorPanel />
+          </PanelFrame>
         </Box>
 
         {canShowYSplitter && <SplitterY onDrag={dragY} />}
 
-        {/* Editor */}
+        {/* Chat */}
         <Box
           sx={{
-            minHeight: editorMin ? LINE_H : `${EDITOR_MIN_H}px`,
+            minHeight: chatMin ? LINE_H : `${CHAT_MIN_H}px`,
             display: 'flex',
-            flex: 1,
+            flexBasis: chatMin ? LINE_H : 'auto',
+            flexGrow: editorMin ? 1 : 1,
+            flexShrink: 1,
             minWidth: 0,
             alignItems: 'stretch',
             '& > *': {
@@ -471,22 +452,15 @@ export default function WorkspaceGrid() {
             }
           }}
         >
-          {editorMin ? (
-            <PanelLine
-              title='Editor'
-              onClick={() => dispatch(restoreEditor())}
-              onRestore={() => dispatch(restoreEditor())}
-              onMaximize={() => dispatch(maximizeEditor())}
-            />
-          ) : (
-            <PanelFrame
-              title='Editor'
-              onMaximize={() => dispatch(maximizeEditor())}
-              onMinimize={() => dispatch(minimizeEditor())}
-            >
-              <EditorPanel />
-            </PanelFrame>
-          )}
+          <PanelFrame
+            title='Chat'
+            collapsed={chatMin}
+            onMaximize={() => dispatch(maximizeChat())}
+            onMinimize={() => dispatch(minimizeChat())}
+            onRestore={() => dispatch(restoreChat())}
+          >
+            <ChatPanel />
+          </PanelFrame>
         </Box>
       </Box>
     </Box>

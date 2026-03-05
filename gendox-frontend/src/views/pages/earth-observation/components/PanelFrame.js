@@ -5,7 +5,7 @@ import Icon from 'src/views/custom-components/mui/icon/icon'
 import { alpha, useTheme } from '@mui/material/styles'
 import Tooltip from '@mui/material/Tooltip'
 
-export default function PanelFrame({ title, children, onMaximize, onMinimize, onRestore }) {
+export default function PanelFrame({ title, children, onMaximize, onMinimize, onRestore, collapsed = false }) {
   const theme = useTheme()
 
   return (
@@ -20,6 +20,7 @@ export default function PanelFrame({ title, children, onMaximize, onMinimize, on
         border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
         boxShadow: (theme.palette.common.white, 0.04),
         overflow: 'hidden',
+        height: collapsed ? 34 : '100%'
       }}
     >
       {/* Header */}
@@ -47,10 +48,17 @@ export default function PanelFrame({ title, children, onMaximize, onMinimize, on
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 0.25 }}>
-          {onMinimize && (
+          {!collapsed && onMinimize && (
             <Tooltip title='Minimize'>
               <IconButton size='small' onClick={onMinimize} sx={{ opacity: 0.45, '&:hover': { opacity: 1 } }}>
                 <Icon icon='mdi:minus' />
+              </IconButton>
+            </Tooltip>
+          )}
+          {collapsed && onRestore && (
+            <Tooltip title='Restore'>
+              <IconButton size='small' onClick={onRestore} sx={{ opacity: 0.45, '&:hover': { opacity: 1 } }}>
+                <Icon icon='mdi:fullscreen-exit' />
               </IconButton>
             </Tooltip>
           )}
@@ -61,18 +69,11 @@ export default function PanelFrame({ title, children, onMaximize, onMinimize, on
               </IconButton>
             </Tooltip>
           )}
-          {onRestore && (
-            <Tooltip title='Restore layout'>
-              <IconButton size='small' onClick={onRestore} sx={{ opacity: 0.45, '&:hover': { opacity: 1 } }}>
-                <Icon icon='mdi:fullscreen-exit' />
-              </IconButton>
-            </Tooltip>
-          )}
         </Box>
       </Box>
 
-      {/* Content — p:0 and overflow:hidden so map/editor/chat fill the frame correctly */}
-      <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>{children}</Box>
+      {/* Content stays mounted; collapse only hides it to preserve panel state. */}
+      <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', display: collapsed ? 'none' : 'block' }}>{children}</Box>
     </Box>
   )
 }
