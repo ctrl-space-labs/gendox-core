@@ -26,7 +26,7 @@ const initialState = {
   mapMin: false,
 
   isGeeReady: false,
-  mapLayerUrl: null,
+  mapLayers: [],          // [{ url, name }]
   mapThumbnailUrl: null,
   mapCenter: null,
   geeRunError: null,
@@ -138,13 +138,15 @@ const slice = createSlice({
     setGeeReady: (state, action) => {
       state.isGeeReady = action.payload
     },
-    setMapLayer: (state, action) => {
-      state.mapLayerUrl = action.payload
-    },
     setMapData: (state, action) => {
-      // The payload is expected to be: { url: string, center: object }
-      if (action.payload.url) state.mapLayerUrl = action.payload.url
       if (action.payload.center) state.mapCenter = action.payload.center
+    },
+    addMapLayer: (state, action) => {
+      // payload: { url, name }
+      state.mapLayers.push(action.payload)
+    },
+    clearMapLayers: state => {
+      state.mapLayers = []
     },
     setMapThumbnail: (state, action) => {
       state.mapThumbnailUrl = action.payload
@@ -179,7 +181,7 @@ const slice = createSlice({
       state.latestEOScriptError = null
       state.createEOScriptLoading = false
       state.createEOScriptError = null
-      state.mapLayerUrl = null
+      state.mapLayers = []
       state.mapThumbnailUrl = null
       state.mapCenter = null
       state.geeRunError = null
@@ -264,8 +266,9 @@ export const {
   minimizeEditor,
   restoreEditor,
   setGeeReady,
-  setMapLayer,
   setMapData,
+  addMapLayer,
+  clearMapLayers,
   setMapThumbnail,
   setGeeRunError,
   addDrawnGeometry,

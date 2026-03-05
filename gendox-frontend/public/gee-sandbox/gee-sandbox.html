@@ -84,7 +84,7 @@
                 return
               }
 
-              window.parent.postMessage({ type: 'SUCCESS', payload: { url: urlFormat } }, '*')
+              window.parent.postMessage({ type: 'SUCCESS', payload: { url: urlFormat, name: name || 'Layer' } }, '*')
 
               // Request a static thumbnail asynchronously so the map tiles
               // appear immediately while the thumbnail is still being generated.

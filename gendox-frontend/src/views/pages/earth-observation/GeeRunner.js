@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, use } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { setMapData, setMapThumbnail, setGeeRunError, createEOScriptThunk } from 'src/store/earthObservation/earthObservation'
+import { setMapData, addMapLayer, clearMapLayers, setMapThumbnail, setGeeRunError, createEOScriptThunk } from 'src/store/earthObservation/earthObservation'
 import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
@@ -19,6 +19,7 @@ export default function GeeRunner({
   const createEOScriptLoading = useSelector(state => state.earthObservation.createEOScriptLoading)
   const latestEOScriptLoading = useSelector(state => state.earthObservation.latestEOScriptLoading)
 
+  console.log("STATE", useSelector(state => state.earthObservation))
 
   // 1. State for iframe management
   const [iframeKey, setIframeKey] = useState(0) //  counter for iframe reloads
@@ -42,7 +43,7 @@ export default function GeeRunner({
     if (!currentCode) return
 
     setIsRunning(true)
-    dispatch(setMapData({ url: null }))        // clear previous map layer
+    dispatch(clearMapLayers())                 // clear previous map layers
     dispatch(setMapThumbnail(null))            // clear previous thumbnail
     dispatch(setGeeRunError(null))             // clear previous error
 
@@ -96,9 +97,11 @@ export default function GeeRunner({
         dispatch(setMapData({ center: payload?.center }))
       }
 
-      // B. Success - Map arrived
+      // B. Success - Map layer arrived
       if (type === 'SUCCESS') {
-        dispatch(setMapData({ url: payload.url }))
+        if (payload.url) {
+          dispatch(addMapLayer({ url: payload.url, name: payload.name || 'Layer' }))
+        }
 
         // Save the EOScript to backend (mirrors EditorPanel onRun)
         if (organizationId && projectId && taskId && token) {
