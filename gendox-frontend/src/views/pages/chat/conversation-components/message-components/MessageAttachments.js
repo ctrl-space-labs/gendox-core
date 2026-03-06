@@ -13,7 +13,6 @@ const MessageAttachments = ({ attachments, currentThread, token }) => {
   const images = useMemo(() => (attachments || []).filter(a => a.kind === 'image'), [attachments])
   const files = useMemo(() => (attachments || []).filter(a => a.kind !== 'image'), [attachments])
 
-  console.log("files", files)
 
   const hadleOpenImage = img => {
     if (!img?.previewUrl) return
@@ -65,7 +64,7 @@ const MessageAttachments = ({ attachments, currentThread, token }) => {
             display: 'flex',
             flexDirection: 'column',
             gap: 1,
-            alignItems: 'flex-end', 
+            alignItems: 'flex-end',
             maxWidth: '80%'
           }}
         >

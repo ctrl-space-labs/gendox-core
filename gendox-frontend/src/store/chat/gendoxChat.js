@@ -6,6 +6,17 @@ import chatThreadService from '../../gendox-sdk/chatThreadService'
 import completionService from '../../gendox-sdk/completionService'
 import documentService from '../../gendox-sdk/documentService'
 
+const DEFAULT_LOCAL_CONTEXT_MAX_RESPONSES = 0 // basically dont wait
+const DEFAULT_LOCAL_CONTEXT_MAX_WAIT_MS = 10
+
+const resolveLocalContextFetchConfig = iFrameMessageManager => {
+  const config = iFrameMessageManager?.iFrameConfiguration || {}
+  return {
+    maxResponses: config.localContextMaxResponses ?? DEFAULT_LOCAL_CONTEXT_MAX_RESPONSES,
+    maxWaitTimeoutMs: config.localContextMaxWaitMs ?? DEFAULT_LOCAL_CONTEXT_MAX_WAIT_MS
+  }
+}
+
 const initialChatState = {
   threads: null,
   agents: null,
@@ -179,12 +190,13 @@ export const sendMessage = createAsyncThunk(
       payload: { message }
     })
 
+    const { maxResponses, maxWaitTimeoutMs } = resolveLocalContextFetchConfig(iFrameMessageManager)
     let chatLocalContextResponses = await iFrameMessageManager.messageManager.fetchResponses(
       'gendox.events.chat.message.context.local.request',
       'gendox.events.chat.message.context.local.response',
       {},
-      1,
-      200
+      maxResponses,
+      maxWaitTimeoutMs
     )
 
     const documentInstanceIds = (uploadedDocs || []).map(d => d?.documentId).filter(Boolean)

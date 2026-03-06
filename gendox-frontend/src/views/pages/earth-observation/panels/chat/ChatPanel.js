@@ -37,6 +37,9 @@ export default function ChatPanel() {
     script.setAttribute('data-project-id', projectId)
     script.setAttribute('data-gendox-container-id', CONTAINER_ID)
     script.setAttribute('data-gendox-iframe-id', IFRAME_ID)
+    script.setAttribute('data-gendox-chat-initial-state', 'open')
+    script.setAttribute('data-gendox-local-context-max-responses', '1')
+    script.setAttribute('data-gendox-local-context-max-wait-ms', '500')
     script.src = `${window.location.origin}/gendox-sdk/gendox-widget-plugin.js`
     document.head.appendChild(script)
 

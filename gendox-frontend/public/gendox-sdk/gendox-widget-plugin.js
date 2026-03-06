@@ -1,4 +1,10 @@
 ;(function () {
+  const DEFAULT_CHAT_INITIAL_STATE = 'closed'
+  const DEFAULT_LOCAL_CONTEXT_MAX_RESPONSES = 1
+  const DEFAULT_LOCAL_CONTEXT_MAX_WAIT_MS = 200
+  const CHAT_TOGGLE_REQUEST_EVENT = 'gendox.events.embedded.chat.toggle.request'
+  const CHAT_TOGGLE_ACTION_EVENT = 'gendox.events.embedded.chat.toggle.action'
+
   // Default CSS styles
   const defaultStyles = `
         .gendox-chat-container-position {
@@ -38,26 +44,54 @@
   // Extract data attributes from the script tag
   function getDataAttributes() {
     const scriptTag = document.getElementById('gendox-chat-script')
+
+    const normalizedInitialState = normalizeChatInitialState(
+      scriptTag.getAttribute('data-gendox-chat-initial-state')
+    )
+    const localContextMaxResponses = parseNonNegativeInt(
+      scriptTag.getAttribute('data-gendox-local-context-max-responses'),
+      DEFAULT_LOCAL_CONTEXT_MAX_RESPONSES
+    )
+    const localContextMaxWaitMs = parseNonNegativeInt(
+      scriptTag.getAttribute('data-gendox-local-context-max-wait-ms'),
+      DEFAULT_LOCAL_CONTEXT_MAX_WAIT_MS
+    )
+
     return {
       gendoxSrc: scriptTag.getAttribute('data-gendox-src') || '',
       organizationId: scriptTag.getAttribute('data-organization-id') || '',
       projectId: scriptTag.getAttribute('data-project-id') || '',
       gendoxContainerId: scriptTag.getAttribute('data-gendox-container-id') || 'gendox-chat-container-id',
-      gendoxIframeId: scriptTag.getAttribute('data-gendox-iframe-id') || 'gendox-chat-iframe-id'
+      gendoxIframeId: scriptTag.getAttribute('data-gendox-iframe-id') || 'gendox-chat-iframe-id',
+      chatInitialState: normalizedInitialState,
+      localContextMaxResponses,
+      localContextMaxWaitMs
     }
   }
 
+  function normalizeChatInitialState(value) {
+    return value === 'open' ? 'open' : DEFAULT_CHAT_INITIAL_STATE
+  }
+
+  function parseNonNegativeInt(value, fallback) {
+    const parsed = Number.parseInt(value, 10)
+    return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback
+  }
+
   // Create container and iframe dynamically if they don't exist
-  function createChatElements(containerId, iframeId, gendoxSrc, organizationId, projectId, origin) {
+  function createChatElements(containerId, iframeId, gendoxSrc, organizationId, projectId, origin, chatInitialState) {
     let container = document.getElementById(containerId)
     let iframe = document.getElementById(iframeId)
+    const containerStateClass = chatInitialState === 'open' ? 'gendox-chat-open' : 'gendox-chat-closed'
 
     if (!container) {
       container = document.createElement('div')
       container.id = containerId
-      container.classList.add('gendox-chat-container-position', 'gendox-chat-closed')
+      container.classList.add('gendox-chat-container-position')
       document.body.appendChild(container)
     }
+    container.classList.remove('gendox-chat-open', 'gendox-chat-closed')
+    container.classList.add(containerStateClass)
 
     if (!iframe) {
       iframe = document.createElement('iframe')
@@ -74,20 +108,64 @@
   function initializeChat(config) {
     const { gendoxSrc, gendoxContainerId, gendoxIframeId } = config
 
-    const iframeWindow = document.getElementById(gendoxIframeId)
+    const iframe = document.getElementById(gendoxIframeId)
     const chatContainer = document.getElementById(gendoxContainerId)
 
-    console.log('gendoxContainerId: ', gendoxContainerId)
+    function applyContainerToggleClasses(isOpen) {
+      chatContainer.classList.remove('gendox-chat-open', 'gendox-chat-closed')
+      chatContainer.classList.add(isOpen ? 'gendox-chat-open' : 'gendox-chat-closed')
+      window.gendox.widget.state.isOpen = isOpen
+    }
+
+    function sendToggleRequest(action) {
+      if (!iframe?.contentWindow) {
+        console.warn('Could not send toggle request because the embedded chat iframe is not available.')
+        return false
+      }
+      iframe.contentWindow.postMessage(
+        {
+          type: CHAT_TOGGLE_REQUEST_EVENT,
+          data: { action }
+        },
+        gendoxSrc
+      )
+      return true
+    }
+
+    window.gendox.widget.state = {
+      isOpen: chatContainer.classList.contains('gendox-chat-open')
+    }
+    window.gendox.widget.open = function () {
+      return sendToggleRequest('open')
+    }
+    window.gendox.widget.close = function () {
+      return sendToggleRequest('close')
+    }
+    window.gendox.widget.toggle = function () {
+      const isOpen = Boolean(window.gendox.widget.state?.isOpen)
+      return sendToggleRequest(isOpen ? 'close' : 'open')
+    }
+    window.gendox.widget.isOpen = function () {
+      return Boolean(window.gendox.widget.state?.isOpen)
+    }
 
     const handleInitializationRequestMessage = function (event) {
       if (event.data && event.data.type === 'gendox.events.initialization.request') {
-        const message = { type: 'gendox.events.initialization.response', page: '...' }
-        iframeWindow.contentWindow.postMessage(message, gendoxSrc)
+        const message = {
+          type: 'gendox.events.initialization.response',
+          payload: {
+            chatInitialState: config.chatInitialState,
+            localContextMaxResponses: config.localContextMaxResponses,
+            localContextMaxWaitMs: config.localContextMaxWaitMs
+          }
+        }
+        iframe.contentWindow.postMessage(message, gendoxSrc)
       }
     }
 
     const handleLocalContextSelectedText = function (event) {
       if (event.data && event.data.type === 'gendox.events.chat.message.context.local.request') {
+        console.log('handleLocalContextSelectedText after if: ', event)
         gatherSelectedText(selectedText => {
           const message = {
             type: 'gendox.events.chat.message.context.local.response',
@@ -96,7 +174,8 @@
               value: selectedText
             }
           }
-          iframeWindow.contentWindow.postMessage(message, gendoxSrc)
+          console.log('Sending message to iframe: ', {message,gendoxSrc})
+          iframe.contentWindow.postMessage(message, gendoxSrc)
         }, true)
       }
     }
@@ -106,17 +185,12 @@
         return
       }
 
-      if (event.data && event.data.type === 'gendox.events.embedded.chat.toggle.action') {
+      if (event.data && event.data.type === CHAT_TOGGLE_ACTION_EVENT) {
         const isOpen = event.data.data.isOpen
         if (isOpen) {
-          console.log('Opening chat window')
-          console.log('chatContainer: ', chatContainer)
-          chatContainer.classList.remove('gendox-chat-closed')
-          chatContainer.classList.add('gendox-chat-open')
+          applyContainerToggleClasses(true)
         } else {
-          console.log('Closing chat window')
-          chatContainer.classList.remove('gendox-chat-open')
-          chatContainer.classList.add('gendox-chat-closed')
+          applyContainerToggleClasses(false)
         }
       }
     }
@@ -199,7 +273,8 @@
         config.gendoxSrc,
         config.organizationId,
         config.projectId,
-        config.origin
+        config.origin,
+        config.chatInitialState
       )
 
       // Inject user-defined styles if provided
