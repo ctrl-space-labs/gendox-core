@@ -463,15 +463,16 @@
     // TODO: This is a workaround and may not work in all cases.
     setTimeout(() => {
       const selection = window.getSelection()
+      const rawSelectedText = getSelectedText(selection).trim()
 
-      // Check if the selection is empty or has no ranges
-      if (
-        !selection ||
-        selection.type !== 'Range' ||
-        selection.rangeCount === 0 ||
-        selection.toString().trim() === ''
-      ) {
-        console.log('No text selected or selection cleared.')
+      if (!selection || selection.type !== 'Range' || selection.rangeCount === 0 || rawSelectedText === '') {
+        const fallbackSelectedText = getFallbackSelectedText(selection)
+        if (fallbackSelectedText === '') {
+          console.log('No text selected or selection cleared.')
+          return
+        }
+
+        handleTextCallback(fallbackSelectedText)
         return
       }
 
@@ -488,11 +489,151 @@
   }
 
   /**
+   * Tries to recover selected text when the browser does not expose it as a DOM Range.
+   * This keeps support for editors that render text through focused controls or EditContext.
+   * @param {Selection | null} selection - The current browser selection.
+   * @returns {string} - The recovered selected text, or an empty string if none is available.
+   */
+  function getFallbackSelectedText(selection) {
+    const browserSelectedText = getSelectedText(selection)
+    if (browserSelectedText.trim() !== '') {
+      return browserSelectedText
+    }
+
+    // EditContext may be attached to the selection's anchor/focus nodes (e.g. Monaco editor)
+    const selectionNodeText = getEditContextTextFromSelectionNodes(selection)
+    if (selectionNodeText.trim() !== '') {
+      return selectionNodeText
+    }
+
+    const activeElementSelectedText = getSelectedTextFromActiveElement(document.activeElement)
+    if (activeElementSelectedText.trim() !== '') {
+      return activeElementSelectedText
+    }
+
+    return ''
+  }
+
+  /**
+   * Reads EditContext selection text from the selection's anchor and focus nodes.
+   * Handles editors such as Monaco that attach EditContext directly to a selection node
+   * rather than to the focused element.
+   * @param {Selection | null} selection - The current browser selection.
+   * @returns {string} - The selected text from the EditContext, or an empty string.
+   */
+  function getEditContextTextFromSelectionNodes(selection) {
+    if (!selection) {
+      return ''
+    }
+
+    for (const node of [selection.anchorNode, selection.focusNode]) {
+      if (!node) continue
+
+      // Check editContext directly on the node first, then walk up to the nearest element
+      const startElement = node.nodeType === Node.TEXT_NODE ? node.parentElement : node
+      const editContext = node.editContext || getAttachedEditContext(startElement)
+
+      if (!editContext || typeof editContext.text !== 'string') continue
+
+      const text = sliceSelectedText(editContext.text, editContext.selectionStart, editContext.selectionEnd)
+      if (text.trim() !== '') return text
+    }
+
+    return ''
+  }
+
+  /**
+   * Reads selected text from the currently focused editing surface.
+   * Supports native text controls and elements with an attached EditContext.
+   * @param {Element | null} element - The currently focused element.
+   * @returns {string} - The selected text for the active element.
+   */
+  function getSelectedTextFromActiveElement(element) {
+    if (!element) {
+      return ''
+    }
+
+    const nativeSelectionText = getTextFromSelectableElement(element)
+    if (nativeSelectionText !== '') {
+      return nativeSelectionText
+    }
+
+    const editContext = getAttachedEditContext(element)
+    if (!editContext || typeof editContext.text !== 'string') {
+      return ''
+    }
+
+    return sliceSelectedText(editContext.text, editContext.selectionStart, editContext.selectionEnd)
+  }
+
+  /**
+   * Reads selected text from a focused input or textarea.
+   * @param {Element} element - The focused element.
+   * @returns {string} - The selected text for native text controls.
+   */
+  function getTextFromSelectableElement(element) {
+    if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement)) {
+      return ''
+    }
+
+    return sliceSelectedText(element.value, element.selectionStart, element.selectionEnd)
+  }
+
+  /**
+   * Finds an EditContext attached to the current element or one of its hosts.
+   * @param {Element} element - The focused element.
+   * @returns {EditContext | null} - The attached EditContext when available.
+   */
+  function getAttachedEditContext(element) {
+    const visited = new Set()
+    let current = element
+
+    while (current && !visited.has(current)) {
+      visited.add(current)
+
+      if (current.editContext) {
+        return current.editContext
+      }
+
+      const rootNode = current.getRootNode ? current.getRootNode() : null
+      current = current.parentElement || rootNode?.host || null
+    }
+
+    return null
+  }
+
+  /**
+   * Returns the selected substring for text-like content.
+   * @param {string} text - The full text content.
+   * @param {number | null | undefined} start - The selection start offset.
+   * @param {number | null | undefined} end - The selection end offset.
+   * @returns {string} - The selected substring.
+   */
+  function sliceSelectedText(text, start, end) {
+    if (typeof text !== 'string' || typeof start !== 'number' || typeof end !== 'number') {
+      return ''
+    }
+
+    const selectionStart = Math.max(0, Math.min(start, end))
+    const selectionEnd = Math.max(selectionStart, Math.max(start, end))
+
+    if (selectionStart === selectionEnd) {
+      return ''
+    }
+
+    return text.slice(selectionStart, selectionEnd)
+  }
+
+  /**
    * Retrieves the original selected text.
-   * @param {Selection} selection - The current selection object.
+   * @param {Selection | null} selection - The current selection object.
    * @returns {string} - The original selected text.
    */
   function getSelectedText(selection) {
+    if (!selection) {
+      return ''
+    }
+
     return selection.toString()
   }
 
