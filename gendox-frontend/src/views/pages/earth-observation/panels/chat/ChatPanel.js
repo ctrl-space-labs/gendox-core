@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Box from '@mui/material/Box'
 
@@ -10,12 +10,25 @@ const IFRAME_ID = 'gendox-chat-iframe-id'
 export default function ChatPanel() {
   const router = useRouter()
   const { organizationId, projectId } = router.query
+  const containerRef = useRef(null)
 
   useEffect(() => {
     if (!organizationId || !projectId) return
 
+    // Create container div in the Box before script loads
+    if (containerRef.current && !document.getElementById(CONTAINER_ID)) {
+      const container = document.createElement('div')
+      container.id = CONTAINER_ID
+      container.className = 'gendox-custom-chat-container-position'
+      container.style.position = 'relative' // Override fixed positioning
+      container.style.width = '100%'
+      container.style.height = '100%'
+      container.style.bottom = 'auto'
+      container.style.right = 'auto'
+      containerRef.current.appendChild(container)
+    }
+
     document.getElementById(SCRIPT_ID)?.remove()
-    document.getElementById(CONTAINER_ID)?.remove()
 
     const script = document.createElement('script')
     script.id = SCRIPT_ID
@@ -34,6 +47,9 @@ export default function ChatPanel() {
   }, [organizationId, projectId])
 
   return (
-    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }} />
+    <Box
+      ref={containerRef}
+      sx={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}
+    />
   )
 }
