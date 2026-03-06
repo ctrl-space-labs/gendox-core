@@ -3,6 +3,7 @@
   const DEFAULT_LOCAL_CONTEXT_MAX_RESPONSES = 1
   const DEFAULT_LOCAL_CONTEXT_MAX_WAIT_MS = 200
   const DEFAULT_AUTO_SELECTED_TEXT_LOCAL_CONTEXT_ENABLED = true
+  const DEFAULT_OPEN_WEB_PAGE_TOOL_ENABLED = true
   const CHAT_TOGGLE_REQUEST_EVENT = 'gendox.events.embedded.chat.toggle.request'
   const CHAT_TOGGLE_ACTION_EVENT = 'gendox.events.embedded.chat.toggle.action'
   const CONFIG_UPDATE_EVENT = 'gendox.events.embedded.config.update'
@@ -63,6 +64,10 @@
       scriptTag.getAttribute('data-gendox-local-context-selected-text-enabled'),
       DEFAULT_AUTO_SELECTED_TEXT_LOCAL_CONTEXT_ENABLED
     )
+    const openWebPageToolEnabled = parseBooleanAttribute(
+      scriptTag.getAttribute('data-gendox-open-web-page-tool-enabled'),
+      DEFAULT_OPEN_WEB_PAGE_TOOL_ENABLED
+    )
 
     return {
       gendoxSrc: scriptTag.getAttribute('data-gendox-src') || '',
@@ -73,7 +78,8 @@
       chatInitialState: normalizedInitialState,
       localContextMaxResponses,
       localContextMaxWaitMs,
-      autoSelectedTextLocalContextEnabled
+      autoSelectedTextLocalContextEnabled,
+      openWebPageToolEnabled
     }
   }
 
@@ -172,22 +178,35 @@
     window.gendox.widget.isOpen = function () {
       return Boolean(window.gendox.widget.state?.isOpen)
     }
-    window.gendox.widget.localContextRequestCallbacks = []
-    window.gendox.widget.addLocalContextRequestCallback = function (callback) {
+    window.gendox.widget.localContextRequestCallbacks = {}
+    window.gendox.widget.addLocalContextRequestCallback = function (contextType, callback) {
+      if (typeof contextType !== 'string' || contextType.trim() === '') {
+        throw new Error('Local context type must be a non-empty string')
+      }
+
       if (typeof callback !== 'function') {
         throw new Error('Local context callback must be a function')
       }
-      window.gendox.widget.localContextRequestCallbacks.push(callback)
+
+      if (window.gendox.widget.localContextRequestCallbacks.hasOwnProperty(contextType)) {
+        throw new Error(
+          `A local context callback for contextType "${contextType}" is already registered. You will have to remove it first.`
+        )
+      }
+
+      window.gendox.widget.localContextRequestCallbacks[contextType] = callback
       return callback
     }
-    window.gendox.widget.removeLocalContextRequestCallback = function (callback) {
-      window.gendox.widget.localContextRequestCallbacks = window.gendox.widget.localContextRequestCallbacks.filter(
-        registeredCallback => registeredCallback !== callback
-      )
+    window.gendox.widget.removeLocalContextRequestCallback = function (contextType) {
+      if (!window.gendox.widget.localContextRequestCallbacks.hasOwnProperty(contextType)) {
+        throw new Error(`No local context callback for contextType "${contextType}" is registered.`)
+      }
+
+      delete window.gendox.widget.localContextRequestCallbacks[contextType]
     }
 
     if (config.autoSelectedTextLocalContextEnabled) {
-      window.gendox.widget.addLocalContextRequestCallback(function (_event, sendResponse) {
+      window.gendox.widget.addLocalContextRequestCallback('SELECTED_TEXT', function (_event, sendResponse) {
         gatherSelectedText(selectedText => {
           sendResponse({
             contextType: 'SELECTED_TEXT',
@@ -266,12 +285,14 @@
 
     const handleLocalContextRequests = function (event) {
       if (event.data && event.data.type === 'gendox.events.chat.message.context.local.request') {
-        console.log('Received local context, the are callbacks registered:', window.gendox.widget.localContextRequestCallbacks.length)
-        window.gendox.widget.localContextRequestCallbacks.forEach(callback => {
+        const registeredContextTypes = Object.keys(window.gendox.widget.localContextRequestCallbacks)
+        console.log('Received local context, there are callbacks registered for context types:', registeredContextTypes)
+        registeredContextTypes.forEach(contextType => {
+          const callback = window.gendox.widget.localContextRequestCallbacks[contextType]
           try {
             sendRegisteredLocalContextResponses(callback(event, sendLocalContextResponse))
           } catch (err) {
-            console.error('Error executing local context callback:', err)
+            console.error(`Error executing local context callback for "${contextType}":`, err)
           }
         })
       }
@@ -340,7 +361,11 @@
     }
   }
 
-  function initializeDefaultTools() {
+  function initializeDefaultTools(config) {
+    if (!config.openWebPageToolEnabled) {
+      return
+    }
+
     // Register the default "open_web_page" tool
     registerTool('open_web_page', openWebPageToolHandler)
   }
@@ -380,7 +405,7 @@
       }
 
       initializeChat(config)
-      initializeDefaultTools()
+      initializeDefaultTools(config)
     }
 
     // Check if DOM is already loaded
