@@ -21,6 +21,7 @@ import { useRouter } from 'next/router'
 import { useAuth } from 'src/authentication/useAuth'
 import { registerGeeCompletions } from './monacoGeeProvider'
 import { fetchLatestEOScriptThunk, fetchEOScriptsThunk, resetEOScriptState, createEOScriptThunk } from 'src/store/earthObservation/earthObservation'
+import { editorCodeRef } from 'src/views/pages/earth-observation/editorState'
 import GeeRunner from '../../GeeRunner'
 
 function fmtRelative(isoString) {
@@ -102,12 +103,19 @@ export default function EditorPanel() {
   }, [dispatch, organizationId, projectId, taskId, token])
 
   useEffect(() => {
-    if (latestEOScript?.scriptContent) setCode(latestEOScript.scriptContent)
+    if (latestEOScript?.scriptContent) {
+      setCode(latestEOScript.scriptContent)
+      editorCodeRef.current = latestEOScript.scriptContent
+    }
     if (latestEOScript?.title) setCurrentScriptName(latestEOScript.title)
     if (latestEOScript?.id) setCurrentVersionId(latestEOScript.id)
   }, [latestEOScript])
 
-  const onChange = value => setCode(value ?? '')
+  const onChange = value => {
+    const v = value ?? ''
+    setCode(v)
+    editorCodeRef.current = v
+  }
 
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor
@@ -118,6 +126,7 @@ export default function EditorPanel() {
   // Pick a named script → load its latest version
   const handleSelectScript = script => {
     setCode(script.scriptContent)
+    editorCodeRef.current = script.scriptContent
     editorRef.current?.setValue?.(script.scriptContent)
     setCurrentScriptName(script.title)
     setCurrentVersionId(script.id)
@@ -127,6 +136,7 @@ export default function EditorPanel() {
   // Pick a specific version of the current script
   const handleSelectVersion = version => {
     setCode(version.scriptContent)
+    editorCodeRef.current = version.scriptContent
     editorRef.current?.setValue?.(version.scriptContent)
     setCurrentVersionId(version.id)
     setVersionMenuAnchor(null)
