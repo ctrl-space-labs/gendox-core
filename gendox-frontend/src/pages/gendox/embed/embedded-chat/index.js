@@ -48,7 +48,6 @@ const EmbeddedChatPage = props => {
   const [isOpen, setIsOpen] = useState(false) // Manage chat window visibility
   const iFrameMessageManager = useIFrameMessageManager()
   const isOpenRef = useRef(false)
-  const appliedInitialStateRef = useRef(false)
 
   const sendToggleMessage = nextState => {
     iFrameMessageManager.messageManager.sendMessage({
@@ -96,11 +95,11 @@ const EmbeddedChatPage = props => {
     isOpenRef.current = isOpen
   }, [isOpen])
 
+  // Apply chat open/closed state from config (initial load and when parent calls updateConfig)
   useEffect(() => {
-    const initialState = iFrameMessageManager?.iFrameConfiguration?.chatInitialState
-    if (appliedInitialStateRef.current || !initialState) return
-    appliedInitialStateRef.current = true
-    setIsOpen(initialState === 'open')
+    const chatInitialState = iFrameMessageManager?.iFrameConfiguration?.chatInitialState
+    if (chatInitialState === undefined) return
+    applyChatState(chatInitialState === 'open', false)
   }, [iFrameMessageManager?.iFrameConfiguration?.chatInitialState])
 
   useEffect(() => {

@@ -2,8 +2,11 @@
   const DEFAULT_CHAT_INITIAL_STATE = 'closed'
   const DEFAULT_LOCAL_CONTEXT_MAX_RESPONSES = 1
   const DEFAULT_LOCAL_CONTEXT_MAX_WAIT_MS = 200
+  const DEFAULT_AUTO_SELECTED_TEXT_LOCAL_CONTEXT_ENABLED = true
   const CHAT_TOGGLE_REQUEST_EVENT = 'gendox.events.embedded.chat.toggle.request'
   const CHAT_TOGGLE_ACTION_EVENT = 'gendox.events.embedded.chat.toggle.action'
+  const CONFIG_UPDATE_EVENT = 'gendox.events.embedded.config.update'
+  const LOCAL_CONTEXT_RESPONSE_EVENT = 'gendox.events.chat.message.context.local.response'
 
   // Default CSS styles
   const defaultStyles = `
@@ -56,6 +59,10 @@
       scriptTag.getAttribute('data-gendox-local-context-max-wait-ms'),
       DEFAULT_LOCAL_CONTEXT_MAX_WAIT_MS
     )
+    const autoSelectedTextLocalContextEnabled = parseBooleanAttribute(
+      scriptTag.getAttribute('data-gendox-local-context-selected-text-enabled'),
+      DEFAULT_AUTO_SELECTED_TEXT_LOCAL_CONTEXT_ENABLED
+    )
 
     return {
       gendoxSrc: scriptTag.getAttribute('data-gendox-src') || '',
@@ -65,7 +72,8 @@
       gendoxIframeId: scriptTag.getAttribute('data-gendox-iframe-id') || 'gendox-chat-iframe-id',
       chatInitialState: normalizedInitialState,
       localContextMaxResponses,
-      localContextMaxWaitMs
+      localContextMaxWaitMs,
+      autoSelectedTextLocalContextEnabled
     }
   }
 
@@ -76,6 +84,22 @@
   function parseNonNegativeInt(value, fallback) {
     const parsed = Number.parseInt(value, 10)
     return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback
+  }
+
+  function parseBooleanAttribute(value, fallback) {
+    if (value === null || value === undefined || value === '') {
+      return fallback
+    }
+
+    if (value === 'true') {
+      return true
+    }
+
+    if (value === 'false') {
+      return false
+    }
+
+    return fallback
   }
 
   // Create container and iframe dynamically if they don't exist
@@ -148,6 +172,53 @@
     window.gendox.widget.isOpen = function () {
       return Boolean(window.gendox.widget.state?.isOpen)
     }
+    window.gendox.widget.localContextRequestCallbacks = []
+    window.gendox.widget.addLocalContextRequestCallback = function (callback) {
+      if (typeof callback !== 'function') {
+        throw new Error('Local context callback must be a function')
+      }
+      window.gendox.widget.localContextRequestCallbacks.push(callback)
+      return callback
+    }
+    window.gendox.widget.removeLocalContextRequestCallback = function (callback) {
+      window.gendox.widget.localContextRequestCallbacks = window.gendox.widget.localContextRequestCallbacks.filter(
+        registeredCallback => registeredCallback !== callback
+      )
+    }
+
+    if (config.autoSelectedTextLocalContextEnabled) {
+      window.gendox.widget.addLocalContextRequestCallback(function (_event, sendResponse) {
+        gatherSelectedText(selectedText => {
+          sendResponse({
+            contextType: 'SELECTED_TEXT',
+            value: selectedText
+          })
+        }, true)
+      })
+    }
+
+    window.gendox.widget.updateConfig = function (partial) {
+      if (!partial || typeof partial !== 'object') return false
+      const iframeEl = document.getElementById(gendoxIframeId)
+      if (!iframeEl?.contentWindow) return false
+      const payload = {}
+      if (partial.chatInitialState !== undefined) {
+        payload.chatInitialState = normalizeChatInitialState(partial.chatInitialState)
+      }
+      if (partial.localContextMaxResponses !== undefined) {
+        const n = parseNonNegativeInt(String(partial.localContextMaxResponses), config.localContextMaxResponses)
+        payload.localContextMaxResponses = n < 1 ? 1 : n
+      }
+      if (partial.localContextMaxWaitMs !== undefined) {
+        payload.localContextMaxWaitMs = parseNonNegativeInt(
+          String(partial.localContextMaxWaitMs),
+          config.localContextMaxWaitMs
+        )
+      }
+      if (Object.keys(payload).length === 0) return true
+      iframeEl.contentWindow.postMessage({ type: CONFIG_UPDATE_EVENT, payload }, gendoxSrc)
+      return true
+    }
 
     const handleInitializationRequestMessage = function (event) {
       if (event.data && event.data.type === 'gendox.events.initialization.request') {
@@ -163,20 +234,46 @@
       }
     }
 
-    const handleLocalContextSelectedText = function (event) {
-      if (event.data && event.data.type === 'gendox.events.chat.message.context.local.request') {
-        console.log('handleLocalContextSelectedText after if: ', event)
-        gatherSelectedText(selectedText => {
-          const message = {
-            type: 'gendox.events.chat.message.context.local.response',
-            payload: {
-              contextType: 'SELECTED_TEXT',
-              value: selectedText
-            }
+    function sendLocalContextResponse(payload) {
+      if (!payload || payload.contextType === undefined || payload.value === undefined) {
+        return
+      }
+      console.log('Sending local context response:', payload)
+      iframe.contentWindow.postMessage(
+        {
+          type: LOCAL_CONTEXT_RESPONSE_EVENT,
+          payload: {
+            contextType: payload.contextType,
+            value: payload.value
           }
-          console.log('Sending message to iframe: ', {message,gendoxSrc})
-          iframe.contentWindow.postMessage(message, gendoxSrc)
-        }, true)
+        },
+        gendoxSrc
+      )
+    }
+
+    function sendRegisteredLocalContextResponses(result) {
+      if (!result) {
+        return
+      }
+
+      if (Array.isArray(result)) {
+        result.forEach(sendLocalContextResponse)
+        return
+      }
+
+      sendLocalContextResponse(result)
+    }
+
+    const handleLocalContextRequests = function (event) {
+      if (event.data && event.data.type === 'gendox.events.chat.message.context.local.request') {
+        console.log('Received local context, the are callbacks registered:', window.gendox.widget.localContextRequestCallbacks.length)
+        window.gendox.widget.localContextRequestCallbacks.forEach(callback => {
+          try {
+            sendRegisteredLocalContextResponses(callback(event, sendLocalContextResponse))
+          } catch (err) {
+            console.error('Error executing local context callback:', err)
+          }
+        })
       }
     }
 
@@ -232,13 +329,13 @@
 
     window.addEventListener('message', handleChatWindowToggleMessage, false)
     window.addEventListener('message', handleInitializationRequestMessage)
-    window.addEventListener('message', handleLocalContextSelectedText)
+    window.addEventListener('message', handleLocalContextRequests)
     window.addEventListener('message', handleToolUseMessages)
 
     window.onunload = function () {
       window.removeEventListener('message', handleInitializationRequestMessage)
       window.removeEventListener('message', handleChatWindowToggleMessage)
-      window.removeEventListener('message', handleLocalContextSelectedText)
+      window.removeEventListener('message', handleLocalContextRequests)
       window.removeEventListener('message', handleToolUseMessages)
     }
   }
