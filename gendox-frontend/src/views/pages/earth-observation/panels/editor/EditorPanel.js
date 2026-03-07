@@ -20,8 +20,13 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/router'
 import { useAuth } from 'src/authentication/useAuth'
 import { registerGeeCompletions } from './monacoGeeProvider'
-import { fetchLatestEOScriptThunk, fetchEOScriptsThunk, resetEOScriptState, createEOScriptThunk } from 'src/store/earthObservation/earthObservation'
-import { editorCodeRef } from 'src/views/pages/earth-observation/editorState'
+import {
+  fetchLatestEOScriptThunk,
+  fetchEOScriptsThunk,
+  resetEOScriptState,
+  createEOScriptThunk
+} from 'src/store/earthObservation/earthObservation'
+import { editorCodeRef } from 'src/views/pages/earth-observation/panels/shared/editorState'
 import GeeRunner from '../../GeeRunner'
 
 function fmtRelative(isoString) {
@@ -48,7 +53,6 @@ export default function EditorPanel() {
     state => state.earthObservation
   )
 
-  console.log('EditorCodeRef current value:', editorCodeRef.current)  // Debug log to verify the ref value
 
   const [code, setCode] = useState('')
   const [currentScriptName, setCurrentScriptName] = useState('New Script')
@@ -76,9 +80,7 @@ export default function EditorPanel() {
   }, [eoScripts, currentScriptName])
 
   // The currently loaded version object
-  const currentVersion = currentScriptVersions.find(v => v.id === currentVersionId)
-    ?? currentScriptVersions[0]
-    ?? null
+  const currentVersion = currentScriptVersions.find(v => v.id === currentVersionId) ?? currentScriptVersions[0] ?? null
 
   useEffect(() => {
     const doFetch = async () => {
@@ -167,7 +169,9 @@ export default function EditorPanel() {
     const d = new Date()
     const pad = n => String(n).padStart(2, '0')
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    const description = `Saved – ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+    const description = `Saved – ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} ${pad(d.getHours())}:${pad(
+      d.getMinutes()
+    )}`
 
     dispatch(
       createEOScriptThunk({
@@ -188,7 +192,6 @@ export default function EditorPanel() {
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-
       {/* ── Toolbar ── */}
       <Stack
         direction='row'
@@ -204,7 +207,6 @@ export default function EditorPanel() {
       >
         {/* Left: script context (name → version breadcrumb) */}
         <Stack direction='row' alignItems='center' gap={0.25} sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-
           {/* Script name */}
           <Tooltip title='Switch script' placement='bottom'>
             <Button
@@ -249,7 +251,9 @@ export default function EditorPanel() {
                 onClick={() => handleSelectScript(script)}
               >
                 <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                  <Typography variant='body2' noWrap>{script.title}</Typography>
+                  <Typography variant='body2' noWrap>
+                    {script.title}
+                  </Typography>
                   <Typography variant='caption' color='text.secondary'>
                     {fmtRelative(script.createdAt)}
                   </Typography>
@@ -323,7 +327,10 @@ export default function EditorPanel() {
           <Divider orientation='vertical' flexItem sx={{ mx: 0.25 }} />
 
           {/* Save (icon button) */}
-          <Tooltip title={createEOScriptLoading ? 'Saving…' : hasUnsavedChanges ? 'Save changes' : 'Saved'} placement='bottom'>
+          <Tooltip
+            title={createEOScriptLoading ? 'Saving…' : hasUnsavedChanges ? 'Save changes' : 'Saved'}
+            placement='bottom'
+          >
             <span>
               <IconButton
                 size='small'
@@ -331,10 +338,11 @@ export default function EditorPanel() {
                 disabled={createEOScriptLoading || !hasUnsavedChanges}
                 sx={{ borderRadius: 1, color: hasUnsavedChanges ? 'warning.main' : 'text.disabled' }}
               >
-                {createEOScriptLoading
-                  ? <CircularProgress size={16} color='inherit' />
-                  : <Icon icon='mdi:content-save-outline' width={18} />
-                }
+                {createEOScriptLoading ? (
+                  <CircularProgress size={16} color='inherit' />
+                ) : (
+                  <Icon icon='mdi:content-save-outline' width={18} />
+                )}
               </IconButton>
             </span>
           </Tooltip>
@@ -369,7 +377,11 @@ export default function EditorPanel() {
             }}
           >
             <Box sx={{ textAlign: 'center' }}>
-              <Icon icon='mdi:satellite-variant' width={52} style={{ opacity: 0.18, display: 'block', margin: '0 auto 12px' }} />
+              <Icon
+                icon='mdi:satellite-variant'
+                width={52}
+                style={{ opacity: 0.18, display: 'block', margin: '0 auto 12px' }}
+              />
               <Typography variant='h6' sx={{ fontWeight: 700, mb: 0.5 }}>
                 Start your first script
               </Typography>
@@ -387,7 +399,9 @@ export default function EditorPanel() {
                 placeholder='e.g. NDVI Analysis'
                 value={newScriptNameInput}
                 onChange={e => setNewScriptNameInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && newScriptNameInput.trim()) handleCreateNewScript() }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && newScriptNameInput.trim()) handleCreateNewScript()
+                }}
               />
               <Button
                 variant='contained'
@@ -446,7 +460,9 @@ export default function EditorPanel() {
             label='Script name'
             value={newScriptNameInput}
             onChange={e => setNewScriptNameInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && newScriptNameInput.trim()) handleCreateNewScript() }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && newScriptNameInput.trim()) handleCreateNewScript()
+            }}
             sx={{ mt: 1 }}
           />
         </DialogContent>
@@ -457,7 +473,6 @@ export default function EditorPanel() {
           </Button>
         </DialogActions>
       </Dialog>
-
     </Box>
   )
 }
