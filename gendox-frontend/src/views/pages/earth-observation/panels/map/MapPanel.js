@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 
 import Box from '@mui/material/Box'
+import CircularProgress from '@mui/material/CircularProgress'
 import IconButton from '@mui/material/IconButton'
 
 import Tooltip from '@mui/material/Tooltip'
@@ -11,6 +12,7 @@ import dynamic from 'next/dynamic'
 import toast from 'react-hot-toast'
 import 'leaflet/dist/leaflet.css'
 
+import CameraAltIcon from '@mui/icons-material/CameraAlt'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
 import TimelineIcon from '@mui/icons-material/Timeline'
 import HexagonIcon from '@mui/icons-material/Hexagon'
@@ -27,10 +29,12 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 
 import {
   setMapThumbnail,
+  setScreenshotUrl,
   addDrawnGeometry,
   removeDrawnGeometry,
   clearDrawnGeometries,
-  updateDrawnGeometry
+  updateDrawnGeometry,
+  requestScreenshot
 } from 'src/store/earthObservation/earthObservation'
 
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
@@ -41,6 +45,22 @@ const MapController = dynamic(() => import('src/views/pages/earth-observation/co
 const DrawingManager = dynamic(() => import('src/views/pages/earth-observation/components/DrawingManager'), {
   ssr: false
 })
+
+// Captures the Leaflet map instance so MapPanel can read bounds for screenshots.
+// Must be rendered inside <MapContainer> where useMap() is available.
+const MapRefCapture = dynamic(
+  () =>
+    import('react-leaflet').then(({ useMap }) => ({
+      default: function MapRefCaptureInner({ onReady }) {
+        const map = useMap()
+        useEffect(() => {
+          if (map) onReady(map)
+        }, [map, onReady])
+        return null
+      }
+    })),
+  { ssr: false }
+)
 
 const GeeLayer = ({ url, opacity = 1 }) => {
   if (!url) return null
@@ -64,6 +84,7 @@ export default function MapPanel() {
   const mapLayers = useSelector(state => state.earthObservation.mapLayers)
   const mapCenter = useSelector(state => state.earthObservation.mapCenter)
   const mapThumbnailUrl = useSelector(state => state.earthObservation.mapThumbnailUrl)
+  const screenshotUrl = useSelector(state => state.earthObservation.screenshotUrl)
   const drawnGeometries = useSelector(state => state.earthObservation.drawnGeometries)
 
   // ── Local state ──
@@ -76,8 +97,31 @@ export default function MapPanel() {
   const [layersOpen, setLayersOpen] = useState(true)
   const [panelWide, setPanelWide] = useState(true) // false when map panel is too narrow to show sliders
 
+  const [isCapturing, setIsCapturing] = useState(false)
+
   const inspectorRowRefs = useRef({}) // i -> DOM node for auto-scroll
   const panelRef = useRef(null)
+  const mapInstanceRef = useRef(null) // holds the Leaflet map instance
+
+  // Called by MapRefCapture once the Leaflet map instance is ready
+  const handleMapReady = useCallback(map => {
+    mapInstanceRef.current = map
+  }, [])
+
+  // When the user clicks the camera button, capture current viewport bounds and
+  // dispatch to Redux — GeeRunner picks it up and asks the sandbox for a thumbnail.
+  const handleScreenshot = () => {
+    if (!mapInstanceRef.current) return
+    const b = mapInstanceRef.current.getBounds()
+    const zoom = mapInstanceRef.current.getZoom()
+    setIsCapturing(true)
+    dispatch(requestScreenshot({ south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast(), zoom }))
+  }
+
+  // Reset loading state once the screenshot lands in Redux
+  useEffect(() => {
+    if (screenshotUrl) setIsCapturing(false)
+  }, [screenshotUrl])
 
   // Hide opacity sliders when the map panel is narrower than 400px
   useEffect(() => {
@@ -165,21 +209,21 @@ export default function MapPanel() {
     navigator.clipboard?.writeText(text).then(() => toast.success('Coordinates copied!'))
   }
 
-  // ── Thumbnail handlers ──
-  const handleDownload = () => {
-    if (!mapThumbnailUrl) return
+  // ── Thumbnail / screenshot handlers ──
+  const handleDownload = (url, filename = 'gee-map-result.png') => {
+    if (!url) return
     const a = document.createElement('a')
-    a.href = mapThumbnailUrl
-    a.download = 'gee-map-result.png'
+    a.href = url
+    a.download = filename
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
   }
 
-  const handleCopyImage = async () => {
-    if (!mapThumbnailUrl) return
+  const handleCopyImage = async url => {
+    if (!url) return
     try {
-      const res = await fetch(mapThumbnailUrl)
+      const res = await fetch(url)
       const blob = await res.blob()
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
       toast.success('Image copied! You can now paste it anywhere.')
@@ -216,6 +260,7 @@ export default function MapPanel() {
         {mapLayers.map((layer, i) => (
           <GeeLayer key={i} url={layer.url} opacity={visibleLayers.has(i) ? (layerOpacities[i] ?? 1) : 0} />
         ))}
+        <MapRefCapture onReady={handleMapReady} />
         {mapCenter && <MapController centerData={mapCenter} />}
         <DrawingManager
           activeTool={activeTool}
@@ -307,7 +352,7 @@ export default function MapPanel() {
           )}
         </Box>
 
-        {/* Snapshot toolbar — appears when a thumbnail exists */}
+        {/* Auto-thumbnail toolbar — appears after script run when GEE returns a thumbnail */}
         {mapThumbnailUrl && (
           <Box
             sx={{
@@ -330,12 +375,12 @@ export default function MapPanel() {
             />
             <Divider orientation='vertical' flexItem sx={{ mx: 0.25 }} />
             <Tooltip title='Download'>
-              <IconButton size='small' onClick={handleDownload} sx={{ width: 30, height: 30, p: 0 }}>
+              <IconButton size='small' onClick={() => handleDownload(mapThumbnailUrl, 'gee-thumbnail.png')} sx={{ width: 30, height: 30, p: 0 }}>
                 <FileDownloadIcon sx={{ fontSize: 15 }} />
               </IconButton>
             </Tooltip>
             <Tooltip title='Copy image'>
-              <IconButton size='small' onClick={handleCopyImage} sx={{ width: 30, height: 30, p: 0 }}>
+              <IconButton size='small' onClick={() => handleCopyImage(mapThumbnailUrl)} sx={{ width: 30, height: 30, p: 0 }}>
                 <ContentCopyIcon sx={{ fontSize: 15 }} />
               </IconButton>
             </Tooltip>
@@ -349,6 +394,83 @@ export default function MapPanel() {
               </IconButton>
             </Tooltip>
           </Box>
+        )}
+
+        {/* Screenshot toolbar — appears after camera button capture */}
+        {screenshotUrl && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              bgcolor: 'background.paper',
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1,
+              px: 1,
+              py: 0.5,
+              boxShadow: 2
+            }}
+          >
+            <img
+              src={screenshotUrl}
+              alt='Screenshot'
+              style={{ width: 44, height: 30, objectFit: 'cover', borderRadius: 2, display: 'block' }}
+            />
+            <Divider orientation='vertical' flexItem sx={{ mx: 0.25 }} />
+            <Tooltip title='Download screenshot'>
+              <IconButton size='small' onClick={() => handleDownload(screenshotUrl, 'gee-screenshot.png')} sx={{ width: 30, height: 30, p: 0 }}>
+                <FileDownloadIcon sx={{ fontSize: 15 }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title='Copy screenshot'>
+              <IconButton size='small' onClick={() => handleCopyImage(screenshotUrl)} sx={{ width: 30, height: 30, p: 0 }}>
+                <ContentCopyIcon sx={{ fontSize: 15 }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title='Dismiss'>
+              <IconButton
+                size='small'
+                onClick={() => dispatch(setScreenshotUrl(null))}
+                sx={{ width: 30, height: 30, p: 0 }}
+              >
+                <CloseIcon sx={{ fontSize: 15 }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )}
+
+        {/* Screenshot button — capture current viewport as a GEE thumbnail */}
+        {mapLayers.length > 0 && (
+          <Tooltip title={isCapturing ? 'Capturing…' : 'Screenshot current view'}>
+            <span>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  bgcolor: 'background.paper',
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  px: 0.75,
+                  py: 0.5,
+                  boxShadow: 2
+                }}
+              >
+                <IconButton
+                  size='small'
+                  onClick={handleScreenshot}
+                  disabled={isCapturing}
+                  sx={{ width: 30, height: 30, p: 0 }}
+                >
+                  {isCapturing
+                    ? <CircularProgress size={14} />
+                    : <CameraAltIcon sx={{ fontSize: 15 }} />
+                  }
+                </IconButton>
+              </Box>
+            </span>
+          </Tooltip>
         )}
 
         {/* Layers panel — appears when there are GEE layers */}

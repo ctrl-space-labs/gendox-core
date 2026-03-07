@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, use } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { setMapData, addMapLayer, clearMapLayers, setMapThumbnail, setGeeRunError, createEOScriptThunk } from 'src/store/earthObservation/earthObservation'
+import { setMapData, addMapLayer, clearMapLayers, setMapThumbnail, setScreenshotUrl, setGeeRunError, createEOScriptThunk, clearScreenshotRequest } from 'src/store/earthObservation/earthObservation'
 import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
@@ -18,6 +18,7 @@ export default function GeeRunner({
 
   const createEOScriptLoading = useSelector(state => state.earthObservation.createEOScriptLoading)
   const latestEOScriptLoading = useSelector(state => state.earthObservation.latestEOScriptLoading)
+  const screenshotRequest = useSelector(state => state.earthObservation.screenshotRequest)
 
   console.log("STATE", useSelector(state => state.earthObservation))
 
@@ -36,6 +37,13 @@ export default function GeeRunner({
   useEffect(() => {
     scriptNameRef.current = scriptName
   }, [scriptName])
+
+  // Forward screenshot requests from MapPanel to the GEE sandbox iframe
+  useEffect(() => {
+    if (!screenshotRequest || !iframeRef.current) return
+    iframeRef.current.contentWindow.postMessage({ type: 'GET_THUMB', payload: screenshotRequest }, '*')
+    dispatch(clearScreenshotRequest())
+  }, [screenshotRequest, dispatch])
 
   // 3. Handler for "Run Code" button
   const handleRun = () => {
@@ -128,9 +136,7 @@ export default function GeeRunner({
         setIsRunning(false)
       }
 
-      // C. Thumbnail ready — the URL from GEE requires a Bearer token to open,
-      // so we fetch it here (where we have the token) and convert it to a
-      // base64 data URL that can be used directly in an <img> tag and sent to chat.
+      // C. Auto-thumbnail after script run (from Map.setCenter region)
       if (type === 'THUMBNAIL') {
         const thumbUrl = payload?.url
         if (!thumbUrl) return
@@ -153,6 +159,31 @@ export default function GeeRunner({
           )
           .then(dataUrl => dispatch(setMapThumbnail(dataUrl)))
           .catch(err => console.warn('GEE thumbnail fetch failed:', err))
+      }
+
+      // C2. On-demand screenshot from the camera button (current viewport bounds)
+      if (type === 'SCREENSHOT') {
+        const thumbUrl = payload?.url
+        if (!thumbUrl) return
+
+        const geeToken = window.localStorage.getItem('gee_access_token')
+        if (!geeToken) return
+
+        fetch(thumbUrl, { headers: { Authorization: 'Bearer ' + geeToken } })
+          .then(res => {
+            if (!res.ok) throw new Error('HTTP ' + res.status)
+            return res.blob()
+          })
+          .then(
+            blob =>
+              new Promise(resolve => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result)
+                reader.readAsDataURL(blob)
+              })
+          )
+          .then(dataUrl => dispatch(setScreenshotUrl(dataUrl)))
+          .catch(err => console.warn('GEE screenshot fetch failed:', err))
       }
 
       // D. Error

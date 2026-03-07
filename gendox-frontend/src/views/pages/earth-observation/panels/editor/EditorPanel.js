@@ -48,6 +48,8 @@ export default function EditorPanel() {
     state => state.earthObservation
   )
 
+  console.log('EditorCodeRef current value:', editorCodeRef.current)  // Debug log to verify the ref value
+
   const [code, setCode] = useState('')
   const [currentScriptName, setCurrentScriptName] = useState('New Script')
   const [currentVersionId, setCurrentVersionId] = useState(null)

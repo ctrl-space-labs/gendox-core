@@ -27,7 +27,8 @@ const initialState = {
 
   isGeeReady: false,
   mapLayers: [],          // [{ url, name }]
-  mapThumbnailUrl: null,
+  mapThumbnailUrl: null,  // auto-thumbnail after script run (from Map.setCenter region)
+  screenshotUrl: null,    // on-demand screenshot from the camera button (current viewport)
   mapCenter: null,
   geeRunError: null,
   drawnGeometries: { type: 'GeometryCollection', geometries: [] },
@@ -39,7 +40,9 @@ const initialState = {
   latestEOScriptError: null,
 
   createEOScriptLoading: false,
-  createEOScriptError: null
+  createEOScriptError: null,
+
+  screenshotRequest: null  // { south, west, north, east } — set by MapPanel, consumed by GeeRunner
 }
 
 export const fetchEOScriptsThunk = createAsyncThunk(
@@ -151,6 +154,9 @@ const slice = createSlice({
     setMapThumbnail: (state, action) => {
       state.mapThumbnailUrl = action.payload
     },
+    setScreenshotUrl: (state, action) => {
+      state.screenshotUrl = action.payload
+    },
     setGeeRunError: (state, action) => {
       state.geeRunError = action.payload
     },
@@ -172,6 +178,12 @@ const slice = createSlice({
     setLatestEOScript: (state, action) => {
       state.latestEOScript = action.payload
     },
+    requestScreenshot: (state, action) => {
+      state.screenshotRequest = action.payload  // { south, west, north, east }
+    },
+    clearScreenshotRequest: state => {
+      state.screenshotRequest = null
+    },
     resetEOScriptState: state => {
       state.eoScripts = []
       state.eoScriptsLoading = false
@@ -183,6 +195,7 @@ const slice = createSlice({
       state.createEOScriptError = null
       state.mapLayers = []
       state.mapThumbnailUrl = null
+      state.screenshotUrl = null
       state.mapCenter = null
       state.geeRunError = null
     },
@@ -270,13 +283,16 @@ export const {
   addMapLayer,
   clearMapLayers,
   setMapThumbnail,
+  setScreenshotUrl,
   setGeeRunError,
   addDrawnGeometry,
   removeDrawnGeometry,
   clearDrawnGeometries,
   updateDrawnGeometry,
   setLatestEOScript,
-  resetEOScriptState
+  resetEOScriptState,
+  requestScreenshot,
+  clearScreenshotRequest
 } = slice.actions
 
 export default slice.reducer

@@ -21,6 +21,7 @@
     <script>
       let layerAdded = false
       let mapCenter = null  // stored when user calls Map.setCenter()
+      let lastLayerData = null  // { eeImg, visParams } — reused for on-demand screenshots
 
       const ProxyMap = {
         addLayer: (image, visParams = {}, name) => {
@@ -86,6 +87,9 @@
 
               window.parent.postMessage({ type: 'SUCCESS', payload: { url: urlFormat, name: name || 'Layer' } }, '*')
 
+              // Store the last rendered image so on-demand screenshots can reuse it
+              lastLayerData = { eeImg, visParams: normalizedVisParams }
+
               // Request a static thumbnail asynchronously so the map tiles
               // appear immediately while the thumbnail is still being generated.
               // A region is required — without it GEE renders a blank image.
@@ -139,9 +143,36 @@
       window.addEventListener('message', event => {
         const { type, code, token } = event.data
 
+        // On-demand screenshot: use current Leaflet map bounds from MapPanel
+        if (type === 'GET_THUMB') {
+          if (!lastLayerData) return
+          const { eeImg, visParams } = lastLayerData
+          const { south, west, north, east } = event.data.payload
+          try {
+            const thumbParams = { dimensions: '1024', format: 'png', bestEffort: true }
+            if (visParams.bands)            thumbParams.bands   = visParams.bands
+            if (visParams.min !== undefined) thumbParams.min    = visParams.min
+            if (visParams.max !== undefined) thumbParams.max    = visParams.max
+            if (visParams.palette)           thumbParams.palette = visParams.palette
+            thumbParams.region = ee.Geometry.Rectangle([west, south, east, north])
+            eeImg.getThumbURL(thumbParams, (thumbUrl, thumbErr) => {
+              if (thumbErr || !thumbUrl) {
+                console.warn('[Sandbox] Screenshot thumbnail error:', thumbErr)
+                window.parent.postMessage({ type: 'ERROR', message: 'Screenshot failed: ' + thumbErr }, '*')
+                return
+              }
+              window.parent.postMessage({ type: 'SCREENSHOT', payload: { url: thumbUrl } }, '*')
+            })
+          } catch (ex) {
+            console.warn('[Sandbox] GET_THUMB error:', ex)
+          }
+          return
+        }
+
         if (type === 'EXECUTE') {
           layerAdded = false
           mapCenter = null  // reset for new run
+          lastLayerData = null  // reset for new run
 
           try {
             ee.data.setAuthToken(null, 'Bearer', token)
