@@ -12,8 +12,7 @@ export const fetchAiModels = createAsyncThunk(
       const response = await projectService.getAiModels(organizationId, projectId, token)
       return response.data
     } catch (error) {
-      toast.error(`${getErrorMessage(error)}`)
-      console.error('Failed to fetch AI models', error)
+      toast.error(`Failed to fetch AI models. Error: ${getErrorMessage(error)}`)
       return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
@@ -26,8 +25,7 @@ export const fetchExampleTools = createAsyncThunk(
       const response = await typesService.getToolExamples(token)
       return response.data
     } catch (error) {
-      toast.error(`${getErrorMessage(error)}`)
-      console.error('Failed to fetch example tools', error)
+      toast.error(`Failed to fetch example tools. Error: ${getErrorMessage(error)}`)
       return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
@@ -41,8 +39,7 @@ export const updateProjectAgent = createAsyncThunk(
       const response = await projectService.updateProject(organizationId, projectId, payload, token)
       return response.data
     } catch (error) {
-      toast.error(`${getErrorMessage(error)}`)
-      console.error('Failed to update project agent', error)
+      toast.error(`Failed to update project agent. Error: ${getErrorMessage(error)}`)
       return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }

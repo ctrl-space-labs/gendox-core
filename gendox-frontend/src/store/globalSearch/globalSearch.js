@@ -6,13 +6,13 @@ import toast from 'react-hot-toast'
 // 1. Fetch closer sections from the backend
 export const fetchCloserSectionsFromProject = createAsyncThunk(
   'globalSearch/fetchCloserSectionsFromProject',
-  async ({ message, projectId, size, page, token }) => {
+  async ({ message, projectId, size, page, token }, thunkAPI) => {
     try {
       const response = await searchService.postSearchMessage(message, projectId, size, page, token)
       return response.data
     } catch (error) {
       toast.error(`Failed to fetch closer sections from the project. Error: ${getErrorMessage(error)}`)
-      return thunkAPI.rejectWithValue(error.response.data)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )

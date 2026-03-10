@@ -1,6 +1,8 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import projectService from 'src/gendox-sdk/projectService'
 import { generalConstants } from 'src/utils/generalConstants'
+import { getErrorMessage } from 'src/utils/errorHandler'
+import { toast } from 'sonner'
 import chatConverter from '../../converters/chat.converter'
 import chatThreadService from '../../gendox-sdk/chatThreadService'
 import completionService from '../../gendox-sdk/completionService'
@@ -51,7 +53,7 @@ export const fetchAgents = createAsyncThunk(
       // 3. Return the transformed agents.
       return agents
     } catch (error) {
-      console.error('Failed to fetch agents:', error)
+      toast.error(`Failed to fetch agents. Error: ${getErrorMessage(error)}`)
       return rejectWithValue(error.message)
     }
   }
@@ -102,7 +104,7 @@ export const fetchThreads = createAsyncThunk(
 
       return threadEntries
     } catch (error) {
-      console.error('Failed to fetch threads:', error)
+      toast.error(`Failed to fetch threads. Error: ${getErrorMessage(error)}`)
       return rejectWithValue(error.message)
     }
   }
@@ -131,7 +133,7 @@ export const loadThread = createAsyncThunk(
 
       return currentThread
     } catch (error) {
-      console.error('Failed to load thread:', error)
+      toast.error(`Failed to load thread. Error: ${getErrorMessage(error)}`)
       return rejectWithValue(error.message)
     }
   }
@@ -144,7 +146,7 @@ export const fetchMessageMetadata = createAsyncThunk(
       const response = await chatThreadService.getThreadMessageMetadataByMessageId(thread.id, message.messageId, token)
       return response.data
     } catch (error) {
-      console.error('Failed to fetch message metadata:', error)
+      toast.error(`Failed to fetch message metadata. Error: ${getErrorMessage(error)}`)
       return rejectWithValue(error.message)
     }
   }
@@ -260,9 +262,7 @@ export const addMessage = createAsyncThunk('gendoxChat/pushMessage', async (mess
   return chatConverter.gendoxMessageToThreadMessage(message)
 })
 
-export const fetchThreadId = createAsyncThunk('gendoxChat/fetchThreadId', async (arg, thunkAPI) => {
-  console.log('fetchThreadId called')
-})
+export const fetchThreadId = createAsyncThunk('gendoxChat/fetchThreadId', async (arg, thunkAPI) => {})
 
 const gendoxChatSlice = createSlice({
   name: 'gendoxChat',
