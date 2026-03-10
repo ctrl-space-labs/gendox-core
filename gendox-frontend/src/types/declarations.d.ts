@@ -88,10 +88,6 @@ declare module "src/store/activeTask/activeTask" {
   export const clearDigitizationGenerationState: any
 }
 
-declare module "src/utils/identiconUtil" {
-  export function generateIdenticon(...args: any[]): string
-}
-
 declare module "src/utils/generalConstants" {
   export const localStorageConstants: {
     accessTokenKey: string

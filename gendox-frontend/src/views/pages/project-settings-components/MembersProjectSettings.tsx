@@ -189,8 +189,8 @@ const MembersProjectSettings = () => {
         }
         const role = row.original.role?.name || "UNKNOWN"
         const status =
-          (memberRoleStatus as any)[role] ||
-          (memberRoleStatus as any).UNKNOWN
+          memberRoleStatus[role] ||
+          memberRoleStatus.UNKNOWN
         return (
           <span className="text-sm flex items-center">
             {roleIconMap[role] || roleIconMap.UNKNOWN}

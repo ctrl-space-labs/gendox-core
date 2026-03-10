@@ -208,8 +208,8 @@ const InviteDialog = ({ open, handleClose }: InviteDialogProps) => {
                       <SelectContent>
                         {allowedRoles.map((role: string) => (
                           <SelectItem key={role} value={role}>
-                            {(memberRoleStatus as any)[role]
-                              ? (memberRoleStatus as any)[role].title
+                            {memberRoleStatus[role]
+                              ? memberRoleStatus[role].title
                               : role}
                           </SelectItem>
                         ))}

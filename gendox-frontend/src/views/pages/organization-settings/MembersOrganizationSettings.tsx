@@ -241,8 +241,8 @@ const MembersOrganizationSettings = () => {
         cell: ({ row }) => {
           const role = row.original.role?.name || "UNKNOWN";
           const status =
-            (memberRoleStatus as any)[role] ||
-            (memberRoleStatus as any).UNKNOWN;
+            memberRoleStatus[role] ||
+            memberRoleStatus.UNKNOWN;
 
           return (
             <div className="flex items-center gap-2">
@@ -252,8 +252,8 @@ const MembersOrganizationSettings = () => {
               </span>
 
               {userRole !== "ROLE_READER" &&
-                (roleRankMap as any)[userRole] >=
-                  ((roleRankMap as any)[row.original.role?.name] || 0) && (
+                roleRankMap[userRole] >=
+                  (roleRankMap[row.original.role?.name || "UNKNOWN"] || 0) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -268,9 +268,7 @@ const MembersOrganizationSettings = () => {
                             roleKey !== "UNKNOWN"
                         )
                         .map((roleKey: string) => {
-                          const roleStatus = (memberRoleStatus as any)[
-                            roleKey
-                          ];
+                          const roleStatus = memberRoleStatus[roleKey];
                           return (
                             <DropdownMenuItem
                               key={roleKey}

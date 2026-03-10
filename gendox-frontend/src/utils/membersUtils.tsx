@@ -11,7 +11,6 @@ export interface UserTypeStatusEntry {
 
 export interface MemberRoleStatusEntry {
   title: string;
-  icon: string;
 }
 
 export interface RenderClientAvatarUser {
@@ -22,14 +21,14 @@ export interface RenderClientAvatarUser {
 
 // ─── Color palette ────────────────────────────────────────────────────────────
 
-/** Maps a palette index → Tailwind bg/text pair used for the identicon tint. */
-const colorOptions: Array<{ fg: string; bg: string; tailwind: string }> = [
-  { fg: "#16a34a", bg: "#16a34a", tailwind: "bg-green-100 text-green-700" },   // success
-  { fg: "#dc2626", bg: "#dc2626", tailwind: "bg-red-100 text-red-700" },       // error
-  { fg: "#d97706", bg: "#d97706", tailwind: "bg-amber-100 text-amber-700" },   // warning
-  { fg: "#0ea5e9", bg: "#0ea5e9", tailwind: "bg-sky-100 text-sky-700" },       // info
-  { fg: "#7c3aed", bg: "#7c3aed", tailwind: "bg-violet-100 text-violet-700" }, // primary
-  { fg: "#db2777", bg: "#db2777", tailwind: "bg-pink-100 text-pink-700" },     // secondary
+/** Maps a palette index → Tailwind bg/text pair used for avatar coloring. */
+const colorOptions: string[] = [
+  "bg-green-100 text-green-700",   // success
+  "bg-red-100 text-red-700",       // error
+  "bg-amber-100 text-amber-700",   // warning
+  "bg-sky-100 text-sky-700",       // info
+  "bg-violet-100 text-violet-700", // primary
+  "bg-pink-100 text-pink-700",     // secondary
 ];
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -43,11 +42,11 @@ export const userTypeStatus: Record<string, UserTypeStatusEntry> = {
 };
 
 export const memberRoleStatus: Record<string, MemberRoleStatusEntry> = {
-  ROLE_OWNER: { title: "Owner", icon: "mdi:shield-account" },
-  ROLE_ADMIN: { title: "Admin", icon: "mdi:shield-crown-outline" },
-  ROLE_READER: { title: "Read Only", icon: "mdi:smart-card-reader-outline" },
-  ROLE_EDITOR: { title: "Editor", icon: "mdi:pencil-outline" },
-  UNKNOWN: { title: "UNKNOWN", icon: "mdi:account-question" },
+  ROLE_OWNER: { title: "Owner" },
+  ROLE_ADMIN: { title: "Admin" },
+  ROLE_READER: { title: "Read Only" },
+  ROLE_EDITOR: { title: "Editor" },
+  UNKNOWN: { title: "UNKNOWN" },
 };
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
@@ -70,22 +69,20 @@ const hashCode = (str: string): number => {
 // ─── Avatar renderer ──────────────────────────────────────────────────────────
 
 /**
- * Renders a shadcn Avatar with a deterministic identicon image derived from
+ * Renders a shadcn Avatar with deterministic coloring derived from
  * the user's unique value (id → email → userName → "default").
- *
- * Replaces the MUI `CustomAvatar` usage; no longer requires `useTheme()`.
  */
 export const renderClientAvatar = (user: RenderClientAvatarUser): React.ReactElement => {
   const uniqueValue = user.id ?? user.email ?? user.userName ?? "default";
   const colorIndex = Math.abs(hashCode(uniqueValue)) % colorOptions.length;
-  const { tailwind } = colorOptions[colorIndex];
+  const color = colorOptions[colorIndex];
 
   const displayName = user.userName ?? user.email ?? "U";
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <Avatar className={cn("mr-3 h-8 w-8", tailwind)}>
-      <AvatarFallback className={cn("text-xs font-semibold", tailwind)}>
+    <Avatar className={cn("mr-3 h-8 w-8", color)}>
+      <AvatarFallback className={cn("text-xs font-semibold", color)}>
         {initial}
       </AvatarFallback>
     </Avatar>
