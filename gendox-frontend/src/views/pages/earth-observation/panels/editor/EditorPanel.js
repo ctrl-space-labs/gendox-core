@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { applyPatch } from 'diff'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -30,6 +29,11 @@ import {
 import { editorCodeRef, runScriptRef } from 'src/views/pages/earth-observation/panels/shared/editorState'
 import GeeRunner from '../../GeeRunner'
 
+// Sentinel used to mark that a tool edit is currently in flight.
+// The ref is set to this value before executeEdits (which fires onChange synchronously)
+// so onChange knows not to clear pending change state during a tool-driven edit.
+const TOOL_EDIT_IN_FLIGHT = {}
+
 function fmtRelative(isoString) {
   if (!isoString) return ''
   const diff = Date.now() - new Date(isoString).getTime()
@@ -49,7 +53,11 @@ export default function EditorPanel() {
   const token = oidcAuthState?.user?.access_token
   const { organizationId, taskId, projectId } = router.query
   const editorRef = useRef(null)
+  const monacoRef = useRef(null)
   const providerDisposableRef = useRef(null)
+  const patchDecorationsRef = useRef([])
+  const pendingChangeRef = useRef(null)
+  const lastToolWrittenContentRef = useRef(null)
   const { latestEOScriptLoading, latestEOScript, eoScripts, createEOScriptLoading } = useSelector(
     state => state.earthObservation
   )
@@ -64,6 +72,7 @@ export default function EditorPanel() {
   const [newScriptDialogOpen, setNewScriptDialogOpen] = useState(false)
   const [newScriptNameInput, setNewScriptNameInput] = useState('')
   const [isFirstScript, setIsFirstScript] = useState(false)
+  const [hasPendingChange, setHasPendingChange] = useState(false)
 
   // One entry per unique title — most recent first (eoScripts already sorted desc)
   const distinctScripts = useMemo(() => {
@@ -125,28 +134,61 @@ export default function EditorPanel() {
     const register = () => {
       if (!window.gendox?.tools?.registerTool) return false
 
-      console.log('register -> apply_patch')
-      window.gendox.tools.registerTool('apply_patch', ({ patch, document_id, summary }) => {
-        // if (document_id !== 'GEE_SCRIPT_FILE') {
-        //   return { success: false, error: `Unknown document_id: ${document_id}` }
-        // }
-        console.log('apply_patch')
-        console.log('apply_patch -> patch:', patch)
-        console.log('apply_patch -> document_id:', document_id)
-        console.log('apply_patch -> summary:', summary)
-
-        const currentCode = editorRef.current?.getValue?.() ?? ''
-        console.log('apply_patch -> currentCode:', currentCode)
-        console.log('apply_patch -> patch:', patch)
-        const patched = applyPatch(currentCode, patch)
-        console.log('apply_patch -> patched:', patched)
-
-        if (patched === false) {
-          return { success: false, error: 'Patch could not be applied cleanly to current script' }
+      window.gendox.tools.registerTool('apply_range_patch', ({ document_id, start_line, end_line, new_text, summary }) => {
+        const editor = editorRef.current
+        const monaco = monacoRef.current
+        if (!editor || !monaco) {
+          return { success: false, error: 'Editor not ready' }
         }
-        editorRef.current?.setValue?.(patched)
-        setCode(patched)
-        editorCodeRef.current = patched
+        const model = editor.getModel()
+        if (!model) {
+          return { success: false, error: 'Editor model not ready' }
+        }
+        const lineCount = model.getLineCount()
+        const start = Math.max(1, Math.min(start_line, lineCount))
+        const end = Math.max(1, Math.min(end_line, lineCount))
+        if (start > end) {
+          return { success: false, error: `Invalid range: start_line (${start_line}) must be <= end_line (${end_line})` }
+        }
+        const range = new monaco.Range(start, 1, end, model.getLineMaxColumn(end))
+        const contentBeforeEdit = editor.getValue()
+
+        // Set sentinel BEFORE executeEdits — it fires onChange synchronously,
+        // and onChange must not clear the pending batch during a tool edit.
+        lastToolWrittenContentRef.current = TOOL_EDIT_IN_FLIGHT
+        editor.executeEdits('replace-line-range', [{ range, text: new_text ?? '' }])
+        const updated = editor.getValue()
+        lastToolWrittenContentRef.current = updated
+        setCode(updated)
+        editorCodeRef.current = updated
+
+        const newLineCount = (new_text ?? '').split(/\r?\n/).length || 1
+        const highlightEndLine = start + newLineCount - 1
+        const newRange = { startLine: start, endLine: highlightEndLine }
+
+        if (!pendingChangeRef.current) {
+          pendingChangeRef.current = { originalContent: contentBeforeEdit, ranges: [newRange] }
+        } else {
+          pendingChangeRef.current.ranges.push(newRange)
+        }
+        setHasPendingChange(true)
+
+        const newDecorations = []
+        for (const { startLine: s, endLine: e } of pendingChangeRef.current.ranges) {
+          for (let L = s; L <= e; L++) {
+            newDecorations.push({
+              range: new monaco.Range(L, 1, L, 1),
+              options: {
+                isWholeLine: true,
+                className: 'gendox-patch-changed-line',
+                stickiness: 1
+              }
+            })
+          }
+        }
+        if (newDecorations.length > 0) {
+          patchDecorationsRef.current = editor.deltaDecorations(patchDecorationsRef.current, newDecorations)
+        }
         return { success: true, summary }
       })
 
@@ -165,19 +207,55 @@ export default function EditorPanel() {
 
     return () => {
       clearInterval(intervalId)
-      window.gendox?.tools?.removeTool?.('apply_patch')
+      window.gendox?.tools?.removeTool?.('apply_range_patch')
       window.gendox?.tools?.removeTool?.('execute_script')
     }
   }, [])
+
+  const clearChangeVisualization = () => {
+    const editor = editorRef.current
+    if (editor && patchDecorationsRef.current.length > 0) {
+      editor.deltaDecorations(patchDecorationsRef.current, [])
+      patchDecorationsRef.current = []
+    }
+    pendingChangeRef.current = null
+    setHasPendingChange(false)
+  }
+
+  const handleKeepAll = () => {
+    clearChangeVisualization()
+  }
+
+  const handleUndoAll = () => {
+    const pending = pendingChangeRef.current
+    if (!pending) {
+      clearChangeVisualization()
+      return
+    }
+    const editor = editorRef.current
+    if (editor && pending.originalContent !== undefined) {
+      editor.setValue(pending.originalContent)
+      setCode(pending.originalContent)
+      editorCodeRef.current = pending.originalContent
+    }
+    clearChangeVisualization()
+  }
 
   const onChange = value => {
     const v = value ?? ''
     setCode(v)
     editorCodeRef.current = v
+    const last = lastToolWrittenContentRef.current
+    if (last !== TOOL_EDIT_IN_FLIGHT && v !== last) {
+      // Content differs from what the tool wrote → user edited manually
+      clearChangeVisualization()
+      lastToolWrittenContentRef.current = null
+    }
   }
 
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor
+    monacoRef.current = monaco
     providerDisposableRef.current?.dispose?.()
     providerDisposableRef.current = registerGeeCompletions(monaco)
   }
@@ -402,6 +480,34 @@ export default function EditorPanel() {
             </span>
           </Tooltip>
 
+          {/* Keep all / Undo all (when there is a pending AI edit) */}
+          {hasPendingChange && (
+            <>
+              <Tooltip title='Keep all changes and clear preview' placement='bottom'>
+                <Button
+                  size='small'
+                  variant='outlined'
+                  onClick={handleKeepAll}
+                  startIcon={<Icon icon='mdi:check-all' width={16} />}
+                  sx={{ textTransform: 'none', fontSize: 12, py: 0.25, borderColor: 'success.main', color: 'success.main' }}
+                >
+                  Keep all
+                </Button>
+              </Tooltip>
+              <Tooltip title='Revert to content before this edit' placement='bottom'>
+                <Button
+                  size='small'
+                  variant='outlined'
+                  onClick={handleUndoAll}
+                  startIcon={<Icon icon='mdi:undo' width={16} />}
+                  sx={{ textTransform: 'none', fontSize: 12, py: 0.25, borderColor: 'text.secondary', color: 'text.secondary' }}
+                >
+                  Undo all
+                </Button>
+              </Tooltip>
+            </>
+          )}
+
           {/* Run Code */}
           <GeeRunner
             code={code}
@@ -417,6 +523,12 @@ export default function EditorPanel() {
 
       {/* ── Editor or First-script onboarding ── */}
       <Box sx={{ flex: 1, minHeight: 0, position: 'relative' }}>
+        {/* CSS for patch-change line highlight (Monaco decoration) */}
+        <style>{`
+          .gendox-patch-changed-line {
+            background-color: rgba(0, 255, 0, 0.15) !important;
+          }
+        `}</style>
         {isFirstScript ? (
           /* ── Inline onboarding: no code, no dialog, just this ── */
           <Box

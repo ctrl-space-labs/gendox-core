@@ -43,9 +43,17 @@ export default function ChatPanel() {
     script.src = `${window.location.origin}/gendox-sdk/gendox-widget-plugin.js`
     script.onload = () => {
       window.gendox.widget.addLocalContextRequestCallback('GEE_SCRIPT_FILE', function () {
+        const raw = editorCodeRef.current || ''
+        const withLineNumbers = raw
+          .split('\n')
+          .map((line, i) => {
+            const num = String(i + 1).padStart(4)
+            return `${num} | ${line}`
+          })
+          .join('\n')
         return {
           contextType: 'GEE_SCRIPT_FILE',
-          value: editorCodeRef.current
+          value: withLineNumbers
         }
       })
     }
