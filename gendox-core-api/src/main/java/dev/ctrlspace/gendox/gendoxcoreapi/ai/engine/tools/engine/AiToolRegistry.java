@@ -36,29 +36,33 @@ public class AiToolRegistry {
         this.objectMapper = objectMapper;
     }
 
-    public JsonNode execute(String toolName, JsonNode args, ToolExecutionContext context)  {
+    public JsonNode execute(String toolName, JsonNode args, ToolExecutionContext context) {
         AiToolHandler handler = handlersByName.get(toolName);
-        if (handler != null) {
-            try {
-                return handler.execute(args, context);
-            } catch (GendoxException e) {
-                logger.error("Failed to execute tool {}, for project {}. Skipping...",
-                        toolName,
-                        Optional.ofNullable(context.project()).map(p -> p.getId().toString()).orElse("no-project"));
-                logger.error(e.getMessage(), e);
-                // return the error notification to the LLM
-                ObjectNode result = objectMapper.createObjectNode();
-                result.put("status", "EXECUTION_FAILED_WITH_ERROR");
-                return result;
-            }
 
+        if (handler == null) {
+            // TODO: think what to do with tools that are just passed in the browsers, and no execution is needed by BE
+            // This supports only Frontend actions that do not require BE execution.
+            // The tools are custom jsons in the agent's settings
+            ObjectNode result = objectMapper.createObjectNode();
+            result.put("status", "executed");
+            return result;
         }
-        // TODO: think what to do with tools that are just passed in the browsers, and no execution is needed by BE
-        // This supports only Frontend actions that do not require BE execution.
-        // The tools are custom jsons in the agent's settings
-        ObjectNode result = objectMapper.createObjectNode();
-        result.put("status", "executed");
-        return result;
+
+        try {
+            return handler.execute(args, context);
+        } catch (GendoxException e) {
+            logger.error(
+                    "Failed to execute tool {}, for project {}. Skipping...",
+                    toolName,
+                    Optional.ofNullable(context.project()).map(p -> p.getId().toString()).orElse("no-project")
+            );
+            logger.error(e.getMessage(), e);
+
+            // return the error notification to the LLM
+            ObjectNode result = objectMapper.createObjectNode();
+            result.put("status", "EXECUTION_FAILED_WITH_ERROR");
+            return result;
+        }
     }
 
     public boolean supports(String toolName) {
