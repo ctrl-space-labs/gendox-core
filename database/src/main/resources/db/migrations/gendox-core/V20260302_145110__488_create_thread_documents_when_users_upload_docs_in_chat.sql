@@ -99,62 +99,83 @@ WHERE NOT EXISTS (SELECT 1
                     AND ctd.project_id = f.project_id);
 
 
--- INSERT into gendox_core.types
---     (type_category, name, description)
--- select 'PROJECT_DOCUMENT_TYPE',
---        'KNOWLEDGE_BASE',
---        'Knowledge base used across all project'
--- where not exists(SELECT *
---                  FROM gendox_core.types
---                  where type_category = 'PROJECT_DOCUMENT_TYPE'
---                    and name = 'KNOWLEDGE_BASE');
---
--- INSERT into gendox_core.types
---     (type_category, name, description)
--- select 'PROJECT_DOCUMENT_TYPE',
---        'THREAD_ATTACHMENT',
---        'Document uploaded as attachment in a chat thread, only visible to thread participants'
--- where not exists(SELECT *
---                  FROM gendox_core.types
---                  where type_category = 'PROJECT_DOCUMENT_TYPE'
---                    and name = 'THREAD_ATTACHMENT');
+INSERT INTO gendox_core.types (type_category, name, description)
+SELECT
+    'AI_TOOL_EXAMPLES',
+    'APPLY_RANGE_PATCH',
+    $${
+          "name": "apply_range_patch",
+          "strict": true,
+          "parameters": {
+            "type": "object",
+            "required": [
+              "document_id",
+              "start_line",
+              "end_line",
+              "new_text",
+              "summary"
+            ],
+            "properties": {
+              "summary": {
+                "type": "string",
+                "description": "A short summary explaining the purpose of the modification"
+              },
+              "end_line": {
+                "type": "integer",
+                "description": "The last line number in the current document to replace, inclusive"
+              },
+              "new_text": {
+                "type": "string",
+                "description": "The exact replacement text for the specified line range. Use an empty string to delete the selected lines."
+              },
+              "start_line": {
+                "type": "integer",
+                "description": "The first line number in the current document to replace"
+              },
+              "document_id": {
+                "type": "string",
+                "description": "The UUID of the document to update"
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Function that applies a single line-range edit to an existing document and persists the updated content. The edit replaces the lines from start_line through end_line, inclusive, with new_text. If multiple changes are needed, multiple tool calls should be issued."
+        }$$
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.types
+    WHERE type_category = 'AI_TOOL_EXAMPLES'
+      AND name = 'APPLY_RANGE_PATCH'
+);
 
 
--- set default values for existing records
--- set default values for existing records (only where document_type_id IS NULL)
--- WITH type_ids AS (
---     SELECT
---         (SELECT id
---          FROM gendox_core.types
---          WHERE type_category = 'PROJECT_DOCUMENT_TYPE'
---            AND name = 'THREAD_ATTACHMENT'
---          ORDER BY id
---          LIMIT 1) AS thread_type_id,
---         (SELECT id
---          FROM gendox_core.types
---          WHERE type_category = 'PROJECT_DOCUMENT_TYPE'
---            AND name = 'KNOWLEDGE_BASE'
---          ORDER BY id
---          LIMIT 1) AS kb_type_id
--- ),
---      mlc_docs AS (
---          SELECT DISTINCT document_id
---          FROM gendox_core.message_local_context
---      ),
---      desired AS (
---          SELECT
---              pd.id AS project_document_id,
---              CASE
---                  WHEN md.document_id IS NOT NULL THEN t.thread_type_id
---                  ELSE t.kb_type_id
---                  END AS desired_type_id
---          FROM gendox_core.project_documents pd
---                   CROSS JOIN type_ids t
---                   LEFT JOIN mlc_docs md
---                             ON md.document_id = pd.document_id
---          WHERE pd.document_type_id IS NULL
---      )
--- UPDATE gendox_core.project_documents pd
--- SET document_type_id = d.desired_type_id
--- FROM desired d
--- WHERE pd.id = d.project_document_id;
+
+
+INSERT INTO gendox_core.types (type_category, name, description)
+SELECT
+    'AI_TOOL_EXAMPLES',
+    'EXECUTE_COMMAND',
+    $${
+          "name": "execute_command",
+          "strict": true,
+          "parameters": {
+            "type": "object",
+            "required": [
+              "command"
+            ],
+            "properties": {
+              "command": {
+                "type": "string",
+                "description": "The shell command to execute. Use known Linux commands or commands described in the context/skills documentation."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Function that executes a shell command to run scripts or other operations. Use standard Linux commands or commands described in the available context/skills documentation."
+        }$$
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.types
+    WHERE type_category = 'AI_TOOL_EXAMPLES'
+      AND name = 'EXECUTE_COMMAND'
+);

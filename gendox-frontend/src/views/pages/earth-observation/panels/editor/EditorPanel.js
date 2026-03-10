@@ -192,8 +192,8 @@ export default function EditorPanel() {
         return { success: true, summary }
       })
 
-      window.gendox.tools.registerTool('execute_script', () => {
-        console.log('execute_script')
+      window.gendox.tools.registerTool('execute_command', () => {
+        console.log('execute_command')
         runScriptRef.current?.()
         return { success: true }
       })
@@ -208,7 +208,7 @@ export default function EditorPanel() {
     return () => {
       clearInterval(intervalId)
       window.gendox?.tools?.removeTool?.('apply_range_patch')
-      window.gendox?.tools?.removeTool?.('execute_script')
+      window.gendox?.tools?.removeTool?.('execute_command')
     }
   }, [])
 
