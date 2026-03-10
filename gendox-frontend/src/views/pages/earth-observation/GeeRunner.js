@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useRef, use } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { setMapData, addMapLayer, clearMapLayers, setMapThumbnail, setScreenshotUrl, setGeeRunError, createEOScriptThunk, clearScreenshotRequest } from 'src/store/earthObservation/earthObservation'
+import { runScriptRef } from 'src/views/pages/earth-observation/panels/shared/editorState'
 import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
@@ -68,6 +69,13 @@ export default function GeeRunner({
     // Increase the key -> React destroys the old iframe and creates a NEW one
     setIframeKey(prev => prev + 1)
   }
+
+  // Keep runScriptRef current so EditorPanel's tool handler can trigger a run
+  // without prop drilling — same pattern as editorCodeRef.
+  useEffect(() => {
+    runScriptRef.current = handleRun
+    return () => { runScriptRef.current = null }
+  })
 
   // 4. Listen for messages (The heart of communication)
   useEffect(() => {

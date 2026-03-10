@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { applyPatch } from 'diff'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -26,7 +27,7 @@ import {
   resetEOScriptState,
   createEOScriptThunk
 } from 'src/store/earthObservation/earthObservation'
-import { editorCodeRef } from 'src/views/pages/earth-observation/panels/shared/editorState'
+import { editorCodeRef, runScriptRef } from 'src/views/pages/earth-observation/panels/shared/editorState'
 import GeeRunner from '../../GeeRunner'
 
 function fmtRelative(isoString) {
@@ -114,6 +115,60 @@ export default function EditorPanel() {
     if (latestEOScript?.title) setCurrentScriptName(latestEOScript.title)
     if (latestEOScript?.id) setCurrentVersionId(latestEOScript.id)
   }, [latestEOScript])
+
+  // Register tools with the widget SDK so the AI agent can call them.
+  // The widget script is loaded asynchronously by ChatPanel, so we poll until
+  // window.gendox.tools.registerTool is available before registering.
+  useEffect(() => {
+    let intervalId
+
+    const register = () => {
+      if (!window.gendox?.tools?.registerTool) return false
+
+      console.log('register -> apply_patch')
+      window.gendox.tools.registerTool('apply_patch', ({ patch, document_id, summary }) => {
+        // if (document_id !== 'GEE_SCRIPT_FILE') {
+        //   return { success: false, error: `Unknown document_id: ${document_id}` }
+        // }
+        console.log('apply_patch')
+        console.log('apply_patch -> patch:', patch)
+        console.log('apply_patch -> document_id:', document_id)
+        console.log('apply_patch -> summary:', summary)
+
+        const currentCode = editorRef.current?.getValue?.() ?? ''
+        console.log('apply_patch -> currentCode:', currentCode)
+        console.log('apply_patch -> patch:', patch)
+        const patched = applyPatch(currentCode, patch)
+        console.log('apply_patch -> patched:', patched)
+
+        if (patched === false) {
+          return { success: false, error: 'Patch could not be applied cleanly to current script' }
+        }
+        editorRef.current?.setValue?.(patched)
+        setCode(patched)
+        editorCodeRef.current = patched
+        return { success: true, summary }
+      })
+
+      window.gendox.tools.registerTool('execute_script', () => {
+        console.log('execute_script')
+        runScriptRef.current?.()
+        return { success: true }
+      })
+
+      return true
+    }
+
+    if (!register()) {
+      intervalId = setInterval(() => { if (register()) clearInterval(intervalId) }, 100)
+    }
+
+    return () => {
+      clearInterval(intervalId)
+      window.gendox?.tools?.removeTool?.('apply_patch')
+      window.gendox?.tools?.removeTool?.('execute_script')
+    }
+  }, [])
 
   const onChange = value => {
     const v = value ?? ''
