@@ -118,9 +118,12 @@ export default function MapPanel() {
     dispatch(requestScreenshot({ south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast(), zoom }))
   }
 
-  // Reset loading state once the screenshot lands in Redux
+  // Auto-download as soon as the screenshot lands in Redux, then clear it
   useEffect(() => {
-    if (screenshotUrl) setIsCapturing(false)
+    if (!screenshotUrl) return
+    setIsCapturing(false)
+    handleDownload(screenshotUrl, 'gee-screenshot.png')
+    dispatch(setScreenshotUrl(null))
   }, [screenshotUrl])
 
   // Hide opacity sliders when the map panel is narrower than 400px
@@ -396,49 +399,6 @@ export default function MapPanel() {
           </Box>
         )}
 
-        {/* Screenshot toolbar — appears after camera button capture */}
-        {screenshotUrl && (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5,
-              bgcolor: 'background.paper',
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: 1,
-              px: 1,
-              py: 0.5,
-              boxShadow: 2
-            }}
-          >
-            <img
-              src={screenshotUrl}
-              alt='Screenshot'
-              style={{ width: 44, height: 30, objectFit: 'cover', borderRadius: 2, display: 'block' }}
-            />
-            <Divider orientation='vertical' flexItem sx={{ mx: 0.25 }} />
-            <Tooltip title='Download screenshot'>
-              <IconButton size='small' onClick={() => handleDownload(screenshotUrl, 'gee-screenshot.png')} sx={{ width: 30, height: 30, p: 0 }}>
-                <FileDownloadIcon sx={{ fontSize: 15 }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title='Copy screenshot'>
-              <IconButton size='small' onClick={() => handleCopyImage(screenshotUrl)} sx={{ width: 30, height: 30, p: 0 }}>
-                <ContentCopyIcon sx={{ fontSize: 15 }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title='Dismiss'>
-              <IconButton
-                size='small'
-                onClick={() => dispatch(setScreenshotUrl(null))}
-                sx={{ width: 30, height: 30, p: 0 }}
-              >
-                <CloseIcon sx={{ fontSize: 15 }} />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        )}
 
         {/* Screenshot button — capture current viewport as a GEE thumbnail */}
         {mapLayers.length > 0 && (
