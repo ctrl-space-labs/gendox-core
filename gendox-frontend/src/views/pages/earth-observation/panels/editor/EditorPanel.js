@@ -26,13 +26,70 @@ import {
   resetEOScriptState,
   createEOScriptThunk
 } from 'src/store/earthObservation/earthObservation'
-import { editorCodeRef, runScriptRef } from 'src/views/pages/earth-observation/panels/shared/editorState'
+import { editorCodeRef, runScriptRef, keepAllRef } from 'src/views/pages/earth-observation/panels/shared/editorState'
 import GeeRunner from '../../GeeRunner'
 
 // Sentinel used to mark that a tool edit is currently in flight.
 // The ref is set to this value before executeEdits (which fires onChange synchronously)
 // so onChange knows not to clear pending change state during a tool-driven edit.
 const TOOL_EDIT_IN_FLIGHT = {}
+
+/**
+ * Translates original-script line numbers to current-document line numbers using
+ * previously applied patches. Each patch that ends before a given line adds its
+ * delta (newLineCount - replacedLineCount) to that line's offset.
+ * @param {Array<{ originalStart: number, originalEnd: number, newLineCount: number }>} appliedPatches
+ * @param {number} startLine - 1-based original start line
+ * @param {number} endLine - 1-based original end line
+ * @returns {{ translatedStart: number, translatedEnd: number }}
+ */
+function translateOriginalLinesToCurrent(appliedPatches, startLine, endLine) {
+  let startOffset = 0
+  let endOffset = 0
+  for (const p of appliedPatches) {
+    const replacedCount = p.originalEnd - p.originalStart + 1
+    const delta = p.newLineCount - replacedCount
+    if (startLine > p.originalEnd) startOffset += delta
+    if (endLine > p.originalEnd) endOffset += delta
+  }
+  return {
+    translatedStart: startLine + startOffset,
+    translatedEnd: endLine + endOffset
+  }
+}
+
+/**
+ * Returns the number of lines in the given text (for patch delta calculation).
+ * Empty or null is treated as 1 line so the offset matches Monaco: replacing
+ * a range with "" still leaves one empty line in the model.
+ */
+function getNewTextLineCount(text) {
+  if (text == null || text === '') return 1
+  const lines = String(text).split(/\r?\n/)
+  return lines.length || 1
+}
+
+/**
+ * Builds Monaco decoration descriptors for whole-line highlight of the given range.
+ * @param {object} monaco - Monaco namespace
+ * @param {number} startLine - 1-based start (inclusive)
+ * @param {number} endLine - 1-based end (inclusive)
+ * @returns {Array<{ range: object, options: object }>}
+ */
+function buildPatchLineDecorations(monaco, startLine, endLine) {
+  const decorations = []
+  for (let L = startLine; L <= endLine; L++) {
+    decorations.push({
+      range: new monaco.Range(L, 1, L, 1),
+      options: {
+        isWholeLine: true,
+        className: 'gendox-patch-changed-line',
+        stickiness: 1
+      }
+    })
+  }
+  return decorations
+}
 
 function fmtRelative(isoString) {
   if (!isoString) return ''
@@ -58,6 +115,10 @@ export default function EditorPanel() {
   const patchDecorationsRef = useRef([])
   const pendingChangeRef = useRef(null)
   const lastToolWrittenContentRef = useRef(null)
+  // Each entry: { originalStart, originalEnd, newLineCount }
+  // Tracks patches applied in the current batch so subsequent patches can
+  // translate their original-script line numbers to current-document lines.
+  const appliedPatchesRef = useRef([])
   const { latestEOScriptLoading, latestEOScript, eoScripts, createEOScriptLoading } = useSelector(
     state => state.earthObservation
   )
@@ -137,24 +198,32 @@ export default function EditorPanel() {
       window.gendox.tools.registerTool('apply_range_patch', ({ document_id, start_line, end_line, new_text, summary }) => {
         const editor = editorRef.current
         const monaco = monacoRef.current
-        if (!editor || !monaco) {
-          return { success: false, error: 'Editor not ready' }
-        }
+        if (!editor || !monaco) return { success: false, error: 'Editor not ready' }
         const model = editor.getModel()
-        if (!model) {
-          return { success: false, error: 'Editor model not ready' }
-        }
+        if (!model) return { success: false, error: 'Editor model not ready' }
+
+        const { translatedStart, translatedEnd } = translateOriginalLinesToCurrent(
+          appliedPatchesRef.current,
+          start_line,
+          end_line
+        )
         const lineCount = model.getLineCount()
-        const start = Math.max(1, Math.min(start_line, lineCount))
-        const end = Math.max(1, Math.min(end_line, lineCount))
+        const start = Math.max(1, Math.min(translatedStart, lineCount))
+        const end = Math.max(1, Math.min(translatedEnd, lineCount))
         if (start > end) {
           return { success: false, error: `Invalid range: start_line (${start_line}) must be <= end_line (${end_line})` }
         }
+
+        const newLineCount = getNewTextLineCount(new_text)
+        appliedPatchesRef.current.push({
+          originalStart: start_line,
+          originalEnd: end_line,
+          newLineCount
+        })
+
         const range = new monaco.Range(start, 1, end, model.getLineMaxColumn(end))
         const contentBeforeEdit = editor.getValue()
 
-        // Set sentinel BEFORE executeEdits — it fires onChange synchronously,
-        // and onChange must not clear the pending batch during a tool edit.
         lastToolWrittenContentRef.current = TOOL_EDIT_IN_FLIGHT
         editor.executeEdits('replace-line-range', [{ range, text: new_text ?? '' }])
         const updated = editor.getValue()
@@ -162,32 +231,16 @@ export default function EditorPanel() {
         setCode(updated)
         editorCodeRef.current = updated
 
-        const newLineCount = (new_text ?? '').split(/\r?\n/).length || 1
-        const highlightEndLine = start + newLineCount - 1
-        const newRange = { startLine: start, endLine: highlightEndLine }
-
         if (!pendingChangeRef.current) {
-          pendingChangeRef.current = { originalContent: contentBeforeEdit, ranges: [newRange] }
-        } else {
-          pendingChangeRef.current.ranges.push(newRange)
+          pendingChangeRef.current = { originalContent: contentBeforeEdit }
         }
         setHasPendingChange(true)
 
-        const newDecorations = []
-        for (const { startLine: s, endLine: e } of pendingChangeRef.current.ranges) {
-          for (let L = s; L <= e; L++) {
-            newDecorations.push({
-              range: new monaco.Range(L, 1, L, 1),
-              options: {
-                isWholeLine: true,
-                className: 'gendox-patch-changed-line',
-                stickiness: 1
-              }
-            })
-          }
-        }
+        const highlightEnd = start + newLineCount - 1
+        const newDecorations = buildPatchLineDecorations(monaco, start, highlightEnd)
         if (newDecorations.length > 0) {
-          patchDecorationsRef.current = editor.deltaDecorations(patchDecorationsRef.current, newDecorations)
+          const addedIds = editor.deltaDecorations([], newDecorations)
+          patchDecorationsRef.current = [...patchDecorationsRef.current, ...addedIds]
         }
         return { success: true, summary }
       })
@@ -219,6 +272,7 @@ export default function EditorPanel() {
       patchDecorationsRef.current = []
     }
     pendingChangeRef.current = null
+    appliedPatchesRef.current = []
     setHasPendingChange(false)
   }
 
@@ -322,6 +376,10 @@ export default function EditorPanel() {
   }
 
   const hasUnsavedChanges = code.trim() !== (currentVersion?.scriptContent ?? '').trim()
+
+  // Keep the shared ref pointing to the latest handleKeepAll so ChatPanel
+  // can invoke it without prop drilling (e.g. auto-accept before context capture).
+  keepAllRef.current = handleKeepAll
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>

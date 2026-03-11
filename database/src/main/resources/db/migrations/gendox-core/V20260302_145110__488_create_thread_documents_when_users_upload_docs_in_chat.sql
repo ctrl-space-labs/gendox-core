@@ -118,28 +118,28 @@ SELECT
             "properties": {
               "summary": {
                 "type": "string",
-                "description": "A short summary explaining the purpose of the modification"
-              },
-              "end_line": {
-                "type": "integer",
-                "description": "The last line number in the current document to replace, inclusive"
+                "description": "Short reason for the edit"
               },
               "new_text": {
                 "type": "string",
-                "description": "The exact replacement text for the specified line range. Use an empty string to delete the selected lines."
+                "description": "Replacement text for the range. Use \"\" to delete. For insertion, set start_line = end_line and repeat the target line at the start to insert below, or at the end to insert above."
               },
               "start_line": {
                 "type": "integer",
-                "description": "The first line number in the current document to replace"
+                "description": "First line to replace"
+              },
+              "end_line": {
+                "type": "integer",
+                "description": "Last line to replace, inclusive. Must be >= start_line."
               },
               "document_id": {
                 "type": "string",
-                "description": "The UUID of the document to update"
+                "description": "Document UUID"
               }
             },
             "additionalProperties": false
           },
-          "description": "Function that applies a single line-range edit to an existing document and persists the updated content. The edit replaces the lines from start_line through end_line, inclusive, with new_text. If multiple changes are needed, multiple tool calls should be issued."
+          "description": "Applies one line-range edit to a document. Replaces lines start_line through end_line, inclusive, with new_text, where start_line <= end_line. Use \"\" to delete lines. For insertion, use start_line = end_line and repeat the target line in new_text: put it first to insert below, or last to insert above. Use multiple calls for multiple edits."
         }$$
 WHERE NOT EXISTS (
     SELECT 1

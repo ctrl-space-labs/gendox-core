@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Box from '@mui/material/Box'
-import { editorCodeRef } from 'src/views/pages/earth-observation/panels/shared/editorState'
+import { editorCodeRef, keepAllRef } from 'src/views/pages/earth-observation/panels/shared/editorState'
 
 const SCRIPT_ID = 'gendox-chat-script'
 const CONTAINER_ID = 'gendox-chat-container-id'
@@ -43,6 +43,9 @@ export default function ChatPanel() {
     script.src = `${window.location.origin}/gendox-sdk/gendox-widget-plugin.js`
     script.onload = () => {
       window.gendox.widget.addLocalContextRequestCallback('GEE_SCRIPT_FILE', function () {
+        // Auto-accept any pending AI edits so the script the AI receives
+        // matches what the user sees, and the patch line-number counter resets.
+        keepAllRef.current?.()
         const raw = editorCodeRef.current || ''
         const withLineNumbers = raw
           .split('\n')
