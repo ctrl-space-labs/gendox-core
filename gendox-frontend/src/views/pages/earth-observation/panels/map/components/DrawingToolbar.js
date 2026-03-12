@@ -5,9 +5,8 @@ import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
-import HexagonIcon from '@mui/icons-material/Hexagon'
-import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
-import TimelineIcon from '@mui/icons-material/Timeline'
+
+import { GEOM_ICON } from '../constants/geometryConstants'
 
 const toolBtnSx = (activeTool, tool) => ({
   width: 30,
@@ -40,19 +39,19 @@ export default function DrawingToolbar({ activeTool, pendingVertices, canFinish,
     >
       <Tooltip title='Point'>
         <IconButton size='small' sx={toolBtnSx(activeTool, 'point')} onClick={() => onSelectTool('point')}>
-          <RadioButtonUncheckedIcon sx={{ fontSize: 15 }} />
+          <GEOM_ICON.Point sx={{ fontSize: 15 }} />
         </IconButton>
       </Tooltip>
 
       <Tooltip title='LinearRing'>
         <IconButton size='small' sx={toolBtnSx(activeTool, 'linearRing')} onClick={() => onSelectTool('linearRing')}>
-          <TimelineIcon sx={{ fontSize: 15 }} />
+          <GEOM_ICON.LinearRing sx={{ fontSize: 15 }} />
         </IconButton>
       </Tooltip>
 
       <Tooltip title='Polygon'>
         <IconButton size='small' sx={toolBtnSx(activeTool, 'polygon')} onClick={() => onSelectTool('polygon')}>
-          <HexagonIcon sx={{ fontSize: 15 }} />
+          <GEOM_ICON.Polygon sx={{ fontSize: 15 }} />
         </IconButton>
       </Tooltip>
 

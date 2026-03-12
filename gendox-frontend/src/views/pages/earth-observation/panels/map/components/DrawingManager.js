@@ -122,6 +122,7 @@ export default function DrawingManager({
 
       {/* ── Completed geometries ── */}
       {geometries.map((geom, i) => {
+        if (!geom.isVisible) return null
         const isSelected = selectedIndex === i
         const color      = isSelected ? SELECTED_COLOR : DEFAULT_COLOR
         const weight     = isSelected ? 3 : 2

@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
-import { createEOGeometryThunk } from 'src/store/earthObservation'
+import { createEOGeometryThunk, selectNextDisplayOrder } from 'src/store/earthObservation'
 
 export default function useGeometryDrawing({ organizationId, projectId, taskId, token }) {
   const dispatch = useDispatch()
-  const eoGeometries = useSelector(state => state.earthObservation.geometries.eoGeometries)
+  const nextDisplayOrder = useSelector(selectNextDisplayOrder)
   const [activeTool, setActiveTool] = useState(null) // 'point' | 'linearRing' | 'polygon' | null
   const [pendingVertices, setPendingVertices] = useState([]) // [[lat, lng], ...]
 
@@ -20,7 +20,8 @@ export default function useGeometryDrawing({ organizationId, projectId, taskId, 
             geometryPayload: {
               geometryTypeName: 'POINT',
               coordinates: JSON.stringify([lng, lat]),
-              displayOrder: eoGeometries.length
+              displayOrder: nextDisplayOrder,
+              title: `Point ${nextDisplayOrder}`
             },
             token
           })
@@ -29,12 +30,12 @@ export default function useGeometryDrawing({ organizationId, projectId, taskId, 
         setPendingVertices(prev => [...prev, [lat, lng]])
       }
     },
-    [activeTool, dispatch, organizationId, projectId, taskId, token, eoGeometries.length]
+    [activeTool, dispatch, organizationId, projectId, taskId, token, nextDisplayOrder]
   )
 
   const handleSelectTool = tool => {
     setPendingVertices([])
-    setActiveTool(prev => (prev === tool ? null : tool)) // toggle off if same tool clicked
+    setActiveTool(prev => (prev === tool ? null : tool))
   }
 
   const handleFinish = () => {
@@ -47,7 +48,8 @@ export default function useGeometryDrawing({ organizationId, projectId, taskId, 
           geometryPayload: {
             geometryTypeName: 'LINEAR_RING',
             coordinates: JSON.stringify(pendingVertices.map(([lat, lng]) => [lng, lat])),
-            displayOrder: eoGeometries.length
+            displayOrder: nextDisplayOrder,
+            title: `Linear Ring ${nextDisplayOrder}`
           },
           token
         })
@@ -63,7 +65,8 @@ export default function useGeometryDrawing({ organizationId, projectId, taskId, 
           geometryPayload: {
             geometryTypeName: 'POLYGON',
             coordinates: JSON.stringify([ring]),
-            displayOrder: eoGeometries.length
+            displayOrder: nextDisplayOrder,
+            title: `Polygon ${nextDisplayOrder}`
           },
           token
         })

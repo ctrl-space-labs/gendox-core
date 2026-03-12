@@ -49,9 +49,11 @@ export default function MapPanel() {
     setSelectedGeometryIndex,
     inspectorOpen,
     setInspectorOpen,
+    handleToggleVisibility,
     inspectorRowRefs,
     handleSelectGeometry,
     handleUpdateGeometry,
+    handleUpdateTitle,
     handleCopyGeometry,
     handleDeleteGeometry,
     handleDeleteAllGeometries
@@ -124,11 +126,11 @@ export default function MapPanel() {
 
       <GeometryInspector
         geometries={geometries}
-        selectedGeometryIndex={selectedGeometryIndex}
-        setSelectedGeometryIndex={setSelectedGeometryIndex}
         inspectorOpen={inspectorOpen}
         setInspectorOpen={setInspectorOpen}
         inspectorRowRefs={inspectorRowRefs}
+        onToggleVisibility={handleToggleVisibility}
+        onUpdateTitle={handleUpdateTitle}
         onCopyGeometry={handleCopyGeometry}
         onDeleteGeometry={handleDeleteGeometry}
         onDeleteAll={handleDeleteAllGeometries}

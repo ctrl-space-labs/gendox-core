@@ -24,3 +24,13 @@ export const selectCreateEOScriptLoading = state => state.earthObservation.scrip
 // Geometries
 export const selectEoGeometries = state => state.earthObservation.geometries.eoGeometries
 export const selectEoGeometriesLoading = state => state.earthObservation.geometries.eoGeometriesLoading
+
+// Derived: full geometry objects that are currently visible (isVisible flag on each object)
+export const selectVisibleGeometries = state =>
+  state.earthObservation.geometries.eoGeometries.filter(g => g.isVisible)
+
+// Derived: next displayOrder = max existing + 1 (safe when geometries are deleted/reordered)
+export const selectNextDisplayOrder = state => {
+  const orders = state.earthObservation.geometries.eoGeometries.map(g => g.displayOrder ?? 0)
+  return orders.length ? Math.max(...orders) + 1 : 1
+}

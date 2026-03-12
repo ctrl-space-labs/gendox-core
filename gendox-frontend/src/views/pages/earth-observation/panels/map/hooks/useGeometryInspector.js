@@ -5,19 +5,25 @@ import toast from 'react-hot-toast'
 import {
   updateEOGeometryThunk,
   deleteEOGeometryThunk,
-  deleteEOGeometriesThunk
+  deleteEOGeometriesThunk,
+  toggleGeometryVisibility
 } from 'src/store/earthObservation'
 
 export default function useGeometryInspector({ organizationId, projectId, taskId, token }) {
   const dispatch = useDispatch()
   const eoGeometries = useSelector(state => state.earthObservation.geometries.eoGeometries)
+
   const [selectedGeometryIndex, setSelectedGeometryIndex] = useState(null)
   const [inspectorOpen, setInspectorOpen] = useState(true)
   const inspectorRowRefs = useRef({})
 
+  const handleToggleVisibility = id => {
+    dispatch(toggleGeometryVisibility(id))
+  }
+
   const handleSelectGeometry = index => {
     setSelectedGeometryIndex(index)
-    if (index !== null) setInspectorOpen(true) // auto-open inspector when map selects a geometry
+    if (index !== null) setInspectorOpen(true)
   }
 
   // Auto-scroll the inspector to the selected row
@@ -39,7 +45,28 @@ export default function useGeometryInspector({ organizationId, projectId, taskId
         geometryPayload: {
           geometryTypeName: existing.geometryTypeName,
           coordinates: JSON.stringify(geometry.coordinates),
-          displayOrder: existing.displayOrder
+          displayOrder: existing.displayOrder,
+          title: existing.title
+        },
+        token
+      })
+    )
+  }
+
+  const handleUpdateTitle = (geometryId, newTitle) => {
+    const existing = eoGeometries.find(g => g.id === geometryId)
+    if (!existing) return
+    dispatch(
+      updateEOGeometryThunk({
+        organizationId,
+        projectId,
+        taskId,
+        geometryId,
+        geometryPayload: {
+          geometryTypeName: existing.geometryTypeName,
+          coordinates: existing.coordinates,
+          displayOrder: existing.displayOrder,
+          title: newTitle
         },
         token
       })
@@ -75,9 +102,11 @@ export default function useGeometryInspector({ organizationId, projectId, taskId
     setSelectedGeometryIndex,
     inspectorOpen,
     setInspectorOpen,
+    handleToggleVisibility,
     inspectorRowRefs,
     handleSelectGeometry,
     handleUpdateGeometry,
+    handleUpdateTitle,
     handleCopyGeometry,
     handleDeleteGeometry,
     handleDeleteAllGeometries

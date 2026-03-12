@@ -3,7 +3,7 @@ import { createSlice } from '@reduxjs/toolkit'
 import { layoutInitialState, layoutReducers } from './earthObservation.layout.slice'
 import { mapInitialState, mapReducers } from './earthObservation.map.slice'
 import { scriptsInitialState, scriptsReducers, addScriptsExtraReducers } from './earthObservation.scripts.slice'
-import { geometriesInitialState, addGeometriesExtraReducers } from './earthObservation.geometries.slice'
+import { geometriesInitialState, geometriesReducers, addGeometriesExtraReducers } from './earthObservation.geometries.slice'
 
 const slice = createSlice({
   name: 'earthObservation',
@@ -16,7 +16,8 @@ const slice = createSlice({
   reducers: {
     ...layoutReducers,
     ...mapReducers,
-    ...scriptsReducers
+    ...scriptsReducers,
+    ...geometriesReducers
   },
   extraReducers: builder => {
     addScriptsExtraReducers(builder)
@@ -52,7 +53,8 @@ export const {
   setLatestEOScript,
   resetEOScriptState,
   requestScreenshot,
-  clearScreenshotRequest
+  clearScreenshotRequest,
+  toggleGeometryVisibility
 } = slice.actions
 
 export default slice.reducer

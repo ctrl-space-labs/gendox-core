@@ -18,6 +18,13 @@ export const geometriesInitialState = {
   deleteEOGeometryError: null
 }
 
+export const geometriesReducers = {
+  toggleGeometryVisibility: (state, action) => {
+    const geom = state.geometries.eoGeometries.find(g => g.id === action.payload)
+    if (geom) geom.isVisible = !geom.isVisible
+  }
+}
+
 export function addGeometriesExtraReducers(builder) {
   builder
     .addCase(getEOGeometriesThunk.pending, state => {
@@ -26,7 +33,7 @@ export function addGeometriesExtraReducers(builder) {
     })
     .addCase(getEOGeometriesThunk.fulfilled, (state, action) => {
       state.geometries.eoGeometriesLoading = false
-      state.geometries.eoGeometries = action.payload
+      state.geometries.eoGeometries = action.payload.map(g => ({ ...g, isVisible: true }))
     })
     .addCase(getEOGeometriesThunk.rejected, (state, action) => {
       state.geometries.eoGeometriesLoading = false
@@ -39,7 +46,7 @@ export function addGeometriesExtraReducers(builder) {
     })
     .addCase(createEOGeometryThunk.fulfilled, (state, action) => {
       state.geometries.createEOGeometryLoading = false
-      state.geometries.eoGeometries.push(action.payload)
+      state.geometries.eoGeometries.push({ ...action.payload, isVisible: true })
     })
     .addCase(createEOGeometryThunk.rejected, (state, action) => {
       state.geometries.createEOGeometryLoading = false
@@ -54,7 +61,10 @@ export function addGeometriesExtraReducers(builder) {
       state.geometries.updateEOGeometryLoading = false
       const updated = action.payload
       const index = state.geometries.eoGeometries.findIndex(g => g.id === updated.id)
-      if (index !== -1) state.geometries.eoGeometries[index] = updated
+      if (index !== -1) {
+        const prev = state.geometries.eoGeometries[index]
+        state.geometries.eoGeometries[index] = { ...updated, isVisible: prev.isVisible ?? true }
+      }
     })
     .addCase(updateEOGeometryThunk.rejected, (state, action) => {
       state.geometries.updateEOGeometryLoading = false

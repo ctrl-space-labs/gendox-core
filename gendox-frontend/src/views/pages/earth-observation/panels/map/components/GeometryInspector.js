@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
@@ -7,20 +8,42 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-
-import { geomSummary } from '../utils/geometryHelpers'
+import { geomLabel } from '../utils/geometryHelpers'
+import { GEOM_ICON } from '../constants/geometryConstants'
 
 export default function GeometryInspector({
   geometries,
-  selectedGeometryIndex,
-  setSelectedGeometryIndex,
   inspectorOpen,
   setInspectorOpen,
   inspectorRowRefs,
+  onToggleVisibility,
+  onUpdateTitle,
   onCopyGeometry,
   onDeleteGeometry,
   onDeleteAll
 }) {
+  const [editingId, setEditingId] = useState(null)
+  const [editValue, setEditValue] = useState('')
+  const inputRef = useRef(null)
+
+  const startEdit = (e, geom) => {
+    e.stopPropagation()
+    setEditingId(geom.id)
+    setEditValue(geomLabel(geom, geometries.indexOf(geom)))
+    setTimeout(() => inputRef.current?.select(), 0)
+  }
+
+  const commitEdit = () => {
+    if (editingId && editValue.trim()) {
+      onUpdateTitle(editingId, editValue.trim())
+    }
+    setEditingId(null)
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+  }
+
   if (!geometries.length) return null
 
   return (
@@ -51,7 +74,7 @@ export default function GeometryInspector({
         }}
       >
         <Typography variant='caption' sx={{ flex: 1, fontWeight: 700, fontFamily: 'monospace' }}>
-          Geometry Imports ({geometries.length})
+          Geometries ({geometries.length})
         </Typography>
         <Tooltip title='Clear all'>
           <IconButton size='small' onClick={onDeleteAll}>
@@ -65,48 +88,91 @@ export default function GeometryInspector({
 
       {/* Body */}
       {inspectorOpen && (
-        <Box sx={{ px: 1, py: 0.75, maxHeight: 180, overflowY: 'auto' }}>
-          <Typography variant='caption' sx={{ display: 'block', fontFamily: 'monospace', color: 'text.secondary' }}>
-            type: GeometryCollection
-          </Typography>
-          <Typography
-            variant='caption'
-            sx={{ display: 'block', fontFamily: 'monospace', color: 'text.secondary', mb: 0.5 }}
-          >
-            geometries: List ({geometries.length} elements)
-          </Typography>
+        <Box sx={{ px: 0.5, py: 0.75, maxHeight: 200, overflowY: 'auto' }}>
           {geometries.map((geom, i) => {
-            const isSelected = selectedGeometryIndex === i
+            const isVisible = geom.isVisible ?? true
+            const isEditing = editingId === geom.id
             return (
               <Box
-                key={i}
+                key={geom.id ?? i}
                 ref={el => {
                   inspectorRowRefs.current[i] = el
                 }}
-                onClick={() => setSelectedGeometryIndex(isSelected ? null : i)}
+                onClick={() => !isEditing && onToggleVisibility(geom.id)}
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
+                  gap: 0.75,
+                  px: 0.5,
+                  minWidth: 0,
                   borderRadius: 0.5,
-                  cursor: 'pointer',
-                  bgcolor: isSelected ? 'action.selected' : 'transparent',
-                  borderLeft: isSelected ? '2px solid' : '2px solid transparent',
-                  borderColor: isSelected ? 'primary.light' : 'transparent',
-                  '&:hover': { bgcolor: isSelected ? 'action.selected' : 'action.hover' }
+                  cursor: isEditing ? 'default' : 'pointer',
+                  borderLeft: isVisible ? '2px solid' : '2px solid transparent',
+                  borderColor: isVisible ? 'text.primary' : 'transparent'
                 }}
               >
-                <Typography
-                  variant='caption'
-                  sx={{
-                    flex: 1,
-                    fontFamily: 'monospace',
-                    pl: 1,
-                    fontSize: '0.68rem',
-                    color: isSelected ? 'primary.light' : 'text.primary'
-                  }}
-                >
-                  {geomSummary(geom, i)}
-                </Typography>
+                {/* Type icon */}
+                <Box sx={{ display: 'flex', color: isVisible ? 'text.primary' : 'text.disabled', flexShrink: 0 }}>
+                  {(() => {
+                    const Icon = GEOM_ICON[geom.type] ?? GEOM_ICON.Point
+                    return <Icon sx={{ fontSize: 13 }} />
+                  })()}
+                </Box>
+
+                {isEditing ? (
+                  <Box
+                    component='input'
+                    ref={inputRef}
+                    value={editValue}
+                    onChange={e => setEditValue(e.target.value)}
+                    onBlur={commitEdit}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        commitEdit()
+                      }
+                      if (e.key === 'Escape') {
+                        e.preventDefault()
+                        cancelEdit()
+                      }
+                    }}
+                    onClick={e => e.stopPropagation()}
+                    sx={{
+                      flex: 1,
+                      fontFamily: 'monospace',
+                      fontSize: '0.68rem',
+                      border: 'none',
+                      borderBottom: '1px solid',
+                      borderColor: 'text.primary',
+                      outline: 'none',
+                      background: 'transparent',
+                      color: 'text.primary',
+                      px: 0,
+                      py: 0
+                    }}
+                  />
+                ) : (
+                  <Tooltip title={geomLabel(geom, i)} enterDelay={600}>
+                    <Typography
+                      variant='caption'
+                      onDoubleClick={e => startEdit(e, geom)}
+                      noWrap
+                      sx={{
+                        flex: 1,
+                        minWidth: 0,
+                        fontFamily: 'monospace',
+                        fontSize: '0.68rem',
+                        color: isVisible ? 'text.primary' : 'text.disabled',
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
+                      {geomLabel(geom, i)}
+                    </Typography>
+                  </Tooltip>
+                )}
+
                 <Tooltip title='Copy as ee.Geometry'>
                   <IconButton
                     size='small'
