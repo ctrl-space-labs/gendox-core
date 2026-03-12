@@ -26,15 +26,18 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import LayersIcon from '@mui/icons-material/Layers'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
+import { useRouter } from 'next/router'
+import { localStorageConstants } from 'src/utils/generalConstants'
 
 import {
   setMapThumbnail,
   setScreenshotUrl,
-  addDrawnGeometry,
-  removeDrawnGeometry,
-  clearDrawnGeometries,
-  updateDrawnGeometry,
-  requestScreenshot
+  requestScreenshot,
+  createEOGeometryThunk,
+  updateEOGeometryThunk,
+  deleteEOGeometryThunk,
+  deleteEOGeometriesThunk,
+  getEOGeometriesThunk
 } from 'src/store/earthObservation/earthObservation'
 
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
@@ -80,12 +83,16 @@ const geomSummary = (geom, i) => {
 
 export default function MapPanel() {
   const dispatch = useDispatch()
+  const router = useRouter()
+  const token = localStorage.getItem(localStorageConstants.accessTokenKey)
+  const { organizationId, projectId, taskId } = router.query
+
   // ── Redux state ──
   const mapLayers = useSelector(state => state.earthObservation.mapLayers)
   const mapCenter = useSelector(state => state.earthObservation.mapCenter)
   const mapThumbnailUrl = useSelector(state => state.earthObservation.mapThumbnailUrl)
   const screenshotUrl = useSelector(state => state.earthObservation.screenshotUrl)
-  const drawnGeometries = useSelector(state => state.earthObservation.drawnGeometries)
+  const eoGeometries = useSelector(state => state.earthObservation.eoGeometries)
 
   // ── Local state ──
   const [activeTool, setActiveTool] = useState(null) // 'point' | 'linearRing' | 'polygon' | null
@@ -93,7 +100,7 @@ export default function MapPanel() {
   const [inspectorOpen, setInspectorOpen] = useState(true)
   const [selectedGeometryIndex, setSelectedGeometryIndex] = useState(null) // index into geometries[]
   const [visibleLayers, setVisibleLayers] = useState(new Set()) // indices of visible layers
-  const [layerOpacities, setLayerOpacities] = useState([])     // opacity 0-1 per layer index
+  const [layerOpacities, setLayerOpacities] = useState([]) // opacity 0-1 per layer index
   const [layersOpen, setLayersOpen] = useState(true)
   const [panelWide, setPanelWide] = useState(true) // false when map panel is too narrow to show sliders
 
@@ -115,7 +122,9 @@ export default function MapPanel() {
     const b = mapInstanceRef.current.getBounds()
     const zoom = mapInstanceRef.current.getZoom()
     setIsCapturing(true)
-    dispatch(requestScreenshot({ south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast(), zoom }))
+    dispatch(
+      requestScreenshot({ south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast(), zoom })
+    )
   }
 
   // Auto-download as soon as the screenshot lands in Redux, then clear it
@@ -142,16 +151,34 @@ export default function MapPanel() {
     setLayerOpacities(mapLayers.map(() => 1))
   }, [mapLayers.length])
 
+  useEffect(() => {
+    if (organizationId && projectId && taskId && token) {
+      dispatch(getEOGeometriesThunk({ organizationId, projectId, taskId, token }))
+    }
+  }, [organizationId, projectId, taskId, token])
+
   // ── Drawing handlers ──
   const handleMapClick = useCallback(
     (lat, lng) => {
       if (activeTool === 'point') {
-        dispatch(addDrawnGeometry({ type: 'Point', coordinates: [lng, lat] }))
+        dispatch(
+          createEOGeometryThunk({
+            organizationId,
+            projectId,
+            taskId,
+            geometryPayload: {
+              geometryTypeName: 'POINT',
+              coordinates: JSON.stringify([lng, lat]),
+              displayOrder: eoGeometries.length
+            },
+            token
+          })
+        )
       } else {
         setPendingVertices(prev => [...prev, [lat, lng]])
       }
     },
-    [activeTool, dispatch]
+    [activeTool, dispatch, organizationId, projectId, taskId, token, eoGeometries.length]
   )
 
   const handleSelectTool = tool => {
@@ -162,15 +189,34 @@ export default function MapPanel() {
   const handleFinish = () => {
     if (activeTool === 'linearRing' && pendingVertices.length >= 2) {
       dispatch(
-        addDrawnGeometry({
-          type: 'LinearRing',
-          coordinates: pendingVertices.map(([lat, lng]) => [lng, lat])
+        createEOGeometryThunk({
+          organizationId,
+          projectId,
+          taskId,
+          geometryPayload: {
+            geometryTypeName: 'LINEAR_RING',
+            coordinates: JSON.stringify(pendingVertices.map(([lat, lng]) => [lng, lat])),
+            displayOrder: eoGeometries.length
+          },
+          token
         })
       )
     } else if (activeTool === 'polygon' && pendingVertices.length >= 3) {
       const ring = pendingVertices.map(([lat, lng]) => [lng, lat])
       ring.push(ring[0]) // close the ring
-      dispatch(addDrawnGeometry({ type: 'Polygon', coordinates: [ring] }))
+      dispatch(
+        createEOGeometryThunk({
+          organizationId,
+          projectId,
+          taskId,
+          geometryPayload: {
+            geometryTypeName: 'POLYGON',
+            coordinates: JSON.stringify([ring]),
+            displayOrder: eoGeometries.length
+          },
+          token
+        })
+      )
     }
     setPendingVertices([])
     setActiveTool(null)
@@ -187,7 +233,22 @@ export default function MapPanel() {
   }
 
   const handleUpdateGeometry = (index, geometry) => {
-    dispatch(updateDrawnGeometry({ index, geometry }))
+    const existing = eoGeometries[index]
+    if (!existing?.id) return
+    dispatch(
+      updateEOGeometryThunk({
+        organizationId,
+        projectId,
+        taskId,
+        geometryId: existing.id,
+        geometryPayload: {
+          geometryTypeName: existing.geometryTypeName,
+          coordinates: JSON.stringify(geometry.coordinates),
+          displayOrder: existing.displayOrder
+        },
+        token
+      })
+    )
   }
 
   // Auto-scroll the inspector to the selected row.
@@ -237,7 +298,12 @@ export default function MapPanel() {
   }
 
   // ── Derived ──
-  const geometries = drawnGeometries?.geometries ?? []
+  const GEOM_TYPE_MAP = { POINT: 'Point', LINEAR_RING: 'LinearRing', POLYGON: 'Polygon' }
+  const geometries = (eoGeometries ?? []).map(g => ({
+    ...g,
+    type: GEOM_TYPE_MAP[g.geometryTypeName] ?? g.geometryTypeName,
+    coordinates: typeof g.coordinates === 'string' ? JSON.parse(g.coordinates) : g.coordinates
+  }))
   const canFinish =
     (activeTool === 'linearRing' && pendingVertices.length >= 2) ||
     (activeTool === 'polygon' && pendingVertices.length >= 3)
@@ -261,7 +327,7 @@ export default function MapPanel() {
       <MapContainer center={[37.9838, 23.7275]} zoom={6} style={{ height: '100%', width: '100%' }}>
         <TileLayer attribution='&copy; OpenStreetMap' url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' />
         {mapLayers.map((layer, i) => (
-          <GeeLayer key={i} url={layer.url} opacity={visibleLayers.has(i) ? (layerOpacities[i] ?? 1) : 0} />
+          <GeeLayer key={i} url={layer.url} opacity={visibleLayers.has(i) ? layerOpacities[i] ?? 1 : 0} />
         ))}
         <MapRefCapture onReady={handleMapReady} />
         {mapCenter && <MapController centerData={mapCenter} />}
@@ -378,12 +444,20 @@ export default function MapPanel() {
             />
             <Divider orientation='vertical' flexItem sx={{ mx: 0.25 }} />
             <Tooltip title='Download'>
-              <IconButton size='small' onClick={() => handleDownload(mapThumbnailUrl, 'gee-thumbnail.png')} sx={{ width: 30, height: 30, p: 0 }}>
+              <IconButton
+                size='small'
+                onClick={() => handleDownload(mapThumbnailUrl, 'gee-thumbnail.png')}
+                sx={{ width: 30, height: 30, p: 0 }}
+              >
                 <FileDownloadIcon sx={{ fontSize: 15 }} />
               </IconButton>
             </Tooltip>
             <Tooltip title='Copy image'>
-              <IconButton size='small' onClick={() => handleCopyImage(mapThumbnailUrl)} sx={{ width: 30, height: 30, p: 0 }}>
+              <IconButton
+                size='small'
+                onClick={() => handleCopyImage(mapThumbnailUrl)}
+                sx={{ width: 30, height: 30, p: 0 }}
+              >
                 <ContentCopyIcon sx={{ fontSize: 15 }} />
               </IconButton>
             </Tooltip>
@@ -398,7 +472,6 @@ export default function MapPanel() {
             </Tooltip>
           </Box>
         )}
-
 
         {/* Screenshot button — capture current viewport as a GEE thumbnail */}
         {mapLayers.length > 0 && (
@@ -423,10 +496,7 @@ export default function MapPanel() {
                   disabled={isCapturing}
                   sx={{ width: 30, height: 30, p: 0 }}
                 >
-                  {isCapturing
-                    ? <CircularProgress size={14} />
-                    : <CameraAltIcon sx={{ fontSize: 15 }} />
-                  }
+                  {isCapturing ? <CircularProgress size={14} /> : <CameraAltIcon sx={{ fontSize: 15 }} />}
                 </IconButton>
               </Box>
             </span>
@@ -505,10 +575,11 @@ export default function MapPanel() {
                         }
                         sx={{ p: 0.25, flexShrink: 0 }}
                       >
-                        {isVisible
-                          ? <VisibilityIcon sx={{ fontSize: 13, color: 'primary.main' }} />
-                          : <VisibilityOffIcon sx={{ fontSize: 13, color: 'text.disabled' }} />
-                        }
+                        {isVisible ? (
+                          <VisibilityIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                        ) : (
+                          <VisibilityOffIcon sx={{ fontSize: 13, color: 'text.disabled' }} />
+                        )}
                       </IconButton>
                       <Tooltip title={layer.name} placement='top' enterDelay={500}>
                         <Typography
@@ -525,28 +596,30 @@ export default function MapPanel() {
                           {layer.name}
                         </Typography>
                       </Tooltip>
-                      {panelWide && <input
-                        type='range'
-                        min={0}
-                        max={1}
-                        step={0.05}
-                        value={layerOpacities[i] ?? 1}
-                        disabled={!isVisible}
-                        onChange={e =>
-                          setLayerOpacities(prev => {
-                            const next = [...prev]
-                            next[i] = parseFloat(e.target.value)
-                            return next
-                          })
-                        }
-                        style={{
-                          width: 70,
-                          flexShrink: 0,
-                          accentColor: '#08B68D',
-                          cursor: isVisible ? 'pointer' : 'not-allowed',
-                          opacity: isVisible ? 1 : 0.4
-                        }}
-                      />}
+                      {panelWide && (
+                        <input
+                          type='range'
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          value={layerOpacities[i] ?? 1}
+                          disabled={!isVisible}
+                          onChange={e =>
+                            setLayerOpacities(prev => {
+                              const next = [...prev]
+                              next[i] = parseFloat(e.target.value)
+                              return next
+                            })
+                          }
+                          style={{
+                            width: 70,
+                            flexShrink: 0,
+                            accentColor: '#08B68D',
+                            cursor: isVisible ? 'pointer' : 'not-allowed',
+                            opacity: isVisible ? 1 : 0.4
+                          }}
+                        />
+                      )}
                     </Box>
                   )
                 })}
@@ -588,7 +661,10 @@ export default function MapPanel() {
               Geometry Imports ({geometries.length})
             </Typography>
             <Tooltip title='Clear all'>
-              <IconButton size='small' onClick={() => dispatch(clearDrawnGeometries())}>
+              <IconButton
+                size='small'
+                onClick={() => dispatch(deleteEOGeometriesThunk({ organizationId, projectId, taskId, token }))}
+              >
                 <DeleteOutlineIcon sx={{ fontSize: 14 }} />
               </IconButton>
             </Tooltip>
@@ -659,7 +735,9 @@ export default function MapPanel() {
                         onClick={e => {
                           e.stopPropagation()
                           if (isSelected) setSelectedGeometryIndex(null)
-                          dispatch(removeDrawnGeometry(i))
+                          dispatch(
+                            deleteEOGeometryThunk({ organizationId, projectId, taskId, geometryId: geom.id, token })
+                          )
                         }}
                         sx={{ p: 0.25 }}
                       >

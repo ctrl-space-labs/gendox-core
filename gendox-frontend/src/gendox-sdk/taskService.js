@@ -475,57 +475,7 @@ const reorderTaskQuestionNodes = async (organizationId, projectId, taskId, order
 }
 
 
-/**
- * Create EOScript for a Task
- * @param organizationId
- * @param projectId
- * @param taskId
- * @param eoScriptPayload {title, description, scriptContent}
- * @param token
- * @returns {Promise<axios.AxiosResponse<EOScript>>}
- */
-const createEOScript = async (organizationId, projectId, taskId, eoScriptPayload, token) => {
-  return axios.post(apiRequests.createEOScript(organizationId, projectId, taskId), eoScriptPayload, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + token
-    }
-  })
-}
 
-/**
- * Get all EOScripts for a Task (ordered by createdAt desc)
- * @param organizationId
- * @param projectId
- * @param taskId
- * @param token
- * @returns {Promise<axios.AxiosResponse<EOScript[]>>}
- */
-const getEOScripts = async (organizationId, projectId, taskId, token) => {
-  return axios.get(apiRequests.getEOScripts(organizationId, projectId, taskId), {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + token
-    }
-  })
-}
-
-/**
- * Get latest EOScript for a Task
- * @param organizationId
- * @param projectId
- * @param taskId
- * @param token
- * @returns {Promise<axios.AxiosResponse<EOScript>>}
- */
-const getLatestEOScript = async (organizationId, projectId, taskId, token) => {
-  return axios.get(apiRequests.getLatestEOScript(organizationId, projectId, taskId), {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + token
-    }
-  })
-}
 
 export default {
   createTask,
@@ -553,7 +503,4 @@ export default {
   documentDigitizationExportCSV,
   reorderTaskQuestionNodes,
   documentDigitizationExportCSV,
-  createEOScript,
-  getEOScripts,
-  getLatestEOScript
 }
