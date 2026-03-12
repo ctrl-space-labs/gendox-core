@@ -22,7 +22,6 @@ export default function GeeRunner({ code, getCurrentCode, organizationId, projec
   const latestEOScriptLoading = useSelector(state => state.earthObservation.scripts.latestEOScriptLoading)
   const screenshotRequest = useSelector(state => state.earthObservation.map.screenshotRequest)
 
-  // console.log("STATE", useSelector(state => state.earthObservation))
 
   // 1. State for iframe management
   const [iframeKey, setIframeKey] = useState(0) //  counter for iframe reloads

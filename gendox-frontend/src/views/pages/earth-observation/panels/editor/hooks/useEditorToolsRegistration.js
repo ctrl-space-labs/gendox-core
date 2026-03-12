@@ -20,6 +20,7 @@ export default function useEditorToolsRegistration({
 }) {
   useEffect(() => {
     let intervalId
+    let registered = false
 
     const register = () => {
       if (!window.gendox?.tools?.registerTool) return false
@@ -82,6 +83,7 @@ export default function useEditorToolsRegistration({
         return { success: true }
       })
 
+      registered = true
       return true
     }
 
@@ -93,8 +95,10 @@ export default function useEditorToolsRegistration({
 
     return () => {
       clearInterval(intervalId)
-      window.gendox?.tools?.removeTool?.('apply_range_patch')
-      window.gendox?.tools?.removeTool?.('execute_command')
+      if (registered) {
+        window.gendox?.tools?.removeTool?.('apply_range_patch')
+        window.gendox?.tools?.removeTool?.('execute_command')
+      }
     }
   }, [])
 }

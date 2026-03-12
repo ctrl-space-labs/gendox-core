@@ -28,8 +28,6 @@ export default function MapPanel() {
   const mapThumbnailUrl = useSelector(state => state.earthObservation.map.mapThumbnailUrl)
   const eoGeometries = useSelector(state => state.earthObservation.geometries.eoGeometries)
 
-  console.log("STATE", useSelector(state => state.earthObservation))
-
   const { isCapturing, handleScreenshot, handleMapReady } = useMapScreenshot()
   const {
     mapLayers,
