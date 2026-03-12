@@ -3,6 +3,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.TaskConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRuntimeOverridesDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDuplicateDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
@@ -259,6 +260,26 @@ public class TaskService {
         taskRepository.delete(taskToDelete);
     }
 
+    /**
+     * Builds completion runtime overrides from task settings (model, maxTokens, temperature, topP).
+     * Used by batch job processors (documentInsights, documentDigitization) to apply task-level overrides to completions.
+     */
+    public CompletionRuntimeOverridesDTO buildCompletionOverrides(Task task) {
+        CompletionRuntimeOverridesDTO overrides = new CompletionRuntimeOverridesDTO();
+        if (task.getCompletionModel() != null) {
+            overrides.setCompletionModelName(task.getCompletionModel().getName());
+        }
+        if (task.getMaxToken() != null) {
+            overrides.setMaxTokens(task.getMaxToken());
+        }
+        if (task.getTemperature() != null) {
+            overrides.setTemperature(task.getTemperature());
+        }
+        if (task.getTopP() != null) {
+            overrides.setTopP(task.getTopP());
+        }
+        return overrides;
+    }
 
 }
 

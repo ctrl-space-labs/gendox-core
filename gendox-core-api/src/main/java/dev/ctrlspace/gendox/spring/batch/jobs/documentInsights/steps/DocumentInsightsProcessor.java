@@ -11,6 +11,7 @@ import com.knuddels.jtokkit.api.ModelType;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageLocalContextConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRuntimeOverridesDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContextDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
@@ -118,6 +119,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         if (project == null) {
             project = projectService.getProjectById(task.getProjectId());
         }
+        CompletionRuntimeOverridesDTO overrides = taskService.buildCompletionOverrides(task);
         ObjectNode responseJsonSchema = buildResponseSchema(new org.springframework.core.ParameterizedTypeReference<GroupedQuestionAnswers>() {
         });
 
@@ -167,7 +169,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                         supportingDocumentsContext,
                         task,
                         documentGroupWithQuestions.getDocumentNode());
-                GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionChunk);
+                GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionChunk, overrides);
                 if (documentPartAnswers == null) {
                     // ignore all partialAnswers, since there is an error, we cant trust any of those
                     logger.warn("Skipping whole question group, because of some error, and doc has multiple section chunks");
@@ -183,7 +185,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 splitGroupAnswersToSeparateAnswerNodes(partialAnswers.get(0), documentGroupWithQuestions, answerNodeType, newAnswers);
             } else if (partialAnswers.size() > 1) {
                 logger.debug("Creating answers from multiple document parts.");
-                GroupedQuestionAnswers consolidatedDocumentAnswers = consolidatePartsAnswersToASingleOne(documentGroupWithQuestions, questionChunk, allQuestions, partialAnswers, null, responseJsonSchema, task);
+                GroupedQuestionAnswers consolidatedDocumentAnswers = consolidatePartsAnswersToASingleOne(documentGroupWithQuestions, questionChunk, allQuestions, partialAnswers, null, responseJsonSchema, task, overrides);
                 // error occurred, skipping...
                 if (consolidatedDocumentAnswers == null) continue;
 
@@ -202,7 +204,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         return batch;
     }
 
-    private @Nullable GroupedQuestionAnswers consolidatePartsAnswersToASingleOne(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, String allQuestions, List<GroupedQuestionAnswers> allAnswersFromDocumentParts, ChatThread newThread, ObjectNode responseJsonSchema, Task task) throws JsonProcessingException {
+    private @Nullable GroupedQuestionAnswers consolidatePartsAnswersToASingleOne(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, String allQuestions, List<GroupedQuestionAnswers> allAnswersFromDocumentParts, ChatThread newThread, ObjectNode responseJsonSchema, Task task, CompletionRuntimeOverridesDTO overrides) throws JsonProcessingException {
         StringBuilder prompt = new StringBuilder();
         prompt.append("""
                 Big documents don't fit in the LLM context window; the document was split into parts.
@@ -242,7 +244,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         message.setUpdatedBy(project.getProjectAgent().getUserId());
         message = messageService.createMessage(message);
 
-        GroupedQuestionAnswers consolidatedDocumentAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionGroup);
+        GroupedQuestionAnswers consolidatedDocumentAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionGroup, overrides);
         return consolidatedDocumentAnswers;
     }
 
@@ -395,11 +397,11 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         }
     }
 
-    private @Nullable GroupedQuestionAnswers getCompletion(Message message, ObjectNode responseJsonSchema, Project project, TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup) {
+    private @Nullable GroupedQuestionAnswers getCompletion(Message message, ObjectNode responseJsonSchema, Project project, TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, CompletionRuntimeOverridesDTO overrides) {
         GroupedQuestionAnswers answers;
         List<Message> response = null;
         try {
-            response = completionService.getCompletion(message, new ArrayList<>(), project, responseJsonSchema);
+            response = completionService.getCompletion(message, new ArrayList<>(), project, responseJsonSchema, overrides);
             answers = objectMapper.readValue(response.getLast().getValue(), GroupedQuestionAnswers.class);
         } catch (GendoxException e) {
             logger.warn("Error getting completion for message: {}, error: {}", message.getId(), e.getMessage());

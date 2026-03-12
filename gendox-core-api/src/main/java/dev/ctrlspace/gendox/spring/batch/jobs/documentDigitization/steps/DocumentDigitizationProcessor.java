@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRuntimeOverridesDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.DocPageToImageOptions;
@@ -241,9 +242,10 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
                     List<Message> response;
                     try {
+                        CompletionRuntimeOverridesDTO overrides = taskService.buildCompletionOverrides(task);
                         JsonNode node = objectMapper.readTree(documentNode.getNodeValue().getDocumentMetadata().getStructure());
                         ObjectNode schemaResponse = objectMapper.convertValue(node, ObjectNode.class);
-                        response = completionService.getCompletion(message, new ArrayList<>(), project, schemaResponse);
+                        response = completionService.getCompletion(message, new ArrayList<>(), project, schemaResponse, overrides);
                     } catch (GendoxException e) {
                         throw new GendoxRuntimeException(e.getHttpStatus(), e.getErrorCode(), e.getMessage(), e);
                     } catch (Exception e) {
