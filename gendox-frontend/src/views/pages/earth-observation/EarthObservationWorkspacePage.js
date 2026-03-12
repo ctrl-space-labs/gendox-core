@@ -4,7 +4,7 @@ import Typography from '@mui/material/Typography'
 import { styled, alpha } from '@mui/material/styles'
 import WorkspaceShell from './layout/WorkspaceShell'
 import WorkspaceGrid from './layout/WorkspaceGrid'
-import GeeAuthGuard from './GeeAuthGuard'
+import GeeAuthGuard from './gee/GeeAuthGuard'
 
 const PageWrapper = styled(Box)(({ theme }) => ({
   height: '100%',

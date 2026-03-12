@@ -1,90 +1,41 @@
-import { useEffect, useMemo, useRef } from 'react'
 import Box from '@mui/material/Box'
-import { useDispatch, useSelector } from 'react-redux'
 
 import MapPanel from '../panels/map/MapPanel'
 import ChatPanel from '../panels/chat/ChatPanel'
 import EditorPanel from '../panels/editor/EditorPanel'
 
-import PanelFrame from '../components/PanelFrame'
-import PanelLine from '../components/PanelLine'
+import PanelFrame from './PanelFrame'
+import PanelLine from './PanelLine'
 import SplitterX from './SplitterX'
 import SplitterY from './SplitterY'
-
-import {
-  LAYOUT,
-  maximizeMap,
-  maximizeChat,
-  maximizeEditor,
-  minimizeMap,
-  restoreMap,
-  restoreDefault,
-  setSplitX,
-  setSplitY,
-  minimizeChat,
-  restoreChat,
-  minimizeEditor,
-  restoreEditor
-} from 'src/store/earthObservation/earthObservation'
-
-// -------------------- MINIMUM SIZES (τύπου screenshot)
-const LINE_H = 34
-
-const MAP_MIN_W = 560 // min width map
-const RIGHT_MIN_W = 460 // min width right column
-
-const CHAT_MIN_H = 220 // min height chat
-const EDITOR_MIN_H = 220 // min height editor
-
-const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
-
-const clampSplitX = (ratio, totalW) => {
-  // map min + right min
-  const min = MAP_MIN_W / totalW
-  const max = 1 - RIGHT_MIN_W / totalW
-  return clamp(ratio, min, max)
-}
-
-const clampSplitY = (ratio, totalH) => {
-  const min = CHAT_MIN_H / totalH
-  const max = 1 - EDITOR_MIN_H / totalH
-  return clamp(ratio, min, max)
-}
+import useWorkspaceLayout from './hooks/useWorkspaceLayout'
 
 export default function WorkspaceGrid() {
-  const dispatch = useDispatch()
-  const { layoutMode, splitX, splitY, chatMin, editorMin, mapMin } = useSelector(s => s.earthObservation)
-
-  const rootRef = useRef(null)
-  const rightRef = useRef(null)
-
-  const canShowYSplitter = useMemo(() => !chatMin && !editorMin, [chatMin, editorMin])
-
-  useEffect(() => {
-    const w = rootRef.current?.clientWidth || window.innerWidth
-    const h = rightRef.current?.clientHeight || window.innerHeight
-
-    // Start with the current stored ratios but clamp them to respect min sizes.
-    dispatch(setSplitX(clampSplitX(splitX, w)))
-    dispatch(setSplitY(clampSplitY(splitY, h)))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // --- Drag handlers με clamp βάση px
-  const dragX = dx => {
-    const w = rootRef.current?.clientWidth || window.innerWidth
-    const next = splitX + dx / w
-    dispatch(setSplitX(clampSplitX(next, w)))
-  }
-
-  const dragY = dy => {
-    const h = rightRef.current?.clientHeight || window.innerHeight
-    const next = splitY + dy / h
-    dispatch(setSplitY(clampSplitY(next, h)))
-  }
+  const {
+    layoutMode,
+    splitX,
+    splitY,
+    chatMin,
+    editorMin,
+    mapMin,
+    canShowYSplitter,
+    allRightMinimized,
+    useColumnLayout,
+    rootRef,
+    rightRef,
+    dragX,
+    dragY,
+    actions,
+    LAYOUT,
+    LINE_H,
+    MAP_MIN_W,
+    RIGHT_MIN_W,
+    CHAT_MIN_H,
+    EDITOR_MIN_H
+  } = useWorkspaceLayout()
 
   // =================================================================
-  // MODE: MAP_MAX  -> Map full + κάτω 2 lines (Chat/Editor)
+  // MODE: MAP_MAX  -> Map full + bottom 2 lines (Chat/Editor)
   // =================================================================
   if (layoutMode === LAYOUT.MAP_MAX) {
     return (
@@ -95,26 +46,16 @@ export default function WorkspaceGrid() {
             minHeight: 0,
             display: 'flex',
             alignItems: 'stretch',
-            '& > *': {
-              flex: 1,
-              width: '100%',
-              minWidth: 0
-            }
+            '& > *': { flex: 1, width: '100%', minWidth: 0 }
           }}
         >
           <PanelFrame
             title='Map'
             collapsed={mapMin}
-            isMaximized={layoutMode === LAYOUT.MAP_MAX}
-            onMinimize={() => dispatch(minimizeMap())}
-            onRestore={() => {
-              if (layoutMode === LAYOUT.MAP_MAX) {
-                dispatch(restoreDefault())
-              } else {
-                dispatch(restoreMap())
-              }
-            }}
-            onMaximize={() => dispatch(maximizeMap())}
+            isMaximized={true}
+            onMinimize={actions.map.onMinimize}
+            onRestore={actions.map.onRestoreFromMax}
+            onMaximize={actions.map.onMaximize}
           >
             <MapPanel />
           </PanelFrame>
@@ -123,15 +64,15 @@ export default function WorkspaceGrid() {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           <PanelLine
             title='Chat'
-            onClick={() => dispatch(maximizeChat())}
-            onMaximize={() => dispatch(maximizeChat())}
-            onRestore={() => dispatch(restoreDefault())}
+            onClick={actions.chat.onMaximize}
+            onMaximize={actions.chat.onMaximize}
+            onRestore={actions.chat.onRestoreFromMax}
           />
           <PanelLine
             title='Editor'
-            onClick={() => dispatch(maximizeEditor())}
-            onMaximize={() => dispatch(maximizeEditor())}
-            onRestore={() => dispatch(restoreDefault())}
+            onClick={actions.editor.onMaximize}
+            onMaximize={actions.editor.onMaximize}
+            onRestore={actions.editor.onRestoreFromMax}
           />
         </Box>
       </Box>
@@ -139,9 +80,7 @@ export default function WorkspaceGrid() {
   }
 
   // =================================================================
-  // MODE: MAP_MIN  -> Map line πάνω + κάτω Chat/Editor side-by-side
-  // Note: This mode is kept for backward compatibility, but mapMin flag
-  // is now used to control visibility while keeping MapPanel mounted
+  // MODE: MAP_MIN  -> Map line top + Chat/Editor side-by-side
   // =================================================================
   if (layoutMode === LAYOUT.MAP_MIN) {
     return (
@@ -151,20 +90,16 @@ export default function WorkspaceGrid() {
             minHeight: `${LINE_H}px`,
             display: 'flex',
             alignItems: 'stretch',
-            '& > *': {
-              flex: 1,
-              width: '100%',
-              minWidth: 0
-            }
+            '& > *': { flex: 1, width: '100%', minWidth: 0 }
           }}
         >
           <PanelFrame
             title='Map'
             collapsed={mapMin}
             isMaximized={false}
-            onMinimize={() => dispatch(minimizeMap())}
-            onRestore={() => dispatch(restoreMap())}
-            onMaximize={() => dispatch(maximizeMap())}
+            onMinimize={actions.map.onMinimize}
+            onRestore={actions.map.onRestore}
+            onMaximize={actions.map.onMaximize}
           >
             <MapPanel />
           </PanelFrame>
@@ -183,9 +118,9 @@ export default function WorkspaceGrid() {
             title='Chat'
             collapsed={chatMin}
             isMaximized={false}
-            onMaximize={() => dispatch(maximizeChat())}
-            onMinimize={() => dispatch(minimizeChat())}
-            onRestore={() => dispatch(restoreChat())}
+            onMaximize={actions.chat.onMaximize}
+            onMinimize={actions.chat.onMinimize}
+            onRestore={actions.chat.onRestore}
           >
             <ChatPanel />
           </PanelFrame>
@@ -194,9 +129,9 @@ export default function WorkspaceGrid() {
             title='Editor'
             collapsed={editorMin}
             isMaximized={false}
-            onMaximize={() => dispatch(maximizeEditor())}
-            onMinimize={() => dispatch(minimizeEditor())}
-            onRestore={() => dispatch(restoreEditor())}
+            onMaximize={actions.editor.onMaximize}
+            onMinimize={actions.editor.onMinimize}
+            onRestore={actions.editor.onRestore}
           >
             <EditorPanel />
           </PanelFrame>
@@ -211,7 +146,6 @@ export default function WorkspaceGrid() {
   if (layoutMode === LAYOUT.CHAT_MAX) {
     return (
       <Box ref={rootRef} sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: mapMin ? 'column' : 'row', gap: 1.5 }}>
-        {/* Map */}
         <Box
           sx={{
             minWidth: mapMin ? 'auto' : `${MAP_MIN_W}px`,
@@ -221,20 +155,16 @@ export default function WorkspaceGrid() {
             flexGrow: 0,
             flexShrink: 0,
             alignItems: 'stretch',
-            '& > *': {
-              flex: 1,
-              width: '100%',
-              minWidth: 0
-            }
+            '& > *': { flex: 1, width: '100%', minWidth: 0 }
           }}
         >
           <PanelFrame
             title='Map'
             collapsed={mapMin}
             isMaximized={false}
-            onMaximize={() => dispatch(maximizeMap())}
-            onMinimize={() => dispatch(minimizeMap())}
-            onRestore={() => dispatch(restoreMap())}
+            onMaximize={actions.map.onMaximize}
+            onMinimize={actions.map.onMinimize}
+            onRestore={actions.map.onRestore}
           >
             <MapPanel />
           </PanelFrame>
@@ -242,7 +172,6 @@ export default function WorkspaceGrid() {
 
         {!mapMin && <SplitterX onDrag={dragX} />}
 
-        {/* Right */}
         <Box
           ref={rightRef}
           sx={{
@@ -260,56 +189,35 @@ export default function WorkspaceGrid() {
               minHeight: 0,
               display: 'flex',
               alignItems: 'stretch',
-              '& > *': {
-                flex: 1,
-                width: '100%',
-                minWidth: 0
-              }
+              '& > *': { flex: 1, width: '100%', minWidth: 0 }
             }}
           >
             {chatMin ? (
               <PanelLine
                 title='Chat'
-                onClick={() => dispatch(restoreChat())}
-                onMaximize={() => dispatch(maximizeChat())}
-                onRestore={() => {
-                  dispatch(restoreChat())
-                  dispatch(restoreDefault())
-                }}
+                onClick={actions.chat.onRestore}
+                onMaximize={actions.chat.onMaximize}
+                onRestore={() => { actions.chat.onRestore(); actions.chat.onRestoreFromMax() }}
               />
             ) : (
               <PanelFrame
                 title='Chat'
-                collapsed={chatMin}
-                isMaximized={layoutMode === LAYOUT.CHAT_MAX}
-                onMinimize={() => dispatch(minimizeChat())}
-                onRestore={() => {
-                  if (layoutMode === LAYOUT.CHAT_MAX) {
-                    dispatch(restoreDefault())
-                  } else {
-                    dispatch(restoreChat())
-                  }
-                }}
-                onMaximize={() => dispatch(maximizeChat())}
+                collapsed={false}
+                isMaximized={true}
+                onMinimize={actions.chat.onMinimize}
+                onRestore={actions.chat.onRestoreFromMax}
+                onMaximize={actions.chat.onMaximize}
               >
                 <ChatPanel />
               </PanelFrame>
             )}
           </Box>
 
-          {/* Editor line (ή restore αν ήταν minimized) */}
           <PanelLine
             title='Editor'
-            onClick={() => {
-              if (editorMin) {
-                dispatch(restoreEditor())
-                dispatch(restoreDefault())
-              } else {
-                dispatch(maximizeEditor())
-              }
-            }}
-            onMaximize={() => dispatch(maximizeEditor())}
-            onRestore={() => dispatch(restoreDefault())}
+            onClick={() => editorMin ? (actions.editor.onRestore(), actions.editor.onRestoreFromMax()) : actions.editor.onMaximize()}
+            onMaximize={actions.editor.onMaximize}
+            onRestore={actions.editor.onRestoreFromMax}
           />
         </Box>
       </Box>
@@ -322,7 +230,6 @@ export default function WorkspaceGrid() {
   if (layoutMode === LAYOUT.EDITOR_MAX) {
     return (
       <Box ref={rootRef} sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: mapMin ? 'column' : 'row', gap: 1.5 }}>
-        {/* Map */}
         <Box
           sx={{
             minWidth: mapMin ? 'auto' : `${MAP_MIN_W}px`,
@@ -332,20 +239,16 @@ export default function WorkspaceGrid() {
             flexGrow: 0,
             flexShrink: 0,
             alignItems: 'stretch',
-            '& > *': {
-              flex: 1,
-              width: '100%',
-              minWidth: 0
-            }
+            '& > *': { flex: 1, width: '100%', minWidth: 0 }
           }}
         >
           <PanelFrame
             title='Map'
             collapsed={mapMin}
             isMaximized={false}
-            onMaximize={() => dispatch(maximizeMap())}
-            onMinimize={() => dispatch(minimizeMap())}
-            onRestore={() => dispatch(restoreMap())}
+            onMaximize={actions.map.onMaximize}
+            onMinimize={actions.map.onMinimize}
+            onRestore={actions.map.onRestore}
           >
             <MapPanel />
           </PanelFrame>
@@ -353,7 +256,6 @@ export default function WorkspaceGrid() {
 
         {!mapMin && <SplitterX onDrag={dragX} />}
 
-        {/* Right */}
         <Box
           ref={rightRef}
           sx={{
@@ -371,56 +273,35 @@ export default function WorkspaceGrid() {
               minHeight: 0,
               display: 'flex',
               alignItems: 'stretch',
-              '& > *': {
-                flex: 1,
-                width: '100%',
-                minWidth: 0
-              }
+              '& > *': { flex: 1, width: '100%', minWidth: 0 }
             }}
           >
             {editorMin ? (
               <PanelLine
                 title='Editor'
-                onClick={() => dispatch(restoreEditor())}
-                onMaximize={() => dispatch(maximizeEditor())}
-                onRestore={() => {
-                  dispatch(restoreEditor())
-                  dispatch(restoreDefault())
-                }}
+                onClick={actions.editor.onRestore}
+                onMaximize={actions.editor.onMaximize}
+                onRestore={() => { actions.editor.onRestore(); actions.editor.onRestoreFromMax() }}
               />
             ) : (
               <PanelFrame
                 title='Editor'
-                collapsed={editorMin}
-                isMaximized={layoutMode === LAYOUT.EDITOR_MAX}
-                onMinimize={() => dispatch(minimizeEditor())}
-                onRestore={() => {
-                  if (layoutMode === LAYOUT.EDITOR_MAX) {
-                    dispatch(restoreDefault())
-                  } else {
-                    dispatch(restoreEditor())
-                  }
-                }}
-                onMaximize={() => dispatch(maximizeEditor())}
+                collapsed={false}
+                isMaximized={true}
+                onMinimize={actions.editor.onMinimize}
+                onRestore={actions.editor.onRestoreFromMax}
+                onMaximize={actions.editor.onMaximize}
               >
                 <EditorPanel />
               </PanelFrame>
             )}
           </Box>
 
-          {/* Chat line */}
           <PanelLine
             title='Chat'
-            onClick={() => {
-              if (chatMin) {
-                dispatch(restoreChat())
-                dispatch(restoreDefault())
-              } else {
-                dispatch(maximizeChat())
-              }
-            }}
-            onMaximize={() => dispatch(maximizeChat())}
-            onRestore={() => dispatch(restoreDefault())}
+            onClick={() => chatMin ? (actions.chat.onRestore(), actions.chat.onRestoreFromMax()) : actions.chat.onMaximize()}
+            onMaximize={actions.chat.onMaximize}
+            onRestore={actions.chat.onRestoreFromMax}
           />
         </Box>
       </Box>
@@ -429,11 +310,7 @@ export default function WorkspaceGrid() {
 
   // =================================================================
   // MODE: DEFAULT -> Resizable Map vs Right + Resizable Chat vs Editor
-  //               + Min lines για Chat/Editor
   // =================================================================
-  const allRightMinimized = chatMin && editorMin
-  const useColumnLayout = mapMin || allRightMinimized
-
   return (
     <Box ref={rootRef} sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: useColumnLayout ? 'column' : 'row', gap: 1.5 }}>
       {/* Map */}
@@ -446,20 +323,16 @@ export default function WorkspaceGrid() {
           flexGrow: mapMin ? 0 : allRightMinimized ? 1 : 0,
           flexShrink: allRightMinimized ? 1 : 0,
           alignItems: 'stretch',
-          '& > *': {
-            flex: 1,
-            width: '100%',
-            minWidth: 0
-          }
+          '& > *': { flex: 1, width: '100%', minWidth: 0 }
         }}
       >
         <PanelFrame
           title='Map'
           collapsed={mapMin}
           isMaximized={false}
-          onMaximize={() => dispatch(maximizeMap())}
-          onMinimize={() => dispatch(minimizeMap())}
-          onRestore={() => dispatch(restoreMap())}
+          onMaximize={actions.map.onMaximize}
+          onMinimize={actions.map.onMinimize}
+          onRestore={actions.map.onRestore}
         >
           <MapPanel />
         </PanelFrame>
@@ -490,20 +363,16 @@ export default function WorkspaceGrid() {
             flexGrow: chatMin ? 1 : 0,
             flexShrink: 0,
             alignItems: 'stretch',
-            '& > *': {
-              flex: 1,
-              width: '100%',
-              minWidth: 0
-            }
+            '& > *': { flex: 1, width: '100%', minWidth: 0 }
           }}
         >
           <PanelFrame
             title='Editor'
             collapsed={editorMin}
             isMaximized={false}
-            onMaximize={() => dispatch(maximizeEditor())}
-            onMinimize={() => dispatch(minimizeEditor())}
-            onRestore={() => dispatch(restoreEditor())}
+            onMaximize={actions.editor.onMaximize}
+            onMinimize={actions.editor.onMinimize}
+            onRestore={actions.editor.onRestore}
           >
             <EditorPanel />
           </PanelFrame>
@@ -518,24 +387,20 @@ export default function WorkspaceGrid() {
             height: chatMin ? LINE_H : 'auto',
             display: 'flex',
             flexBasis: chatMin ? LINE_H : 'auto',
-            flexGrow: editorMin ? 1 : 1,
+            flexGrow: 1,
             flexShrink: 1,
             minWidth: 0,
             alignItems: 'stretch',
-            '& > *': {
-              flex: 1,
-              width: '100%',
-              minWidth: 0
-            }
+            '& > *': { flex: 1, width: '100%', minWidth: 0 }
           }}
         >
           <PanelFrame
             title='Chat'
             collapsed={chatMin}
             isMaximized={false}
-            onMaximize={() => dispatch(maximizeChat())}
-            onMinimize={() => dispatch(minimizeChat())}
-            onRestore={() => dispatch(restoreChat())}
+            onMaximize={actions.chat.onMaximize}
+            onMinimize={actions.chat.onMinimize}
+            onRestore={actions.chat.onRestore}
           >
             <ChatPanel />
           </PanelFrame>

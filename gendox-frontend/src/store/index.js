@@ -11,7 +11,7 @@ import globalSearch from 'src/store/globalSearch/globalSearch'
 import activeTask from 'src/store/activeTask/activeTask'
 import activeTaskNode from 'src/store/activeTaskNode/activeTaskNode'
 import activeTaskEdge from 'src/store/activeTaskEdge/activeTaskEdge'
-import earthObservation from 'src/store/earthObservation/earthObservation'
+import earthObservation from 'src/store/earthObservation'
 import chatAttachments from 'src/store/chatAttachments/chatAttachments'
 
 const reducer = {

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Box from '@mui/material/Box'
-import { editorCodeRef, keepAllRef } from 'src/views/pages/earth-observation/panels/shared/editorState'
+import { editorCodeRef, keepAllRef } from 'src/views/pages/earth-observation/panels/shared/panelState'
 
 const SCRIPT_ID = 'gendox-chat-script'
 const CONTAINER_ID = 'gendox-chat-container-id'

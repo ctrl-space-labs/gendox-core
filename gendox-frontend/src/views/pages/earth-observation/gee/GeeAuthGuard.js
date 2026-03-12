@@ -12,7 +12,7 @@ import Typography from '@mui/material/Typography'
 import CircularProgress from '@mui/material/CircularProgress'
 import Box from '@mui/material/Box'
 
-import { setGeeReady } from 'src/store/earthObservation/earthObservation'
+import { setGeeReady } from 'src/store/earthObservation'
 import commonConfig from 'src/configs/common.config.js'
 
 const CLIENT_ID = commonConfig.GEE_clientId
@@ -53,7 +53,7 @@ function clearStoredToken() {
 
 export default function GeeAuthGuard({ children }) {
   const dispatch = useDispatch()
-  const isGeeReady = useSelector(s => s.earthObservation.isGeeReady)
+  const isGeeReady = useSelector(s => s.earthObservation.map.isGeeReady)
 
   const [loading, setLoading] = useState(!isGeeReady)
   const [error, setError] = useState(null)

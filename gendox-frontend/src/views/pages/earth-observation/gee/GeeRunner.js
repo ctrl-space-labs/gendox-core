@@ -1,25 +1,26 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { setMapData, addMapLayer, clearMapLayers, setMapThumbnail, setScreenshotUrl, setGeeRunError, createEOScriptThunk, clearScreenshotRequest } from 'src/store/earthObservation/earthObservation'
-import { runScriptRef } from 'src/views/pages/earth-observation/panels/shared/editorState'
+import {
+  setMapData,
+  addMapLayer,
+  clearMapLayers,
+  setMapThumbnail,
+  setScreenshotUrl,
+  setGeeRunError,
+  createEOScriptThunk,
+  clearScreenshotRequest
+} from 'src/store/earthObservation'
+import { runScriptRef } from 'src/views/pages/earth-observation/panels/shared/panelState'
 import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
 
-export default function GeeRunner({
-  code,
-  getCurrentCode,
-  organizationId,
-  projectId,
-  taskId,
-  token,
-  scriptName
-}) {
+export default function GeeRunner({ code, getCurrentCode, organizationId, projectId, taskId, token, scriptName }) {
   const dispatch = useDispatch()
 
-  const createEOScriptLoading = useSelector(state => state.earthObservation.createEOScriptLoading)
-  const latestEOScriptLoading = useSelector(state => state.earthObservation.latestEOScriptLoading)
-  const screenshotRequest = useSelector(state => state.earthObservation.screenshotRequest)
+  const createEOScriptLoading = useSelector(state => state.earthObservation.scripts.createEOScriptLoading)
+  const latestEOScriptLoading = useSelector(state => state.earthObservation.scripts.latestEOScriptLoading)
+  const screenshotRequest = useSelector(state => state.earthObservation.map.screenshotRequest)
 
   // console.log("STATE", useSelector(state => state.earthObservation))
 
@@ -52,9 +53,9 @@ export default function GeeRunner({
     if (!currentCode) return
 
     setIsRunning(true)
-    dispatch(clearMapLayers())                 // clear previous map layers
-    dispatch(setMapThumbnail(null))            // clear previous thumbnail
-    dispatch(setGeeRunError(null))             // clear previous error
+    dispatch(clearMapLayers()) // clear previous map layers
+    dispatch(setMapThumbnail(null)) // clear previous thumbnail
+    dispatch(setGeeRunError(null)) // clear previous error
 
     // Keep the last run code (for save after SUCCESS)
     lastRunCodeRef.current = currentCode
@@ -74,7 +75,9 @@ export default function GeeRunner({
   // without prop drilling — same pattern as editorCodeRef.
   useEffect(() => {
     runScriptRef.current = handleRun
-    return () => { runScriptRef.current = null }
+    return () => {
+      runScriptRef.current = null
+    }
   })
 
   // 4. Listen for messages (The heart of communication)
@@ -86,7 +89,6 @@ export default function GeeRunner({
       // check event.source instead of event.origin to verify the message comes
       // from our specific iframe instance and not another window.
       if (iframeRef.current && event.source !== iframeRef.current.contentWindow) return
-
 
       const { type, payload, message } = event.data
 
@@ -131,8 +133,10 @@ export default function GeeRunner({
                 description: (() => {
                   const d = new Date()
                   const pad = n => String(n).padStart(2, '0')
-                  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-                  return `Run-Saved – ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+                  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                  return `Run-Saved – ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} ${pad(
+                    d.getHours()
+                  )}:${pad(d.getMinutes())}`
                 })(),
                 scriptContent: lastRunCodeRef.current
               },
@@ -213,7 +217,11 @@ export default function GeeRunner({
         variant='contained'
         onClick={handleRun}
         disabled={isRunning || createEOScriptLoading || latestEOScriptLoading}
-        startIcon={isRunning || createEOScriptLoading || latestEOScriptLoading ? <CircularProgress size={16} color='inherit' /> : null}
+        startIcon={
+          isRunning || createEOScriptLoading || latestEOScriptLoading ? (
+            <CircularProgress size={16} color='inherit' />
+          ) : null
+        }
       >
         {isRunning || createEOScriptLoading || latestEOScriptLoading ? 'Processing...' : 'Run Code'}
       </Button>
