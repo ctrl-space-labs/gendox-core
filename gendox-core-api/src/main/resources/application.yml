@@ -170,8 +170,8 @@ gendox:
   agents:
     splitter-type: "STATIC_WORD_COUNT_SPLITTER"
     max_token: 500
-    temperature: 0.8
-    top_p: 0.4
+    temperature: 0.3
+    top_p: 0.95
     max_search_limit: 5
     max_completion_limit: 5
   tasks:

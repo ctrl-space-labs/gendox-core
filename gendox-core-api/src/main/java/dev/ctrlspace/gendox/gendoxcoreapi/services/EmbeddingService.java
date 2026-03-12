@@ -221,23 +221,29 @@ public class EmbeddingService {
 
     public String getApiKey(ProjectAgent agent, String aiModelType) throws GendoxException {
         AiModel model = organizationModelKeyService.getAgentModelByType(agent, aiModelType);
-        OrganizationModelProviderKey organizationModelProviderKey = organizationModelKeyService.getKeyForAgent(agent, aiModelType);
-        String rawKey = null;
+        return getApiKey(agent.getProject().getOrganizationId(), model);
+    }
+
+    /**
+     * Resolves the API key for the given organization and model (e.g. when using an overridden completion model).
+     * Use this when the model is not the agent's default for the type (e.g. completion model overridden at runtime).
+     */
+    public String getApiKey(UUID organizationId, AiModel model) throws GendoxException {
+        OrganizationModelProviderKey organizationModelProviderKey = organizationModelKeyService.getKeyForModel(organizationId, model);
+        String rawKey;
         if (organizationModelProviderKey != null) {
             logger.debug("Using OrganizationModelProviderKey ID: {}", organizationModelProviderKey.getId());
             rawKey = organizationModelProviderKey.getKey();
         } else {
-            logger.debug("Using default API key for agent id: {} and model type: {}", agent.getId(), aiModelType);
-            rawKey = organizationModelKeyService.getDefaultKeyForAgent(agent, aiModelType);
+            logger.debug("Using default API key for organization: {} and model: {}", organizationId, model.getModel());
+            rawKey = organizationModelKeyService.getDefaultKeyForModel(organizationId, model);
 
             // OAuth2 authentication token requires special handling
             // TODO generalize to get the GCP secret per organization, this will require GCloudAuthenticationService to cache GoogleCredentials per organization
-            if ("VERTEX_AI".equals(model.getAiModelProvider().getName()) ) {
+            if ("VERTEX_AI".equals(model.getAiModelProvider().getName())) {
                 rawKey = gCloudAuthenticationService.getClientToken();
             }
         }
-
-
         return rawKey;
     }
 
