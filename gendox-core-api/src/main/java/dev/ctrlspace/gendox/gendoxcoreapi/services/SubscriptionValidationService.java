@@ -112,7 +112,7 @@ public class SubscriptionValidationService {
             return true;
         }
         OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
-        int maxMessages = activePlan.getSubscriptionPlan().getUserUploadLimitFileCount() * activePlan.getNumberOfSeats();
+        int maxMessages = activePlan.getSubscriptionPlan().getUserMessageMonthlyLimitCount() * activePlan.getNumberOfSeats();
         int numberOfMessages = this.countMessages(organizationId, activePlan.getStartDate(), activePlan.getEndDate());
         return numberOfMessages < maxMessages;
     }
