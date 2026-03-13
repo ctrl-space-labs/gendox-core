@@ -23,46 +23,53 @@ export default function MonacoEditorPane({
         }
       `}</style>
 
-      {isFirstScript ? (
-        <FirstScriptOnboarding
-          newScriptNameInput={newScriptNameInput}
-          setNewScriptNameInput={setNewScriptNameInput}
-          onCreateNewScript={onCreateNewScript}
-        />
-      ) : (
-        <>
-          {latestEOScriptLoading && (
-            <Box
-              sx={{
-                position: 'absolute',
-                inset: 0,
-                zIndex: 10,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(0,0,0,0.35)'
-              }}
-            >
-              <CircularProgress />
-            </Box>
-          )}
-          <Editor
-            height='100%'
-            defaultLanguage='javascript'
-            theme='vs-dark'
-            value={code}
-            onChange={onChange}
-            onMount={onMount}
-            options={{
-              minimap: { enabled: false },
-              fontSize: 13,
-              wordWrap: 'on',
-              automaticLayout: true,
-              tabSize: 2,
-              readOnly: latestEOScriptLoading
-            }}
+      {latestEOScriptLoading && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.35)'
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      )}
+      <Editor
+        height='100%'
+        defaultLanguage='javascript'
+        theme='vs-dark'
+        value={code}
+        onChange={onChange}
+        onMount={onMount}
+        options={{
+          minimap: { enabled: false },
+          fontSize: 13,
+          wordWrap: 'on',
+          automaticLayout: true,
+          tabSize: 2,
+          readOnly: latestEOScriptLoading
+        }}
+      />
+      {isFirstScript && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 20,
+            height: '100%',
+            pointerEvents: 'auto'
+          }}
+        >
+          <FirstScriptOnboarding
+            newScriptNameInput={newScriptNameInput}
+            setNewScriptNameInput={setNewScriptNameInput}
+            onCreateNewScript={onCreateNewScript}
           />
-        </>
+        </Box>
       )}
     </Box>
   )

@@ -16,7 +16,8 @@ export default function useEditorToolsRegistration({
   patchDecorationsRef,
   lastToolWrittenContentRef,
   setCode,
-  setHasPendingChange
+  setHasPendingChange,
+  eoScripts
 }) {
   useEffect(() => {
     let intervalId
@@ -28,6 +29,10 @@ export default function useEditorToolsRegistration({
       window.gendox.tools.registerTool(
         'apply_range_patch',
         ({ document_id, start_line, end_line, new_text, summary }) => {
+          console.log(`IsFirstScript: ${eoScripts.isFirstScript}`)
+          if (eoScripts.isFirstScript) {
+            eoScripts.handleCreateNewScript()
+          }
           const editor = editorRef.current
           const monaco = monacoRef.current
           if (!editor || !monaco) return { success: false, error: 'Editor not ready' }

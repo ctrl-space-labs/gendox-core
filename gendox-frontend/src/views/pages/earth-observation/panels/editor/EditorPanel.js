@@ -24,9 +24,10 @@ export default function EditorPanel() {
 
   const { editorRef, monacoRef, handleEditorDidMount } = useMonacoEditor()
   const patchPreview = usePatchPreview({ editorRef, monacoRef, setCode })
-  useEditorToolsRegistration({ editorRef, monacoRef, setCode, ...patchPreview })
-
   const scripts = useEOScripts({ organizationId, projectId, taskId, token, editorRef, code, setCode })
+
+  useEditorToolsRegistration({ editorRef, monacoRef, setCode, "eoScripts": scripts, ...patchPreview })
+
 
   // Keep the shared ref pointing to the latest handleKeepAll so ChatPanel
   // can invoke it without prop drilling (e.g. auto-accept before context capture).
