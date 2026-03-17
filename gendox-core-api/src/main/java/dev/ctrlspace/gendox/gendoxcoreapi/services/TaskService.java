@@ -8,6 +8,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDuplicateDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,8 @@ public class TaskService {
     private final TaskNodeRepository taskNodeRepository;
     private final TaskEdgeService taskEdgeService;
     private final TypeService typeService;
+    private final EOScriptService eoScriptService;
+    private final EOTaskGeometryService eoTaskGeometryServicey;
     private TaskConverter taskConverter;
     private AiModelService aiModelService;
     private TaskNodeService taskNodeService;
@@ -41,6 +44,8 @@ public class TaskService {
                        TaskNodeRepository taskNodeRepository,
                        TypeService typeService,
                        TaskEdgeService taskEdgeService,
+                       EOScriptService eoScriptRepository,
+                       EOTaskGeometryService eoTaskGeometryRepository,
                        TaskConverter taskConverter,
                        AiModelService aiModelService,
                        TaskNodeService taskNodeService,
@@ -51,6 +56,8 @@ public class TaskService {
         this.taskNodeRepository = taskNodeRepository;
         this.typeService = typeService;
         this.taskEdgeService = taskEdgeService;
+        this.eoScriptService = eoScriptRepository;
+        this.eoTaskGeometryServicey = eoTaskGeometryRepository;
         this.taskConverter = taskConverter;
         this.aiModelService = aiModelService;
         this.taskNodeService = taskNodeService;
@@ -245,6 +252,13 @@ public class TaskService {
         // Fetch the task to delete
         Task taskToDelete = taskRepository.findById(taskId)
                 .orElseThrow(() -> new GendoxException("TASK_NOT_FOUND", "Task not found for deletion", HttpStatus.NOT_FOUND));
+
+        // Delete EO children for task type Earth Observation
+        if (taskToDelete.getTaskType() != null &&
+                TaskTypeConstants.EARTH_OBSERVATION.equals(taskToDelete.getTaskType().getName())) {
+            eoScriptService.deleteAllEOScriptsForTask(taskId);
+            eoTaskGeometryServicey.deleteAllByTaskId(taskId);
+        }
 
         Page<TaskNode> nodesToDelete = taskNodeRepository.findAllByTaskId(taskId, Pageable.unpaged());
 

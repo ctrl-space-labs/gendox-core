@@ -67,6 +67,11 @@ public class EOScriptService {
         return eoScriptRepository.save(eoScript);
     }
 
+    @Transactional
+    public void deleteAllEOScriptsForTask(UUID taskId) {
+        logger.info("Deleting all EOScripts for task id: {}", taskId);
+        eoScriptRepository.deleteAll(eoScriptRepository.findByTask_IdOrderByCreatedAtDesc(taskId));
+    }
 
     private String normalize(String s) {
         if (s == null) return null;

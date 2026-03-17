@@ -61,7 +61,6 @@ public class EOTaskGeometryService {
     @Transactional
     public void deleteAllByTaskId(UUID taskId) {
         logger.info("Deleting all EOTaskGeometries for taskId: {}", taskId);
-        List<EOTaskGeometry> geometries = eoTaskGeometryRepository.findByTaskIdOrderByDisplayOrderAsc(taskId);
-        eoTaskGeometryRepository.deleteAll(geometries);
+        eoTaskGeometryRepository.deleteAll(eoTaskGeometryRepository.findByTaskIdOrderByDisplayOrderAsc(taskId));
     }
 }
