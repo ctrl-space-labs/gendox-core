@@ -11,7 +11,6 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 import { useRouter } from 'next/router'
 import { useEffect } from 'react'
 
-
 const PageWrapper = styled(Box)(({ theme }) => ({
   height: '100%',
   width: '100%',
@@ -40,16 +39,13 @@ const EarthObservationWorkspacePage = () => {
   const router = useRouter()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   const { organizationId, projectId, taskId } = router.query
-    const { selectedTask } = useSelector(state => state.activeTask)
-  
+  const { selectedTask } = useSelector(state => state.activeTask)
 
-    console.log("selectedTask in EO workspace page:", selectedTask)
-
-    useEffect(() => {
-        if (organizationId && projectId && taskId && token) {
-          dispatch(fetchTaskById({ organizationId, projectId, taskId, token }))
-        }
-      }, [organizationId, projectId, taskId, token, dispatch])
+  useEffect(() => {
+    if (organizationId && projectId && taskId && token) {
+      dispatch(fetchTaskById({ organizationId, projectId, taskId, token }))
+    }
+  }, [organizationId, projectId, taskId, token, dispatch])
 
   return (
     <PageWrapper>
@@ -60,7 +56,9 @@ const EarthObservationWorkspacePage = () => {
         </Typography>
         {selectedTask?.title && (
           <>
-            <Typography variant='h5' sx={{ color: 'text.disabled', fontWeight: 400, lineHeight: 1 }}>/</Typography>
+            <Typography variant='h5' sx={{ color: 'text.disabled', fontWeight: 400, lineHeight: 1 }}>
+              /
+            </Typography>
             <Typography
               variant='h5'
               sx={{

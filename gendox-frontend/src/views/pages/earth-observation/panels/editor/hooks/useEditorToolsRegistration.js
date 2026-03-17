@@ -17,21 +17,21 @@ export default function useEditorToolsRegistration({
   lastToolWrittenContentRef,
   setCode,
   setHasPendingChange,
-  eoScripts
+  eoScriptsRef
 }) {
   useEffect(() => {
     let intervalId
     let registered = false
+    console.log("APPLIED PATCHES REF IN TOOL REGISTRATION", appliedPatchesRef.current)
 
     const register = () => {
       if (!window.gendox?.tools?.registerTool) return false
-
       window.gendox.tools.registerTool(
         'apply_range_patch',
         ({ document_id, start_line, end_line, new_text, summary }) => {
-          console.log(`IsFirstScript: ${eoScripts.isFirstScript}`)
+          const eoScripts = eoScriptsRef.current
           if (eoScripts.isFirstScript) {
-            eoScripts.handleCreateNewScript()
+            eoScripts.handleAutoCreateFromChat()
           }
           const editor = editorRef.current
           const monaco = monacoRef.current

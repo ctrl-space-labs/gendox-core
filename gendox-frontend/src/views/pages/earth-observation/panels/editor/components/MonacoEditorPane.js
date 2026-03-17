@@ -38,22 +38,24 @@ export default function MonacoEditorPane({
           <CircularProgress />
         </Box>
       )}
-      <Editor
-        height='100%'
-        defaultLanguage='javascript'
-        theme='vs-dark'
-        value={code}
-        onChange={onChange}
-        onMount={onMount}
-        options={{
-          minimap: { enabled: false },
-          fontSize: 13,
-          wordWrap: 'on',
-          automaticLayout: true,
-          tabSize: 2,
-          readOnly: latestEOScriptLoading
-        }}
-      />
+      <Box sx={{ height: '100%', visibility: isFirstScript ? 'hidden' : 'visible' }}>
+        <Editor
+          height='100%'
+          defaultLanguage='javascript'
+          theme='vs-dark'
+          value={code}
+          onChange={onChange}
+          onMount={onMount}
+          options={{
+            minimap: { enabled: false },
+            fontSize: 13,
+            wordWrap: 'on',
+            automaticLayout: true,
+            tabSize: 2,
+            readOnly: latestEOScriptLoading
+          }}
+        />
+      </Box>
       {isFirstScript && (
         <Box
           sx={{

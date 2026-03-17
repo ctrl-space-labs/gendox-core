@@ -15,7 +15,7 @@ import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
 
-export default function GeeRunner({ code, getCurrentCode, organizationId, projectId, taskId, token, scriptName }) {
+export default function GeeRunner({ code, getCurrentCode, organizationId, projectId, taskId, token, scriptName, isFirstScript }) {
   const dispatch = useDispatch()
 
   const createEOScriptLoading = useSelector(state => state.earthObservation.scripts.createEOScriptLoading)
@@ -128,7 +128,7 @@ export default function GeeRunner({ code, getCurrentCode, organizationId, projec
               projectId,
               taskId,
               eoScriptPayload: {
-                title: scriptNameRef.current || 'New Script',
+                title: scriptNameRef.current || 'My Script',
                 description: (() => {
                   const d = new Date()
                   const pad = n => String(n).padStart(2, '0')
@@ -215,7 +215,7 @@ export default function GeeRunner({ code, getCurrentCode, organizationId, projec
         size='small'
         variant='contained'
         onClick={handleRun}
-        disabled={isRunning || createEOScriptLoading || latestEOScriptLoading}
+        disabled={isFirstScript || isRunning || createEOScriptLoading || latestEOScriptLoading}
         startIcon={
           isRunning || createEOScriptLoading || latestEOScriptLoading ? (
             <CircularProgress size={16} color='inherit' />

@@ -88,6 +88,7 @@ export default function EditorToolbar({
           taskId={taskId}
           token={token}
           scriptName={currentScriptName}
+          isFirstScript={isFirstScript}
         />
       </Stack>
     </Stack>

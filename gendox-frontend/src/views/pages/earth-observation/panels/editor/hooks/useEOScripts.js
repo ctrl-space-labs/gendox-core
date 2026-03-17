@@ -16,7 +16,7 @@ export default function useEOScripts({ organizationId, projectId, taskId, token,
     state => state.earthObservation.scripts
   )
 
-  const [currentScriptName, setCurrentScriptName] = useState('New Script')
+  const [currentScriptName, setCurrentScriptName] = useState('My Script')
   const [currentVersionId, setCurrentVersionId] = useState(null)
   const [scriptMenuAnchor, setScriptMenuAnchor] = useState(null)
   const [versionMenuAnchor, setVersionMenuAnchor] = useState(null)
@@ -99,7 +99,7 @@ export default function useEOScripts({ organizationId, projectId, taskId, token,
   }
 
   const handleCreateNewScript = () => {
-    const name = newScriptNameInput.trim() || 'New Script'
+    const name = newScriptNameInput.trim() || 'My Script'
     setCurrentScriptName(name)
     setCurrentVersionId(null)
     setCode('')
@@ -107,6 +107,14 @@ export default function useEOScripts({ organizationId, projectId, taskId, token,
     setIsFirstScript(false)
     setNewScriptDialogOpen(false)
   }
+
+const handleAutoCreateFromChat = () => {
+  const name = newScriptNameInput.trim() || 'My Script'
+  setCurrentScriptName(name)
+  setCurrentVersionId(null)
+  setIsFirstScript(false)
+}
+
 
   const handleSave = () => {
     const currentCode = (editorRef.current?.getValue?.() ?? code ?? '').trim()
@@ -118,7 +126,7 @@ export default function useEOScripts({ organizationId, projectId, taskId, token,
         projectId,
         taskId,
         eoScriptPayload: {
-          title: currentScriptName || 'New Script',
+          title: currentScriptName || 'My Script',
           description: buildSaveDescription(),
           scriptContent: currentCode
         },
@@ -151,6 +159,7 @@ export default function useEOScripts({ organizationId, projectId, taskId, token,
     handleSelectVersion,
     handleOpenNewScriptDialog,
     handleCreateNewScript,
+    handleAutoCreateFromChat,
     handleSave
   }
 }

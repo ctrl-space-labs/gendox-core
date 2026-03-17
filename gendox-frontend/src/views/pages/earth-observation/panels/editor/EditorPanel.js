@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Box from '@mui/material/Box'
 import { useRouter } from 'next/router'
 
@@ -26,7 +26,10 @@ export default function EditorPanel() {
   const patchPreview = usePatchPreview({ editorRef, monacoRef, setCode })
   const scripts = useEOScripts({ organizationId, projectId, taskId, token, editorRef, code, setCode })
 
-  useEditorToolsRegistration({ editorRef, monacoRef, setCode, "eoScripts": scripts, ...patchPreview })
+  const eoScriptsRef = useRef(scripts)
+  eoScriptsRef.current = scripts
+
+  useEditorToolsRegistration({ editorRef, monacoRef, setCode, eoScriptsRef, ...patchPreview })
 
 
   // Keep the shared ref pointing to the latest handleKeepAll so ChatPanel
