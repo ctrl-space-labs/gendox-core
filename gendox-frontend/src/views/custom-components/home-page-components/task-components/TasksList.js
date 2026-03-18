@@ -84,9 +84,11 @@ const TasksList = ({ projectTasks, page }) => {
       closeDeleteConfirm()
     } catch (error) {
       toast.error(`Failed to delete task: ${getErrorMessage(error)}`)
+      closeDeleteConfirm()
     } finally {
       setIsDeleting(false)
       setSelectedTask(null)
+      closeDeleteConfirm()
     }
   }
 
