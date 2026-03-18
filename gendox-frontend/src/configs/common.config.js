@@ -9,6 +9,8 @@ const commonConfig = {
     provenAiUrl: process.env.NEXT_PUBLIC_PROVEN_AI_URL,
     provenAiEnabled: process.env.NEXT_PUBLIC_PROVEN_AI_ENABLED? process.env.NEXT_PUBLIC_PROVEN_AI_ENABLED === 'true' : false /* true | false */,
     GEE_clientId: process.env.NEXT_PUBLIC_GEE_CLIENT_ID,
+    GEE_clientSecret: process.env.NEXT_PUBLIC_GEE_CLIENT_SECRET,
+    GEE_redirectUri: process.env.NEXT_PUBLIC_GEE_REDIRECT_URI,
     MAPS_API_KEY: process.env.NEXT_PUBLIC_MAPS_API_KEY
 }
 
