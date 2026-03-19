@@ -7,24 +7,36 @@ import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
 import { useGeeMessages } from './useGeeMessages'
 
-export default function GeeRunner({ code, getCurrentCode, organizationId, projectId, taskId, token, scriptName, isFirstScript }) {
+export default function GeeRunner({
+  code,
+  getCurrentCode,
+  organizationId,
+  projectId,
+  taskId,
+  token,
+  scriptName,
+  isFirstScript
+}) {
   const dispatch = useDispatch()
 
   const createEOScriptLoading = useSelector(state => state.earthObservation.scripts.createEOScriptLoading)
   const latestEOScriptLoading = useSelector(state => state.earthObservation.scripts.latestEOScriptLoading)
-  const screenshotRequest     = useSelector(state => state.earthObservation.map.screenshotRequest)
+  const screenshotRequest = useSelector(state => state.earthObservation.map.screenshotRequest)
+  const sessionExpired = useSelector(state => state.earthObservation.map.sessionExpired)
 
-  const [iframeKey,  setIframeKey]  = useState(0) // incremented to destroy + recreate the iframe
-  const [isRunning,  setIsRunning]  = useState(false)
+  const [iframeKey, setIframeKey] = useState(0) // incremented to destroy + recreate the iframe
+  const [isRunning, setIsRunning] = useState(false)
 
-  const pendingCodeRef  = useRef(null)
+  const pendingCodeRef = useRef(null)
   const pendingTokenRef = useRef(null)
-  const iframeRef       = useRef(null)
-  const lastRunCodeRef  = useRef('')
-  const scriptNameRef   = useRef(scriptName)
+  const iframeRef = useRef(null)
+  const lastRunCodeRef = useRef('')
+  const scriptNameRef = useRef(scriptName)
 
   // Keep scriptNameRef in sync so the message handler never reads a stale name
-  useEffect(() => { scriptNameRef.current = scriptName }, [scriptName])
+  useEffect(() => {
+    scriptNameRef.current = scriptName
+  }, [scriptName])
 
   // Forward screenshot requests from MapPanel to the GEE sandbox iframe
   useEffect(() => {
@@ -35,8 +47,16 @@ export default function GeeRunner({ code, getCurrentCode, organizationId, projec
 
   // Wire up all sandbox → parent message handling
   useGeeMessages({
-    iframeRef, pendingCodeRef, pendingTokenRef, scriptNameRef, lastRunCodeRef,
-    organizationId, projectId, taskId, token, setIsRunning
+    iframeRef,
+    pendingCodeRef,
+    pendingTokenRef,
+    scriptNameRef,
+    lastRunCodeRef,
+    organizationId,
+    projectId,
+    taskId,
+    token,
+    setIsRunning
   })
 
   const handleRun = () => {
@@ -48,10 +68,10 @@ export default function GeeRunner({ code, getCurrentCode, organizationId, projec
     dispatch(setMapThumbnail(null))
     dispatch(setGeeRunError(null))
 
-    lastRunCodeRef.current  = currentCode
+    lastRunCodeRef.current = currentCode
     // Read token fresh at click time — avoids using a stale token after silent refresh
     pendingTokenRef.current = window.localStorage.getItem('gee_access_token')
-    pendingCodeRef.current  = currentCode
+    pendingCodeRef.current = currentCode
 
     // Incrementing the key destroys the old iframe and mounts a fresh one
     setIframeKey(prev => prev + 1)
@@ -61,7 +81,9 @@ export default function GeeRunner({ code, getCurrentCode, organizationId, projec
   // a run without prop drilling (same pattern as editorCodeRef)
   useEffect(() => {
     runScriptRef.current = handleRun
-    return () => { runScriptRef.current = null }
+    return () => {
+      runScriptRef.current = null
+    }
   })
 
   const isLoading = isRunning || createEOScriptLoading || latestEOScriptLoading
@@ -72,7 +94,7 @@ export default function GeeRunner({ code, getCurrentCode, organizationId, projec
         size='small'
         variant='contained'
         onClick={handleRun}
-        disabled={isFirstScript || isLoading}
+        disabled={isFirstScript || isLoading || sessionExpired}
         startIcon={isLoading ? <CircularProgress size={16} color='inherit' /> : null}
       >
         {isLoading ? 'Processing...' : 'Run Code'}

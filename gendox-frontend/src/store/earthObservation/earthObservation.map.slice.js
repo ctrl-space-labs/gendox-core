@@ -1,5 +1,6 @@
 export const mapInitialState = {
   isGeeReady: false,
+  sessionExpired: false, // true when token expired mid-session; shows Snackbar instead of blocking dialog
   mapLayers: [], // [{ url, name }]
   mapThumbnailUrl: null, // auto-thumbnail after script run (from Map.setCenter region)
   screenshotUrl: null, // on-demand screenshot from the camera button (current viewport)
@@ -11,6 +12,10 @@ export const mapInitialState = {
 export const mapReducers = {
   setGeeReady: (state, action) => {
     state.map.isGeeReady = action.payload
+    if (action.payload) state.map.sessionExpired = false // clear on successful (re)auth
+  },
+  setSessionExpired: (state, action) => {
+    state.map.sessionExpired = action.payload
   },
   setMapData: (state, action) => {
     if (action.payload.center) state.map.mapCenter = action.payload.center

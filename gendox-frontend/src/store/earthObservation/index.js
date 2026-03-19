@@ -30,6 +30,7 @@ export * from './earthObservation.thunks'
 export * from './earthObservation.selectors'
 
 export const {
+  setSessionExpired,
   setLayoutMode,
   maximizeMap,
   maximizeChat,

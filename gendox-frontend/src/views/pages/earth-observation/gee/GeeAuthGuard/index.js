@@ -12,146 +12,148 @@ import Typography from '@mui/material/Typography'
 import CircularProgress from '@mui/material/CircularProgress'
 import Box from '@mui/material/Box'
 
-import { setGeeReady } from 'src/store/earthObservation'
-import {
-  readStoredToken, persistToken, persistRefreshToken,
-  readRefreshToken, clearStoredToken, EXPIRY_BUFFER_MS
-} from './geeStorage'
-import { generateCodeVerifier, generateCodeChallenge } from './geePkce'
-import { CLIENT_ID, openAuthPopup, exchangeCodeForTokens, doTokenRefresh } from './geeOAuth'
+import { setGeeReady, setSessionExpired } from 'src/store/earthObservation'
+import { readStoredToken, persistToken, clearStoredToken } from './geeStorage'
+import { CLIENT_ID, authenticateViaOauth } from './geeOAuth'
 
-export default function GeeAuthGuard({ children }) {
-  const dispatch   = useDispatch()
+const REFRESH_BUFFER_MS = 10 * 1000 // refresh 10 seconds before expiry
+
+// reconnectRef — optional ref owned by a parent component (e.g. EarthObservationWorkspacePage).
+// GeeAuthGuard writes its handleReconnect function into it so the parent can
+// render GeeSessionBanner outside this component's subtree (e.g. above GlassSurface).
+export default function GeeAuthGuard({ children, reconnectRef }) {
+  const dispatch = useDispatch()
   const isGeeReady = useSelector(s => s.earthObservation.map.isGeeReady)
 
   const [loading, setLoading] = useState(!isGeeReady)
-  const [error,   setError]   = useState(null)
+  const [error, setError] = useState(null)
 
-  const initAttempted          = useRef(false)
-  const refreshTimerRef        = useRef(null)
-  const scheduleTokenRefreshRef = useRef(null)
+  const initAttempted = useRef(false)
+  const refreshTimerRef = useRef(null)
 
-  // Clear the background refresh timer when the component unmounts
-  useEffect(() => () => { if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current) }, [])
+  // Cancel the background timer when the component unmounts
+  useEffect(
+    () => () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+    },
+    []
+  )
 
-  // ── Background silent refresh via refresh token ───────────────────────────
-  const handleSilentRefreshFail = () => {
-    console.warn('[GEE] Silent refresh failed — showing login dialog')
-    clearStoredToken()
-    dispatch(setGeeReady(false))
-    setLoading(false)
-  }
-
+  // ── Session expiry timer ──────────────────────────────────────────────────
+  // Fires before the token expires and marks the session as expired so the
+  // non-blocking banner appears. We intentionally do NOT attempt re-auth here:
+  // browsers block popups from timer callbacks (not a user gesture). The popup
+  // is only opened when the user clicks "Reconnect" in the banner.
   const scheduleTokenRefresh = expiresInSeconds => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
-    const delayMs = Math.max(0, expiresInSeconds * 1000 - EXPIRY_BUFFER_MS)
+    const delayMs = Math.max(0, expiresInSeconds * 1000 - REFRESH_BUFFER_MS)
 
-    refreshTimerRef.current = setTimeout(async () => {
-      const refreshToken = readRefreshToken()
-      if (!refreshToken) { handleSilentRefreshFail(); return }
-
-      try {
-        const data      = await doTokenRefresh(refreshToken)
-        const expiresIn = data.expires_in || 3600
-        persistToken(data.access_token, expiresIn)
-        ee.data.setAuthToken(CLIENT_ID, 'Bearer', data.access_token, expiresIn, [], null, false)
-        scheduleTokenRefreshRef.current?.(expiresIn)
-      } catch {
-        handleSilentRefreshFail()
-      }
+    refreshTimerRef.current = setTimeout(() => {
+      clearStoredToken()
+      dispatch(setSessionExpired(true))
     }, delayMs)
   }
 
-  // Keep ref in sync to avoid stale closures inside the async timer callback
-  scheduleTokenRefreshRef.current = scheduleTokenRefresh
-  // ──────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
 
-  // Called once the auth token is set in the EE library — initializes EE
-  const runInitialize = () => {
-    ee.initialize(
-      null,
-      null,
-      () => {
-        try {
-          const tok = ee.data.getAuthToken()
-          if (tok) {
-            const tokenStr = typeof tok === 'object' ? tok.access_token : String(tok).replace(/^Bearer /, '')
-            const expiresIn = typeof tok === 'object' && tok.expires_in ? tok.expires_in : 3600
-            if (tokenStr) {
-              persistToken(tokenStr, expiresIn)
-              scheduleTokenRefresh(expiresIn)
-            }
-          }
-        } catch {}
-        dispatch(setGeeReady(true))
-        setLoading(false)
-      },
-      err => {
-        console.warn('GEE Init failed (token might be expired).', err)
-        clearStoredToken()
-        setLoading(false)
+  // Helper: read the current EE token, persist it, and start the refresh timer
+  const persistAndSchedule = () => {
+    try {
+      const tok = ee.data.getAuthToken()
+      if (tok) {
+        const tokenStr = typeof tok === 'object' ? tok.access_token : String(tok).replace(/^Bearer /, '')
+        const expiresIn = typeof tok === 'object' ? tok.expires_in || 3600 : 3600
+        if (tokenStr) {
+          persistToken(tokenStr, expiresIn)
+          scheduleTokenRefresh(expiresIn)
+        }
       }
-    )
+    } catch {}
   }
 
+  // ── On mount: try silent restore from stored access token ─────────────────
+  // Optimisation: if a valid token is stored, reuse it to skip the popup.
+  // If EE init fails (token expired), clear storage and show the login dialog.
   useEffect(() => {
-    if (isGeeReady) { setLoading(false); return }
+    if (isGeeReady) {
+      setLoading(false)
+      return
+    }
     if (initAttempted.current) return
     initAttempted.current = true
 
     const stored = readStoredToken()
 
     if (stored) {
-      // ── Silent restore path ──────────────────────────────────────────────
       ee.data.setAuthToken(CLIENT_ID, 'Bearer', stored.token, stored.expiresIn, [], null, false)
-      scheduleTokenRefresh(stored.expiresIn)
-      runInitialize()
+      ee.initialize(
+        null,
+        null,
+        () => {
+          scheduleTokenRefresh(stored.expiresIn)
+          dispatch(setGeeReady(true))
+          setLoading(false)
+        },
+        () => {
+          clearStoredToken()
+          setLoading(false)
+        }
+      )
       return
     }
 
-    // ── No stored token — show login dialog ──────────────────────────────
-    const safetyTimer = setTimeout(() => {
-      setLoading(prev => (prev ? false : prev))
-    }, 3000)
-
-    try {
-      runInitialize()
-    } catch {
-      console.log('Auto-init crashed, showing login.')
-      setLoading(false)
-    }
-
-    return () => clearTimeout(safetyTimer)
+    // No stored token — show login dialog
+    setLoading(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGeeReady])
 
-  // ── Login handler — PKCE Authorization Code flow ──────────────────────────
-  const handleLoginClick = async () => {
+  // ── Reconnect handler ─────────────────────────────────────────────────────
+  // Called when the user clicks "Reconnect" in the Snackbar.
+  // Auth-only — no ee.initialize needed (EE is already initialised).
+  const handleReconnect = () =>
+    authenticateViaOauth().then(() => {
+      persistAndSchedule()
+    })
+
+  // Expose handleReconnect to parent via ref (for GeeSessionBanner rendered outside this subtree)
+  useEffect(() => {
+    if (reconnectRef) reconnectRef.current = handleReconnect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  })
+
+  // ── First-time login handler ───────────────────────────────────────────────
+  const handleLoginClick = () => {
     setLoading(true)
     setError(null)
 
-    try {
-      const verifier  = generateCodeVerifier()
-      const challenge = await generateCodeChallenge(verifier)
-      const code      = await openAuthPopup(challenge)
-      const tokens    = await exchangeCodeForTokens(code, verifier)
-
-      persistToken(tokens.access_token, tokens.expires_in || 3600)
-      if (tokens.refresh_token) persistRefreshToken(tokens.refresh_token)
-
-      ee.data.setAuthToken(CLIENT_ID, 'Bearer', tokens.access_token, tokens.expires_in || 3600, [], null, false)
-      runInitialize()
-    } catch (err) {
-      console.error('GEE Auth Failed', err)
-      setError('Authentication failed. Please try again.')
-      setLoading(false)
-    }
+    authenticateViaOauth()
+      .then(
+        () =>
+          new Promise((resolve, reject) => {
+            ee.initialize(null, null, resolve, reject)
+          })
+      )
+      .then(() => {
+        persistAndSchedule()
+        dispatch(setGeeReady(true))
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error('GEE Auth Failed', err)
+        setError('Authentication failed. Please try again.')
+        setLoading(false)
+      })
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  // ── Render ────────────────────────────────────────────────────────────────
-  if (isGeeReady) return <>{children}</>
+  // ── Workspace is ready: render children only ──────────────────────────────
+  // GeeSessionBanner is rendered by the parent (EarthObservationWorkspacePage)
+  // outside GlassSurface, using the reconnectRef to call handleReconnect.
+  if (isGeeReady) {
+    return <>{children}</>
+  }
 
+  // ── First-time login: blocking dialog (no token ever existed) ─────────────
   return (
     <>
       <Box
