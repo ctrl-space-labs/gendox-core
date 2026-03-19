@@ -55,7 +55,12 @@ export const {
   resetEOScriptState,
   requestScreenshot,
   clearScreenshotRequest,
-  toggleGeometryVisibility
+  appendPrintMessage,
+  clearPrintMessages,
+  toggleGeometryVisibility,
+  tileLayerLoaded,
+  setMapResultScreenshot,
+  clearMapResultScreenshot
 } = slice.actions
 
 export default slice.reducer
