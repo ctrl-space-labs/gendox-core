@@ -1,6 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { clearMapLayers, setMapThumbnail, setGeeRunError, clearScreenshotRequest } from 'src/store/earthObservation'
+import {
+  clearMapLayers,
+  setMapThumbnail,
+  setGeeRunError,
+  clearScreenshotRequest,
+  clearPrintMessages,
+  clearMapResultScreenshot
+} from 'src/store/earthObservation'
 import { runScriptRef } from 'src/views/pages/earth-observation/panels/shared/panelState'
 import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
@@ -23,6 +30,7 @@ export default function GeeRunner({
   const latestEOScriptLoading = useSelector(state => state.earthObservation.scripts.latestEOScriptLoading)
   const screenshotRequest = useSelector(state => state.earthObservation.map.screenshotRequest)
   const sessionExpired = useSelector(state => state.earthObservation.map.sessionExpired)
+  const printMessages = useSelector(state => state.earthObservation.map.printMessages)
 
   const [iframeKey, setIframeKey] = useState(0) // incremented to destroy + recreate the iframe
   const [isRunning, setIsRunning] = useState(false)
@@ -67,6 +75,8 @@ export default function GeeRunner({
     dispatch(clearMapLayers())
     dispatch(setMapThumbnail(null))
     dispatch(setGeeRunError(null))
+    dispatch(clearPrintMessages())
+    dispatch(clearMapResultScreenshot())
 
     lastRunCodeRef.current = currentCode
     // Read token fresh at click time — avoids using a stale token after silent refresh

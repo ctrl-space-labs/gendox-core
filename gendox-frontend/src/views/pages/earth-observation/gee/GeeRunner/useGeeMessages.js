@@ -3,9 +3,11 @@ import { useDispatch } from 'react-redux'
 import {
   setMapData,
   addMapLayer,
+  clearMapLayers,
   setMapThumbnail,
   setScreenshotUrl,
   setGeeRunError,
+  appendPrintMessage,
   createEOScriptThunk
 } from 'src/store/earthObservation'
 import { fetchGeeImage } from './fetchGeeImage'
@@ -105,6 +107,26 @@ export function useGeeMessages({
         console.error('GEE Script Error:', message)
         dispatch(setGeeRunError(message))
         setIsRunning(false)
+      }
+
+      // print() output from user script
+      if (type === 'PRINT') {
+        dispatch(appendPrintMessage(payload?.message ?? ''))
+      }
+
+      // Map.setZoom() — update stored center zoom
+      if (type === 'ZOOM') {
+        dispatch(setMapData({ zoom: payload?.zoom }))
+      }
+
+      // Map.clear() — remove all layers
+      if (type === 'CLEAR_LAYERS') {
+        dispatch(clearMapLayers())
+      }
+
+      // Map.setOptions() — basemap style hint (no-op on OSM, logged for visibility)
+      if (type === 'MAP_OPTIONS') {
+        console.log('GEE Map.setOptions (ignored on OSM):', payload)
       }
     }
 
