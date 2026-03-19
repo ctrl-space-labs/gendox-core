@@ -1,6 +1,8 @@
 export const mapInitialState = {
   isGeeReady: false,
   mapLayers: [], // [{ url, name }]
+  loadedLayerCount: 0, // incremented each time a GeeLayer fires its Leaflet 'load' event
+  mapResultScreenshot: null, // data URL of the latest auto/manual full-panel screenshot
   mapThumbnailUrl: null, // auto-thumbnail after script run (from Map.setCenter region)
   screenshotUrl: null, // on-demand screenshot from the camera button (current viewport)
   mapCenter: null,
@@ -26,6 +28,17 @@ export const mapReducers = {
   },
   clearMapLayers: state => {
     state.map.mapLayers = []
+    state.map.loadedLayerCount = 0
+    state.map.mapResultScreenshot = null
+  },
+  setMapResultScreenshot: (state, action) => {
+    state.map.mapResultScreenshot = action.payload
+  },
+  clearMapResultScreenshot: state => {
+    state.map.mapResultScreenshot = null
+  },
+  tileLayerLoaded: state => {
+    state.map.loadedLayerCount += 1
   },
   setMapThumbnail: (state, action) => {
     state.map.mapThumbnailUrl = action.payload

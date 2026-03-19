@@ -16,6 +16,10 @@ export default function ChatPanel() {
   const printMessagesRef = useRef(printMessages)
   useEffect(() => { printMessagesRef.current = printMessages }, [printMessages])
 
+  const mapResultScreenshot = useSelector(state => state.earthObservation.map.mapResultScreenshot)
+  const mapResultScreenshotRef = useRef(mapResultScreenshot)
+  useEffect(() => { mapResultScreenshotRef.current = mapResultScreenshot }, [mapResultScreenshot])
+
   useEffect(() => {
     if (!organizationId || !projectId) return
 
@@ -71,12 +75,21 @@ export default function ChatPanel() {
           value: messages.map((msg, i) => `[${i + 1}] ${msg}`).join('\n')
         }
       })
+
+      // TODO: Enable this when local context image is supported in the backend
+      // window.gendox.widget.addLocalContextRequestCallback('GEE_SCRIPT_MAP_RESULT_SCREENSHOT', function () {
+      //   return {
+      //     contextType: 'GEE_SCRIPT_MAP_RESULT_SCREENSHOT',
+      //     value: mapResultScreenshotRef.current || ''
+      //   }
+      // })
     }
     document.head.appendChild(script)
 
     return () => {
       window.gendox?.widget?.removeLocalContextRequestCallback?.('GEE_SCRIPT_FILE')
       window.gendox?.widget?.removeLocalContextRequestCallback?.('GEE_SCRIPT_LOG_MESSAGES')
+      // window.gendox?.widget?.removeLocalContextRequestCallback?.('GEE_SCRIPT_MAP_RESULT_SCREENSHOT')
       document.getElementById(SCRIPT_ID)?.remove()
       document.getElementById(CONTAINER_ID)?.remove()
     }

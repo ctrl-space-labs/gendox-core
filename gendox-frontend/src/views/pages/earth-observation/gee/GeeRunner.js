@@ -9,6 +9,7 @@ import {
   setGeeRunError,
   appendPrintMessage,
   clearPrintMessages,
+  clearMapResultScreenshot,
   createEOScriptThunk,
   clearScreenshotRequest
 } from 'src/store/earthObservation'
@@ -58,6 +59,7 @@ export default function GeeRunner({ code, getCurrentCode, organizationId, projec
     dispatch(setMapThumbnail(null)) // clear previous thumbnail
     dispatch(setGeeRunError(null)) // clear previous error
     dispatch(clearPrintMessages()) // clear previous print output
+    dispatch(clearMapResultScreenshot()) // clear previous map screenshot
 
     // Keep the last run code (for save after SUCCESS)
     lastRunCodeRef.current = currentCode
