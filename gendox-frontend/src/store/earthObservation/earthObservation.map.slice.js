@@ -5,7 +5,8 @@ export const mapInitialState = {
   screenshotUrl: null, // on-demand screenshot from the camera button (current viewport)
   mapCenter: null,
   geeRunError: null,
-  screenshotRequest: null // { south, west, north, east } — set by MapPanel, consumed by GeeRunner
+  screenshotRequest: null, // { south, west, north, east } — set by MapPanel, consumed by GeeRunner
+  printMessages: [] // collected print() output per execution
 }
 
 export const mapReducers = {
@@ -14,6 +15,10 @@ export const mapReducers = {
   },
   setMapData: (state, action) => {
     if (action.payload.center) state.map.mapCenter = action.payload.center
+    if (action.payload.zoom != null) {
+      if (state.map.mapCenter) state.map.mapCenter.zoom = action.payload.zoom
+      else state.map.mapCenter = { lon: 0, lat: 0, zoom: action.payload.zoom }
+    }
   },
   addMapLayer: (state, action) => {
     // payload: { url, name }
@@ -36,5 +41,11 @@ export const mapReducers = {
   },
   clearScreenshotRequest: state => {
     state.map.screenshotRequest = null
+  },
+  appendPrintMessage: (state, action) => {
+    state.map.printMessages.push(action.payload) // payload: string
+  },
+  clearPrintMessages: state => {
+    state.map.printMessages = []
   }
 }

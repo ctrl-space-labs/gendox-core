@@ -133,11 +133,65 @@
           mapCenter = { lon, lat, zoom }  // save for thumbnail region
           window.parent.postMessage({ type: 'CENTER', payload: { center: { lon, lat, zoom } } }, '*')
         },
-        centerObject: () => {},
-        setOptions: () => {},
-        add: () => {},
-        getScale: () => 1000,
-        getZoom: () => 6
+
+        centerObject: (obj, zoom) => {
+          try {
+            const geom = (obj && typeof obj.geometry === 'function') ? obj.geometry() : obj
+            ee.Geometry(geom).centroid(1).evaluate((result, err) => {
+              if (err || !result || !result.coordinates) return
+              const [lon, lat] = result.coordinates
+              const z = zoom != null ? zoom : (mapCenter ? mapCenter.zoom : 6)
+              mapCenter = { lon, lat, zoom: z }
+              window.parent.postMessage({ type: 'CENTER', payload: { center: { lon, lat, zoom: z } } }, '*')
+            })
+          } catch (ex) {
+            console.warn('[Sandbox] centerObject failed:', ex)
+          }
+        },
+
+        setZoom: zoom => {
+          if (mapCenter) mapCenter.zoom = zoom
+          else mapCenter = { lon: 0, lat: 0, zoom }
+          window.parent.postMessage({ type: 'ZOOM', payload: { zoom } }, '*')
+        },
+
+        getBounds: () => {
+          if (!mapCenter) return null
+          const halfDeg = 360 / Math.pow(2, mapCenter.zoom || 6)
+          return ee.Geometry.Rectangle([
+            Math.max(-180, mapCenter.lon - halfDeg),
+            Math.max(-90,  mapCenter.lat - halfDeg),
+            Math.min(180,  mapCenter.lon + halfDeg),
+            Math.min(90,   mapCenter.lat + halfDeg)
+          ])
+        },
+
+        clear: () => {
+          window.parent.postMessage({ type: 'CLEAR_LAYERS' }, '*')
+        },
+
+        getZoom: () => mapCenter?.zoom ?? 6,
+
+        getScale: () => {
+          if (!mapCenter) return 1000
+          const zoom = mapCenter.zoom ?? 6
+          const lat  = mapCenter.lat  ?? 0
+          return 156543.03 * Math.cos(lat * Math.PI / 180) / Math.pow(2, zoom)
+        },
+
+        setOptions: options => {
+          window.parent.postMessage({ type: 'MAP_OPTIONS', payload: options }, '*')
+        },
+
+        // Code-Editor-only / UI methods — silent no-ops
+        layers:                () => [],
+        add:                   () => {},
+        setControlVisibility:  () => {},
+        onClick:               () => {},
+        onChangeCenter:        () => {},
+        onChangeZoom:          () => {},
+        drawingTools:          () => ({ setShown: () => {}, getShapes: () => [] }),
+        style:                 () => ({ set: () => {} })
       }
 
       window.addEventListener('message', event => {
@@ -182,8 +236,26 @@
               null,
               () => {
                 try {
-                  const userFunc = new Function('ee', 'Map', code)
-                  userFunc(ee, ProxyMap)
+                  // Proxy for GEE print() — handles both plain values and lazy EE objects
+                  const proxyPrint = (...args) => {
+                    args.forEach(a => {
+                      if (a != null && typeof a.evaluate === 'function') {
+                        // EE lazy object — evaluate server-side then post result
+                        a.evaluate((val, err) => {
+                          const text = err ? `[Error: ${err}]` : JSON.stringify(val, null, 2)
+                          console.log('[GEE print]', text)
+                          window.parent.postMessage({ type: 'PRINT', payload: { message: text } }, '*')
+                        })
+                      } else {
+                        const text = (typeof a === 'object' && a !== null) ? JSON.stringify(a) : String(a ?? '')
+                        console.log('[GEE print]', text)
+                        window.parent.postMessage({ type: 'PRINT', payload: { message: text } }, '*')
+                      }
+                    })
+                  }
+
+                  const userFunc = new Function('ee', 'Map', 'print', code)
+                  userFunc(ee, ProxyMap, proxyPrint)
 
                   setTimeout(() => {
                     if (!layerAdded) {

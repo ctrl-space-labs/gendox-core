@@ -54,6 +54,8 @@ export const {
   resetEOScriptState,
   requestScreenshot,
   clearScreenshotRequest,
+  appendPrintMessage,
+  clearPrintMessages,
   toggleGeometryVisibility
 } = slice.actions
 

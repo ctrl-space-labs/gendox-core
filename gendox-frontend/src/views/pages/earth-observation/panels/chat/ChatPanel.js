@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
+import { useSelector } from 'react-redux'
 import Box from '@mui/material/Box'
 import { editorCodeRef, keepAllRef } from 'src/views/pages/earth-observation/panels/shared/panelState'
 
@@ -11,6 +12,9 @@ export default function ChatPanel() {
   const router = useRouter()
   const { organizationId, projectId } = router.query
   const containerRef = useRef(null)
+  const printMessages = useSelector(state => state.earthObservation.map.printMessages)
+  const printMessagesRef = useRef(printMessages)
+  useEffect(() => { printMessagesRef.current = printMessages }, [printMessages])
 
   useEffect(() => {
     if (!organizationId || !projectId) return
@@ -38,7 +42,7 @@ export default function ChatPanel() {
     script.setAttribute('data-gendox-container-id', CONTAINER_ID)
     script.setAttribute('data-gendox-iframe-id', IFRAME_ID)
     script.setAttribute('data-gendox-chat-initial-state', 'open')
-    script.setAttribute('data-gendox-local-context-max-responses', '2')
+    script.setAttribute('data-gendox-local-context-max-responses', '3')
     script.setAttribute('data-gendox-local-context-max-wait-ms', '1000')
     script.src = `${window.location.origin}/gendox-sdk/gendox-widget-plugin.js`
     script.onload = () => {
@@ -59,11 +63,20 @@ export default function ChatPanel() {
           value: withLineNumbers
         }
       })
+
+      window.gendox.widget.addLocalContextRequestCallback('GEE_SCRIPT_LOG_MESSAGES', function () {
+        const messages = printMessagesRef.current || []
+        return {
+          contextType: 'GEE_SCRIPT_LOG_MESSAGES',
+          value: messages.map((msg, i) => `[${i + 1}] ${msg}`).join('\n')
+        }
+      })
     }
     document.head.appendChild(script)
 
     return () => {
       window.gendox?.widget?.removeLocalContextRequestCallback?.('GEE_SCRIPT_FILE')
+      window.gendox?.widget?.removeLocalContextRequestCallback?.('GEE_SCRIPT_LOG_MESSAGES')
       document.getElementById(SCRIPT_ID)?.remove()
       document.getElementById(CONTAINER_ID)?.remove()
     }

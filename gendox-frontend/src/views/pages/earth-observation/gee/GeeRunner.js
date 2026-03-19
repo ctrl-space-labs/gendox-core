@@ -7,6 +7,8 @@ import {
   setMapThumbnail,
   setScreenshotUrl,
   setGeeRunError,
+  appendPrintMessage,
+  clearPrintMessages,
   createEOScriptThunk,
   clearScreenshotRequest
 } from 'src/store/earthObservation'
@@ -21,7 +23,7 @@ export default function GeeRunner({ code, getCurrentCode, organizationId, projec
   const createEOScriptLoading = useSelector(state => state.earthObservation.scripts.createEOScriptLoading)
   const latestEOScriptLoading = useSelector(state => state.earthObservation.scripts.latestEOScriptLoading)
   const screenshotRequest = useSelector(state => state.earthObservation.map.screenshotRequest)
-
+  const printMessages = useSelector(state => state.earthObservation.map.printMessages)
 
   // 1. State for iframe management
   const [iframeKey, setIframeKey] = useState(0) //  counter for iframe reloads
@@ -55,6 +57,7 @@ export default function GeeRunner({ code, getCurrentCode, organizationId, projec
     dispatch(clearMapLayers()) // clear previous map layers
     dispatch(setMapThumbnail(null)) // clear previous thumbnail
     dispatch(setGeeRunError(null)) // clear previous error
+    dispatch(clearPrintMessages()) // clear previous print output
 
     // Keep the last run code (for save after SUCCESS)
     lastRunCodeRef.current = currentCode
@@ -202,6 +205,26 @@ export default function GeeRunner({ code, getCurrentCode, organizationId, projec
         console.error('GEE Script Error:', message)
         dispatch(setGeeRunError(message))
         setIsRunning(false)
+      }
+
+      // E. print() output from user script
+      if (type === 'PRINT') {
+        dispatch(appendPrintMessage(payload?.message ?? ''))
+      }
+
+      // F. Map.setZoom() — update stored center zoom
+      if (type === 'ZOOM') {
+        dispatch(setMapData({ zoom: payload?.zoom }))
+      }
+
+      // G. Map.clear() — remove all layers
+      if (type === 'CLEAR_LAYERS') {
+        dispatch(clearMapLayers())
+      }
+
+      // H. Map.setOptions() — basemap style hint (no-op on OSM, logged for visibility)
+      if (type === 'MAP_OPTIONS') {
+        console.log('GEE Map.setOptions (ignored on OSM):', payload)
       }
     }
 
