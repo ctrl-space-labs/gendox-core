@@ -8,11 +8,19 @@ import CameraAltIcon from '@mui/icons-material/CameraAlt'
 import CloseIcon from '@mui/icons-material/Close'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import FileDownloadIcon from '@mui/icons-material/FileDownload'
+import ScreenshotMonitorIcon from '@mui/icons-material/ScreenshotMonitor'
 
 import { setMapThumbnail } from 'src/store/earthObservation'
 import { downloadFile, copyImageToClipboard } from '../utils/mapPanelHelpers'
 
-export default function ScreenshotToolbar({ mapThumbnailUrl, mapLayersCount, isCapturing, onScreenshot }) {
+export default function ScreenshotToolbar({
+  mapThumbnailUrl,
+  mapLayersCount,
+  isCapturing,
+  isPanelCapturing,
+  onScreenshot,
+  onPanelScreenshot
+}) {
   const dispatch = useDispatch()
 
   return (
@@ -69,21 +77,22 @@ export default function ScreenshotToolbar({ mapThumbnailUrl, mapLayersCount, isC
       )}
 
       {mapLayersCount > 0 && (
-        <Tooltip title={isCapturing ? 'Capturing…' : 'Screenshot current view'}>
-          <span>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                bgcolor: 'background.paper',
-                border: 1,
-                borderColor: 'divider',
-                borderRadius: 1,
-                px: 0.75,
-                py: 0.5,
-                boxShadow: 2
-              }}
-            >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            bgcolor: 'background.paper',
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 1,
+            px: 0.75,
+            py: 0.5,
+            boxShadow: 2,
+            gap: 0.25
+          }}
+        >
+          <Tooltip title={isCapturing ? 'Capturing…' : 'Screenshot current view'}>
+            <span>
               <IconButton
                 size='small'
                 onClick={onScreenshot}
@@ -92,9 +101,21 @@ export default function ScreenshotToolbar({ mapThumbnailUrl, mapLayersCount, isC
               >
                 {isCapturing ? <CircularProgress size={14} /> : <CameraAltIcon sx={{ fontSize: 15 }} />}
               </IconButton>
-            </Box>
-          </span>
-        </Tooltip>
+            </span>
+          </Tooltip>
+          <Tooltip title={isPanelCapturing ? 'Copying…' : 'Copy full map screenshot to clipboard'}>
+            <span>
+              <IconButton
+                size='small'
+                onClick={onPanelScreenshot}
+                disabled={isPanelCapturing}
+                sx={{ width: 30, height: 30, p: 0 }}
+              >
+                {isPanelCapturing ? <CircularProgress size={14} /> : <ScreenshotMonitorIcon sx={{ fontSize: 15 }} />}
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Box>
       )}
     </>
   )

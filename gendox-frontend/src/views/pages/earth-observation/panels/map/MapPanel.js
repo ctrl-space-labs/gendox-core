@@ -28,7 +28,7 @@ export default function MapPanel() {
   const mapThumbnailUrl = useSelector(state => state.earthObservation.map.mapThumbnailUrl)
   const eoGeometries = useSelector(state => state.earthObservation.geometries.eoGeometries)
 
-  const { isCapturing, handleScreenshot, handleMapReady } = useMapScreenshot()
+  const { isCapturing, isPanelCapturing, handleScreenshot, handlePanelScreenshot, handleMapReady } = useMapScreenshot()
   const {
     mapLayers,
     visibleLayers,
@@ -108,7 +108,9 @@ export default function MapPanel() {
           mapThumbnailUrl={mapThumbnailUrl}
           mapLayersCount={mapLayers.length}
           isCapturing={isCapturing}
+          isPanelCapturing={isPanelCapturing}
           onScreenshot={handleScreenshot}
+          onPanelScreenshot={() => handlePanelScreenshot(panelRef.current)}
         />
         <LayersPanel
           mapLayers={mapLayers}
