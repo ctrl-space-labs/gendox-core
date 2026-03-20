@@ -62,9 +62,9 @@ export default function GeometryVariablesPanel() {
         )}
       </Box>
 
-      {/* Rows */}
+      {/* Hint + scrollable row list (row area ~half previous height so ~2–3 geometries show) */}
       {open && (
-        <Box sx={{ maxHeight: 120, overflowY: 'auto', px: 1, pb: 0.5 }}>
+        <Box sx={{ px: 1, pb: 0.5 }}>
           <Typography
             variant='caption'
             component='div'
@@ -90,6 +90,7 @@ export default function GeometryVariablesPanel() {
             </Box>{' '}
             (slug = lowercased title, letters/digits only).
           </Typography>
+          <Box sx={{ maxHeight: 60, overflowY: 'auto' }}>
           {eoGeometries.map((geom, i) => {
             const type = normalizeType(geom.geometryTypeName)
             const Icon = GEOM_ICON[type] ?? GEOM_ICON.Point
@@ -160,6 +161,7 @@ export default function GeometryVariablesPanel() {
               </Box>
             )
           })}
+          </Box>
         </Box>
       )}
     </Box>

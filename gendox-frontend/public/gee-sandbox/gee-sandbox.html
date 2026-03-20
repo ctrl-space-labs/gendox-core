@@ -194,6 +194,55 @@
         style:                 () => ({ set: () => {} })
       }
 
+      /**
+       * Builds the `geometries` object passed into the user script (4th argument to `new Function(..., 'geometries', code)`).
+       *
+       * **Return value:** a plain object (not an Array). Each own property value is an `ee.Geometry` for one map-drawn
+       * geometry. The same `ee.Geometry` instance may appear under several keys:
+       * - **Index** — `0`, `1`, … so `geometries[2]` and `geometries["2"]` work (object keys are strings in JS).
+       * - **Exact label** — `title` or `name` from the parent payload, e.g. `geometries["Polygon 3"]`.
+       * - **Slug** — label lowercased with non-alphanumerics removed, e.g. `geometries.polygon3`, `geometries.athens`.
+       *
+       * Call only after the Earth Engine client is loaded (`ee` global). Rows that fail to parse are skipped.
+       *
+       * @param {Array<{ geometryTypeName?: string, coordinates?: string|Array, title?: string, name?: string }>} rawGeometries
+       * @returns {Object<string, *>} Plain object; each value is an `ee.Geometry` from the Earth Engine API.
+       */
+      function buildGeometriesLookup(rawGeometries) {
+        const list = rawGeometries || []
+
+        function parseOne(g) {
+          try {
+            const coords = typeof g.coordinates === 'string' ? JSON.parse(g.coordinates) : g.coordinates
+            const type = (g.geometryTypeName || '').toUpperCase()
+            if (type === 'POINT') return ee.Geometry.Point(coords)
+            if (type === 'LINEAR_RING') return ee.Geometry.LinearRing(coords)
+            if (type === 'POLYGON') return ee.Geometry.Polygon(coords)
+          } catch (ex) {
+            console.warn('[Sandbox] buildGeometriesLookup parse failed for', g, ex)
+          }
+          return null
+        }
+
+        function slugKey(label) {
+          return String(label).toLowerCase().replace(/[^a-z0-9]+/g, '')
+        }
+
+        const out = {}
+        list.forEach((g, i) => {
+          const geom = parseOne(g)
+          if (!geom) return
+          out[i] = geom
+          const label = g.title || g.name
+          if (label) {
+            out[label] = geom
+            const slug = slugKey(label)
+            if (slug) out[slug] = geom
+          }
+        })
+        return out
+      }
+
       window.addEventListener('message', event => {
         const { type, code, token } = event.data
 
@@ -254,8 +303,10 @@
                     })
                   }
 
-                  const userFunc = new Function('ee', 'Map', 'print', code)
-                  userFunc(ee, ProxyMap, proxyPrint)
+                  const geometries = buildGeometriesLookup(event.data.geometries)
+
+                  const userFunc = new Function('ee', 'Map', 'print', 'geometries', code)
+                  userFunc(ee, ProxyMap, proxyPrint, geometries)
 
                   setTimeout(() => {
                     if (!layerAdded) {
