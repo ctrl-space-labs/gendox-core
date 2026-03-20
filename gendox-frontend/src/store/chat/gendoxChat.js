@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import projectService from 'src/gendox-sdk/projectService'
+import taskService from 'src/gendox-sdk/taskService'
 import { generalConstants } from 'src/utils/generalConstants'
 import chatConverter from '../../converters/chat.converter'
 import chatThreadService from '../../gendox-sdk/chatThreadService'
@@ -27,7 +28,10 @@ const initialChatState = {
   currentMessageMetadata: null,
   isLoadingMessages: null,
   isLoadingAgentsAndThreads: null,
-  isLoadingMetadata: null
+  isLoadingMetadata: null,
+  isDeepThinking: false,
+  deepThinkingJobId: null,
+  deepThinkingSteps: []
 }
 
 /**
@@ -201,6 +205,8 @@ export const sendMessage = createAsyncThunk(
 
     const documentInstanceIds = (uploadedDocs || []).map(d => d?.documentId).filter(Boolean)
 
+    const deepThinking = currentThread.deepThinking || false
+
     // Send the message to the server
     const response = await completionService.postCompletionMessage(
       projectId,
@@ -208,8 +214,27 @@ export const sendMessage = createAsyncThunk(
       message,
       chatLocalContextResponses,
       documentInstanceIds,
-      token
+      token,
+      deepThinking
     )
+
+    // Deep thinking returns HTTP 202 with { jobExecutionId, threadId }
+    if (response.status === 202 && response.data?.jobExecutionId) {
+      const { jobExecutionId, threadId: responseThreadId } = response.data
+
+      const isNewThread = !threadId
+      if (isNewThread) {
+        _updateThreadsToLocalStorage(responseThreadId)
+      }
+
+      dispatch(fetchThreads({ organizationId, token }))
+
+      if (isNewThread) {
+        dispatch(loadThread({ threadId: responseThreadId, projectId, organizationId, token }))
+      }
+
+      return { deepThinking: true, jobExecutionId, threadId: responseThreadId }
+    }
 
     const { messages: apiMessages = [], threadId: responseThreadId } = response.data
 
@@ -237,9 +262,6 @@ export const sendMessage = createAsyncThunk(
     })
 
     if (toolCallsToProcess.length > 0) {
-      // Process tool calls after the message has been added
-      // Currently, this is 1-way communication, so we send the tool calls to the parent frame
-      // TODO this should be a 2-way communication, where the parent frame processes the tool calls and sends back the results
       iFrameMessageManager.messageManager.sendMessage({
         type: 'gendox.events.chat.message.tool_calls.request',
         payload: toolCallsToProcess
@@ -253,13 +275,72 @@ export const sendMessage = createAsyncThunk(
       _updateThreadsToLocalStorage(responseThreadId)
     }
 
-    //reload threads to get the updated one
-    // TODO requires performance improvement
     dispatch(fetchThreads({ organizationId, token }))
 
     if (isNewThread) {
-      // TODO this should change the URL in the browser, fix in the future
       dispatch(loadThread({ threadId: finalThreadId, projectId, organizationId, token }))
+    }
+  }
+)
+
+export const pollDeepThinkingStatus = createAsyncThunk(
+  'gendoxChat/pollDeepThinkingStatus',
+  async ({ organizationId, projectId, jobExecutionId, token }, { rejectWithValue }) => {
+    try {
+      const [jobResponse, stepsResponse] = await Promise.all([
+        taskService.getJobsByCriteria(organizationId, projectId, { jobExecutionIdsIn: [jobExecutionId] }, token),
+        taskService.getDeepThinkingSteps(organizationId, projectId, jobExecutionId, token)
+      ])
+
+      const job = jobResponse.data?.content?.[0]
+      const status = job?.status?.trim().toUpperCase()
+      const steps = stepsResponse.data || []
+
+      return { status, steps, job }
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const cancelDeepThinking = createAsyncThunk(
+  'gendoxChat/cancelDeepThinking',
+  async ({ organizationId, projectId, jobExecutionId, token }, { rejectWithValue }) => {
+    try {
+      await taskService.stopJob(organizationId, projectId, jobExecutionId, token)
+      return { jobExecutionId }
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const resumeDeepThinkingIfActive = createAsyncThunk(
+  'gendoxChat/resumeDeepThinkingIfActive',
+  async ({ organizationId, projectId, token }, { dispatch, rejectWithValue }) => {
+    try {
+      const jobId = localStorage.getItem('activeDeepThinkingJobId')
+      if (!jobId) return null
+
+      const jobResponse = await taskService.getJobsByCriteria(
+        organizationId,
+        projectId,
+        { jobExecutionIdsIn: [jobId] },
+        token
+      )
+
+      const job = jobResponse.data?.content?.[0]
+      const status = job?.status?.trim().toUpperCase()
+
+      if (status === 'STARTED' || status === 'STARTING') {
+        return { jobExecutionId: Number(jobId), status }
+      }
+
+      localStorage.removeItem('activeDeepThinkingJobId')
+      localStorage.removeItem('activeDeepThinkingThreadId')
+      return null
+    } catch (error) {
+      return rejectWithValue(error.message)
     }
   }
 )
@@ -361,6 +442,18 @@ const gendoxChatSlice = createSlice({
       state.isLoadingMessages = null
       state.isLoadingAgentsAndThreads = null
       state.isLoadingMetadata = null
+      state.isDeepThinking = false
+      state.deepThinkingJobId = null
+      state.deepThinkingSteps = []
+    },
+    clearDeepThinkingState: state => {
+      state.isDeepThinking = false
+      state.deepThinkingJobId = null
+      state.deepThinkingSteps = []
+      try {
+        localStorage.removeItem('activeDeepThinkingJobId')
+        localStorage.removeItem('activeDeepThinkingThreadId')
+      } catch (_) {}
     },
     removeCurrentThread: state => {
       const revokeThreadPreviewUrls = thread => {
@@ -486,13 +579,52 @@ const gendoxChatSlice = createSlice({
       state.isLoadingMetadata = false
     })
     builder.addCase(sendMessage.pending, state => {
-      state.isSendingMessage = true // Set isSending to true when sendMessage starts
+      state.isSendingMessage = true
     })
     builder.addCase(sendMessage.fulfilled, (state, action) => {
-      state.isSendingMessage = false // Set isSending to false on success
+      if (action.payload?.deepThinking) {
+        state.isDeepThinking = true
+        state.deepThinkingJobId = action.payload.jobExecutionId
+        state.deepThinkingSteps = []
+        state.isSendingMessage = false
+        try {
+          localStorage.setItem('activeDeepThinkingJobId', String(action.payload.jobExecutionId))
+          localStorage.setItem('activeDeepThinkingThreadId', action.payload.threadId)
+        } catch (_) {}
+      } else {
+        state.isSendingMessage = false
+      }
     })
     builder.addCase(sendMessage.rejected, state => {
-      state.isSendingMessage = false // Ensure isSending is false on failure
+      state.isSendingMessage = false
+    })
+    builder.addCase(pollDeepThinkingStatus.fulfilled, (state, action) => {
+      const { status, steps } = action.payload
+      state.deepThinkingSteps = steps
+      if (['COMPLETED', 'FAILED', 'STOPPED', 'ABANDONED'].includes(status)) {
+        state.isDeepThinking = false
+        state.deepThinkingJobId = null
+        try {
+          localStorage.removeItem('activeDeepThinkingJobId')
+          localStorage.removeItem('activeDeepThinkingThreadId')
+        } catch (_) {}
+      }
+    })
+    builder.addCase(cancelDeepThinking.fulfilled, state => {
+      state.isDeepThinking = false
+      state.deepThinkingJobId = null
+      state.deepThinkingSteps = []
+      try {
+        localStorage.removeItem('activeDeepThinkingJobId')
+        localStorage.removeItem('activeDeepThinkingThreadId')
+      } catch (_) {}
+    })
+    builder.addCase(resumeDeepThinkingIfActive.fulfilled, (state, action) => {
+      if (action.payload) {
+        state.isDeepThinking = true
+        state.deepThinkingJobId = action.payload.jobExecutionId
+        state.deepThinkingSteps = []
+      }
     })
     builder.addCase(addMessage.fulfilled, (state, action) => {
       if (state.currentThread && state.currentThread.messages) {

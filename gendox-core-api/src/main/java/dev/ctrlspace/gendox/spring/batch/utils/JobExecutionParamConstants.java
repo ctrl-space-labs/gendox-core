@@ -23,6 +23,10 @@ public class JobExecutionParamConstants {
     public static final String UPDATED_BETWEEN_FROM = "updatedBetween.from";
     public static final String UPDATED_BETWEEN_TO = "updatedBetween.to";
 
+    // Deep Thinking Job Parameters
+    public static final String MESSAGE_ID = "messageId";
+    public static final String THREAD_ID = "threadId";
+
     // Document Insights - Digitization Job Parameters
     public static final String TASK_ID = "taskId";
     public static final String RE_GENERATE_EXISTING_ANSWERS = "reGenerateExistingAnswers";

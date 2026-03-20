@@ -48,6 +48,13 @@ public class MessageService {
         return messageRepository.findAll(MessagePredicates.build(criteria), pageable);
     }
 
+    public Message getMessageById(UUID messageId) throws GendoxException {
+        return messageRepository.findById(messageId)
+                .orElseThrow(() -> new GendoxException("MESSAGE_NOT_FOUND",
+                        "Message not found: " + messageId,
+                        org.springframework.http.HttpStatus.NOT_FOUND));
+    }
+
     public List<MessageSection> getMessageSectionsBySectionId(UUID sectionId) {
         return messageSectionRepository.findAllBySectionId(sectionId);
     }

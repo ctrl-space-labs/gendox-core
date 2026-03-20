@@ -7,20 +7,24 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRequestDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DeepThinkingResponseDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.SubscriptionValidationService;
+import dev.ctrlspace.gendox.spring.batch.services.DeepThinkingBatchService;
 import io.micrometer.observation.annotation.Observed;
 import jakarta.servlet.http.HttpServletRequest;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.batch.core.JobExecution;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -44,6 +48,7 @@ public class EmbeddingsController {
     private ProjectService projectService;
     private MessageLocalContextConverter messageLocalContextConverter;
     private MessageLocalContextService messageLocalContextService;
+    private DeepThinkingBatchService deepThinkingBatchService;
 
 
     @Value("${proven-ai.enabled}")
@@ -58,7 +63,8 @@ public class EmbeddingsController {
                                 SubscriptionValidationService subscriptionValidationService,
                                 ProjectService projectService,
                                 MessageLocalContextConverter messageLocalContextConverter,
-                                MessageLocalContextService messageLocalContextService) {
+                                MessageLocalContextService messageLocalContextService,
+                                DeepThinkingBatchService deepThinkingBatchService) {
         this.embeddingService = embeddingService;
         this.trainingService = trainingService;
         this.completionService = completionService;
@@ -68,6 +74,7 @@ public class EmbeddingsController {
         this.projectService = projectService;
         this.messageLocalContextConverter = messageLocalContextConverter;
         this.messageLocalContextService = messageLocalContextService;
+        this.deepThinkingBatchService = deepThinkingBatchService;
     }
 
 
@@ -157,10 +164,10 @@ public class EmbeddingsController {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public CompletionMessageDTO getCompletionSearch(@RequestBody CompletionRequestDTO completionRequestDTO,
+    public ResponseEntity<?> getCompletionSearch(@RequestBody CompletionRequestDTO completionRequestDTO,
                                                     @RequestParam String projectId,
                                                     Authentication authentication,
-                                                    HttpServletRequest request) throws GendoxException, IOException, NoSuchAlgorithmException {
+                                                    HttpServletRequest request) throws Exception {
 
         Project project = projectService.getProjectById(UUID.fromString(projectId));
         // check if the message is within the subscription limits
@@ -196,7 +203,19 @@ public class EmbeddingsController {
         List<ContentPart> attachedImages = messageLocalContextService.getImageContentPartsFromLocalContext(message);
         savedMessage.setAdditionalResources(attachedImages);
 
-        return completionService.getCompletionSearch(savedMessage, project);
+        if (completionRequestDTO.isDeepThinking()) {
+            JobExecution jobExecution = deepThinkingBatchService.runDeepThinking(
+                    savedMessage.getId(), project.getId(), savedMessage.getThreadId());
+
+            DeepThinkingResponseDTO response = DeepThinkingResponseDTO.builder()
+                    .jobExecutionId(jobExecution.getId())
+                    .threadId(savedMessage.getThreadId())
+                    .build();
+
+            return ResponseEntity.accepted().body(response);
+        }
+
+        return ResponseEntity.ok(completionService.getCompletionSearch(savedMessage, project));
     }
 
 

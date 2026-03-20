@@ -19,6 +19,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.CancellationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAuthor;
@@ -261,9 +262,14 @@ public class CompletionService {
 
         boolean hasToolCalls;
         int iteration = 0;
-        int maxIterations = 5; // safety guard against infinite loops
+        int maxIterations = runtimeContext.cancellationToken() != null ? 50 : 5;
 
         do {
+            if (runtimeContext.cancellationToken() != null && runtimeContext.cancellationToken().isCancelled()) {
+                logger.info("Deep thinking cancelled, stopping completion loop at iteration {}", iteration);
+                throw new GendoxException("DEEP_THINKING_CANCELLED", "Deep thinking was cancelled", HttpStatus.CONFLICT);
+            }
+
             CompletionResponse completionResponse = getCompletionForMessages(previousMessages,
                     runtimeContext.agentRole(),
                     runtimeContext.completionModel(),
@@ -293,7 +299,8 @@ public class CompletionService {
                         completionResponseMessage,
                         runtimeContext.project(),
                         runtimeContext.agent(),
-                        runtimeContext.availableTools()
+                        runtimeContext.availableTools(),
+                        runtimeContext.cancellationToken()
                 );
 
                 // Save tool response messages.
@@ -356,6 +363,10 @@ public class CompletionService {
                 .topP(topP)
                 .build();
 
+        CancellationToken cancellationToken = Optional.ofNullable(overrides)
+                .map(CompletionRuntimeOverridesDTO::getCancellationToken)
+                .orElse(null);
+
         return new CompletionRuntimeContext(
                 project,
                 agent,
@@ -367,7 +378,8 @@ public class CompletionService {
                 availableTools,
                 projectId,
                 organizationId,
-                createdByAgentUserId
+                createdByAgentUserId,
+                cancellationToken
         );
     }
 
@@ -534,7 +546,8 @@ public class CompletionService {
             List<AiTools> availableTools,
             UUID projectId,
             UUID organizationId,
-            UUID createdByAgentUserId
+            UUID createdByAgentUserId,
+            @Nullable CancellationToken cancellationToken
     ) {
         private boolean hasProjectContext() {
             return project != null && agent != null;
@@ -621,7 +634,7 @@ public class CompletionService {
      * @param availableTools
      * @return
      */
-    private List<AiModelMessage> handleToolExecution(Message completionResponseMessage, @Nullable Project project, @Nullable ProjectAgent agent, List<AiTools> availableTools) {
+    private List<AiModelMessage> handleToolExecution(Message completionResponseMessage, @Nullable Project project, @Nullable ProjectAgent agent, List<AiTools> availableTools, @Nullable CancellationToken cancellationToken) {
         Map<String, AiTools> toolMap = new HashMap<>();
         //map available tools for quick lookup, parse the jsonSchema to JsonNode and find the .function.name property
         availableTools.forEach(tool -> {
@@ -647,7 +660,7 @@ public class CompletionService {
             }
 
             JsonNode args = toolCall.get("function").get("arguments");
-            ToolExecutionContext ctx = new ToolExecutionContext(project, agent, completionResponseMessage, toolDefinition);
+            ToolExecutionContext ctx = new ToolExecutionContext(project, agent, completionResponseMessage, toolDefinition, cancellationToken);
             JsonNode result = aiToolRegistry.execute(toolName, args, ctx);
 
             AiModelMessage message = new AiModelMessage();

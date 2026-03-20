@@ -21,6 +21,9 @@ public class CompletionRequestDTO {
     private UUID threadId;
 
     @Builder.Default
+    private boolean deepThinking = false;
+
+    @Builder.Default
     private List<MessageLocalContextDTO> localContexts = new ArrayList<>();
 
     @Builder.Default

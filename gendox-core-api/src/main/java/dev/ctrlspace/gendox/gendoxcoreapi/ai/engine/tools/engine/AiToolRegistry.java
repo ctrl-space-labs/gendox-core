@@ -51,6 +51,9 @@ public class AiToolRegistry {
         try {
             return handler.execute(args, context);
         } catch (GendoxException e) {
+            if ("DEEP_THINKING_CANCELLED".equals(e.getErrorCode())) {
+                throw new GendoxRuntimeException(e.getHttpStatus(), e.getErrorCode(), e.getMessage(), e);
+            }
             logger.error(
                     "Failed to execute tool {}, for project {}. Skipping...",
                     toolName,
