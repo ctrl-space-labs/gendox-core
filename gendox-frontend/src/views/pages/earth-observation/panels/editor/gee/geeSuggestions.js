@@ -4,6 +4,12 @@ export const geeSuggestions = [
   // Globals
   { label: 'ee', insertText: 'ee', detail: 'Earth Engine global' },
   { label: 'Map', insertText: 'Map', detail: 'Earth Engine Map object' },
+  {
+    label: 'geometries',
+    insertText: 'geometries[${1:index}]',
+    detail:
+      'Map-drawn EO geometries (Run Code): geometries[0], geometries["Title"], geometries.slug (slug = lowercased, alphanumeric only)'
+  },
 
   // ee.*
   { label: 'ee.Image', insertText: "ee.Image('${1:ASSET_ID}')", detail: 'Create an Image' },

@@ -6,7 +6,8 @@ import {
   setGeeRunError,
   clearScreenshotRequest,
   clearPrintMessages,
-  clearMapResultScreenshot
+  clearMapResultScreenshot,
+  selectEoGeometries
 } from 'src/store/earthObservation'
 import { runScriptRef } from 'src/views/pages/earth-observation/panels/shared/panelState'
 import Button from '@mui/material/Button'
@@ -31,12 +32,14 @@ export default function GeeRunner({
   const screenshotRequest = useSelector(state => state.earthObservation.map.screenshotRequest)
   const sessionExpired = useSelector(state => state.earthObservation.map.sessionExpired)
   const printMessages = useSelector(state => state.earthObservation.map.printMessages)
+  const eoGeometries = useSelector(selectEoGeometries)
 
   const [iframeKey, setIframeKey] = useState(0) // incremented to destroy + recreate the iframe
   const [isRunning, setIsRunning] = useState(false)
 
   const pendingCodeRef = useRef(null)
   const pendingTokenRef = useRef(null)
+  const pendingGeometriesRef = useRef([])
   const iframeRef = useRef(null)
   const lastRunCodeRef = useRef('')
   const scriptNameRef = useRef(scriptName)
@@ -58,6 +61,7 @@ export default function GeeRunner({
     iframeRef,
     pendingCodeRef,
     pendingTokenRef,
+    pendingGeometriesRef,
     scriptNameRef,
     lastRunCodeRef,
     organizationId,
@@ -82,6 +86,8 @@ export default function GeeRunner({
     // Read token fresh at click time — avoids using a stale token after silent refresh
     pendingTokenRef.current = window.localStorage.getItem('gee_access_token')
     pendingCodeRef.current = currentCode
+    // Snapshot geometries at run time so the iframe receives what was drawn when Run was clicked
+    pendingGeometriesRef.current = eoGeometries
 
     // Incrementing the key destroys the old iframe and mounts a fresh one
     setIframeKey(prev => prev + 1)

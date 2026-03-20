@@ -26,3 +26,71 @@ WHERE NOT EXISTS (
     WHERE type_category = 'AI_TOOL_EXAMPLES'
       AND name = 'ADVANCED_SEARCH'
 );
+
+
+-- UPDATE CHAT TEMPLATES
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_templates_name
+    ON gendox_core.templates (name);
+
+INSERT INTO gendox_core.templates (name, text, type, is_default)
+VALUES (
+           'CHAT_CONTEXT_WITH_SESSION_AND_RETRIVAL_CONTEXT',
+           '<session_context>
+$' || '{localContexts}
+</session_context>
+
+<retrieval_context>
+$' || '{context}
+</retrieval_context>
+
+<user_question>
+$' || '{question}
+</user_question>',
+           (
+               SELECT id
+               FROM gendox_core.types
+               WHERE type_category = 'TEMPLATE_TYPE'
+                 AND name = 'CHAT_TEMPLATE'
+           ),
+           true
+       )
+ON CONFLICT (name)
+    DO UPDATE SET
+                  text = EXCLUDED.text,
+                  type = EXCLUDED.type,
+                  is_default = EXCLUDED.is_default;
+
+
+INSERT INTO gendox_core.templates (name, text, type, is_default)
+VALUES (
+           'CHAT_CONTEXT_RETRIEVED_DOCUMENT',
+           '  <retrieved_document>
+    <title>$' || '{documentTitle}</title>
+    <source>$' || '{source}</source>
+    <author>$' || '{user}</author>
+    <document_text>
+      $' || '{sectionText}
+    </document_text>
+  </retrieved_document>',
+           (
+               SELECT id
+               FROM gendox_core.types
+               WHERE type_category = 'TEMPLATE_TYPE'
+                 AND name = 'SECTION_TEMPLATE'
+           ),
+           true
+       )
+ON CONFLICT (name)
+    DO UPDATE SET
+                  text = EXCLUDED.text,
+                  type = EXCLUDED.type,
+                  is_default = EXCLUDED.is_default;
+
+
+UPDATE gendox_core.templates
+SET is_default = false
+WHERE name != 'CHAT_CONTEXT_RETRIEVED_DOCUMENT' and type = (SELECT id FROM gendox_core.types WHERE type_category = 'TEMPLATE_TYPE' AND name = 'SECTION_TEMPLATE');
+
+
+
