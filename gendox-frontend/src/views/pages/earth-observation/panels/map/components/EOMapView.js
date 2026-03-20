@@ -24,6 +24,7 @@ export default function EOMapView({
   selectedGeometryIndex,
   onMapReady,
   onMapClick,
+  onFinish,
   onSelectGeometry,
   onUpdateGeometry
 }) {
@@ -40,6 +41,7 @@ export default function EOMapView({
         pendingVertices={pendingVertices}
         geometries={geometries}
         onMapClick={onMapClick}
+        onFinish={onFinish}
         selectedIndex={selectedGeometryIndex}
         onSelectGeometry={onSelectGeometry}
         onUpdateGeometry={onUpdateGeometry}

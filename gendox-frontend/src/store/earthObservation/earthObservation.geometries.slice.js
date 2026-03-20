@@ -40,17 +40,32 @@ export function addGeometriesExtraReducers(builder) {
       state.geometries.eoGeometriesError = action.payload || 'Failed to fetch EO geometries'
     })
 
-    .addCase(createEOGeometryThunk.pending, state => {
+    .addCase(createEOGeometryThunk.pending, (state, action) => {
       state.geometries.createEOGeometryLoading = true
       state.geometries.createEOGeometryError = null
+      const { geometryPayload } = action.meta.arg
+      state.geometries.eoGeometries.push({
+        id: 'optimistic',
+        geometryTypeName: geometryPayload.geometryTypeName,
+        coordinates: geometryPayload.coordinates,
+        displayOrder: geometryPayload.displayOrder,
+        title: geometryPayload.title,
+        isVisible: true
+      })
     })
     .addCase(createEOGeometryThunk.fulfilled, (state, action) => {
       state.geometries.createEOGeometryLoading = false
-      state.geometries.eoGeometries.push({ ...action.payload, isVisible: true })
+      const idx = state.geometries.eoGeometries.findIndex(g => g.id === 'optimistic')
+      if (idx !== -1) {
+        state.geometries.eoGeometries[idx] = { ...action.payload, isVisible: true }
+      } else {
+        state.geometries.eoGeometries.push({ ...action.payload, isVisible: true })
+      }
     })
     .addCase(createEOGeometryThunk.rejected, (state, action) => {
       state.geometries.createEOGeometryLoading = false
       state.geometries.createEOGeometryError = action.payload || 'Failed to create EO geometry'
+      state.geometries.eoGeometries = state.geometries.eoGeometries.filter(g => g.id !== 'optimistic')
     })
 
     .addCase(updateEOGeometryThunk.pending, state => {

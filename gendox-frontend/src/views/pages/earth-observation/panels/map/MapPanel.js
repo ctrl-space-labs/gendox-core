@@ -81,6 +81,7 @@ export default function MapPanel() {
         selectedGeometryIndex={selectedGeometryIndex}
         onMapReady={handleMapReady}
         onMapClick={handleMapClick}
+        onFinish={handleFinish}
         onSelectGeometry={handleSelectGeometry}
         onUpdateGeometry={handleUpdateGeometry}
       />

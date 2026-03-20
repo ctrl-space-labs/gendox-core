@@ -37,6 +37,7 @@ export default function DrawingManager({
   pendingVertices,
   geometries,
   onMapClick,
+  onFinish,
   selectedIndex,
   onSelectGeometry,
   onUpdateGeometry
@@ -103,14 +104,34 @@ export default function DrawingManager({
   return (
     <>
       {/* ── Preview: dots for vertices being placed ── */}
-      {pendingVertices.map((pos, i) => (
-        <CircleMarker
-          key={`pv-${i}`}
-          center={pos}
-          radius={4}
-          pathOptions={{ color: PREVIEW_COLOR, fillColor: PREVIEW_COLOR, fillOpacity: 1 }}
-        />
-      ))}
+      {pendingVertices.map((pos, i) => {
+        // First vertex of a polygon with ≥3 points: render as a larger clickable "close" target
+        const isCloseTarget = activeTool === 'polygon' && i === 0 && pendingVertices.length >= 3
+        return isCloseTarget ? (
+          <CircleMarker
+            key='pv-close'
+            center={pos}
+            radius={8}
+            pathOptions={{ color: '#fff', weight: 2, fillColor: PREVIEW_COLOR, fillOpacity: 1 }}
+            eventHandlers={{
+              click: e => {
+                e.originalEvent?.stopPropagation()
+                geometryClickedRef.current = true
+                onFinish()
+              },
+              mouseover: e => { e.target.setStyle({ fillColor: theme.palette.success.main }) },
+              mouseout:  e => { e.target.setStyle({ fillColor: PREVIEW_COLOR }) }
+            }}
+          />
+        ) : (
+          <CircleMarker
+            key={`pv-${i}`}
+            center={pos}
+            radius={4}
+            pathOptions={{ color: PREVIEW_COLOR, fillColor: PREVIEW_COLOR, fillOpacity: 1 }}
+          />
+        )
+      })}
 
       {/* ── Preview: dashed line connecting pending vertices ── */}
       {pendingVertices.length > 1 && (
@@ -197,7 +218,7 @@ export default function DrawingManager({
             <React.Fragment key={`g${i}`}>
               <Polygon
                 positions={positions}
-                pathOptions={{ color, weight, fillOpacity: isSelected ? 0.35 : 0.2, interactive: true }}
+                pathOptions={{ color, weight, fillOpacity: 0, interactive: true }}
                 eventHandlers={{ click: clickHandler }}
               />
 
