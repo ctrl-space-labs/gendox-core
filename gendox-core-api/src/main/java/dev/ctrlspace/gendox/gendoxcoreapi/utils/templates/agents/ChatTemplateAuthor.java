@@ -21,9 +21,19 @@ public class ChatTemplateAuthor {
     public Map<String, String> toChatValues(Message message, String sectionValues){
         Map<String, String> questionTemplateValues = new HashMap<>();
         questionTemplateValues.put("context", escapePlaceholders(sectionValues));
-        questionTemplateValues.put("localContexts", message.getLocalContexts().stream()
-                .map(c -> "    - Session Type: " + c.getContextTypeName() + ", Session Value: " + c.getValue())
-                .collect(Collectors.joining("\n\"\"\"\n")));
+        questionTemplateValues.put(
+                "localContexts",
+                message.getLocalContexts().stream()
+                        .map(c ->
+                                "  <session_item>\n" +
+                                        "    <type>" + escapeUserText(c.getContextTypeName()) + "</type>\n" +
+                                        "    <value>\n" +
+                                        escapeUserText(c.getValue()) + "\n" +
+                                        "    </value>\n" +
+                                        "  </session_item>"
+                        )
+                        .collect(Collectors.joining("\n"))
+        );
         questionTemplateValues.put("question", (message.getValue()));
         return questionTemplateValues;
     }
@@ -42,5 +52,13 @@ public class ChatTemplateAuthor {
     private String escapePlaceholders(String input) {
         return input.replaceAll("\\$\\{", "\\$\\$\\{");
 
+    }
+
+    private String escapeUserText(String input) {
+        if (input == null) return "";
+        return input
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
     }
 }
