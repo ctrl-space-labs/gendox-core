@@ -25,7 +25,13 @@ export default function ScreenshotToolbar({
 
   return (
     <>
-      {mapThumbnailUrl && (
+      {/* 
+        ⚠️ Thumbnail from GEE Disabled for now.
+        This thumbnail preview feature is not working yet.
+        Will be re-enabled in a future update.
+      */}
+
+      {/* {mapThumbnailUrl && (
         <Box
           sx={{
             display: 'flex',
@@ -74,10 +80,10 @@ export default function ScreenshotToolbar({
             </IconButton>
           </Tooltip>
         </Box>
-      )}
+      )} */}
 
-      {mapLayersCount > 0 && (
-        <Box
+      {/* {mapLayersCount > 0 && ( */}
+      {/* <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
@@ -90,8 +96,14 @@ export default function ScreenshotToolbar({
             boxShadow: 2,
             gap: 0.25
           }}
-        >
-          <Tooltip title={isCapturing ? 'Capturing…' : 'Screenshot current view'}>
+        > */}
+      {/* 
+             ⚠️ Snapshot from GEE Disabled for now.
+             This snapshot feature is not working yet.
+             Will be re-enabled in a future update.
+           */}
+
+      {/* <Tooltip title={isCapturing ? 'Capturing…' : 'Screenshot current view'}>
             <span>
               <IconButton
                 size='small'
@@ -102,21 +114,26 @@ export default function ScreenshotToolbar({
                 {isCapturing ? <CircularProgress size={14} /> : <CameraAltIcon sx={{ fontSize: 15 }} />}
               </IconButton>
             </span>
-          </Tooltip>
-          <Tooltip title={isPanelCapturing ? 'Copying…' : 'Copy full map screenshot to clipboard'}>
-            <span>
-              <IconButton
-                size='small'
-                onClick={onPanelScreenshot}
-                disabled={isPanelCapturing}
-                sx={{ width: 30, height: 30, p: 0 }}
-              >
-                {isPanelCapturing ? <CircularProgress size={14} /> : <ScreenshotMonitorIcon sx={{ fontSize: 15 }} />}
-              </IconButton>
-            </span>
-          </Tooltip>
+          </Tooltip> */}
+      <Tooltip title={isPanelCapturing ? 'Copying…' : 'Copy screenshot to clipboard'} placement='right'>
+        <Box component='span'>
+          <IconButton
+            onClick={onPanelScreenshot}
+            disabled={isPanelCapturing}
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: 1.5,
+              color: 'text.secondary',
+              '&:hover': { bgcolor: 'action.selected', color: 'primary.main' }
+            }}
+          >
+            {isPanelCapturing ? <CircularProgress size={18} /> : <ScreenshotMonitorIcon sx={{ fontSize: 18 }} />}
+          </IconButton>
         </Box>
-      )}
+      </Tooltip>
+      {/* </Box> */}
+      {/* )} */}
     </>
   )
 }

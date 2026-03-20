@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import Box from '@mui/material/Box'
+import Divider from '@mui/material/Divider'
 import { useRouter } from 'next/router'
 
 import { localStorageConstants } from 'src/utils/generalConstants'
@@ -33,18 +34,20 @@ export default function MapPanel() {
     visibleLayers,
     layerOpacities,
     layersOpen,
-    panelWide,
     panelRef,
     setVisibleLayers,
     setLayerOpacities,
     setLayersOpen
   } = useLayerControls()
-  const { isCapturing, isPanelCapturing, handleScreenshot, handlePanelScreenshot, handleMapReady } = useMapScreenshot(panelRef)
+
+  const { isCapturing, isPanelCapturing, handleScreenshot, handlePanelScreenshot, handleMapReady } =
+    useMapScreenshot(panelRef)
+
   const { activeTool, pendingVertices, canFinish, handleMapClick, handleSelectTool, handleFinish, handleCancel } =
     useGeometryDrawing({ organizationId, projectId, taskId, token })
+
   const {
     selectedGeometryIndex,
-    setSelectedGeometryIndex,
     inspectorOpen,
     setInspectorOpen,
     handleToggleVisibility,
@@ -82,20 +85,26 @@ export default function MapPanel() {
         onUpdateGeometry={handleUpdateGeometry}
       />
 
-      {/* ── Top-center toolbar row (drawing + screenshot + layers) ── */}
+      {/* ── Left vertical toolbar — top-anchored ── */}
       <Box
         sx={{
           position: 'absolute',
-          top: 10,
-          left: '50%',
-          transform: 'translateX(-50%)',
+          left: 10,
+          top: 90,
           zIndex: 1000,
           display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'flex-start',
-          gap: 0.5
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 0.25,
+          bgcolor: 'background.paper',
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 2.5,
+          boxShadow: 8,
+          p: 0.75
         }}
       >
+        {/* Drawing tools */}
         <DrawingToolbar
           activeTool={activeTool}
           pendingVertices={pendingVertices}
@@ -104,6 +113,10 @@ export default function MapPanel() {
           onFinish={handleFinish}
           onCancel={handleCancel}
         />
+
+        <Divider flexItem sx={{ my: 0.5 }} />
+
+        {/* Screenshot */}
         <ScreenshotToolbar
           mapThumbnailUrl={mapThumbnailUrl}
           mapLayersCount={mapLayers.length}
@@ -112,29 +125,35 @@ export default function MapPanel() {
           onScreenshot={handleScreenshot}
           onPanelScreenshot={() => handlePanelScreenshot(panelRef.current)}
         />
+
+        <Divider flexItem sx={{ my: 0.5 }} />
+
+        {/* Geometry inspector toggle */}
+        <GeometryInspector
+          geometries={geometries}
+          inspectorOpen={inspectorOpen}
+          setInspectorOpen={setInspectorOpen}
+          inspectorRowRefs={inspectorRowRefs}
+          onToggleVisibility={handleToggleVisibility}
+          onUpdateTitle={handleUpdateTitle}
+          onCopyGeometry={handleCopyGeometry}
+          onDeleteGeometry={handleDeleteGeometry}
+          onDeleteAll={handleDeleteAllGeometries}
+        />
+      </Box>
+
+      {/* ── Layers panel — standalone, top-right, always mounted ── */}
+      <Box sx={{ position: 'absolute', top: 16, right: 10, zIndex: 1000 }}>
         <LayersPanel
           mapLayers={mapLayers}
           visibleLayers={visibleLayers}
           layerOpacities={layerOpacities}
           layersOpen={layersOpen}
-          panelWide={panelWide}
           setVisibleLayers={setVisibleLayers}
           setLayerOpacities={setLayerOpacities}
           setLayersOpen={setLayersOpen}
         />
       </Box>
-
-      <GeometryInspector
-        geometries={geometries}
-        inspectorOpen={inspectorOpen}
-        setInspectorOpen={setInspectorOpen}
-        inspectorRowRefs={inspectorRowRefs}
-        onToggleVisibility={handleToggleVisibility}
-        onUpdateTitle={handleUpdateTitle}
-        onCopyGeometry={handleCopyGeometry}
-        onDeleteGeometry={handleDeleteGeometry}
-        onDeleteAll={handleDeleteAllGeometries}
-      />
     </Box>
   )
 }

@@ -8,82 +8,89 @@ import CloseIcon from '@mui/icons-material/Close'
 
 import { GEOM_ICON } from '../constants/geometryConstants'
 
-const toolBtnSx = (activeTool, tool) => ({
-  width: 30,
-  height: 30,
-  p: 0,
-  minWidth: 0,
-  border: 1,
-  borderColor: activeTool === tool ? 'primary.main' : 'divider',
-  bgcolor: activeTool === tool ? 'primary.main' : 'background.paper',
-  color: activeTool === tool ? '#fff' : 'text.primary',
-  borderRadius: 1,
-  '&:hover': { bgcolor: activeTool === tool ? 'primary.dark' : 'action.hover' }
-})
-
+// Rendered inside the unified left toolbar — no own container wrapper.
 export default function DrawingToolbar({ activeTool, pendingVertices, canFinish, onSelectTool, onFinish, onCancel }) {
+  const btnSx = tool => ({
+    width: 40,
+    height: 40,
+    borderRadius: 1.5,
+    color: activeTool === tool ? 'primary.contrastText' : 'text.secondary',
+    bgcolor: activeTool === tool ? 'primary.main' : 'transparent',
+    '&:hover': {
+      bgcolor: activeTool === tool ? 'primary.dark' : 'action.selected',
+      color: activeTool === tool ? 'primary.contrastText' : 'primary.main'
+    }
+  })
+
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 0.5,
-        bgcolor: 'background.paper',
-        border: 1,
-        borderColor: 'divider',
-        borderRadius: 1,
-        px: 1,
-        py: 0.5,
-        boxShadow: 2
-      }}
-    >
-      <Tooltip title='Point'>
-        <IconButton size='small' sx={toolBtnSx(activeTool, 'point')} onClick={() => onSelectTool('point')}>
-          <GEOM_ICON.Point sx={{ fontSize: 15 }} />
+    <>
+      <Tooltip title='Point' placement='right'>
+        <IconButton sx={btnSx('point')} onClick={() => onSelectTool('point')}>
+          <GEOM_ICON.Point sx={{ fontSize: 18 }} />
         </IconButton>
       </Tooltip>
 
-      <Tooltip title='LinearRing'>
-        <IconButton size='small' sx={toolBtnSx(activeTool, 'linearRing')} onClick={() => onSelectTool('linearRing')}>
-          <GEOM_ICON.LinearRing sx={{ fontSize: 15 }} />
+      <Tooltip title='Linear Ring' placement='right'>
+        <IconButton sx={btnSx('linearRing')} onClick={() => onSelectTool('linearRing')}>
+          <GEOM_ICON.LinearRing sx={{ fontSize: 18 }} />
         </IconButton>
       </Tooltip>
 
-      <Tooltip title='Polygon'>
-        <IconButton size='small' sx={toolBtnSx(activeTool, 'polygon')} onClick={() => onSelectTool('polygon')}>
-          <GEOM_ICON.Polygon sx={{ fontSize: 15 }} />
+      <Tooltip title='Polygon' placement='right'>
+        <IconButton sx={btnSx('polygon')} onClick={() => onSelectTool('polygon')}>
+          <GEOM_ICON.Polygon sx={{ fontSize: 18 }} />
         </IconButton>
       </Tooltip>
 
+      {/* Contextual finish / cancel — visible only while drawing a multi-point shape */}
       {activeTool && activeTool !== 'point' && (
         <>
-          <Divider orientation='vertical' flexItem sx={{ mx: 0.5 }} />
-          <Tooltip title={canFinish ? 'Finish' : `Need ${activeTool === 'linearRing' ? 2 : 3}+ points`}>
-            <span>
-              <IconButton
-                size='small'
-                disabled={!canFinish}
-                onClick={onFinish}
-                sx={{ width: 30, height: 30, p: 0, border: 1, borderColor: 'divider', color: 'success.main' }}
-              >
-                <CheckIcon sx={{ fontSize: 15 }} />
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Tooltip title='Cancel'>
-            <IconButton
-              size='small'
-              onClick={onCancel}
-              sx={{ width: 30, height: 30, p: 0, border: 1, borderColor: 'divider', color: 'error.main' }}
-            >
-              <CloseIcon sx={{ fontSize: 15 }} />
-            </IconButton>
-          </Tooltip>
-          <Typography variant='caption' sx={{ ml: 0.5, color: 'text.secondary', fontSize: '0.65rem' }}>
+          <Divider flexItem sx={{ my: 0.5 }} />
+
+          <Typography
+            sx={{ fontSize: '0.65rem', color: 'text.secondary', textAlign: 'center', lineHeight: 1.3, userSelect: 'none' }}
+          >
             {pendingVertices.length} pt{pendingVertices.length !== 1 ? 's' : ''}
           </Typography>
+
+          <Tooltip
+            title={canFinish ? 'Finish drawing' : `Need ${activeTool === 'linearRing' ? '2' : '3'}+ points`}
+            placement='right'
+          >
+            <Box component='span'>
+              <IconButton
+                disabled={!canFinish}
+                onClick={onFinish}
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 1.5,
+                  color: 'success.main',
+                  '&:hover': { bgcolor: 'action.selected' },
+                  '&.Mui-disabled': { color: 'action.disabled' }
+                }}
+              >
+                <CheckIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Box>
+          </Tooltip>
+
+          <Tooltip title='Cancel drawing' placement='right'>
+            <IconButton
+              onClick={onCancel}
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 1.5,
+                color: 'error.main',
+                '&:hover': { bgcolor: 'action.selected' }
+              }}
+            >
+              <CloseIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
         </>
       )}
-    </Box>
+    </>
   )
 }
