@@ -2,6 +2,11 @@ import { GEOM_TYPE_MAP } from '../constants/geometryConstants'
 
 const TYPE_LABELS = { Point: 'Point', LinearRing: 'Linear Ring', Polygon: 'Polygon' }
 
+/** Lowercase + strip non-alphanumeric — matches gee-sandbox `buildGeometriesLookup` dot keys (e.g. polygon3). */
+export function geometrySlug(label) {
+  return String(label).toLowerCase().replace(/[^a-z0-9]+/g, '')
+}
+
 export function geomLabel(geom, index) {
   if (geom.title) return geom.title
   if (geom.name) return geom.name

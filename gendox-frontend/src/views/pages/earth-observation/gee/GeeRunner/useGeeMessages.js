@@ -18,6 +18,7 @@ export function useGeeMessages({
   iframeRef,
   pendingCodeRef,
   pendingTokenRef,
+  pendingGeometriesRef,
   scriptNameRef,
   lastRunCodeRef,
   organizationId,
@@ -42,7 +43,12 @@ export function useGeeMessages({
       if (type === 'IFRAME_READY') {
         if (pendingCodeRef.current && iframeRef.current) {
           iframeRef.current.contentWindow.postMessage(
-            { type: 'EXECUTE', code: pendingCodeRef.current, token: pendingTokenRef.current },
+            {
+              type: 'EXECUTE',
+              code: pendingCodeRef.current,
+              token: pendingTokenRef.current,
+              geometries: pendingGeometriesRef?.current ?? []
+            },
             '*'
           )
           pendingCodeRef.current = null

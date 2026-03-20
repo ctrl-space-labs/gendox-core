@@ -13,6 +13,7 @@ import useEOScripts from './hooks/useEOScripts'
 import EditorToolbar from './components/EditorToolbar'
 import MonacoEditorPane from './components/MonacoEditorPane'
 import NewScriptDialog from './components/NewScriptDialog'
+import GeometryVariablesPanel from './components/GeometryVariablesPanel'
 
 export default function EditorPanel() {
   const router = useRouter()
@@ -65,6 +66,8 @@ export default function EditorPanel() {
         taskId={taskId}
         token={token}
       />
+
+      <GeometryVariablesPanel />
 
       <MonacoEditorPane
         code={code}
