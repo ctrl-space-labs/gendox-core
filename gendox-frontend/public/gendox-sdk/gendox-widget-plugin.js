@@ -241,6 +241,10 @@
 
     const handleInitializationRequestMessage = function (event) {
       if (event.data && event.data.type === 'gendox.events.initialization.request') {
+        if (!iframe?.contentWindow) {
+          console.warn('Cannot respond to initialization request: iframe contentWindow is not available.')
+          return
+        }
         const message = {
           type: 'gendox.events.initialization.response',
           payload: {
@@ -255,6 +259,10 @@
 
     function sendLocalContextResponse(payload) {
       if (!payload || payload.contextType === undefined || payload.value === undefined) {
+        return
+      }
+      if (!iframe?.contentWindow) {
+        console.warn('Cannot send local context response: iframe contentWindow is not available.')
         return
       }
       console.log('Sending local context response:', payload)

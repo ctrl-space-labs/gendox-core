@@ -45,7 +45,7 @@ export function addGeometriesExtraReducers(builder) {
       state.geometries.createEOGeometryError = null
       const { geometryPayload } = action.meta.arg
       state.geometries.eoGeometries.push({
-        id: 'optimistic',
+        id: `optimistic-${Date.now()}`,
         geometryTypeName: geometryPayload.geometryTypeName,
         coordinates: geometryPayload.coordinates,
         displayOrder: geometryPayload.displayOrder,
@@ -55,7 +55,7 @@ export function addGeometriesExtraReducers(builder) {
     })
     .addCase(createEOGeometryThunk.fulfilled, (state, action) => {
       state.geometries.createEOGeometryLoading = false
-      const idx = state.geometries.eoGeometries.findIndex(g => g.id === 'optimistic')
+      const idx = state.geometries.eoGeometries.findIndex(g => g.id?.startsWith('optimistic-'))
       if (idx !== -1) {
         state.geometries.eoGeometries[idx] = { ...action.payload, isVisible: true }
       } else {
@@ -65,7 +65,7 @@ export function addGeometriesExtraReducers(builder) {
     .addCase(createEOGeometryThunk.rejected, (state, action) => {
       state.geometries.createEOGeometryLoading = false
       state.geometries.createEOGeometryError = action.payload || 'Failed to create EO geometry'
-      state.geometries.eoGeometries = state.geometries.eoGeometries.filter(g => g.id !== 'optimistic')
+      state.geometries.eoGeometries = state.geometries.eoGeometries.filter(g => !g.id?.startsWith('optimistic-'))
     })
 
     .addCase(updateEOGeometryThunk.pending, state => {
