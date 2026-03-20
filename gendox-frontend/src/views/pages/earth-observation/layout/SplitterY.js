@@ -1,42 +1,54 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Box from '@mui/material/Box'
 
+// Horizontal divider between the Editor and Chat panels (right column, DEFAULT mode).
+// Same design decisions as SplitterX — see that file for the full rationale.
 export default function SplitterY({ onDrag }) {
   const [hovered, setHovered] = useState(false)
   const [dragging, setDragging] = useState(false)
 
-  const active = hovered || dragging
+  const draggingRef = useRef(false)
+  const lastYRef    = useRef(0)
+  const pendingRef  = useRef(0)
+  const rafRef      = useRef(null)
 
-  const onPointerDown = e => {
-    e.preventDefault()
-    setDragging(true)
-    const startY = e.clientY
-    let pendingDy = 0
-    let rafScheduled = false
-
-    const move = ev => {
-      pendingDy = ev.clientY - startY
-      if (rafScheduled) return
-      rafScheduled = true
-      requestAnimationFrame(() => {
-        onDrag(pendingDy)
-        rafScheduled = false
-      })
+  const flush = () => {
+    if (pendingRef.current !== 0) {
+      onDrag(pendingRef.current)
+      pendingRef.current = 0
     }
-
-    const up = () => {
-      setDragging(false)
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', up)
-    }
-
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
+    rafRef.current = null
   }
+
+  const handlePointerDown = e => {
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    lastYRef.current    = e.clientY
+    draggingRef.current = true
+    setDragging(true)
+  }
+
+  const handlePointerMove = e => {
+    if (!draggingRef.current) return
+    pendingRef.current += e.clientY - lastYRef.current
+    lastYRef.current    = e.clientY
+    if (!rafRef.current) rafRef.current = requestAnimationFrame(flush)
+  }
+
+  const handlePointerUp = e => {
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); flush() }
+    e.currentTarget.releasePointerCapture(e.pointerId)
+    draggingRef.current = false
+    setDragging(false)
+  }
+
+  const active = hovered || dragging
 
   return (
     <Box
-      onPointerDown={onPointerDown}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
       sx={{
@@ -47,7 +59,7 @@ export default function SplitterY({ onDrag }) {
         justifyContent: 'center',
         alignItems: 'center',
         position: 'relative',
-        userSelect: 'none',
+        userSelect: 'none'
       }}
     >
       {/* Track line */}
@@ -59,7 +71,7 @@ export default function SplitterY({ onDrag }) {
           borderRadius: 999,
           bgcolor: active ? 'primary.main' : 'divider',
           opacity: active ? 0.65 : 0.3,
-          transition: 'height 0.15s, opacity 0.15s, background-color 0.15s',
+          transition: 'height 0.15s, opacity 0.15s, background-color 0.15s'
         }}
       />
 
@@ -71,14 +83,11 @@ export default function SplitterY({ onDrag }) {
           gap: '4px',
           opacity: active ? 1 : 0,
           transition: 'opacity 0.15s',
-          zIndex: 1,
+          zIndex: 1
         }}
       >
         {[0, 1, 2, 3, 4].map(i => (
-          <Box
-            key={i}
-            sx={{ width: 3, height: 3, borderRadius: '50%', bgcolor: 'primary.main' }}
-          />
+          <Box key={i} sx={{ width: 3, height: 3, borderRadius: '50%', bgcolor: 'primary.main' }} />
         ))}
       </Box>
     </Box>

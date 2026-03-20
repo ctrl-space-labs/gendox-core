@@ -44,6 +44,8 @@ export const {
   restoreChat,
   minimizeEditor,
   restoreEditor,
+  restoreChatFromMax,
+  restoreEditorFromMax,
   setGeeReady,
   setMapData,
   addMapLayer,

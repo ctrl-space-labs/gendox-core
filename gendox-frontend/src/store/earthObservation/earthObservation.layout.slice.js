@@ -51,5 +51,16 @@ export const layoutReducers = {
   },
   restoreEditor: state => {
     state.layout.editorMin = false
+  },
+  // Combined actions for restoring a panel that was minimised while in a MAX layout mode.
+  // Using a single action avoids the double-dispatch anti-pattern and guarantees
+  // the Redux state is consistent in one atomic step.
+  restoreChatFromMax: state => {
+    state.layout.chatMin = false
+    state.layout.layoutMode = LAYOUT.DEFAULT
+  },
+  restoreEditorFromMax: state => {
+    state.layout.editorMin = false
+    state.layout.layoutMode = LAYOUT.DEFAULT
   }
 }
