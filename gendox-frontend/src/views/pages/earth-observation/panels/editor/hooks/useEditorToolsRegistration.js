@@ -22,10 +22,12 @@ export default function useEditorToolsRegistration({
   useEffect(() => {
     let intervalId
     let registered = false
-    console.log("APPLIED PATCHES REF IN TOOL REGISTRATION", appliedPatchesRef.current)
+    let registeredOnTools = null
 
     const register = () => {
       if (!window.gendox?.tools?.registerTool) return false
+      if (window.gendox.tools === registeredOnTools) return true
+      registeredOnTools = window.gendox.tools
       window.gendox.tools.registerTool(
         'apply_range_patch',
         ({ document_id, start_line, end_line, new_text, summary }) => {
@@ -84,7 +86,7 @@ export default function useEditorToolsRegistration({
 
       window.gendox.tools.registerTool('execute_command', () => {
         console.log('execute_command')
-        runScriptRef.current?.()
+        setTimeout(() => runScriptRef.current?.(), 0)
         return { success: true }
       })
 
@@ -92,11 +94,8 @@ export default function useEditorToolsRegistration({
       return true
     }
 
-    if (!register()) {
-      intervalId = setInterval(() => {
-        if (register()) clearInterval(intervalId)
-      }, 100)
-    }
+    register()
+    intervalId = setInterval(() => register(), 500)
 
     return () => {
       clearInterval(intervalId)
