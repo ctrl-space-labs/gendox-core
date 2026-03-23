@@ -13,16 +13,11 @@ import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
 import dev.ctrlspace.gendox.spring.batch.utils.JobUtils;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.launch.JobOperator;
-import org.springframework.batch.core.launch.support.SimpleJobOperator;
-import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
@@ -58,17 +53,6 @@ public class SpringBatchConfiguration implements ApplicationRunner {
     private Job demoJob;
     @Autowired
     private SplitterBatchService splitterBatchService;
-
-    @Bean
-    public JobOperator jobOperator(JobExplorer jobExplorer,
-                                   JobRepository jobRepository,
-                                   JobLauncher jobLauncher) {
-        SimpleJobOperator operator = new SimpleJobOperator();
-        operator.setJobExplorer(jobExplorer);
-        operator.setJobRepository(jobRepository);
-        operator.setJobLauncher(jobLauncher);
-        return operator;
-    }
 
     @Override
     public void run(ApplicationArguments args) throws Exception {

@@ -262,6 +262,7 @@ public class CompletionService {
 
         boolean hasToolCalls;
         int iteration = 0;
+        // TODO: this indicate that is a deep thinking task, should be more explicit and not inferred by the presence cancelation token.
         int maxIterations = runtimeContext.cancellationToken() != null ? 50 : 5;
 
         do {

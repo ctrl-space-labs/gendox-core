@@ -212,6 +212,7 @@ public class EmbeddingsController {
                     .threadId(savedMessage.getThreadId())
                     .build();
 
+            // TODO change responae to return the same object in both cases, and use the same endpoint for both deep thinking and regular completion search
             return ResponseEntity.accepted().body(response);
         }
 

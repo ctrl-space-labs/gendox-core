@@ -171,15 +171,17 @@ public class JobController {
     public void stopJob(@PathVariable UUID organizationId,
                         @PathVariable UUID projectId,
                         @PathVariable Long jobExecutionId) throws GendoxException {
+        jobService.assertJobExecutionBelongsToProject(jobExecutionId, projectId);
+
         try {
             jobOperator.stop(jobExecutionId);
             logger.info("Stop requested for job execution {}", jobExecutionId);
         } catch (NoSuchJobExecutionException e) {
             throw new GendoxException("JOB_EXECUTION_NOT_FOUND",
-                    "Job execution not found: " + jobExecutionId, HttpStatus.NOT_FOUND);
+                    "Job execution not found: " + jobExecutionId, HttpStatus.NOT_FOUND, e);
         } catch (Exception e) {
             throw new GendoxException("JOB_STOP_FAILED",
-                    "Failed to stop job execution: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+                    "Failed to stop job execution: "+jobExecutionId, HttpStatus.INTERNAL_SERVER_ERROR, e);
         }
     }
 
@@ -190,7 +192,9 @@ public class JobController {
             description = "Returns the progress steps for a deep thinking job execution, ordered by step order.")
     public List<DeepThinkingStep> getDeepThinkingSteps(@PathVariable UUID organizationId,
                                                         @PathVariable UUID projectId,
-                                                        @PathVariable Long jobExecutionId) {
+                                                        @PathVariable Long jobExecutionId) throws GendoxException {
+        jobService.assertJobExecutionBelongsToProject(jobExecutionId, projectId);
+
         return deepThinkingStepService.getSteps(jobExecutionId);
     }
 

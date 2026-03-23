@@ -5,7 +5,11 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
+import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecutionParams;
+import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionParamsRepository;
+import dev.ctrlspace.gendox.spring.batch.repositories.BatchJobExecutionRepository;
 import dev.ctrlspace.gendox.spring.batch.services.*;
+import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import org.slf4j.Logger;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
@@ -32,6 +36,8 @@ public class JobService {
     private DocumentDigitizationBatchService documentDigitizationBatchService;
     private final JobExplorer jobExplorer;
     private final TaskService taskService;
+    private final BatchJobExecutionRepository batchJobExecutionRepository;
+    private final BatchJobExecutionParamsRepository batchJobExecutionParamsRepository;
 
     @Autowired
     public JobService(SplitterBatchService splitterBatchService,
@@ -40,7 +46,9 @@ public class JobService {
                       DocumentInsightsBatchService documentInsightsBatchService,
                       DocumentDigitizationBatchService documentDigitizationBatchService,
                       JobExplorer jobExplorer,
-                      TaskService taskService) {
+                      TaskService taskService,
+                      BatchJobExecutionRepository batchJobExecutionRepository,
+                      BatchJobExecutionParamsRepository batchJobExecutionParamsRepository) {
         this.splitterBatchService = splitterBatchService;
         this.trainingBatchService = trainingBatchService;
         this.splitterAndTrainingBatchService = splitterAndTrainingBatchService;
@@ -48,6 +56,25 @@ public class JobService {
         this.documentDigitizationBatchService = documentDigitizationBatchService;
         this.jobExplorer = jobExplorer;
         this.taskService = taskService;
+        this.batchJobExecutionRepository = batchJobExecutionRepository;
+        this.batchJobExecutionParamsRepository = batchJobExecutionParamsRepository;
+    }
+
+    /**
+     * Ensures the job execution exists and its {@link JobExecutionParamConstants#PROJECT_ID} parameter matches the given project.
+     */
+    public void assertJobExecutionBelongsToProject(Long jobExecutionId, UUID expectedProjectId) throws GendoxException {
+        if (!batchJobExecutionRepository.existsById(jobExecutionId)) {
+            throw new GendoxException("JOB_EXECUTION_NOT_FOUND",
+                    "Job execution not found: " + jobExecutionId, HttpStatus.NOT_FOUND);
+        }
+        BatchJobExecutionParams projectParam = batchJobExecutionParamsRepository
+                .findByExecutionIdAndName(jobExecutionId, JobExecutionParamConstants.PROJECT_ID);
+        String paramValue = projectParam != null ? projectParam.getParameterValue() : null;
+        if (paramValue == null || !expectedProjectId.toString().equals(paramValue)) {
+            throw new GendoxException("JOB_PROJECT_MISMATCH",
+                    "Job execution does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
     }
 
     @Async
