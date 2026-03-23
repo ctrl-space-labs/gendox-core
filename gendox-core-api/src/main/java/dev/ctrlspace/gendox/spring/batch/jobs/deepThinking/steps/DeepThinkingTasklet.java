@@ -1,14 +1,9 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.deepThinking.steps;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRuntimeOverridesDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.EmbeddingService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.CancellationToken;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
 import dev.ctrlspace.gendox.spring.batch.utils.JobExecutionParamConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,12 +14,17 @@ import org.springframework.batch.core.StepExecutionListener;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRuntimeOverridesDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.JobService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.CancellationToken;
 
 @Component
 public class DeepThinkingTasklet implements Tasklet, StepExecutionListener {
@@ -34,49 +34,36 @@ public class DeepThinkingTasklet implements Tasklet, StepExecutionListener {
     private final CompletionService completionService;
     private final MessageService messageService;
     private final ProjectService projectService;
-    private final EmbeddingService embeddingService;
-
-    private StepExecution stepExecution;
+    private final JobService jobService;
 
     public DeepThinkingTasklet(CompletionService completionService,
                                MessageService messageService,
                                ProjectService projectService,
-                               EmbeddingService embeddingService) {
+                               JobService jobService) {
         this.completionService = completionService;
         this.messageService = messageService;
         this.projectService = projectService;
-        this.embeddingService = embeddingService;
+        this.jobService = jobService;
     }
 
     @Override
     public void beforeStep(StepExecution stepExecution) {
-        this.stepExecution = stepExecution;
+        // no-op
     }
 
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
-        String messageId = stepExecution.getJobParameters().getString(JobExecutionParamConstants.MESSAGE_ID);
-        String projectId = stepExecution.getJobParameters().getString(JobExecutionParamConstants.PROJECT_ID);
+        StepExecution currentStepExecution = contribution.getStepExecution();
+        String messageId = currentStepExecution.getJobParameters().getString(JobExecutionParamConstants.MESSAGE_ID);
+        String projectId = currentStepExecution.getJobParameters().getString(JobExecutionParamConstants.PROJECT_ID);
 
         Message message = messageService.getMessageById(UUID.fromString(messageId));
         Project project = projectService.getProjectById(UUID.fromString(projectId));
 
-        CancellationToken cancellationToken = new CancellationToken(stepExecution::isTerminateOnly);
+        CancellationToken cancellationToken = new CancellationToken(
+                () -> isCancellationRequested(contribution.getStepExecution()));
 
         List<DocumentInstanceSectionDTO> topSectionsForCompletion = new ArrayList<>();
-
-        List<DocumentInstanceSectionDTO> sectionDTOs = embeddingService.findClosestSections(
-                message,
-                project,
-                PageRequest.of(0, project.getProjectAgent().getMaxSearchLimit().intValue())
-        );
-
-        int maxCompletionLimit = project.getProjectAgent().getMaxCompletionLimit().intValue();
-        for (int i = 0; i < sectionDTOs.size(); i++) {
-            if (i < maxCompletionLimit) {
-                topSectionsForCompletion.add(sectionDTOs.get(i));
-            }
-        }
 
         CompletionRuntimeOverridesDTO overrides = CompletionRuntimeOverridesDTO.builder()
                 .cancellationToken(cancellationToken)
@@ -89,7 +76,7 @@ public class DeepThinkingTasklet implements Tasklet, StepExecutionListener {
             logger.info("Deep thinking completed for message {} with {} response messages",
                     messageId, completions.size());
         } catch (Exception e) {
-            if (stepExecution.isTerminateOnly()) {
+            if (cancellationToken.isCancelled()) {
                 logger.info("Deep thinking cancelled for message {}", messageId);
                 contribution.setExitStatus(ExitStatus.STOPPED);
                 return RepeatStatus.FINISHED;
@@ -103,5 +90,13 @@ public class DeepThinkingTasklet implements Tasklet, StepExecutionListener {
     @Override
     public ExitStatus afterStep(StepExecution stepExecution) {
         return stepExecution.getExitStatus();
+    }
+
+    /**
+     * Delegates cancellation detection to JobService where the DB read runs
+     * in a dedicated transaction.
+     */
+    private boolean isCancellationRequested(StepExecution stepExecution) {
+        return jobService.isDeepThinkingCancellationRequested(stepExecution.getJobExecutionId(), stepExecution.isTerminateOnly());
     }
 }

@@ -18,6 +18,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
 import java.util.UUID;
@@ -75,6 +78,23 @@ public class JobService {
             throw new GendoxException("JOB_PROJECT_MISMATCH",
                     "Job execution does not belong to the specified project", HttpStatus.BAD_REQUEST);
         }
+    }
+
+    /**
+     * Reads the latest DB status in a separate transaction so long-running callers
+     * (e.g. tasklets) do not observe stale persistence-context state.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true, isolation = Isolation.READ_COMMITTED)
+    public boolean isDeepThinkingCancellationRequested(Long jobExecutionId, boolean fallbackTerminateOnly) {
+        if (jobExecutionId == null) {
+            return fallbackTerminateOnly;
+        }
+
+        boolean dbStopping = batchJobExecutionRepository.findById(jobExecutionId)
+                .map(jobExecution -> BatchStatus.STOPPING.name().equalsIgnoreCase(jobExecution.getStatus()))
+                .orElse(false);
+
+        return fallbackTerminateOnly || dbStopping;
     }
 
     @Async
