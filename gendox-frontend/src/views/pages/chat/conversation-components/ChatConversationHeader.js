@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, IconButton, ListItemIcon, Typography, useTheme } from '@mui/material'
+import { Box, IconButton, ListItemIcon, Tooltip, Typography, useTheme } from '@mui/material'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import UserIcon from 'src/layouts/components/UserIcon'
 import { AgentAvatar } from 'src/views/pages/chat/utils/chatUtils'
@@ -11,7 +11,8 @@ const ChatConversationHeader = ({
   themeConfig,
   handleInsightsToggle,
   isLoadingMessages,
-  chatInsightView
+  chatInsightView,
+  onCreateNewThread
 }) => {
   const theme = useTheme()
 
@@ -26,6 +27,7 @@ const ChatConversationHeader = ({
         height: 60,
         filter: isLoadingMessages ? 'blur(6px)' : 'none'
       }}
+      id={'chat-conversation-header'}
     >
       {/* Left group */}
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -81,6 +83,13 @@ const ChatConversationHeader = ({
           </Typography>
         </Box>
       </Box>
+
+      {/* TODO: Remove this, in the embedded chat, it falls directly under the 'x' button */}
+      {/* <Tooltip title='New chat'>
+        <IconButton onClick={onCreateNewThread} size='small'>
+          <Icon icon='mdi:plus' />
+        </IconButton>
+      </Tooltip> */}
     </Box>
   )
 }

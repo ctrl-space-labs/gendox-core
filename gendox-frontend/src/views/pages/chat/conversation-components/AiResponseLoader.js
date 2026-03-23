@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Box, Button, LinearProgress, Typography, Stepper, Step, StepLabel, StepContent } from '@mui/material'
 import StopCircleIcon from '@mui/icons-material/StopCircle'
-import { pollDeepThinkingStatus, cancelDeepThinking, loadThread, chatActions } from 'src/store/chat/gendoxChat'
+import { pollDeepThinkingStatus, cancelDeepThinking, finalizeDeepThinkingThread } from 'src/store/chat/gendoxChat'
 import { localStorageConstants } from 'src/utils/generalConstants'
+import { useIFrameMessageManager } from 'src/authentication/context/IFrameMessageManagerContext'
 
 const STEP_TYPE_LABELS = {
   LLM_CALL: 'AI Processing',
@@ -16,6 +17,7 @@ const STEP_TYPE_LABELS = {
 
 const AiResponseLoader = ({ isSending }) => {
   const dispatch = useDispatch()
+  const iFrameMessageManager = useIFrameMessageManager()
   const [statusMessage, setStatusMessage] = useState('')
   const pollingRef = useRef(null)
 
@@ -73,11 +75,10 @@ const AiResponseLoader = ({ isSending }) => {
 
             if (status === 'COMPLETED') {
               dispatch(
-                loadThread({
+                finalizeDeepThinkingThread({
                   threadId: currentThread.threadId,
-                  projectId,
-                  organizationId,
-                  token
+                  token,
+                  iFrameMessageManager
                 })
               )
             }
@@ -88,9 +89,9 @@ const AiResponseLoader = ({ isSending }) => {
     }
 
     const getInterval = () => {
-      if (pollCount < 5) return 2000
-      if (pollCount < 15) return 5000
-      return 10000
+      if (pollCount < 5) return 3000
+      if (pollCount < 15) return 8000
+      return 12000
     }
 
     poll()
@@ -102,7 +103,7 @@ const AiResponseLoader = ({ isSending }) => {
         pollingRef.current = null
       }
     }
-  }, [isDeepThinking, deepThinkingJobId, currentThread, dispatch])
+  }, [isDeepThinking, deepThinkingJobId, currentThread, dispatch, iFrameMessageManager])
 
   const handleCancel = () => {
     if (!currentThread || !deepThinkingJobId) return

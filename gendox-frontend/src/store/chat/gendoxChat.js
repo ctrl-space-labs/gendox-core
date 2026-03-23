@@ -31,7 +31,8 @@ const initialChatState = {
   isLoadingMetadata: null,
   isDeepThinking: false,
   deepThinkingJobId: null,
-  deepThinkingSteps: []
+  deepThinkingSteps: [],
+  newlyCreatedThreadId: null
 }
 
 /**
@@ -177,8 +178,6 @@ export const sendMessage = createAsyncThunk(
     // the threadId is null for new threads, this is expected
     const threadId = currentThread.threadId
     const projectId = currentThread.agent.projectId
-    const agentId = currentThread.agent.agentId
-
     dispatch(
       addMessage({
         createdBy: user.id,
@@ -222,70 +221,36 @@ export const sendMessage = createAsyncThunk(
     if (response.status === 202 && response.data?.jobExecutionId) {
       const { jobExecutionId, threadId: responseThreadId } = response.data
 
-      const isNewThread = !threadId
-      if (isNewThread) {
-        _updateThreadsToLocalStorage(responseThreadId)
-      }
+      const { finalThreadId } = await _handleThreadPostSend({
+        threadId,
+        responseThreadId,
+        projectId,
+        organizationId,
+        token,
+        dispatch
+      })
 
-      dispatch(fetchThreads({ organizationId, token }))
-
-      if (isNewThread) {
-        dispatch(loadThread({ threadId: responseThreadId, projectId, organizationId, token }))
-      }
-
-      return { deepThinking: true, jobExecutionId, threadId: responseThreadId }
+      return { deepThinking: true, jobExecutionId, threadId: finalThreadId, isNewThread: !threadId }
     }
 
     const { messages: apiMessages = [], threadId: responseThreadId } = response.data
-
-    // sending PostMessage notification
-    iFrameMessageManager.messageManager.sendMessage({
-      type: 'gendox.events.chat.message.new.response.received',
-      payload: response.data.messages
+    _dispatchIncomingMessagesAndToolCalls({
+      apiMessages,
+      responseThreadId,
+      dispatch,
+      iFrameMessageManager
     })
 
-    const toolCallsToProcess = []
-
-    apiMessages.forEach(message => {
-      dispatch(addMessage(message))
-
-      // If this message invoked any tool calls, stash them for later
-      if (Array.isArray(message?.toolCalls) && message?.toolCalls.length) {
-        message.toolCalls.forEach(call => {
-          toolCallsToProcess.push({
-            threadId: responseThreadId,
-            messageId: message.id,
-            ...call
-          })
-        })
-      }
+    const { finalThreadId } = await _handleThreadPostSend({
+      threadId,
+      responseThreadId,
+      projectId,
+      organizationId,
+      token,
+      dispatch
     })
 
-    if (toolCallsToProcess.length > 0) {
-      // Process tool calls after the message has been added
-      // Currently, this is 1-way communication, so we send the tool calls to the parent frame
-      // TODO this should be a 2-way communication, where the parent frame processes the tool calls and sends back the results
-      iFrameMessageManager.messageManager.sendMessage({
-        type: 'gendox.events.chat.message.tool_calls.request',
-        payload: toolCallsToProcess
-      })
-    }
-
-    const isNewThread = !threadId
-    const finalThreadId = isNewThread ? responseThreadId : threadId
-
-    if (isNewThread) {
-      _updateThreadsToLocalStorage(responseThreadId)
-    }
-
-    //reload threads to get the updated one
-    // TODO requires performance improvement
-    dispatch(fetchThreads({ organizationId, token }))
-
-    if (isNewThread) {
-      // TODO this should change the URL in the browser, fix in the future
-      dispatch(loadThread({ threadId: finalThreadId, projectId, organizationId, token }))
-    }
+    return { deepThinking: false, threadId: finalThreadId, isNewThread: !threadId }
   }
 )
 
@@ -309,6 +274,43 @@ export const pollDeepThinkingStatus = createAsyncThunk(
   }
 )
 
+export const finalizeDeepThinkingThread = createAsyncThunk(
+  'gendoxChat/finalizeDeepThinkingThread',
+  async ({ threadId, token, iFrameMessageManager }, { getState, dispatch, rejectWithValue }) => {
+    try {
+      if (!threadId) return { addedCount: 0 }
+
+      const response = await chatThreadService.getThreadMessagesByCriteria(threadId, token)
+      const apiMessages = response?.data?.content || []
+      const existingMessages = getState()?.gendoxChat?.currentThread?.messages || []
+      const existingMessageIds = new Set(existingMessages.map(m => m?.messageId).filter(Boolean))
+
+      const newApiMessages = apiMessages
+        .filter(message => {
+          const messageId = message?.id
+          const role = (message?.role || '').toUpperCase()
+          if (!messageId) return false
+          if (existingMessageIds.has(messageId)) return false
+          // User message was already added optimistically on send.
+          if (role === 'USER') return false
+          return true
+        })
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+
+      _dispatchIncomingMessagesAndToolCalls({
+        apiMessages: newApiMessages,
+        responseThreadId: threadId,
+        dispatch,
+        iFrameMessageManager
+      })
+
+      return { addedCount: newApiMessages.length }
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
 export const cancelDeepThinking = createAsyncThunk(
   'gendoxChat/cancelDeepThinking',
   async ({ organizationId, projectId, jobExecutionId, token }, { rejectWithValue }) => {
@@ -316,6 +318,12 @@ export const cancelDeepThinking = createAsyncThunk(
       await taskService.stopJob(organizationId, projectId, jobExecutionId, token)
       return { jobExecutionId }
     } catch (error) {
+      const errorCode = error?.response?.data?.errorCode || error?.response?.data?.code
+      // These mean there is no cancellable execution in this context anymore.
+      // Treat them as terminal so UI state/polling can be cleared safely.
+      if (errorCode === 'JOB_EXECUTION_NOT_FOUND' || errorCode === 'JOB_PROJECT_MISMATCH') {
+        return { jobExecutionId, ignoredErrorCode: errorCode }
+      }
       return rejectWithValue(error.message)
     }
   }
@@ -451,6 +459,7 @@ const gendoxChatSlice = createSlice({
       state.isDeepThinking = false
       state.deepThinkingJobId = null
       state.deepThinkingSteps = []
+      state.newlyCreatedThreadId = null
     },
     clearDeepThinkingState: state => {
       state.isDeepThinking = false
@@ -498,6 +507,9 @@ const gendoxChatSlice = createSlice({
     },
     clearCurrentMessageMetadata: state => {
       state.currentMessageMetadata = ''
+    },
+    clearNewlyCreatedThreadId: state => {
+      state.newlyCreatedThreadId = null
     },
     setAttachmentPreviewStatus: (state, action) => {
       const { messageId, documentId, previewStatus } = action.payload
@@ -588,6 +600,7 @@ const gendoxChatSlice = createSlice({
       state.isSendingMessage = true // Set isSending to true when sendMessage starts
     })
     builder.addCase(sendMessage.fulfilled, (state, action) => {
+      state.newlyCreatedThreadId = action.payload?.isNewThread ? action.payload.threadId : null
       if (action.payload?.deepThinking) {
         state.isDeepThinking = true
         state.deepThinkingJobId = action.payload.jobExecutionId
@@ -730,3 +743,60 @@ function _updateThreadsToLocalStorage(newThreadId) {
   // Save the updated array back to localStorage
   localStorage.setItem(generalConstants.LOCAL_STORAGE_THREAD_IDS_NAME, JSON.stringify(threads))
 }
+
+async function _handleThreadPostSend({ threadId, responseThreadId, projectId, organizationId, token, dispatch }) {
+  const isNewThread = !threadId
+  const finalThreadId = isNewThread ? responseThreadId : threadId
+
+  if (isNewThread && responseThreadId) {
+    _updateThreadsToLocalStorage(responseThreadId)
+  }
+
+  // reload threads to get the updated one
+  // TODO requires performance improvement
+  dispatch(fetchThreads({ organizationId, token }))
+
+  if (isNewThread && finalThreadId) {
+    await dispatch(loadThread({ threadId: finalThreadId, projectId, organizationId, token }))
+  }
+
+  return { isNewThread, finalThreadId }
+}
+
+function _dispatchIncomingMessagesAndToolCalls({ apiMessages = [], responseThreadId, dispatch, iFrameMessageManager }) {
+  if (!Array.isArray(apiMessages) || apiMessages.length === 0) return
+
+  // sending PostMessage notification
+  iFrameMessageManager?.messageManager?.sendMessage({
+    type: 'gendox.events.chat.message.new.response.received',
+    payload: apiMessages
+  })
+
+  const toolCallsToProcess = []
+
+  apiMessages.forEach(message => {
+    dispatch(addMessage(message))
+
+    // If this message invoked any tool calls, stash them for later
+    if (Array.isArray(message?.toolCalls) && message?.toolCalls.length) {
+      message.toolCalls.forEach(call => {
+        toolCallsToProcess.push({
+          threadId: responseThreadId,
+          messageId: message.id,
+          ...call
+        })
+      })
+    }
+  })
+
+  if (toolCallsToProcess.length > 0) {
+    // Process tool calls after the message has been added
+    // Currently, this is 1-way communication, so we send the tool calls to the parent frame
+    // TODO this should be a 2-way communication, where the parent frame processes the tool calls and sends back the results
+    iFrameMessageManager?.messageManager?.sendMessage({
+      type: 'gendox.events.chat.message.tool_calls.request',
+      payload: toolCallsToProcess
+    })
+  }
+}
+
