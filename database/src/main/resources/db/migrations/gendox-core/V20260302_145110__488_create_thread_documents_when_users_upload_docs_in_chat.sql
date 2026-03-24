@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS chat_thread_documents
+CREATE TABLE IF NOT EXISTS gendox_core.chat_thread_documents
 (
     id          bigserial PRIMARY KEY,
     document_id UUID      NOT NULL,

@@ -8,8 +8,7 @@ const commonConfig = {
     oidcSilentRedirectUri: process.env.NEXT_PUBLIC_OIDC_SILENT_REDIRECT_URI,
     provenAiUrl: process.env.NEXT_PUBLIC_PROVEN_AI_URL,
     provenAiEnabled: process.env.NEXT_PUBLIC_PROVEN_AI_ENABLED? process.env.NEXT_PUBLIC_PROVEN_AI_ENABLED === 'true' : false /* true | false */,
-    GEE_clientId: process.env.NEXT_PUBLIC_GEE_CLIENT_ID,
-    MAPS_API_KEY: process.env.NEXT_PUBLIC_MAPS_API_KEY
+    GEE_clientId: process.env.NEXT_PUBLIC_GEE_CLIENT_ID
 }
 
 
