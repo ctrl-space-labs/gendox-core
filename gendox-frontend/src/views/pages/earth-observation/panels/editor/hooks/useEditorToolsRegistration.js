@@ -95,6 +95,7 @@ export default function useEditorToolsRegistration({
     }
 
     register()
+    // try again in 0.5s in case tools aren't ready yet TODO change this to an event-based system if possible
     intervalId = setInterval(() => register(), 500)
 
     return () => {
