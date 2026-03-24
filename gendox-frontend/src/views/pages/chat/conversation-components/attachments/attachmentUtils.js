@@ -5,6 +5,7 @@ export const getDocLabel = file => {
   if (file.type === 'application/pdf' || ext === 'pdf') return 'PDF'
   if (['txt', 'md', 'rst'].includes(ext)) return 'Document'
   if (['doc', 'docx'].includes(ext)) return 'Word'
+  if (['xls', 'xlsx', 'csv'].includes(ext)) return 'Spreadsheet'
   return 'File'
 }
 

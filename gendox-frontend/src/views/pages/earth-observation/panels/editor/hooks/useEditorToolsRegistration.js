@@ -85,7 +85,6 @@ export default function useEditorToolsRegistration({
       )
 
       window.gendox.tools.registerTool('execute_command', () => {
-        console.log('execute_command')
         setTimeout(() => runScriptRef.current?.(), 0)
         return { success: true }
       })

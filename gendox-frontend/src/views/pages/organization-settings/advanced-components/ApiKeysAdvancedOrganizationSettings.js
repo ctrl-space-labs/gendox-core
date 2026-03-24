@@ -49,10 +49,9 @@ const ApiKeysAdvancedOrganizationSettings = () => {
   const copyToClipboard = async text => {
     try {
       await navigator.clipboard.writeText(text)
-      // console.log("Text copied to clipboard!");
+
       return true
     } catch (err) {
-      // console.error("Failed to copy text: ", err);
       return false
     }
   }

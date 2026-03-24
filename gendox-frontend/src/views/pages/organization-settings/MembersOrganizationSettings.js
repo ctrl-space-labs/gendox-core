@@ -111,7 +111,6 @@ const MembersOrganizationSettings = () => {
 
   const handleBanUser = () => {
     // Implement the ban user logic here
-    console.log('Banning user:', selectedUserForAction)
     handleMenuClose()
   }
 

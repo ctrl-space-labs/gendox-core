@@ -13,7 +13,6 @@ const MessageAttachments = ({ attachments, currentThread, token }) => {
   const images = useMemo(() => (attachments || []).filter(a => a.kind === 'image'), [attachments])
   const files = useMemo(() => (attachments || []).filter(a => a.kind !== 'image'), [attachments])
 
-
   const hadleOpenImage = img => {
     if (!img?.previewUrl) return
     setActiveImage(img)
@@ -30,14 +29,7 @@ const MessageAttachments = ({ attachments, currentThread, token }) => {
     if (!documentId) return
 
     try {
-      const res = await documentService.downloadDocument(
-        currentThread?.threadId,
-        documentId,
-        token
-      )
-
-      console.log('download headers:', res?.headers)
-      console.log('blob type/size:', res?.data?.type, res?.data?.size, res?.data instanceof Blob)
+      const res = await documentService.downloadDocument(currentThread?.threadId, documentId, token)
 
       downloadFromAxiosResponse(res, fileAtt.title || fileAtt.name || 'document')
     } catch (e) {
@@ -165,8 +157,8 @@ const MessageAttachments = ({ attachments, currentThread, token }) => {
                       {f.title || f.name}
                     </Typography>
                     <Typography variant='caption' sx={{ opacity: 0.8 }} noWrap>
-                  {f.documentType || 'File'}
-                </Typography>
+                      {f.documentType || 'File'}
+                    </Typography>
                   </Box>
                 </Box>
               ))}

@@ -126,7 +126,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     }))
   }, [taskNodesAnswerList])
 
-  // console.log('ANSWERS:', answers)
 
   const reloadAll = useCallback(async () => {
     if (!organizationId || !projectId || !taskId) return

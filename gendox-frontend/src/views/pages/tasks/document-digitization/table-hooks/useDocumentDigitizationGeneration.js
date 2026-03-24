@@ -52,11 +52,6 @@ export default function useDocumentDigitizationGeneration({ reloadAll, token, se
       // Global Generation == Generate All Documents & Generate New Documents
       const isGlobalGeneration = documentIds.length === 0
 
-      console.log('Starting digitization generation for documents:', {
-        docCount: documentIds.length,
-        reGenerate: reGenerateExistingAnswers
-      })
-
       try {
         dispatch(setDigitizationGenerating(true))
         const criteria = { taskId, documentNodeIds: documentIds, reGenerateExistingAnswers }
