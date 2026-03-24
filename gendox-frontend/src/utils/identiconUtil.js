@@ -35,7 +35,6 @@ export const generateIdenticon = (
     background
   }).toString();
 
-  // console.log("Calculating identicon hash for:", text); // debugging
 
   // Construct the src URL for the Avatar component
   return `data:image/svg+xml;base64,${data}`;

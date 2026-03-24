@@ -2,45 +2,38 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Claude Global Behavior
-
-**Memory & Context Management:**
-- Always remember and use the full project architecture, tech stack, folder structure, API endpoints, Redux slices, theme system, and database structure
-- Build and maintain an internal map of the app's components, state management, services, and styling tokens
-- If new information is introduced during conversations, keep it in memory and adjust future answers accordingly
-- Continuously update understanding of component relationships, data flows, and integration patterns
-
 ## Common Development Commands
 
 ### Backend (gendox-core-api)
 ```bash
-# Build and run the Spring Boot API
 cd gendox-core-api
 mvn clean install
 mvn spring-boot:run
 
-# Run database migrations
-mvn flyway:migrate -Durl=jdbc:postgresql://localhost:5432/gendox -Duser=admin -Dpassword=admin123
-
-# Run tests
+# Run all tests
 mvn test
+
+# Run a single test class
+mvn test -Dtest=MyServiceTest
+
+# Run a single test method
+mvn test -Dtest=MyServiceTest#myMethod
+
+# Run integration tests
 mvn integration-test
+
+# Run database migrations manually
+mvn flyway:migrate -Durl=jdbc:postgresql://localhost:5432/gendox -Duser=admin -Dpassword=admin123
 ```
 
 ### Frontend (gendox-frontend)
 ```bash
-# Development server
 cd gendox-frontend
 yarn install
-yarn dev          # Starts development server on http://localhost:3000
-
-# Production build
+yarn dev          # http://localhost:3000
 yarn build
-yarn start
-
-# Linting and formatting
-yarn lint         # Run ESLint
-yarn lint:fix     # Auto-fix linting issues
+yarn lint
+yarn lint:fix
 ```
 
 ### End-to-End Tests (gendox-e2e-tests)
@@ -48,264 +41,204 @@ yarn lint:fix     # Auto-fix linting issues
 cd gendox-e2e-tests
 npm install
 npx playwright install
-npx playwright test --ui              # Run with UI mode
-npx playwright test --project=chromium # Run single browser
-npx playwright test auth.spec.js       # Run specific test file
+npx playwright test
+npx playwright test --ui
+npx playwright test --project=chromium
+npx playwright test auth.spec.js          # Run a single spec file
 ```
 
 ### Documentation (documentation)
 ```bash
 cd documentation
 yarn install
-yarn start        # Development server
-yarn build        # Production build
+yarn start        # http://localhost:3001
+yarn build
 ```
 
-### Docker Development Environment
+### Docker
 ```bash
-# Start all services (recommended for development)
-docker-compose up -d
-
-# Start specific services
-docker-compose up -d postgres keycloak
-docker-compose up -d gendox-api
-docker-compose up -d gendox-frontend
-
-# View logs
+# From gendox-compose-scripts/<environment>/
+docker-compose up -d                      # All services
+docker-compose up -d postgres keycloak    # Dependencies only
 docker-compose logs -f gendox-api
 ```
+
+Available compose environments in `gendox-compose-scripts/`:
+- `build-ci-installation/` — CI build (`.env.local`)
+- `dev-ci-installation/` — Development CI (`.env`)
+- `local-tests-installation/` — Local e2e testing (`docker-compose-with-tests.yml`)
 
 ## Architecture Overview
 
 ### Project Structure
-- **gendox-core-api/**: Spring Boot backend API with Java 21, PostgreSQL, Spring Security, Spring AI
-- **gendox-frontend/**: Next.js 15.1.7 React 19 application with Material-UI 5, Redux Toolkit 2.5.0, OIDC authentication
-- **gendox-keycloak/**: Custom Keycloak 25.0.4 configuration for OAuth2/OIDC authentication  
-- **database/**: PostgreSQL with pgvector extension, Flyway migrations (80+ migration files)
-- **gendox-e2e-tests/**: Playwright test suite with Page Object Model pattern
-- **documentation/**: Docusaurus-based documentation site
-- **gendox-compose-scripts/**: Docker Compose configurations for different environments
-
-### Key Technologies
-- **Backend**: Spring Boot 3.4.5, Spring AI 1.0.0-M6, QueryDSL, PostgreSQL + pgvector
-- **Frontend**: Next.js 15.1.7, React 19, Material-UI 5, Redux Toolkit 2.5.0, React-Redux 9.2.0, ApexCharts
-- **Authentication**: Keycloak 25.0.4 with OAuth2/JWT tokens
-- **AI Integration**: Multi-provider support (OpenAI, Anthropic, Cohere, Groq, Ollama, etc.)
-- **Database**: PostgreSQL with pgvector extension, vector embeddings for semantic search, organization-based multi-tenancy
-
-### Frontend Architecture Patterns (Next.js 15.1.7 + React 19 + Redux Toolkit)
-
-**Next.js Framework:**
-- **Pages Router**: File-system based routing in `src/pages/`
-- **API Routes**: Server-side API endpoints (if used)
-- **Static Generation**: Build-time page generation where applicable
-- **Server Components**: React 19 server components support
-
-**Redux Toolkit State Management:**
-- **Store Configuration**: Centralized store in `src/store/index.js`
-- **Slices**: Feature-based slices in `src/store/` directories:
-  - `activeDocument/activeDocument.js`
-  - `activeOrganization/activeOrganization.js` 
-  - `activeProject/activeProject.js`
-  - `activeTask/activeTask.js`
-  - `chat/gendoxChat.js`
-  - `globalSearch/globalSearch.js`
-  - `userData/userData.js`
-- **Async Thunks**: Redux Toolkit async actions for API calls
-- **RTK Query**: Used for caching and data fetching (where implemented)
-
-**Component Architecture:**
-- **Feature-based Organization**: Components organized by feature under `src/views/pages/`
-- **Layout Components**: Reusable layouts in `src/layouts/`
-- **Custom Components**: Shared components in `src/views/custom-components/`
-- **Context Providers**: React contexts in `src/contexts/` and `src/authentication/context/`
-
-**API Layer & Services:**
-- **Custom SDK**: Complete API abstraction in `src/gendox-sdk/` with service modules:
-  - `taskService.js`, `documentService.js`, `projectService.js`, etc.
-- **HTTP Client**: Centralized API request configuration in `src/configs/apiRequest.js`
-- **Service Pattern**: Each feature has dedicated service modules
-
-**Authentication & Authorization:**
-- **OIDC Provider**: OAuth2/OpenID Connect integration with Keycloak
-- **Auth Context**: `src/authentication/context/AuthContext.js`
-- **Route Guards**: Protected routes with `OrganizationProjectGuard`, `PrivateRoute`
-- **Token Management**: Automatic token refresh and storage
-- **Multi-tenancy**: Organization-based access control
-
-**Material-UI Integration:**
-- **Theme System**: Custom theme in `src/@core/theme/` with `GendoxThemeOptions.js`
-- **Component Overrides**: Theme overrides in `src/@core/theme/overrides/`
-- **Responsive Design**: MUI breakpoints and responsive utilities
-- **Dark/Light Mode**: Dynamic theme switching support
-
-**Routing & Navigation:**
-- **File-system Routing**: Next.js pages in `src/pages/gendox/`
-- **Protected Routes**: Authentication-based route access
-- **Dynamic Routes**: Parameterized routes for organizations/projects
-- **Vertical Navigation**: Sidebar navigation in `src/navigation/vertical/`
-
-### Backend Architecture Patterns
-- **Layered Architecture**: Controllers → Services → Repositories
-- **Domain Models**: Separate entities, DTOs, and converters
-- **Multi-tenancy**: Organization-scoped data access with security filters
-- **AI Integration**: Document processing pipeline with vector embeddings
-- **Batch Processing**: Spring Batch for long-running AI operations
-- **Event-Driven**: AWS SQS integration for async processing
-
-### Database Design & Flyway Migrations
-
-**Database Structure (PostgreSQL + pgvector):**
-- **Location**: `/database/src/main/resources/db/migrations/`
-- **Migration Files**: 80+ Flyway migration files organized chronologically
-- **Schema Management**: Version-controlled database evolution since 2023
-
-**Core Database Tables:**
-- **User & Organization Management**:
-  - `organizations` - Multi-tenant organization structure
-  - `organization_users` - User-organization relationships with roles
-  - `projects` - Organization projects
-  - `project_users` - Project-level permissions
-  - `users` - User profiles (linked to Keycloak)
-  - `user_types` - User role definitions
-
-- **Document Management**:
-  - `documents` - Document metadata and storage references  
-  - `document_instances` - Document embeddings and vector storage
-  - `document_sections` - Document content chunking for processing
-  - `temp_integration_files` - Temporary file processing
-
-- **AI & Processing**:
-  - `ai_models` - Supported AI model configurations (OpenAI, Anthropic, Cohere, etc.)
-  - `project_agents` - AI agent configurations per project
-  - `completion_agents` - AI completion settings
-  - `chat_threads` - Conversation threads
-  - `message_sections` - Chat message storage
-
-- **Task & Workflow System**:
-  - `tasks` - Document processing tasks
-  - `task_nodes` - Individual task execution nodes
-  - `audit_logs` - System activity tracking
-  - `spring_batch_*` - Spring Batch job execution tables
-
-- **Integration & External Services**:
-  - `integrations` - External service configurations
-  - `organization_web_sites` - Website integration settings
-  - `api_keys` - API key management
-  - `subscription_plans` - Pricing and usage limits
-  - `subscription_usage` - Usage tracking
-
-**Flyway Migration Categories:**
-- **Core Schema**: `V20230807_*` - Initial database structure
-- **AI Models**: `V202311*_*`, `V202407*_*` - AI provider integrations
-- **User Management**: `V202310*_*`, `V202405*_*` - Authentication & authorization
-- **Document Processing**: `V202311*_*`, `V202501*_*` - Document handling improvements
-- **Subscription System**: `V202408*_*` - Pricing and usage tracking
-- **Task System**: `V20250621_*` - New task and action framework
-- **Integrations**: `V202411*_*` - External service connections
-
-**Vector Search (pgvector):**
-- **Extension**: pgvector for semantic similarity search
-- **Embedding Storage**: `document_instances.embedding` column
-- **Index Types**: HNSW and IVFFlat indexes for performance
-- **Search Capabilities**: Semantic document search and retrieval
-
-**Database Configuration:**
-- **Environments**: Separate configurations for dev, prod, e2e, local
-- **Connection Pooling**: Configured via application profiles
-- **Migrations**: Automated via Flyway during application startup
-- **Indexes**: Optimized for main query patterns (added V20240808)
-
-**Migration Patterns:**
-- **Versioned Migrations**: `V[YYYYMMDD]_[HHMMSS]__Description.sql`
-- **Repeatable Migrations**: `R__Description.sql` for functions/triggers
-- **Demo/Test Data**: Separate migration files for development data
-- **Rollback Strategy**: Forward-only migrations with careful planning
-
-### Development Workflow
-1. **Local Setup**: Use `docker-compose up -d` to start all dependencies
-2. **API Development**: Run Spring Boot with `mvn spring-boot:run` or IDE
-3. **Frontend Development**: Run Next.js with `yarn dev` for hot reloading
-4. **Testing**: Use Playwright for E2E tests, JUnit for backend unit tests
-5. **Documentation**: Use Docusaurus for user and developer documentation
-
-### Authentication Flow
-- **Frontend**: OIDC Client → Keycloak → JWT tokens stored in localStorage
-- **Backend**: Spring Security validates JWT tokens with Keycloak public key
-- **API Calls**: Bearer token authentication with organization context
-
-### AI Feature Architecture
-- **Document Processing**: Upload → Split → Embed → Store in vector DB
-- **Chat System**: Thread-based conversations with message history
-- **Provider Abstraction**: Unified interface for multiple AI providers
-- **Semantic Search**: Vector similarity search using pgvector
-- **Tool Integration**: Support for external API calls and custom functions
-
-### Testing Strategy
-- **E2E Tests**: Playwright with fixtures for authentication and data setup
-- **API Tests**: Spring Boot Test with TestContainers for integration tests
-- **Frontend Tests**: Component testing with React Testing Library (when present)
-- **Database Tests**: Flyway migrations with version control
-
-### Configuration Management
-- **Environment Variables**: Centralized in `application.yml` and `docker-compose.yml`
-- **Profiles**: Development, testing, and production Spring profiles
-- **Secrets**: External configuration for API keys and sensitive data
-- **Feature Flags**: Environment-based feature toggles
-
-### Key Integration Points
-- **AWS S3**: Document storage and file management
-- **AWS SQS**: Async job processing and event handling
-- **Keycloak**: User authentication and authorization
-- **Multiple AI Providers**: OpenAI, Anthropic, Cohere, Azure OpenAI, etc.
-- **Vector Database**: PostgreSQL with pgvector for embeddings
+- **gendox-core-api/**: Spring Boot 3.5.8, Java 25, Spring AI 1.0.3, QueryDSL, PostgreSQL + pgvector
+- **gendox-frontend/**: Next.js 15.1.7, React 19, Material-UI 5, Redux Toolkit 2.5.0
+- **gendox-keycloak/**: Custom Keycloak 25.0.4 configuration for OAuth2/OIDC
+- **database/**: 98+ Flyway migration files under `src/main/resources/db/migrations/gendox-core/`
+- **gendox-e2e-tests/**: Playwright with Page Object Model
+- **documentation/**: Docusaurus site, deployed to Cloudflare Pages
+- **gendox-compose-scripts/**: Docker Compose configurations per environment
 
 ### Development Environment URLs
 - **API**: http://localhost:8080/gendox/api/v1
 - **Frontend**: http://localhost:3000
 - **Keycloak**: https://localhost:8443
-- **Database**: localhost:5432 (gendox/admin/admin123)
-- **Documentation**: http://localhost:3001
+- **Database**: localhost:5432 (`gendox` / `admin` / `admin123`)
 
-## Code Documentation Requirements
+---
 
-Every time you generate or modify code in this project, you must also:
+## Backend Architecture
 
-1. **Provide the full file structure** of the relevant part of the app
-2. **Include a summary of the app's styling details**, including margins, paddings, spacing, and any global styles
-3. **If you create or modify a component**, explain how it fits into the app's structure and styling system
+### Package Structure (`dev.ctrlspace.gendox`)
+- `gendoxcoreapi/controller/` — REST controllers
+- `gendoxcoreapi/services/` — business logic
+- `gendoxcoreapi/model/` — JPA entities
+- `gendoxcoreapi/repositories/` — Spring Data JPA + QueryDSL
+- `gendoxcoreapi/converters/` — entity ↔ DTO converters
+- `gendoxcoreapi/ai/engine/` — AI provider adapter layer
+- `gendoxcoreapi/messages/` — AWS SQS + Postgres queue producers
+- `gendoxcoreapi/configuration/` — Spring beans, `GendoxCoreApiApplication.java`
+- `gendoxcoreapi/discord/` — Discord bot (JDA)
+- `gendoxcoreapi/observations/` — structured logging
+- `spring.batch/` — Spring Batch jobs for async document processing
+- `integrations/` — external service adapters
+- `provenAi/` — ProvenAI integration
 
-Always output these after code changes without the user asking.
+### Key Patterns
+- **Layered**: Controllers → Services → Repositories. No business logic in controllers.
+- **Multi-tenancy**: Every data access is organization-scoped. Spring Security `@PreAuthorize` annotations enforce organization/project membership.
+- **Security annotation pattern**: `@PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")` — custom SpEL with operation name + method to extract context ID.
+- **RESTful URL structure**: `/gendox/api/v1/organizations/{orgId}/projects/{projectId}/...`
+- **AI provider abstraction**: `AiModelApiAdapterService` dispatches to OpenAI, Anthropic, Cohere, Groq, Ollama, Azure, etc. Provider env vars: `OPENAI_KEY`, `COHERE_KEY`, `GROQ_KEY`, `GEMINI_KEY`, `ANTHROPIC_KEY`, `VOYAGE_KEY`, `MISTRAL_KEY`.
+- **Document pipeline**: Upload → split into sections → embed → store in pgvector → semantic search via HNSW/IVFFlat indexes.
+- **Async jobs**: Spring Batch processes long-running tasks; AWS SQS carries inter-service events; ShedLock prevents duplicate job execution in multi-instance deployments.
+- **Rate limiting**: Bucket4j per-API-key rate limiting.
+- **Caching**: Caffeine in-process cache.
+- **File parsing**: PDFBox (PDF), docx4j (Word), Apache POI (Excel).
+- **Git integration**: JGit for document source tracking.
 
-## Consistency Rules
+### Spring Profiles
+Application configs: `application.yml`, `application-dev.yml`, `application-local.yml`, `application-docker-local.yml`, `application-prod.yml`.
 
-**Code Standards & Conventions:**
-- Always mirror existing naming, folder structure, import order, and file organization
-- Follow Next.js + React + Material-UI + Redux Toolkit conventions already present in the repository
-- Use the centralized theme for styling — no hardcoded values unless absolutely required
-- Use reusable components whenever possible instead of creating new ones
-- Always integrate error handling and loading states for API calls
-- Respect accessibility and responsiveness when using Material-UI components
-- Maintain consistent TypeScript/JavaScript patterns as established in the codebase
+Swagger UI is available at `/api-documentation` when the server is running.
 
-## Response Format Requirements
+### Notable Backend Features
+- **Virtual threads**: Enabled (Java 21+ structured concurrency).
+- **Caching**: Caffeine with 5-min expiry / 1000-item limit; custom `GendoxKeyGenerator` formats keys as `ClassName:methodName:param1:param2`.
+- **Jackson**: Custom `ObjectMapper` — `JavaTimeModule` registered, dates as ISO strings (not timestamps), unknown properties ignored, Hibernate lazy-load properties excluded via MixIn.
+- **HTTP client**: Spring 6 `RestClient` (not `RestTemplate`), configured in `RestClientConfiguration.java`.
+- **Document upload**: Max 150 MB; supported extensions `.txt`, `.md`, `.rst`, `.pdf`, `.docx`, `.doc`, `.xls`, `.xlsx`; default split at 500 words / 768 tokens.
+- **Flyway**: Disabled by default in local/dev profiles; runs automatically on startup in prod.
+- **Observability**: Micrometer + Brave tracing at 100% sample rate; Prometheus metrics endpoint; Spring Boot Actuator with `show-details: always`.
+- **S3 + Git integrations**: `services/integrations/` contains `GitIntegrationUpdateService`, `S3BucketIntegrationUpdateService`, `ApiIntegrationUpdateService`, orchestrated by `IntegrationManager`.
 
-**Claude's answers must always include, in this order:**
+---
 
-1. **Code Changes** → Full, clean, and ready-to-paste code with proper imports and exports
-2. **File Structure** → Show the relevant part of the project tree with new/updated files highlighted  
-3. **Styling & Theme Context** → Margins, paddings, spacing units, colors, typography, and which MUI tokens are used
-4. **Integration Explanation** → Where the code fits, which components use it, and how it interacts with Redux, API services, or Keycloak
-5. **Impact & Risks** → Any breaking changes, dependencies affected, database migrations needed, or potential conflicts
-6. **Next Steps** → Suggest 1–3 follow-up actions if needed (testing, deployment considerations, etc.)
+## Frontend Architecture
 
-## Global Context Commands
+### Routing (Next.js Pages Router)
+All protected pages live under `src/pages/gendox/` and are guarded by `OrganizationProjectGuard`. Public routes (`/logout`, `/accept-invitation`, `/silent-renew`) are outside `gendox/`.
 
-**The user can invoke these commands at any time:**
+**Page patterns:**
+- Pages assign `PageComponent.getLayout = page => <LayoutWrapper>{page}</LayoutWrapper>` for layout composition.
+- Pages expose a `pageConfig` object (e.g., `{ applyEffectiveOrgAndProjectIds: true }`) to control guard behavior.
+- Client-only components (e.g., EO workspace) use `dynamic(() => import(...), { ssr: false })`.
 
-- **`/sync`** → Summarize the current architecture in ≤10 bullets
-- **`/map`** → Output a module/file structure map of the relevant areas
-- **`/contracts`** → List known API endpoints and response shapes
-- **`/theme`** → Show spacing, color, and typography tokens from the MUI theme
-- **`/touches`** → List which files will be modified or created for the current task
-- **`/undo-plan`** → Suggest a safe revert plan for the latest changes
+**Guard behavior (`useOrganizationProjectGuard`):** validates in sequence — user has organizations → user belongs to org → user has projects → user belongs to project. Stores selected IDs in localStorage (`selectedOrganizationId`, `selectedProjectId`) and auto-corrects mismatched URL params.
+
+**Next.js build:** static export mode (`output: "export"`), trailing slashes enabled, `reactStrictMode` disabled.
+
+### Redux Store (`src/store/`)
+Feature slices:
+- `userData/userData.js` — authenticated user profile
+- `activeOrganization/` — selected org context
+- `activeProject/` — selected project context
+- `activeDocument/` — selected document
+- `activeProjectAgent/` — selected AI agent
+- `activeTask/` + `activeTaskNode/` + `activeTaskEdge/` — task workflow editor
+- `chat/gendoxChat.js` — messages and threads
+- `chatAttachments/` — file upload queue
+- `globalSearch/` — global search results
+- `earthObservation/` — earth observation workspace
+
+### API Service Layer (`src/gendox-sdk/`)
+One service module per domain: `documentService.js`, `projectService.js`, `chatThreadService.js`, `taskService.js`, etc. All HTTP calls go through `src/configs/apiRequest.js`. Service methods accept an explicit `token` parameter and attach it as a Bearer header — never pull the token from a global singleton inside a service.
+
+### Authentication
+- OIDC via `oidc-client-ts` with Keycloak; tokens stored in localStorage.
+- `src/authentication/context/AuthContext.js` exposes user/token state.
+- `OrganizationProjectGuard` enforces org/project membership on the frontend.
+- `IFrameMessageManagerContext` handles cross-origin messaging for embedded chat.
+
+### Theme System (`src/@core/theme/`)
+- `GendoxThemeOptions.js` — palette, spacing, typography
+- `src/@core/theme/overrides/` — 31 MUI component overrides
+- Always use theme tokens; avoid hardcoded colors or spacing values.
+
+### Consistency Rules
+- Mirror existing naming, folder structure, and import order.
+- Use Redux Toolkit async thunks for all API calls from components.
+- Integrate loading and error states for every async operation.
+- Use MUI components and theme tokens; no inline styles with raw values.
+
+### Environment Variables (Frontend)
+Key variables in `gendox-frontend/.env.local`:
+- `NEXT_PUBLIC_OIDC_AUTHORITY` — Keycloak realm URL
+- `NEXT_PUBLIC_CLIENT_ID` — OIDC client ID
+- `NEXT_PUBLIC_GENDOX_URL` — API base URL
+- `NEXT_PUBLIC_GEE_CLIENT_ID` — Google Earth Engine OAuth client ID
+- `NEXT_PUBLIC_MAPS_API_KEY` — Google Maps API key (used in Earth Observation map panel)
+- `NEXT_PUBLIC_PROVEN_AI_URL` — ProvenAI service endpoint
+- `NEXT_PUBLIC_PROVEN_AI_ENABLED` — Feature flag for ProvenAI integration
+
+---
+
+## Earth Observation (seaScope) Feature
+
+A geospatial analysis workspace integrated with Google Earth Engine (GEE). Route: `/gendox/tasks/earth-observation/workspace`.
+
+### Layout & Components
+`EarthObservationLayout.js` bypasses the standard navigation sidebar. The workspace is a resizable three-panel grid managed by `WorkspaceGrid`:
+- **MapPanel** — interactive Leaflet map rendering GEE map tiles
+- **EditorPanel** — Monaco editor with GEE-specific syntax (via `monacoGeeProvider`)
+- **ChatPanel** — AI chat embedded as an iframe (`IFrameMessageManagerContext` for cross-origin messaging)
+
+`GeeAuthGuard` wraps the workspace and ensures a valid GEE OAuth token exists (persisted in localStorage) before rendering.
+
+### Redux Store (`src/store/earthObservation/`)
+Five layout modes: `DEFAULT`, `MAP_MAX`, `CHAT_MAX`, `EDITOR_MAX`, `MAP_MIN`. Tracks split ratios, EO scripts (with optimistic create), GEE readiness, map layers, and map center.
+
+### EOScript Entities
+Backend: `EOScript.java` → `EOScriptRepository` → `EOScriptService`. Scripts are owned by a Task and accessed via `taskService.js` (`createEOScript`, `getEOScripts`, `getLatestEOScript`). The frontend applies optimistic updates — the UI inserts a script with `id: 'optimistic'` immediately while the POST request is in flight.
+
+### Cross-Origin IFrame Communication
+`IFrameMessageManagerContext` (used by ChatPanel) coordinates parent-child frame messaging. The iframe initiates with a `gendox.events.initialization.request` event; the origin URL is passed as a `?origin=` query parameter and stored in localStorage. Use `messageManager.addHandler(eventName, handler)` to register listeners.
+
+### ProvenAI Integration
+Feature-flagged (`PROVEN_AI_ENABLED`). Main classes under `provenAi/utils/`: `ProvenAiService`, `ProvenAiAgentAuthenticationAdapter`, `ProvenAiQueryAdapter`, `UniqueIdentifierCodeService` (ISCC generation). Webhook endpoint: `ProvenAiWebHookController`. Source tracked via git repo configured in `PROVEN_AI_GIT_REPOSITORY`.
+
+---
+
+## Database
+
+### Flyway Migrations
+- **Location**: `database/src/main/resources/db/migrations/gendox-core/`
+- **Naming**: `V[YYYYMMDD]_[HHMMSS]__Description.sql`
+- **Repeatable**: `R__Description.sql` for functions/triggers
+- **Demo/test data**: separate subdirectories (`demo-data/`, `test-data/`)
+- Migrations are forward-only. Plan schema changes carefully before writing a migration.
+- Migrations run automatically on backend startup via Flyway.
+
+### Core Table Groups
+- **Tenancy**: `organizations`, `organization_users`, `projects`, `project_users`
+- **Users**: `users`, `user_types` (linked to Keycloak)
+- **Documents**: `documents`, `document_instances` (with `embedding` vector column), `document_sections`
+- **AI**: `ai_models`, `project_agents`, `completion_agents`
+- **Chat**: `chat_threads`, `message_sections`
+- **Tasks**: `tasks`, `task_nodes`
+- **Subscriptions**: `subscription_plans`, `subscription_usage`
+- **Integrations**: `integrations`, `organization_web_sites`, `api_keys`
+- **Ops**: `audit_logs`, `spring_batch_*` tables
+
+### Vector Search
+pgvector extension; embeddings stored in `document_instances.embedding`; HNSW and IVFFlat indexes for similarity search.

@@ -26,7 +26,7 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
      * <p>
      * Example: for windowSize=25 and a total of 60 messages, you get
      * 25 + (60 % 25) = 35 messages.
-     *
+     * <p>
      * In worst case the message history is #25 messages, in best case it is 50 messages
      * </p>
      *
@@ -43,39 +43,39 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
     List<MessageMetadataDTO> getMessageMetadataByMessageId(@Param("messageId") UUID messageId);
 
     @Query(value = """
-    WITH ranked_messages AS (
-        SELECT
-            id,
-            value,
-            project_id,
-            thread_id,
-            created_at,
-            updated_at,
-            created_by,
-            updated_by,
-            role,
-            name,
-            tool_call_id,
-            tool_calls,
-            ROW_NUMBER() OVER (PARTITION BY thread_id ORDER BY created_at DESC) AS row_number
-        FROM gendox_core.message
-        WHERE thread_id IN :threadIds
-    )
-    SELECT id,
-            value,
-            project_id,
-            thread_id,
-            created_at,
-            updated_at,
-            created_by,
-            updated_by,
-            role,
-            name,
-            tool_call_id,
-            tool_calls
-    FROM ranked_messages
-    WHERE row_number = 1
-""", nativeQuery = true)
+                WITH ranked_messages AS (
+                    SELECT
+                        id,
+                        value,
+                        project_id,
+                        thread_id,
+                        created_at,
+                        updated_at,
+                        created_by,
+                        updated_by,
+                        role,
+                        name,
+                        tool_call_id,
+                        tool_calls,
+                        ROW_NUMBER() OVER (PARTITION BY thread_id ORDER BY created_at DESC) AS row_number
+                    FROM gendox_core.message
+                    WHERE thread_id IN :threadIds
+                )
+                SELECT id,
+                        value,
+                        project_id,
+                        thread_id,
+                        created_at,
+                        updated_at,
+                        created_by,
+                        updated_by,
+                        role,
+                        name,
+                        tool_call_id,
+                        tool_calls
+                FROM ranked_messages
+                WHERE row_number = 1
+            """, nativeQuery = true)
     List<Message> findLatestMessagesForThreads(@Param("threadIds") List<UUID> threadIds);
 
 
@@ -85,6 +85,17 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
             @Param("startDate") Instant startDate,
             @Param("endDate") Instant endDate
     );
+
+    boolean existsByIdAndThreadId(UUID id, UUID threadId);
+
+    @Query("""
+                select m.id
+                from Message m
+                where m.threadId = :threadId
+                  and m.id in :messageIds
+            """)
+    List<UUID> findIdsByThreadIdAndIdIn(@Param("threadId") UUID threadId,
+                                        @Param("messageIds") List<UUID> messageIds);
 
 
 }

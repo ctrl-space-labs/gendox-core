@@ -4,6 +4,18 @@ import { generalConstants } from 'src/utils/generalConstants'
 import chatConverter from '../../converters/chat.converter'
 import chatThreadService from '../../gendox-sdk/chatThreadService'
 import completionService from '../../gendox-sdk/completionService'
+import documentService from '../../gendox-sdk/documentService'
+
+const DEFAULT_LOCAL_CONTEXT_MAX_RESPONSES = 0 // basically dont wait
+const DEFAULT_LOCAL_CONTEXT_MAX_WAIT_MS = 10
+
+const resolveLocalContextFetchConfig = iFrameMessageManager => {
+  const config = iFrameMessageManager?.iFrameConfiguration || {}
+  return {
+    maxResponses: config.localContextMaxResponses ?? DEFAULT_LOCAL_CONTEXT_MAX_RESPONSES,
+    maxWaitTimeoutMs: config.localContextMaxWaitMs ?? DEFAULT_LOCAL_CONTEXT_MAX_WAIT_MS
+  }
+}
 
 const initialChatState = {
   threads: null,
@@ -81,7 +93,6 @@ export const fetchThreads = createAsyncThunk(
         // No projects means no threads to fetch.
         return []
       }
-      
 
       // 3. For unauthenticated users, check for local thread IDs.
       let localThreadIds = null
@@ -118,16 +129,15 @@ export const loadThread = createAsyncThunk(
         return _createNewThread(state, projectId, organizationId)
       }
 
-        // If the threadId is the same as the current threadId, return the current thread
-        let currentThread = await _fetchExistingThreadWithMessages(
-          threadId,
-          projectId,
-          organizationId,
-          dispatch,
-          token,
-          state
-        )
-
+      // If the threadId is the same as the current threadId, return the current thread
+      let currentThread = await _fetchExistingThreadWithMessages(
+        threadId,
+        projectId,
+        organizationId,
+        dispatch,
+        token,
+        state
+      )
 
       return currentThread
     } catch (error) {
@@ -153,7 +163,7 @@ export const fetchMessageMetadata = createAsyncThunk(
 export const sendMessage = createAsyncThunk(
   'gendoxChat/sendMessage',
   async (
-    { user, currentThread, message, organizationId, iFrameMessageManager, token },
+    { user, currentThread, message, uploadedDocs = [], organizationId, iFrameMessageManager, token },
     { getState, dispatch, rejectWithValue }
   ) => {
     if (!user?.id) {
@@ -169,7 +179,8 @@ export const sendMessage = createAsyncThunk(
       addMessage({
         createdBy: user.id,
         value: message,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        attachments: uploadedDocs
       })
     )
 
@@ -179,13 +190,16 @@ export const sendMessage = createAsyncThunk(
       payload: { message }
     })
 
+    const { maxResponses, maxWaitTimeoutMs } = resolveLocalContextFetchConfig(iFrameMessageManager)
     let chatLocalContextResponses = await iFrameMessageManager.messageManager.fetchResponses(
       'gendox.events.chat.message.context.local.request',
       'gendox.events.chat.message.context.local.response',
       {},
-      1,
-      200
+      maxResponses,
+      maxWaitTimeoutMs
     )
+
+    const documentInstanceIds = (uploadedDocs || []).map(d => d?.documentId).filter(Boolean)
 
     // Send the message to the server
     const response = await completionService.postCompletionMessage(
@@ -193,14 +207,11 @@ export const sendMessage = createAsyncThunk(
       threadId,
       message,
       chatLocalContextResponses,
+      documentInstanceIds,
       token
     )
 
-
-    const {
-      messages: apiMessages = [],
-      threadId: responseThreadId
-    } = response.data
+    const { messages: apiMessages = [], threadId: responseThreadId } = response.data
 
     // sending PostMessage notification
     iFrameMessageManager.messageManager.sendMessage({
@@ -211,17 +222,14 @@ export const sendMessage = createAsyncThunk(
     const toolCallsToProcess = []
 
     apiMessages.forEach(message => {
-
-      dispatch(
-        addMessage(message)
-      )
+      dispatch(addMessage(message))
 
       // If this message invoked any tool calls, stash them for later
       if (Array.isArray(message?.toolCalls) && message?.toolCalls.length) {
         message.toolCalls.forEach(call => {
           toolCallsToProcess.push({
-            threadId:       responseThreadId,
-            messageId:      message.id,
+            threadId: responseThreadId,
+            messageId: message.id,
             ...call
           })
         })
@@ -264,6 +272,80 @@ export const fetchThreadId = createAsyncThunk('gendoxChat/fetchThreadId', async 
   console.log('fetchThreadId called')
 })
 
+export const hydrateAttachmentPreviews = createAsyncThunk(
+  'gendoxChat/hydrateAttachmentPreviews',
+  async ({ threadId, token, messages }, { dispatch }) => {
+    if (!Array.isArray(messages) || messages.length === 0) return
+
+    const isImageAttachment = a => {
+      const ft = (a?.fileType?.name || '').toLowerCase()
+      const title = (a?.title || '').toLowerCase()
+      return (
+        ft.includes('image') ||
+        title.endsWith('.png') ||
+        title.endsWith('.jpg') ||
+        title.endsWith('.jpeg') ||
+        title.endsWith('.gif') ||
+        title.endsWith('.webp')
+      )
+    }
+
+    const queue = []
+    const msgs = [...messages].reverse()
+
+    for (const m of msgs) {
+      const atts = Array.isArray(m.attachments) ? m.attachments : []
+      for (const a of atts) {
+        if (!a?.documentId) continue
+        if (!isImageAttachment(a)) continue
+        if (a.previewUrl) continue
+        queue.push({ messageId: m.messageId, documentId: a.documentId })
+      }
+    }
+
+    const CONCURRENCY = 3
+    let idx = 0
+
+    const worker = async () => {
+      while (idx < queue.length) {
+        const item = queue[idx++]
+
+        dispatch(
+          chatActions.setAttachmentPreviewStatus({
+            messageId: item.messageId,
+            documentId: item.documentId,
+            previewStatus: 'loading'
+          })
+        )
+
+        try {
+          const res = await documentService.viewDocumentContent(threadId, item.documentId, token)
+          const blobUrl = URL.createObjectURL(res.data)
+
+          dispatch(
+            chatActions.setAttachmentPreview({
+              messageId: item.messageId,
+              documentId: item.documentId,
+              previewUrl: blobUrl
+            })
+          )
+        } catch (e) {
+          dispatch(
+            chatActions.setAttachmentPreviewStatus({
+              messageId: item.messageId,
+              documentId: item.documentId,
+              previewStatus: 'error'
+            })
+          )
+        }
+      }
+    }
+
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()))
+  }
+)
+
+
 const gendoxChatSlice = createSlice({
   name: 'gendoxChat',
   initialState: initialChatState,
@@ -281,6 +363,16 @@ const gendoxChatSlice = createSlice({
       state.isLoadingMetadata = null
     },
     removeCurrentThread: state => {
+      const revokeThreadPreviewUrls = thread => {
+        const msgs = thread?.messages || []
+        msgs.forEach(m => {
+          const atts = m?.attachments || []
+          atts.forEach(a => {
+            if (a?.previewUrl) URL.revokeObjectURL(a.previewUrl)
+          })
+        })
+      }
+      revokeThreadPreviewUrls(state.currentThread)
       state.currentThread = null
     },
     updateCurrentThreadWithAgent: state => {
@@ -307,6 +399,30 @@ const gendoxChatSlice = createSlice({
     },
     clearCurrentMessageMetadata: state => {
       state.currentMessageMetadata = ''
+    },
+    setAttachmentPreviewStatus: (state, action) => {
+      const { messageId, documentId, previewStatus } = action.payload
+      const msgs = state.currentThread?.messages || []
+      const msg = msgs.find(m => m.messageId === messageId)
+      if (!msg) return
+      const att = (msg.attachments || []).find(a => a.documentId === documentId)
+      if (!att) return
+      att.previewStatus = previewStatus
+    },
+
+    setAttachmentPreview: (state, action) => {
+      const { messageId, documentId, previewUrl } = action.payload
+      const msgs = state.currentThread?.messages || []
+      const msg = msgs.find(m => m.messageId === messageId)
+      if (!msg) return
+      const att = (msg.attachments || []).find(a => a.documentId === documentId)
+      if (!att) return
+
+      // revoke old preview URL if exists to avoid memory leaks
+      if (att.previewUrl) URL.revokeObjectURL(att.previewUrl)
+
+      att.previewUrl = previewUrl
+      att.previewStatus = 'ready'
     }
   },
   extraReducers: builder => {
@@ -409,6 +525,31 @@ async function _fetchExistingThreadWithMessages(threadId, projectId, organizatio
 
   // sort messages by time ascending
   chatMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+
+  const messageIds = chatMessages.map(m => m.messageId).filter(Boolean)
+  let attachmentsByMessageId = {}
+  if (messageIds.length > 0) {
+    try {
+      const attRes = await chatThreadService.getMessageAttachmentsBatch(organizationId, threadId, messageIds, token)
+      attachmentsByMessageId = attRes?.data?.attachmentsByMessageId || {}
+    } catch (e) {
+      console.error('Failed to fetch message attachments batch:', e)
+      attachmentsByMessageId = {}
+    }
+  }
+
+  // 1) attach attachments
+  chatMessages = chatMessages.map(m => {
+    const att = attachmentsByMessageId?.[m.messageId] || []
+    return {
+      ...m,
+      attachments: att.map(a => ({
+        ...a,
+        previewUrl: a.previewUrl || null,
+        previewStatus: 'idle'
+      }))
+    }
+  })
 
   let currentThread = {
     id: threadId,

@@ -1,3 +1,5 @@
+import { create, update } from 'lodash'
+import { remove } from 'nprogress'
 import commonConfig from 'src/configs/common.config.js'
 import { duplicateTask } from 'src/store/activeTask/activeTask'
 
@@ -58,6 +60,9 @@ export default {
 
   getThreadMessagesByCriteria: (threadId, page = 0, size = 10, sort = 'createdAt,desc') =>
     `${url}threads/${threadId}/messages?page=${page}&size=${size}&sort=${sort}`,
+
+  getThreadMessageAttachmentsBatch: (organizationId, threadId) =>
+    `${url}organizations/${organizationId}/threads/${threadId}/messages/attachments`,
 
   documentSections: documentId => `${url}documents/${documentId}/sections`,
 
@@ -220,5 +225,34 @@ export default {
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/digitization/export-csv`,
 
   reorderTaskQuestionNodes: (organizationId, projectId, taskId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/questions/order`
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/questions/order`,
+
+  createEOScript: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-scripts`,
+
+  getEOScripts: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-scripts`,
+
+  getLatestEOScript: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-scripts/latest`,
+
+  getEOGeometries: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-geometries`,
+
+  createEOGeometry: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-geometries`,
+
+  updateEOGeometry: (organizationId, projectId, taskId, geometryId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-geometries/${geometryId}`,
+
+  deleteEOGeometry: (organizationId, projectId, taskId, geometryId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-geometries/${geometryId}`,
+
+  deleteEOGeometries: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-geometries`,
+
+  // Document content (inline preview) + download
+  viewDocumentContent: (threadId, documentId) => `${url}threads/${threadId}/documents/${documentId}/content`,
+
+  downloadDocument: (threadId, documentId) => `${url}threads/${threadId}/documents/${documentId}/download`
 }

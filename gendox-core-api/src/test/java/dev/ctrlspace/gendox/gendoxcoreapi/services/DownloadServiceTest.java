@@ -4,10 +4,15 @@ import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.DocPageToImageOptions;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.ImageUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.DocFileReader;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.DocxFileReader;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.document.readers.ExcelFileReader;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
@@ -33,8 +38,8 @@ public class DownloadServiceTest {
     @InjectMocks
     private DownloadService downloadService;
 
-    @Spy
-    private ImageUtils imageUtils = new ImageUtils();
+    @Mock
+    private ImageUtils imageUtils;
 
     @Test
     void readDocxContent_SampleDocx() throws Exception {

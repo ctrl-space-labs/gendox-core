@@ -31,7 +31,6 @@ const StyledReactMde = styled(ReactMde)(({ theme }) => ({
 
 const NewDocument = ({ documentTitle, setDocumentTitle, markdownValue, setMarkdownValue, titleError }) => {
   const [selectedTab, setSelectedTab] = useState('write')
-  console.log('markdownValue:', markdownValue)
   // Set up the markdown converter
     const converter = new Showdown.Converter({
       tables: true,

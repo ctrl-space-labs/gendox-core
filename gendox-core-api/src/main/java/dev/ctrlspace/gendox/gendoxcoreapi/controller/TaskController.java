@@ -45,13 +45,15 @@ public class TaskController {
                           TaskEdgeConverter taskEdgeConverter,
                           TaskCsvExportService taskCsvExportService,
                           TaskNodeService taskNodeService,
-                          TaskEdgeService taskEdgeService) {
+                          TaskEdgeService taskEdgeService
+    ) {
         this.taskService = taskService;
         this.taskNodeConverter = taskNodeConverter;
         this.taskEdgeConverter = taskEdgeConverter;
         this.taskCsvExportService = taskCsvExportService;
         this.taskNodeService = taskNodeService;
         this.taskEdgeService = taskEdgeService;
+
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")

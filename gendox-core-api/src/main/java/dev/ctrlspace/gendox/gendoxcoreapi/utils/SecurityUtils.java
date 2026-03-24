@@ -1,23 +1,19 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
+
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadDocumentsRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageLocalContextService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
-import jakarta.servlet.Filter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.codec.binary.Base32;
 import org.jetbrains.annotations.Nullable;
@@ -41,23 +37,28 @@ import java.util.stream.Collectors;
 @Component("securityUtils")
 public class SecurityUtils {
 
+    private final ChatThreadDocumentsRepository chatThreadDocumentsRepository;
     Logger logger = org.slf4j.LoggerFactory.getLogger(SecurityUtils.class);
 
     private ChatThreadRepository chatThreadRepository;
     private ProjectAgentService projectAgentService;
     private DocumentInstanceRepository documentInstanceRepository;
     private UserOrganizationService userOrganizationService;
+    private MessageLocalContextService messageLocalContextService;
 
     @Autowired
     public SecurityUtils(ChatThreadRepository chatThreadRepository,
                          ProjectAgentService projectAgentService,
                          DocumentInstanceRepository documentInstanceRepository,
-                         UserOrganizationService userOrganizationService
-    ) {
+                         UserOrganizationService userOrganizationService,
+                         MessageLocalContextService messageLocalContextService,
+                         ChatThreadDocumentsRepository chatThreadDocumentsRepository) {
         this.chatThreadRepository = chatThreadRepository;
         this.projectAgentService = projectAgentService;
         this.documentInstanceRepository = documentInstanceRepository;
         this.userOrganizationService = userOrganizationService;
+        this.messageLocalContextService = messageLocalContextService;
+        this.chatThreadDocumentsRepository = chatThreadDocumentsRepository;
     }
 
 
@@ -214,9 +215,25 @@ public class SecurityUtils {
                 .map(project -> UUID.fromString(project.getId()))
                 .collect(Collectors.toSet());
 
-        return documentInstanceRepository.areAllDocumentIdsInAnyProject(
+        boolean areAllInProjectDocuments = documentInstanceRepository.areAllDocumentIdsInAnyProject(
                 documentIds.toArray(UUID[]::new),
                 authorizedProjectIds.toArray(UUID[]::new));
+        if (areAllInProjectDocuments) {
+            return true;
+        }
+
+        boolean areAllInChatDocuments = chatThreadDocumentsRepository.areAllDocumentIdsInAnyProject(documentIds.toArray(UUID[]::new),
+                authorizedProjectIds.toArray(UUID[]::new));
+
+        if (areAllInChatDocuments) {
+            return true;
+        }
+        // missing the case that some are in project documents and some in chat documents,
+        // but it is not intended to be used like that, for now :)
+        // if needed, it can be done with one query in the future
+
+        return false;
+
     }
 
 
@@ -418,6 +435,62 @@ public class SecurityUtils {
         return chatThreadRepository.existsByIdAndPublicThreadIsTrue(threadId);
     }
 
+    public boolean threadHasDocumentInMessageLocalContext(UUID threadId, UUID documentId) {
+        if (threadId == null || documentId == null) return false;
+
+        return messageLocalContextService
+                .isDocumentAttachedToThread(threadId, documentId);
+    }
+
+    /**
+     * Returns true if the currently authenticated user is the one who uploaded the document.
+     * Used to allow preview of just-uploaded attachments before they are added to a message local context.
+     */
+    public boolean isDocumentCreatedByCurrentUser(UUID documentId) {
+        if (documentId == null) return false;
+        try {
+            UUID currentUserId = getUserId();
+            if (currentUserId == null) return false;
+            return documentInstanceRepository.existsByIdAndCreatedBy(documentId, currentUserId);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private AccessCriteria getRequestedOrgIdFromDocumentIdPathVariable() {
+        HttpServletRequest request = getCurrentHttpRequest();
+        Map<String, String> uriTemplateVariables = (Map<String, String>) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+
+        String documentIdStr = null;
+        if (uriTemplateVariables != null) {
+            documentIdStr = uriTemplateVariables.get(QueryParamNames.DOCUMENT_INSTANCE_ID);
+        }
+
+        if (documentIdStr == null || documentIdStr.isBlank()) {
+            return new AccessCriteria();
+        }
+
+        UUID documentId;
+        try {
+            documentId = UUID.fromString(documentIdStr);
+        } catch (Exception e) {
+            return new AccessCriteria();
+        }
+
+
+        UUID orgId = documentInstanceRepository.findOrganizationIdByDocumentId(documentId);
+        if (orgId == null) {
+            return new AccessCriteria();
+        }
+
+        return AccessCriteria.builder()
+                .orgIds(Set.of(orgId.toString()))
+                .projectIds(Collections.emptySet())
+                .threadId("")
+                .documentIds(Collections.emptyList())
+                .build();
+    }
+
 
     public class AccessCriteriaGetterFunction {
 
@@ -430,6 +503,7 @@ public class SecurityUtils {
         public static final String THREAD_ID_FROM_PATH_VARIABLE = "getRequestedThreadIdFromPathVariable";
         public static final String DOCUMENT_ID_FROM_PATH_VARIABLE = "getRequestedDocumentIdFromPathVariable";
         public static final String DOCUMENT_IDS_FROM_REQUEST_PARAMS = "getRequestedDocumentIdsFromRequestParams";
+        public static final String ORG_ID_FROM_DOCUMENT_ID_PATH_VARIABLE = "getRequestedOrgIdFromDocumentIdPathVariable";
     }
 
 
@@ -473,6 +547,10 @@ public class SecurityUtils {
             accessCriteria = getRequestedDocumentIdsFromRequestParam();
         }
 
+        if (AccessCriteriaGetterFunction.ORG_ID_FROM_DOCUMENT_ID_PATH_VARIABLE.equals(getterFunction)) {
+            accessCriteria = getRequestedOrgIdFromDocumentIdPathVariable();
+        }
+
         if (!(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserProfile)) {
             return false;
         }
@@ -484,11 +562,12 @@ public class SecurityUtils {
 
 
     /**
-     *  Use to check for Authorization with provided AccessCriteria, this is used inside services
-     *  the other #hasAuthority is used in @PreAuthorize annotations.
+     * Use to check for Authorization with provided AccessCriteria, this is used inside services
+     * the other #hasAuthority is used in @PreAuthorize annotations.
+     * <p>
+     * To generate the AccessCriteria, you can use the related getter methods in this class.
+     * *
      *
-     *  To generate the AccessCriteria, you can use the related getter methods in this class.
-     *  *
      * @param userProfile
      * @param authority
      * @param accessCriteria
@@ -506,7 +585,6 @@ public class SecurityUtils {
         }
         return can(authority, userProfile, accessCriteria);
     }
-
 
 
     public UUID getUserId() {

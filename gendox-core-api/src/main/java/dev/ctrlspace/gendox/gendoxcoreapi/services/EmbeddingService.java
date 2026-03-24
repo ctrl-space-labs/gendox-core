@@ -221,23 +221,29 @@ public class EmbeddingService {
 
     public String getApiKey(ProjectAgent agent, String aiModelType) throws GendoxException {
         AiModel model = organizationModelKeyService.getAgentModelByType(agent, aiModelType);
-        OrganizationModelProviderKey organizationModelProviderKey = organizationModelKeyService.getKeyForAgent(agent, aiModelType);
-        String rawKey = null;
+        return getApiKey(agent.getProject().getOrganizationId(), model);
+    }
+
+    /**
+     * Resolves the API key for the given organization and model (e.g. when using an overridden completion model).
+     * Use this when the model is not the agent's default for the type (e.g. completion model overridden at runtime).
+     */
+    public String getApiKey(UUID organizationId, AiModel model) throws GendoxException {
+        OrganizationModelProviderKey organizationModelProviderKey = organizationModelKeyService.getKeyForModel(organizationId, model);
+        String rawKey;
         if (organizationModelProviderKey != null) {
             logger.debug("Using OrganizationModelProviderKey ID: {}", organizationModelProviderKey.getId());
             rawKey = organizationModelProviderKey.getKey();
         } else {
-            logger.debug("Using default API key for agent id: {} and model type: {}", agent.getId(), aiModelType);
-            rawKey = organizationModelKeyService.getDefaultKeyForAgent(agent, aiModelType);
+            logger.debug("Using default API key for organization: {} and model: {}", organizationId, model.getModel());
+            rawKey = organizationModelKeyService.getDefaultKeyForModel(organizationId, model);
 
             // OAuth2 authentication token requires special handling
             // TODO generalize to get the GCP secret per organization, this will require GCloudAuthenticationService to cache GoogleCredentials per organization
-            if ("VERTEX_AI".equals(model.getAiModelProvider().getName()) ) {
+            if ("VERTEX_AI".equals(model.getAiModelProvider().getName())) {
                 rawKey = gCloudAuthenticationService.getClientToken();
             }
         }
-
-
         return rawKey;
     }
 
@@ -335,7 +341,6 @@ public class EmbeddingService {
             })
     public List<DocumentInstanceSectionDTO> findClosestSections(Message message, Project project, Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
 
-        UUID projectId = project.getId();
         ProjectAgent agent = project.getProjectAgent();
 
         String embeddingSearchMessage = message.getValue();
@@ -356,54 +361,35 @@ public class EmbeddingService {
                 logger.debug("Advanced search message is empty, no search will be applied.");
                 embeddingSearchMessage = message.getValue();
             }
-
         }
 
-        Encoding enc = encodingRegistry.getEncodingForModel(ModelType.TEXT_EMBEDDING_3_SMALL);
-        int requestTokens = enc.encode(embeddingSearchMessage).size();
+        return findClosestSectionsByQuery(embeddingSearchMessage, message.getId(), project, pageable);
+    }
 
-        if (requestTokens > MAX_EMBEDDING_TOKENS) {
-            logger.warn("Message exceeds maximum embedding tokens. Request tokens: {}, Max tokens: {}", requestTokens, MAX_EMBEDDING_TOKENS);
-            throw new GendoxException("MESSAGE_TOO_LONG_FOR_EMBEDDING", "Message too long to perform semantic search. Enable Advanced Search, or contact the administrator.", HttpStatus.BAD_REQUEST);
-        }
+    /**
+     * Performs a full semantic search pipeline using the given query string directly, bypassing
+     * the {@code advancedSearchEnable} flag. Covers embedding → vector search → ProvenAI enrichment
+     * → reranking. Used by {@link dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.AdvancedSearchTool}
+     * so the LLM agent can trigger a targeted search at any point in its reasoning loop, and by
+     * {@link #findClosestSections} after it has optionally reformulated the query.
+     *
+     * @param searchQuery the text to embed and search with
+     * @param messageId   optional ID of the originating message (used for embedding caching); pass {@code null} when called outside a message context
+     * @param project     the project whose vector store is searched
+     * @param pageable    controls how many nearest neighbours are retrieved
+     */
+    public List<DocumentInstanceSectionDTO> findClosestSectionsByQuery(String searchQuery, @Nullable UUID messageId, Project project, Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
 
-        EmbeddingResponse embeddingResponse = getEmbeddingForMessage(project.getProjectAgent(),
-                embeddingSearchMessage,
-                project.getProjectAgent().getSemanticSearchModel());
+        List<DocumentInstanceSectionDTO> sections = findClosestSectionsCore(searchQuery, messageId, project, pageable);
 
-        String searchTextSha256Hash = cryptographyUtils.calculateSHA256(embeddingSearchMessage);
-
-        Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse,
-                projectId,
-                message.getId(),
-                null,
-                project.getProjectAgent().getSemanticSearchModel().getId(),
-                project.getOrganizationId(),
-                searchTextSha256Hash);
-
-        List<SectionDistanceDTO> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, pageable);
-
-        Map<UUID, Double> sectionsDistances = nearestEmbeddings.stream()
-                .collect(Collectors.toMap(SectionDistanceDTO::getSectionsId, SectionDistanceDTO::getDistance));
-
-        List<DocumentInstanceSection> allSections = documentSectionService.getSectionsBySectionsIn(projectId, sectionsDistances.keySet());
-
-        List<DocumentInstanceSectionDTO> allSectionsDTO = allSections
-                .stream()
-                .map(section -> documentInstanceSectionWithDocumentConverter.toDTO(section))
-                .peek(sectionDTO -> sectionDTO.setDistanceFromQuestion(sectionsDistances.get(sectionDTO.getId()))) // Set the distance from the question
-                .peek(sectionDTO -> sectionDTO.setDistanceModelName(project.getProjectAgent().getSemanticSearchModel().getName()))
-                .sorted(Comparator.comparing(DocumentInstanceSectionDTO::getDistanceFromQuestion))
-                .collect(Collectors.toList());
-
-        logger.debug("Base sections found: {}", allSections.size());
+        logger.debug("Base sections found: {}", sections.size());
 
         // Find more sections from other Projects using ProvenAI if enabled
         if (provenAiEnabled) {
             try {
                 logger.info("ProvenAI enabled");
-                List<DocumentInstanceSectionDTO> provenAiSections = this.findProvenAiClosestSections(message, project);
-                allSectionsDTO.addAll(provenAiSections);
+                List<DocumentInstanceSectionDTO> provenAiSections = this.findProvenAiClosestSections(searchQuery, project);
+                sections.addAll(provenAiSections);
                 logger.debug("ProvenAI sections added");
             } catch (GendoxException e) {
                 // swallow exception
@@ -416,20 +402,57 @@ public class EmbeddingService {
         }
 
         logger.debug("Sections after conversion: {}",
-                allSectionsDTO.stream()
-                        .map(DocumentInstanceSectionDTO::getId)
-                        .toList());
+                sections.stream().map(DocumentInstanceSectionDTO::getId).toList());
 
         // Rerank the sections
-        if (project.getProjectAgent().getRerankEnable() && !allSectionsDTO.isEmpty()) {
-            allSectionsDTO = rerankService.rerankSections(project.getProjectAgent(), allSectionsDTO, message.getValue());
+        if (project.getProjectAgent().getRerankEnable() && !sections.isEmpty() && searchQuery != null && !searchQuery.isEmpty()) {
+            sections = rerankService.rerankSections(project.getProjectAgent(), sections, searchQuery);
             logger.debug("Sections after rerank: {}",
-                    allSectionsDTO.stream()
-                            .map(DocumentInstanceSectionDTO::getId)
-                            .toList());
+                    sections.stream().map(DocumentInstanceSectionDTO::getId).toList());
         }
 
-        return allSectionsDTO;
+        return sections;
+    }
+
+    private List<DocumentInstanceSectionDTO> findClosestSectionsCore(String searchQuery, @Nullable UUID messageId, Project project, Pageable pageable) throws GendoxException, IOException, NoSuchAlgorithmException {
+        UUID projectId = project.getId();
+
+        Encoding enc = encodingRegistry.getEncodingForModel(ModelType.TEXT_EMBEDDING_3_SMALL);
+        int requestTokens = enc.encode(searchQuery).size();
+
+        if (requestTokens > MAX_EMBEDDING_TOKENS) {
+            logger.warn("Message exceeds maximum embedding tokens. Request tokens: {}, Max tokens: {}", requestTokens, MAX_EMBEDDING_TOKENS);
+            throw new GendoxException("MESSAGE_TOO_LONG_FOR_EMBEDDING", "Message too long to perform semantic search. Enable Advanced Search, or contact the administrator.", HttpStatus.BAD_REQUEST);
+        }
+
+        EmbeddingResponse embeddingResponse = getEmbeddingForMessage(project.getProjectAgent(),
+                searchQuery,
+                project.getProjectAgent().getSemanticSearchModel());
+
+        String searchTextSha256Hash = cryptographyUtils.calculateSHA256(searchQuery);
+
+        Embedding messageEmbedding = upsertEmbeddingForText(embeddingResponse,
+                projectId,
+                messageId,
+                null,
+                project.getProjectAgent().getSemanticSearchModel().getId(),
+                project.getOrganizationId(),
+                searchTextSha256Hash);
+
+        List<SectionDistanceDTO> nearestEmbeddings = findNearestEmbeddings(messageEmbedding, projectId, pageable);
+
+        Map<UUID, Double> sectionsDistances = nearestEmbeddings.stream()
+                .collect(Collectors.toMap(SectionDistanceDTO::getSectionsId, SectionDistanceDTO::getDistance));
+
+        List<DocumentInstanceSection> allSections = documentSectionService.getSectionsBySectionsIn(projectId, sectionsDistances.keySet());
+
+        return allSections
+                .stream()
+                .map(section -> documentInstanceSectionWithDocumentConverter.toDTO(section))
+                .peek(sectionDTO -> sectionDTO.setDistanceFromQuestion(sectionsDistances.get(sectionDTO.getId())))
+                .peek(sectionDTO -> sectionDTO.setDistanceModelName(project.getProjectAgent().getSemanticSearchModel().getName()))
+                .sorted(Comparator.comparing(DocumentInstanceSectionDTO::getDistanceFromQuestion))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -453,7 +476,7 @@ public class EmbeddingService {
         return functionCallNode;
     }
 
-    public List<DocumentInstanceSectionDTO> findProvenAiClosestSections(Message message, Project project) throws GendoxException, IOException {
+    public List<DocumentInstanceSectionDTO> findProvenAiClosestSections(String query, Project project) throws GendoxException, IOException {
 
         ProjectAgent projectAgent = project.getProjectAgent();
         if (projectAgent.getAgentVcJwt() == null) {
@@ -462,7 +485,7 @@ public class EmbeddingService {
 
         logger.debug("Starting search on provenAI");
 
-        List<SearchResult> provenAiSearchResults = provenAiService.search(message.getValue(), projectAgent);
+        List<SearchResult> provenAiSearchResults = provenAiService.search(query, projectAgent);
         List<DocumentInstanceSectionDTO> provenAiSections = new ArrayList<>();
         for (SearchResult searchResult : provenAiSearchResults) {
             DocumentInstanceSectionDTO sectionDTO = searchResultConverter.toDocumentInstanceDTO(searchResult);

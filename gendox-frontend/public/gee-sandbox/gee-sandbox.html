@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>GEE Sandbox</title>
+
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+    default-src 'none';
+    script-src 'unsafe-inline' 'unsafe-eval' https://ajax.googleapis.com https://apis.google.com;
+    connect-src https://earthengine.googleapis.com https://*.googleapis.com https://*.google.com;
+    img-src data: blob: *;
+    style-src 'unsafe-inline';
+  "
+    />
+
+    <script src="https://ajax.googleapis.com/ajax/libs/earthengine/0.1.347/earthengine-api.min.js"></script>
+  </head>
+  <body>
+    <script>
+      let layerAdded = false
+      let mapCenter = null  // stored when user calls Map.setCenter()
+      let lastLayerData = null  // { eeImg, visParams } — reused for on-demand screenshots
+
+      const ProxyMap = {
+        addLayer: (image, visParams = {}, name) => {
+          layerAdded = true
+
+          try {
+            // 1. check for Geometry/Feature/FeatureCollection and convert to Image
+            if (image instanceof ee.Geometry || image instanceof ee.Feature || image instanceof ee.FeatureCollection) {
+              const color = visParams.color || 'red'
+              image = ee
+                .Image()
+                .paint(image, 2)
+                .visualize({ palette: [color] })
+              visParams = {}
+            }
+
+            // 2. Ensure image is an ee.Image
+            image = ee.Image(image)
+
+            // 3. Get map tiles using the HIGH-LEVEL Image API.
+            // Passing raw JSON objects to ee.data.getMapId can break (e.g. a.split is not a function).
+            // The Image API handles serialization correctly.
+
+            // Normalize vis params to what the API expects.
+            const normalizedVisParams = { ...(visParams || {}) }
+            if (Array.isArray(normalizedVisParams.palette)) {
+              normalizedVisParams.palette = normalizedVisParams.palette.join(',')
+            }
+            if (Array.isArray(normalizedVisParams.bands)) {
+              normalizedVisParams.bands = normalizedVisParams.bands.join(',')
+            }
+
+            const eeImg = ee.Image(image)
+
+            // Prefer ee.Image.getMap (returns urlFormat in some builds), otherwise ee.Image.getMapId.
+            const getMapFn =
+              typeof eeImg.getMap === 'function'
+                ? eeImg.getMap.bind(eeImg)
+                : typeof eeImg.getMapId === 'function'
+                ? eeImg.getMapId.bind(eeImg)
+                : null
+
+            if (!getMapFn) {
+              throw new Error('Earth Engine Image map function not available (getMap/getMapId missing).')
+            }
+
+            getMapFn(normalizedVisParams, (map, error) => {
+              if (error) {
+                console.error('[Sandbox] GEE Error:', error)
+                window.parent.postMessage({ type: 'ERROR', message: error.message || String(error) }, '*')
+                return
+              }
+
+              // Different EE builds return slightly different shapes.
+              // We want a Leaflet URL template like .../{z}/{x}/{y}
+              const urlFormat = map && (map.urlFormat || map.url || (map.tiles && map.tiles[0] && map.tiles[0].url))
+
+              if (!urlFormat) {
+                console.warn('[Sandbox] Map response without urlFormat:', map)
+                window.parent.postMessage({ type: 'ERROR', message: 'Map response missing urlFormat.' }, '*')
+                return
+              }
+
+              window.parent.postMessage({ type: 'SUCCESS', payload: { url: urlFormat, name: name || 'Layer' } }, '*')
+
+              // Store the last rendered image so on-demand screenshots can reuse it
+              lastLayerData = { eeImg, visParams: normalizedVisParams }
+
+              // Request a static thumbnail asynchronously so the map tiles
+              // appear immediately while the thumbnail is still being generated.
+              // A region is required — without it GEE renders a blank image.
+              // We derive the region from the center+zoom the user set via Map.setCenter().
+              // Skip the thumbnail entirely if the user script never called Map.setCenter().
+              if (mapCenter) try {
+                const thumbParams = { dimensions: '512', format: 'png' }
+                if (normalizedVisParams.bands)            thumbParams.bands   = normalizedVisParams.bands
+                if (normalizedVisParams.min !== undefined) thumbParams.min    = normalizedVisParams.min
+                if (normalizedVisParams.max !== undefined) thumbParams.max    = normalizedVisParams.max
+                if (normalizedVisParams.palette)           thumbParams.palette = normalizedVisParams.palette
+
+                // At zoom z a 512-px wide tile covers 360/2^z degrees of longitude.
+                // We use the same value for latitude (clamped) to get a square region.
+                const halfDeg = 360 / Math.pow(2, mapCenter.zoom || 6)
+                thumbParams.region = ee.Geometry.Rectangle([
+                  Math.max(-180, mapCenter.lon - halfDeg),
+                  Math.max(-90,  mapCenter.lat - halfDeg),
+                  Math.min(180,  mapCenter.lon + halfDeg),
+                  Math.min(90,   mapCenter.lat + halfDeg)
+                ])
+
+                eeImg.getThumbURL(thumbParams, (thumbUrl, thumbErr) => {
+                  if (thumbErr || !thumbUrl) {
+                    console.warn('[Sandbox] Thumbnail error:', thumbErr)
+                    return
+                  }
+                  window.parent.postMessage({ type: 'THUMBNAIL', payload: { url: thumbUrl } }, '*')
+                })
+              } catch (thumbEx) {
+                console.warn('[Sandbox] getThumbURL unavailable:', thumbEx)
+              }  // end if (mapCenter)
+            })
+          } catch (err) {
+            console.error('[Sandbox] addLayer crash:', err)
+            window.parent.postMessage({ type: 'ERROR', message: 'addLayer Error: ' + err.message }, '*')
+          }
+        },
+
+        setCenter: (lon, lat, zoom) => {
+          mapCenter = { lon, lat, zoom }  // save for thumbnail region
+          window.parent.postMessage({ type: 'CENTER', payload: { center: { lon, lat, zoom } } }, '*')
+        },
+
+        centerObject: (obj, zoom) => {
+          try {
+            const geom = (obj && typeof obj.geometry === 'function') ? obj.geometry() : obj
+            ee.Geometry(geom).centroid(1).evaluate((result, err) => {
+              if (err || !result || !result.coordinates) return
+              const [lon, lat] = result.coordinates
+              const z = zoom != null ? zoom : (mapCenter ? mapCenter.zoom : 6)
+              mapCenter = { lon, lat, zoom: z }
+              window.parent.postMessage({ type: 'CENTER', payload: { center: { lon, lat, zoom: z } } }, '*')
+            })
+          } catch (ex) {
+            console.warn('[Sandbox] centerObject failed:', ex)
+          }
+        },
+
+        setZoom: zoom => {
+          if (mapCenter) mapCenter.zoom = zoom
+          else mapCenter = { lon: 0, lat: 0, zoom }
+          window.parent.postMessage({ type: 'ZOOM', payload: { zoom } }, '*')
+        },
+
+        getBounds: () => {
+          if (!mapCenter) return null
+          const halfDeg = 360 / Math.pow(2, mapCenter.zoom || 6)
+          return ee.Geometry.Rectangle([
+            Math.max(-180, mapCenter.lon - halfDeg),
+            Math.max(-90,  mapCenter.lat - halfDeg),
+            Math.min(180,  mapCenter.lon + halfDeg),
+            Math.min(90,   mapCenter.lat + halfDeg)
+          ])
+        },
+
+        clear: () => {
+          window.parent.postMessage({ type: 'CLEAR_LAYERS' }, '*')
+        },
+
+        getZoom: () => mapCenter?.zoom ?? 6,
+
+        getScale: () => {
+          if (!mapCenter) return 1000
+          const zoom = mapCenter.zoom ?? 6
+          const lat  = mapCenter.lat  ?? 0
+          return 156543.03 * Math.cos(lat * Math.PI / 180) / Math.pow(2, zoom)
+        },
+
+        setOptions: options => {
+          window.parent.postMessage({ type: 'MAP_OPTIONS', payload: options }, '*')
+        },
+
+        // Code-Editor-only / UI methods — silent no-ops
+        layers:                () => [],
+        add:                   () => {},
+        setControlVisibility:  () => {},
+        onClick:               () => {},
+        onChangeCenter:        () => {},
+        onChangeZoom:          () => {},
+        drawingTools:          () => ({ setShown: () => {}, getShapes: () => [] }),
+        style:                 () => ({ set: () => {} })
+      }
+
+      /**
+       * Builds the `geometries` object passed into the user script (4th argument to `new Function(..., 'geometries', code)`).
+       *
+       * **Return value:** a plain object (not an Array). Each own property value is an `ee.Geometry` for one map-drawn
+       * geometry. The same `ee.Geometry` instance may appear under several keys:
+       * - **Index** — `0`, `1`, … so `geometries[2]` and `geometries["2"]` work (object keys are strings in JS).
+       * - **Exact label** — `title` or `name` from the parent payload, e.g. `geometries["Polygon 3"]`.
+       * - **Slug** — label lowercased with non-alphanumerics removed, e.g. `geometries.polygon3`, `geometries.athens`.
+       *
+       * Call only after the Earth Engine client is loaded (`ee` global). Rows that fail to parse are skipped.
+       *
+       * @param {Array<{ geometryTypeName?: string, coordinates?: string|Array, title?: string, name?: string }>} rawGeometries
+       * @returns {Object<string, *>} Plain object; each value is an `ee.Geometry` from the Earth Engine API.
+       */
+      function buildGeometriesLookup(rawGeometries) {
+        const list = rawGeometries || []
+
+        function parseOne(g) {
+          try {
+            const coords = typeof g.coordinates === 'string' ? JSON.parse(g.coordinates) : g.coordinates
+            const type = (g.geometryTypeName || '').toUpperCase()
+            if (type === 'POINT') return ee.Geometry.Point(coords)
+            if (type === 'LINEAR_RING') return ee.Geometry.LinearRing(coords)
+            if (type === 'POLYGON') return ee.Geometry.Polygon(coords)
+          } catch (ex) {
+            console.warn('[Sandbox] buildGeometriesLookup parse failed for', g, ex)
+          }
+          return null
+        }
+
+        function slugKey(label) {
+          return String(label).toLowerCase().replace(/[^a-z0-9]+/g, '')
+        }
+
+        const out = {}
+        list.forEach((g, i) => {
+          const geom = parseOne(g)
+          if (!geom) return
+          out[i] = geom
+          const label = g.title || g.name
+          if (label) {
+            out[label] = geom
+            const slug = slugKey(label)
+            if (slug) out[slug] = geom
+          }
+        })
+        return out
+      }
+
+      window.addEventListener('message', event => {
+        const { type, code, token } = event.data
+
+        // On-demand screenshot: use current Leaflet map bounds from MapPanel
+        if (type === 'GET_THUMB') {
+          if (!lastLayerData) return
+          const { eeImg, visParams } = lastLayerData
+          const { south, west, north, east } = event.data.payload
+          try {
+            const thumbParams = { dimensions: '1024', format: 'png', bestEffort: true }
+            if (visParams.bands)            thumbParams.bands   = visParams.bands
+            if (visParams.min !== undefined) thumbParams.min    = visParams.min
+            if (visParams.max !== undefined) thumbParams.max    = visParams.max
+            if (visParams.palette)           thumbParams.palette = visParams.palette
+            thumbParams.region = ee.Geometry.Rectangle([west, south, east, north])
+            eeImg.getThumbURL(thumbParams, (thumbUrl, thumbErr) => {
+              if (thumbErr || !thumbUrl) {
+                console.warn('[Sandbox] Screenshot thumbnail error:', thumbErr)
+                window.parent.postMessage({ type: 'ERROR', message: 'Screenshot failed: ' + thumbErr }, '*')
+                return
+              }
+              window.parent.postMessage({ type: 'SCREENSHOT', payload: { url: thumbUrl } }, '*')
+            })
+          } catch (ex) {
+            console.warn('[Sandbox] GET_THUMB error:', ex)
+          }
+          return
+        }
+
+        if (type === 'EXECUTE') {
+          layerAdded = false
+          mapCenter = null  // reset for new run
+          lastLayerData = null  // reset for new run
+
+          try {
+            ee.data.setAuthToken(null, 'Bearer', token)
+
+            ee.initialize(
+              null,
+              null,
+              () => {
+                try {
+                  // Proxy for GEE print() — handles both plain values and lazy EE objects
+                  const proxyPrint = (...args) => {
+                    args.forEach(a => {
+                      if (a != null && typeof a.evaluate === 'function') {
+                        // EE lazy object — evaluate server-side then post result
+                        a.evaluate((val, err) => {
+                          const text = err ? `[Error: ${err}]` : JSON.stringify(val, null, 2)
+                          console.log('[GEE print]', text)
+                          window.parent.postMessage({ type: 'PRINT', payload: { message: text } }, '*')
+                        })
+                      } else {
+                        const text = (typeof a === 'object' && a !== null) ? JSON.stringify(a) : String(a ?? '')
+                        console.log('[GEE print]', text)
+                        window.parent.postMessage({ type: 'PRINT', payload: { message: text } }, '*')
+                      }
+                    })
+                  }
+
+                  const geometries = buildGeometriesLookup(event.data.geometries)
+
+                  const userFunc = new Function('ee', 'Map', 'print', 'geometries', code)
+                  userFunc(ee, ProxyMap, proxyPrint, geometries)
+
+                  setTimeout(() => {
+                    if (!layerAdded) {
+                      window.parent.postMessage({ type: 'SUCCESS', payload: { url: null } }, '*')
+                    }
+                  }, 500)
+                } catch (runErr) {
+                  window.parent.postMessage({ type: 'ERROR', message: 'Runtime Error: ' + runErr.message }, '*')
+                }
+              },
+              initErr => {
+                window.parent.postMessage({ type: 'ERROR', message: 'Init Failed: ' + initErr }, '*')
+              }
+            )
+          } catch (err) {
+            window.parent.postMessage({ type: 'ERROR', message: err.message }, '*')
+          }
+        }
+      })
+
+      window.parent.postMessage({ type: 'IFRAME_READY' }, '*')
+    </script>
+  </body>
+</html>

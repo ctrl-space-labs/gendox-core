@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class MessageService {
@@ -191,6 +192,25 @@ public class MessageService {
         if (documentId != null) {
             messageSectionRepository.deleteByDocumentId(documentId);
         }
+    }
+
+
+    public boolean areAllMessagesInThread(UUID threadId, List<UUID> messageIds) {
+        if (threadId == null || messageIds == null || messageIds.isEmpty()) return false;
+
+        // normalize (dedupe + remove nulls)
+        Set<UUID> requested = messageIds.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (requested.isEmpty()) return false;
+
+        // 1 query: returns only ids that belong to thread
+        List<UUID> validList = messageRepository.findIdsByThreadIdAndIdIn(threadId, new ArrayList<>(requested));
+        Set<UUID> valid = new HashSet<>(validList);
+
+        // if all requested ids are in valid, then the client request is valid
+        return valid.containsAll(requested);
     }
 
 }

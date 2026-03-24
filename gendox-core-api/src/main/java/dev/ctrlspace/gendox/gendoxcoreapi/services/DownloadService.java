@@ -45,10 +45,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Stream;
 
 @Service
@@ -191,10 +188,28 @@ public class DownloadService {
             return readDocContent(resource);
         } else if (isXlsFile(fileExtension) || isXlsxFile(fileExtension)) {
             return readExcelContent(resource);
+        } else if (isImageFile(fileExtension)) {
+            throw new GendoxException("ERROR_IMAGE_FILE_TYPE", "File type " + fileExtension + " is an image and cannot be converted to text.", HttpStatus.UNSUPPORTED_MEDIA_TYPE );
         } else {
             throw new GendoxException("ERROR_UNSUPPORTED_FILE_TYPE", "Unsupported file type: " + fileExtension, HttpStatus.BAD_REQUEST);
         }
 
+    }
+
+    public String readDocumentImageToBase64(String documentUrl) throws GendoxException, IOException {
+        Resource resource = openResource(documentUrl);
+
+        String fileExtension = getFileExtension(documentUrl, resource);
+
+        if (!isImageFile(fileExtension)) {
+            throw new GendoxException(
+                    "ERROR_NOT_IMAGE_FILE_TYPE",
+                    "File type " + fileExtension + " is not an image and cannot be converted to Base64.",
+                    HttpStatus.UNSUPPORTED_MEDIA_TYPE
+            );
+        }
+
+        return imageUtils.toBase64(resource, fileExtension);
     }
 
     /**
@@ -264,7 +279,7 @@ public class DownloadService {
     }
 
 
-    private @NotNull String getFileExtension(String documentUrl, Resource resource) throws GendoxException {
+    public @NotNull String getFileExtension(String documentUrl, Resource resource) throws GendoxException {
         String fileExtension = getFileExtension(documentUrl);
         if (fileExtension == null) {
             fileExtension = getFileExtension(resource.getFilename());
@@ -447,8 +462,13 @@ public class DownloadService {
     }
 
     private boolean isXlsxFile(String extension) {
-
         return ".xlsx".equals(extension);
-
     }
+
+    public boolean isImageFile(String extension) {
+        return Set.of( ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".avif", ".heic", ".heif", ".jxl", ".ico", ".svg" )
+                .contains(extension);
+    }
+
+
 }

@@ -5,18 +5,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
-import com.knuddels.jtokkit.api.ModelType;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContext;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRuntimeOverridesDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,7 +98,8 @@ public class InsightsSummaryProcessor implements ItemProcessor<TaskDocumentQuest
 
 
         // each document should pass only one from the processor, if not, then multiple summaries will be created
-        CompletionAnswerSummary answerSummary = getDocumentAnswerSummary(documentGroupWithQuestions, task, project);
+        CompletionRuntimeOverridesDTO overrides = taskService.buildCompletionOverrides(task);
+        CompletionAnswerSummary answerSummary = getDocumentAnswerSummary(documentGroupWithQuestions, task, project, overrides);
         if (answerSummary == null) {
             return null;
         }
@@ -128,7 +125,7 @@ public class InsightsSummaryProcessor implements ItemProcessor<TaskDocumentQuest
     }
 
 
-    private CompletionAnswerSummary getDocumentAnswerSummary(TaskDocumentQuestionsDTO documentGroupWithQuestions, Task task, Project project) {
+    private CompletionAnswerSummary getDocumentAnswerSummary(TaskDocumentQuestionsDTO documentGroupWithQuestions, Task task, Project project, CompletionRuntimeOverridesDTO overrides) {
         TaskNodeCriteria allAnswersForDocumentCriteria = TaskNodeCriteria.builder()
                 .taskId(documentGroupWithQuestions.getTaskId())
                 .nodeTypeNames(List.of("ANSWER"))
@@ -205,17 +202,17 @@ public class InsightsSummaryProcessor implements ItemProcessor<TaskDocumentQuest
         message.setUpdatedBy(project.getProjectAgent().getUserId());
         message = messageService.createMessage(message);
 
-        CompletionAnswerSummary completionQuestionResponse = getCompletionSummary(message, project, documentGroupWithQuestions.getDocumentNode());
+        CompletionAnswerSummary completionQuestionResponse = getCompletionSummary(message, project, documentGroupWithQuestions.getDocumentNode(), overrides);
         return completionQuestionResponse;
     }
 
 
-    private @Nullable CompletionAnswerSummary getCompletionSummary(Message message, Project project, TaskNode documentNode) {
+    private @Nullable CompletionAnswerSummary getCompletionSummary(Message message, Project project, TaskNode documentNode, CompletionRuntimeOverridesDTO overrides) {
         CompletionAnswerSummary answer;
         List<Message> response = null;
         try {
             response = completionService.getCompletion(message, new ArrayList<>(), project, buildResponseSchema(new ParameterizedTypeReference<CompletionAnswerSummary>() {
-            }));
+            }), overrides);
             answer = objectMapper.readValue(response.getLast().getValue(), CompletionAnswerSummary.class);
         } catch (GendoxException e) {
             logger.warn("Error getting completion for message: {}, error: {}", message.getId(), e.getMessage());

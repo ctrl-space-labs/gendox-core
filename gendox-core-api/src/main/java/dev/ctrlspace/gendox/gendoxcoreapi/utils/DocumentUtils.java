@@ -28,6 +28,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -46,6 +47,8 @@ public class DocumentUtils {
 
     @Autowired
     private ResourceLoader resourceLoader;
+    @Autowired
+    private CryptographyUtils cryptographyUtils;
 
     @Autowired
     public DocumentUtils(IsccCodeService isccCodeService,
@@ -75,10 +78,13 @@ public class DocumentUtils {
         return documentIsccCode;
     }
 
-    public String saveFile(MultipartFile file, UUID organizationId, UUID projectId) throws IOException {
+    public String saveFile(MultipartFile file, UUID organizationId, UUID projectId, String prefix) throws IOException {
         String fileName = file.getOriginalFilename();
         String cleanFileName = Paths.get(fileName).getFileName().toString();
         String filePathPrefix = organizationId + "/" + projectId;
+        if (prefix != null) {
+            filePathPrefix = filePathPrefix + "/" + prefix;
+        }
         String fullFilePath = uploadDir + "/" + filePathPrefix + "/" + cleanFileName;
 
         createLocalFileDirectory(filePathPrefix);
@@ -185,6 +191,14 @@ public class DocumentUtils {
             logger.error("Invalid URL: {}", url);
             throw new IllegalArgumentException("Invalid URL provided: " + url, e);
         }
+    }
+
+    public boolean hasChanged( String currentDocContent, String oldSHA256) throws NoSuchAlgorithmException {
+        String newHash = cryptographyUtils.calculateSHA256(currentDocContent);
+        if (newHash.equals(oldSHA256)) {
+            return false;
+        }
+        return true;
     }
 
 

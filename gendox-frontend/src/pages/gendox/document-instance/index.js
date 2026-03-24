@@ -11,7 +11,7 @@ import Icon from 'src/views/custom-components/mui/icon/icon'
 import toast from 'react-hot-toast'
 import { fetchDocument, updateSectionsOrder } from 'src/store/activeDocument/activeDocument'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 
 import SectionCard from 'src/views/pages/documents-components/SectionCard'
 import SectionEdit from 'src/views/pages/documents-components/SectionEdit'

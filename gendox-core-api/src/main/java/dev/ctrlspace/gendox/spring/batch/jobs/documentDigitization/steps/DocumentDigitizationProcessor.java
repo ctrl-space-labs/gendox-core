@@ -1,8 +1,12 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRuntimeOverridesDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.DocPageToImageOptions;
@@ -35,6 +39,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
     private final CompletionService completionService;
     private final ProjectService projectService;
     private final TaskExecutor asyncLlmCompletionsExecutor;
+    private final ObjectMapper objectMapper;
 
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private boolean reGenerateExistingAnswers;
@@ -56,7 +61,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
                                          DocumentService documentService,
                                          DownloadService downloadService,
                                          MessageService messageService,
-                                         TaskExecutor asyncLlmCompletionsExecutor) {
+                                         TaskExecutor asyncLlmCompletionsExecutor, ObjectMapper objectMapper) {
         this.taskService = taskService;
         this.taskNodeService = taskNodeService;
         this.documentService = documentService;
@@ -65,6 +70,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         this.projectService = projectService;
         this.messageService = messageService;
         this.asyncLlmCompletionsExecutor = asyncLlmCompletionsExecutor;
+        this.objectMapper = objectMapper;
     }
 
 
@@ -129,18 +135,18 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         int endPage = totalPages - 1;
         Integer pageFromParam = documentMetadata.getPageFrom();
         Integer pageToParam = documentMetadata.getPageTo();
-        
+
         if (pageFromParam != null) {
             startPage = Math.max(0, pageFromParam - 1); // Convert from 1-based to 0-based
         }
-        
+
         if (pageToParam != null) {
             endPage = Math.min(totalPages - 1, pageToParam - 1); // Convert from 1-based to 0-based
         }
-        
+
         if (startPage > endPage) {
-            logger.warn("Invalid page range: pageFrom {} is greater than pageTo {} for document {}", 
-                       startPage + 1, endPage + 1, documentInstance.getId());
+            logger.warn("Invalid page range: pageFrom {} is greater than pageTo {} for document {}",
+                    startPage + 1, endPage + 1, documentInstance.getId());
             return null;
         }
 
@@ -202,7 +208,6 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
                 documentNode.getId(), documentInstance.getId(), promptPreview, structure);
 
 
-
         return batch;
     }
 
@@ -237,9 +242,14 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
                     List<Message> response;
                     try {
-                        response = completionService.getCompletion(message, new ArrayList<>(), project, null);
+                        CompletionRuntimeOverridesDTO overrides = taskService.buildCompletionOverrides(task);
+                        JsonNode node = objectMapper.readTree(documentNode.getNodeValue().getDocumentMetadata().getStructure());
+                        ObjectNode schemaResponse = objectMapper.convertValue(node, ObjectNode.class);
+                        response = completionService.getCompletion(message, new ArrayList<>(), project, schemaResponse, overrides);
                     } catch (GendoxException e) {
                         throw new GendoxRuntimeException(e.getHttpStatus(), e.getErrorCode(), e.getMessage(), e);
+                    } catch (Exception e) {
+                        throw new GendoxRuntimeException(HttpStatus.INTERNAL_SERVER_ERROR, "COMPLETION_FAILED", "Failed to get completion response: " + e.getMessage(), e);
                     }
 
                     return AnswerCreationDTO.builder()

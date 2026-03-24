@@ -148,7 +148,6 @@ const IFrameAuthProvider = ({ children, initialAuth }) => {
   useEffect(() => {
     const { organizationId, projectId } = router.query;
     const token = window.localStorage.getItem(localStorageConstants.accessTokenKey);
-    console.log('user', user)
     if (user && user.organizations.length > 0 && organizationId && projectId) {
       dispatch(
         fetchOrganization({

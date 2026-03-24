@@ -56,12 +56,10 @@ public class ProjectDocumentService {
 
     public ProjectDocument createProjectDocument(UUID projectID, UUID documentId) throws GendoxException {
         ProjectDocument projectDocument = new ProjectDocument();
-        Project project = new Project();
-        project = projectRepository.findById(projectID)
+        Project project = projectRepository.findById(projectID)
                 .orElseThrow(() -> new GendoxException("PROJECT_NOT_FOUND", "Project not found with id: " + projectID, HttpStatus.NOT_FOUND));
 
-        DocumentInstance documentInstance = new DocumentInstance();
-        documentInstance = documentInstanceRepository.findDocumentInstanceById(documentId)
+        DocumentInstance documentInstance = documentInstanceRepository.findDocumentInstanceById(documentId)
                 .orElseThrow(() -> new GendoxException("DOCUMENT_NOT_FOUND", "Document not found with id: " + documentId, HttpStatus.NOT_FOUND));
 
 

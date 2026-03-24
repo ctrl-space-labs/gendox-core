@@ -5,9 +5,11 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,7 +29,7 @@ public class SplitFileService {
 
 
     @Autowired
-    public SplitFileService(DocumentService documentService,
+    public SplitFileService(@Lazy DocumentService documentService,
                             DownloadService downloadService,
                             ProjectAgentService projectAgentService,
                             ServiceSelector serviceSelector) {
@@ -57,20 +59,25 @@ public class SplitFileService {
 
     public List<String> splitDocument(DocumentInstance documentInstance) throws GendoxException, IOException {
         String fileContent = downloadService.readDocumentContent(documentInstance.getRemoteUrl());
+        return splitDocument(documentInstance, fileContent);
+    }
 
+    public List<String> splitDocument(DocumentInstance documentInstance, String fileContent) throws GendoxException, IOException {
         ProjectAgent agent = projectAgentService.getAgentByDocumentId(documentInstance.getId());
-
         String splitterTypeName = agent.getDocumentSplitterType().getName();
 
         DocumentSplitter documentSplitter = serviceSelector.getDocumentSplitterByName(splitterTypeName);
         if (documentSplitter == null) {
-            throw new GendoxException("DOCUMENT_SPLITTER_NOT_FOUND", "Document splitter not found with name: " + splitterTypeName, HttpStatus.NOT_FOUND);
+            throw new GendoxException(
+                    "DOCUMENT_SPLITTER_NOT_FOUND",
+                    "Document splitter not found with name: " + splitterTypeName,
+                    HttpStatus.NOT_FOUND
+            );
         }
 
-        List<String> contentSections = documentSplitter.split(fileContent);
-
-        return contentSections;
+        return documentSplitter.split(fileContent);
     }
+
 
 
 

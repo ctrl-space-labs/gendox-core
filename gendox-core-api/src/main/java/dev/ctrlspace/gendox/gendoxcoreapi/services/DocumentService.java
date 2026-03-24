@@ -1,27 +1,30 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.messages.postgres.QueueProducerService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -29,6 +32,9 @@ import java.util.stream.Collectors;
 public class DocumentService {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentService.class);
+    private final SecurityUtils securityUtils;
+    private final UploadService uploadService;
+    private final QueueProducerService queueProducerService;
 
     private DocumentInstanceRepository documentInstanceRepository;
     private DocumentSectionService documentSectionService;
@@ -40,6 +46,8 @@ public class DocumentService {
     private EntityManager entityManager;
     private DownloadService downloadService;
 
+    private final String documentUploadTopicName;
+
 
     @Autowired
     public DocumentService(DocumentInstanceRepository documentInstanceRepository,
@@ -50,7 +58,8 @@ public class DocumentService {
                            SubscriptionValidationService subscriptionValidationService,
                            EntityManager entityManager,
                            TaskNodeService taskNodeService,
-                           DownloadService downloadService) {
+                           @Value("${gendox.topics.document-upload}") String documentUploadTopicName,
+                           DownloadService downloadService, SecurityUtils securityUtils, UploadService uploadService, QueueProducerService queueProducerService) {
         this.documentInstanceRepository = documentInstanceRepository;
         this.documentSectionService = documentSectionService;
         this.projectDocumentService = projectDocumentService;
@@ -59,7 +68,11 @@ public class DocumentService {
         this.subscriptionValidationService = subscriptionValidationService;
         this.entityManager = entityManager;
         this.taskNodeService = taskNodeService;
+        this.documentUploadTopicName = documentUploadTopicName;
         this.downloadService = downloadService;
+        this.securityUtils = securityUtils;
+        this.uploadService = uploadService;
+        this.queueProducerService = queueProducerService;
     }
 
 
@@ -76,13 +89,20 @@ public class DocumentService {
 
 
     public Page<DocumentInstance> getAllDocuments(DocumentCriteria criteria, Pageable pageable) throws GendoxException {
+        Page<DocumentInstance> page = documentInstanceRepository.findAll(DocumentPredicates.build(criteria), pageable);
+        logger.info("Fetched {} docs, criteria={}", page.getNumberOfElements(), criteria);
 
-        return documentInstanceRepository.findAll(DocumentPredicates.build(criteria), pageable);
+        return page;
 
     }
 
     public DocumentInstance getDocumentByFileName(UUID projectId, UUID organizationId, String fileName) throws GendoxException {
         return documentInstanceRepository.findByProjectIdAndOrganizationIdAndFileName(projectId, organizationId, fileName)
+                .orElse(null);
+    }
+
+    public DocumentInstance getDocumentByRemoteUrl(UUID organizationId, String remoteUrl) throws GendoxException {
+        return documentInstanceRepository.findByOrganizationIdAndRemoteUrl(organizationId, remoteUrl)
                 .orElse(null);
     }
 
@@ -287,6 +307,29 @@ public class DocumentService {
         }
 
 
+    }
+
+
+    @Transactional(rollbackOn = Exception.class)
+    public @NotNull DocumentInstance uploadSingleFile(MultipartFile file, boolean messageAttachment, UUID threadId, UUID organizationId, UUID projectId) throws IOException, GendoxException, NoSuchAlgorithmException {
+        UUID userId = securityUtils.getUserId();
+        DocumentInstance documentInstance = uploadService.uploadFile(file, organizationId, projectId, messageAttachment, userId, threadId);
+
+        DocumentCriteria.DocumentCriteriaBuilder documentCriteriaBuilder = DocumentCriteria
+                .builder()
+                .documentInstanceId(String.valueOf(documentInstance.getId()))
+                .projectId(projectId.toString());
+
+        if (messageAttachment)  {
+            // split inline
+            // files uploaded for messages need to synchronously be split ASAP, so the content is available for message completion
+            // also chat thread documents are not part of the knowledge base, so they don't get selected by the split and training jobs
+            documentSectionService.splitDocumentAndCreateSections(documentInstance, true);
+        } else {
+            // queue for splitting and training
+            queueProducerService.convertAndSend(documentUploadTopicName, documentCriteriaBuilder.build(), Map.of());
+        }
+        return documentInstance;
     }
 
 

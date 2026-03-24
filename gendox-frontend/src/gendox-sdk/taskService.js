@@ -474,6 +474,9 @@ const reorderTaskQuestionNodes = async (organizationId, projectId, taskId, order
   )
 }
 
+
+
+
 export default {
   createTask,
   duplicateTask,
@@ -498,5 +501,6 @@ export default {
   documentInsightsExportAllCSV,
   documentInsightsExportCSV,
   documentDigitizationExportCSV,
-  reorderTaskQuestionNodes
+  reorderTaskQuestionNodes,
+  documentDigitizationExportCSV,
 }

@@ -4,7 +4,15 @@ import Icon from 'src/views/custom-components/mui/icon/icon'
 import UserIcon from 'src/layouts/components/UserIcon'
 import { AgentAvatar } from 'src/views/pages/chat/utils/chatUtils'
 
-const ChatConversationHeader = ({ hidden, handleDrawerToggle, currentThread, themeConfig, handleInsightsToggle, isLoadingMessages }) => {
+const ChatConversationHeader = ({
+  hidden,
+  handleDrawerToggle,
+  currentThread,
+  themeConfig,
+  handleInsightsToggle,
+  isLoadingMessages,
+  chatInsightView
+}) => {
   const theme = useTheme()
 
   return (
@@ -16,7 +24,7 @@ const ChatConversationHeader = ({ hidden, handleDrawerToggle, currentThread, the
         justifyContent: 'space-between',
         borderBottom: `1px solid ${theme.palette.divider}`,
         height: 60,
-        filter: isLoadingMessages  ? 'blur(6px)' : 'none',
+        filter: isLoadingMessages ? 'blur(6px)' : 'none'
       }}
     >
       {/* Left group */}
@@ -27,7 +35,15 @@ const ChatConversationHeader = ({ hidden, handleDrawerToggle, currentThread, the
           </IconButton>
         )}
 
-        <ListItemIcon sx={{ mr: 2.5, color: 'text.primary', transition: 'margin .25s ease-in-out', cursor: 'pointer' }} onClick={handleInsightsToggle}> 
+        <ListItemIcon
+          sx={{
+            mr: 2.5,
+            color: 'text.primary',
+            transition: 'margin .25s ease-in-out',
+            cursor: chatInsightView ? 'pointer' : 'default'
+          }}
+          onClick={handleInsightsToggle}
+        >
           <UserIcon icon={() => <AgentAvatar isSelected={false} fullName={currentThread?.agent?.fullName} />} />
         </ListItemIcon>
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import { styled, useTheme } from '@mui/material/styles'
 import { useSettings } from 'src/@core/hooks/useSettings'
@@ -18,6 +18,7 @@ const gendoxChatConfig = {
   chatUrlPath: '/gendox/embed/embedded-chat',
   chatInsightView: false,
 }
+const CHAT_TOGGLE_REQUEST_EVENT = 'gendox.events.embedded.chat.toggle.request'
 
 const StyledWrapper = styled(Box, {
   shouldForwardProp: prop => prop !== 'isOpen'
@@ -46,6 +47,34 @@ const EmbeddedChatPage = props => {
   const { settings, saveSettings } = useSettings()
   const [isOpen, setIsOpen] = useState(false) // Manage chat window visibility
   const iFrameMessageManager = useIFrameMessageManager()
+  const isOpenRef = useRef(false)
+
+  const sendToggleMessage = nextState => {
+    iFrameMessageManager.messageManager.sendMessage({
+      type: 'gendox.events.embedded.chat.toggle.action',
+      data: { isOpen: nextState }
+    })
+  }
+
+  const applyChatState = (nextState, withAnimation = true) => {
+    if (isOpenRef.current === nextState) return
+    if (nextState) {
+      sendToggleMessage(true)
+      if (withAnimation) {
+        setTimeout(() => setIsOpen(true), 10)
+      } else {
+        setIsOpen(true)
+      }
+      return
+    }
+
+    setIsOpen(false)
+    if (withAnimation) {
+      setTimeout(() => sendToggleMessage(false), 320)
+    } else {
+      sendToggleMessage(false)
+    }
+  }
 
   useEffect(() => {
     const originalSettings = settings
@@ -62,23 +91,44 @@ const EmbeddedChatPage = props => {
     return () => saveSettings(originalSettings)
   }, [])
 
-  const toggleChatWindow = () => {
-    const nextState = !isOpen
-    const sendMessage = () => {
-      iFrameMessageManager.messageManager.sendMessage({
-        type: 'gendox.events.embedded.chat.toggle.action',
-        data: { isOpen: nextState }
-      })
+  useEffect(() => {
+    isOpenRef.current = isOpen
+  }, [isOpen])
+
+  // Apply chat open/closed state from config (initial load and when parent calls updateConfig)
+  useEffect(() => {
+    const chatInitialState = iFrameMessageManager?.iFrameConfiguration?.chatInitialState
+    if (chatInitialState === undefined) return
+    applyChatState(chatInitialState === 'open', false)
+  }, [iFrameMessageManager?.iFrameConfiguration?.chatInitialState])
+
+  useEffect(() => {
+    const handleToggleRequest = data => {
+      if (data?.type !== CHAT_TOGGLE_REQUEST_EVENT) return
+      const action = data?.data?.action
+      if (!action) return
+
+      if (action === 'toggle') {
+        applyChatState(!isOpenRef.current)
+        return
+      }
+      if (action === 'open') {
+        applyChatState(true)
+        return
+      }
+      if (action === 'close') {
+        applyChatState(false)
+      }
     }
 
-    // Delay logic depending on whether we're opening or closing
-    if (nextState) {
-      sendMessage() // Opening: send the message immediately
-      setTimeout(() => setIsOpen(nextState), 10) // Delay state update
-    } else {
-      setIsOpen(nextState) // Closing: update state immediately
-      setTimeout(sendMessage, 320) // Delay message, to show the closing animation
+    iFrameMessageManager.messageManager.addHandler(handleToggleRequest)
+    return () => {
+      iFrameMessageManager.messageManager.removeHandler(handleToggleRequest)
     }
+  }, [iFrameMessageManager])
+
+  const toggleChatWindow = () => {
+    applyChatState(!isOpenRef.current)
   }
 
   return (

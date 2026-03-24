@@ -88,7 +88,6 @@ const ProfileCard = props => {
 
   // Handle Delete User
   const handleDeleteUser = async () => {
-    console.log('Attempting to delete user:', userData.id) // Debugging log
     if (!token) {
       toast.error('Authentication token missing.')
       return

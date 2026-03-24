@@ -4,7 +4,7 @@ import {useTheme} from "@mui/material/styles";
 import GendoxChatLayout from "../../../layouts/GendoxChatLayout";
 
 
-const ChatPage = () => {  
+const ChatPage = () => {
 
   const theme = useTheme();
 

@@ -28,7 +28,7 @@ const ChatConversation = props => {
   const hidden = useMediaQuery(theme.breakpoints.down('lg'))
   const auth = useAuth()
   const router = useRouter()
-  const { organizationId } = router.query
+  const { organizationId, projectId } = router.query
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   // Grab state data from Redux
   const { currentThread, isSendingMessage, isLoadingMessages } = useSelector(
@@ -43,7 +43,7 @@ const ChatConversation = props => {
         p: '0 !important',
         width: '100%'
       }}
-    >      
+    >
       <Box
         component='main'
         sx={{
@@ -60,6 +60,7 @@ const ChatConversation = props => {
           themeConfig={themeConfig}
           handleInsightsToggle={props.handleInsightsToggle}
           isLoadingMessages={isLoadingMessages}
+          chatInsightView={props.chatInsightView}
         />
 
         {/* This Box will take up the remaining space */}
@@ -85,9 +86,9 @@ const ChatConversation = props => {
           <ChatConversationInputSection
             auth={auth}
             token={token}
-            dispatch={dispatch}
             currentThread={currentThread}
             organizationId={organizationId}
+            projectId={projectId}
             isSending={isSendingMessage}
             isLoadingMessages={isLoadingMessages}
           />

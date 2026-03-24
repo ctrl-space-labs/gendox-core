@@ -50,6 +50,9 @@ rsa:
   private-key: ${RSA_KEY_PATH:classpath:.env/local/local-non-production-use-private_key.pem}
 
 gendox:
+  topics:
+    document-upload: documents.upload.local
+    attachment-upload: attachment.upload.local
   domains:
     frontend: http://localhost:3000
   documents:

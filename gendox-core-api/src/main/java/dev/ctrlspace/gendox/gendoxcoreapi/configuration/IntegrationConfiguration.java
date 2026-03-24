@@ -152,7 +152,7 @@ public class IntegrationConfiguration {
                                             .documentIsccCode(documentUtils.getISCCCodeForApiIntegrationFile())
                                             .build();
 
-                                    uploadService.upsertDocumentInstance(project.getId(), documentInstanceDTO);
+                                    uploadService.upsertDocumentInstance(project.getId(), documentInstanceDTO, false, null);
                                     logger.debug("extrernal document uploaded document: {} successfully", file.getExternalFile().getContentId());
 
                                 }
