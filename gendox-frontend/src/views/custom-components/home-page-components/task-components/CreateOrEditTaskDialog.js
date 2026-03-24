@@ -67,7 +67,6 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
   const { isFetchingAiModels, aiModels } = useSelector(state => state.activeProjectAgent)
   const { completionModels } = aiModels
 
-  // console.log('Completion Models in CreateTaskDialog:', completionModels)
   const [task, setTask] = useState({
     title: '',
     description: '',

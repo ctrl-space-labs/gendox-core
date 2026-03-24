@@ -98,7 +98,7 @@ const MembersProjectSettings = () => {
           dispatch(fetchProjectMembersAndRoles({ organizationId, projectId, token }))
         })
         .catch(error => {
-          console.log('Failed to delete user:', error)
+          console.error('Failed to delete user:', error)
         })
       setConfirmDelete(false)
       handleMenuClose()
@@ -107,7 +107,6 @@ const MembersProjectSettings = () => {
 
   const handleBanUser = () => {
     // Implement the ban user logic here
-    console.log('Banning user:', selectedUser)
     handleMenuClose()
   }
 
