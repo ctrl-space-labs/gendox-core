@@ -1,6 +1,11 @@
 import commonConfig from 'src/configs/common.config.js'
 import ee from '@google/earthengine'
 
+// Expose ee to window so the EE library can find it after webpack bundling
+if (typeof window !== 'undefined') {
+  window.ee = ee
+}
+
 export const CLIENT_ID = commonConfig.GEE_clientId
 
 // Drive scope is not included in the EE default scopes, so we add it explicitly.
