@@ -8,10 +8,10 @@ if (typeof window !== 'undefined') {
 
 export const CLIENT_ID = commonConfig.GEE_clientId
 
-// Drive scope is not included in the EE default scopes, so we add it explicitly.
-// TODO 'auth/drive' scope removed since it will trigger a restricted scope review by Google.
-// TODO uncomment this to support Google Drive exports
-// const EXTRA_SCOPES = ['https://www.googleapis.com/auth/drive']
+// EE client defaults also include cloud-platform + drive; suppress and request only earthengine.
+// If you uncomment EXTRA_SCOPES above, spread it: [ee.apiclient.AUTH_SCOPE, ...EXTRA_SCOPES]
+const OAUTH_SCOPES = [ee.apiclient.AUTH_SCOPE]
+const SUPPRESS_EE_DEFAULT_SCOPES = true
 
 // Wraps ee.data.authenticateViaOauth in a Promise.
 //
@@ -28,6 +28,13 @@ export const CLIENT_ID = commonConfig.GEE_clientId
 // No client_secret, no redirect URI, no manual token exchange.
 export function authenticateViaOauth({ onImmediateFailed } = {}) {
   return new Promise((resolve, reject) => {
-    ee.data.authenticateViaOauth(CLIENT_ID, resolve, reject, EXTRA_SCOPES, onImmediateFailed)
+    ee.data.authenticateViaOauth(
+      CLIENT_ID,
+      resolve,
+      reject,
+      OAUTH_SCOPES,
+      onImmediateFailed,
+      SUPPRESS_EE_DEFAULT_SCOPES
+    )
   })
 }
