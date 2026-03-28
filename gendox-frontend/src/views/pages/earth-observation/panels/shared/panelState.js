@@ -7,6 +7,9 @@ export const editorCodeRef = { current: '' }
 // without prop drilling or forwardRef. GeeRunner sets this on mount.
 export const runScriptRef = { current: null }
 
+// Hidden GEE sandbox iframe — MapPanel posts task cancel messages here.
+export const geeIframeRef = { current: null }
+
 // Shared handle so ChatPanel can programmatically accept pending AI edits
 // (e.g. auto-keep before capturing the script as local context).
 // EditorPanel keeps this pointing to its handleKeepAll on every render.

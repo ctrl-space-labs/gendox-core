@@ -8,8 +8,11 @@ import {
   setScreenshotUrl,
   setGeeRunError,
   appendPrintMessage,
+  upsertGeeExport,
+  applyEeOperationResult,
   createEOScriptThunk
 } from 'src/store/earthObservation'
+import { buildSubmittedGeeExportPayload } from 'src/store/earthObservation/geeExportPayload'
 import { fetchGeeImage } from './fetchGeeImage'
 
 // Handles all window.message events coming from the GEE sandbox iframe.
@@ -133,6 +136,27 @@ export function useGeeMessages({
       // Map.setOptions() — basemap style hint (no-op on OSM, logged for visibility)
       if (type === 'MAP_OPTIONS') {
         console.log('GEE Map.setOptions (ignored on OSM):', payload)
+      }
+
+      if (type === 'EXPORT_STARTED' && payload?.taskId) {
+        const meta = {
+          id: payload.taskId,
+          taskId: payload.taskId,
+          domain: payload.domain,
+          target: payload.target,
+          description: payload.description ?? null
+        }
+        dispatch(upsertGeeExport({ ...buildSubmittedGeeExportPayload(meta), updatedAt: Date.now() }))
+      }
+
+      if (type === 'GEE_OPERATION_RESULT' && payload?.taskId != null) {
+        dispatch(
+          applyEeOperationResult({
+            taskId: payload.taskId,
+            raw: payload.raw,
+            error: payload.error
+          })
+        )
       }
     }
 

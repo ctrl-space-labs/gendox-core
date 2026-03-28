@@ -9,7 +9,8 @@ export const mapInitialState = {
   mapCenter: null,
   geeRunError: null,
   screenshotRequest: null, // { south, west, north, east } — set by MapPanel, consumed by GeeRunner
-  printMessages: [] // collected print() output per execution
+  printMessages: [], // collected print() output per execution
+  geeExports: [] // batch export tasks from GEE sandbox (frontend-only; keyed by id)
 }
 
 export const mapReducers = {
@@ -35,6 +36,19 @@ export const mapReducers = {
     state.map.mapLayers = []
     state.map.loadedLayerCount = 0
     state.map.mapResultScreenshot = null
+  },
+  upsertGeeExport: (state, action) => {
+    const p = action.payload || {}
+    const id = p.id ?? p.taskId
+    if (!id) return
+    const updatedAt = p.updatedAt ?? Date.now()
+    const next = { ...p, id, taskId: id, updatedAt }
+    const idx = state.map.geeExports.findIndex(e => e.id === id)
+    if (idx >= 0) state.map.geeExports[idx] = { ...state.map.geeExports[idx], ...next }
+    else state.map.geeExports.unshift(next)
+  },
+  clearGeeExports: state => {
+    state.map.geeExports = []
   },
   setMapResultScreenshot: (state, action) => {
     state.map.mapResultScreenshot = action.payload

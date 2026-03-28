@@ -26,6 +26,7 @@ export const scriptsReducers = {
     state.scripts.createEOScriptLoading = false
     state.scripts.createEOScriptError = null
     state.map.mapLayers = []
+    state.map.geeExports = []
     state.map.mapThumbnailUrl = null
     state.map.screenshotUrl = null
     state.map.mapCenter = null

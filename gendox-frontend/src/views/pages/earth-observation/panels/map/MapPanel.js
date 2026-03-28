@@ -5,7 +5,7 @@ import Divider from '@mui/material/Divider'
 import { useRouter } from 'next/router'
 
 import { localStorageConstants } from 'src/utils/generalConstants'
-import { getEOGeometriesThunk } from 'src/store/earthObservation'
+import { getEOGeometriesThunk, selectGeeExports } from 'src/store/earthObservation'
 
 import useMapScreenshot from './hooks/useMapScreenshot'
 import useLayerControls from './hooks/useLayerControls'
@@ -17,6 +17,7 @@ import EOMapView from './components/EOMapView'
 import DrawingToolbar from './components/DrawingToolbar'
 import ScreenshotToolbar from './components/ScreenshotToolbar'
 import LayersPanel from './components/LayersPanel'
+import ExportsPanel from './components/ExportsPanel'
 import GeometryInspector from './components/GeometryInspector'
 
 export default function MapPanel() {
@@ -28,6 +29,7 @@ export default function MapPanel() {
   const mapCenter = useSelector(state => state.earthObservation.map.mapCenter)
   const mapThumbnailUrl = useSelector(state => state.earthObservation.map.mapThumbnailUrl)
   const eoGeometries = useSelector(state => state.earthObservation.geometries.eoGeometries)
+  const geeExports = useSelector(selectGeeExports)
 
   const {
     mapLayers,
@@ -143,8 +145,19 @@ export default function MapPanel() {
         />
       </Box>
 
-      {/* ── Layers panel — standalone, top-right, always mounted ── */}
-      <Box sx={{ position: 'absolute', top: 16, right: 10, zIndex: 1000 }}>
+      {/* ── Layers + exports — top-right stack (exports same width as layers dropdown) ── */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 16,
+          right: 10,
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: 1
+        }}
+      >
         <LayersPanel
           mapLayers={mapLayers}
           visibleLayers={visibleLayers}
@@ -154,6 +167,7 @@ export default function MapPanel() {
           setLayerOpacities={setLayerOpacities}
           setLayersOpen={setLayersOpen}
         />
+        <ExportsPanel geeExports={geeExports} />
       </Box>
     </Box>
   )
