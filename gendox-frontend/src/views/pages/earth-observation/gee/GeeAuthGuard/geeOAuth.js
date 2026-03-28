@@ -9,7 +9,9 @@ if (typeof window !== 'undefined') {
 export const CLIENT_ID = commonConfig.GEE_clientId
 
 // Drive scope is not included in the EE default scopes, so we add it explicitly.
-const EXTRA_SCOPES = ['https://www.googleapis.com/auth/drive']
+// TODO 'auth/drive' scope removed since it will trigger a restricted scope review by Google.
+// TODO uncomment this to support Google Drive exports
+// const EXTRA_SCOPES = ['https://www.googleapis.com/auth/drive']
 
 // Wraps ee.data.authenticateViaOauth in a Promise.
 //
