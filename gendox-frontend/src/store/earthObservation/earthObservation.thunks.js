@@ -1,6 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit'
 import toast from 'react-hot-toast'
 import earthObservationService from 'src/gendox-sdk/earthObservationService'
+import { geeIframeRef } from 'src/views/pages/earth-observation/panels/shared/panelState'
 import { getErrorMessage } from 'src/utils/errorHandler'
 
 export const fetchEOScriptsThunk = createAsyncThunk(
@@ -127,3 +128,10 @@ export const deleteEOGeometriesThunk = createAsyncThunk(
     }
   }
 )
+
+/** Redux-side cancel: only the GEE iframe can run ee.data.cancelOperation (see gee-sandbox.html). */
+export const cancelGeeExport = taskId => () => {
+  const win = geeIframeRef.current?.contentWindow
+  if (!win || !taskId) return
+  win.postMessage({ type: 'CANCEL_EXPORT', taskId }, '*')
+}

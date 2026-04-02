@@ -1,6 +1,6 @@
 {
-  "name": "documentation",
-  "version": "0.0.0",
+  "name": "gendox-documentation",
+  "version": "0.11.0",
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",

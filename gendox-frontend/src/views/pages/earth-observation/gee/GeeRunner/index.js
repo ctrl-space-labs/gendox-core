@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   clearMapLayers,
+  clearGeeExports,
   setMapThumbnail,
   setGeeRunError,
   clearScreenshotRequest,
@@ -9,10 +10,11 @@ import {
   clearMapResultScreenshot,
   selectEoGeometries
 } from 'src/store/earthObservation'
-import { runScriptRef } from 'src/views/pages/earth-observation/panels/shared/panelState'
+import { runScriptRef, geeIframeRef } from 'src/views/pages/earth-observation/panels/shared/panelState'
 import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
+import { useGeeExportPolling } from './useGeeExportPolling'
 import { useGeeMessages } from './useGeeMessages'
 
 export default function GeeRunner({
@@ -71,12 +73,15 @@ export default function GeeRunner({
     setIsRunning
   })
 
+  useGeeExportPolling()
+
   const handleRun = () => {
     const currentCode = (getCurrentCode?.() ?? code ?? '').trim()
     if (!currentCode) return
 
     setIsRunning(true)
     dispatch(clearMapLayers())
+    dispatch(clearGeeExports())
     dispatch(setMapThumbnail(null))
     dispatch(setGeeRunError(null))
     dispatch(clearPrintMessages())
@@ -102,6 +107,14 @@ export default function GeeRunner({
     }
   })
 
+  useEffect(() => {
+    const el = iframeRef.current
+    geeIframeRef.current = el
+    return () => {
+      if (geeIframeRef.current === el) geeIframeRef.current = null
+    }
+  }, [iframeKey])
+
   const isLoading = isRunning || createEOScriptLoading || latestEOScriptLoading
 
   return (
@@ -123,7 +136,7 @@ export default function GeeRunner({
           ref={iframeRef}
           key={iframeKey}
           src='/gee-sandbox/gee-sandbox.html'
-          sandbox='allow-scripts'
+          sandbox='allow-scripts allow-modals'
           style={{ display: 'none' }}
         />
       )}

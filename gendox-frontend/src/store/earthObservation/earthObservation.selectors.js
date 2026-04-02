@@ -14,6 +14,7 @@ export const selectScreenshotUrl = state => state.earthObservation.map.screensho
 export const selectMapCenter = state => state.earthObservation.map.mapCenter
 export const selectGeeRunError = state => state.earthObservation.map.geeRunError
 export const selectScreenshotRequest = state => state.earthObservation.map.screenshotRequest
+export const selectGeeExports = state => state.earthObservation.map.geeExports
 
 // Scripts
 export const selectEoScripts = state => state.earthObservation.scripts.eoScripts

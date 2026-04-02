@@ -22,42 +22,28 @@ export default function LayersPanel({
   const hasLayers = mapLayers.length > 0
 
   return (
-    <Box sx={{ position: 'relative' }}>
-      {/* Standalone trigger button */}
-      <Tooltip title={hasLayers ? `Layers (${mapLayers.length})` : 'No layers yet — run a script first'} placement='bottom'>
-        <Box component='span'>
-          <IconButton
-            disabled={!hasLayers}
-            onClick={() => setLayersOpen(p => !p)}
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 1.5,
-              color: layersOpen && hasLayers ? 'primary.main' : 'text.secondary',
-              bgcolor: layersOpen && hasLayers ? 'action.selected' : 'transparent',
-              '&:hover': { bgcolor: 'action.selected', color: 'primary.main' },
-              '&.Mui-disabled': { color: 'action.disabled' }
-            }}
-          >
-            <LayersIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-        </Box>
-      </Tooltip>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: 0.5,
+        /* Flow layout (not absolute) so ExportsPanel sits below the full expanded height */
+        zIndex: 1100
+      }}
+    >
 
-      {/* Dropdown panel */}
+      {/* Layer list — in document flow below the trigger */}
       {layersOpen && hasLayers && (
         <Box
           sx={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
             bgcolor: 'background.paper',
             border: '1px solid',
             borderColor: 'divider',
             borderRadius: 2,
             boxShadow: 8,
             width: 240,
-            zIndex: 1100
+            flexShrink: 0
           }}
         >
           {/* Header with collapse toggle */}
