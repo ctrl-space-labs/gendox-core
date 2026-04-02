@@ -68,12 +68,20 @@ const AiResponseLoader = ({ isSending }) => {
         })
       ).then(action => {
         if (action.payload) {
-          const { status } = action.payload
-          if (['COMPLETED', 'FAILED', 'STOPPED', 'ABANDONED'].includes(status)) {
+          const { status, job } = action.payload
+          const effectiveExitCode = (job?.exitCode || '').trim().toUpperCase()
+          const terminal =
+            ['COMPLETED', 'FAILED', 'STOPPED', 'ABANDONED'].includes(status) ||
+            // Fallback: Spring Batch may return status=UNKNOWN while exitCode is terminal.
+            (status === 'UNKNOWN' && ['FAILED', 'COMPLETED', 'STOPPED', 'ABANDONED'].includes(effectiveExitCode))
+
+          if (terminal) {
             clearInterval(pollingRef.current)
             pollingRef.current = null
 
-            if (status === 'COMPLETED') {
+            const finalStatus = status === 'UNKNOWN' ? effectiveExitCode || status : status
+
+            if (finalStatus === 'COMPLETED') {
               dispatch(
                 finalizeDeepThinkingThread({
                   threadId: currentThread.threadId,

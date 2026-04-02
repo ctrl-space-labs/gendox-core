@@ -264,7 +264,17 @@ export const pollDeepThinkingStatus = createAsyncThunk(
       ])
 
       const job = jobResponse.data?.content?.[0]
-      const status = job?.status?.trim().toUpperCase()
+      const rawStatus = job?.status?.trim().toUpperCase()
+      const exitCode = job?.exitCode?.trim().toUpperCase()
+
+      // Spring Batch can sometimes report status=UNKNOWN even when exitCode is terminal (e.g. FAILED).
+      // Derive a more reliable effective status for UI polling/termination decisions.
+      const status =
+        rawStatus && rawStatus !== 'UNKNOWN'
+          ? rawStatus
+          : exitCode && ['COMPLETED', 'FAILED', 'STOPPED', 'ABANDONED', 'UNKNOWN'].includes(exitCode)
+            ? exitCode
+            : rawStatus
       const steps = stepsResponse.data || []
 
       return { status, steps, job }
