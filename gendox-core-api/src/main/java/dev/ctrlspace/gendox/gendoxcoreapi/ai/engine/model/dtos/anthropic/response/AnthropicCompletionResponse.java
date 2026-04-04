@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.response;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,6 +30,9 @@ public class AnthropicCompletionResponse {
     public static class Content {
         private String text;
         private String type;
+        private String id;
+        private String name;
+        private JsonNode input;
     }
 
     @Data
@@ -40,4 +44,3 @@ public class AnthropicCompletionResponse {
         private Integer output_tokens;
     }
 }
-

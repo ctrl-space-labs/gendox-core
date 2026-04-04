@@ -1,5 +1,10 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.response.AnthropicCompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.CompletionResponse;
@@ -7,37 +12,98 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.C
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Usage;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
 public class AnthropicCompletionResponseConverter {
-    public CompletionResponse toCompletionResponse(AnthropicCompletionResponse anthropicCompletionResponse) {
 
+    private final ObjectMapper objectMapper;
+
+    public AnthropicCompletionResponseConverter(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
+    public CompletionResponse toCompletionResponse(AnthropicCompletionResponse anthropicCompletionResponse) {
+        AnthropicCompletionResponse.Usage anthropicUsage = anthropicCompletionResponse.getUsage();
+        int inTok = anthropicUsage != null && anthropicUsage.getInput_tokens() != null ? anthropicUsage.getInput_tokens() : 0;
+        int outTok = anthropicUsage != null && anthropicUsage.getOutput_tokens() != null ? anthropicUsage.getOutput_tokens() : 0;
         Usage usage = Usage.builder()
-                .completionTokens(anthropicCompletionResponse.getUsage().getOutput_tokens())
-                .promptTokens(anthropicCompletionResponse.getUsage().getInput_tokens())
-                .totalTokens(anthropicCompletionResponse.getUsage().getInput_tokens() + anthropicCompletionResponse.getUsage().getOutput_tokens())
+                .completionTokens(outTok)
+                .promptTokens(inTok)
+                .totalTokens(inTok + outTok)
                 .build();
 
-        List<Choice> mappedChoices = anthropicCompletionResponse.getContent().stream()
-                .map(content -> Choice.builder()
-                        .index(0)
-                        .finishReason(anthropicCompletionResponse.getStop_reason())
-                        .message(AiModelMessage.builder()
-                                .content(content.getText())
-                                .role(anthropicCompletionResponse.getRole())
-                                .build())
-                        .build())
-                .toList();
+        List<String> textParts = new ArrayList<>();
+        ArrayNode toolCallsArray = objectMapper.createArrayNode();
+        List<AnthropicCompletionResponse.Content> contents = anthropicCompletionResponse.getContent();
+        if (contents != null) {
+            for (AnthropicCompletionResponse.Content c : contents) {
+                if (c == null) {
+                    continue;
+                }
+                if ("tool_use".equals(c.getType())) {
+                    toolCallsArray.add(anthropicToolUseToOpenAiToolCall(c));
+                } else if ("text".equals(c.getType()) || (c.getType() == null && c.getText() != null)) {
+                    if (c.getText() != null && !c.getText().isEmpty()) {
+                        textParts.add(c.getText());
+                    }
+                }
+            }
+        }
 
-        CompletionResponse completionResponse = CompletionResponse.builder()
+        String joinedText = textParts.isEmpty() ? null : String.join("\n", textParts);
+
+        String stopReason = anthropicCompletionResponse.getStop_reason();
+        String finishReason;
+        if ("tool_use".equals(stopReason)) {
+            finishReason = "tool_calls";
+        } else if ("end_turn".equals(stopReason)) {
+            finishReason = "stop";
+        } else {
+            finishReason = stopReason;
+        }
+
+        AiModelMessage.AiModelMessageBuilder messageBuilder = AiModelMessage.builder()
+                .role(anthropicCompletionResponse.getRole())
+                .content(joinedText);
+        if (!toolCallsArray.isEmpty()) {
+            messageBuilder.toolCalls(toolCallsArray);
+        }
+
+        Choice choice = Choice.builder()
+                .index(0)
+                .finishReason(finishReason)
+                .message(messageBuilder.build())
+                .build();
+
+        return CompletionResponse.builder()
                 .id(anthropicCompletionResponse.getId())
                 .model(anthropicCompletionResponse.getModel())
                 .usage(usage)
-                .choices(mappedChoices)
+                .choices(List.of(choice))
                 .build();
-
-        return completionResponse;
     }
 
+    private ObjectNode anthropicToolUseToOpenAiToolCall(AnthropicCompletionResponse.Content c) {
+        ObjectNode call = objectMapper.createObjectNode();
+        call.put("id", c.getId() != null ? c.getId() : "");
+        call.put("type", "function");
+        ObjectNode function = objectMapper.createObjectNode();
+        function.put("name", c.getName() != null ? c.getName() : "");
+        String argsJson;
+        try {
+            JsonNode input = c.getInput();
+            if (input == null || input.isNull()) {
+                argsJson = "{}";
+            } else {
+                argsJson = objectMapper.writeValueAsString(input);
+            }
+        } catch (JsonProcessingException e) {
+            argsJson = "{}";
+        }
+        function.put("arguments", argsJson);
+        call.set("function", function);
+        return call;
+    }
 }

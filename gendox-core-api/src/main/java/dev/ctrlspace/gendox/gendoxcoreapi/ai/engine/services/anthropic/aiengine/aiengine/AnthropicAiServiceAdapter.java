@@ -2,6 +2,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.anthropic.aiengine
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.AnthropicCompletionResponseConverter;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.AnthropicMessagesConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request.AnthropicCompletionRequest;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.response.AnthropicCompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
@@ -30,12 +31,15 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
     private Set<String> supportedApiTypeNames = Set.of("ANTHROPIC_AI_API");
     private RestTemplate restTemplate;
     private AnthropicCompletionResponseConverter anthropicCompletionResponseConverter;
+    private AnthropicMessagesConverter anthropicMessagesConverter;
 
     @Autowired
     public AnthropicAiServiceAdapter(RestTemplate restTemplate,
-                                     AnthropicCompletionResponseConverter anthropicCompletionResponseConverter) {
+                                     AnthropicCompletionResponseConverter anthropicCompletionResponseConverter,
+                                     AnthropicMessagesConverter anthropicMessagesConverter) {
         this.restTemplate = restTemplate;
         this.anthropicCompletionResponseConverter = anthropicCompletionResponseConverter;
+        this.anthropicMessagesConverter = anthropicMessagesConverter;
     }
 
 
@@ -56,10 +60,15 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
                 completionApiUrl,
                 new HttpEntity<>(anthropicRequest, buildHeader(apiKey)),
                 AnthropicCompletionResponse.class);
-        logger.info("Received completion Response from '{}'. Tokens billed: {}", completionApiUrl,
-                responseEntity.getBody().getUsage().getInput_tokens() + responseEntity.getBody().getUsage().getOutput_tokens());
+        AnthropicCompletionResponse body = responseEntity.getBody();
+        if (body != null && body.getUsage() != null) {
+            logger.info("Received completion Response from '{}'. Tokens billed: {}", completionApiUrl,
+                    body.getUsage().getInput_tokens() + body.getUsage().getOutput_tokens());
+        } else {
+            logger.info("Received completion Response from '{}'.", completionApiUrl);
+        }
 
-        return responseEntity.getBody();
+        return body;
 
     }
 
@@ -74,23 +83,39 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, AiModelMessage.builder().role("user").content(agentRole).build());
         }
+        if (responseJsonSchema != null) {
+            logger.debug("responseJsonSchema is set but Anthropic completion does not support OpenAI response_format; ignoring.");
+        }
+
+        AnthropicMessagesConverter.MappedAnthropicMessages mapped = anthropicMessagesConverter.mapMessages(messages);
+
         AnthropicCompletionRequest.AnthropicCompletionRequestBuilder anthropicRequestBuilder = AnthropicCompletionRequest.builder()
                 .model(aiModel.getModel())
-                .messages(
-                        messages.stream()
-                                .map(m -> AnthropicCompletionRequest.Message.builder()
-                                        .role(m.getRole())
-                                        .content(m.getContent())
-                                        .build())
-                                .toList())
+                .messages(mapped.messages())
                 .max_tokens(aiModelRequestParams.getMaxTokens().intValue());
+
+        if (mapped.system() != null && !mapped.system().isEmpty()) {
+            anthropicRequestBuilder.system(mapped.system());
+        }
+        // Anthropic rejects requests that set both temperature and top_p for some models.
+        Double temperature = aiModelRequestParams.getTemperature();
+        Double topP = aiModelRequestParams.getTopP();
+        if (temperature != null) {
+            anthropicRequestBuilder.temperature(temperature);
+        } else if (topP != null) {
+            anthropicRequestBuilder.topP(topP);
+        }
+        if (tools != null && !tools.isEmpty()) {
+            anthropicRequestBuilder.tools(tools.stream()
+                    .map(anthropicMessagesConverter::toAnthropicToolDefinition)
+                    .toList());
+            anthropicRequestBuilder.toolChoice(anthropicMessagesConverter.mapToolChoice(toolChoice));
+        }
 
         AnthropicCompletionRequest anthropicRequest = anthropicRequestBuilder.build();
         AnthropicCompletionResponse anthropicResponse = this.getCompletionResponse(anthropicRequest, aiModel, apiKey);
 
-
-        CompletionResponse completionResponse = anthropicCompletionResponseConverter.toCompletionResponse(anthropicResponse);
-        return completionResponse;
+        return anthropicCompletionResponseConverter.toCompletionResponse(anthropicResponse);
     }
 
     @Override
