@@ -296,7 +296,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                     .maxCompletionTokens(null);
         }
         // Special case for o1, o3, o4 models, temprature to 1
-        if (List.of("o1", "o3", "o4", "gpt-5-", "gpt-5.1").stream()
+        if (List.of("o1", "o3", "o4", "gpt-5-", "gpt-5.1", "gpt-5.4").stream()
                 .anyMatch(aiModel.getModel()::contains)) {
             openAiGptRequestBuilder
                     .temperature(1.0)
@@ -306,7 +306,7 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         }
 
         // thinking models, increate max tokens and set reasoning effort
-        if (List.of("o1", "o3", "o4", "gpt-5-", "gpt-5.1", "gemini-2.5", "gemini-3").stream()
+        if (List.of("o1", "o3", "o4", "gpt-5-", "gpt-5.1", "gpt-5.4", "gemini-2.5", "gemini-3").stream()
                 .anyMatch(aiModel.getModel()::contains)) {
             openAiGptRequestBuilder
                     .reasoningEffort(computeReasoningEffort(aiModelRequestParams.getMaxTokens(), aiModel.getModel()))
@@ -365,20 +365,22 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         String name = modelName == null ? "" : modelName.toLowerCase(Locale.ROOT);
 
         boolean isGpt51       = name.startsWith("gpt-5.1");
-        boolean isGpt5        = name.startsWith("gpt-5") && !isGpt51;
+        boolean isGpt54       = name.startsWith("gpt-5.4");
+        boolean isGpt5        = name.startsWith("gpt-5") && !isGpt51 && !isGpt54;
         boolean isGemini25Pro = name.contains("gemini-2.5-pro");
         boolean isGemini3Pro = name.startsWith("gemini-3-pro") || name.startsWith("gemini-3.1-pro");
         boolean isGemini3Flash = name.startsWith("gemini-3-flash");
+        boolean isGemini31FlashLite = name.startsWith("gemini-3.1-flash-lite");
 
         if (tokens >= 32_768L) return "high";
         if (tokens >= 8_192L && isGemini3Pro)  return "high";
         if (tokens >= 8_192L)  return "medium";
         if (tokens >= 1_024L)  return "low";
 
-        if (isGpt5 || isGemini3Flash)        return "minimal"; // GPT-5 min is "minimal"
+        if (isGpt5 || isGemini3Flash || isGemini31FlashLite) return "minimal"; // GPT-5 min is "minimal"
         if (isGemini25Pro || isGemini3Pro) return "low";     // Gemini 2.5 Pro: no "none", min "low"
 
-        // GPT-5.1 and others (that support it) can get "none"
+        // GPT-5.1, GPT-5.4 flagship, and others (that support it) can get "none"
         return "none";
     }
 
