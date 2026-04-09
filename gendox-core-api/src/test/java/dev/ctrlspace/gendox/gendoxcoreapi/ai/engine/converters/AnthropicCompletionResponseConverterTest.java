@@ -123,11 +123,49 @@ class AnthropicCompletionResponseConverterTest {
         CompletionResponse cr = converter.toCompletionResponse(response);
 
         Usage u = cr.getUsage();
+        // OpenAI-shaped prompt_tokens = total input; Anthropic splits across input + cache read + cache create
+        assertEquals(9117, u.getPromptTokens());
+        assertEquals(9279, u.getTotalTokens());
         assertNotNull(u.getPromptTokensDetail());
         assertEquals(200, u.getPromptTokensDetail().getCachedTokens());
         assertEquals(100, u.getPromptTokensDetail().getCacheCreationInputTokens());
         assertNotNull(u.getPromptTokensDetail().getCacheCreation());
         assertEquals(80, u.getPromptTokensDetail().getCacheCreation().getEphemeral5mInputTokens());
         assertEquals(20, u.getPromptTokensDetail().getCacheCreation().getEphemeral1hInputTokens());
+    }
+
+    @Test
+    void toCompletionResponse_cacheHit_sumsPromptTokensLikeOpenAI() throws Exception {
+        String json = """
+                {
+                  "model": "claude-haiku-4-5-20251001",
+                  "id": "msg_015CsNNiEDUBpXgxR9Z1vgfS",
+                  "type": "message",
+                  "role": "assistant",
+                  "content": [],
+                  "stop_reason": "tool_use",
+                  "usage": {
+                    "input_tokens": 3,
+                    "cache_creation_input_tokens": 0,
+                    "cache_read_input_tokens": 8351,
+                    "cache_creation": {
+                      "ephemeral_5m_input_tokens": 0,
+                      "ephemeral_1h_input_tokens": 0
+                    },
+                    "output_tokens": 172,
+                    "service_tier": "standard",
+                    "inference_geo": "not_available"
+                  }
+                }
+                """;
+
+        ObjectMapper om = new ObjectMapper();
+        AnthropicCompletionResponse response = om.readValue(json, AnthropicCompletionResponse.class);
+        Usage u = converter.toCompletionResponse(response).getUsage();
+
+        assertEquals(8354, u.getPromptTokens());
+        assertEquals(8526, u.getTotalTokens());
+        assertNotNull(u.getPromptTokensDetail());
+        assertEquals(8351, u.getPromptTokensDetail().getCachedTokens());
     }
 }

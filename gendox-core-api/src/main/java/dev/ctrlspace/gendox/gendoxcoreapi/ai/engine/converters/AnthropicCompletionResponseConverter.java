@@ -26,7 +26,7 @@ public class AnthropicCompletionResponseConverter {
 
     public CompletionResponse toCompletionResponse(AnthropicCompletionResponse anthropicCompletionResponse) {
         AnthropicCompletionResponse.Usage anthropicUsage = anthropicCompletionResponse.getUsage();
-        int inTok = anthropicUsage != null && anthropicUsage.getInput_tokens() != null ? anthropicUsage.getInput_tokens() : 0;
+        int inTok = anthropicTotalInputTokens(anthropicUsage);
         int outTok = anthropicUsage != null && anthropicUsage.getOutput_tokens() != null ? anthropicUsage.getOutput_tokens() : 0;
         Usage.PromptTokensDetail promptTokensDetail = mapAnthropicPromptTokensDetail(anthropicUsage);
         Usage usage = Usage.builder()
@@ -107,6 +107,21 @@ public class AnthropicCompletionResponseConverter {
         function.put("arguments", argsJson);
         call.set("function", function);
         return call;
+    }
+
+    /**
+     * Anthropic splits prompt usage into three disjoint buckets; their docs define
+     * {@code total = input_tokens + cache_read_input_tokens + cache_creation_input_tokens}.
+     * We map that total to OpenAI-shaped {@code prompt_tokens}.
+     */
+    private static int anthropicTotalInputTokens(AnthropicCompletionResponse.Usage u) {
+        if (u == null) {
+            return 0;
+        }
+        int input = u.getInput_tokens() != null ? u.getInput_tokens() : 0;
+        int cacheRead = u.getCache_read_input_tokens() != null ? u.getCache_read_input_tokens() : 0;
+        int cacheCreate = u.getCache_creation_input_tokens() != null ? u.getCache_creation_input_tokens() : 0;
+        return input + cacheRead + cacheCreate;
     }
 
     /**

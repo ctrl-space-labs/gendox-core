@@ -90,7 +90,8 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
         AnthropicCompletionRequest.AnthropicCompletionRequestBuilder anthropicRequestBuilder = AnthropicCompletionRequest.builder()
                 .model(aiModel.getModel())
                 .messages(mapped.messages())
-                .max_tokens(aiModelRequestParams.getMaxTokens().intValue());
+                .max_tokens(aiModelRequestParams.getMaxTokens().intValue())
+                .cacheControl(AnthropicCompletionRequest.CacheControl.builder().type("ephemeral").build());
 
         if (mapped.system() != null && !mapped.system().isEmpty()) {
             anthropicRequestBuilder.system(mapped.system());
