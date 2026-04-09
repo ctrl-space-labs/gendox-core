@@ -7,6 +7,7 @@ let userManager = new UserManager(authConfig.oidcConfig);
 
 if (typeof window !== 'undefined') {
     authConfig.oidcConfig.userStore = new WebStorageStateStore({ store: window.localStorage });
+    authConfig.oidcConfig.stateStore = new WebStorageStateStore({ store: window.localStorage });
     userManager = new UserManager(authConfig.oidcConfig);
 }
 
