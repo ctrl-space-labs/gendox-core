@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.respons
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.CompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Choice;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.Usage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -93,5 +94,40 @@ class AnthropicCompletionResponseConverterTest {
         CompletionResponse cr = converter.toCompletionResponse(response);
         assertEquals("stop", cr.getChoices().getFirst().getFinishReason());
         assertNull(cr.getChoices().getFirst().getMessage().getToolCalls());
+    }
+
+    @Test
+    void toCompletionResponse_deserializesAnthropicUsageAndMapsCacheToPromptTokensDetail() throws Exception {
+        String json = """
+                {
+                  "id": "msg_01DRyiG99zxzwK2g32V4pg34",
+                  "type": "message",
+                  "role": "assistant",
+                  "model": "claude-haiku-4-5-20251001",
+                  "content": [{"type": "text", "text": "hi"}],
+                  "stop_reason": "end_turn",
+                  "usage": {
+                    "input_tokens": 8817,
+                    "cache_creation_input_tokens": 100,
+                    "cache_read_input_tokens": 200,
+                    "cache_creation": {"ephemeral_5m_input_tokens": 80, "ephemeral_1h_input_tokens": 20},
+                    "output_tokens": 162,
+                    "service_tier": "standard",
+                    "inference_geo": "not_available"
+                  }
+                }
+                """;
+
+        ObjectMapper om = new ObjectMapper();
+        AnthropicCompletionResponse response = om.readValue(json, AnthropicCompletionResponse.class);
+        CompletionResponse cr = converter.toCompletionResponse(response);
+
+        Usage u = cr.getUsage();
+        assertNotNull(u.getPromptTokensDetail());
+        assertEquals(200, u.getPromptTokensDetail().getCachedTokens());
+        assertEquals(100, u.getPromptTokensDetail().getCacheCreationInputTokens());
+        assertNotNull(u.getPromptTokensDetail().getCacheCreation());
+        assertEquals(80, u.getPromptTokensDetail().getCacheCreation().getEphemeral5mInputTokens());
+        assertEquals(20, u.getPromptTokensDetail().getCacheCreation().getEphemeral1hInputTokens());
     }
 }

@@ -242,7 +242,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
                     List<Message> response;
                     try {
-                        CompletionRuntimeOverridesDTO overrides = taskService.buildCompletionOverrides(task);
+                        CompletionRuntimeOverridesDTO overrides = taskService.buildDefaultCompletionOverrides(task);
                         JsonNode node = objectMapper.readTree(documentNode.getNodeValue().getDocumentMetadata().getStructure());
                         ObjectNode schemaResponse = objectMapper.convertValue(node, ObjectNode.class);
                         response = completionService.getCompletion(message, new ArrayList<>(), project, schemaResponse, overrides);

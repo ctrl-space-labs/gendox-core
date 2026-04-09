@@ -278,7 +278,7 @@ public class TaskService {
      * Builds completion runtime overrides from task settings (model, maxTokens, temperature, topP).
      * Used by batch job processors (documentInsights, documentDigitization) to apply task-level overrides to completions.
      */
-    public CompletionRuntimeOverridesDTO buildCompletionOverrides(Task task) {
+    public CompletionRuntimeOverridesDTO buildDefaultCompletionOverrides(Task task) {
         // TODO: add override to add extra tools and maybe system prompt
         CompletionRuntimeOverridesDTO overrides = new CompletionRuntimeOverridesDTO();
         if (task.getCompletionModel() != null) {

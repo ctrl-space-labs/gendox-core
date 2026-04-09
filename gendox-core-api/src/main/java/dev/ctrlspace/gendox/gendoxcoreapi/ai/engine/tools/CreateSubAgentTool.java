@@ -100,7 +100,8 @@ public class CreateSubAgentTool implements AiToolHandler {
         subAgentMessage.setId(UUID.randomUUID());
         subAgentMessage.setValue(taskDescription);
         subAgentMessage.setRole("user");
-        subAgentMessage.setThreadId(context.message().getThreadId());
+        // Dont populate thread to create it as a new thread
+//        subAgentMessage.setThreadId(context.message().getThreadId());
         subAgentMessage.setProjectId(context.message().getProjectId());
         subAgentMessage.setAdditionalResources(new ArrayList<>());
 

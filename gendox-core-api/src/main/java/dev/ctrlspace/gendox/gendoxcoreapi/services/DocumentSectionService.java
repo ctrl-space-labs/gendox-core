@@ -122,12 +122,29 @@ public class DocumentSectionService {
         sections.sort(Comparator.comparingInt(
                 s -> s.getDocumentSectionMetadata().getSectionOrder()
         ));
+        return buildNumberedSectionLines(sections);
+    }
 
-        String documentText = sections.stream()
-                .map(DocumentInstanceSection::getSectionValue)
-                .reduce("", (a, b) -> a + "\n" + b);
-
-        return documentText;
+    /**
+     * Concatenates section text in order with {@code N | } line prefixes (blank lines numbered too),
+     * and one numbered blank line between sections — same convention as document insights prompts.
+     */
+    private static String buildNumberedSectionLines(List<DocumentInstanceSection> sections) {
+        StringBuilder sb = new StringBuilder();
+        int lineNo = 1;
+        for (int sectionIdx = 0; sectionIdx < sections.size(); sectionIdx++) {
+            String sectionText = Optional.ofNullable(sections.get(sectionIdx))
+                    .map(DocumentInstanceSection::getSectionValue)
+                    .orElse("");
+            String[] lines = sectionText.split("\\R", -1);
+            for (String line : lines) {
+                sb.append(lineNo++).append(" | ").append(line).append("\n");
+            }
+            if (sectionIdx < sections.size() - 1) {
+                sb.append(lineNo++).append(" | ").append("\n");
+            }
+        }
+        return sb.toString();
     }
 
 

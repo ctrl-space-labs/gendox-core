@@ -22,12 +22,31 @@ public class AnthropicCompletionRequest {
     private Integer max_tokens;
     private String system;
     private List<Message> messages;
+    @JsonProperty("output_config")
+    private OutputConfig outputConfig;
     private List<ToolDefinition> tools = new ArrayList<>();
     @JsonProperty("tool_choice")
     private JsonNode toolChoice;
     private Double temperature;
     @JsonProperty("top_p")
     private Double topP;
+
+    @Data
+    @Builder(toBuilder = true)
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class OutputConfig {
+        private Format format;
+    }
+
+    @Data
+    @Builder(toBuilder = true)
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class Format {
+        private String type;
+        private JsonNode schema;
+    }
 
     @Data
     @Builder(toBuilder = true)

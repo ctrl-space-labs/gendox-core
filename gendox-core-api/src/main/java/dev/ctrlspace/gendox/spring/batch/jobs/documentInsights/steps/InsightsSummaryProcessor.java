@@ -98,7 +98,7 @@ public class InsightsSummaryProcessor implements ItemProcessor<TaskDocumentQuest
 
 
         // each document should pass only one from the processor, if not, then multiple summaries will be created
-        CompletionRuntimeOverridesDTO overrides = taskService.buildCompletionOverrides(task);
+        CompletionRuntimeOverridesDTO overrides = taskService.buildDefaultCompletionOverrides(task);
         CompletionAnswerSummary answerSummary = getDocumentAnswerSummary(documentGroupWithQuestions, task, project, overrides);
         if (answerSummary == null) {
             return null;

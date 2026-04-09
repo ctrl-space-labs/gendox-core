@@ -22,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -83,9 +84,6 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
         if (Strings.isNotEmpty(agentRole)) {
             messages.add(0, AiModelMessage.builder().role("user").content(agentRole).build());
         }
-        if (responseJsonSchema != null) {
-            logger.debug("responseJsonSchema is set but Anthropic completion does not support OpenAI response_format; ignoring.");
-        }
 
         AnthropicMessagesConverter.MappedAnthropicMessages mapped = anthropicMessagesConverter.mapMessages(messages);
 
@@ -96,6 +94,26 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
 
         if (mapped.system() != null && !mapped.system().isEmpty()) {
             anthropicRequestBuilder.system(mapped.system());
+        }
+
+        if (responseJsonSchema != null) {
+            // We accept the OpenAI-style json_schema wrapper ({ name, schema }) and map it to Anthropic's output_config.format.
+            ObjectNode schemaNode = responseJsonSchema;
+            if (responseJsonSchema.has("schema") && responseJsonSchema.get("schema").isObject()) {
+                schemaNode = (ObjectNode) responseJsonSchema.get("schema");
+            }
+
+            // Anthropic requires explicit additionalProperties:false for object schemas.
+            // To be resilient to upstream schema generators, we inject it recursively when missing.
+            ObjectNode sanitized = schemaNode.deepCopy();
+            enforceClosedObjectSchemas(sanitized);
+
+            anthropicRequestBuilder.outputConfig(AnthropicCompletionRequest.OutputConfig.builder()
+                    .format(AnthropicCompletionRequest.Format.builder()
+                            .type("json_schema")
+                            .schema(sanitized)
+                            .build())
+                    .build());
         }
         // Anthropic rejects requests that set both temperature and top_p for some models.
         Double temperature = aiModelRequestParams.getTemperature();
@@ -116,6 +134,73 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
         AnthropicCompletionResponse anthropicResponse = this.getCompletionResponse(anthropicRequest, aiModel, apiKey);
 
         return anthropicCompletionResponseConverter.toCompletionResponse(anthropicResponse);
+    }
+
+    private static void enforceClosedObjectSchemas(ObjectNode node) {
+        if (node == null) {
+            return;
+        }
+
+        if (node.has("type") && "object".equals(node.get("type").asText()) && !node.has("additionalProperties")) {
+            node.put("additionalProperties", false);
+        }
+
+        // Recurse common JSON-schema composition / nesting keywords
+        recurseInto(node, "properties");
+        recurseInto(node, "$defs");
+        recurseInto(node, "definitions");
+        recurseInto(node, "items");
+        recurseIntoArrayOfSchemas(node, "allOf");
+        recurseIntoArrayOfSchemas(node, "anyOf");
+        recurseIntoArrayOfSchemas(node, "oneOf");
+        recurseInto(node, "not");
+    }
+
+    private static void recurseInto(ObjectNode node, String field) {
+        if (!node.has(field)) {
+            return;
+        }
+        var child = node.get(field);
+        if (child == null || child.isNull()) {
+            return;
+        }
+
+        if (child.isObject()) {
+            ObjectNode obj = (ObjectNode) child;
+
+            // Special case: "properties", "$defs", "definitions" are maps of schemas
+            if ("properties".equals(field) || "$defs".equals(field) || "definitions".equals(field)) {
+                Iterator<String> names = obj.fieldNames();
+                while (names.hasNext()) {
+                    String name = names.next();
+                    var schema = obj.get(name);
+                    if (schema != null && schema.isObject()) {
+                        enforceClosedObjectSchemas((ObjectNode) schema);
+                    }
+                }
+                return;
+            }
+
+            enforceClosedObjectSchemas(obj);
+        } else if (child.isArray()) {
+            // Some generators emit items as an array (tuple validation)
+            child.elements().forEachRemaining(e -> {
+                if (e != null && e.isObject()) {
+                    enforceClosedObjectSchemas((ObjectNode) e);
+                }
+            });
+        }
+    }
+
+    private static void recurseIntoArrayOfSchemas(ObjectNode node, String field) {
+        if (!node.has(field) || !node.get(field).isArray()) {
+            return;
+        }
+        node.get(field).elements().forEachRemaining(e -> {
+            if (e != null && e.isObject()) {
+                enforceClosedObjectSchemas((ObjectNode) e);
+            }
+        });
     }
 
     @Override
