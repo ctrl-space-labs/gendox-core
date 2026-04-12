@@ -3,9 +3,12 @@ package dev.ctrlspace.gendox.gendoxcoreapi.converters;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class MessageAiMessageConverter implements GendoxConverter<Message, AiModelMessage> {
@@ -20,17 +23,22 @@ public class MessageAiMessageConverter implements GendoxConverter<Message, AiMod
             role = message.getRole();
         }
 
+        List<ContentPart> nonTextParts = message.getAdditionalResources().stream()
+                .filter(part -> !"text".equals(part.getType()))
+                .toList();
 
-
-        return AiModelMessage.builder()
+        AiModelMessage.AiModelMessageBuilder builder = AiModelMessage.builder()
                 .role(role)
                 .content(message.getValue())
                 .name(message.getName())
                 .toolCallId(message.getToolCallId())
-                .toolCalls(message.getToolCalls())
-                .build();
+                .toolCalls(message.getToolCalls());
 
+        if (!nonTextParts.isEmpty()) {
+            builder.contentParts(nonTextParts);
+        }
 
+        return builder.build();
     }
 
     @Override

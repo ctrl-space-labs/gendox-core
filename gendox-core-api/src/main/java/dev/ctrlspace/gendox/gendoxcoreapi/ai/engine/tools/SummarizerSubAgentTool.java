@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolHandler;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
@@ -20,18 +21,27 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@Component
-public class CreateSubAgentTool implements AiToolHandler {
+import static java.util.stream.Collectors.joining;
 
-    private static final Logger logger = LoggerFactory.getLogger(CreateSubAgentTool.class);
+/**
+ * A summarizer sub-agent that carries the full parent-thread conversation as context.
+ *
+ * <p>Unlike {@link CreateSubAgentTool}, which spawns a blank new thread, this tool
+ * prepends the parent thread's message history into the sub-agent message text so the
+ * sub-agent can summarise or extract information that was already discussed.
+ */
+@Component
+public class SummarizerSubAgentTool implements AiToolHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(SummarizerSubAgentTool.class);
 
     private final CompletionService completionService;
     private final MessageService messageService;
     private final ObjectMapper objectMapper;
 
-    public CreateSubAgentTool(@Lazy CompletionService completionService,
-                              MessageService messageService,
-                              ObjectMapper objectMapper) {
+    public SummarizerSubAgentTool(@Lazy CompletionService completionService,
+                                  MessageService messageService,
+                                  ObjectMapper objectMapper) {
         this.completionService = completionService;
         this.messageService = messageService;
         this.objectMapper = objectMapper;
@@ -39,13 +49,15 @@ public class CreateSubAgentTool implements AiToolHandler {
 
     @Override
     public String getName() {
-        return "create_sub_agent";
+        return "summarize";
     }
 
     @Override
     public String getDescription() {
-        return "Create a sub-agent to perform a specific research or analysis task. " +
-                "The sub-agent will execute independently and return its findings.";
+        return "Summarize documents or extract focused information from them. " +
+                "The sub-agent receives the full conversation history as context and performs " +
+                "the summarization task described in the task_description. " +
+                "Use this when you need a condensed, targeted summary of a document or a set of findings.";
     }
 
     @Override
@@ -57,11 +69,11 @@ public class CreateSubAgentTool implements AiToolHandler {
                   "properties": {
                     "task_description": {
                       "type": "string",
-                      "description": "A clear description of the task the sub-agent should perform."
+                      "description": "A clear description of what to summarize and what information to extract. Example: 'Summarize all payment-related clauses from the contract.'"
                     },
                     "system_instructions": {
                       "type": "string",
-                      "description": "Optional system-level instructions for the sub-agent's behavior and role."
+                      "description": "Optional role or behavioral instructions for the summarizer sub-agent."
                     }
                   },
                   "additionalProperties": false
@@ -70,7 +82,7 @@ public class CreateSubAgentTool implements AiToolHandler {
         try {
             return objectMapper.readTree(schemaJson);
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Invalid JSON schema in CreateSubAgentTool", e);
+            throw new IllegalStateException("Invalid JSON schema in SummarizerSubAgentTool", e);
         }
     }
 
@@ -92,15 +104,19 @@ public class CreateSubAgentTool implements AiToolHandler {
                 ? arguments.get("system_instructions").asText()
                 : null;
 
-        logger.info("CreateSubAgentTool: spawning sub-agent for task: {}",
+        logger.debug("SummarizerSubAgentTool: running summarization task: {}",
                 taskDescription.substring(0, Math.min(taskDescription.length(), 100)));
+
+        // Prepend the parent-thread conversation into the message text so the sub-agent
+        // has full context without any changes to CompletionService's history loading.
+        List<AiModelMessage> parentThreadHistory = context.parentPreviousMessages();
+
+        String promptMessageText = buildMessage(systemInstructions, taskDescription);
 
         Message subAgentMessage = new Message();
         subAgentMessage.setId(UUID.randomUUID());
-        subAgentMessage.setValue(taskDescription);
+        subAgentMessage.setValue(promptMessageText);
         subAgentMessage.setRole("user");
-        // Dont populate thread to create it as a new thread
-//        subAgentMessage.setThreadId(context.parentMessage().getThreadId());
         subAgentMessage.setProjectId(context.parentMessage().getProjectId());
         subAgentMessage.setAdditionalResources(new ArrayList<>());
 
@@ -108,8 +124,10 @@ public class CreateSubAgentTool implements AiToolHandler {
                 .cancellationToken(context.cancellationToken())
                 .build();
 
-        if (systemInstructions != null && !systemInstructions.isBlank()) {
-            overrides.setSystemPrompt(systemInstructions);
+
+        if (parentThreadHistory != null && !parentThreadHistory.isEmpty()) {
+            overrides.setPreviousMessages(parentThreadHistory);
+
         }
 
         try {
@@ -125,25 +143,43 @@ public class CreateSubAgentTool implements AiToolHandler {
                     .filter(m -> "assistant".equals(m.getRole()))
                     .reduce((first, second) -> second)
                     .map(Message::getValue)
-                    .orElse("Sub-agent completed but produced no response.");
+                    .orElse("Summarizer sub-agent completed but produced no response.");
 
             ObjectNode result = objectMapper.createObjectNode();
             result.put("status", "completed");
-            result.put("response", finalResponse);
+            result.put("summary", finalResponse);
             result.put("message_count", subAgentResponses.size());
 
-            logger.info("CreateSubAgentTool: sub-agent completed with {} messages", subAgentResponses.size());
-
+            logger.info("SummarizerSubAgentTool: completed with {} messages", subAgentResponses.size());
             return result;
+
         } catch (GendoxException e) {
             if ("DEEP_THINKING_CANCELLED".equals(e.getErrorCode())) {
                 throw e;
             }
-            logger.error("Sub-agent execution failed: {}", e.getMessage(), e);
+            logger.error("Summarizer sub-agent execution failed: {}", e.getMessage(), e);
             ObjectNode result = objectMapper.createObjectNode();
             result.put("status", "failed");
             result.put("error", e.getMessage());
             return result;
         }
+    }
+
+    /**
+     * Formats the parent-thread history as a readable block and prepends it to the
+     * task description so the sub-agent message is self-contained.
+     */
+    private String buildMessage(String systemInstructions, String taskDescription) {
+
+        return """
+                You are the Summarizer Sub-Agent. 
+                <system_instructions>
+                %s
+                </system_instructions>
+
+                <task_description>
+                %s
+                </task_description>
+                """.formatted(systemInstructions, taskDescription);
     }
 }

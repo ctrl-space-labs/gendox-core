@@ -506,6 +506,13 @@
             <version>1.40.0</version>
         </dependency>
 
+        <!-- diff-match-patch: text diff / patch library used by DocumentDiffTool -->
+        <dependency>
+            <groupId>org.bitbucket.cowwoc</groupId>
+            <artifactId>diff-match-patch</artifactId>
+            <version>1.2</version>
+        </dependency>
+
     </dependencies>
 
     <dependencyManagement>

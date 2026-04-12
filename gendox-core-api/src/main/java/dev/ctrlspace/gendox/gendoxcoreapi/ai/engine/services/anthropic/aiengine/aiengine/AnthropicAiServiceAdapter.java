@@ -82,7 +82,7 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
     @Override
     public CompletionResponse askCompletion(List<AiModelMessage> messages, String agentRole, AiModel aiModel, AiModelRequestParams aiModelRequestParams, String apiKey, List<AiTools> tools, String toolChoice, @Nullable ObjectNode responseJsonSchema) {
         if (Strings.isNotEmpty(agentRole)) {
-            messages.add(0, AiModelMessage.builder().role("user").content(agentRole).build());
+            upsertSystemPrompt(messages, agentRole);
         }
 
         AnthropicMessagesConverter.MappedAnthropicMessages mapped = anthropicMessagesConverter.mapMessages(messages);
@@ -135,6 +135,23 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
         AnthropicCompletionResponse anthropicResponse = this.getCompletionResponse(anthropicRequest, aiModel, apiKey);
 
         return anthropicCompletionResponseConverter.toCompletionResponse(anthropicResponse);
+    }
+
+    private static void upsertSystemPrompt(List<AiModelMessage> messages, String agentRole) {
+        AiModelMessage first = messages.isEmpty() ? null : messages.getFirst();
+
+        boolean hasSystemRole = first != null && "system".equals(first.getRole());
+
+        AiModelMessage updated = AiModelMessage.builder()
+                .role("system")
+                .content(agentRole)
+                .build();
+
+        if (hasSystemRole) {
+            messages.set(0, updated);
+        } else {
+            messages.add(0, updated);
+        }
     }
 
     private static void enforceClosedObjectSchemas(ObjectNode node) {
