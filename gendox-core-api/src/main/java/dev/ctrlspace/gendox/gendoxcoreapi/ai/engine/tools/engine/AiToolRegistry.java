@@ -38,6 +38,7 @@ public class AiToolRegistry {
 
     public JsonNode execute(String toolName, JsonNode args, ToolExecutionContext context) {
         AiToolHandler handler = handlersByName.get(toolName);
+        logger.debug("AiToolRegistry.execute: toolName={}", toolName);
 
         if (handler == null) {
             // TODO: think what to do with tools that are just passed in the browsers, and no execution is needed by BE

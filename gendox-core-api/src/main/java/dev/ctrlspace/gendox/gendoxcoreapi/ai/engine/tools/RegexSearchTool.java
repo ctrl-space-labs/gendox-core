@@ -117,8 +117,7 @@ public class RegexSearchTool implements AiToolHandler {
             documentIds.add(docId);
         }
 
-        RegexSearchResultDTO resultDto = documentSectionService.searchDocumentsWithRegex(
-                documentIds, rawPatterns, caseInsensitive);
+        RegexSearchResultDTO resultDto = documentSectionService.searchDocumentsWithRegex(documentIds, rawPatterns, caseInsensitive);
 
         logger.info("RegexSearchTool: found {} matches across {} documents",
                 resultDto.totalMatches(), documentIds.size());

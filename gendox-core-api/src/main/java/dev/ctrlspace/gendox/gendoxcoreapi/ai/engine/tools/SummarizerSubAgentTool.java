@@ -19,7 +19,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import static java.util.stream.Collectors.joining;
 
@@ -114,20 +113,20 @@ public class SummarizerSubAgentTool implements AiToolHandler {
         String promptMessageText = buildMessage(systemInstructions, taskDescription);
 
         Message subAgentMessage = new Message();
-        subAgentMessage.setId(UUID.randomUUID());
         subAgentMessage.setValue(promptMessageText);
         subAgentMessage.setRole("user");
         subAgentMessage.setProjectId(context.parentMessage().getProjectId());
         subAgentMessage.setAdditionalResources(new ArrayList<>());
+        // Save before getCompletion: MessageService creates a new ChatThread and assigns threadId,
+        // so every message produced inside this sub-agent's loop shares the same thread.
+        subAgentMessage = messageService.createMessage(subAgentMessage);
 
         CompletionRuntimeOverridesDTO overrides = CompletionRuntimeOverridesDTO.builder()
                 .cancellationToken(context.cancellationToken())
                 .build();
 
-
         if (parentThreadHistory != null && !parentThreadHistory.isEmpty()) {
             overrides.setPreviousMessages(parentThreadHistory);
-
         }
 
         try {

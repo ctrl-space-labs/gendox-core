@@ -12,6 +12,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRuntimeOverridesDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import org.slf4j.Logger;
@@ -41,17 +42,20 @@ public class DocumentSectionExtractorTool implements AiToolHandler {
 
     private final CompletionService completionService;
     private final DocumentSectionService documentSectionService;
+    private final MessageService messageService;
     private final UserService userService;
     private final SecurityUtils securityUtils;
     private final ObjectMapper objectMapper;
 
     public DocumentSectionExtractorTool(@Lazy CompletionService completionService,
                                         DocumentSectionService documentSectionService,
+                                        MessageService messageService,
                                         UserService userService,
                                         SecurityUtils securityUtils,
                                         ObjectMapper objectMapper) {
         this.completionService = completionService;
         this.documentSectionService = documentSectionService;
+        this.messageService = messageService;
         this.userService = userService;
         this.securityUtils = securityUtils;
         this.objectMapper = objectMapper;
@@ -137,19 +141,24 @@ public class DocumentSectionExtractorTool implements AiToolHandler {
                 </summary>
                 
                 Return ONLY the JSON array, with no additional explanation. Example format:
-                [
-                  {"line_start": 1, "line_end": 25},
-                  {"line_start": 100, "line_end": 200},
-                  {"line_start": 500, "line_end": 800}
-                ]
+                 {
+                   "document_id": "123",
+                   "line_ranges": [
+                     {"line_start": 1, "line_end": 25},
+                     {"line_start": 100, "line_end": 200},
+                     {"line_start": 500, "line_end": 800}
+                   ]
+                 }
                 """.formatted(documentText, contractSummary);
 
         Message subAgentMessage = new Message();
-        subAgentMessage.setId(UUID.randomUUID());
         subAgentMessage.setValue(prompt);
         subAgentMessage.setRole("user");
         subAgentMessage.setProjectId(context.parentMessage().getProjectId());
         subAgentMessage.setAdditionalResources(new ArrayList<>());
+        // Save before getCompletion: MessageService creates a new ChatThread and assigns threadId,
+        // so every message produced inside this sub-agent's loop shares the same thread.
+        subAgentMessage = messageService.createMessage(subAgentMessage);
 
         String systemInstructions = """
                 You are a document analysis specialist. Your task is to identify the portions of a

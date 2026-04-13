@@ -279,24 +279,20 @@ public class DocumentSectionService {
 
         List<RegexSearchMatchDTO> matches = new ArrayList<>();
         for (UUID docId : documentIds) {
-            List<String> lines = getFullDocumentLines(docId);
+            List<String> lines = getFullDocumentLines(docId).stream()
+                    .map(this::removeWordDocBookmark)
+                    .toList();
             String docIdStr = docId.toString();
             for (int i = 0; i < lines.size(); i++) {
                 String content = lines.get(i);
                 int lineNum = i + 1;
-                String previousLine = i > 0 ? lines.get(i - 1) : null;
-                String nextLine = i < lines.size() - 1 ? lines.get(i + 1) : null;
                 for (CompiledRegex cp : compiled) {
                     Matcher m = cp.pattern().matcher(content);
                     if (m.find()) {
-                        StringBuilder sb = new StringBuilder();
+                        ContextWindow ctx = extractContextWindow(lines, i, m.start(), m.end(), 90);
                         matches.add(new RegexSearchMatchDTO(
                                 docIdStr, lineNum, cp.raw(),
-                                sb
-                                        .append(previousLine).append("\n")
-                                        .append(">").append(content).append("\n")
-                                        .append(nextLine)
-                                        .toString()));
+                                ctx.before() + m.group() + ctx.after()));
 
                         break;
                     }
@@ -313,6 +309,34 @@ public class DocumentSectionService {
     }
 
     private record CompiledRegex(String raw, Pattern pattern) {}
+
+    private record ContextWindow(String before, String after) {}
+
+    private static ContextWindow extractContextWindow(List<String> lines, int lineIndex,
+                                                      int matchStart, int matchEnd,
+                                                      int windowChars) {
+        String currentLine = lines.get(lineIndex);
+
+        // ── before: up to windowChars chars ending exactly at matchStart ──
+        StringBuilder before = new StringBuilder(currentLine.substring(0, matchStart));
+        for (int p = lineIndex - 1; p >= 0 && before.length() < windowChars; p--) {
+            before.insert(0, lines.get(p) + "\n");
+        }
+        if (before.length() > windowChars) {
+            before.delete(0, before.length() - windowChars);
+        }
+
+        // ── after: up to windowChars chars starting exactly at matchEnd ──
+        StringBuilder after = new StringBuilder(currentLine.substring(matchEnd));
+        for (int n = lineIndex + 1; n < lines.size() && after.length() < windowChars; n++) {
+            after.append("\n").append(lines.get(n));
+        }
+        if (after.length() > windowChars) {
+            after.setLength(windowChars);
+        }
+
+        return new ContextWindow(before.toString(), after.toString());
+    }
 
     /**
      * TODO merge this with the above to findSectionsByCriteria

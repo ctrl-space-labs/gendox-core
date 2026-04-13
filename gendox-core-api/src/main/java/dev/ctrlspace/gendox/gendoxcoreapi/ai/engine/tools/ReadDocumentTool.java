@@ -132,7 +132,7 @@ public class ReadDocumentTool implements AiToolHandler {
         }
 
         boolean closeOrOverlaps(Range next) {
-            return next.startLine - this.endLine <= 30;
+            return next.startLine - this.endLine <= 25;
         }
 
         Range mergeWith(Range other) {
@@ -177,18 +177,17 @@ public class ReadDocumentTool implements AiToolHandler {
             }
         }
 
-        // Walk the lines with a counter
+        // Walk the merged ranges, emitting "..." between non-adjacent sections
         String[] lines = fullText.split("\n", -1);
         StringBuilder sb = new StringBuilder();
-        int lineNum = 1;
-        for (String line : lines) {
-            for (Range r : merged) {
-                if (r.contains(lineNum)) {
-                    sb.append(line).append("\n");
-                    break;
-                }
+        for (int i = 0; i < merged.size(); i++) {
+            if (i > 0) {
+                sb.append("...\n");
             }
-            lineNum++;
+            Range r = merged.get(i);
+            for (int lineNum = r.startLine(); lineNum <= r.endLine() && lineNum <= lines.length; lineNum++) {
+                sb.append(lines[lineNum - 1]).append("\n");
+            }
         }
         return sb.toString();
     }

@@ -18,7 +18,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Component
 public class CreateSubAgentTool implements AiToolHandler {
@@ -96,13 +95,13 @@ public class CreateSubAgentTool implements AiToolHandler {
                 taskDescription.substring(0, Math.min(taskDescription.length(), 100)));
 
         Message subAgentMessage = new Message();
-        subAgentMessage.setId(UUID.randomUUID());
         subAgentMessage.setValue(taskDescription);
         subAgentMessage.setRole("user");
-        // Dont populate thread to create it as a new thread
-//        subAgentMessage.setThreadId(context.parentMessage().getThreadId());
         subAgentMessage.setProjectId(context.parentMessage().getProjectId());
         subAgentMessage.setAdditionalResources(new ArrayList<>());
+        // Save before getCompletion: MessageService creates a new ChatThread and assigns threadId,
+        // so every message produced inside this sub-agent's loop shares the same thread.
+        subAgentMessage = messageService.createMessage(subAgentMessage);
 
         CompletionRuntimeOverridesDTO overrides = CompletionRuntimeOverridesDTO.builder()
                 .cancellationToken(context.cancellationToken())
@@ -113,6 +112,9 @@ public class CreateSubAgentTool implements AiToolHandler {
         }
 
         try {
+            // TODO think if i want to pass the text from the 1st user message.
+            //  This could accelerate the sub-agent, and enable cost savings by improving cache hits.
+
             List<Message> subAgentResponses = completionService.getCompletion(
                     subAgentMessage,
                     new ArrayList<>(),
