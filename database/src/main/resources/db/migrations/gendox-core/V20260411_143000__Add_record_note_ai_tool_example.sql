@@ -8,7 +8,6 @@ SELECT
     $${
     "name": "create_note",
     "description": "Create a structured note for an important finding or excerpt. Use when the exact wording must be preserved (e.g. a clause, amount, date, or obligation). The host app may persist or display the note; the model should pass the text in content.",
-    "strict": true,
     "parameters": {
       "type": "object",
       "required": ["content"],
@@ -41,7 +40,6 @@ SELECT
     $${
     "name": "regex_search",
     "description": "Search one or more documents for lines that match any of the provided regular expressions. Returns each matching line with its line number, the matching pattern, and the document it came from. Useful for locating specific dates, numbers, string literals, or any structured text.",
-    "strict": true,
     "parameters": {
       "type": "object",
       "required": ["patterns", "document_ids"],
@@ -79,7 +77,6 @@ SELECT
     $${
     "name": "summarize",
     "description": "It created a sub-agent to summarize documents or extract focused information from them. The sub-agent receives the full conversation history as context and performs the summarization task described in the task_description. Use this when you need a condensed, targeted summary of a document or a set of findings.",
-    "strict": true,
     "parameters": {
       "type": "object",
       "required": ["task_description"],
@@ -166,7 +163,6 @@ UPDATE gendox_core.types
 SET description = $${
     "name": "read_document",
     "description": "Read the full text of a document by its ID. Optionally provide line_ranges (array of {line_start, line_end}) to return only specific portions. Ranges are expanded to bring in surrounding context.",
-    "strict": true,
     "parameters": {
       "type": "object",
       "required": ["document_id"],
@@ -202,7 +198,6 @@ SELECT
     $${
     "name": "create_sub_agent",
     "description": "Create a sub-agent to perform a specific research or analysis task. The sub-agent will execute independently and return its findings.",
-    "strict": true,
     "parameters": {
       "type": "object",
       "required": ["task_description"],

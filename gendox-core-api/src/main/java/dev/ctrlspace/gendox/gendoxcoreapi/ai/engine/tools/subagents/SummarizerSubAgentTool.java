@@ -1,4 +1,4 @@
-package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools;
+package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.subagents;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -37,13 +37,17 @@ public class SummarizerSubAgentTool implements AiToolHandler {
     private final CompletionService completionService;
     private final MessageService messageService;
     private final ObjectMapper objectMapper;
+    private final CreateSubAgentTool createSubAgentTool;
+    private final DocumentSectionExtractorTool documentSectionExtractorTool;
 
     public SummarizerSubAgentTool(@Lazy CompletionService completionService,
                                   MessageService messageService,
-                                  ObjectMapper objectMapper) {
+                                  ObjectMapper objectMapper, CreateSubAgentTool createSubAgentTool, DocumentSectionExtractorTool documentSectionExtractorTool) {
         this.completionService = completionService;
         this.messageService = messageService;
         this.objectMapper = objectMapper;
+        this.createSubAgentTool = createSubAgentTool;
+        this.documentSectionExtractorTool = documentSectionExtractorTool;
     }
 
     @Override
@@ -123,11 +127,14 @@ public class SummarizerSubAgentTool implements AiToolHandler {
 
         CompletionRuntimeOverridesDTO overrides = CompletionRuntimeOverridesDTO.builder()
                 .cancellationToken(context.cancellationToken())
+                // Prevent this sub-agent from spawning further sub-agents.
+                .excludedToolNames(List.of(this.getName(), createSubAgentTool.getName(), documentSectionExtractorTool.getName()))
                 .build();
 
         if (parentThreadHistory != null && !parentThreadHistory.isEmpty()) {
             overrides.setPreviousMessages(parentThreadHistory);
         }
+        
 
         try {
             List<Message> subAgentResponses = completionService.getCompletion(

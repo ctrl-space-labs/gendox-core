@@ -37,4 +37,12 @@ public class CompletionRuntimeOverridesDTO {
     private CancellationToken cancellationToken;
 
     private List<AiModelMessage> previousMessages;
+
+    /**
+     * Tool names that should be removed from the available tools list before sending the request to the LLM.
+     * Use this to prevent a sub-agent from calling tools it should not have access to
+     * (e.g. prevent a summarizer sub-agent from spawning further sub-agents).
+     */
+    @Builder.Default
+    private List<String> excludedToolNames = new ArrayList<>();
 }

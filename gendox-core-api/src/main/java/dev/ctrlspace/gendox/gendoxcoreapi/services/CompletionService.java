@@ -465,11 +465,32 @@ public class CompletionService {
 
     private List<AiTools> resolveAvailableTools(@Nullable ProjectAgent agent,
                                                  @Nullable CompletionRuntimeOverridesDTO overrides) {
+        List<AiTools> tools;
         if (overrides != null && overrides.getAiTools() != null && !overrides.getAiTools().isEmpty()) {
-            return overrides.getAiTools();
+            tools = overrides.getAiTools();
+        } else if (agent != null) {
+            tools = agent.getAiTools();
+        } else {
+            return Collections.emptyList();
         }
-        if (agent != null) return agent.getAiTools();
-        return Collections.emptyList();
+
+        List<String> excluded = overrides != null ? overrides.getExcludedToolNames() : Collections.emptyList();
+        if (excluded == null || excluded.isEmpty()) {
+            return tools;
+        }
+
+        return tools.stream()
+                .filter(tool -> {
+                    try {
+                        JsonNode fn = objectMapper.readTree(tool.getJsonSchema());
+                        String name = fn.path("name").asText();
+                        return !excluded.contains(name);
+                    } catch (JsonProcessingException e) {
+                        logger.warn("Could not parse tool JSON schema while filtering excluded tools; keeping tool. Error: {}", e.getMessage());
+                        return true;
+                    }
+                })
+                .collect(Collectors.toList());
     }
 
     private String resolveSystemPrompt(@Nullable ProjectAgent agent,
