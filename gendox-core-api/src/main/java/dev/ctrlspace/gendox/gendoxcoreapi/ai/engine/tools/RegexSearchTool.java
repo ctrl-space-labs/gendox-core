@@ -119,7 +119,7 @@ public class RegexSearchTool implements AiToolHandler {
 
         RegexSearchResultDTO resultDto = documentSectionService.searchDocumentsWithRegex(documentIds, rawPatterns, caseInsensitive);
 
-        logger.info("RegexSearchTool: found {} matches across {} documents",
+        logger.debug("RegexSearchTool: found {} matches across {} documents",
                 resultDto.totalMatches(), documentIds.size());
         return objectMapper.valueToTree(resultDto);
     }

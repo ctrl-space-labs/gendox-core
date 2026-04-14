@@ -91,7 +91,7 @@ public class CreateSubAgentTool implements AiToolHandler {
                 ? arguments.get("system_instructions").asText()
                 : null;
 
-        logger.info("CreateSubAgentTool: spawning sub-agent for task: {}",
+        logger.debug("CreateSubAgentTool: spawning sub-agent for task: {}",
                 taskDescription.substring(0, Math.min(taskDescription.length(), 100)));
 
         Message subAgentMessage = new Message();

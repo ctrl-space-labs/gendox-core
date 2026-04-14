@@ -171,7 +171,7 @@ public class SummarizerSubAgentTool implements AiToolHandler {
     private String buildMessage(String systemInstructions, String taskDescription) {
 
         return """
-                You are the Summarizer Sub-Agent. 
+                You are the Summarizer Sub-Agent. Dont delegate your task to any other sub-agent. You MUST answer the question yourself. It is forbidden to create any other sub-agent, or summarizer. You MUST answer the question yourself. 
                 <system_instructions>
                 %s
                 </system_instructions>

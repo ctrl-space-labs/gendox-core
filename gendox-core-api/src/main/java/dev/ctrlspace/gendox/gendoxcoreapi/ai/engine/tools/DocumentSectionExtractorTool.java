@@ -172,6 +172,7 @@ public class DocumentSectionExtractorTool implements AiToolHandler {
                 .build();
 
         try {
+            logger.debug("DocumentSectionExtractorTool: sending document scanning task to sub-agent for document {}", docId);
             List<Message> responses = completionService.getCompletion(
                     subAgentMessage,
                     new ArrayList<>(),

@@ -111,6 +111,7 @@ public class DocumentDiffTool implements AiToolHandler {
         validateAccess(context, docBId);
 
         List<DiffMatchPatch.Patch> patches = documentSectionService.diffDocuments(docAId, docBId);
+        logger.debug("Diff calculated and found {} patches", patches.size());
         String patchText = documentSectionService.patchToDecodedText(patches);
 
         ObjectNode result = objectMapper.createObjectNode();
