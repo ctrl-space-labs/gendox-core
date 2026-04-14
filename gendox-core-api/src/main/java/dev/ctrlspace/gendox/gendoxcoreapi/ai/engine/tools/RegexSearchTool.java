@@ -117,6 +117,12 @@ public class RegexSearchTool implements AiToolHandler {
             documentIds.add(docId);
         }
 
+        logger.info("RegexSearchTool: execute (parentThreadId={}, documents={}, patterns={}, caseInsensitive={})",
+                context.parentMessage() != null ? context.parentMessage().getThreadId() : null,
+                documentIds.size(),
+                rawPatterns.size(),
+                caseInsensitive);
+
         RegexSearchResultDTO resultDto = documentSectionService.searchDocumentsWithRegex(documentIds, rawPatterns, caseInsensitive);
 
         logger.debug("RegexSearchTool: found {} matches across {} documents",

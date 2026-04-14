@@ -42,7 +42,9 @@ public class SummarizerSubAgentTool implements AiToolHandler {
 
     public SummarizerSubAgentTool(@Lazy CompletionService completionService,
                                   MessageService messageService,
-                                  ObjectMapper objectMapper, CreateSubAgentTool createSubAgentTool, DocumentSectionExtractorTool documentSectionExtractorTool) {
+                                  ObjectMapper objectMapper,
+                                  @Lazy CreateSubAgentTool createSubAgentTool,
+                                  @Lazy DocumentSectionExtractorTool documentSectionExtractorTool) {
         this.completionService = completionService;
         this.messageService = messageService;
         this.objectMapper = objectMapper;

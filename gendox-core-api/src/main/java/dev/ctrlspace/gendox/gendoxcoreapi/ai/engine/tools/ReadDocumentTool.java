@@ -102,6 +102,9 @@ public class ReadDocumentTool implements AiToolHandler {
         }
 
         UUID docId = UUID.fromString(arguments.get("document_id").asText());
+        logger.info("ReadDocumentTool: execute (parentThreadId={}, documentId={})",
+                context.parentMessage() != null ? context.parentMessage().getThreadId() : null,
+                docId);
 
         validateAgentHasAccessToReadTheDoc(context, docId);
 

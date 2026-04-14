@@ -46,19 +46,25 @@ public class DocumentSectionExtractorTool implements AiToolHandler {
     private final UserService userService;
     private final SecurityUtils securityUtils;
     private final ObjectMapper objectMapper;
+    private final SummarizerSubAgentTool summarizerSubAgentTool;
+    private final CreateSubAgentTool createSubAgentTool;
 
     public DocumentSectionExtractorTool(@Lazy CompletionService completionService,
                                         DocumentSectionService documentSectionService,
                                         MessageService messageService,
                                         UserService userService,
                                         SecurityUtils securityUtils,
-                                        ObjectMapper objectMapper) {
+                                        ObjectMapper objectMapper,
+                                        @Lazy SummarizerSubAgentTool summarizerSubAgentTool,
+                                        @Lazy CreateSubAgentTool createSubAgentTool) {
         this.completionService = completionService;
         this.documentSectionService = documentSectionService;
         this.messageService = messageService;
         this.userService = userService;
         this.securityUtils = securityUtils;
         this.objectMapper = objectMapper;
+        this.summarizerSubAgentTool = summarizerSubAgentTool;
+        this.createSubAgentTool = createSubAgentTool;
     }
 
     @Override
@@ -168,6 +174,7 @@ public class DocumentSectionExtractorTool implements AiToolHandler {
 
         CompletionRuntimeOverridesDTO overrides = CompletionRuntimeOverridesDTO.builder()
                 .cancellationToken(context.cancellationToken())
+                .excludedToolNames(List.of(this.getName(), createSubAgentTool.getName(), summarizerSubAgentTool.getName()))
                 .systemPrompt(systemInstructions)
                 .build();
 

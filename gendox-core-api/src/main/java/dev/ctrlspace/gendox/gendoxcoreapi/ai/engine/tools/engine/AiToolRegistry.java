@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -36,9 +38,19 @@ public class AiToolRegistry {
         this.objectMapper = objectMapper;
     }
 
+    @Observed(name = "AiToolRegistry.execute",
+            contextualName = "AiToolRegistry#execute",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public JsonNode execute(String toolName, JsonNode args, ToolExecutionContext context) {
         AiToolHandler handler = handlersByName.get(toolName);
-        logger.debug("AiToolRegistry.execute: toolName={}", toolName);
+        logger.info("AiToolRegistry.execute: toolName={}, parentThreadId={}",
+                toolName,
+                Optional.ofNullable(context.parentMessage()).map(m -> m.getThreadId()).orElse(null));
 
         if (handler == null) {
             // TODO: think what to do with tools that are just passed in the browsers, and no execution is needed by BE

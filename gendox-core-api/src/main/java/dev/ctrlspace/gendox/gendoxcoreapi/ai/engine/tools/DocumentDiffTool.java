@@ -107,6 +107,11 @@ public class DocumentDiffTool implements AiToolHandler {
         UUID docAId = UUID.fromString(arguments.get("document_a_id").asText());
         UUID docBId = UUID.fromString(arguments.get("document_b_id").asText());
 
+        logger.info("DocumentDiffTool: execute (parentThreadId={}, documentAId={}, documentBId={})",
+                context.parentMessage() != null ? context.parentMessage().getThreadId() : null,
+                docAId,
+                docBId);
+
         validateAccess(context, docAId);
         validateAccess(context, docBId);
 

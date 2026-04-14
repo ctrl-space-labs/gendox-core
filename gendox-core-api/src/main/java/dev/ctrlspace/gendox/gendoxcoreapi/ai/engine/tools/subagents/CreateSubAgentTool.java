@@ -27,13 +27,17 @@ public class CreateSubAgentTool implements AiToolHandler {
     private final CompletionService completionService;
     private final MessageService messageService;
     private final ObjectMapper objectMapper;
+    private final DocumentSectionExtractorTool documentSectionExtractorTool;
+    private final SummarizerSubAgentTool summarizerSubAgentTool;
 
     public CreateSubAgentTool(@Lazy CompletionService completionService,
                               MessageService messageService,
-                              ObjectMapper objectMapper) {
+                              ObjectMapper objectMapper, DocumentSectionExtractorTool documentSectionExtractorTool, SummarizerSubAgentTool summarizerSubAgentTool) {
         this.completionService = completionService;
         this.messageService = messageService;
         this.objectMapper = objectMapper;
+        this.documentSectionExtractorTool = documentSectionExtractorTool;
+        this.summarizerSubAgentTool = summarizerSubAgentTool;
     }
 
     @Override
@@ -105,6 +109,7 @@ public class CreateSubAgentTool implements AiToolHandler {
 
         CompletionRuntimeOverridesDTO overrides = CompletionRuntimeOverridesDTO.builder()
                 .cancellationToken(context.cancellationToken())
+                .excludedToolNames(List.of(this.getName(), documentSectionExtractorTool.getName(), summarizerSubAgentTool.getName()))
                 .build();
 
         if (systemInstructions != null && !systemInstructions.isBlank()) {
