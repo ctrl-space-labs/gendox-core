@@ -210,7 +210,7 @@ gendox:
         steps:
           document-insights-step:
             name: documentInsightsStep
-            chunk-size: 2
+            chunk-size: 1
             pageable-size: 1000
           delete-insights-answers-step:
             name: deleteInsightsAnswersStep
