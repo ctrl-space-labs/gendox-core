@@ -206,6 +206,7 @@ gendox:
       job:
         name: documentInsightsJob
         thread-pool-size: 10
+        llm-completion-executor-pool-size: 10
         steps:
           document-insights-step:
             name: documentInsightsStep

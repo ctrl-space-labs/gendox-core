@@ -38,7 +38,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
     private final MessageService messageService;
     private final CompletionService completionService;
     private final ProjectService projectService;
-    private final TaskExecutor asyncLlmCompletionsExecutor;
+    private final TaskExecutor asyncDigitizationLlmCompletionsExecutor;
     private final ObjectMapper objectMapper;
 
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
@@ -61,7 +61,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
                                          DocumentService documentService,
                                          DownloadService downloadService,
                                          MessageService messageService,
-                                         TaskExecutor asyncLlmCompletionsExecutor, ObjectMapper objectMapper) {
+                                         TaskExecutor asyncDigitizationLlmCompletionsExecutor, ObjectMapper objectMapper) {
         this.taskService = taskService;
         this.taskNodeService = taskNodeService;
         this.documentService = documentService;
@@ -69,7 +69,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
         this.completionService = completionService;
         this.projectService = projectService;
         this.messageService = messageService;
-        this.asyncLlmCompletionsExecutor = asyncLlmCompletionsExecutor;
+        this.asyncDigitizationLlmCompletionsExecutor = asyncDigitizationLlmCompletionsExecutor;
         this.objectMapper = objectMapper;
     }
 
@@ -265,7 +265,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
                                     .documentId(documentNode.getDocumentId())
                                     .build())
                             .build();
-                }, asyncLlmCompletionsExecutor)
+                }, asyncDigitizationLlmCompletionsExecutor)
                 .handle((newPage, throwable) -> {
                     if (throwable != null) {
                         logger.error("Failed to get completion for docNode {}, page {}: ",
