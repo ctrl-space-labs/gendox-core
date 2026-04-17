@@ -38,6 +38,7 @@ const ChatInputSection = ({ auth, token, currentThread, organizationId, projectI
   const [isDragging, setIsDragging] = useState(false)
   const [plusMenuAnchorEl, setPlusMenuAnchorEl] = useState(null)
   const isPlusMenuOpen = Boolean(plusMenuAnchorEl)
+  const [deepThinkingEnabled, setDeepThinkingEnabled] = useState(false)
 
   const { items: attachments, isUploading, isDeleting } = useSelector(state => state.chatAttachments)
 
@@ -115,6 +116,11 @@ const ChatInputSection = ({ auth, token, currentThread, organizationId, projectI
     dispatch(clearAll())
   }, [currentThread?.threadId, dispatch])
 
+  // Reset deep thinking toggle per thread context.
+  useEffect(() => {
+    setDeepThinkingEnabled(false)
+  }, [currentThread?.threadId, projectId])
+
   useEffect(() => {
     return () => {
       attachmentsRef.current.forEach(a => {
@@ -140,7 +146,10 @@ const ChatInputSection = ({ auth, token, currentThread, organizationId, projectI
     dispatch(
       sendMessage({
         user: auth.user,
-        currentThread,
+        currentThread: {
+          ...currentThread,
+          deepThinking: deepThinkingEnabled
+        },
         message,
         uploadedDocs: uploadedDocs,
         organizationId,
@@ -345,7 +354,10 @@ const ChatInputSection = ({ auth, token, currentThread, organizationId, projectI
         </Box>
       )}
       {/* Row 2: Search, Attach, Copilot, More chips */}
-      <InputMessageOptions />
+      <InputMessageOptions
+        deepThinkingEnabled={deepThinkingEnabled}
+        onDeepThinkingToggle={() => setDeepThinkingEnabled(prev => !prev)}
+      />
     </Paper>
   )
 }

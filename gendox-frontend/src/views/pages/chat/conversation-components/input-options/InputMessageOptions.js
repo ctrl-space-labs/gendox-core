@@ -1,28 +1,8 @@
-import { useState } from 'react'
 import { Box, Tooltip } from '@mui/material'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import Chip from 'src/views/custom-components/mui/chip'
 
-const InputMessageOptions = () => {
-  // Menu anchor state (for the "More" chip)
-  const [anchorEl, setAnchorEl] = useState(null)
-
-  // Toggle states
-  const [copilotEnabled, setCopilotEnabled] = useState(false)
-
-  // Menu open/close
-  const handleMenuOpen = event => {
-    setAnchorEl(event.currentTarget)
-  }
-  const handleMenuClose = () => {
-    setAnchorEl(null)
-  }
-
-  // Example toggler for the Copilot chip
-  const handleCopilotToggle = () => {
-    setCopilotEnabled(!copilotEnabled)
-  }
-
+const InputMessageOptions = ({ deepThinkingEnabled = false, onDeepThinkingToggle }) => {
   return (
     <Box
       sx={{
@@ -43,7 +23,7 @@ const InputMessageOptions = () => {
         />
       </Tooltip>
 
-      {/*/!* Attach Chip *!/*/}
+       {/*/!* Attach Chip *!/*/}
       {/*<Chip*/}
       {/*  onClick={() => console.log('Attach file')}*/}
       {/*  icon={<Icon icon='mdi:plus' />}*/}
@@ -103,6 +83,16 @@ const InputMessageOptions = () => {
       {/*    Action 3*/}
       {/*  </MenuItem>*/}
       {/*</Menu>*/}
+      <Tooltip title={deepThinkingEnabled ? 'Disable deep thinking' : 'Enable deep thinking'}>
+        <Chip
+          onClick={onDeepThinkingToggle}
+          icon={<Icon icon='mdi:brain' />}
+          label='Deep Thinking'
+          color={deepThinkingEnabled ? 'primary' : 'secondary'}
+          variant='outlined'
+          rounded
+        />
+      </Tooltip>
     </Box>
   )
 }

@@ -16,12 +16,16 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContextDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.CancellationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.tools.ToolDeclarationStrings;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.util.json.schema.JsonSchemaGenerator;
+import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.annotation.BeforeStep;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,9 +35,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-
+import org.springframework.core.task.TaskExecutor;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 
 @Component
@@ -41,6 +47,7 @@ import java.util.*;
 public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQuestionsDTO, TaskAnswerBatchDTO> {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentInsightsProcessor.class);
+    private final JobService jobService;
 
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private Boolean reGenerateExistingAnswers;
@@ -57,6 +64,13 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     private Project project;
     private final DocumentService documentService;
     private MessageLocalContextConverter messageLocalContextConverter;
+    private StepExecution stepExecution;
+    private final TaskExecutor asyncInsightsLlmCompletionsExecutor;
+
+    @BeforeStep
+    public void setStepExecution(StepExecution stepExecution) {
+        this.stepExecution = stepExecution;
+    }
 
     @Autowired
     public DocumentInsightsProcessor(TypeService typeService,
@@ -69,7 +83,9 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                                      DocumentSectionService documentSectionService,
                                      TaskNodeService taskNodeService,
                                      DocumentService documentService,
-                                     MessageLocalContextConverter messageLocalContextConverter) {
+                                     MessageLocalContextConverter messageLocalContextConverter,
+                                     JobService jobService,
+                                     TaskExecutor asyncInsightsLlmCompletionsExecutor) {
         this.typeService = typeService;
         this.taskService = taskService;
         this.objectMapper = objectMapper;
@@ -81,6 +97,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         this.taskNodeService = taskNodeService;
         this.documentService = documentService;
         this.messageLocalContextConverter = messageLocalContextConverter;
+        this.jobService = jobService;
+        this.asyncInsightsLlmCompletionsExecutor = asyncInsightsLlmCompletionsExecutor;
     }
 
     @Override
@@ -89,7 +107,6 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         TaskAnswerBatchDTO batch = new TaskAnswerBatchDTO();
 
         /* 1 – Filter questions that are already answered (optionally delete old) */
-        List<AnswerCreationDTO> newAnswers = new ArrayList<>();
         List<TaskNode> answeredQuestions = new ArrayList<>();
         List<TaskNode> answersToDelete = new ArrayList<>();
 
@@ -119,12 +136,145 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         if (project == null) {
             project = projectService.getProjectById(task.getProjectId());
         }
-        CompletionRuntimeOverridesDTO overrides = taskService.buildCompletionOverrides(task);
+        CompletionRuntimeOverridesDTO overrides = taskService.buildDefaultCompletionOverrides(task);
+
+        // TODO - this makes it implicitly a "DeepThinking" completion. Update this to be declared explicitly
+        CancellationToken cancellationToken = new CancellationToken(
+                () -> isCancellationRequested(stepExecution));
+        overrides.setCancellationToken(cancellationToken);
+
+        // TODO - add subagent tool, move it to a propper place
+//        AiTools subAgentTool = new AiTools();
+//        subAgentTool.setType("function");
+//        subAgentTool.setJsonSchema(ToolDeclarationStrings.CREATE_SUB_AGENT);
+//        overrides.getAiTools().add(subAgentTool);
+//        List<MessageLocalContextDTO> subAgents = new ArrayList<>();
+//        MessageLocalContextDTO plannerAgentDescriptionContext = MessageLocalContextDTO.builder()
+//                .contextType("sub-agent")
+//                .value("""
+//                        SubAgent name: Planner
+//                        Role: create a plan for analyzing contracts. Analyzes the questions asked for a contract and create a step by step plan on how to answer them, which tools to use, and in which order. In general the available tools and other sub-agents that exist are: 1. Summering a contract and extracting information needed to be reviewed to answer the question (e.g 'extract all financial info, to review payment related questions' or 'extract all property related info and codes to then review architecture diagrams'), 2. A document shortener sub-agent the will review huge documents and will describe the parts that are related for our contract. \n\n A planning session could be like:\n1.Summarize the Main Contract for related to [..that..] information\n2. Extract from Systash Orizontias idioktisias only the parts that are related to the Main Contract\n3. Compare the main contract with the extracted text parts from Systash
+//                        """)
+//                .build();
+//        MessageLocalContextDTO summarizerAgentDescriptionContext = MessageLocalContextDTO.builder()
+//                .contextType("sub-agent")
+//                .value("""
+//                        SubAgent name: Summarizer
+//                        Role: summarize documents, or parts of documents, to extract the needed information to answer the questions. For example, if the question is 'What are the payment terms in the contract?' and the document is a 100 pages contract, this agent should review the contract and extract all payment related information, to then provide it as context for answering the question.
+//                        """)
+//                .build();
+//        MessageLocalContextDTO textExtractorAgentDescriptionContext = MessageLocalContextDTO.builder()
+//                .contextType("sub-agent")
+//                .value("""
+//                        SubAgent name: Text Extractor
+//                        Role: <Document>
+//                            ......
+//                            </Document>
+//
+//                            For the above document, I need you to extract any text parts that are refering to the bellow <summary>.
+//                            The output must be a json array list with line_start and line_end fields describing sections that are related the the bellow question.
+//
+//                            These are text parts that are related to the <summary>. After your export, those parts will be used to cross check the summary with the original text. your goal is not to miss any related sections, be generus with your selection, and remove the parts that are completly unrelated.
+//
+//                            The summary:
+//
+//                            <summary>
+//                            .....
+//                            </summary>
+//
+//
+//                            If any of the above is referred to the document, the whole paragraph should be extracted.
+//
+//                            Example output:
+//                            [
+//                            {line_start: 1, line_end: 25},
+//                            {line_start: 100, line_end: 200},
+//                            {line_start: 500, line_end: 800},
+//                            {line_start: 23, line_end: 80},
+//                            ]"
+//
+//                        """)
+//                .build();
+//        MessageLocalContextDTO paralegalAgentDescriptionContext = MessageLocalContextDTO.builder()
+//                .contextType("sub-agent")
+//                .value("""
+//                        SubAgent name: Paralegal
+//                        Role: A paralegal subagent retrieves and reviews legal documents, identifies the sections relevant to the task, and performs focused comparisons, checks, and analysis across them.
+//                              It then delivers a concise, structured answer that highlights key findings, discrepancies, and the specific document passages that support its conclusion.
+//                              In the task description should pass the UUIDs of the documents that need to be processed, and the questions that need to be answered. The paralegal will then read the document content, find the relevant sections in those documents, review them, and answer the questions based on them.
+//                        """)
+//                .build();
+//        subAgents.add(plannerAgentDescriptionContext);
+//        subAgents.add(summarizerAgentDescriptionContext);
+//        subAgents.add(textExtractorAgentDescriptionContext);
+//        subAgents.add(paralegalAgentDescriptionContext);
+
+//        MessageLocalContextDTO legalReviewSkills = MessageLocalContextDTO.builder()
+//                .contextType("legal_review_skills")
+//                .value("""
+//                        <skills>
+//                        :: bellow are skills on how to review legal documents.
+//
+//                        When Reviewing a document trying to answer in specific questions, is is always usefull to create a plan first.
+//
+//                        Many questions, might require to piece information from multiple parts of the document. You can create a summary of the document related to this question eg. Summarize it related to all payments and the payment plan, or summarize it related to the buys seller and the people involved, or summarize it related to all the codes of properties referred to the doc.\s
+//                        To avoid cognitive load, you can delegate this to the Summarizer sub-agent by calling the appropriate tool. The Summarizer sub-agent will receive the full chat history as context, so dont repeat the information, just give instructions what to summarize from the previous discussion.\s
+//
+//                        You can use the regex_search tool to find specific information in the document, for example search for amounts, or code articles, or for placeholders.
+//
+//                        Typically placeholders are in brackets, and some might have escaped characters, like [•], [...], \\[...\\], [DATE], [FULL NAME], [Name], {Name}, {First Name}, {...}, \\{Name\\}, ......, or other variations. You can use regexes to find all of them, and then review them to find the relevant ones for the question you need to answer.
+//
+//                        If you need to compare 2 documents, you can use the diff_documents tool, it will return a patch with all the differences between the 2 documents, and you can review the differences to find the relevant ones for the question you need to answer.
+//
+//                        Because comparing the documents adds both documents content to the context, delegate this to a subagent, and ask it to compare those documents by providing their UUIDs and ask to give you a consolidated answer about the question. The sub-agent is expected to use the diff_documents tool, and then review the differences to give you a consolidated answer.
+//
+//                        Usually you use the read_document too read the content of the document, it gets the UUID as a param. In read cases the tool gets also a range of lines to read from the doc. This is mainly used in the results of the SectionExtractor sub-agent, that finds the relevant sections in the document (see bellow).\s
+//
+//                        The SectionExtractor sub-agent is responsible to read documents that are huge, usually they are supporting documents for the contract review. This subagent reads the document, reviews it, and returns the line ranges that are related to the contract and the question. The main agent then uses the line ranges to read only the relevant sections from the document, and then answer the question based on those sections.
+//
+//                        SectionExtractor sub-agent receives from the main agent the document UUID to read and the summary of the main document that needs to be reviewed, and it is expected to return the line ranges that are related to the summary.\s
+//
+//                        1. Αν η ερώτηση είναι για σύγκριση με το template τότε πρέπει:
+//                        -  να φτιάξεις έναν sub agent με create_sub_agent\s
+//                        - Στο task description θα δώσεις το document id (UUID) του συμβολαίου και το document id (UUID) του template που θα διαλέξεις από την λίστα των templete files.\s
+//                        - Στο task description θα του ζητήσεις να χρησιμοποιήσει το diff_document tool, για να δει τις διαφορές
+//                        - Στο task description θα του ζητήσεις να σου απαντήσει με λεπτομέρεια για το τι αλλαγές υπάρχουν. Προσάρμοσε ακριβώς τι θα του ζητήσεις και σε συνδυασμό με την ερώτηση του χρήστη
+//
+//                        2. Αν η ερώτηση είναι για σύγκριση με την σύσταση οριζόντιας ιδιοκτησίας (που είναι τεράστιο), τότε:
+//                        - Θα φτιάξεις έναν Summarize agent και θα του ζητήσεις  να κάνει μια λεπτομερή περίληψη του συμβολαίου σε σχέση με όλους τους κωδικούς ακινήτων που αναφέρονται στην ερώτηση και στο συμβόλαιο
+//                        - θα πάρεις αυτή την περίληψη, και θα την δώσεις στον Extractor Agent (extract_relevant_sections tool) μαζί με το document id (UUID) του αρχείου της σύστασης θα του ζητήσεις να σου βρει όλα τα line ranges που περιγράφουν τα στοιχεία του ακινήτου, χρειαζόμαστε όλα τα παρακάτω ranges που αναφέρονται στο συγκεκριμένο συμβόλαιο. αυτά συνήθως βρίσκονται:
+//                            - στην αρχή της σύστασης, σε σχέση με το οικόπεδο και το κτίριο
+//                            - μετά ακολουθεί μια περιοχή που περιγράφονται οι αποθήκες και οι θέσεις parking
+//                            - μετά ακολουθεί η περιγραφή των ίδιων των σπιτιών
+//                        - ο extractor agent θα σου επιστρέψει τα ranges, μετά εσύ θα χρησιμοποιήσει το read_document με ranges για να διαβάσεις από την σύσταση αυτά τα line ranges
+//                        - από τα ranges που θα διαβάσεις θα δώσεις μια συνεκτική απάντηση, αν τα ranges δεν αρκούν, τότε ξαναζήτα από τον extractor να συμπληρώσει το selection
+//
+//                        3. Αν η ερώτηση αφορά έλεγχο οικονομικών στοιχείων τότε:
+//                        - Ζήτα από τον summirize να σου κάνει μια λεπτομερή περίληψη για όλα τα οικονομικά στοιχεία που εμφανίζονται στο συμβόλαιο.
+//                        - Αν δεν σου αρκεί, ξαναχρησιμοποίησε το summarize tool με περισσότερες λεπτομέρειες (αυτό θα είναι νέο summarize instance, θα έχει το ίδιο context που έχεις εσύ μέχρι τώρα)
+//                        - με την περίληψη που θα πάρεις, διάβασε ότι άλλο υποστηρικτικό έγγραφο χρειάζεσαι (read_document)
+//                        - αφού συγκεντρώσεις όλες τις πληροφορίες, δώσε την συνεκτικά απάντηση στην ερώτηση του χρήστη
+//                        </skills>
+//
+//                        """)
+//                .build();
+
+
+
         ObjectNode responseJsonSchema = buildResponseSchema(new org.springframework.core.ParameterizedTypeReference<GroupedQuestionAnswers>() {
         });
 
         List<List<CompletionQuestionRequest>> questionChunks = chunkQuestionsToGroups(task, documentGroupWithQuestions.getQuestionNodes());
         List<List<DocumentInstanceSection>> sectionChunks = groupSectionsBy100kTokens(task, documentGroupWithQuestions.getDocumentNode().getDocumentId());
+
+        DocumentInstance mainDocument = sectionChunks.stream()
+                .flatMap(List::stream)
+                .map(DocumentInstanceSection::getDocumentInstance)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+        String mainDocumentTitle = mainDocument != null ? mainDocument.getTitle() : null;
+        UUID mainDocumentId = mainDocument != null ? mainDocument.getId() : documentGroupWithQuestions.getDocumentNode().getDocumentId();
 
         Page<DocumentInstance> mainDocSupportingDocuments = getSupportingDocuments(
                 documentGroupWithQuestions.getDocumentNode());
@@ -134,74 +284,119 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 mainDocSupportingDocuments,
                 "main-document");
 
-
-        // For each question group
-        questionLoop:
+        List<CompletableFuture<List<AnswerCreationDTO>>> questionsChunkCompletionFutures = new ArrayList<>();
         for (List<CompletionQuestionRequest> questionChunk : questionChunks) {
-
-            String allQuestions = objectMapper.writeValueAsString(questionChunk);
-            String questionsPrompt = """
-                    Answer the following questions based on the provided document:
-                    
-                    """ + allQuestions;
-
-            List<GroupedQuestionAnswers> partialAnswers = new ArrayList<>();
-            // a group of sections, is called a document part, each document might be splitted in 1, 2 or more parts (like 100K tokens per part)
-            sectionsLoop:
-            for (List<DocumentInstanceSection> groupedDocumentPart : sectionChunks) {
-
-                ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()),
-                        project.getId(),
-                        "DOCUMENT_INSIGHTS - Task:" + task.getId());
-
-                // TODO: Next steps:
-                //  Extract all hardcoded strings to properties files
-                //  Overwrite the default agent settings, from the settings in the task
-
-                List<MessageLocalContextDTO> supportingDocumentsContext = new ArrayList<>();
-                supportingDocumentsContext.add(mainDocSupportingDocumentsContext);
-                supportingDocumentsContext.addAll(questionChunk.stream().map(CompletionQuestionRequest::getQuestionSupportingDocsLocalContext).toList());
-                supportingDocumentsContext.removeIf(Objects::isNull);
-
-                Message message = buildPromptMessageForSections(groupedDocumentPart,
-                        questionsPrompt,
-                        newThread,
-                        supportingDocumentsContext,
-                        task,
-                        documentGroupWithQuestions.getDocumentNode());
-                GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionChunk, overrides);
-                if (documentPartAnswers == null) {
-                    // ignore all partialAnswers, since there is an error, we cant trust any of those
-                    logger.warn("Skipping whole question group, because of some error, and doc has multiple section chunks");
-                    continue questionLoop;
-                }
-
-                partialAnswers.add(documentPartAnswers);
-
-            }
-
-            if (partialAnswers.size() == 1) {
-                logger.debug("Creating answers from a single document.");
-                splitGroupAnswersToSeparateAnswerNodes(partialAnswers.get(0), documentGroupWithQuestions, answerNodeType, newAnswers);
-            } else if (partialAnswers.size() > 1) {
-                logger.debug("Creating answers from multiple document parts.");
-                GroupedQuestionAnswers consolidatedDocumentAnswers = consolidatePartsAnswersToASingleOne(documentGroupWithQuestions, questionChunk, allQuestions, partialAnswers, null, responseJsonSchema, task, overrides);
-                // error occurred, skipping...
-                if (consolidatedDocumentAnswers == null) continue;
-
-                splitGroupAnswersToSeparateAnswerNodes(consolidatedDocumentAnswers, documentGroupWithQuestions, answerNodeType, newAnswers);
-            }
-
-            logger.info("Processed TaskDocumentInsightsAnswerDTO: taskId={}, documentNodeId={}, questions # = {}",
-                    documentGroupWithQuestions.getTaskId(),
-                    documentGroupWithQuestions.getDocumentNode().getId(),
-                    documentGroupWithQuestions.getQuestionNodes().size()
-            );
-
+            CompletableFuture<List<AnswerCreationDTO>> future = CompletableFuture
+                    .supplyAsync(() -> {
+                        try {
+                            return processQuestionChunk(questionChunk,
+                                    sectionChunks,
+                                    documentGroupWithQuestions,
+                                    task,
+                                    answerNodeType,
+                                    responseJsonSchema,
+                                    overrides,
+                                    mainDocSupportingDocumentsContext,
+                                    mainDocumentTitle,
+                                    mainDocumentId);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }, asyncInsightsLlmCompletionsExecutor)
+                    .handle((answers, throwable) -> {
+                        if (throwable != null) {
+                            logger.error("Failed to process insights completion for docNode {}: ",
+                                    documentGroupWithQuestions.getDocumentNode().getId(), throwable);
+                            return List.<AnswerCreationDTO>of();
+                        }
+                        return answers == null ? List.<AnswerCreationDTO>of() : answers;
+                    });
+            questionsChunkCompletionFutures.add(future);
         }
+
+        CompletableFuture.allOf(questionsChunkCompletionFutures.toArray(new CompletableFuture[0])).join();
+
+        List<AnswerCreationDTO> newAnswers = questionsChunkCompletionFutures.stream()
+                .flatMap(f -> f.join().stream())
+                .collect(Collectors.toList());
 
         batch.setNewAnswers(newAnswers);
         return batch;
+    }
+
+    private @NotNull List<AnswerCreationDTO> processQuestionChunk(List<CompletionQuestionRequest> questionChunk,
+                                                                  List<List<DocumentInstanceSection>> sectionChunks,
+                                                                  TaskDocumentQuestionsDTO documentGroupWithQuestions,
+                                                                  Task task,
+                                                                  Type answerNodeType,
+                                                                  ObjectNode responseJsonSchema,
+                                                                  CompletionRuntimeOverridesDTO overrides,
+                                                                  MessageLocalContextDTO mainDocSupportingDocumentsContext,
+                                                                  @Nullable String mainDocumentTitle,
+                                                                  @Nullable UUID mainDocumentId) throws JsonProcessingException {
+
+        List<AnswerCreationDTO> newAnswers = new ArrayList<>();
+
+        String allQuestions = objectMapper.writeValueAsString(questionChunk);
+        String questionsPrompt = """
+                Answer the following questions based on the provided document:
+                
+                """ + allQuestions;
+
+        List<GroupedQuestionAnswers> partialAnswers = new ArrayList<>();
+        int lineNo = 1;
+        // a group of sections, is called a document part, each document might be splitted in 1, 2 or more parts (like 100K tokens per part)
+        for (List<DocumentInstanceSection> groupedDocumentPart : sectionChunks) {
+
+            ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()),
+                    project.getId(),
+                    "DOCUMENT_INSIGHTS - Task:" + task.getId());
+
+            List<MessageLocalContextDTO> supportingDocumentsContext = new ArrayList<>();
+            supportingDocumentsContext.add(mainDocSupportingDocumentsContext);
+            supportingDocumentsContext.addAll(questionChunk.stream().map(CompletionQuestionRequest::getQuestionSupportingDocsLocalContext).toList());
+            supportingDocumentsContext.removeIf(Objects::isNull);
+
+            NumberedText numberedText = buildNumberedTextSections(groupedDocumentPart, lineNo);
+            lineNo = numberedText.nextLineNo();
+
+            Message message = buildPromptMessageForSections(numberedText.text(),
+                    questionsPrompt,
+                    newThread,
+                    supportingDocumentsContext,
+                    task,
+                    documentGroupWithQuestions.getDocumentNode(),
+                    mainDocumentTitle,
+                    mainDocumentId);
+            GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionChunk, overrides);
+            if (documentPartAnswers == null) {
+                // ignore all partialAnswers, since there is an error, we cant trust any of those
+                logger.warn("Skipping whole question group, because of some error, and doc has multiple section chunks");
+                return List.of();
+            }
+
+            partialAnswers.add(documentPartAnswers);
+        }
+
+        if (partialAnswers.size() == 1) {
+            logger.debug("Creating answers from a single document.");
+            splitGroupAnswersToSeparateAnswerNodes(partialAnswers.get(0), documentGroupWithQuestions, answerNodeType, newAnswers);
+        } else if (partialAnswers.size() > 1) {
+            logger.debug("Creating answers from multiple document parts.");
+            GroupedQuestionAnswers consolidatedDocumentAnswers = consolidatePartsAnswersToASingleOne(documentGroupWithQuestions, questionChunk, allQuestions, partialAnswers, null, responseJsonSchema, task, overrides);
+            // error occurred, skipping...
+            if (consolidatedDocumentAnswers == null) return List.of();
+
+            splitGroupAnswersToSeparateAnswerNodes(consolidatedDocumentAnswers, documentGroupWithQuestions, answerNodeType, newAnswers);
+        }
+
+        logger.info("Processed TaskDocumentInsightsAnswerDTO: taskId={}, documentNodeId={}, questions # = {}",
+                documentGroupWithQuestions.getTaskId(),
+                documentGroupWithQuestions.getDocumentNode().getId(),
+                documentGroupWithQuestions.getQuestionNodes().size()
+        );
+
+        return newAnswers;
     }
 
     private @Nullable GroupedQuestionAnswers consolidatePartsAnswersToASingleOne(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, String allQuestions, List<GroupedQuestionAnswers> allAnswersFromDocumentParts, ChatThread newThread, ObjectNode responseJsonSchema, Task task, CompletionRuntimeOverridesDTO overrides) throws JsonProcessingException {
@@ -248,18 +443,16 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         return consolidatedDocumentAnswers;
     }
 
-    private Message buildPromptMessageForSections(List<DocumentInstanceSection> sectionGroup,
+    private Message buildPromptMessageForSections(String textSections,
                                                   String questionsPrompt,
                                                   ChatThread newThread,
                                                   List<MessageLocalContextDTO> localContext,
                                                   Task task,
-                                                  TaskNode documentNode) {
-        String textSections = sectionGroup.stream()
-                .map(DocumentInstanceSection::getSectionValue)
-                .reduce("", (a, b) -> a + "\n\n" + b);
-
+                                                  TaskNode documentNode,
+                                                  String mainDocumentTitle,
+                                                  UUID mainDocumentId) {
         // Main document is 1st in local context, to increase LLM cache hit rate
-        addMainDocumentText(localContext, textSections);
+        addMainDocumentText(localContext, textSections, mainDocumentTitle, mainDocumentId);
 
         // task prompt, if exists, is 2nd in local context
         addTaskPromptIfExists(localContext, task);
@@ -294,6 +487,33 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
         message = messageService.createMessage(message);
         return message;
+    }
+
+    private record NumberedText(String text, int nextLineNo) {}
+
+    private static @NotNull NumberedText buildNumberedTextSections(@NotNull List<DocumentInstanceSection> sectionGroup,
+                                                                   int startLineNo) {
+        StringBuilder sb = new StringBuilder();
+        int lineNo = startLineNo;
+
+        for (int sectionIdx = 0; sectionIdx < sectionGroup.size(); sectionIdx++) {
+            String sectionText = Optional.ofNullable(sectionGroup.get(sectionIdx))
+                    .map(DocumentInstanceSection::getSectionValue)
+                    .orElse("");
+
+            // Keep empty lines (and trailing empty line if present) so numbering is stable.
+            String[] lines = sectionText.split("\\R", -1);
+            for (String line : lines) {
+                sb.append(lineNo++).append(" | ").append(line).append("\n");
+            }
+
+            // Visual separator between sections (also numbered).
+            if (sectionIdx < sectionGroup.size() - 1) {
+                sb.append(lineNo++).append(" | ").append("\n");
+            }
+        }
+
+        return new NumberedText(sb.toString(), lineNo);
     }
 
     private static void addDocumentPromptIfExists(List<MessageLocalContextDTO> localContext, TaskNode documentNode) {
@@ -333,15 +553,23 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         }
     }
 
-    private static void addMainDocumentText(List<MessageLocalContextDTO> localContext, String textSections) {
+    private static void addMainDocumentText(List<MessageLocalContextDTO> localContext,
+                                            String textSections,
+                                            @Nullable String mainDocumentTitle,
+                                            @Nullable UUID mainDocumentId) {
         MessageLocalContextDTO mainDocumentContext = MessageLocalContextDTO.builder()
                 .contextType("**[Main Document] Text**")
                 .value("""
                         
-                        \"\"\"\"\"
+                        ./main-document/%s | UUID=%s
+                        <document-text>
                         %s
-                        \"\"\"\"\"
-                        """.formatted(textSections))
+                        </document-text>
+                        """.formatted(
+                        Optional.ofNullable(mainDocumentTitle).orElse(""),
+                        Optional.ofNullable(mainDocumentId).map(UUID::toString).orElse(""),
+                        textSections
+                ))
                 .build();
         localContext.add(0, mainDocumentContext);
     }
@@ -611,6 +839,14 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         return wrapper;
     }
 
+
+    /**
+     * Delegates cancellation detection to JobService where the DB read runs
+     * in a dedicated transaction.
+     */
+    private boolean isCancellationRequested(StepExecution stepExecution) {
+        return jobService.isDeepThinkingCancellationRequested(stepExecution.getJobExecutionId(), stepExecution.isTerminateOnly());
+    }
 
 }
 

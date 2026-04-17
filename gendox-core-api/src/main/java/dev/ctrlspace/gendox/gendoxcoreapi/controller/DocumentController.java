@@ -13,6 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionOrde
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import jakarta.validation.Valid;
+import org.bitbucket.cowwoc.diffmatchpatch.DiffMatchPatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.JobParametersInvalidException;
@@ -156,6 +157,23 @@ public class DocumentController {
     public List<DocumentInstanceSection> getSectionsByDocumentId(Authentication authentication, @PathVariable UUID documentId) throws GendoxException {
 
         return documentSectionService.getSectionsByDocument(documentId);
+    }
+
+    /**
+     * Temporary: exercise {@link DocumentSectionService#diffDocuments} over HTTP. Remove when no longer needed.
+     * <p>Query: {@code ?documentIds=<uuidA>&documentIds=<uuidB>} — first id is document {@code a} (original), second is {@code b} (modified).
+     */
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedDocumentIdsFromRequestParams')")
+    @GetMapping("/documents/diff")
+    @Operation(summary = "[TEMP] Diff two documents",
+            description = "Returns semantic diff hunks between two full document bodies. Temporary endpoint for testing.")
+    public List<DiffMatchPatch.Patch> diffDocumentsTemp(@RequestParam("documentIds") List<UUID> documentIds) throws GendoxException {
+        if (documentIds == null || documentIds.size() != 2) {
+            throw new GendoxException("DOCUMENT_DIFF_REQUIRES_TWO_IDS",
+                    "Provide exactly two documentIds query parameters: first = original (a), second = modified (b).",
+                    HttpStatus.BAD_REQUEST);
+        }
+        return documentSectionService.diffDocuments(documentIds.get(0), documentIds.get(1));
     }
 
 

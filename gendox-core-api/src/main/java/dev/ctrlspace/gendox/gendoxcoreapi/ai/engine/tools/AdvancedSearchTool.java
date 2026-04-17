@@ -77,7 +77,10 @@ public class AdvancedSearchTool implements AiToolHandler {
 
         String searchQuery = arguments.get("search_query").asText();
 
-        logger.debug("AdvancedSearchTool executing with query: {}", searchQuery);
+        String truncatedQuery = searchQuery.substring(0, Math.min(searchQuery.length(), 100));
+        logger.info("AdvancedSearchTool: execute (parentThreadId={}, query={})",
+                context.parentMessage() != null ? context.parentMessage().getThreadId() : null,
+                truncatedQuery);
 
         int maxSearchLimit = context.agent().getMaxSearchLimit().intValue();
         int maxCompletionLimit = context.agent().getMaxCompletionLimit().intValue();

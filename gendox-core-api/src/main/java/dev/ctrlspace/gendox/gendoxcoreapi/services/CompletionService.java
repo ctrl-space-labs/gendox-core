@@ -19,6 +19,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.CancellationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAuthor;
@@ -235,17 +236,21 @@ public class CompletionService {
         CompletionRuntimeContext runtimeContext = resolveCompletionRuntimeContext(message, nearestSections, project, overrides);
         runModerationIfEnabled(runtimeContext);
 
-        // TODO populate previous messages with local context, attached file, and attached images (in the ContentPart)
-        // TODO rethink the logic, validate count of previous message tokens and drop messages if not enough space
-        // TODO maybe add a similar logic to the embedding service to limit the number of messages
-        List<AiModelMessage> previousMessages = messageService.getPreviousMessages(message, 25);
+        List<AiModelMessage> previousMessages;
+        if (overrides != null && overrides.getPreviousMessages() != null && !overrides.getPreviousMessages().isEmpty()) {
+            // TODO handle this in the resolveCompletionRuntimeContext
+            previousMessages = overrides.getPreviousMessages();
+        } else {
+            // TODO populate previous messages with local context, attached file, and attached images (in the ContentPart)
+            // TODO rethink the logic, validate count of previous message tokens and drop messages if not enough space
+            // TODO maybe add a similar logic to the embedding service to limit the number of messages
+            previousMessages = messageService.getPreviousMessages(message, 25);
+        }
 
         //get contentParts without type "text"
         List<ContentPart> contentParts = message.getAdditionalResources().stream()
                 .filter(part -> !"text".equals(part.getType()))
                 .toList();
-
-        // clone message to avoid changing the original message text in DB
         AiModelMessage promptMessage = AiModelMessage.builder()
                 .content(runtimeContext.question())
                 .contentParts(contentParts)
@@ -261,9 +266,18 @@ public class CompletionService {
 
         boolean hasToolCalls;
         int iteration = 0;
-        int maxIterations = 5; // safety guard against infinite loops
+        // TODO: this indicate that is a deep thinking task, should be more explicit and not inferred by the presence cancelation token.
+        boolean isDeepThinking = runtimeContext.cancellationToken() != null;
+        int maxIterations = isDeepThinking ? 50 : 5;
 
         do {
+            if (runtimeContext.cancellationToken() != null && runtimeContext.cancellationToken().isCancelled()) {
+                logger.info("Deep thinking cancelled, stopping completion loop at iteration {}", iteration);
+                throw new GendoxException("DEEP_THINKING_CANCELLED", "Deep thinking was cancelled", HttpStatus.CONFLICT);
+            }
+
+            // TODO add from the orginal thread, the system prompt and the first user message to give to the subagent the original context
+            //  and also to hit cache for the long original messages.
             CompletionResponse completionResponse = getCompletionForMessages(previousMessages,
                     runtimeContext.agentRole(),
                     runtimeContext.completionModel(),
@@ -291,9 +305,11 @@ public class CompletionService {
                 // Execute all tools
                 List<AiModelMessage> toolResponseMessages = handleToolExecution(
                         completionResponseMessage,
+                        previousMessages,
                         runtimeContext.project(),
                         runtimeContext.agent(),
-                        runtimeContext.availableTools()
+                        runtimeContext.availableTools(),
+                        runtimeContext.cancellationToken()
                 );
 
                 // Save tool response messages.
@@ -356,6 +372,10 @@ public class CompletionService {
                 .topP(topP)
                 .build();
 
+        CancellationToken cancellationToken = Optional.ofNullable(overrides)
+                .map(CompletionRuntimeOverridesDTO::getCancellationToken)
+                .orElse(null);
+
         return new CompletionRuntimeContext(
                 project,
                 agent,
@@ -367,7 +387,8 @@ public class CompletionService {
                 availableTools,
                 projectId,
                 organizationId,
-                createdByAgentUserId
+                createdByAgentUserId,
+                cancellationToken
         );
     }
 
@@ -444,11 +465,32 @@ public class CompletionService {
 
     private List<AiTools> resolveAvailableTools(@Nullable ProjectAgent agent,
                                                  @Nullable CompletionRuntimeOverridesDTO overrides) {
+        List<AiTools> tools;
         if (overrides != null && overrides.getAiTools() != null && !overrides.getAiTools().isEmpty()) {
-            return overrides.getAiTools();
+            tools = overrides.getAiTools();
+        } else if (agent != null) {
+            tools = agent.getAiTools();
+        } else {
+            return Collections.emptyList();
         }
-        if (agent != null) return agent.getAiTools();
-        return Collections.emptyList();
+
+        List<String> excluded = overrides != null ? overrides.getExcludedToolNames() : Collections.emptyList();
+        if (excluded == null || excluded.isEmpty()) {
+            return tools;
+        }
+
+        return tools.stream()
+                .filter(tool -> {
+                    try {
+                        JsonNode fn = objectMapper.readTree(tool.getJsonSchema());
+                        String name = fn.path("name").asText();
+                        return !excluded.contains(name);
+                    } catch (JsonProcessingException e) {
+                        logger.warn("Could not parse tool JSON schema while filtering excluded tools; keeping tool. Error: {}", e.getMessage());
+                        return true;
+                    }
+                })
+                .collect(Collectors.toList());
     }
 
     private String resolveSystemPrompt(@Nullable ProjectAgent agent,
@@ -534,7 +576,8 @@ public class CompletionService {
             List<AiTools> availableTools,
             UUID projectId,
             UUID organizationId,
-            UUID createdByAgentUserId
+            UUID createdByAgentUserId,
+            @Nullable CancellationToken cancellationToken
     ) {
         private boolean hasProjectContext() {
             return project != null && agent != null;
@@ -621,7 +664,7 @@ public class CompletionService {
      * @param availableTools
      * @return
      */
-    private List<AiModelMessage> handleToolExecution(Message completionResponseMessage, @Nullable Project project, @Nullable ProjectAgent agent, List<AiTools> availableTools) {
+    private List<AiModelMessage> handleToolExecution(Message completionResponseMessage, List<AiModelMessage> parentPreviousMessages, @Nullable Project project, @Nullable ProjectAgent agent, List<AiTools> availableTools, @Nullable CancellationToken cancellationToken) {
         Map<String, AiTools> toolMap = new HashMap<>();
         //map available tools for quick lookup, parse the jsonSchema to JsonNode and find the .function.name property
         availableTools.forEach(tool -> {
@@ -647,7 +690,7 @@ public class CompletionService {
             }
 
             JsonNode args = toolCall.get("function").get("arguments");
-            ToolExecutionContext ctx = new ToolExecutionContext(project, agent, completionResponseMessage, toolDefinition);
+            ToolExecutionContext ctx = new ToolExecutionContext(project, agent, completionResponseMessage, parentPreviousMessages, toolDefinition, cancellationToken);
             JsonNode result = aiToolRegistry.execute(toolName, args, ctx);
 
             AiModelMessage message = new AiModelMessage();

@@ -1,7 +1,10 @@
 package dev.ctrlspace.gendox.spring.batch.jobs;
 
+import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
 import dev.ctrlspace.gendox.spring.batch.jobs.common.UniqueInstanceDecider;
+import dev.ctrlspace.gendox.spring.batch.jobs.deepThinking.DeepThinkingJobConfig;
 import dev.ctrlspace.gendox.spring.batch.jobs.demojob.DemoJobConfig;
+import dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.DocumentDigitizationJobConfig;
 import dev.ctrlspace.gendox.spring.batch.jobs.documentInsights.DocumentInsightsJobConfig;
 import dev.ctrlspace.gendox.spring.batch.jobs.splitter.SplitterJobConfig;
 import dev.ctrlspace.gendox.spring.batch.model.BatchJobExecution;
@@ -10,15 +13,20 @@ import dev.ctrlspace.gendox.spring.batch.jobs.training.TrainingJobConfig;
 import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import dev.ctrlspace.gendox.spring.batch.services.TrainingBatchService;
 import dev.ctrlspace.gendox.spring.batch.utils.JobUtils;
+import io.micrometer.observation.ObservationRegistry;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 
@@ -33,10 +41,18 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
         TrainingJobConfig.class,
         SplitterJobConfig.class,
         JobUtils.class,
-        DocumentInsightsJobConfig.class})
+        DocumentDigitizationJobConfig.class,
+        DocumentInsightsJobConfig.class,
+        DeepThinkingJobConfig.class})
 @EnableJpaRepositories(basePackageClasses = {BatchJobExecutionRepository.class})
 @EntityScan(basePackageClasses = {BatchJobExecution.class})
 public class SpringBatchConfiguration implements ApplicationRunner {
+
+    @Value("${gendox.batch-jobs.document-digitization.job.llm-completion-executor-pool-size}")
+    private Integer digitizationLlmPoolSize;
+
+    @Value("${gendox.batch-jobs.document-insights.job.llm-completion-executor-pool-size}")
+    private Integer insightsLlmPoolSize;
 
     @Autowired
     private JobLauncher jobLauncher;
@@ -51,6 +67,24 @@ public class SpringBatchConfiguration implements ApplicationRunner {
     private Job demoJob;
     @Autowired
     private SplitterBatchService splitterBatchService;
+
+    @Bean
+    public TaskExecutor asyncDigitizationLlmCompletionsExecutor(ObservationRegistry observationRegistry) {
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("llm-completion-");
+        executor.setVirtualThreads(true);
+        executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
+        executor.setConcurrencyLimit(digitizationLlmPoolSize);
+        return executor;
+    }
+
+    @Bean
+    public TaskExecutor asyncInsightsLlmCompletionsExecutor(ObservationRegistry observationRegistry) {
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("llm-insights-");
+        executor.setVirtualThreads(true);
+        executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
+        executor.setConcurrencyLimit(insightsLlmPoolSize);
+        return executor;
+    }
 
     @Override
     public void run(ApplicationArguments args) throws Exception {

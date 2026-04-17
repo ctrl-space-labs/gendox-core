@@ -206,10 +206,11 @@ gendox:
       job:
         name: documentInsightsJob
         thread-pool-size: 10
+        llm-completion-executor-pool-size: 10
         steps:
           document-insights-step:
             name: documentInsightsStep
-            chunk-size: 2
+            chunk-size: 1
             pageable-size: 1000
           delete-insights-answers-step:
             name: deleteInsightsAnswersStep

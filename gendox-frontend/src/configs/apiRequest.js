@@ -209,6 +209,12 @@ export default {
 
   getJobsByCriteria: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/jobs`,
 
+  stopJob: (organizationId, projectId, jobExecutionId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/jobs/${jobExecutionId}/stop`,
+
+  getDeepThinkingSteps: (organizationId, projectId, jobExecutionId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/jobs/${jobExecutionId}/deep-thinking-steps`,
+
   deleteTaskNode: (organizationId, projectId, taskNodeId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes/${taskNodeId}`,
 

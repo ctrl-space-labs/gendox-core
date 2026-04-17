@@ -4,11 +4,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxErrorResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
+import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.ToolsHandlerAdvice;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -25,19 +28,33 @@ public class AiToolRegistry {
 
     private final Map<String, AiToolHandler> handlersByName;
     private final ObjectMapper objectMapper;
+    private final ToolsHandlerAdvice toolsHandlerAdvice;
 
     public AiToolRegistry(List<AiToolHandler> handlers,
-                          ObjectMapper objectMapper) {
+                          ObjectMapper objectMapper,
+                          ToolsHandlerAdvice toolsHandlerAdvice) {
         this.handlersByName = handlers.stream()
                 .collect(Collectors.toMap(
                         AiToolHandler::getName,
                         Function.identity()
                 ));
         this.objectMapper = objectMapper;
+        this.toolsHandlerAdvice = toolsHandlerAdvice;
     }
 
+    @Observed(name = "AiToolRegistry.execute",
+            contextualName = "AiToolRegistry#execute",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "false"
+            })
     public JsonNode execute(String toolName, JsonNode args, ToolExecutionContext context) {
         AiToolHandler handler = handlersByName.get(toolName);
+        logger.info("AiToolRegistry.execute: toolName={}, parentThreadId={}",
+                toolName,
+                Optional.ofNullable(context.parentMessage()).map(m -> m.getThreadId()).orElse(null));
 
         if (handler == null) {
             // TODO: think what to do with tools that are just passed in the browsers, and no execution is needed by BE
@@ -48,20 +65,25 @@ public class AiToolRegistry {
             return result;
         }
 
+        JsonNode parametersSchema = safeSchema(handler);
+
         try {
             return handler.execute(args, context);
         } catch (GendoxException e) {
-            logger.error(
-                    "Failed to execute tool {}, for project {}. Skipping...",
+            if ("DEEP_THINKING_CANCELLED".equals(e.getErrorCode())) {
+                throw new GendoxRuntimeException(e.getHttpStatus(), e.getErrorCode(), e.getMessage(), e);
+            }
+            logger.error("Failed to execute tool {}, for project {}.",
                     toolName,
-                    Optional.ofNullable(context.project()).map(p -> p.getId().toString()).orElse("no-project")
-            );
-            logger.error(e.getMessage(), e);
+                    Optional.ofNullable(context.project()).map(p -> p.getId().toString()).orElse("no-project"));
 
-            // return the error notification to the LLM
-            ObjectNode result = objectMapper.createObjectNode();
-            result.put("status", "EXECUTION_FAILED_WITH_ERROR");
-            return result;
+            return objectMapper.valueToTree(toolsHandlerAdvice.handleToolException(e, toolName, args, parametersSchema));
+        } catch (Exception e) {
+            logger.error("Unexpected error while executing tool {}, for project {}.",
+                    toolName,
+                    Optional.ofNullable(context.project()).map(p -> p.getId().toString()).orElse("no-project"));
+
+            return objectMapper.valueToTree(toolsHandlerAdvice.handleToolException(e, toolName, args, parametersSchema));
         }
     }
 
@@ -111,5 +133,16 @@ public class AiToolRegistry {
 
         toolNode.set("function", functionNode);
         return toolNode;
+    }
+
+    /** Safely fetches the handler's parameter schema; returns {@code null} on any error. */
+    private JsonNode safeSchema(AiToolHandler handler) {
+        if (handler == null) return null;
+        try {
+            return handler.getParametersSchema();
+        } catch (Exception e) {
+            logger.warn("Could not fetch parameters schema from handler '{}': {}", handler.getName(), e.getMessage());
+            return null;
+        }
     }
 }

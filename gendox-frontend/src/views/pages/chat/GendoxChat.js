@@ -31,7 +31,7 @@ const GendoxChat = props => {
   const chatInsightView = props.chatInsightView ?? true
   const hideSidebar = props.hideSidebar || false
   // Redux state from chat store
-  const { currentThread, agents, threads } = useSelector(state => state.gendoxChat)
+  const { currentThread, agents, threads, newlyCreatedThreadId } = useSelector(state => state.gendoxChat)
   // For responsive layout: hide sidebar if below large breakpoint
   const hidden = useMediaQuery(theme.breakpoints.down('lg'))
 
@@ -112,6 +112,45 @@ const GendoxChat = props => {
     dispatch(chatActions.clearCurrentMessageMetadata())
   }
 
+  const handleCreateNewThread = () => {
+    const nextQuery = { ...router.query }
+    delete nextQuery.threadId
+    router.replace(
+      {
+        pathname: router.pathname,
+        query: nextQuery
+      },
+      undefined,
+      { shallow: true }
+    )
+  }
+
+  useEffect(() => {
+    if (!router.isReady || !newlyCreatedThreadId) return
+
+    const queryThreadId = Array.isArray(threadId) ? threadId[0] : threadId
+    if (queryThreadId === newlyCreatedThreadId) {
+      dispatch(chatActions.clearNewlyCreatedThreadId())
+      return
+    }
+
+    router
+      .replace(
+        {
+          pathname: router.pathname,
+          query: {
+            ...router.query,
+            threadId: newlyCreatedThreadId
+          }
+        },
+        undefined,
+        { shallow: true }
+      )
+      .finally(() => {
+        dispatch(chatActions.clearNewlyCreatedThreadId())
+      })
+  }, [router, dispatch, newlyCreatedThreadId, threadId])
+
   return (
     <Box
       sx={{
@@ -139,6 +178,7 @@ const GendoxChat = props => {
         handleInsightsToggle={handleInsightsToggle}
         embedMode={embedMode}
         chatInsightView={chatInsightView}
+        onCreateNewThread={handleCreateNewThread}
       />
 
       {/* Right sidebar for additional chat insights */}

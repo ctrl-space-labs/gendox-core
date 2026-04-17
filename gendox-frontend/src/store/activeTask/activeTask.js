@@ -100,7 +100,10 @@ const initialState = {
   isLoading: false,
   generationState: {
     isInsightsGeneratingCells: {}, // Object: { "docId_questionId": true }
-    isDigitizationGenerating: false
+    isDigitizationGenerating: false,
+    /** Set by useJobMonitor.pollJobByCriteria while a batch job is tracked; cleared with generation loading state */
+    generationTaskId: null,
+    generationJobExecutionId: null
   },
   error: null
 }
@@ -124,12 +127,22 @@ const taskSlice = createSlice({
     },
     clearInsightsGenerationState: state => {
       state.generationState.isInsightsGeneratingCells = {}
+      state.generationState.generationTaskId = null
+      state.generationState.generationJobExecutionId = null
     },
     setDigitizationGenerating: (state, action) => {
       state.generationState.isDigitizationGenerating = action.payload
     },
     clearDigitizationGenerationState: state => {
       state.generationState.isDigitizationGenerating = false
+      state.generationState.generationTaskId = null
+      state.generationState.generationJobExecutionId = null
+    },
+    setGenerationJobTracking: (state, action) => {
+      const { taskId, jobExecutionId } = action.payload || {}
+      state.generationState.generationTaskId = taskId ?? null
+      state.generationState.generationJobExecutionId =
+        jobExecutionId != null ? Number(jobExecutionId) : null
     },
   },
   extraReducers: builder => {
@@ -178,7 +191,8 @@ export const {
   removeInsightsGeneratingCells,
   clearInsightsGenerationState,
   setDigitizationGenerating,
-  clearDigitizationGenerationState
+  clearDigitizationGenerationState,
+  setGenerationJobTracking
 } = taskSlice.actions
 
 export default taskSlice.reducer

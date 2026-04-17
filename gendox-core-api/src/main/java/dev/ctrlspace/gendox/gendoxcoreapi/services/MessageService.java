@@ -1,8 +1,27 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThreadMember;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Message;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.MessageSection;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageMetadataDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.MessageCriteria;
@@ -12,13 +31,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.MessagePre
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import jakarta.annotation.Nullable;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class MessageService {
@@ -46,6 +58,13 @@ public class MessageService {
 
     public Page<Message> getAllMessagesByCriteria(MessageCriteria criteria, Pageable pageable) {
         return messageRepository.findAll(MessagePredicates.build(criteria), pageable);
+    }
+
+    public Message getMessageById(UUID messageId) throws GendoxException {
+        return messageRepository.findById(messageId)
+                .orElseThrow(() -> new GendoxException("MESSAGE_NOT_FOUND",
+                        "Message not found: " + messageId,
+                        org.springframework.http.HttpStatus.NOT_FOUND));
     }
 
     public List<MessageSection> getMessageSectionsBySectionId(UUID sectionId) {

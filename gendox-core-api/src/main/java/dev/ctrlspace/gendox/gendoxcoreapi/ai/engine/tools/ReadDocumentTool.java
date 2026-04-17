@@ -8,7 +8,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolHandler;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentSectionService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserService;
@@ -17,9 +16,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -51,7 +52,9 @@ public class ReadDocumentTool implements AiToolHandler {
 
     @Override
     public String getDescription() {
-        return "Read the full text of a document by its ID.";
+        return "Read the full text of a document by its ID. " +
+                "Optionally provide line_ranges (array of {line_start, line_end}) to return only specific portions. " +
+                "Ranges are expanded to bring in surrounding context.";
     }
 
     @Override
@@ -64,6 +67,18 @@ public class ReadDocumentTool implements AiToolHandler {
                   "type": "string",
                   "format": "uuid",
                   "description": "The UUID of the document to read."
+                },
+                "line_ranges": {
+                  "type": "array",
+                  "description": "Optional. When provided, only lines within these ranges are returned. Ranges are expanded to bring in surrounding context.",
+                  "items": {
+                    "type": "object",
+                    "required": ["line_start", "line_end"],
+                    "properties": {
+                      "line_start": { "type": "integer", "description": "First line number (inclusive)." },
+                      "line_end":   { "type": "integer", "description": "Last line number (inclusive)." }
+                    }
+                  }
                 }
               },
               "required": ["document_id"]
@@ -79,7 +94,6 @@ public class ReadDocumentTool implements AiToolHandler {
 
     @Override
     public JsonNode execute(JsonNode argumentsNode, ToolExecutionContext context) throws GendoxException {
-        // original argumentsNode is a JSON string, so we need to parse it
         JsonNode arguments;
         try {
             arguments = objectMapper.readTree(argumentsNode.asText());
@@ -88,21 +102,97 @@ public class ReadDocumentTool implements AiToolHandler {
         }
 
         UUID docId = UUID.fromString(arguments.get("document_id").asText());
+        logger.info("ReadDocumentTool: execute (parentThreadId={}, documentId={})",
+                context.parentMessage() != null ? context.parentMessage().getThreadId() : null,
+                docId);
 
         validateAgentHasAccessToReadTheDoc(context, docId);
 
-        String docText = documentSectionService.getFullDocumentText(docId);
+        String docText = documentSectionService.getFullNumberedDocumentText(docId);
 
-        logger.debug("Reading document tool, with document id: {} and text length: {} characters", docId, docText.length());
+        logger.debug("ReadDocumentTool: document {} loaded, {} characters", docId, docText.length());
+
+        JsonNode lineRangesNode = arguments.get("line_ranges");
+        if (lineRangesNode != null && lineRangesNode.isArray() && !lineRangesNode.isEmpty()) {
+            docText = filterByLineRanges(docText, lineRangesNode);
+            logger.debug("ReadDocumentTool: filtered to {} characters using {} raw range(s)",
+                    docText.length(), lineRangesNode.size());
+        }
 
         ObjectNode result = objectMapper.createObjectNode();
         result.put("document_id", docId.toString());
-        result.put("document_text",
-                """
-                %s
-                """.formatted(docText));
-        //Consider adding the document title or other metadata if needed
+        result.put("document_text", "\n" + docText + "\n");
         return result;
+    }
+
+    private record Range(int startLine, int endLine) {
+        Range {
+            if (startLine > endLine) throw new IllegalArgumentException("startLine must be <= endLine");
+        }
+
+        Range expand(int margin) {
+            return new Range(Math.max(1, startLine - margin), endLine + margin);
+        }
+
+        boolean closeOrOverlaps(Range next) {
+            return next.startLine - this.endLine <= 25;
+        }
+
+        Range mergeWith(Range other) {
+            return new Range(Math.min(this.startLine, other.startLine), Math.max(this.endLine, other.endLine));
+        }
+
+        boolean contains(int lineNum) {
+            return lineNum >= startLine && lineNum <= endLine;
+        }
+    }
+
+    /**
+     * Filters {@code fullText} (which already has {@code "N | line"} prefixes) to only lines
+     * covered by the supplied ranges after expansion and merging.
+     *
+     * <p>Expansion: each side grows by 15% of the range length (rounded up), clamped to line 1.
+     * Merging: ranges that overlap or whose gap is ≤ 30 lines are collapsed into one.
+     */
+    private String filterByLineRanges(String fullText, JsonNode lineRangesNode) {
+        // Parse raw ranges
+        List<Range> ranges = new ArrayList<>();
+        for (JsonNode rangeNode : lineRangesNode) {
+            int start = rangeNode.get("line_start").asInt();
+            int end   = rangeNode.get("line_end").asInt();
+            if (start > end) { int tmp = start; start = end; end = tmp; }
+            ranges.add(new Range(start, end));
+        }
+
+        // Expand each range by 15% on each side
+        List<Range> expanded = ranges.stream()
+                .map(r -> r.expand((int) Math.ceil((r.endLine() - r.startLine() + 1) * 0.15)))
+                .sorted(Comparator.comparingInt(Range::startLine))
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+
+        // Merge overlapping / close ranges
+        List<Range> merged = new ArrayList<>();
+        for (Range r : expanded) {
+            if (merged.isEmpty() || !merged.getLast().closeOrOverlaps(r)) {
+                merged.add(r);
+            } else {
+                merged.set(merged.size() - 1, merged.getLast().mergeWith(r));
+            }
+        }
+
+        // Walk the merged ranges, emitting "..." between non-adjacent sections
+        String[] lines = fullText.split("\n", -1);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < merged.size(); i++) {
+            if (i > 0) {
+                sb.append("...\n");
+            }
+            Range r = merged.get(i);
+            for (int lineNum = r.startLine(); lineNum <= r.endLine() && lineNum <= lines.length; lineNum++) {
+                sb.append(lines[lineNum - 1]).append("\n");
+            }
+        }
+        return sb.toString();
     }
 
     private void validateAgentHasAccessToReadTheDoc(ToolExecutionContext context, UUID docId) throws GendoxException {
@@ -111,7 +201,7 @@ public class ReadDocumentTool implements AiToolHandler {
                 securityUtils.getRequestedDocumentIdAccessCriteria(docId.toString()));
         if (!canAccessDoc) {
             logger.error("Agent with id: {}, tried to access document without permission: {}, in thread {}",
-                    context.agent().getId(), docId, context.message().getThreadId());
+                    context.agent().getId(), docId, context.parentMessage().getThreadId());
 
             throw new GendoxException("FORBIDDEN_AGENT_ACCESS_TO_DOCUMENT",
                     "Agent tried to access document with id:" + docId + " without proper permissions.",

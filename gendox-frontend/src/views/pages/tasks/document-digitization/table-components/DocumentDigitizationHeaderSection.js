@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
+import { useSelector } from 'react-redux'
 import { Box, Typography, Stack, Button, Tooltip, Divider, Menu, MenuItem, CircularProgress } from '@mui/material'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
+import StopIcon from '@mui/icons-material/Stop'
+import toast from 'react-hot-toast'
 
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import { isFileTypeSupported } from 'src/utils/tasks/taskUtils'
 import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
+import taskService from 'src/gendox-sdk/taskService'
+import { getErrorMessage } from 'src/utils/errorHandler'
 
 const HeaderSection = ({
   title,
@@ -18,6 +24,11 @@ const HeaderSection = ({
   isDigitizationGenerating = false,
   documents = []
 }) => {
+  const router = useRouter()
+  const { organizationId, projectId, taskId } = router.query
+  const token = typeof window !== 'undefined' ? window.localStorage.getItem('accessToken') : null
+  const { generationJobExecutionId, generationTaskId } = useSelector(state => state.activeTask.generationState)
+
   const [anchorEl, setAnchorEl] = useState(null)
   const [confirmGeneration, setConfirmGeneration] = useState(null) // 'all', 'new', 'selected', or null
   const [generatingType, setGeneratingType] = useState(null)
@@ -27,8 +38,28 @@ const HeaderSection = ({
   }
 
   const disableGenerate = isLoading || documents.length === 0 || isDigitizationGenerating
+  const dropdownDisabled = isLoading || documents.length === 0
 
-  
+  const canStopGeneration =
+    isDigitizationGenerating &&
+    generationJobExecutionId != null &&
+    taskId != null &&
+    String(generationTaskId) === String(taskId)
+
+  const handleStopGeneration = async () => {
+    setAnchorEl(null)
+    if (!canStopGeneration || !organizationId || !projectId || !token) return
+
+    toast('Stopping may take up to a minute for the job to fully stop.', {
+      icon: '⚠️'
+    })
+
+    try {
+      await taskService.stopJob(organizationId, projectId, generationJobExecutionId, token)
+    } catch (e) {
+      toast.error(getErrorMessage(e))
+    }
+  }
 
   useEffect(() => {
       if (!isDigitizationGenerating) {
@@ -159,6 +190,7 @@ const HeaderSection = ({
               <Box
                 sx={{
                   display: 'flex',
+                  alignItems: 'stretch',
                   width: '100%' // keeps it full width on mobile
                 }}
               >
@@ -181,18 +213,63 @@ const HeaderSection = ({
                   {buttonConfig.text}
                 </Button>
 
+                {isDigitizationGenerating && (
+                  <Tooltip
+                    title={
+                      canStopGeneration
+                        ? 'Stop this generation run'
+                        : 'Waiting for the job to be ready…'
+                    }
+                  >
+                    <Box component='span' sx={{ display: 'inline-flex', alignItems: 'stretch' }}>
+                      <Button
+                        variant='outlined'
+                        color='primary'
+                        size='small'
+                        onClick={handleStopGeneration}
+                        disabled={!canStopGeneration}
+                        aria-label='Stop generation'
+                        sx={{
+                          alignSelf: 'stretch',
+                          flexShrink: 0,
+                          minWidth: '40px',
+                          px: 0,
+                          py: 0,
+                          ml: '-1px',
+                          borderRadius: 0,
+                          borderTopLeftRadius: 0,
+                          borderBottomLeftRadius: 0,
+                          borderTopRightRadius: 0,
+                          borderBottomRightRadius: 0,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <StopIcon fontSize='small' />
+                      </Button>
+                    </Box>
+                  </Tooltip>
+                )}
+
                 <Button
                   variant='outlined'
                   color='primary'
                   size='small'
                   onClick={handleToggle}
-                  disabled={disableGenerate}
+                  disabled={dropdownDisabled}
                   sx={{
+                    alignSelf: 'stretch',
+                    flexShrink: 0,
                     minWidth: '40px',
                     px: 0,
+                    py: 0,
                     borderTopLeftRadius: 0,
                     borderBottomLeftRadius: 0,
-                    ml: '-1px'
+                    ml: '-1px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
                   <ArrowDropDownIcon fontSize='small' />

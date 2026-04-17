@@ -26,12 +26,14 @@ public class AnthropicCompletionResponseConverter {
 
     public CompletionResponse toCompletionResponse(AnthropicCompletionResponse anthropicCompletionResponse) {
         AnthropicCompletionResponse.Usage anthropicUsage = anthropicCompletionResponse.getUsage();
-        int inTok = anthropicUsage != null && anthropicUsage.getInput_tokens() != null ? anthropicUsage.getInput_tokens() : 0;
+        int inTok = anthropicTotalInputTokens(anthropicUsage);
         int outTok = anthropicUsage != null && anthropicUsage.getOutput_tokens() != null ? anthropicUsage.getOutput_tokens() : 0;
+        Usage.PromptTokensDetail promptTokensDetail = mapAnthropicPromptTokensDetail(anthropicUsage);
         Usage usage = Usage.builder()
                 .completionTokens(outTok)
                 .promptTokens(inTok)
                 .totalTokens(inTok + outTok)
+                .promptTokensDetail(promptTokensDetail)
                 .build();
 
         List<String> textParts = new ArrayList<>();
@@ -105,5 +107,50 @@ public class AnthropicCompletionResponseConverter {
         function.put("arguments", argsJson);
         call.set("function", function);
         return call;
+    }
+
+    /**
+     * Anthropic splits prompt usage into three disjoint buckets; their docs define
+     * {@code total = input_tokens + cache_read_input_tokens + cache_creation_input_tokens}.
+     * We map that total to OpenAI-shaped {@code prompt_tokens}.
+     */
+    private static int anthropicTotalInputTokens(AnthropicCompletionResponse.Usage u) {
+        if (u == null) {
+            return 0;
+        }
+        int input = u.getInput_tokens() != null ? u.getInput_tokens() : 0;
+        int cacheRead = u.getCache_read_input_tokens() != null ? u.getCache_read_input_tokens() : 0;
+        int cacheCreate = u.getCache_creation_input_tokens() != null ? u.getCache_creation_input_tokens() : 0;
+        return input + cacheRead + cacheCreate;
+    }
+
+    /**
+     * Maps Anthropic {@code usage} cache fields into the OpenAI-shaped {@link Usage} detail object so
+     * {@link dev.ctrlspace.gendox.gendoxcoreapi.services.CompletionService#saveCompletionAuditLogs}
+     * can record cache reads via {@code cached_tokens} and retain write breakdowns.
+     */
+    private static Usage.PromptTokensDetail mapAnthropicPromptTokensDetail(AnthropicCompletionResponse.Usage anthropicUsage) {
+        if (anthropicUsage == null) {
+            return null;
+        }
+        boolean anyCache = anthropicUsage.getCache_read_input_tokens() != null
+                || anthropicUsage.getCache_creation_input_tokens() != null
+                || anthropicUsage.getCache_creation() != null;
+        if (!anyCache) {
+            return null;
+        }
+        Usage.PromptTokensDetail.PromptCacheCreation promptCacheCreation = null;
+        AnthropicCompletionResponse.Usage.CacheCreation cc = anthropicUsage.getCache_creation();
+        if (cc != null && (cc.getEphemeral5mInputTokens() != null || cc.getEphemeral1hInputTokens() != null)) {
+            promptCacheCreation = Usage.PromptTokensDetail.PromptCacheCreation.builder()
+                    .ephemeral5mInputTokens(cc.getEphemeral5mInputTokens())
+                    .ephemeral1hInputTokens(cc.getEphemeral1hInputTokens())
+                    .build();
+        }
+        return Usage.PromptTokensDetail.builder()
+                .cachedTokens(anthropicUsage.getCache_read_input_tokens())
+                .cacheCreationInputTokens(anthropicUsage.getCache_creation_input_tokens())
+                .cacheCreation(promptCacheCreation)
+                .build();
     }
 }

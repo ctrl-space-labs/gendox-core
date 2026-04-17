@@ -30,8 +30,6 @@ public class DocumentDigitizationJobConfig {
 
     @Value("${gendox.batch-jobs.document-digitization.job.thread-pool-size}")
     private Integer threadPoolSize;
-    @Value("${gendox.batch-jobs.document-digitization.job.llm-completion-executor-pool-size}")
-    private Integer llmCompletionExecutorPoolSize;
     @Value("${gendox.batch-jobs.document-digitization.job.steps.document-digitization-step.chunk-size}")
     private Integer chunkSize;
     @Value("${gendox.batch-jobs.document-digitization.job.name}")
@@ -97,18 +95,5 @@ public class DocumentDigitizationJobConfig {
         executor.setConcurrencyLimit(threadPoolSize);
         return executor;
     }
-
-    @Bean
-    public TaskExecutor asyncLlmCompletionsExecutor(ObservationRegistry observationRegistry) {
-        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("llm-completion-");
-        // switch to Loom’s virtual threads (each task → its own VT)
-        executor.setVirtualThreads(true);
-
-        executor.setTaskDecorator(new ObservabilityTaskDecorator(observationRegistry));
-        // Throttle concurrency
-        executor.setConcurrencyLimit(llmCompletionExecutorPoolSize);
-        return executor;
-    }
-
 
 }

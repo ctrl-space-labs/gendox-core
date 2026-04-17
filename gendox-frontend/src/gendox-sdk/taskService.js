@@ -353,6 +353,40 @@ const getJobsByCriteria = async (organizationId, projectId, criteria, token) => 
 }
 
 /**
+ * Get deep thinking progress steps
+ * @param organizationId
+ * @param projectId
+ * @param jobExecutionId
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<DeepThinkingStep[]>>}
+ */
+const getDeepThinkingSteps = async (organizationId, projectId, jobExecutionId, token) => {
+  return axios.get(apiRequests.getDeepThinkingSteps(organizationId, projectId, jobExecutionId), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+}
+
+/**
+ * Stop a running job execution
+ * @param organizationId
+ * @param projectId
+ * @param jobExecutionId
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<void>>}
+ */
+const stopJob = async (organizationId, projectId, jobExecutionId, token) => {
+  return axios.post(apiRequests.stopJob(organizationId, projectId, jobExecutionId), null, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+}
+
+/**
  * Delete a task node and its connected nodes
  * @param organizationId
  * @param projectId
@@ -496,6 +530,8 @@ export default {
   getTaskEdgesByCriteria,
   executeTaskByType,
   getJobsByCriteria,
+  stopJob,
+  getDeepThinkingSteps,
   deleteTaskNode,
   deleteTask,
   documentInsightsExportAllCSV,

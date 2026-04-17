@@ -61,6 +61,7 @@ const ChatConversation = props => {
           handleInsightsToggle={props.handleInsightsToggle}
           isLoadingMessages={isLoadingMessages}
           chatInsightView={props.chatInsightView}
+          onCreateNewThread={props.onCreateNewThread}
         />
 
         {/* This Box will take up the remaining space */}
