@@ -51,6 +51,21 @@ const getSectionsByDocumentId = async (documentId, token) => {
 }
 
 /**
+ * Diff two documents. Returns patchToDecodedText(patches) — the exact string consumed by diff tools.
+ * @param {string} documentIdA
+ * @param {string} documentIdB
+ * @param {string} token
+ */
+const diffDocumentsPatchText = async (documentIdA, documentIdB, token) => {
+  return axios.get(apiRequests.diffDocumentsPatchText(documentIdA, documentIdB), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
  * create empty document section
  * @param documentId
  * @param token
@@ -221,6 +236,7 @@ const downloadDocument = async (threadId, documentId, token) => {
 export default {
   getDocumentById,
   getSectionsByDocumentId,
+  diffDocumentsPatchText,
   createDocumentSection,
   updateDocumentSection,
   uploadDocument,

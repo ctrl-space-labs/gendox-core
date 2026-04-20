@@ -75,6 +75,9 @@ export default {
 
   updateSectionsOrder: documentId => `${url}documents/${documentId}/sections-order`,
 
+  diffDocumentsPatchText: (documentIdA, documentIdB) =>
+    `${url}documents/diff/patch-text?documentIds=${documentIdA}&documentIds=${documentIdB}`,
+
   uploadDocument: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,
 

@@ -34,10 +34,13 @@ import commonConfig from 'src/configs/common.config.js'
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import Chip from "@mui/material/Chip";
+import { useRouter } from 'next/router'
+import RequireOrgRoles from 'src/authentication/components/RequireOrgRoles'
 
 
 const AiAgentProjectSettings = () => {
   const dispatch = useDispatch()
+  const router = useRouter()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   const { provenAiEnabled, provenAiUrl } = commonConfig
 
@@ -91,6 +94,11 @@ const AiAgentProjectSettings = () => {
     setEditingIndex(null)
     setToolSchema('')
     setToolModalOpen(true)
+  }
+
+  const handleOpenValidateTools = () => {
+    const qs = `?organizationId=${organizationId}&projectId=${projectId}`
+    router.push(`/gendox/project-settings/validate-tools/${qs}`)
   }
 
   const handleEditTool = (idx) => {
@@ -714,9 +722,17 @@ const AiAgentProjectSettings = () => {
                   </Grid>
                   {/* add tool button */}
                   <Grid item xs={12}>
-                    <Button variant='outlined' startIcon={<Icon icon='mdi:plus' />} onClick={handleAddTool}>
-                      Add Tool
-                    </Button>
+                    <Stack direction='row' spacing={2} flexWrap='wrap'>
+                      <Button variant='outlined' startIcon={<Icon icon='mdi:plus' />} onClick={handleAddTool}>
+                        Add Tool
+                      </Button>
+
+                      <RequireOrgRoles organizationId={organizationId} roles={['ROLE_OWNER', 'ROLE_ADMIN']}>
+                        <Button variant='outlined' startIcon={<Icon icon='mdi:ab-testing' />} onClick={handleOpenValidateTools}>
+                          Validate tools
+                        </Button>
+                      </RequireOrgRoles>
+                    </Stack>
                   </Grid>
 
                   {/* add / edit modal (merged with examples) */}

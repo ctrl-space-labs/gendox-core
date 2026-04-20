@@ -160,20 +160,21 @@ public class DocumentController {
     }
 
     /**
-     * Temporary: exercise {@link DocumentSectionService#diffDocuments} over HTTP. Remove when no longer needed.
+     * Decoded patch text representation of the diff between two documents.
+     * This is the exact payload consumed by tools that ingest patch text.
      * <p>Query: {@code ?documentIds=<uuidA>&documentIds=<uuidB>} — first id is document {@code a} (original), second is {@code b} (modified).
      */
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedDocumentIdsFromRequestParams')")
-    @GetMapping("/documents/diff")
-    @Operation(summary = "[TEMP] Diff two documents",
-            description = "Returns semantic diff hunks between two full document bodies. Temporary endpoint for testing.")
-    public List<DiffMatchPatch.Patch> diffDocumentsTemp(@RequestParam("documentIds") List<UUID> documentIds) throws GendoxException {
+    @GetMapping("/documents/diff/patch-text")
+    @Operation(summary = "[TEMP] Diff two documents (decoded patch text)",
+            description = "Returns DocumentSectionService.patchToDecodedText(diffPatches). Temporary endpoint for testing/tool validation.")
+    public String diffDocumentsPatchTextTemp(@RequestParam("documentIds") List<UUID> documentIds) throws GendoxException {
         if (documentIds == null || documentIds.size() != 2) {
             throw new GendoxException("DOCUMENT_DIFF_REQUIRES_TWO_IDS",
                     "Provide exactly two documentIds query parameters: first = original (a), second = modified (b).",
                     HttpStatus.BAD_REQUEST);
         }
-        return documentSectionService.diffDocuments(documentIds.get(0), documentIds.get(1));
+        return documentSectionService.diffDocumentsPatchToDecodedText(documentIds.get(0), documentIds.get(1));
     }
 
 

@@ -268,7 +268,7 @@ public class CompletionService {
         int iteration = 0;
         // TODO: this indicate that is a deep thinking task, should be more explicit and not inferred by the presence cancelation token.
         boolean isDeepThinking = runtimeContext.cancellationToken() != null;
-        int maxIterations = isDeepThinking ? 50 : 5;
+        int maxIterations = isDeepThinking ? 20 : 5;
 
         do {
             if (runtimeContext.cancellationToken() != null && runtimeContext.cancellationToken().isCancelled()) {
@@ -336,6 +336,16 @@ public class CompletionService {
             }
 
             iteration++;
+
+            if (iteration == maxIterations - 1 && hasToolCalls) {
+                logger.warn("Sending warning message to LLM about approaching max tool-calling iterations (iteration {})", iteration);
+                previousMessages.add(AiModelMessage.builder()
+                        .role("user")
+                        .content("SYSTEM WARNING: You are approaching the maximum number of tool-calling iterations. "
+                                + "In your NEXT message you MUST provide the final answer to the user (no more tool calls). "
+                                + "If you do not provide a final answer, the request will timeout.")
+                        .build());
+            }
 
             if (iteration >= maxIterations && hasToolCalls) {
                 logger.warn("Max tool-calling iterations ({}) reached, stopping loop.", maxIterations);

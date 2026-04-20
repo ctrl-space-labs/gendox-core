@@ -214,6 +214,14 @@ public class DocumentSectionService {
         return diffPatches(getFullDocumentText(documentAId), getFullDocumentText(documentBId));
     }
 
+    /**
+     * Compare two documents by full plain text and return the decoded patch text
+     * (see {@link #patchToDecodedText}), which is the string payload consumed by tools.
+     */
+    public String diffDocumentsPatchToDecodedText(UUID documentAId, UUID documentBId) throws GendoxException {
+        return patchToDecodedText(diffDocuments(documentAId, documentBId));
+    }
+
 
 
     /**
@@ -223,10 +231,22 @@ public class DocumentSectionService {
     public List<DiffMatchPatch.Patch> diffPatches(String textA, String textB) {
         DiffMatchPatch dmp = new DiffMatchPatch();
         dmp.patchMargin = DIFF_PATCH_MARGIN;
-        LinkedList<DiffMatchPatch.Diff> diffs = dmp.diffMain(removeWordDocBookmark(textA), removeWordDocBookmark(textB));
+
+        // Allow exhaustive search
+        dmp.diffTimeout = 0;
+        dmp.matchThreshold = 0.3f;   // Stricter — avoids false fuzzy matches
+        dmp.matchDistance = 50000;   // Long documents, content may shift far
+
+        // Use line-mode diff first for long texts, then refine
+        LinkedList<DiffMatchPatch.Diff> diffs = dmp.diffMain(
+                removeWordDocBookmark(textA),
+                removeWordDocBookmark(textB),
+                true  // checklines = true — critical for long docs!
+        );
+
         dmp.diffCleanupSemantic(diffs);
-        List<DiffMatchPatch.Patch> patches = dmp.patchMake(diffs);
-        return patches;
+
+        return dmp.patchMake(diffs);
     }
 
     /**
