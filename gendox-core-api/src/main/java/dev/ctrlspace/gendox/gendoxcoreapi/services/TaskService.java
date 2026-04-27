@@ -164,12 +164,12 @@ public class TaskService {
 
 
     public List<Task> getAllTasksByProjectId(UUID projectId) {
-        logger.debug("Fetching all tasks for project: {}", projectId);
+        logger.trace("Fetching all tasks for project: {}", projectId);
         return taskRepository.findAllByProjectId(projectId);
     }
 
     public Task getTaskById(UUID taskId) {
-        logger.debug("Fetching task by ID: {}", taskId);
+        logger.trace("Fetching task by ID: {}", taskId);
         return taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
     }
