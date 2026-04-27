@@ -238,18 +238,18 @@ public class TaskNodeService {
     }
 
     public TaskNode getTaskNodeById(UUID taskNodeId) {
-        logger.info("Fetching task node by ID: {}", taskNodeId);
+        logger.trace("Fetching task node by ID: {}", taskNodeId);
         return taskNodeRepository.findById(taskNodeId)
                 .orElseThrow(() -> new RuntimeException("Task node not found"));
     }
 
     public Page<TaskNode> getTaskNodesByTaskId(UUID taskId, Pageable pageable) {
-        logger.info("Fetching task nodes for task: {}", taskId);
+        logger.trace("Fetching task nodes for task: {}", taskId);
         return taskNodeRepository.findAllByTaskId(taskId, pageable);
     }
 
     public Page<TaskNode> getTaskNodesByCriteria(TaskNodeCriteria criteria, Pageable pageable) {
-        logger.info("Fetching task nodes by criteria: {}", criteria);
+        logger.trace("Fetching task nodes by criteria: {}", criteria);
         return taskNodeRepository.findAll(TaskNodePredicates.build(criteria), pageable);
     }
 
@@ -282,7 +282,7 @@ public class TaskNodeService {
     }
 
     public Optional<TaskNode> findAnswerNodeByDocumentAndQuestionOptional(UUID taskId, UUID documentNodeId, UUID questionNodeId) {
-        logger.info("Fetching answer node for task: {}, document: {}, question: {}", taskId, documentNodeId, questionNodeId);
+        logger.trace("Fetching answer node for task: {}, document: {}, question: {}", taskId, documentNodeId, questionNodeId);
         return taskNodeRepository.findAnswerNodesByDocumentIdsAndQuestionIds(taskId, List.of(documentNodeId), List.of(questionNodeId), Pageable.unpaged())
                 .stream()
                 .findFirst();
@@ -524,7 +524,7 @@ public class TaskNodeService {
     }
 
     public Page<TaskDocumentMetadataDTO> getTaskDocumentMetadataByCriteria(TaskNodeCriteria criteria, Pageable pageable) throws GendoxException {
-        logger.info("Fetching task document metadata by criteria: {}", criteria);
+        logger.trace("Fetching task document metadata by criteria: {}", criteria);
 
         Page<TaskNode> nodesPage = taskNodeRepository.findAll(TaskNodePredicates.build(criteria), pageable);
         Map<UUID, DocumentInstance> documentsById = getDocumentsById(nodesPage);
