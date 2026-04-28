@@ -105,3 +105,10 @@ buildNumber.properties
 **/.env*
 .env
 .env*
+
+# Digitization script secrets
+scripts/.env
+scripts/input/*
+!scripts/input/.gitkeep
+scripts/output/*
+!scripts/output/.gitkeep
