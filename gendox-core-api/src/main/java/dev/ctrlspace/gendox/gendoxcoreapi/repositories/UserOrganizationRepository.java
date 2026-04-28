@@ -35,7 +35,19 @@ public interface UserOrganizationRepository extends JpaRepository<UserOrganizati
             nativeQuery = true)
     Optional<UserOrganization> findFirstByUserIdAndRoleNative(@Param("userId") UUID userId, @Param("role") String role);
 
-    @Query(value = "SELECT uo FROM UserOrganization uo WHERE uo.user.id = :userId AND uo.organization.id = :organizationId ORDER BY uo.createdAt ASC LIMIT 1", nativeQuery = true)
-    Optional<UserOrganization> findFirstByUserIdAndOrganizationIdOrderByCreatedAtAsc(@Param("userId") UUID userId, @Param("organizationId") UUID organizationId);
+
+    @Query(value = """
+        SELECT *
+        FROM gendox_core.user_organization uo
+        WHERE uo.user_id = :userId
+          AND uo.organization_id = :organizationId
+        ORDER BY uo.created_at ASC
+        LIMIT 1
+        """,
+            nativeQuery = true)
+    Optional<UserOrganization> findFirstByUserIdAndOrganizationIdOrderByCreatedAtAsc(
+            @Param("userId") UUID userId,
+            @Param("organizationId") UUID organizationId
+    );
 
 }
