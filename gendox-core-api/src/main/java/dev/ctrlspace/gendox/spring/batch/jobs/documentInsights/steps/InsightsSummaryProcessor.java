@@ -147,9 +147,13 @@ public class InsightsSummaryProcessor implements ItemProcessor<TaskDocumentQuest
                         HashMap::putAll);
 
         StringBuilder qSB = new StringBuilder();
-        qSB.append("Here is a list of questions and their existing answers. These are presented in the UI in a list.\n");
-        qSB.append("There are too many for a human to quickly understand. Please summarize them in a concise way, ");
-        qSB.append("so that a human can quickly understand what they need to pay attention to when reading the document.\n");
+        qSB.append("""
+                Here is a list of questions and their existing answers. These are presented in the UI in a list.
+                There are too many for a human to read them separately. 
+                In each answer you will find in the end a list with issues. You need to consolidate them into a single list.
+                You must keep and consolidate all the issues described in the list in each answer.
+                Try to order them from the most critical to the least, and if possible, group similar issues together.
+                """);
         qSB.append("\n\n");
         if (task.getTaskPrompt() != null && !task.getTaskPrompt().isBlank()) {
             qSB.append("General Task Instructions: \n");
@@ -165,26 +169,43 @@ public class InsightsSummaryProcessor implements ItemProcessor<TaskDocumentQuest
             qSB.append(documentGroupWithQuestions.getDocumentNode().getNodeValue().getDocumentMetadata().getPrompt()).append("\n");
         }
         qSB.append("\n\n");
-        qSB.append("Here are the questions to summarize in a singe answer:\n");
-        qSB.append("\"\"\"\"\"\"\n");
+        qSB.append("Here are the questions to consolidate in a singe answer:\n");
+        qSB.append("<all-questions-and-answers>\n");
         documentGroupWithQuestions.getQuestionNodes()
                 .forEach(questionNode -> {
                     TaskNode answerNode = answersByQuestionId.get(questionNode.getId());
                     if (answerNode == null) {
                         return;
                     }
-                    qSB.append("\"\"\"\n");
+
+                    qSB.append("<question-answer>\n");
                     qSB.append("Question ID: ").append(questionNode.getId()).append("\n");
                     qSB.append("Question: ").append(questionNode.getNodeValue().getMessage()).append("\n");
                     qSB.append("Answer Flag: ").append(answerNode.getNodeValue().getAnswerFlagEnum()).append("\n");
                     qSB.append("Answer Value: ").append(answerNode.getNodeValue().getAnswerValue()).append("\n");
-                    qSB.append("Answer: ").append(answerNode.getNodeValue().getMessage()).append("\n\n");
-                    qSB.append("\"\"\"\n");
+                    qSB.append("Answer: ").append(answerNode.getNodeValue().getMessage()).append("\n");
+                    qSB.append("</question-answer>\n\n");
+
 
                 });
-        qSB.append("\"\"\"\"\"\"\n");
-        qSB.append("\n\n");
-        qSB.append("Unless otherwise stated in the instructions above, the 'Answer Flag' of the summary should be the most severe flag among the answers summarized.\n");
+        qSB.append("</all-questions-and-answers>\n");
+        // issue table
+        // Severity	Location (Article/Page)	Pass/Fail	Description of Finding	Comments & Action Required
+        qSB.append("""
+        
+        
+        Unless otherwise stated in the instructions above, the 'Answer Flag' of the answer should be the most severe flag among the consolidated answers.\n
+        
+        Consolidate the issues described in the above question-answers into a single list.
+        You must keep and consolidate all the issues described in the list in each answer.
+        Try to order them from the most critical to the least, and if possible, group similar issues together.
+        
+        Your answer must be a markdown table with these columns:
+        | Severity | Location | Pass/Fail | Description of Finding | Comments & Action Required |
+        | --- | --- | --- | --- | --- |
+        
+        
+        """);
 
 
         //Dont need to delete previous DOCUMENT_INSIGHT_SUMMARY, they have been deleted in the Writer of the previous step
