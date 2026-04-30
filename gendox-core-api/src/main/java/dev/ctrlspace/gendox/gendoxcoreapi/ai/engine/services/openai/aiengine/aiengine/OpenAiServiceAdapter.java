@@ -40,6 +40,7 @@ import java.util.*;
 public class OpenAiServiceAdapter implements AiModelApiAdapterService {
 
     private final ObjectMapper objectMapper;
+    private final RestTemplate restTemplate;
     protected Set<String> supportedApiType = Set.of("OPEN_AI_API");
     protected Logger logger = LoggerFactory.getLogger(OpenAiServiceAdapter.class);
     private AiModelRepository aiModelRepository;
@@ -58,7 +59,9 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                                 OpenAiEmbeddingResponseConverter openAiEmbeddingResponseConverter,
                                 DurationUtils durationUtils,
                                 OpenAiModerationResponseConverter openAiModerationResponseConverter,
-                                ToolDtoConverter toolDtoConverter, ObjectMapper objectMapper) {
+                                ToolDtoConverter toolDtoConverter,
+                                ObjectMapper objectMapper,
+                                RestTemplate restTemplate) {
         this.aiModelRepository = aiModelRepository;
         this.apiRateLimitService = apiRateLimitService;
         this.openAiEmbeddingResponseConverter = openAiEmbeddingResponseConverter;
@@ -67,9 +70,8 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         this.openAiModerationResponseConverter = openAiModerationResponseConverter;
         this.toolDtoConverter = toolDtoConverter;
         this.objectMapper = objectMapper;
+        this.restTemplate = restTemplate;
     }
-
-    private static final RestTemplate restTemplate = new RestTemplate();
 
     public HttpHeaders buildHeader(String apiKey) {
         HttpHeaders headers = new HttpHeaders();
