@@ -16,6 +16,7 @@ public class InvitationPredicate {
                 email(criteria.getEmail()),
                 token(criteria.getToken()),
                 organizationId(criteria.getOrganizationId()),
+                projectId(criteria.getProjectId()),
                 inviterUserId(criteria.getInviterUserId()),
                 status(criteria.getStatusName())
         );
@@ -40,6 +41,13 @@ public class InvitationPredicate {
             return null;
         }
         return qInvitation.organizationId.eq(UUID.fromString(organizationId));
+    }
+
+    private static Predicate projectId(String projectId) {
+        if (projectId == null) {
+            return null;
+        }
+        return qInvitation.projectId.eq(UUID.fromString(projectId));
     }
 
     private static Predicate inviterUserId(UUID inviterUserId) {

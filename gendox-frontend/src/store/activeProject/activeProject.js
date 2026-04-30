@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import projectService from 'src/gendox-sdk/projectService'
 import organizationService from 'src/gendox-sdk/organizationService'
+import invitationService from 'src/gendox-sdk/invitationService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 
@@ -99,17 +100,50 @@ export const deleteProjectMember = createAsyncThunk(
   }
 )
 
+export const fetchProjectInvitations = createAsyncThunk(
+  'activeProject/fetchProjectInvitations',
+  async ({ organizationId, projectId, token, params }, thunkAPI) => {
+    try {
+      const statusNames = Array.isArray(params?.statusNames) ? params.statusNames : null
+
+      if (statusNames && statusNames.length > 0) {
+        const requests = statusNames.map(statusName =>
+          invitationService.getProjectInvitations(organizationId, projectId, token, { ...params, statusName })
+        )
+        const responses = await Promise.all(requests)
+        const combined = responses.flatMap(r => (Array.isArray(r.data?.content) ? r.data.content : []))
+
+        // Preserve duplicates by id only; allow multiple invitations per email.
+        const byId = new Map()
+        combined.forEach(inv => {
+          if (inv?.id && !byId.has(inv.id)) byId.set(inv.id, inv)
+        })
+
+        return { content: Array.from(byId.values()) }
+      }
+
+      const response = await invitationService.getProjectInvitations(organizationId, projectId, token, params)
+      return response.data
+    } catch (error) {
+      toast.error(`${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data)
+    }
+  }
+)
+
 // Define the initial state
 const initialActiveProjectState = {
   projectDetails: {},
   projectMembers: [],
   projectMembersAndRoles: [],
+  projectInvitations: [],
   error: null,
   isUpdating: false,
   isDeleting: false,
   isBlurring: false,
   isMembersLoading: false,
-  isDeletingMember: false
+  isDeletingMember: false,
+  isInvitationsLoading: false
 }
 
 // Create the slice
@@ -183,6 +217,18 @@ const activeProjectSlice = createSlice({
       })
       .addCase(deleteProjectMember.rejected, (state, action) => {
         state.isDeletingMember = false
+        state.error = action.payload
+      })
+      .addCase(fetchProjectInvitations.pending, state => {
+        state.isInvitationsLoading = true
+        state.error = null
+      })
+      .addCase(fetchProjectInvitations.fulfilled, (state, action) => {
+        state.isInvitationsLoading = false
+        state.projectInvitations = action.payload
+      })
+      .addCase(fetchProjectInvitations.rejected, (state, action) => {
+        state.isInvitationsLoading = false
         state.error = action.payload
       })
   }

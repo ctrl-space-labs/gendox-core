@@ -16,10 +16,11 @@ import SearchToolbar from 'src/utils/searchToolbar'
 import InviteDialog from 'src/views/pages/project-settings-components/members-components/InviteDialog'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import toast from 'react-hot-toast'
-import { fetchProjectMembersAndRoles, deleteProjectMember } from 'src/store/activeProject/activeProject'
+import { fetchProjectMembersAndRoles, deleteProjectMember, fetchProjectInvitations } from 'src/store/activeProject/activeProject'
 import { fetchOrganizationMembers } from 'src/store/activeOrganization/activeOrganization'
 import { userTypeStatus, memberRoleStatus, escapeRegExp, renderClientAvatar } from 'src/utils/membersUtils'
 import { localStorageConstants } from 'src/utils/generalConstants'
+import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 
 const MembersProjectSettings = () => {
   const dispatch = useDispatch()
@@ -27,12 +28,16 @@ const MembersProjectSettings = () => {
   const { 
     projectDetails: project, 
     projectMembersAndRoles: projectMembers, 
+    projectInvitations,
     isMembersLoading, 
+    isInvitationsLoading,
     isDeletingMember 
   } = useSelector(state => state.activeProject)
+  const { organizationMembers } = useSelector(state => state.activeOrganization)
 
   const { id: projectId, organizationId } = project || {}
-  const [searchText, setSearchText] = useState([])
+  const canSeeInvitations = useHasOrgRole({ organizationId, roles: ['OP_ADD_PROJECT_MEMBERS'] })
+  const [searchText, setSearchText] = useState('')
   const [filteredProjectMembers, setFilteredProjectMembers] = useState([])
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
@@ -50,15 +55,30 @@ const MembersProjectSettings = () => {
   useEffect(() => {
     if (projectId) {
       dispatch(fetchProjectMembersAndRoles({ organizationId, projectId, token }))
+      if (canSeeInvitations) {
+        dispatch(
+          fetchProjectInvitations({
+            organizationId,
+            projectId,
+            token,
+            params: { projectId, statusNames: ['PENDING', 'ACCEPTED'], page: 0, size: 100, sort: 'createdAt,desc' }
+          })
+        )
+      }
     }
     if (organizationId) {
       dispatch(fetchOrganizationMembers({ organizationId, token }))
     }
-  }, [projectId, organizationId, token, dispatch])
+  }, [projectId, organizationId, token, dispatch, canSeeInvitations])
 
   useEffect(() => {
+    if (searchText?.length) {
+      handleSearch(searchText)
+      return
+    }
+
     setFilteredProjectMembers(membersWithoutAgents)
-  }, [projectMembers])
+  }, [projectMembers, searchText])
 
   const handleSearch = searchValue => {
     setSearchText(searchValue)
@@ -246,13 +266,25 @@ const MembersProjectSettings = () => {
     }
   ]
 
+  const orgMemberEmails = Array.isArray(organizationMembers)
+    ? organizationMembers.map(m => m?.user?.email).filter(Boolean)
+    : []
+
+  const visibleInvitations = canSeeInvitations && Array.isArray(projectInvitations?.content) ? projectInvitations.content : []
+  const filteredInvitations = visibleInvitations.filter(inv => {
+    const status = inv?.statusType?.name
+    if (status === 'PENDING') return true
+    if (status === 'ACCEPTED') return !orgMemberEmails.includes(inv?.inviteeEmail)
+    return false
+  })
+
   return (
     <Card>
       <CardHeader />
       <Box sx={{ position: 'relative' }}>
         <Box
           sx={{
-            filter: isMembersLoading || isDeletingMember ? 'blur(3px)' : 'none',
+            filter: isMembersLoading || isDeletingMember || isInvitationsLoading ? 'blur(3px)' : 'none',
             transition: 'filter 0.3s ease'
           }}
         >

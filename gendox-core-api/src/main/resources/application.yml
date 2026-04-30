@@ -232,7 +232,7 @@ gendox:
             pageable-size: 1000
   user-invitation:
     accept-url-template: /accept-invitation/?email=%s&token=%s
-    ttl: 86400  # in seconds
+    ttl: 2592000  # 30 days in seconds
   features:
     subscription-validation: true
 

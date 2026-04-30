@@ -68,6 +68,9 @@ public class Invitation {
     @Column(name = "updated_by")
     private UUID updatedBy;
 
+    @Transient
+    private String invitationLink;
+
 
     public UUID getId() {
         return id;
@@ -171,6 +174,14 @@ public class Invitation {
 
     public void setUpdatedBy(UUID updatedBy) {
         this.updatedBy = updatedBy;
+    }
+
+    public String getInvitationLink() {
+        return invitationLink;
+    }
+
+    public void setInvitationLink(String invitationLink) {
+        this.invitationLink = invitationLink;
     }
 
     @Override

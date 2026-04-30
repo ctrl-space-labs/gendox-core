@@ -1,5 +1,5 @@
-import { useState, forwardRef } from 'react'
-import { useSelector } from 'react-redux'
+import { useEffect, useMemo, useState, forwardRef } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
 import Dialog from '@mui/material/Dialog'
@@ -13,6 +13,7 @@ import Autocomplete from '@mui/material/Autocomplete'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import Tooltip from '@mui/material/Tooltip'
+import { DataGrid } from '@mui/x-data-grid'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import CustomAvatar from 'src/views/custom-components/mui/avatar'
 import invitationService from 'src/gendox-sdk/invitationService'
@@ -23,20 +24,146 @@ import CardContent from '@mui/material/CardContent'
 import Card from '@mui/material/Card'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import { getAllowedRoles, memberRoleStatus } from 'src/utils/membersUtils'
+import { fetchProjectInvitations } from 'src/store/activeProject/activeProject'
+import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 
 const InviteDialog = ({ open, handleClose }) => {
+  const dispatch = useDispatch()
   const auth = useAuth()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   const project = useSelector(state => state.activeProject.projectDetails)
+  const { projectInvitations, isInvitationsLoading } = useSelector(state => state.activeProject)
   const organizationMembers = useSelector(state => state.activeOrganization.organizationMembers)
   const { id: projectId, organizationId } = project
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [selectedRole, setSelectedRole] = useState('')
 
+  const canSeeInvitations = useHasOrgRole({ organizationId, roles: ['OP_ADD_PROJECT_MEMBERS'] })
+
   const members = organizationMembers.filter(member => member.user.email !== null)
   const userRole = members.find(member => member.user.email === auth.user.email)?.role?.name
   const allowedRoles = getAllowedRoles(userRole)
+
+  useEffect(() => {
+    if (!open) return
+    if (!projectId || !organizationId || !token) return
+    if (!canSeeInvitations) return
+
+    dispatch(
+      fetchProjectInvitations({
+        organizationId,
+        projectId,
+        token,
+        params: { projectId, statusNames: ['PENDING', 'ACCEPTED'], page: 0, size: 100, sort: 'createdAt,desc' }
+      })
+    )
+  }, [open, projectId, organizationId, token, dispatch, canSeeInvitations])
+
+  const filteredInvitations = useMemo(() => {
+    if (!canSeeInvitations) return []
+    const orgMemberEmails = Array.isArray(organizationMembers)
+      ? organizationMembers.map(m => m?.user?.email).filter(Boolean)
+      : []
+
+    const visibleInvitations = Array.isArray(projectInvitations?.content) ? projectInvitations.content : []
+    return visibleInvitations.filter(inv => {
+      const status = inv?.statusType?.name
+      if (status === 'PENDING') return true
+      if (status === 'ACCEPTED') return !orgMemberEmails.includes(inv?.inviteeEmail)
+      return false
+    })
+  }, [canSeeInvitations, organizationMembers, projectInvitations])
+
+  const invitationColumns = useMemo(
+    () => [
+      {
+        field: 'actions',
+        headerName: '',
+        width: 60,
+        sortable: false,
+        renderCell: params => {
+          const link = params.row.invitationLink
+          const disabled = !link || isInvitationsLoading
+          return (
+            <Tooltip title={disabled ? 'Invitation link not available' : 'Copy invitation link'}>
+              <span>
+                <IconButton
+                  size='small'
+                  disabled={disabled}
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(link)
+                      toast.success('Invitation link copied')
+                    } catch (e) {
+                      toast.error('Failed to copy invitation link')
+                    }
+                  }}
+                >
+                  <Icon icon='mdi:content-copy' />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )
+        }
+      },
+      {
+        flex: 0.4,
+        minWidth: 260,
+        field: 'inviteeEmail',
+        headerName: 'EMAIL',
+        renderCell: params => (
+          <Typography variant='body2' sx={{ color: 'text.primary' }}>
+            {params.row.inviteeEmail}
+          </Typography>
+        )
+      },
+      {
+        flex: 0.2,
+        minWidth: 180,
+        field: 'role',
+        headerName: 'ROLE',
+        sortable: false,
+        valueGetter: (_, row) => row?.userRoleType?.name,
+        renderCell: params => {
+          const role = params.row.userRoleType?.name || 'UNKNOWN'
+          const status = memberRoleStatus[role] || memberRoleStatus.UNKNOWN
+          return (
+            <Typography variant='body2' sx={{ display: 'flex', alignItems: 'center' }}>
+              {status.icon && <Icon icon={status.icon} style={{ color: status.color, marginRight: '0.5rem' }} />}
+              {status.title}
+            </Typography>
+          )
+        }
+      },
+      {
+        flex: 0.25,
+        minWidth: 210,
+        field: 'expiresAt',
+        headerName: 'EXPIRES AT',
+        valueGetter: (_, row) => row?.expiresAt,
+        renderCell: params => (
+          <Typography variant='body2' sx={{ color: 'text.primary' }}>
+            {params.row.expiresAt ? new Date(params.row.expiresAt).toLocaleString() : '-'}
+          </Typography>
+        )
+      },
+      {
+        flex: 0.15,
+        minWidth: 140,
+        field: 'status',
+        headerName: 'STATUS',
+        sortable: false,
+        valueGetter: (_, row) => row?.statusType?.name,
+        renderCell: params => (
+          <Typography variant='body2' sx={{ color: 'text.primary' }}>
+            {params.row.statusType?.name || 'UNKNOWN'}
+          </Typography>
+        )
+      }
+    ],
+    [isInvitationsLoading]
+  )
 
   const validateEmail = email => {
     // Simple email validation regex
@@ -70,6 +197,14 @@ const InviteDialog = ({ open, handleClose }) => {
       await invitationService.inviteProjectMember(organizationId, token, invitationBody)
       console.log('Invitation Sent')
       toast.success('Invitation sent successfully!')
+      dispatch(
+        fetchProjectInvitations({
+          organizationId,
+          projectId,
+          token,
+          params: { projectId, statusNames: ['PENDING', 'ACCEPTED'], page: 0, size: 100, sort: 'createdAt,desc' }
+        })
+      )
       handleClose() // Close the dialog on success
     } catch (error) {
       handleClose()
@@ -131,42 +266,63 @@ const InviteDialog = ({ open, handleClose }) => {
           </Typography>
           <Typography variant='body2'>{project.name} project</Typography>
         </Box>
-        <Box>
-          <Grid container spacing={4} justifyContent='center'>
-            {steps.map((step, index) => (
-              <Grid item xs={12} sm={4} key={index}>
-                <Card
-                  sx={{
-                    backgroundColor: 'transparent',
-                    display: 'flex',
-                    flexDirection: { xs: 'row', sm: 'column' }, // Row on mobile, column on larger screens
-                    alignItems: 'center',
-                    textAlign: { xs: 'left', sm: 'center' }, // Left align text on mobile
-                    justifyContent: 'center',
-                    boxShadow: 'none',
-                    gap: { xs: 2, sm: 0 } // Adds spacing between icon & text on mobile
-                  }}
-                >
-                  <CustomAvatar
-                    skin='light'
-                    color='primary'
+        {filteredInvitations.length > 0 ? (
+          <Box
+            sx={{
+              width: '100%',
+              filter: isInvitationsLoading ? 'blur(3px)' : 'none',
+              transition: 'filter 0.3s ease'
+            }}
+          >
+            <DataGrid
+              autoHeight
+              columns={invitationColumns}
+              disableRowSelectionOnClick
+              disableColumnFilter
+              disableColumnMenu
+              hideFooter
+              rows={filteredInvitations}
+              getRowId={row => row.id}
+            />
+          </Box>
+        ) : (
+          <Box>
+            <Grid container spacing={4} justifyContent='center'>
+              {steps.map((step, index) => (
+                <Grid item xs={12} sm={4} key={index}>
+                  <Card
                     sx={{
-                      width: [70, 100],
-                      height: [70, 100],
-                      '& svg': { fontSize: ['2.2rem', '2.5rem'] }
+                      backgroundColor: 'transparent',
+                      display: 'flex',
+                      flexDirection: { xs: 'row', sm: 'column' }, // Row on mobile, column on larger screens
+                      alignItems: 'center',
+                      textAlign: { xs: 'left', sm: 'center' }, // Left align text on mobile
+                      justifyContent: 'center',
+                      boxShadow: 'none',
+                      gap: { xs: 2, sm: 0 } // Adds spacing between icon & text on mobile
                     }}
                   >
-                    <Icon icon={step.icon} />
-                  </CustomAvatar>
-                  <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <Typography variant='h6'>{step.title}</Typography>
-                    <Typography variant='body2'>{step.description}</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
+                    <CustomAvatar
+                      skin='light'
+                      color='primary'
+                      sx={{
+                        width: [70, 100],
+                        height: [70, 100],
+                        '& svg': { fontSize: ['2.2rem', '2.5rem'] }
+                      }}
+                    >
+                      <Icon icon={step.icon} />
+                    </CustomAvatar>
+                    <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Typography variant='h6'>{step.title}</Typography>
+                      <Typography variant='body2'>{step.description}</Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        )}
       </DialogContent>
       <Divider sx={{ my: '0' }} />
       <DialogContent

@@ -104,6 +104,8 @@ export default {
 
   inviteProjectMember: organizationId => `${url}organizations/${organizationId}/invitations`,
 
+  getProjectInvitations: organizationId => `${url}organizations/${organizationId}/invitations`,
+
   addOrganizationMember: organizationId => `${url}organizations/${organizationId}/users`,
 
   removeOrganizationMember: (organizationId, userId) => `${url}organizations/${organizationId}/users/${userId}`,
