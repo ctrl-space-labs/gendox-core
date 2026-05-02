@@ -113,7 +113,8 @@ public class ReadDocumentTool implements AiToolHandler {
         logger.debug("ReadDocumentTool: document {} loaded, {} characters", docId, docText.length());
 
         JsonNode lineRangesNode = arguments.get("line_ranges");
-        if (lineRangesNode != null && lineRangesNode.isArray() && !lineRangesNode.isEmpty()) {
+        if (lineRangesNode != null && lineRangesNode.isArray() && !lineRangesNode.isEmpty()
+                && hasAnyNonNullRange(lineRangesNode)) {
             docText = filterByLineRanges(docText, lineRangesNode);
             logger.debug("ReadDocumentTool: filtered to {} characters using {} raw range(s)",
                     docText.length(), lineRangesNode.size());
@@ -147,6 +148,18 @@ public class ReadDocumentTool implements AiToolHandler {
         }
     }
 
+    /** Returns {@code true} if at least one range node has a non-null {@code line_start} or {@code line_end}. */
+    private boolean hasAnyNonNullRange(JsonNode lineRangesNode) {
+        for (JsonNode rangeNode : lineRangesNode) {
+            JsonNode start = rangeNode.get("line_start");
+            JsonNode end   = rangeNode.get("line_end");
+            if ((start != null && !start.isNull()) || (end != null && !end.isNull())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Filters {@code fullText} (which already has {@code "N | line"} prefixes) to only lines
      * covered by the supplied ranges after expansion and merging.
@@ -155,11 +168,16 @@ public class ReadDocumentTool implements AiToolHandler {
      * Merging: ranges that overlap or whose gap is ≤ 30 lines are collapsed into one.
      */
     private String filterByLineRanges(String fullText, JsonNode lineRangesNode) {
-        // Parse raw ranges
+        String[] lines = fullText.split("\n", -1);
+        int totalLines = lines.length;
+
+        // Parse raw ranges; missing/null bounds default to the full file extent
         List<Range> ranges = new ArrayList<>();
         for (JsonNode rangeNode : lineRangesNode) {
-            int start = rangeNode.get("line_start").asInt();
-            int end   = rangeNode.get("line_end").asInt();
+            JsonNode startNode = rangeNode.get("line_start");
+            JsonNode endNode   = rangeNode.get("line_end");
+            int start = (startNode == null || startNode.isNull()) ? 1 : startNode.asInt();
+            int end   = (endNode   == null || endNode.isNull())   ? totalLines : endNode.asInt();
             if (start > end) { int tmp = start; start = end; end = tmp; }
             ranges.add(new Range(start, end));
         }
@@ -181,7 +199,6 @@ public class ReadDocumentTool implements AiToolHandler {
         }
 
         // Walk the merged ranges, emitting "..." between non-adjacent sections
-        String[] lines = fullText.split("\n", -1);
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < merged.size(); i++) {
             if (i > 0) {
