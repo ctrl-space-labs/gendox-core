@@ -62,6 +62,7 @@ const IFrameAuthProvider = ({ children, initialAuth }) => {
         organizations: []
       })
       setLoading(false)
+
       return
     }
 
@@ -75,13 +76,12 @@ const IFrameAuthProvider = ({ children, initialAuth }) => {
         }
       })
       .then(async userDataResponse => {
-        // Add 'role': 'admin' to the userDataResponse.data object
-        userDataResponse.data.role = 'reader'
         setUser(userDataResponse.data)
         window.localStorage.setItem(localStorageConstants.userDataKey, JSON.stringify(userDataResponse.data))
 
         // Store userData, actives project and organization
         dispatch(userDataActions.getUserData(userDataResponse.data))
+
         // dispatch(
         //   fetchOrganization({
         //     organizationId: userDataResponse.data.organizations[0].id,
@@ -128,6 +128,7 @@ const IFrameAuthProvider = ({ children, initialAuth }) => {
     if (token) {
       setAccessToken(token)
     }
+
     return () => {
       // window.parent.postMessage({ type: 'gendox.events.listener.removed' }, "*");
       iFrameMessageManager.messageManager.sendMessage({ type: 'gendox.events.listener.removed' })
