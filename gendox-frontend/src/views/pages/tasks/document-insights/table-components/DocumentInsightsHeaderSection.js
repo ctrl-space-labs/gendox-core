@@ -13,6 +13,8 @@ import DownloadIcon from '@mui/icons-material/Download'
 import GenerateConfirmDialog from 'src/utils/dialogs/GenerateConfirmDialog'
 import taskService from 'src/gendox-sdk/taskService'
 import { getErrorMessage } from 'src/utils/errorHandler'
+import RequireOrgRoles from 'src/authentication/components/RequireOrgRoles'
+import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
 
 const HeaderSection = ({
   title,
@@ -42,8 +44,12 @@ const HeaderSection = ({
     setAnchorEl(prev => (prev ? null : event.currentTarget.parentElement))
   }
 
+  const canGenerateAll = useHasOrgRole({ organizationId, roles: ['ROLE_OWNER', 'ROLE_ADMIN'] })
+
   const disableGenerate = isPageLoading || documents.length === 0 || questions.length === 0 || isGenerating
-  const dropdownDisabled = isPageLoading || documents.length === 0 || questions.length === 0
+
+  const dropdownDisabled =
+    isPageLoading || documents.length === 0 || questions.length === 0 || (!canGenerateAll && selectedDocuments.length === 0)
 
   const canStopGeneration =
     isGenerating &&
@@ -144,7 +150,9 @@ const HeaderSection = ({
 
     // Check if there are new fields (document-question combinations) that haven't been generated
     const totalCombinations = documents.length * questions.length
+
     const generatedCombinations = documents.reduce((count, doc) => {
+
       return count + questions.filter(question => hasGeneratedContent(doc.id, question.id)).length
     }, 0)
     const newFields = totalCombinations - generatedCombinations
@@ -345,10 +353,13 @@ const HeaderSection = ({
                     (() => {
                       const newDocs = documents.filter(doc => !hasGeneratedContent(doc.id))
                       const totalCombinations = documents.length * questions.length
+
                       const generatedCombinations = documents.reduce((count, doc) => {
+
                         return count + questions.filter(question => hasGeneratedContent(doc.id, question.id)).length
                       }, 0)
                       const newFields = totalCombinations - generatedCombinations
+
                       return newDocs.length === 0 || questions.length === 0 || newFields === 0
                     })()
                   }
@@ -363,30 +374,34 @@ const HeaderSection = ({
                   </Box>
                 </MenuItem>,
 
-                <MenuItem key='generate-all' onClick={() => setConfirmGeneration('all')} disabled={disableGenerate}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {isGenerating ? (
-                      <CircularProgress size={16} color='success' />
-                    ) : (
-                      <RocketLaunchIcon fontSize='small' color='success' />
-                    )}
-                    Generate All
-                  </Box>
-                </MenuItem>
+                <RequireOrgRoles key='generate-all' organizationId={organizationId} roles={['ROLE_OWNER', 'ROLE_ADMIN']}>
+                  <MenuItem onClick={() => setConfirmGeneration('all')} disabled={disableGenerate}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {isGenerating ? (
+                        <CircularProgress size={16} color='success' />
+                      ) : (
+                        <RocketLaunchIcon fontSize='small' color='success' />
+                      )}
+                      Generate All
+                    </Box>
+                  </MenuItem>
+                </RequireOrgRoles>
               ]}
 
               {/* When main button is "Generate New" - show only Generate All */}
               {selectedDocuments.length === 0 && (
-                <MenuItem onClick={() => setConfirmGeneration('all')} disabled={disableGenerate}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {isGenerating ? (
-                      <CircularProgress size={16} color='success' />
-                    ) : (
-                      <RocketLaunchIcon fontSize='small' color='success' />
-                    )}
-                    Generate All
-                  </Box>
-                </MenuItem>
+                <RequireOrgRoles organizationId={organizationId} roles={['ROLE_OWNER', 'ROLE_ADMIN']}>
+                  <MenuItem onClick={() => setConfirmGeneration('all')} disabled={disableGenerate}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {isGenerating ? (
+                        <CircularProgress size={16} color='success' />
+                      ) : (
+                        <RocketLaunchIcon fontSize='small' color='success' />
+                      )}
+                      Generate All
+                    </Box>
+                  </MenuItem>
+                </RequireOrgRoles>
               )}
 
               {disableGenerate && (
