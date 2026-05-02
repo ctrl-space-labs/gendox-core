@@ -104,8 +104,8 @@ rsa:
 
 gendox:
   rest-template:
-    connection-timeout-ms: 30000
-    read-timeout-ms: 300000
+    connection-timeout-ms: 30000    # 30 seconds
+    read-timeout-ms: 600000         # 10 minutes
   domains:
     frontend: https://app.gendox.dev
 
