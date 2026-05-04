@@ -106,6 +106,10 @@ buildNumber.properties
 .env
 .env*
 
+# macOS
+.DS_Store
+**/.DS_Store
+
 # Digitization script secrets
 scripts/.env
 scripts/input/*
