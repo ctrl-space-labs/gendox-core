@@ -28,6 +28,33 @@ def _require(key: str, override: str = None) -> str:
     return value
 
 
+# Each entry: (format_name, description, api_endpoint_hint)
+_FORMAT_MENU = [
+    ("csv",      "spreadsheet",        "API endpoint: /digitization/export-csv"),
+    ("json",     "structured records", "parsed from ANSWER node JSON messages"),
+    ("markdown", "raw model output",   "combined text from ANSWER node messages"),
+    ("all",      "all three formats",  "csv + json + markdown"),
+]
+_VALID_FORMATS = {f[0] for f in _FORMAT_MENU}
+
+
+def _prompt_export_format() -> str:
+    """Interactively ask the user to choose an export format."""
+    print("\nSelect export format:")
+    for i, (fmt, label, hint) in enumerate(_FORMAT_MENU, start=1):
+        print(f"  {i}) {fmt:<10} {label:<22} ({hint})")
+    print()
+    while True:
+        raw = input("Enter choice [1 = csv]: ").strip()
+        if raw == "":
+            return "csv"
+        if raw.isdigit() and 1 <= int(raw) <= len(_FORMAT_MENU):
+            return _FORMAT_MENU[int(raw) - 1][0]
+        if raw.lower() in _VALID_FORMATS:
+            return raw.lower()
+        print(f"  Invalid. Enter a number 1–{len(_FORMAT_MENU)} or: {', '.join(f[0] for f in _FORMAT_MENU)}")
+
+
 def _on_progress(step: str, message: str) -> None:
     print(f"  [{step}] {message}")
 
@@ -44,15 +71,21 @@ def _add_digitize_args(parser: argparse.ArgumentParser) -> None:
         "  GENDOX_INPUT_FOLDER    Folder with files to upload  (default: ./input)\n"
         "  GENDOX_OUTPUT_FOLDER   Folder where results are saved (default: ./output)\n"
         "  GENDOX_DOCUMENT_PROMPT Prompt attached to every document node\n"
-        "  GENDOX_EXPORT_FORMAT   csv | markdown | json | all  (default: csv)\n"
+        "  GENDOX_EXPORT_FORMAT   csv | json | markdown | all  (prompts if not set)\n"
         "  GENDOX_SKIP_UPLOAD     true → skip upload+train step\n"
         "  GENDOX_CLEAN_TASK      true → delete old DOCUMENT nodes before upload\n"
+        "\n"
+        "─── export formats ─────────────────────────────────────────\n"
+        "  csv        API /digitization/export-csv    → saves a .csv file\n"
+        "  json       Parses JSON from ANSWER nodes   → saves a .json file\n"
+        "  markdown   Text from ANSWER nodes          → saves a .md file\n"
+        "  all        Runs all three formats\n"
         "\n"
         "─── examples ───────────────────────────────────────────────\n"
         "  gendox digitize\n"
         "  gendox digitize --clean-task\n"
         "  gendox digitize --skip-upload\n"
-        "  gendox digitize --skip-upload --export-format all\n"
+        "  gendox digitize --skip-upload --export-format json\n"
         "  gendox digitize --resume\n"
     )
     parser.add_argument("--token",           default=None, help="Override GENDOX_TOKEN")
@@ -65,8 +98,8 @@ def _add_digitize_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--document-prompt", default=None, help="Override GENDOX_DOCUMENT_PROMPT")
     parser.add_argument(
         "--export-format", default=None,
-        choices=["csv", "markdown", "json", "all"],
-        help="Output format (default: csv)",
+        choices=["csv", "json", "markdown", "all"],
+        help="Output format — skips the interactive prompt",
     )
     parser.add_argument("--skip-upload", action="store_true",
                         help="Skip upload+train step (files already uploaded)")
@@ -119,10 +152,15 @@ def _run_digitize(args: argparse.Namespace) -> None:
     if not output_folder.is_absolute():
         output_folder = cwd / output_folder
 
-    prompt        = (args.document_prompt or os.getenv("GENDOX_DOCUMENT_PROMPT", "")).strip()
-    export_format = args.export_format or os.getenv("GENDOX_EXPORT_FORMAT", "csv")
-    skip_upload   = args.skip_upload   or os.getenv("GENDOX_SKIP_UPLOAD", "false").lower() == "true"
-    clean_task    = args.clean_task    or os.getenv("GENDOX_CLEAN_TASK",  "false").lower() == "true"
+    prompt      = (args.document_prompt or os.getenv("GENDOX_DOCUMENT_PROMPT", "")).strip()
+    skip_upload = args.skip_upload or os.getenv("GENDOX_SKIP_UPLOAD", "false").lower() == "true"
+    clean_task  = args.clean_task  or os.getenv("GENDOX_CLEAN_TASK",  "false").lower() == "true"
+
+    # Format: flag → env var → interactive prompt
+    env_format    = os.getenv("GENDOX_EXPORT_FORMAT", "").strip().lower()
+    export_format = args.export_format or (env_format if env_format in _VALID_FORMATS else None)
+    if export_format is None:
+        export_format = _prompt_export_format()
 
     print("=" * 60)
     print("  Gendox Document Digitization")
