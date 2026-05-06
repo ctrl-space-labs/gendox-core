@@ -9,7 +9,7 @@ from typing import Callable, Iterator, Optional
 
 from ...exceptions import GendoxAPIError, GendoxTimeoutError
 from ..._http import HttpClient
-from .models import CleanupFailure, Document, ExportResult, RunSummary, TaskNode, UploadResult
+from .models import CleanupFailure, ExportResult, RunSummary, TaskNode, UploadResult
 
 logger = logging.getLogger("gendox.digitization")
 
@@ -35,12 +35,19 @@ def _extract_json_from_message(message: str) -> list:
     return json.loads(text)
 
 
-def _extract_pages_from_csv(content: bytes) -> list[tuple[int, str]]:
-    """Parse a /export-csv response and return (page_number, cell_content) for every Page N column."""
+def _parse_export_csv(content: bytes) -> tuple[str, list[tuple[int, str]]]:
+    """Parse a /export-csv response.
+
+    Returns (document_title, pages) where pages is a sorted list of
+    (page_number, cell_content) for every 'Page N' column.
+    """
     text = content.decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(text))
+    title = ""
     pages: list[tuple[int, str]] = []
     for row in reader:
+        if not title:
+            title = (row.get("Document Title") or "").strip()
         for col_name, cell_value in row.items():
             col = (col_name or "").strip()
             if col.lower().startswith("page "):
@@ -50,7 +57,7 @@ def _extract_pages_from_csv(content: bytes) -> list[tuple[int, str]]:
                     continue
                 if cell_value and cell_value.strip():
                     pages.append((page_num, cell_value.strip()))
-    return sorted(pages, key=lambda x: x[0])
+    return title, sorted(pages, key=lambda x: x[0])
 
 
 def _stem_from_name(name: str) -> str:
@@ -147,29 +154,6 @@ class DigitizationService:
         nodes = [TaskNode.model_validate(n) for n in self._paginate(url)]
         return [n for n in nodes if n.node_type_name == node_type]
 
-    def _resolve_doc_stems(self, doc_nodes: list[TaskNode]) -> dict[str, str]:
-        """Return {node_id: filename_stem} by fetching each document from the API."""
-        stems: dict[str, str] = {}
-        for node in doc_nodes:
-            fallback = node.id[:8]
-            if not node.documentId:
-                stems[node.id] = fallback
-                continue
-            try:
-                resp = self._http.get(f"{self._base}/documents/{node.documentId}")
-                if resp.status_code != 200:
-                    logger.warning(
-                        "Could not fetch document %s: %s", node.documentId, resp.status_code
-                    )
-                    stems[node.id] = fallback
-                    continue
-                doc = Document.model_validate(resp.json())
-                stems[node.id] = _stem_from_name(doc.display_name) or fallback
-            except Exception as e:
-                logger.warning("Error fetching document %s: %s", node.documentId, e)
-                stems[node.id] = fallback
-        return stems
-
     @staticmethod
     def _save_state(path: Path, state: dict) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -183,7 +167,7 @@ class DigitizationService:
 
         doc_nodes = self._get_nodes_by_type(task_id, "DOCUMENT")
         if not doc_nodes:
-            self._emit(on_progress, "cleanup", "No document nodes found — nothing to delete")
+            self._emit(on_progress, "cleanup", "No document nodes found - nothing to delete")
             return {"deleted": 0, "failed": []}
 
         self._emit(on_progress, "cleanup", f"Deleting {len(doc_nodes)} node(s)...")
@@ -342,21 +326,17 @@ class DigitizationService:
             f"Exporting {len(doc_nodes)} document(s) as {fmt}..."
         )
 
-        doc_stems = self._resolve_doc_stems(doc_nodes)
-
         results = []
         for node in doc_nodes:
-            stem = doc_stems.get(node.id, node.id[:8])
-            for f in formats:
-                node_results = self._export_one(task_id, node.id, stem, ts, output_folder, f)
-                results.extend(node_results)
-                for result in node_results:
-                    if result.ok:
-                        logger.info("Saved: %s", result.path)
-                    else:
-                        logger.warning(
-                            "Export failed for node %s (%s): %s", node.id, f, result.error
-                        )
+            node_results = self._export_node(task_id, node.id, None, ts, output_folder, formats)
+            results.extend(node_results)
+            for result in node_results:
+                if result.ok:
+                    logger.info("Saved: %s", result.path)
+                else:
+                    logger.warning(
+                        "Export failed for node %s (%s): %s", node.id, result.fmt, result.error
+                    )
 
         ok = sum(1 for r in results if r.ok)
         self._emit(on_progress, "export", f"Saved {ok}/{len(results)} file(s) → {output_folder}")
@@ -370,69 +350,75 @@ class DigitizationService:
             return False, b"", f"{resp.status_code} {resp.text[:120]}"
         return True, resp.content, ""
 
-    def _export_one(
+    def _export_node(
         self,
         task_id: str,
         node_id: str,
-        stem: str,
+        stem: Optional[str],
         timestamp: str,
         output_folder: Path,
-        fmt: str,
+        formats: list[str],
     ) -> list[ExportResult]:
-        """Export one document node in the given format. Returns one result per output file."""
+        """Fetch export-csv ONCE for a node and save all requested formats."""
+        ok, content, err = self._fetch_export_csv(task_id, node_id)
+        if not ok:
+            return [ExportResult(node_id=node_id, fmt=f, error=err) for f in formats]
+
+        doc_title, pages = _parse_export_csv(content)
+        stem = _stem_from_name(doc_title) or stem or node_id[:8]
         base_name = f"{stem}_{timestamp}"
-        try:
-            if fmt == "csv":
-                ok, content, err = self._fetch_export_csv(task_id, node_id)
-                if not ok:
-                    return [ExportResult(node_id=node_id, fmt=fmt, error=err)]
-                out = output_folder / f"{base_name}.csv"
-                out.write_bytes(content)
-                return [ExportResult(node_id=node_id, fmt=fmt, path=str(out))]
 
-            elif fmt == "json":
-                ok, content, err = self._fetch_export_csv(task_id, node_id)
-                if not ok:
-                    return [ExportResult(node_id=node_id, fmt=fmt, error=err)]
+        results = []
 
-                pages = _extract_pages_from_csv(content)
-                if not pages:
-                    return [ExportResult(node_id=node_id, fmt=fmt, error="No page data found in CSV response")]
+        for fmt in formats:
+            try:
+                if fmt == "csv":
+                    out = output_folder / f"{base_name}.csv"
+                    out.write_bytes(content)
+                    results.append(ExportResult(node_id=node_id, fmt=fmt, path=str(out)))
 
-                all_rows: list = []
-                for page_num, cell in pages:
-                    try:
-                        rows = _extract_json_from_message(cell)
-                        if isinstance(rows, list):
-                            all_rows.extend(rows)
-                    except (json.JSONDecodeError, ValueError) as exc:
-                        logger.warning("Could not parse JSON from page %s of node %s: %s", page_num, node_id, exc)
+                elif fmt == "json":
+                    if not pages:
+                        results.append(ExportResult(node_id=node_id, fmt=fmt, error="No page data found in CSV response"))
+                        continue
+                    all_rows: list = []
+                    parse_errors = 0
+                    for page_num, cell in pages:
+                        try:
+                            rows = _extract_json_from_message(cell)
+                            if isinstance(rows, list):
+                                all_rows.extend(rows)
+                        except (json.JSONDecodeError, ValueError) as exc:
+                            parse_errors += 1
+                            logger.warning("Could not parse JSON from page %s of node %s: %s", page_num, node_id, exc)
+                    if not all_rows:
+                        err = f"JSON parsing failed for all {parse_errors} page(s) - enable debug logging for more details"
+                        results.append(ExportResult(node_id=node_id, fmt=fmt, error=err))
+                        continue
+                    if parse_errors:
+                        logger.warning("node %s: %d/%d page(s) failed JSON parsing", node_id, parse_errors, len(pages))
+                    out = output_folder / f"{base_name}.json"
+                    out.write_text(json.dumps(all_rows, ensure_ascii=False, indent=2), encoding="utf-8")
+                    results.append(ExportResult(node_id=node_id, fmt=fmt, path=str(out)))
 
-                out = output_folder / f"{base_name}.json"
-                out.write_text(json.dumps(all_rows, ensure_ascii=False, indent=2), encoding="utf-8")
-                return [ExportResult(node_id=node_id, fmt=fmt, path=str(out))]
+                elif fmt == "markdown":
+                    if not pages:
+                        results.append(ExportResult(node_id=node_id, fmt=fmt, error="No page data found in CSV response"))
+                        continue
+                    combined = "\n\n".join(
+                        f"<!-- Page {page_num} -->\n{cell}" for page_num, cell in pages
+                    )
+                    out = output_folder / f"{base_name}.md"
+                    out.write_text(combined, encoding="utf-8")
+                    results.append(ExportResult(node_id=node_id, fmt=fmt, path=str(out)))
 
-            elif fmt == "markdown":
-                ok, content, err = self._fetch_export_csv(task_id, node_id)
-                if not ok:
-                    return [ExportResult(node_id=node_id, fmt=fmt, error=err)]
+                else:
+                    results.append(ExportResult(node_id=node_id, fmt=fmt, error=f"Unknown format: {fmt}"))
 
-                pages = _extract_pages_from_csv(content)
-                if not pages:
-                    return [ExportResult(node_id=node_id, fmt=fmt, error="No page data found in CSV response")]
+            except Exception as e:
+                results.append(ExportResult(node_id=node_id, fmt=fmt, error=str(e)))
 
-                combined = "\n\n".join(
-                    f"<!-- Page {page_num} -->\n{cell}" for page_num, cell in pages
-                )
-                out = output_folder / f"{base_name}.md"
-                out.write_text(combined, encoding="utf-8")
-                return [ExportResult(node_id=node_id, fmt=fmt, path=str(out))]
-
-            else:
-                return [ExportResult(node_id=node_id, fmt=fmt, error=f"Unknown format: {fmt}")]
-
-        except Exception as e:
-            return [ExportResult(node_id=node_id, fmt=fmt, error=str(e))]
+        return results
 
     def run(
         self,
