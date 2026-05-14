@@ -367,12 +367,6 @@ class TestRun:
             status=201,
         )
         responses.add(responses.POST, f"{api_base}/task-nodes/batch", status=201)
-        responses.add(responses.GET, f"{api_base}/splitting/training", status=200)
-        responses.add(
-            responses.GET,
-            f"{api_base}/jobs",
-            json={"content": [{"status": "COMPLETED"}]},
-        )
         responses.add(
             responses.POST,
             f"{api_base}/tasks/{TASK_ID}/execute",
@@ -465,7 +459,7 @@ class TestRun:
 
         import json as _json
         state_file = output_dir / ".gendox_run_state.json"
-        state_file.write_text(_json.dumps({"trained": True, "executed": True}))
+        state_file.write_text(_json.dumps({"linked": True, "executed": True}))
 
         responses.add(
             responses.GET,

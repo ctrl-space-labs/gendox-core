@@ -102,7 +102,7 @@ def _add_digitize_args(parser: argparse.ArgumentParser) -> None:
         help="Output format — skips the interactive prompt",
     )
     parser.add_argument("--skip-upload", action="store_true",
-                        help="Skip upload+train step (files already uploaded)")
+                        help="Skip upload step (files already uploaded)")
     parser.add_argument("--clean-task", action="store_true",
                         help="Delete existing DOCUMENT nodes before upload")
     parser.add_argument("--resume", action="store_true",

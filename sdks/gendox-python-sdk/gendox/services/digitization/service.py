@@ -266,19 +266,6 @@ class DigitizationService:
 
         self._emit(on_progress, "link", f"Linked {len(doc_ids)} document(s) to task")
 
-    def split_and_train(self, on_progress: Optional[Callable] = None) -> None:
-        """Trigger Split & Train job and wait for completion."""
-        self._emit(on_progress, "split_and_train", "Triggering Split & Train...")
-        url = (
-            f"{self._base}/splitting/training"
-            f"?jobName=SPLITTER_AND_TRAINING&projectId={self._project_id}"
-        )
-        resp = self._http.get(url)
-        if resp.status_code != 200:
-            raise GendoxAPIError(f"Failed to trigger Split & Train: {resp.status_code} {resp.text[:200]}")
-        self._poll("split_and_train", on_progress)
-        self._emit(on_progress, "split_and_train", "Completed")
-
     def execute(self, task_id: str, on_progress: Optional[Callable] = None) -> None:
         """Execute the Document Digitization task and wait for completion."""
         self._emit(on_progress, "execute", "Starting Document Digitization task...")
@@ -437,9 +424,8 @@ class DigitizationService:
           0. (optional) Cleanup old DOCUMENT nodes
           1. Upload files
           2. Link documents to task
-          3. Split & Train
-          4. Execute task
-          5. Export results
+          3. Execute task
+          4. Export results
 
         Set resume=True to skip already-completed steps from a previous interrupted run.
         State is stored in output_folder/.gendox_run_state.json and deleted on success.
@@ -461,17 +447,16 @@ class DigitizationService:
             state["cleaned"] = True
             self._save_state(state_file, state)
 
-        # Steps 1–3: Upload → Link → Train
-        if not skip_upload and not state.get("trained"):
+        # Steps 1–2: Upload → Link
+        if not skip_upload and not state.get("linked"):
             upload_results = self.upload(input_folder, on_progress)
             summary.uploads = upload_results
 
             doc_ids = [r.doc_id for r in upload_results if r.ok]
             if doc_ids:
                 self.link(task_id, doc_ids, prompt, on_progress)
-                self.split_and_train(on_progress)
 
-            state["trained"] = True
+            state["linked"] = True
             state["uploaded"] = [
                 {"file": r.file, "doc_id": r.doc_id} for r in upload_results if r.ok
             ]
