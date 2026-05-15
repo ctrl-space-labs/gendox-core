@@ -77,8 +77,8 @@ class DigitizationService:
         if callback:
             callback(step, message)
 
-    def _poll(self, label: str, callback: Optional[Callable] = None) -> None:
-        url = f"{self._base}/jobs?size=5&sort=jobExecutionId,desc"
+    def _poll(self, label: str, job_name: str, callback: Optional[Callable] = None) -> None:
+        url = f"{self._base}/jobs?jobName={job_name}&size=5&sort=jobExecutionId,desc"
         deadline = time.time() + _POLL_TIMEOUT
         last_status = None
         seen_running = False  # must see at least one non-terminal status before accepting COMPLETED
@@ -276,7 +276,7 @@ class DigitizationService:
         )
         if resp.status_code not in (200, 202):
             raise GendoxAPIError(f"Failed to execute task: {resp.status_code} {resp.text[:200]}")
-        self._poll("execute", on_progress)
+        self._poll("execute", job_name="documentDigitizationJob", callback=on_progress)
         self._emit(on_progress, "execute", "Completed")
 
     def export(
