@@ -126,7 +126,7 @@ gendox:
       
       {%s}------------------------------------------------
     allowed:
-      extensions: .txt,.md,.rst,.pdf,.docx,.doc,.xls,.xlsx
+      extensions: .txt,.md,.rst,.pdf,.docx,.doc,.xls,.xlsx,.jpg
 
   integrations:
     #    poller: 30000 # 30 seconds

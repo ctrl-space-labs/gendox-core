@@ -123,12 +123,19 @@ public class DocumentService {
             documentInstance.setFileSizeBytes(0L);
         }
 
-        if (documentInstance.getRemoteUrl() != null && downloadService.isPdfUrl(documentInstance.getRemoteUrl())) {
+        if (documentInstance.getRemoteUrl() != null) {
             try {
-                documentInstance.setNumberOfPages(downloadService.countDocumentPages(documentInstance.getRemoteUrl()));
-            } catch (IOException e) {
-                logger.error("Error counting document pages for document with ID: {}", documentInstance.getId(), e);
-                throw new GendoxException("PAGE_COUNT_ERROR", "Error counting document pages", HttpStatus.INTERNAL_SERVER_ERROR);
+                String ext = downloadService.getFileExtension(documentInstance.getRemoteUrl());
+                if (downloadService.isPagedFormat(ext) || downloadService.isTextExtractable(ext)) {
+                    documentInstance.setNumberOfPages(downloadService.countDocumentPages(documentInstance.getRemoteUrl()));
+                } else if (downloadService.isImageFile(ext)) {
+                    documentInstance.setNumberOfPages(1);
+                } else {
+                    documentInstance.setNumberOfPages(null);
+                }
+            } catch (Exception e) {
+                logger.warn("Could not count pages for document {}: {}", documentInstance.getId(), e.getMessage());
+                documentInstance.setNumberOfPages(null);
             }
         } else {
             documentInstance.setNumberOfPages(null);

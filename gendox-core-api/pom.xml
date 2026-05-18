@@ -462,6 +462,13 @@
             <version>11.5.3</version>
         </dependency>
 
+        <!-- DOCX → PDF via XSL-FO / Apache FOP (used with PDFBox for page count and rendering) -->
+        <dependency>
+            <groupId>org.docx4j</groupId>
+            <artifactId>docx4j-export-fo</artifactId>
+            <version>11.5.3</version>
+        </dependency>
+
         <!-- Core OOXML + HSSF support -->
         <dependency>
             <groupId>org.apache.poi</groupId>

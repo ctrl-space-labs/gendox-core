@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ApiKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
@@ -24,7 +25,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,11 +36,15 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
     Logger logger = LoggerFactory.getLogger(DocumentSplitterProcessor.class);
     @Value("#{jobParameters['skipUnchangedDocs']}")
     protected Boolean skipUnchangedDocs;
+    @Value("#{jobParameters['projectId']}")
+    private String projectIdParam;
     @PersistenceContext
     private EntityManager entityManager;
 
     private ServiceSelector serviceSelector;
     private ProjectAgentService projectAgentService;
+    private ProjectService projectService;
+    private DocumentDigitizationService documentDigitizationService;
     private DownloadService downloadService;
     private GendoxAPIIntegrationService gendoxAPIIntegrationService;
     private CryptographyUtils cryptographyUtils;
@@ -53,21 +57,25 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
     @Autowired
     public DocumentSplitterProcessor(ServiceSelector serviceSelector,
                                      ProjectAgentService projectAgentService,
+                                     ProjectService projectService,
+                                     DocumentDigitizationService documentDigitizationService,
                                      DownloadService downloadService,
                                      GendoxAPIIntegrationService gendoxAPIIntegrationService,
                                      CryptographyUtils cryptographyUtils,
                                      ApiKeyService apiKeyService,
                                      OrganizationWebSiteService organizationWebSiteService,
-                                     EncodingRegistry encodingRegistry, SplitFileService splitFileService) {
+                                     EncodingRegistry encodingRegistry,
+                                     SplitFileService splitFileService) {
         this.serviceSelector = serviceSelector;
         this.projectAgentService = projectAgentService;
+        this.projectService = projectService;
+        this.documentDigitizationService = documentDigitizationService;
         this.downloadService = downloadService;
         this.gendoxAPIIntegrationService = gendoxAPIIntegrationService;
         this.cryptographyUtils = cryptographyUtils;
         this.apiKeyService = apiKeyService;
         this.organizationWebSiteService = organizationWebSiteService;
         this.encodingRegistry = encodingRegistry;
-
 
         this.enc = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
         this.splitFileService = splitFileService;
@@ -127,9 +135,19 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
 
             ApiKey apiKey = apiKeyService.getById(organizationWebSite.getApiKeyId());
             ContentDTO contentDTO = gendoxAPIIntegrationService.getContentById(instance.getRemoteUrl(), apiKey.getApiKey());
-            //update external url
             instance.setExternalUrl(contentDTO.getSource());
             return contentDTO.getContent();
+        }
+
+        // Pass it from LLM if the AutoDigitization is enabled for the project, basically the same code as the Digitization Task
+        if (projectIdParam != null) {
+            ProjectAgent agent = projectAgentService.getAgentByProjectId(UUID.fromString(projectIdParam));
+            if (agent != null && Boolean.TRUE.equals(agent.getAutoDigitization())) {
+                return documentDigitizationService.digitizeDocumentToText(
+                        instance,
+                        projectService.getProjectById(UUID.fromString(projectIdParam)),
+                        DocumentDigitizationService.DEFAULT_DIGITIZATION_PROMPT);
+            }
         }
 
         return downloadService.readDocumentContent(instance.getRemoteUrl());
