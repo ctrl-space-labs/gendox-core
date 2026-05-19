@@ -85,7 +85,7 @@ public class TaskNodeService {
     public TaskNode updateTaskNode(TaskNodeDTO taskNodeDTO, Task task) throws GendoxException {
         TaskNode existing = taskNodeRepository.findById(taskNodeDTO.getId())
                 .orElseThrow(() -> new GendoxException("TASK_NODE_NOT_FOUND", "Node not found", HttpStatus.NOT_FOUND));
-        logger.info("Updating task node: {} with data: {}", existing.getId(), taskNodeDTO);
+        logger.trace("Updating task node: {} with data: {}", existing.getId(), taskNodeDTO);
 
         // check for Answer nodes to delete if document insights task questions or documents changed
         if (TaskTypeConstants.DOCUMENT_INSIGHTS.equalsIgnoreCase(task.getTaskType().getName())) {
