@@ -67,6 +67,7 @@ const AiAgentProjectSettings = () => {
     moderationCheck: project.projectAgent.moderationCheck,
     rerankEnable: project.projectAgent.rerankEnable,
     advancedSearchEnable: project.projectAgent.advancedSearchEnable,
+    autoDigitization: project.projectAgent.autoDigitization ?? false,
     documentSplitterType: project.projectAgent.documentSplitterType?.name || '',
     maxToken: project.projectAgent.maxToken,
     temperature: project.projectAgent.temperature,
@@ -226,6 +227,7 @@ const AiAgentProjectSettings = () => {
         moderationCheck: data.moderationCheck,
         advancedSearchEnable: data.advancedSearchEnable,
         rerankEnable: data.rerankEnable,
+        autoDigitization: data.autoDigitization,
         aiTools: data.aiTools
       }
     }
@@ -237,6 +239,12 @@ const AiAgentProjectSettings = () => {
       })
       .catch(error => {
         console.error('Failed to update project', error)
+        const message =
+          error?.message ||
+          error?.error?.message ||
+          error?.payload?.message ||
+          'Failed to update project'
+        toast.error(message)
       })
   }
 
@@ -660,6 +668,29 @@ const AiAgentProjectSettings = () => {
                         </FormControl>
                       </Grid>
                     )}
+
+                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                      <FormControlLabel
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            Advanced Digitization
+                            <Tooltip
+                              title='Uses per-page LLM digitization when documents are split instead of plain text extraction. This is slower and consumes significantly more tokens. Requires Basic or Pro subscription.'
+                              arrow
+                            >
+                              <span>
+                                <IconButton color='primary' size='small' sx={{ ml: 0.5, p: 0.25 }}>
+                                  <Icon icon='mdi:information-outline' fontSize='small' />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          </Box>
+                        }
+                        control={
+                          <Checkbox {...register('autoDigitization')} checked={watch('autoDigitization')} />
+                        }
+                      />
+                    </Grid>
                   </Grid>
                 </Grid>
                 <Grid item xs={12} sm={6}>

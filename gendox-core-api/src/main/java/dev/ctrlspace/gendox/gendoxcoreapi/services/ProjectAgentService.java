@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectAgentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
@@ -285,8 +286,14 @@ public class ProjectAgentService {
                     HttpStatus.FORBIDDEN);
         }
 
-        // TODO add validation if can enable advanced search based on subscription plan
-
+        if (Boolean.TRUE.equals(projectAgent.getAutoDigitization())) {
+            Type standardTier = typeService.getByCategoryAndName("MODEL_TIER", "STANDARD_MODEL");
+            if (!subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, standardTier.getId())) {
+                throw new GendoxException("NO_ACCESS_TO_AUTO_DIGITIZATION",
+                        "Advanced Digitization requires Basic or Pro subscription",
+                        HttpStatus.FORBIDDEN);
+            }
+        }
 
         existingProjectAgent.setAgentName(projectAgent.getAgentName());
         existingProjectAgent.setCompletionModel(completionModel);
@@ -313,6 +320,9 @@ public class ProjectAgentService {
         existingProjectAgent.setAdvancedSearchEnable(projectAgent.getAdvancedSearchEnable());
         if (projectAgent.getAdvancedSearchModel() != null && projectAgent.getAdvancedSearchEnable()) {
             existingProjectAgent.setAdvancedSearchModel(aiModelService.getByName(projectAgent.getAdvancedSearchModel().getName()));
+        }
+        if (projectAgent.getAutoDigitization() != null) {
+            existingProjectAgent.setAutoDigitization(projectAgent.getAutoDigitization());
         }
         existingProjectAgent.setOrganizationDid(projectAgent.getOrganizationDid());
 

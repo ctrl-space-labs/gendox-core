@@ -127,19 +127,19 @@ public class DocumentDigitizationService {
                 .append(prompt).append("\n\n")
                 .append("Document Page: ").append(pageIndex + 1).append(" out of ").append(totalPages);
 
-        // ── DEBUG TOGGLE ───────────────────────────────────────────────────────────
-        // Default: prefer image when available; fall back to text.
-        // To send BOTH:  set sendText = true regardless of sendImage.
-        // To force TEXT: set sendImage = false.
-        boolean sendImage = pageImageBase64 != null;
-        boolean sendText  = pageText != null && !sendImage;
-        // ──────────────────────────────────────────────────────────────────────────
+        boolean usePrintedPage = task == null
+                || Boolean.TRUE.equals(task.getUsePrintedPage())
+                || (task.getUsePrintedPage() == null && task.getUsePageText() == null);
+        boolean usePageText = task != null && Boolean.TRUE.equals(task.getUsePageText());
+
+        boolean sendImage = usePrintedPage && pageImageBase64 != null;
+        boolean sendText = usePageText && pageText != null;
 
         if (sendText) {
             promptBuilder.append("\n\n")
-                    .append("<extracted-document-text>")
+                    .append("<extracted-document-text>\n")
                     .append(pageText)
-                    .append("</extracted-document-text>");
+                    .append("\n</extracted-document-text>");
         }
 
         Message message = new Message();

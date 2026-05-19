@@ -78,6 +78,13 @@ public class TaskService {
         if (task.getMaxSectionsChunkTokens() == null) {
             task.setMaxSectionsChunkTokens(this.maxSectionsChunkTokens);
         }
+        if (isDocumentDigitizationTask(task) && task.getUsePrintedPage() == null) {
+            task.setUsePrintedPage(true);
+        }
+        if (isDocumentDigitizationTask(task) && task.getUsePageText() == null) {
+            task.setUsePageText(false);
+        }
+        validateDigitizationContentFields(task);
         logger.debug("Creating new task: {}", task);
         return taskRepository.save(task);
     }
@@ -241,7 +248,34 @@ public class TaskService {
             existingTask.setTopP(taskDTO.getTopP());
         }
 
+        if (taskDTO.getUsePrintedPage() != null) {
+            existingTask.setUsePrintedPage(taskDTO.getUsePrintedPage());
+        }
+        if (taskDTO.getUsePageText() != null) {
+            existingTask.setUsePageText(taskDTO.getUsePageText());
+        }
+
+        validateDigitizationContentFields(existingTask);
+
         return taskRepository.save(existingTask);
+    }
+
+    private boolean isDocumentDigitizationTask(Task task) {
+        return task.getTaskType() != null
+                && TaskTypeConstants.DOCUMENT_DIGITIZATION.equals(task.getTaskType().getName());
+    }
+
+    private void validateDigitizationContentFields(Task task) throws GendoxException {
+        if (!isDocumentDigitizationTask(task)) {
+            return;
+        }
+        if (!Boolean.TRUE.equals(task.getUsePrintedPage()) && !Boolean.TRUE.equals(task.getUsePageText())) {
+            throw new GendoxException(
+                    "INVALID_DIGITIZATION_CONTENT_MODE",
+                    "At least one of Page Images or Extracted Text must be enabled",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
     }
 
 
