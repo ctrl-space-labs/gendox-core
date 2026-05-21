@@ -201,6 +201,9 @@ public class ProjectAgentService {
         if (projectAgent.getAdvancedSearchEnable() == null) {
             projectAgent.setAdvancedSearchEnable(false);
         }
+        if (projectAgent.getAutoDigitization() == null) {
+            projectAgent.setAutoDigitization(false);
+        }
         if (projectAgent.getChatTemplateId() == null) {
             projectAgent.setChatTemplateId(templateRepository.findIdByIsDefaultTrueAndTemplateTypeName("CHAT_TEMPLATE"));
         }

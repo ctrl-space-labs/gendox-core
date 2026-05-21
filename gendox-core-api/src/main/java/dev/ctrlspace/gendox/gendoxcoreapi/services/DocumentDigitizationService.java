@@ -137,9 +137,9 @@ public class DocumentDigitizationService {
 
         if (sendText) {
             promptBuilder.append("\n\n")
-                    .append("<extracted-document-text>\n")
+                    .append("<page-text>\n")
                     .append(pageText)
-                    .append("\n</extracted-document-text>");
+                    .append("\n</page-text>");
         }
 
         Message message = new Message();

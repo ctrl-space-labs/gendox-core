@@ -4,7 +4,8 @@
 // Supported file extensions for document digitization
 export const DOCUMENT_DIGITIZATION_SUPPORTED_EXTENSIONS = [
   'pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx',
-  'odt', 'odp', 'ods', 'rtf', 'pages', 'key', 'numbers'
+  'odt', 'odp', 'ods', 'rtf', 'pages', 'key', 'numbers',
+  'txt', 'md', 'csv'
 ]
 
 export const DOCUMENT_INSIGHTS_SUPPORTED_EXTENSIONS = [
@@ -16,7 +17,7 @@ export const DOCUMENT_INSIGHTS_SUPPORTED_EXTENSIONS = [
 
 // Explicitly unsupported file extensions (text files, code, etc.)
 export const DOCUMENT_DIGITIZATION_UNSUPPORTED_EXTENSIONS = [
-  'txt', 'md', 'csv', 'json', 'xml', 'yaml', 'yml',
+  'json', 'xml', 'yaml', 'yml',
   'html', 'htm', 'css', 'js', 'ts', 'py', 'java',
   'c', 'cpp', 'h', 'hpp', 'php', 'rb', 'go', 'rs',
   'sh', 'bat', 'ps1', 'sql', 'log'
@@ -40,7 +41,10 @@ export const DOCUMENT_DIGITIZATION_SUPPORTED_MIME_TYPES = {
   'application/vnd.oasis.opendocument.text': ['.odt'],
   'application/vnd.oasis.opendocument.presentation': ['.odp'],
   'application/vnd.oasis.opendocument.spreadsheet': ['.ods'],
-  'application/rtf': ['.rtf']
+  'application/rtf': ['.rtf'],
+  'text/plain': ['.txt'],
+  'text/markdown': ['.md'],
+  'text/csv': ['.csv']
 }
 
 export const DOCUMENT_INSIGHTS_SUPPORTED_MIME_TYPES = {
@@ -66,7 +70,8 @@ export const DOCUMENT_INSIGHTS_SUPPORTED_MIME_TYPES = {
 
 // Human-readable format names for user messages
 export const DOCUMENT_DIGITIZATION_SUPPORTED_FORMAT_NAMES = [
-  'PDF', 'DOC', 'DOCX', 'PPT', 'PPTX', 'XLS', 'XLSX', 'ODT', 'ODP', 'ODS', 'RTF'
+  'PDF', 'DOC', 'DOCX', 'PPT', 'PPTX', 'XLS', 'XLSX', 'ODT', 'ODP', 'ODS', 'RTF',
+  'TXT', 'MD', 'CSV'
 ]
 
 export const DOCUMENT_INSIGHTS_SUPPORTED_FORMAT_NAMES = [
