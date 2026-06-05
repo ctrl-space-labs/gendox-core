@@ -18,7 +18,7 @@ import Icon from 'src/views/custom-components/mui/icon/icon'
 import { sendMessage } from 'src/store/chat/gendoxChat'
 import { useIFrameMessageManager } from '../../../../authentication/context/IFrameMessageManagerContext'
 import AttachmentsRow from './attachments/AttachmentsRow'
-import { createPasteHandler } from './attachments/attachmentUtils'
+import { createPasteHandler, withUniqueFileName } from './attachments/attachmentUtils'
 import InputMessageOptions from './input-options/InputMessageOptions'
 import {
   enqueueFiles,
@@ -65,7 +65,7 @@ const ChatInputSection = ({ auth, token, currentThread, organizationId, projectI
     })
 
   const addFiles = filesList => {
-    const files = Array.from(filesList || [])
+    const files = Array.from(filesList || []).map(withUniqueFileName)
     if (!files.length) return
 
     const newItems = toItems(files)

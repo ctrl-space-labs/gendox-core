@@ -16,5 +16,9 @@ export default function GeeLayer({ url, opacity = 1 }) {
 
   if (!url) return null
 
-  return <TileLayer url={url} opacity={opacity} eventHandlers={eventHandlers()} />
+  return <TileLayer
+      url={url} opacity={opacity} updateWhenIdle={true}
+      updateWhenZooming={false}
+      keepBuffer={0}
+      eventHandlers={eventHandlers()}/>
 }

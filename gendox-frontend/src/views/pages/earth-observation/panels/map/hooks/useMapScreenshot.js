@@ -75,7 +75,11 @@ export default function useMapScreenshot(panelRef) {
   // Stores the screenshot in Redux but does NOT copy to clipboard.
   useEffect(() => {
     if (mapLayers.length > 0 && loadedLayerCount === mapLayers.length) {
-      const timer = setTimeout(() => capturePanel(panelRef?.current), 1000)
+      const timer = setTimeout(() => {
+        // Wait for 1 second to ensure all tiles are loaded, then capture the panel.
+        // temp remove to reduce rate limit issues
+        // capturePanel(panelRef?.current)
+      }, 1000)
       return () => clearTimeout(timer)
     }
   }, [loadedLayerCount, mapLayers.length, capturePanel, panelRef])

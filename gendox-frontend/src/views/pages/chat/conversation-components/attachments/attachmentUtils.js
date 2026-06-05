@@ -21,6 +21,14 @@ export const formatBytes = bytes => {
   return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`
 }
 
+export const withUniqueFileName = file => {
+  const dotIndex = file.name.lastIndexOf('.')
+  const baseName = dotIndex > 0 ? file.name.slice(0, dotIndex) : file.name
+  const ext = dotIndex > 0 ? file.name.slice(dotIndex) : ''
+  const name = `${baseName}-${crypto.randomUUID()}${ext}`
+  return new File([file], name, { type: file.type, lastModified: file.lastModified })
+}
+
 export const createPasteHandler = (addFiles) => (e) => {
   const items = e.clipboardData?.items
   if (!items?.length) return
