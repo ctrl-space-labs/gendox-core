@@ -1,18 +1,17 @@
 # Pipeline Internals
 
-The `DigitizationService.run()` method executes up to six steps in sequence. Each step is also available as a standalone method for advanced use cases.
+The `DigitizationService.run()` method executes up to five steps in sequence. Each step is also available as a standalone method for advanced use cases.
 
 ---
 
 ## Overview
 
 ```
-Step 0: Cleanup        (only with clean=True)
-Step 1: Upload         (only without skip_upload=True)
-Step 2: Link           (only without skip_upload=True)
-Step 3: Split & Train  (only without skip_upload=True)
-Step 4: Execute
-Step 5: Export
+Step 0: Cleanup  (only with clean=True)
+Step 1: Upload   (only without skip_upload=True)
+Step 2: Link     (only without skip_upload=True)
+Step 3: Execute
+Step 4: Export
 ```
 
 ---
@@ -59,25 +58,7 @@ Raises `GendoxAPIError` if the batch creation fails.
 
 ---
 
-## Step 3 — Split & Train
-
-**Triggered by**: `skip_upload=False` and at least one document was linked
-
-Triggers the Split & Train job via `GET /splitting/training?jobName=SPLITTER_AND_TRAINING&projectId={projectId}`.
-
-Then polls `GET /jobs?size=5&sort=jobExecutionId,desc` every 5 seconds until the job reaches a terminal state:
-
-| Status | Outcome |
-|---|---|
-| `COMPLETED` | Continues to next step |
-| `FAILED` / `STOPPED` / `ABANDONED` | Raises `GendoxAPIError` |
-| Still running after 600 seconds | Raises `GendoxTimeoutError` |
-
-**What this step does**: Splits each document into sections, generates embeddings for each section, and stores them in the vector database. This makes the documents searchable and enables AI processing in the next step.
-
----
-
-## Step 4 — Execute
+## Step 3 — Execute
 
 Starts the Document Digitization task via `POST /tasks/{taskId}/execute`.
 
@@ -87,7 +68,7 @@ Then polls the same `/jobs` endpoint as Step 3 until the job completes (same tim
 
 ---
 
-## Step 5 — Export
+## Step 4 — Export
 
 Fetches all `DOCUMENT` task nodes, then for each one produces output files in the requested format(s).
 
@@ -143,7 +124,7 @@ The state file is written after each step completes and deleted when the full ru
 ```json
 {
   "cleaned": true,
-  "trained": true,
+  "linked": true,
   "uploaded": [
     {"file": "invoice_jan.pdf", "doc_id": "abc123-..."},
     {"file": "report_q1.xlsx",  "doc_id": "def456-..."}
@@ -157,7 +138,7 @@ The state file is written after each step completes and deleted when the full ru
 | State | What is skipped |
 |---|---|
 | `cleaned: true` | Cleanup step |
-| `trained: true` | Upload + Link + Split & Train |
+| `linked: true` | Upload + Link |
 | `executed: true` | Execute step |
 | _(always runs)_ | Export step (always re-runs to get fresh results) |
 

@@ -6,7 +6,6 @@ import responses
 
 from gendox.exceptions import GendoxAPIError
 from gendox.services.digitization.models import TaskNode
-from gendox.services.digitization.service import _parse_markdown_table
 
 
 TASK_ID = "task-1"
@@ -275,39 +274,13 @@ class TestLink:
         service.link(TASK_ID, doc_ids=[], prompt="x")
 
 
-class TestResolveDocStems:
-    @responses.activate
-    def test_uses_document_name_stem(self, service, api_base):
-        responses.add(
-            responses.GET,
-            f"{api_base}/documents/d1",
-            json={"id": "d1", "name": "report_q1.pdf"},
-        )
-        stems = service._resolve_doc_stems([TaskNode(id="n1", documentId="d1")])
-        assert stems == {"n1": "report_q1"}
-
-    @responses.activate
-    def test_falls_back_to_node_id(self, service, api_base):
-        responses.add(
-            responses.GET,
-            f"{api_base}/documents/d1",
-            status=404,
-        )
-        stems = service._resolve_doc_stems(
-            [TaskNode(id="nodeabcdef123456", documentId="d1")]
-        )
-        assert stems == {"nodeabcdef123456": "nodeabcd"}
-
-    def test_node_without_doc_id(self, service):
-        stems = service._resolve_doc_stems([TaskNode(id="nodeabcdef")])
-        assert stems == {"nodeabcdef": "nodeabcd"}
-
 
 class TestExport:
     @responses.activate
     def test_csv_export_uses_document_name_and_timestamp(
         self, service, api_base, tmp_path: Path
     ):
+        csv_body = b"Document Title,col1,col2\ninvoice.pdf,a,b\n"
         responses.add(
             responses.GET,
             f"{api_base}/tasks/{TASK_ID}/task-nodes",
@@ -315,13 +288,8 @@ class TestExport:
         )
         responses.add(
             responses.GET,
-            f"{api_base}/documents/d1",
-            json={"id": "d1", "name": "invoice.pdf"},
-        )
-        responses.add(
-            responses.GET,
             f"{api_base}/tasks/{TASK_ID}/documents/n1/digitization/export-csv",
-            body=b"col1,col2\na,b\n",
+            body=csv_body,
             content_type="text/csv",
         )
 
@@ -332,7 +300,7 @@ class TestExport:
         assert results[0].ok
         out = tmp_path / "invoice_20260424_180000.csv"
         assert out.exists()
-        assert out.read_bytes() == b"col1,col2\na,b\n"
+        assert out.read_bytes() == csv_body
 
     @responses.activate
     def test_no_doc_nodes_returns_empty(self, service, api_base, tmp_path):
@@ -367,16 +335,15 @@ class TestRun:
             status=201,
         )
         responses.add(responses.POST, f"{api_base}/task-nodes/batch", status=201)
-        responses.add(responses.GET, f"{api_base}/splitting/training", status=200)
-        responses.add(
-            responses.GET,
-            f"{api_base}/jobs",
-            json={"content": [{"status": "COMPLETED"}]},
-        )
         responses.add(
             responses.POST,
             f"{api_base}/tasks/{TASK_ID}/execute",
             status=202,
+        )
+        responses.add(
+            responses.GET,
+            f"{api_base}/jobs",
+            json={"content": [{"status": "STARTED"}]},
         )
         responses.add(
             responses.GET,
@@ -390,13 +357,8 @@ class TestRun:
         )
         responses.add(
             responses.GET,
-            f"{api_base}/documents/doc-1",
-            json={"id": "doc-1", "name": "report.pdf"},
-        )
-        responses.add(
-            responses.GET,
             f"{api_base}/tasks/{TASK_ID}/documents/node-1/digitization/export-csv",
-            body=b"col1,col2\nval1,val2\n",
+            body=b"Document Title,col1,col2\nreport.pdf,val1,val2\n",
             content_type="text/csv",
         )
 
@@ -415,8 +377,11 @@ class TestRun:
         assert len(summary.export_ok) == 1
         csv_files = list(output_dir.glob("report_*.csv"))
         assert len(csv_files) == 1
-        assert csv_files[0].read_bytes() == b"col1,col2\nval1,val2\n"
+        assert csv_files[0].read_bytes() == b"Document Title,col1,col2\nreport.pdf,val1,val2\n"
         assert not (output_dir / ".gendox_run_state.json").exists()
+
+        poll_calls = [c for c in responses.calls if "/jobs" in c.request.url]
+        assert all("jobName=documentDigitizationJob" in c.request.url for c in poll_calls)
 
     @responses.activate
     def test_skip_upload_goes_straight_to_execute(self, service, api_base, tmp_path: Path):
@@ -428,6 +393,11 @@ class TestRun:
 
         responses.add(
             responses.POST, f"{api_base}/tasks/{TASK_ID}/execute", status=202
+        )
+        responses.add(
+            responses.GET,
+            f"{api_base}/jobs",
+            json={"content": [{"status": "STARTED"}]},
         )
         responses.add(
             responses.GET,
@@ -465,7 +435,7 @@ class TestRun:
 
         import json as _json
         state_file = output_dir / ".gendox_run_state.json"
-        state_file.write_text(_json.dumps({"trained": True, "executed": True}))
+        state_file.write_text(_json.dumps({"linked": True, "executed": True}))
 
         responses.add(
             responses.GET,
@@ -487,28 +457,3 @@ class TestRun:
         assert executed_calls == []
 
 
-class TestMarkdownTableParser:
-    def test_parses_simple_table(self):
-        md = """
-        | name | age |
-        |------|-----|
-        | Alice | 30 |
-        | Bob | 25 |
-        """
-        rows = _parse_markdown_table(md)
-        assert rows == [
-            {"name": "Alice", "age": "30"},
-            {"name": "Bob", "age": "25"},
-        ]
-
-    def test_returns_empty_for_non_table(self):
-        assert _parse_markdown_table("just plain text") == []
-
-    def test_pads_short_rows(self):
-        md = """
-        | a | b | c |
-        |---|---|---|
-        | 1 | 2 |
-        """
-        rows = _parse_markdown_table(md)
-        assert rows == [{"a": "1", "b": "2", "c": ""}]
