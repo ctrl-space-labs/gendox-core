@@ -26,7 +26,7 @@ import {
 import { CONNECTOR_TYPES } from 'src/gendox-sdk/organizationConnectorService'
 import { clearStoredToken as clearStoredGeeToken } from 'src/views/pages/earth-observation/gee/GeeAuthGuard/geeStorage'
 
-const GEE_SETUP_DOC_PATH = '/tasks/gee-project-setup'
+const GEE_SETUP_DOC_PATH = '/earth-observation/gee-project-setup'
 
 const CONNECTOR_DEFINITIONS = [
   {

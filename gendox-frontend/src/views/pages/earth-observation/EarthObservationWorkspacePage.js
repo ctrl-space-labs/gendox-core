@@ -17,7 +17,7 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 import { useRouter } from 'next/router'
 import { CONNECTOR_TYPES } from 'src/gendox-sdk/organizationConnectorService'
 
-const GEE_SETUP_DOC_URL = `${commonConfig.gendoxDocsUrl}/tasks/gee-project-setup`
+const GEE_SETUP_DOC_URL = `${commonConfig.gendoxDocsUrl}/earth-observation/gee-project-setup`
 
 const PageWrapper = styled(Box)(({ theme }) => ({
   height: '100%',
