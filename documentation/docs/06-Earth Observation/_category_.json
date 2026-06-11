@@ -1,0 +1,9 @@
+{
+  "label": "Earth Observation",
+  "position": 6,
+  "link": {
+    "type": "generated-index",
+    "description": "SeaScope is an Earth Observation workspace that combines Google Earth Engine, an interactive map, and an AI agent that can write and run analysis code."
+  }
+}
+
