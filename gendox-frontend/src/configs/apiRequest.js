@@ -29,6 +29,17 @@ export default {
 
   updateOrganization: organizationId => `${url}organizations/${organizationId}`,
 
+  getOrganizationConnectors: organizationId => `${url}organizations/${organizationId}/connectors`,
+
+  getOrganizationConnector: (organizationId, connectorType) =>
+    `${url}organizations/${organizationId}/connectors/${connectorType}`,
+
+  upsertOrganizationConnector: (organizationId, connectorType) =>
+    `${url}organizations/${organizationId}/connectors/${connectorType}`,
+
+  deleteOrganizationConnector: (organizationId, connectorType) =>
+    `${url}organizations/${organizationId}/connectors/${connectorType}`,
+
   createProject: organizationId => `${url}organizations/${organizationId}/projects`,
 
   createOrganization: () => `${url}organizations`,

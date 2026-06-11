@@ -48,6 +48,8 @@ export const {
   restoreChatFromMax,
   restoreEditorFromMax,
   setGeeReady,
+  setGeeUserEmail,
+  setGeeProjectFallbackActive,
   setMapData,
   addMapLayer,
   clearMapLayers,

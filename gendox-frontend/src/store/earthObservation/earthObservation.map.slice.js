@@ -1,5 +1,10 @@
 export const mapInitialState = {
   isGeeReady: false,
+  geeUserEmail: null, // Google account email connected to GEE (distinct from the Gendox user)
+  // true when the org has a GEE project ID configured but EE init failed with it
+  // (API disabled, wrong ID, missing access). We fall back to the rate-limited shared
+  // tier so the workspace still opens; the header warns the user.
+  geeProjectFallbackActive: false,
   sessionExpired: false, // true when token expired mid-session; shows Snackbar instead of blocking dialog
   mapLayers: [], // [{ url, name }]
   loadedLayerCount: 0, // incremented each time a GeeLayer fires its Leaflet 'load' event
@@ -17,6 +22,12 @@ export const mapReducers = {
   setGeeReady: (state, action) => {
     state.map.isGeeReady = action.payload
     if (action.payload) state.map.sessionExpired = false // clear on successful (re)auth
+  },
+  setGeeUserEmail: (state, action) => {
+    state.map.geeUserEmail = action.payload || null
+  },
+  setGeeProjectFallbackActive: (state, action) => {
+    state.map.geeProjectFallbackActive = Boolean(action.payload)
   },
   setSessionExpired: (state, action) => {
     state.map.sessionExpired = action.payload

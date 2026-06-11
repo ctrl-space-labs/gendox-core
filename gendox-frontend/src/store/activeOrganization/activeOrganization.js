@@ -4,6 +4,7 @@ import aiModelService from 'src/gendox-sdk/aiModelService'
 import subscriptionPlanService from 'src/gendox-sdk/subscriptionPlanService'
 import apiKeyService from 'src/gendox-sdk/apiKeyService'
 import organizationWebSiteService from 'src/gendox-sdk/organizationWebSiteService'
+import organizationConnectorService from 'src/gendox-sdk/organizationConnectorService'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 
@@ -132,6 +133,50 @@ export const updateMemberRole = createAsyncThunk(
   }
 )
 
+export const fetchOrganizationConnectors = createAsyncThunk(
+  'activeOrganization/fetchOrganizationConnectors',
+  async ({ organizationId, token }, thunkAPI) => {
+    try {
+      const response = await organizationConnectorService.getOrganizationConnectors(organizationId, token)
+      return response.data
+    } catch (error) {
+      console.error(`Failed to fetch organization connectors. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data)
+    }
+  }
+)
+
+export const upsertOrganizationConnector = createAsyncThunk(
+  'activeOrganization/upsertOrganizationConnector',
+  async ({ organizationId, connectorType, payload, token }, thunkAPI) => {
+    try {
+      const response = await organizationConnectorService.upsertOrganizationConnector(
+        organizationId,
+        connectorType,
+        payload,
+        token
+      )
+      return response.data
+    } catch (error) {
+      toast.error(`Failed to save connector. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data)
+    }
+  }
+)
+
+export const deleteOrganizationConnector = createAsyncThunk(
+  'activeOrganization/deleteOrganizationConnector',
+  async ({ organizationId, connectorType, token }, thunkAPI) => {
+    try {
+      await organizationConnectorService.deleteOrganizationConnector(organizationId, connectorType, token)
+      return { connectorType }
+    } catch (error) {
+      toast.error(`Failed to delete connector. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data)
+    }
+  }
+)
+
 // Define the initial state
 const initialActiveOrganizationState = {
   activeOrganization: {},
@@ -141,6 +186,7 @@ const initialActiveOrganizationState = {
   apiKeys: [],
   organizationWebSites: [],
   organizationMembers: [],
+  organizationConnectors: null,
   isFetchingMembers: false,
   isBlurring: false,
   error: null
@@ -264,6 +310,43 @@ const activeOrganizationSlice = createSlice({
       .addCase(removeOrganizationMember.fulfilled, (state, action) => {
         const { memberId } = action.payload
         state.organizationMembers = state.organizationMembers.filter(member => member.id !== memberId)
+      })
+
+      // For fetching organization connectors
+      .addCase(fetchOrganizationConnectors.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchOrganizationConnectors.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.organizationConnectors = action.payload || []
+      })
+      .addCase(fetchOrganizationConnectors.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
+
+      // For upserting a connector — merge the returned row into the list
+      .addCase(upsertOrganizationConnector.fulfilled, (state, action) => {
+        const updated = action.payload
+        if (!updated) return
+        const list = state.organizationConnectors || []
+        const idx = list.findIndex(c => c.connectorType === updated.connectorType)
+        if (idx >= 0) {
+          list[idx] = updated
+        } else {
+          list.push(updated)
+        }
+        state.organizationConnectors = list
+      })
+
+      // For deleting a connector — drop the matching row
+      .addCase(deleteOrganizationConnector.fulfilled, (state, action) => {
+        const { connectorType } = action.payload || {}
+        if (!connectorType) return
+        state.organizationConnectors = (state.organizationConnectors || []).filter(
+          c => c.connectorType !== connectorType
+        )
       })
   }
 })

@@ -9,6 +9,7 @@ import Card from "@mui/material/Card";
 import ApiKeysAdvancedOrganizationSettings from "./advanced-components/ApiKeysAdvancedOrganizationSettings";
 import AiModelProviderKeyAdvancedOrganizationSettings from "./advanced-components/AiModelProviderKeyAdvancedOrganizationSettings";
 import WebsitesAdvancedOrganizationSettings from "./advanced-components/WebsitesAdvancedOrganizationSettings";
+import ConnectorsAdvancedOrganizationSettings from "./advanced-components/ConnectorsAdvancedOrganizationSettings";
 
 const AdvancedOrganizationSettings = () => {
   return (
@@ -18,6 +19,8 @@ const AdvancedOrganizationSettings = () => {
       <WebsitesAdvancedOrganizationSettings />
       <Divider sx={{ m: 10 }} />
       <AiModelProviderKeyAdvancedOrganizationSettings />
+      <Divider sx={{ m: 10 }} />
+      <ConnectorsAdvancedOrganizationSettings />
     </Card>
   );
 };

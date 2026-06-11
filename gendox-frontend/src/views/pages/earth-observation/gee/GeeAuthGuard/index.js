@@ -12,9 +12,17 @@ import Typography from '@mui/material/Typography'
 import CircularProgress from '@mui/material/CircularProgress'
 import Box from '@mui/material/Box'
 
-import { setGeeReady, setSessionExpired } from 'src/store/earthObservation'
+import {
+  setGeeReady,
+  setGeeUserEmail,
+  setGeeProjectFallbackActive,
+  setSessionExpired
+} from 'src/store/earthObservation'
+import { fetchOrganizationConnectors } from 'src/store/activeOrganization/activeOrganization'
+import { CONNECTOR_TYPES } from 'src/gendox-sdk/organizationConnectorService'
+import { localStorageConstants } from 'src/utils/generalConstants'
 import { readStoredToken, persistToken, clearStoredToken } from './geeStorage'
-import { CLIENT_ID, authenticateViaOauth } from './geeOAuth'
+import { CLIENT_ID, authenticateViaOauth, fetchGeeUserEmail, initializeEarthEngineWithFallback } from './geeOAuth'
 
 const REFRESH_BUFFER_MS = 10 * 1000 // refresh 10 seconds before expiry
 
@@ -24,12 +32,28 @@ const REFRESH_BUFFER_MS = 10 * 1000 // refresh 10 seconds before expiry
 export default function GeeAuthGuard({ children, reconnectRef }) {
   const dispatch = useDispatch()
   const isGeeReady = useSelector(s => s.earthObservation.map.isGeeReady)
+  const organizationId = useSelector(s => s.activeOrganization.activeOrganization?.id)
+  const connectors = useSelector(s => s.activeOrganization.organizationConnectors)
+  // null = still loading; [] or array = loaded. We gate EE init on this so the
+  // configured project ID (if any) is passed to ee.initialize as opt_project.
+  const geeProjectId =
+    (connectors || []).find(c => c.connectorType === CONNECTOR_TYPES.GOOGLE_EARTH_ENGINE)?.config?.projectId || null
 
   const [loading, setLoading] = useState(!isGeeReady)
   const [error, setError] = useState(null)
 
   const initAttempted = useRef(false)
   const refreshTimerRef = useRef(null)
+
+  // Make sure the organization's connectors are loaded before we decide whether
+  // to pass opt_project to ee.initialize.
+  useEffect(() => {
+    if (!organizationId) return
+    const token =
+      typeof window !== 'undefined' ? window.localStorage.getItem(localStorageConstants.accessTokenKey) : null
+    if (!token) return
+    dispatch(fetchOrganizationConnectors({ organizationId, token }))
+  }, [organizationId, dispatch])
 
   // Cancel the background timer when the component unmounts
   useEffect(
@@ -56,6 +80,16 @@ export default function GeeAuthGuard({ children, reconnectRef }) {
 
   // ─────────────────────────────────────────────────────────────────────────
 
+  // Helper: resolve the Google account email behind the access token and push it
+  // into Redux so the EO header chip can show which Google user is connected.
+  // Silently no-ops on failure — the header just keeps its placeholder.
+  const resolveAndStoreUserEmail = accessToken => {
+    if (!accessToken) return
+    fetchGeeUserEmail(accessToken).then(email => {
+      if (email) dispatch(setGeeUserEmail(email))
+    })
+  }
+
   // Helper: read the current EE token, persist it, and start the refresh timer
   const persistAndSchedule = () => {
     try {
@@ -66,6 +100,7 @@ export default function GeeAuthGuard({ children, reconnectRef }) {
         if (tokenStr) {
           persistToken(tokenStr, expiresIn)
           scheduleTokenRefresh(expiresIn)
+          resolveAndStoreUserEmail(tokenStr)
         }
       }
     } catch {}
@@ -74,38 +109,40 @@ export default function GeeAuthGuard({ children, reconnectRef }) {
   // ── On mount: try silent restore from stored access token ─────────────────
   // Optimisation: if a valid token is stored, reuse it to skip the popup.
   // If EE init fails (token expired), clear storage and show the login dialog.
+  // We wait until connectors are loaded (null → array) so the optional
+  // organization-level GEE project ID is passed to ee.initialize as opt_project.
   useEffect(() => {
     if (isGeeReady) {
       setLoading(false)
       return
     }
     if (initAttempted.current) return
+    if (connectors === null) return
     initAttempted.current = true
 
     const stored = readStoredToken()
 
     if (stored) {
       ee.data.setAuthToken(CLIENT_ID, 'Bearer', stored.token, stored.expiresIn, [], null, false)
-      ee.initialize(
-        null,
-        null,
-        () => {
+      initializeEarthEngineWithFallback(geeProjectId, stored.token)
+        .then(({ projectFailed }) => {
           scheduleTokenRefresh(stored.expiresIn)
+          dispatch(setGeeProjectFallbackActive(projectFailed))
           dispatch(setGeeReady(true))
+          resolveAndStoreUserEmail(stored.token)
           setLoading(false)
-        },
-        () => {
+        })
+        .catch(() => {
           clearStoredToken()
           setLoading(false)
-        }
-      )
+        })
       return
     }
 
     // No stored token — show login dialog
     setLoading(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isGeeReady])
+  }, [isGeeReady, connectors])
 
   // ── Reconnect handler ─────────────────────────────────────────────────────
   // Called when the user clicks "Reconnect" in the Snackbar.
@@ -127,14 +164,17 @@ export default function GeeAuthGuard({ children, reconnectRef }) {
     setError(null)
 
     authenticateViaOauth()
-      .then(
-        () =>
-          new Promise((resolve, reject) => {
-            ee.initialize(null, null, resolve, reject)
-          })
-      )
       .then(() => {
+        // Read the access token EE just stored, so the probe in
+        // initializeEarthEngineWithFallback can authenticate its HTTP call.
+        const tok = ee.data.getAuthToken()
+        const accessToken =
+          typeof tok === 'object' ? tok?.access_token : String(tok || '').replace(/^Bearer /, '')
+        return initializeEarthEngineWithFallback(geeProjectId, accessToken)
+      })
+      .then(({ projectFailed }) => {
         persistAndSchedule()
+        dispatch(setGeeProjectFallbackActive(projectFailed))
         dispatch(setGeeReady(true))
         setLoading(false)
       })
