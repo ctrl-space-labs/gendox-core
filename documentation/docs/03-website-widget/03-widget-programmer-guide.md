@@ -3,7 +3,7 @@
 This guide is for developers who need to integrate, customize, or automate the Gendox chat widget on their site. It covers the JavaScript API, PostMessage events, initialization options, and practical examples.
 
 :::info
-For basic setup and parameters, see [Website Widget Installation](./01.%20Website%20Widget%20Instalation.md). For agent tool use (e.g. `open_web_page`), see [Agent Tool Use and Website Tool Support](./02.%20Agent%20Tool%20Use%20and%20Website%20Tool%20Support.md).
+For basic setup and parameters, see [Website Widget Installation](./01-website-widget-installation.md). For agent tool use (e.g. `open_web_page`), see [Agent Tool Use and Website Tool Support](./02-agent-tool-use-and-website-tool-support.md).
 :::
 
 ---
@@ -132,7 +132,7 @@ window.gendox.initializeGendoxChat({
 | `window.gendox.tools.registerTool(name, handler)` | Register a tool. `handler(args)` receives parsed arguments; throw or return a result. |
 | `window.gendox.tools.removeTool(name)` | Unregister a tool by name. |
 
-Tool calls are triggered by the agent; the widget sends `gendox.events.chat.message.tool_calls.request` (see Events section). The SDK auto-registers the default `open_web_page` tool handler unless you disable it with `data-gendox-open-web-page-tool-enabled="false"` on the script tag, or `openWebPageToolEnabled: false` in `initializeGendoxChat(...)`. For full tool-use documentation and payload format, see [Agent Tool Use and Website Tool Support](./02.%20Agent%20Tool%20Use%20and%20Website%20Tool%20Support.md).
+Tool calls are triggered by the agent; the widget sends `gendox.events.chat.message.tool_calls.request` (see Events section). The SDK auto-registers the default `open_web_page` tool handler unless you disable it with `data-gendox-open-web-page-tool-enabled="false"` on the script tag, or `openWebPageToolEnabled: false` in `initializeGendoxChat(...)`. For full tool-use documentation and payload format, see [Agent Tool Use and Website Tool Support](./02-agent-tool-use-and-website-tool-support.md).
 
 ---
 
@@ -419,7 +419,7 @@ window.gendox.tools.registerTool('set_category_filter', function (args) {
 });
 ```
 
-API: `window.gendox.tools.registerTool(name, handler)` — `name` is the tool name (must match the tool defined in Gendox), `handler(args)` receives the parsed arguments object. Return a plain object (or throw) as the tool result. For full payload format and tool definition, see [Agent Tool Use and Website Tool Support](./02.%20Agent%20Tool%20Use%20and%20Website%20Tool%20Support.md).
+API: `window.gendox.tools.registerTool(name, handler)` — `name` is the tool name (must match the tool defined in Gendox), `handler(args)` receives the parsed arguments object. Return a plain object (or throw) as the tool result. For full payload format and tool definition, see [Agent Tool Use and Website Tool Support](./02-agent-tool-use-and-website-tool-support.md).
 
 ---
 
@@ -447,7 +447,7 @@ You can override the default position and size of the widget with CSS. The conta
 }
 ```
 
-For more styling options, see [Website Widget Installation](./01.%20Website%20Widget%20Instalation.md).
+For more styling options, see [Website Widget Installation](./01-website-widget-installation.md).
 
 ---
 
@@ -455,10 +455,10 @@ For more styling options, see [Website Widget Installation](./01.%20Website%20Wi
 
 | Need | Where to look |
 |------|----------------|
-| Install script and parameters | [01. Website Widget Installation](./01.%20Website%20Widget%20Instalation.md) |
+| Install script and parameters | [01. Website Widget Installation](./01-website-widget-installation.md) |
 | Open/close/toggle from JS | `window.gendox.widget.open/close/toggle/isOpen()` |
 | Initial state and local-context limits | Data attributes or `initializeGendoxChat({ ... })` on first load |
 | Update config after load | `window.gendox.widget.updateConfig({ ... })` |
 | Event names and direction | Section 4 above |
-| Tool use (e.g. `open_web_page`) | [02. Agent Tool Use and Website Tool Support](./02.%20Agent%20Tool%20Use%20and%20Website%20Tool%20Support.md); example §5.6 |
+| Tool use (e.g. `open_web_page`) | [02. Agent Tool Use and Website Tool Support](./02-agent-tool-use-and-website-tool-support.md); example §5.6 |
 | Custom local context | `window.gendox.widget.addLocalContextRequestCallback(fn)` (§5.4) |
