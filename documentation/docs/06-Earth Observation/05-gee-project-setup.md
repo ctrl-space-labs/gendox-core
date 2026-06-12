@@ -132,8 +132,6 @@ The Project ID is **not** the project name. To find it:
 2. Make sure the correct project is selected in the top bar.
 3. In the **Project info** card (top-left), copy the value labelled **Project ID**. It looks like `gendox-eo-acme-12345`, all lowercase, with dashes.
 
-![Project info card screenshot placeholder](./img/gee-project-id-location.png)
-
 ---
 
 ## Step 6 — Enter the Project ID in Gendox
