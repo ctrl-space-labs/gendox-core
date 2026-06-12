@@ -15,10 +15,7 @@ export const CLIENT_ID = commonConfig.GEE_clientId
 //                     the OAuth consent screen free of "unverified app" warnings.
 // - userinfo.email  — non-sensitive scope; used to display the Google account connected to EE
 //                     in the EO header (separate from the Gendox-app user).
-const OAUTH_SCOPES = [
-  ee.apiclient.AUTH_SCOPE,
-  'https://www.googleapis.com/auth/userinfo.email'
-]
+const OAUTH_SCOPES = [ee.apiclient.AUTH_SCOPE, 'https://www.googleapis.com/auth/userinfo.email']
 const SUPPRESS_EE_DEFAULT_SCOPES = true
 
 const USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
@@ -66,40 +63,18 @@ export function initializeEarthEngineWithFallback(geeProjectId, accessToken) {
       null,
       () => resolve({ projectFailed: false }),
       err => {
-        // Project init failed for ANY reason — disabled API, not registered with
-        // Earth Engine, wrong ID, missing user access, etc. We don't care about
-        // the specific reason; the user must still enter the workspace on the
-        // shared rate-limited default and see the warning chip.
         console.warn(
           `GEE init with project "${geeProjectId}" failed; resetting EE state and falling back to shared rate limits:`,
           err
         )
-        // ee.reset() clears the apiclient's URLs, xsrfToken, initialized flag
-        // and various class caches — but NOT the cached project (see line 19909
-        // of @google/earthengine main.js). Without explicitly clearing the
-        // project, ee.initialize(null, null) reuses the failed project via
-        // setProject(getProject() || DEFAULT_PROJECT_) on line 19906, and the
-        // fallback request fails with the same 403.
         try {
           if (typeof ee.reset === 'function') ee.reset()
         } catch {}
         try {
           if (ee.apiclient && typeof ee.apiclient.setProject === 'function') {
-            // DEFAULT_PROJECT ("earthengine-legacy") triggers the shared-tier
-            // code path: line 19955 skips the X-Goog-User-Project header when
-            // the project equals DEFAULT_PROJECT_.
             ee.apiclient.setProject(ee.apiclient.DEFAULT_PROJECT)
           }
         } catch {}
-        // Defer the retry to the next macrotask. We are currently being called
-        // from inside the EE library's initializationFailure_ for-loop, which
-        // drains ee.errorCallbacks_ and re-checks .length on each iteration.
-        // If we call ee.initialize synchronously here, it pushes our new error
-        // callback back into that same array, the loop sees the array refilled,
-        // and calls our brand-new callback with the OLD 403 error — rejecting
-        // the promise even though the no-project retry would have succeeded.
-        // setTimeout(0) lets the failure loop drain fully before we register
-        // the next round of callbacks.
         setTimeout(() => initWithoutProject({ projectFailed: true }), 0)
       },
       undefined,
