@@ -47,7 +47,7 @@ The project name is what you see in the UI. The **Project ID** (which is what Ge
 
 With your project selected:
 
-1. Go to **APIs & Services → Library**, or open directly: <https://console.cloud.google.com/apis/library/earthengine.googleapis.com>.
+1. Go to **APIs & Services → Library**, or open directly: [console.cloud.google.com/apis/library/earthengine.googleapis.com](https://console.cloud.google.com/apis/library/earthengine.googleapis.com).
 2. Make sure the project selector at the top still shows the project you want.
 3. Click **ENABLE**.
 4. Wait until the page refreshes and shows the **MANAGE** button — that means the API is enabled. (Allow a few minutes for the change to propagate to Earth Engine.)
@@ -60,7 +60,7 @@ Enabling the Earth Engine API (Step 2) is **not enough on its own**. Google requ
 
 > *"Project &lt;your-id&gt; is not registered to use Earth Engine."*
 
-1. Open the Earth Engine registration page for your project: <https://console.cloud.google.com/earth-engine/configuration>.
+1. Open the Earth Engine registration page for your project: [console.cloud.google.com/earth-engine/configuration](https://console.cloud.google.com/earth-engine/configuration).
 2. Make sure the project selector at the top shows the project you want (the URL also accepts a `?project=<your-project-id>` parameter).
 3. Click **Register** (or **Configure** if the project was registered before).
 4. Walk through the 5-step wizard:
@@ -94,7 +94,7 @@ Gendox requests **two** OAuth scopes:
 
 To register both:
 
-1. Open the **Data Access** page of the Google Auth Platform for your project: <https://console.cloud.google.com/auth/scopes>.
+1. Open the **Data Access** page of the Google Auth Platform for your project: [console.cloud.google.com/auth/scopes](https://console.cloud.google.com/auth/scopes).
 2. Make sure the project selector at the top still shows the project you want.
 3. Click **Add or remove scopes**.
 4. In the filter, type `earthengine` and tick the entry:
