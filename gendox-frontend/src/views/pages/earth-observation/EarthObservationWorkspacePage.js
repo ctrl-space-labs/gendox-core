@@ -109,14 +109,18 @@ const EarthObservationWorkspacePage = () => {
             title='Google account connected to Earth Engine. This is separate from your Gendox login.'
             placement='bottom'
           >
-            <span>
+            <span style={{ cursor: 'default' }}>
               <Chip
                 size='small'
                 variant='outlined'
                 color='primary'
-                icon={<Icon icon='mdi:google' fontSize={14} />}
+                // icon={<Icon icon='mdi:google' fontSize={10} />}
                 label={geeUserLabel}
-                sx={{ maxWidth: 260, '& .MuiChip-label': { fontWeight: 500 } }}
+                sx={{
+                  maxWidth: 260,
+                  cursor: 'default',
+                  '& .MuiChip-label': { fontWeight: 500, cursor: 'default' }
+                }}
               />
             </span>
           </Tooltip>
@@ -127,14 +131,18 @@ const EarthObservationWorkspacePage = () => {
               title={`Earth Engine quota is billed to Google Cloud project "${geeProjectId}".`}
               placement='bottom'
             >
-              <span>
+              <span style={{ cursor: 'default' }}>
                 <Chip
                   size='small'
                   variant='outlined'
                   color='primary'
                   icon={<Icon icon='mdi:cloud-check-outline' fontSize={14} />}
                   label={geeProjectId}
-                  sx={{ maxWidth: 260, '& .MuiChip-label': { fontWeight: 500 } }}
+                  sx={{
+                    maxWidth: 260,
+                    cursor: 'default',
+                    '& .MuiChip-label': { fontWeight: 500, cursor: 'default' }
+                  }}
                 />
               </span>
             </Tooltip>

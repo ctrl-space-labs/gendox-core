@@ -22,7 +22,7 @@ The whole process takes ~10 minutes and only needs to be done once per organizat
 
 You will need:
 
-- A **Google account** that has Earth Engine access. If your account is not yet signed up, register at <https://earthengine.google.com/signup/> first.
+- A **Google account** that you will use to sign in to Earth Engine through Gendox. Any personal or workspace Google account works — you no longer need a separate "Earth Engine personal signup". Project-level access (configured in Step 3) is what unlocks EE for this account.
 - The right to manage Cloud projects on that Google account (any personal Google account works for a personal project; for a corporate account, ask your Google Workspace admin if you cannot create projects yourself).
 - **Owner** or **Admin** access to your Gendox organization (so you can save the connector).
 
@@ -140,35 +140,71 @@ The Project ID is **not** the project name. To find it:
 
 1. In Gendox, open the user menu and go to **Organization Settings**.
 2. Select the **Advanced Settings** tab.
-3. Scroll to the **Connectors** section and expand the **Google Earth Engine** row.
-4. Paste the Project ID into the **Project ID** field.
-5. Click **Save**.
+3. Scroll to the **Connectors** section. You will see a row labelled **Google Earth Engine** with a (currently empty) **Project ID** field.
+4. Click the **pencil/edit icon** next to the row to open the configuration dialog.
+5. Paste the Project ID into the **Project ID** field.
+6. Click **Save**.
 
-The next time you (or anyone in the organization) opens an Earth Observation Task, Earth Engine will be initialised against this project and use its quota instead of the shared pool.
+Saving automatically clears any cached Earth Engine session for your organization, so the next time you (or anyone in the organization) opens an Earth Observation Task, Earth Engine will be re-initialised against this project and use its quota instead of the shared pool.
+
+:::tip
+
+To remove the configured project later, click the **red delete icon** on the same row instead of editing — this drops the connector and the EO workspace falls back to the shared rate-limited tier.
+
+:::
 
 ---
 
 ## How to verify it worked
 
-Open any **Earth Observation** Task. In the page header you should see the green/neutral chip:
+Open any **Earth Observation** Task. In the page header (top right) you should see two chips:
 
-> **GEE project: your-project-id**
+- 📧 **Google account chip** — shows the email of the Google account you signed in with (e.g. `you@example.com`).
+- ☁️ **Project chip** — shows the status of the GEE project.
 
-If you instead see a yellow warning chip:
+A **healthy** setup looks like this:
 
-> **GEE project: "your-project-id" rejected — shared rate limits**
+> **🟢 your-project-id** *(neutral blue, with a cloud-check icon)*
 
-then one of the checks failed. The most likely causes are:
+It means Earth Engine accepted your project and is billing requests to it. Hovering shows a tooltip: *"Earth Engine quota is billed to Google Cloud project &lt;your-project-id&gt;"*.
+
+If instead you see a **yellow warning** chip:
+
+> **🟡 your-project-id · rate limited** *(orange, with a warning icon, clickable)*
+
+…then Earth Engine **rejected** the project and the workspace fell back to the shared default tier. Click the chip to jump straight to Org Settings → Connectors. Hovering shows the specific cause.
+
+If no project ID is configured at all:
+
+> **🟡 No project · rate limited**
+
+### Extra check from the browser console
+
+You can ask the Earth Engine library directly which project it is using. Open DevTools → Console and run:
+
+```js
+ee.apiclient.getProject()
+```
+
+| Return value | Meaning |
+| --- | --- |
+| `"your-project-id"` | ✅ Project is active. Requests go to `/v1/projects/<your-project-id>/...` |
+| `"earthengine-legacy"` | ⚠️ Workspace is on the shared default tier (fallback active) |
+| `null` or `undefined` | EE is not yet initialised (or failed) |
+
+### Troubleshooting
+
+The most likely causes if the chip turns yellow or sign-in fails are:
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | Sign-in fails with *"insufficient authentication scopes"* | The `earthengine` scope is not declared in the Google Auth Platform | Revisit [Step 4](#step-4--register-the-oauth-scopes). |
 | Sign-in shows the red *"Google hasn't verified this app"* screen | Your Auth Platform is in Testing mode and your account is not on the test user list | Add yourself as a *Test user* under **Audience** in the Google Auth Platform, or submit the app for verification. |
-| Chip says *rejected* | Earth Engine API not enabled on this project | Revisit [Step 2](#step-2--enable-the-earth-engine-api). |
-| Chip says *rejected* | Project is enabled but **not registered** with Earth Engine | Revisit [Step 3](#step-3--register-the-project-with-earth-engine). |
-| Chip says *rejected* | Project ID is wrong (e.g. you pasted the project *name*) | Revisit [Step 5](#step-5--copy-the-project-id). |
-| Chip says *rejected* | Your Google account does not have access to this project | Add your Google account as a *Viewer* (minimum) in **IAM & Admin → IAM** in the Cloud Console. |
-| Chip says *not configured* | Empty `Project ID` field, or save did not go through | Re-enter the ID and click **Save** again. Refresh the EO Task. |
+| Chip says *rate limited* | Earth Engine API not enabled on this project | Revisit [Step 2](#step-2--enable-the-earth-engine-api). |
+| Chip says *rate limited* | Project is enabled but **not registered** with Earth Engine | Revisit [Step 3](#step-3--register-the-project-with-earth-engine). |
+| Chip says *rate limited* | Project ID is wrong (e.g. you pasted the project *name*) | Revisit [Step 5](#step-5--copy-the-project-id). |
+| Chip says *rate limited* | Your Google account does not have access to this project | Add your Google account as a *Viewer* (minimum) in **IAM & Admin → IAM** in the Cloud Console. |
+| Chip says *No project · rate limited* | Empty `Project ID` field, no connector saved | Re-enter the ID via Org Settings and click **Save** again. Refresh the EO Task. |
 
 ---
 
@@ -180,11 +216,11 @@ No. The Project ID is **organization-level**: configure it once, and every membe
 
 ### Will I be charged?
 
-Earth Engine is free for noncommercial use. Commercial Cloud projects are billed by Google according to [Earth Engine's pricing](https://earthengine.google.com/noncommercial/). Gendox does not add any fees on top.
+Earth Engine is free for projects registered under the [noncommercial plan](https://earthengine.google.com/noncommercial/). Commercial Cloud projects are billed by Google according to [Earth Engine's pricing](https://cloud.google.com/earth-engine/pricing). Gendox does not add any fees on top.
 
 ### Can I change the Project ID later?
 
-Yes. Repeat *Step 6* with a different ID. The change takes effect for new EO Task sessions; users currently inside a workspace need to reload the page.
+Yes. Repeat *Step 6* with a different ID. Gendox automatically clears the cached Earth Engine session for your organization when you save, so the next time an EO Task is opened, Earth Engine re-initialises with the new project. Users currently inside a workspace will be prompted to sign in again on their next page load.
 
 ### What happens if the project is disabled or wrong?
 

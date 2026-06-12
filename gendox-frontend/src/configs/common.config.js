@@ -1,6 +1,6 @@
 const commonConfig = {
     gendoxHomePage: "https://gendox.dev/",
-    gendoxDocsUrl: process.env.NEXT_PUBLIC_GENDOX_DOCS_URL || "https://ctrl-space-labs.github.io",
+    gendoxDocsUrl: process.env.NEXT_PUBLIC_GENDOX_DOCS_URL || "https://docs.gendox.dev",
     gendoxUrl: process.env.NEXT_PUBLIC_GENDOX_URL,
     oidcAuthority: process.env.NEXT_PUBLIC_OIDC_AUTHORITY,
     oidcClientId: process.env.NEXT_PUBLIC_OIDC_CLIENT_ID,
