@@ -44,6 +44,10 @@ const USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
  */
 export function initializeEarthEngineWithFallback(geeProjectId, accessToken) {
   return new Promise((resolve, reject) => {
+    try {
+      if (typeof ee.reset === 'function') ee.reset()
+    } catch {}
+
     const initWithoutProject = ({ projectFailed }) => {
       ee.initialize(
         null,
