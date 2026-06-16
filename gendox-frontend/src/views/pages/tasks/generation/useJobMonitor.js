@@ -7,7 +7,8 @@ import {
   setInsightsGeneratingCells,
   removeInsightsGeneratingCells,
   clearInsightsGenerationState,
-  clearDigitizationGenerationState
+  clearDigitizationGenerationState,
+  setGenerationJobTracking
 } from 'src/store/activeTask/activeTask'
 
 import { fetchAnswerTaskNodes } from 'src/store/activeTaskNode/activeTaskNode'
@@ -91,6 +92,16 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
       // 1) Resolve execution id (either provided or discovered)
       let resolvedExecutionId = jobExecutionId
 
+      const syncJobTracking = (tid, execId) => {
+        if (tid != null && execId != null) {
+          dispatch(setGenerationJobTracking({ taskId: tid, jobExecutionId: execId }))
+        }
+      }
+
+      if (taskId && resolvedExecutionId != null) {
+        syncJobTracking(taskId, resolvedExecutionId)
+      }
+
       const buildDiscoveryCriteria = () => ({
         status: 'STARTED', // reduce result set for discovery
         matchAllParams: [
@@ -154,7 +165,10 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
               if (!resolvedExecutionId) {
                 // Can't continue without an id -> treat as failed scenario
                 terminalFail('FAILED', job, new Error('Could not resolve jobExecutionId from discovery result.'))
+                return 'FAILED'
               }
+
+              syncJobTracking(taskId, resolvedExecutionId)
 
               // Continue loop; next iteration will poll by id
               continue
@@ -205,6 +219,11 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
             return status
           }
 
+          if (status === 'STOPPED') {
+            terminateComplete(status, job)
+            return status
+          }
+
           if (!['STARTED', 'STARTING', 'STOPPING'].includes(status)) {
             terminalFail(status || 'UNKNOWN', job, new Error(`Job ended with status: ${status || 'UNKNOWN'}`))
             return status
@@ -243,6 +262,11 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
 
         // If no active job, exit
         if (!activeJob) return
+
+        const resumedExecutionId = activeJob.jobExecutionId ?? activeJob.id
+        if (taskId && resumedExecutionId != null) {
+          dispatch(setGenerationJobTracking({ taskId, jobExecutionId: resumedExecutionId }))
+        }
 
         // Digitization
         if (
@@ -293,6 +317,7 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
         // startCriteriaPolling({ taskId })
         pollJobByCriteria({
           taskId,
+          jobExecutionId: resumedExecutionId,
           onCompleted: () => {
             completeGeneration(taskId, null)
             reloadAll?.()
@@ -302,8 +327,8 @@ export const useJobMonitor = ({ organizationId, projectId, token, reloadAll }) =
             completeGeneration(taskId, null)
             reloadAll?.()
           },
-          docIds,
-          qIds,
+          selectedDocumentIds: docIds,
+          selectedQuestionIds: qIds,
           forceLoader: false
           // onReload: reloadAll
         })

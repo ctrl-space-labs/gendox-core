@@ -15,6 +15,7 @@ public class InvitationCriteria {
     private String email;
     private String token;
     private String organizationId;
+    private String projectId;
     private UUID inviterUserId;
     private String statusName;
 }

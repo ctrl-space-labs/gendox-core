@@ -110,6 +110,33 @@ public class ExcelFileReader {
 
 
     /**
+     * Returns the CSV content for a single sheet identified by its 0-based index.
+     */
+    public String readSheetContent(Resource resource, int sheetIndex) throws GendoxException {
+        try {
+            Map<String, List<List<String>>> all = readExcelAsTable(resource);
+            String sheetName = new ArrayList<>(all.keySet()).get(sheetIndex);
+            Map<String, List<List<String>>> single = new LinkedHashMap<>();
+            single.put(sheetName, all.get(sheetName));
+            return serializeWorkbookToCsv(single);
+        } catch (Exception e) {
+            throw new GendoxException("ERROR_READING_EXCEL_SHEET", "Error reading Excel sheet at index " + sheetIndex, HttpStatus.INTERNAL_SERVER_ERROR, e);
+        }
+    }
+
+    /**
+     * Returns the number of sheets in the workbook. Used for numberOfPages at ingest.
+     */
+    public int countSheets(Resource resource) throws GendoxException {
+        try (InputStream in = resource.getInputStream();
+             Workbook wb = WorkbookFactory.create(in)) {
+            return wb.getNumberOfSheets();
+        } catch (IOException e) {
+            throw new GendoxException("ERROR_COUNTING_EXCEL_SHEETS", "Error counting sheets in Excel file", HttpStatus.INTERNAL_SERVER_ERROR, e);
+        }
+    }
+
+    /**
      * Serialize the whole workbook Map into a single String.
      * Currently: CSV per sheet, with "# Sheet: <name>" separators.
      */

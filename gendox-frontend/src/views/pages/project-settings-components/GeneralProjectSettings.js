@@ -29,10 +29,10 @@ const GeneralProjectSettings = () => {
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   const { provenAiEnabled, provenAiUrl } = commonConfig
   const {
-    projectDetails: project, 
+    projectDetails: project,
     isBlurring,
-    isUpdating: isUpdatingProject, 
-    isDeleting: isDeletingProject 
+    isUpdating: isUpdatingProject,
+    isDeleting: isDeletingProject
   } = useSelector(state => state.activeProject)
   const [autoTraining, setAutoTraining] = useState(!!project.autoTraining)
   const [name, setName] = useState(project.name)
@@ -189,7 +189,7 @@ const GeneralProjectSettings = () => {
                     <Tooltip
                       title='Start project training manually.
                 Files that have been uploaded will be processed by the system.
-                You may need to wait ~5 minutes, then go to chat and ask it a question!'
+                You may need to wait ~1 minutes, then go to chat and ask it a question!'
                     >
                       <Button size='large' variant='contained' onClick={handleTrainingClick}>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>

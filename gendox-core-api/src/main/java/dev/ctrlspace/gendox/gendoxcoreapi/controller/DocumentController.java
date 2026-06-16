@@ -4,7 +4,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentInstanceSectionWithoutDocumentConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.DocumentOnlyConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.messages.QueueMessageTopicNameConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.messages.postgres.QueueProducerService;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstanceSection;
@@ -13,8 +12,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionOrderDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
-import dev.ctrlspace.gendox.spring.batch.services.SplitterBatchService;
 import jakarta.validation.Valid;
+import org.bitbucket.cowwoc.diffmatchpatch.DiffMatchPatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.JobParametersInvalidException;
@@ -36,6 +35,7 @@ import io.swagger.v3.oas.annotations.Operation;
 
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 @RestController
@@ -55,8 +55,7 @@ public class DocumentController {
     private DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter;
     private QueueProducerService queueProducerService;
 
-    @Value("${gendox.batch-jobs.document-splitter.job.name}")
-    private String documentSplitterJobName;
+    private final String documentUploadTopicName;
 
 
     @Autowired
@@ -67,7 +66,8 @@ public class DocumentController {
                               DocumentSectionService documentSectionService,
                               DocumentInstanceSectionWithoutDocumentConverter documentInstanceSectionWithoutDocumentConverter,
                               DocumentOnlyConverter documentOnlyConverter,
-                              QueueProducerService queueProducerService) {
+                              QueueProducerService queueProducerService,
+                              @Value("${gendox.topics.document-upload}") String documentUploadTopicName) {
         this.documentService = documentService;
         this.documentInstanceConverter = documentInstanceConverter;
         this.uploadService = uploadService;
@@ -76,6 +76,7 @@ public class DocumentController {
         this.documentInstanceSectionWithoutDocumentConverter = documentInstanceSectionWithoutDocumentConverter;
         this.documentOnlyConverter = documentOnlyConverter;
         this.queueProducerService = queueProducerService;
+        this.documentUploadTopicName = documentUploadTopicName;
     }
 
 
@@ -156,6 +157,24 @@ public class DocumentController {
     public List<DocumentInstanceSection> getSectionsByDocumentId(Authentication authentication, @PathVariable UUID documentId) throws GendoxException {
 
         return documentSectionService.getSectionsByDocument(documentId);
+    }
+
+    /**
+     * Decoded patch text representation of the diff between two documents.
+     * This is the exact payload consumed by tools that ingest patch text.
+     * <p>Query: {@code ?documentIds=<uuidA>&documentIds=<uuidB>} — first id is document {@code a} (original), second is {@code b} (modified).
+     */
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedDocumentIdsFromRequestParams')")
+    @GetMapping("/documents/diff/patch-text")
+    @Operation(summary = "[TEMP] Diff two documents (decoded patch text)",
+            description = "Returns DocumentSectionService.patchToDecodedText(diffPatches). Temporary endpoint for testing/tool validation.")
+    public String diffDocumentsPatchTextTemp(@RequestParam("documentIds") List<UUID> documentIds) throws GendoxException {
+        if (documentIds == null || documentIds.size() != 2) {
+            throw new GendoxException("DOCUMENT_DIFF_REQUIRES_TWO_IDS",
+                    "Provide exactly two documentIds query parameters: first = original (a), second = modified (b).",
+                    HttpStatus.BAD_REQUEST);
+        }
+        return documentSectionService.diffDocumentsPatchToDecodedText(documentIds.get(0), documentIds.get(1));
     }
 
 
@@ -288,6 +307,7 @@ public class DocumentController {
         documentService.deleteDocument(documentId, projectId);
     }
 
+
     @PreAuthorize("@securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
             "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedOrgIdFromPathVariable') " +
             "&& @securityUtils.hasAuthority('OP_WRITE_DOCUMENT', 'getRequestedDocumentIdsFromRequestParams')")
@@ -346,7 +366,7 @@ public class DocumentController {
                 .documentInstanceIds(uploadedDocumentInstances.stream().map(d -> String.valueOf(d.getId())).toList())
                 .projectId(projectId.toString())
                 .build();
-        queueProducerService.convertAndSend(QueueMessageTopicNameConstants.DOCUMENT_UPLOAD, documentCriteria, Map.of());
+        queueProducerService.convertAndSend(documentUploadTopicName, documentCriteria, Map.of());
         return ResponseEntity.ok(response);
     }
 
@@ -356,23 +376,18 @@ public class DocumentController {
     @Operation(summary = "Upload a single document file",
             description = "Upload a single file and return the created or updated DocumentInstance.")
     public ResponseEntity<DocumentInstance> uploadSingleFile(@RequestParam("file") MultipartFile file,
+                                                             @RequestParam(value = "messageAttachment", required = false, defaultValue = "false") boolean messageAttachment,
+                                                             @RequestParam(value = "threadId", required = false ) UUID threadId,
                                                              @PathVariable UUID organizationId,
                                                              @PathVariable UUID projectId)
-            throws IOException, GendoxException, JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException {
+            throws IOException, GendoxException, JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException, JobParametersInvalidException, JobRestartException, NoSuchAlgorithmException {
 
 
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
 
-        DocumentInstance documentInstance = uploadService.uploadFile(file, organizationId, projectId);
-
-        DocumentCriteria documentCriteria = DocumentCriteria
-                .builder()
-                .documentInstanceIds(List.of(String.valueOf(documentInstance.getId())))
-                .projectId(projectId.toString())
-                .build();
-        queueProducerService.convertAndSend(QueueMessageTopicNameConstants.DOCUMENT_UPLOAD, documentCriteria, Map.of());
+        DocumentInstance documentInstance = documentService.uploadSingleFile(file, messageAttachment, threadId, organizationId, projectId);
 
         return ResponseEntity.ok(documentInstance);
     }

@@ -8,19 +8,24 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.ModelType;
+import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageLocalContextConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContext;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRuntimeOverridesDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.MessageLocalContextDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.CancellationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.tools.ToolDeclarationStrings;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.util.json.schema.JsonSchemaGenerator;
+import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.annotation.BeforeStep;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,9 +35,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-
+import org.springframework.core.task.TaskExecutor;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 
 @Component
@@ -40,6 +47,7 @@ import java.util.*;
 public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQuestionsDTO, TaskAnswerBatchDTO> {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentInsightsProcessor.class);
+    private final JobService jobService;
 
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private Boolean reGenerateExistingAnswers;
@@ -55,6 +63,14 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
     private EncodingRegistry encodingRegistry;
     private Project project;
     private final DocumentService documentService;
+    private MessageLocalContextConverter messageLocalContextConverter;
+    private StepExecution stepExecution;
+    private final TaskExecutor asyncInsightsLlmCompletionsExecutor;
+
+    @BeforeStep
+    public void setStepExecution(StepExecution stepExecution) {
+        this.stepExecution = stepExecution;
+    }
 
     @Autowired
     public DocumentInsightsProcessor(TypeService typeService,
@@ -66,7 +82,10 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                                      MessageService messageService,
                                      DocumentSectionService documentSectionService,
                                      TaskNodeService taskNodeService,
-                                     DocumentService documentService) {
+                                     DocumentService documentService,
+                                     MessageLocalContextConverter messageLocalContextConverter,
+                                     JobService jobService,
+                                     TaskExecutor asyncInsightsLlmCompletionsExecutor) {
         this.typeService = typeService;
         this.taskService = taskService;
         this.objectMapper = objectMapper;
@@ -77,6 +96,9 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         this.documentSectionService = documentSectionService;
         this.taskNodeService = taskNodeService;
         this.documentService = documentService;
+        this.messageLocalContextConverter = messageLocalContextConverter;
+        this.jobService = jobService;
+        this.asyncInsightsLlmCompletionsExecutor = asyncInsightsLlmCompletionsExecutor;
     }
 
     @Override
@@ -85,7 +107,6 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         TaskAnswerBatchDTO batch = new TaskAnswerBatchDTO();
 
         /* 1 – Filter questions that are already answered (optionally delete old) */
-        List<AnswerCreationDTO> newAnswers = new ArrayList<>();
         List<TaskNode> answeredQuestions = new ArrayList<>();
         List<TaskNode> answersToDelete = new ArrayList<>();
 
@@ -115,91 +136,155 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         if (project == null) {
             project = projectService.getProjectById(task.getProjectId());
         }
+        CompletionRuntimeOverridesDTO overrides = taskService.buildDefaultCompletionOverrides(task);
+
+        // TODO - this makes it implicitly a "DeepThinking" completion. Update this to be declared explicitly
+        CancellationToken cancellationToken = new CancellationToken(
+                () -> isCancellationRequested(stepExecution));
+        overrides.setCancellationToken(cancellationToken);
+
+
+
+
         ObjectNode responseJsonSchema = buildResponseSchema(new org.springframework.core.ParameterizedTypeReference<GroupedQuestionAnswers>() {
         });
 
         List<List<CompletionQuestionRequest>> questionChunks = chunkQuestionsToGroups(task, documentGroupWithQuestions.getQuestionNodes());
         List<List<DocumentInstanceSection>> sectionChunks = groupSectionsBy100kTokens(task, documentGroupWithQuestions.getDocumentNode().getDocumentId());
 
+        DocumentInstance mainDocument = sectionChunks.stream()
+                .flatMap(List::stream)
+                .map(DocumentInstanceSection::getDocumentInstance)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+        String mainDocumentTitle = mainDocument != null ? mainDocument.getTitle() : null;
+        UUID mainDocumentId = mainDocument != null ? mainDocument.getId() : documentGroupWithQuestions.getDocumentNode().getDocumentId();
+
         Page<DocumentInstance> mainDocSupportingDocuments = getSupportingDocuments(
                 documentGroupWithQuestions.getDocumentNode());
 
-        MessageLocalContext mainDocSupportingDocumentsContext = generateLocalContextForQuestion(
+        MessageLocalContextDTO mainDocSupportingDocumentsContext = generateLocalContextForQuestion(
                 documentGroupWithQuestions.getDocumentNode(),
                 mainDocSupportingDocuments,
                 "main-document");
 
-
-        // For each question group
-        questionLoop:
+        List<CompletableFuture<List<AnswerCreationDTO>>> questionsChunkCompletionFutures = new ArrayList<>();
         for (List<CompletionQuestionRequest> questionChunk : questionChunks) {
-
-            String allQuestions = objectMapper.writeValueAsString(questionChunk);
-            String questionsPrompt = """
-                    Answer the following questions based on the provided document:
-                    
-                    """ + allQuestions;
-
-            List<GroupedQuestionAnswers> partialAnswers = new ArrayList<>();
-            // a group of sections, is called a document part, each document might be splitted in 1, 2 or more parts (like 100K tokens per part)
-            sectionsLoop:
-            for (List<DocumentInstanceSection> groupedDocumentPart : sectionChunks) {
-
-                ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()),
-                        project.getId(),
-                        "DOCUMENT_INSIGHTS - Task:" + task.getId());
-
-                // TODO: Next steps:
-                //  Extract all hardcoded strings to properties files
-                //  Overwrite the default agent settings, from the settings in the task
-
-                List<MessageLocalContext> supportingDocumentsContext = new ArrayList<>();
-                supportingDocumentsContext.add(mainDocSupportingDocumentsContext);
-                supportingDocumentsContext.addAll(questionChunk.stream().map(CompletionQuestionRequest::getQuestionSupportingDocsLocalContext).toList());
-                supportingDocumentsContext.removeIf(Objects::isNull);
-
-                Message message = buildPromptMessageForSections(groupedDocumentPart,
-                        questionsPrompt,
-                        newThread,
-                        supportingDocumentsContext,
-                        task,
-                        documentGroupWithQuestions.getDocumentNode());
-                GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionChunk);
-                if (documentPartAnswers == null) {
-                    // ignore all partialAnswers, since there is an error, we cant trust any of those
-                    logger.warn("Skipping whole question group, because of some error, and doc has multiple section chunks");
-                    continue questionLoop;
-                }
-
-                partialAnswers.add(documentPartAnswers);
-
-            }
-
-            if (partialAnswers.size() == 1) {
-                logger.debug("Creating answers from a single document.");
-                splitGroupAnswersToSeparateAnswerNodes(partialAnswers.get(0), documentGroupWithQuestions, answerNodeType, newAnswers);
-            } else if (partialAnswers.size() > 1) {
-                logger.debug("Creating answers from multiple document parts.");
-                GroupedQuestionAnswers consolidatedDocumentAnswers = consolidatePartsAnswersToASingleOne(documentGroupWithQuestions, questionChunk, allQuestions, partialAnswers, null, responseJsonSchema, task);
-                // error occurred, skipping...
-                if (consolidatedDocumentAnswers == null) continue;
-
-                splitGroupAnswersToSeparateAnswerNodes(consolidatedDocumentAnswers, documentGroupWithQuestions, answerNodeType, newAnswers);
-            }
-
-            logger.info("Processed TaskDocumentInsightsAnswerDTO: taskId={}, documentNodeId={}, questions # = {}",
-                    documentGroupWithQuestions.getTaskId(),
-                    documentGroupWithQuestions.getDocumentNode().getId(),
-                    documentGroupWithQuestions.getQuestionNodes().size()
-            );
-
+            CompletableFuture<List<AnswerCreationDTO>> future = CompletableFuture
+                    .supplyAsync(() -> {
+                        try {
+                            return processQuestionChunk(questionChunk,
+                                    sectionChunks,
+                                    documentGroupWithQuestions,
+                                    task,
+                                    answerNodeType,
+                                    responseJsonSchema,
+                                    overrides,
+                                    mainDocSupportingDocumentsContext,
+                                    mainDocumentTitle,
+                                    mainDocumentId);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }, asyncInsightsLlmCompletionsExecutor)
+                    .handle((answers, throwable) -> {
+                        if (throwable != null) {
+                            logger.error("Failed to process insights completion for docNode {}: ",
+                                    documentGroupWithQuestions.getDocumentNode().getId(), throwable);
+                            return List.<AnswerCreationDTO>of();
+                        }
+                        return answers == null ? List.<AnswerCreationDTO>of() : answers;
+                    });
+            questionsChunkCompletionFutures.add(future);
         }
+
+        CompletableFuture.allOf(questionsChunkCompletionFutures.toArray(new CompletableFuture[0])).join();
+
+        List<AnswerCreationDTO> newAnswers = questionsChunkCompletionFutures.stream()
+                .flatMap(f -> f.join().stream())
+                .collect(Collectors.toList());
 
         batch.setNewAnswers(newAnswers);
         return batch;
     }
 
-    private @Nullable GroupedQuestionAnswers consolidatePartsAnswersToASingleOne(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, String allQuestions, List<GroupedQuestionAnswers> allAnswersFromDocumentParts, ChatThread newThread, ObjectNode responseJsonSchema, Task task) throws JsonProcessingException {
+    private @NotNull List<AnswerCreationDTO> processQuestionChunk(List<CompletionQuestionRequest> questionChunk,
+                                                                  List<List<DocumentInstanceSection>> sectionChunks,
+                                                                  TaskDocumentQuestionsDTO documentGroupWithQuestions,
+                                                                  Task task,
+                                                                  Type answerNodeType,
+                                                                  ObjectNode responseJsonSchema,
+                                                                  CompletionRuntimeOverridesDTO overrides,
+                                                                  MessageLocalContextDTO mainDocSupportingDocumentsContext,
+                                                                  @Nullable String mainDocumentTitle,
+                                                                  @Nullable UUID mainDocumentId) throws JsonProcessingException {
+
+        List<AnswerCreationDTO> newAnswers = new ArrayList<>();
+
+        String allQuestions = objectMapper.writeValueAsString(questionChunk);
+        String questionsPrompt = """
+                Answer the following questions based on the provided document:
+                
+                """ + allQuestions;
+
+        List<GroupedQuestionAnswers> partialAnswers = new ArrayList<>();
+        int lineNo = 1;
+        // a group of sections, is called a document part, each document might be splitted in 1, 2 or more parts (like 100K tokens per part)
+        for (List<DocumentInstanceSection> groupedDocumentPart : sectionChunks) {
+
+            ChatThread newThread = messageService.createThreadForMessage(List.of(project.getProjectAgent().getUserId()),
+                    project.getId(),
+                    "DOCUMENT_INSIGHTS - Task:" + task.getId());
+
+            List<MessageLocalContextDTO> supportingDocumentsContext = new ArrayList<>();
+            supportingDocumentsContext.add(mainDocSupportingDocumentsContext);
+            supportingDocumentsContext.addAll(questionChunk.stream().map(CompletionQuestionRequest::getQuestionSupportingDocsLocalContext).toList());
+            supportingDocumentsContext.removeIf(Objects::isNull);
+
+            NumberedText numberedText = buildNumberedTextSections(groupedDocumentPart, lineNo);
+            lineNo = numberedText.nextLineNo();
+
+            Message message = buildPromptMessageForSections(numberedText.text(),
+                    questionsPrompt,
+                    newThread,
+                    supportingDocumentsContext,
+                    task,
+                    documentGroupWithQuestions.getDocumentNode(),
+                    mainDocumentTitle,
+                    mainDocumentId);
+            GroupedQuestionAnswers documentPartAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionChunk, overrides);
+            if (documentPartAnswers == null) {
+                // ignore all partialAnswers, since there is an error, we cant trust any of those
+                logger.warn("Skipping whole question group, because of some error, and doc has multiple section chunks");
+                return List.of();
+            }
+
+            partialAnswers.add(documentPartAnswers);
+        }
+
+        if (partialAnswers.size() == 1) {
+            logger.debug("Creating answers from a single document.");
+            splitGroupAnswersToSeparateAnswerNodes(partialAnswers.get(0), documentGroupWithQuestions, answerNodeType, newAnswers);
+        } else if (partialAnswers.size() > 1) {
+            logger.debug("Creating answers from multiple document parts.");
+            GroupedQuestionAnswers consolidatedDocumentAnswers = consolidatePartsAnswersToASingleOne(documentGroupWithQuestions, questionChunk, allQuestions, partialAnswers, null, responseJsonSchema, task, overrides);
+            // error occurred, skipping...
+            if (consolidatedDocumentAnswers == null) return List.of();
+
+            splitGroupAnswersToSeparateAnswerNodes(consolidatedDocumentAnswers, documentGroupWithQuestions, answerNodeType, newAnswers);
+        }
+
+        logger.info("Processed TaskDocumentInsightsAnswerDTO: taskId={}, documentNodeId={}, questions # = {}",
+                documentGroupWithQuestions.getTaskId(),
+                documentGroupWithQuestions.getDocumentNode().getId(),
+                documentGroupWithQuestions.getQuestionNodes().size()
+        );
+
+        return newAnswers;
+    }
+
+    private @Nullable GroupedQuestionAnswers consolidatePartsAnswersToASingleOne(TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, String allQuestions, List<GroupedQuestionAnswers> allAnswersFromDocumentParts, ChatThread newThread, ObjectNode responseJsonSchema, Task task, CompletionRuntimeOverridesDTO overrides) throws JsonProcessingException {
         StringBuilder prompt = new StringBuilder();
         prompt.append("""
                 Big documents don't fit in the LLM context window; the document was split into parts.
@@ -239,22 +324,20 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         message.setUpdatedBy(project.getProjectAgent().getUserId());
         message = messageService.createMessage(message);
 
-        GroupedQuestionAnswers consolidatedDocumentAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionGroup);
+        GroupedQuestionAnswers consolidatedDocumentAnswers = getCompletion(message, responseJsonSchema, project, documentGroupWithQuestions, questionGroup, overrides);
         return consolidatedDocumentAnswers;
     }
 
-    private Message buildPromptMessageForSections(List<DocumentInstanceSection> sectionGroup,
+    private Message buildPromptMessageForSections(String textSections,
                                                   String questionsPrompt,
                                                   ChatThread newThread,
-                                                  List<MessageLocalContext> localContext,
+                                                  List<MessageLocalContextDTO> localContext,
                                                   Task task,
-                                                  TaskNode documentNode) {
-        String textSections = sectionGroup.stream()
-                .map(DocumentInstanceSection::getSectionValue)
-                .reduce("", (a, b) -> a + "\n\n" + b);
-
+                                                  TaskNode documentNode,
+                                                  String mainDocumentTitle,
+                                                  UUID mainDocumentId) {
         // Main document is 1st in local context, to increase LLM cache hit rate
-        addMainDocumentText(localContext, textSections);
+        addMainDocumentText(localContext, textSections, mainDocumentTitle, mainDocumentId);
 
         // task prompt, if exists, is 2nd in local context
         addTaskPromptIfExists(localContext, task);
@@ -283,14 +366,42 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         message.setProjectId(project.getId());
         message.setCreatedBy(project.getProjectAgent().getUserId());
         message.setUpdatedBy(project.getProjectAgent().getUserId());
-        message = messageService.createMessage(message);
+        message.setLocalContexts(
+                messageLocalContextConverter.toEntities(message, localContext)
+        );
 
-        // add after creations as the local context is not saved
-        message.setLocalContexts(localContext);
+        message = messageService.createMessage(message);
         return message;
     }
 
-    private static void addDocumentPromptIfExists(List<MessageLocalContext> localContext, TaskNode documentNode) {
+    private record NumberedText(String text, int nextLineNo) {}
+
+    private static @NotNull NumberedText buildNumberedTextSections(@NotNull List<DocumentInstanceSection> sectionGroup,
+                                                                   int startLineNo) {
+        StringBuilder sb = new StringBuilder();
+        int lineNo = startLineNo;
+
+        for (int sectionIdx = 0; sectionIdx < sectionGroup.size(); sectionIdx++) {
+            String sectionText = Optional.ofNullable(sectionGroup.get(sectionIdx))
+                    .map(DocumentInstanceSection::getSectionValue)
+                    .orElse("");
+
+            // Keep empty lines (and trailing empty line if present) so numbering is stable.
+            String[] lines = sectionText.split("\\R", -1);
+            for (String line : lines) {
+                sb.append(lineNo++).append(" | ").append(line).append("\n");
+            }
+
+            // Visual separator between sections (also numbered).
+            if (sectionIdx < sectionGroup.size() - 1) {
+                sb.append(lineNo++).append(" | ").append("\n");
+            }
+        }
+
+        return new NumberedText(sb.toString(), lineNo);
+    }
+
+    private static void addDocumentPromptIfExists(List<MessageLocalContextDTO> localContext, TaskNode documentNode) {
         if (Optional.ofNullable(documentNode)
                 .map(n -> n.getNodeValue())
                 .map(v -> v.getDocumentMetadata())
@@ -299,8 +410,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                 .isPresent()) {
 
 
-            MessageLocalContext documentPrompt = MessageLocalContext.builder()
-                    .contextType(Type.builder().name("**Instructions to follow, and information to know, for this specific [Main Document]**").build())
+            MessageLocalContextDTO documentPrompt = MessageLocalContextDTO.builder()
+                    .contextType("**Instructions to follow, and information to know, for this specific [Main Document]**")
                     .value("""
                             
                             \"\"\"\"\"
@@ -312,10 +423,10 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         }
     }
 
-    private static void addTaskPromptIfExists(List<MessageLocalContext> localContext, Task task) {
+    private static void addTaskPromptIfExists(List<MessageLocalContextDTO> localContext, Task task) {
         if (task.getTaskPrompt() != null && !task.getTaskPrompt().isBlank()) {
-            MessageLocalContext taskPrompt = MessageLocalContext.builder()
-                    .contextType(Type.builder().name("**General instructions to follow for the processing**").build())
+            MessageLocalContextDTO taskPrompt = MessageLocalContextDTO.builder()
+                    .contextType("**General instructions to follow for the processing**")
                     .value("""
                             
                             \"\"\"\"\"
@@ -327,15 +438,23 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         }
     }
 
-    private static void addMainDocumentText(List<MessageLocalContext> localContext, String textSections) {
-        MessageLocalContext mainDocumentContext = MessageLocalContext.builder()
-                .contextType(Type.builder().name("**[Main Document] Text**").build())
+    private static void addMainDocumentText(List<MessageLocalContextDTO> localContext,
+                                            String textSections,
+                                            @Nullable String mainDocumentTitle,
+                                            @Nullable UUID mainDocumentId) {
+        MessageLocalContextDTO mainDocumentContext = MessageLocalContextDTO.builder()
+                .contextType("**[Main Document] Text**")
                 .value("""
                         
-                        \"\"\"\"\"
+                        ./main-document/%s | UUID=%s
+                        <document-text>
                         %s
-                        \"\"\"\"\"
-                        """.formatted(textSections))
+                        </document-text>
+                        """.formatted(
+                        Optional.ofNullable(mainDocumentTitle).orElse(""),
+                        Optional.ofNullable(mainDocumentId).map(UUID::toString).orElse(""),
+                        textSections
+                ))
                 .build();
         localContext.add(0, mainDocumentContext);
     }
@@ -391,11 +510,11 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         }
     }
 
-    private @Nullable GroupedQuestionAnswers getCompletion(Message message, ObjectNode responseJsonSchema, Project project, TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup) {
+    private @Nullable GroupedQuestionAnswers getCompletion(Message message, ObjectNode responseJsonSchema, Project project, TaskDocumentQuestionsDTO documentGroupWithQuestions, List<CompletionQuestionRequest> questionGroup, CompletionRuntimeOverridesDTO overrides) {
         GroupedQuestionAnswers answers;
         List<Message> response = null;
         try {
-            response = completionService.getCompletion(message, new ArrayList<>(), project, responseJsonSchema);
+            response = completionService.getCompletion(message, new ArrayList<>(), project, responseJsonSchema, overrides);
             answers = objectMapper.readValue(response.getLast().getValue(), GroupedQuestionAnswers.class);
         } catch (GendoxException e) {
             logger.warn("Error getting completion for message: {}, error: {}", message.getId(), e.getMessage());
@@ -460,7 +579,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
 
             int qTokens = countQuestionTokens(enc, text, supportingDocuments);
 
-            MessageLocalContext localContext = generateLocalContextForQuestion(q, supportingDocuments, "questions");
+            MessageLocalContextDTO localContext = generateLocalContextForQuestion(q, supportingDocuments, "questions");
 
             CompletionQuestionRequest req = CompletionQuestionRequest.builder()
                     .questionId(q.getId())
@@ -538,7 +657,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
      * @param supportingDocumentDirName like 'questions' will return -> ./supporting-documents/questions/[question_id]/doc_name.pdf
      * @return
      */
-    private static @Nullable MessageLocalContext generateLocalContextForQuestion(TaskNode q, Page<DocumentInstance> supportingDocuments, String supportingDocumentDirName) {
+    private static @Nullable MessageLocalContextDTO generateLocalContextForQuestion(TaskNode q, Page<DocumentInstance> supportingDocuments, String supportingDocumentDirName) {
         if (q.getNodeValue().getDocumentMetadata() == null ||
                 q.getNodeValue().getDocumentMetadata().getSupportingDocumentIds() == null ||
                 q.getNodeValue().getDocumentMetadata().getSupportingDocumentIds().isEmpty()) {
@@ -556,8 +675,8 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                     .append(" | UUID=").append(doc.getId())
                     .append("\n");
         }
-        MessageLocalContext localContext = MessageLocalContext.builder()
-                .contextType(Type.builder().name("Supporting Documents").build())
+        MessageLocalContextDTO localContext = MessageLocalContextDTO.builder()
+                .contextType("Supporting Documents")
                 .value(sb.toString())
                 .build();
         return localContext;
@@ -605,6 +724,14 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
         return wrapper;
     }
 
+
+    /**
+     * Delegates cancellation detection to JobService where the DB read runs
+     * in a dedicated transaction.
+     */
+    private boolean isCancellationRequested(StepExecution stepExecution) {
+        return jobService.isDeepThinkingCancellationRequested(stepExecution.getJobExecutionId(), stepExecution.isTerminateOnly());
+    }
 
 }
 

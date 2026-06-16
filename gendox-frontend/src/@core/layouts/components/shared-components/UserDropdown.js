@@ -16,10 +16,14 @@ import Typography from '@mui/material/Typography'
 
 import { generateIdenticon } from 'src/utils/identiconUtil'
 import { useAuth } from 'src/authentication/useAuth'
+import RequireOrgRoles from 'src/authentication/components/RequireOrgRoles'
+import { memberRoleStatus, roleRankMap } from 'src/utils/membersUtils'
 
 import { localStorageConstants } from 'src/utils/generalConstants'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import { Link } from '@mui/material'
+
+const ORG_ROLE_KEYS = ['ROLE_OWNER', 'ROLE_ADMIN', 'ROLE_EDITOR', 'ROLE_READER']
 
 // ** Styled Components
 const BadgeContentSpan = styled('span')(({ theme }) => ({
@@ -48,6 +52,32 @@ const UserDropdown = props => {
   }
 
   const identiconSrc = useMemo(() => generateIdenticon(auth?.user?.id), [auth?.user?.id])
+
+  const orgRoleSubtitle = useMemo(() => {
+    const user = auth?.user
+    if (!user?.organizations?.length || !organizationId) return null
+
+    const org = user.organizations.find(o => String(o?.id) === String(organizationId))
+    if (!org) return null
+
+    const authorities = Array.isArray(org.authorities) ? org.authorities : []
+    let bestKey = null
+    let bestRank = -1
+
+    for (const key of ORG_ROLE_KEYS) {
+      if (!authorities.includes(key)) continue
+
+      const rank = roleRankMap[key] ?? 0
+      if (rank > bestRank) {
+        bestRank = rank
+        bestKey = key
+      }
+    }
+
+    if (!bestKey) return null
+
+    return memberRoleStatus[bestKey]?.title ?? bestKey
+  }, [auth?.user, organizationId])
 
   const handleDropdownOpen = event => {
     setAnchorEl(event.currentTarget)
@@ -118,9 +148,11 @@ const UserDropdown = props => {
             </Badge>
             <Box sx={{ display: 'flex', marginLeft: 3, alignItems: 'flex-start', flexDirection: 'column' }}>
               <Typography sx={{ fontWeight: 600 }}>{auth.user.name}</Typography>
-              <Typography variant='body2' sx={{ fontSize: '0.8rem', color: 'text.disabled' }}>
-                {auth.user.role}
-              </Typography>
+              {orgRoleSubtitle ? (
+                <Typography variant='body2' sx={{ fontSize: '0.8rem', color: 'text.disabled' }}>
+                  {orgRoleSubtitle}
+                </Typography>
+              ) : null}
             </Box>
           </Box>
         </Box>
@@ -144,15 +176,17 @@ const UserDropdown = props => {
             Add Organization
           </Box>
         </MenuItem>
-        <MenuItem
-          sx={{ p: 0 }}
-          onClick={() => handleDropdownClose(`/gendox/organization-settings/?organizationId=${organizationId}`)}
-        >
-          <Box sx={{ ...styles, textDecoration: 'none' }}>
-            <Icon icon='mdi:cog-outline' />
-            Organization Settings
-          </Box>
-        </MenuItem>
+        <RequireOrgRoles organizationId={organizationId} roles={['ROLE_OWNER', 'ROLE_ADMIN']}>
+          <MenuItem
+            sx={{ p: 0 }}
+            onClick={() => handleDropdownClose(`/gendox/organization-settings/?organizationId=${organizationId}`)}
+          >
+            <Box sx={{ ...styles, textDecoration: 'none' }}>
+              <Icon icon='mdi:cog-outline' />
+              Organization Settings
+            </Box>
+          </MenuItem>
+        </RequireOrgRoles>
         <Divider />
         <MenuItem
           onClick={handleLogout}

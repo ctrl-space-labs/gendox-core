@@ -71,7 +71,8 @@ const gendoxMessageToThreadMessage = (message) => {
     role: message.role,
     toolName: message.name,
     toolCallId: message.toolCallId,
-    toolCalls: message.toolCalls
+    toolCalls: message.toolCalls,
+    attachments: message.attachments || []
   };
 };
 

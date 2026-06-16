@@ -128,8 +128,6 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
         }
       })
 
-      // Add 'role': 'admin' to the userDataResponse.data object
-      userDataResponse.data.role = 'ROLE_ADMIN'
       setUser(userDataResponse.data)
       window.localStorage.setItem(localStorageConstants.userDataKey, JSON.stringify(userDataResponse.data))
 

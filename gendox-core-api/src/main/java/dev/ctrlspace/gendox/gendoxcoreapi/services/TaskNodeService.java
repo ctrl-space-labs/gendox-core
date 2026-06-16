@@ -85,7 +85,7 @@ public class TaskNodeService {
     public TaskNode updateTaskNode(TaskNodeDTO taskNodeDTO, Task task) throws GendoxException {
         TaskNode existing = taskNodeRepository.findById(taskNodeDTO.getId())
                 .orElseThrow(() -> new GendoxException("TASK_NODE_NOT_FOUND", "Node not found", HttpStatus.NOT_FOUND));
-        logger.info("Updating task node: {} with data: {}", existing.getId(), taskNodeDTO);
+        logger.trace("Updating task node: {} with data: {}", existing.getId(), taskNodeDTO);
 
         // check for Answer nodes to delete if document insights task questions or documents changed
         if (TaskTypeConstants.DOCUMENT_INSIGHTS.equalsIgnoreCase(task.getTaskType().getName())) {
@@ -238,18 +238,18 @@ public class TaskNodeService {
     }
 
     public TaskNode getTaskNodeById(UUID taskNodeId) {
-        logger.info("Fetching task node by ID: {}", taskNodeId);
+        logger.trace("Fetching task node by ID: {}", taskNodeId);
         return taskNodeRepository.findById(taskNodeId)
                 .orElseThrow(() -> new RuntimeException("Task node not found"));
     }
 
     public Page<TaskNode> getTaskNodesByTaskId(UUID taskId, Pageable pageable) {
-        logger.info("Fetching task nodes for task: {}", taskId);
+        logger.trace("Fetching task nodes for task: {}", taskId);
         return taskNodeRepository.findAllByTaskId(taskId, pageable);
     }
 
     public Page<TaskNode> getTaskNodesByCriteria(TaskNodeCriteria criteria, Pageable pageable) {
-        logger.info("Fetching task nodes by criteria: {}", criteria);
+        logger.trace("Fetching task nodes by criteria: {}", criteria);
         return taskNodeRepository.findAll(TaskNodePredicates.build(criteria), pageable);
     }
 
@@ -282,7 +282,7 @@ public class TaskNodeService {
     }
 
     public Optional<TaskNode> findAnswerNodeByDocumentAndQuestionOptional(UUID taskId, UUID documentNodeId, UUID questionNodeId) {
-        logger.info("Fetching answer node for task: {}, document: {}, question: {}", taskId, documentNodeId, questionNodeId);
+        logger.trace("Fetching answer node for task: {}, document: {}, question: {}", taskId, documentNodeId, questionNodeId);
         return taskNodeRepository.findAnswerNodesByDocumentIdsAndQuestionIds(taskId, List.of(documentNodeId), List.of(questionNodeId), Pageable.unpaged())
                 .stream()
                 .findFirst();
@@ -524,7 +524,7 @@ public class TaskNodeService {
     }
 
     public Page<TaskDocumentMetadataDTO> getTaskDocumentMetadataByCriteria(TaskNodeCriteria criteria, Pageable pageable) throws GendoxException {
-        logger.info("Fetching task document metadata by criteria: {}", criteria);
+        logger.trace("Fetching task document metadata by criteria: {}", criteria);
 
         Page<TaskNode> nodesPage = taskNodeRepository.findAll(TaskNodePredicates.build(criteria), pageable);
         Map<UUID, DocumentInstance> documentsById = getDocumentsById(nodesPage);
@@ -567,6 +567,44 @@ public class TaskNodeService {
                 .collect(Collectors.toMap(DocumentInstance::getId, doc -> doc));
 
         return documentsById;
+    }
+
+    @Transactional
+    public void reorderQuestionNodes(UUID taskId, UUID projectId, List<UUID> orderedQuestionNodeIds) throws GendoxException {
+
+        if (orderedQuestionNodeIds == null || orderedQuestionNodeIds.isEmpty()) {
+            throw new GendoxException("EMPTY_ORDER", "Ordered list is empty", HttpStatus.BAD_REQUEST);
+        }
+
+
+        // Load all QUESTION nodes of this task
+        List<TaskNode> questionNodes = taskNodeRepository.findAllByTaskIdAndNodeTypeName(taskId, TaskNodeTypeConstants.QUESTION);
+
+        if (questionNodes.size() != orderedQuestionNodeIds.size()) {
+            throw new GendoxException("ORDER_SIZE_MISMATCH",
+                    "Payload ids count does not match existing question nodes count",
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        // Validate: no duplicates in payload
+        Set<UUID> payloadSet = new HashSet<>(orderedQuestionNodeIds);
+        if (payloadSet.size() != orderedQuestionNodeIds.size()) {
+            throw new GendoxException("DUPLICATE_IDS", "Duplicate ids in payload", HttpStatus.BAD_REQUEST);
+        }
+
+        // Validate: payload ids == existing ids
+        Set<UUID> existingSet = questionNodes.stream().map(TaskNode::getId).collect(Collectors.toSet());
+        if (!existingSet.equals(payloadSet)) {
+            throw new GendoxException("INVALID_IDS", "Payload ids do not match task question nodes", HttpStatus.BAD_REQUEST);
+        }
+
+        // Apply order = index (choose if you want 1-based or 0-based)
+        // Your createTaskNode uses max + 1 => looks like 1-based order.
+        for (int i = 0; i < orderedQuestionNodeIds.size(); i++) {
+            UUID nodeId = orderedQuestionNodeIds.get(i);
+            int newOrder = i + 1; // keep consistent with existing logic
+            taskNodeRepository.updateNodeOrder(nodeId, newOrder);
+        }
     }
 
 

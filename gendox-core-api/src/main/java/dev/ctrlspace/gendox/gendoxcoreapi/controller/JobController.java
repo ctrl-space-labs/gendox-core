@@ -1,9 +1,11 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.controller;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.DeepThinkingStep;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.DeepThinkingStepService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.JobService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TaskService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
@@ -21,6 +23,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.launch.JobOperator;
+import org.springframework.batch.core.launch.NoSuchJobExecutionException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -41,6 +45,8 @@ import java.util.concurrent.CompletableFuture;
 public class JobController {
 
     private final JobUtils jobUtils;
+    private final JobOperator jobOperator;
+    private final DeepThinkingStepService deepThinkingStepService;
     Logger logger = LoggerFactory.getLogger(JobController.class);
 
     private final JobService jobService;
@@ -50,11 +56,16 @@ public class JobController {
     @Autowired
     public JobController(JobService jobService,
                          SecurityUtils securityUtils,
-                         TaskService taskService, JobUtils jobUtils) {
+                         TaskService taskService,
+                         JobUtils jobUtils,
+                         JobOperator jobOperator,
+                         DeepThinkingStepService deepThinkingStepService) {
         this.jobService = jobService;
         this.securityUtils = securityUtils;
         this.taskService = taskService;
         this.jobUtils = jobUtils;
+        this.jobOperator = jobOperator;
+        this.deepThinkingStepService = deepThinkingStepService;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
@@ -150,6 +161,42 @@ public class JobController {
         throw new GendoxException("INVALID_TASK_TYPE", "Task type not supported: " + taskType, HttpStatus.BAD_REQUEST);
     }
 
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @PostMapping("organizations/{organizationId}/projects/{projectId}/jobs/{jobExecutionId}/stop")
+    @Operation(summary = "Stop a running job execution",
+            description = "Gracefully stops a running Spring Batch job. For chunk-based jobs, execution stops between chunks. " +
+                    "For tasklet-based jobs (e.g. deep thinking), the tasklet checks the stop signal and terminates.")
+    public void stopJob(@PathVariable UUID organizationId,
+                        @PathVariable UUID projectId,
+                        @PathVariable Long jobExecutionId) throws GendoxException {
+        jobService.assertJobExecutionBelongsToProject(jobExecutionId, projectId);
+
+        try {
+            jobOperator.stop(jobExecutionId);
+            logger.info("Stop requested for job execution {}", jobExecutionId);
+        } catch (NoSuchJobExecutionException e) {
+            throw new GendoxException("JOB_EXECUTION_NOT_FOUND",
+                    "Job execution not found: " + jobExecutionId, HttpStatus.NOT_FOUND, e);
+        } catch (Exception e) {
+            throw new GendoxException("JOB_STOP_FAILED",
+                    "Failed to stop job execution: "+jobExecutionId, HttpStatus.INTERNAL_SERVER_ERROR, e);
+        }
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
+            "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")
+    @GetMapping("organizations/{organizationId}/projects/{projectId}/jobs/{jobExecutionId}/deep-thinking-steps")
+    @Operation(summary = "Get deep thinking progress steps",
+            description = "Returns the progress steps for a deep thinking job execution, ordered by step order.")
+    public List<DeepThinkingStep> getDeepThinkingSteps(@PathVariable UUID organizationId,
+                                                        @PathVariable UUID projectId,
+                                                        @PathVariable Long jobExecutionId) throws GendoxException {
+        jobService.assertJobExecutionBelongsToProject(jobExecutionId, projectId);
+
+        return deepThinkingStepService.getSteps(jobExecutionId);
+    }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectIdFromPathVariable')" +
             "&& @securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedOrgIdFromPathVariable')")

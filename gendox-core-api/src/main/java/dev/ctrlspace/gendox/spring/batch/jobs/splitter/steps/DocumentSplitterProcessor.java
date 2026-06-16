@@ -8,13 +8,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ApiKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.ApiKeyService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.DownloadService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationWebSiteService;
-import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.ServiceSelector;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.documents.DocumentSplitter;
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.ContentDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
 import jakarta.persistence.EntityManager;
@@ -29,7 +25,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,14 +32,19 @@ import java.util.UUID;
 @StepScope
 public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance, DocumentSectionDTO> {
 
+    private final SplitFileService splitFileService;
     Logger logger = LoggerFactory.getLogger(DocumentSplitterProcessor.class);
     @Value("#{jobParameters['skipUnchangedDocs']}")
     protected Boolean skipUnchangedDocs;
+    @Value("#{jobParameters['projectId']}")
+    private String projectIdParam;
     @PersistenceContext
     private EntityManager entityManager;
 
     private ServiceSelector serviceSelector;
     private ProjectAgentService projectAgentService;
+    private ProjectService projectService;
+    private DocumentDigitizationService documentDigitizationService;
     private DownloadService downloadService;
     private GendoxAPIIntegrationService gendoxAPIIntegrationService;
     private CryptographyUtils cryptographyUtils;
@@ -57,14 +57,19 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
     @Autowired
     public DocumentSplitterProcessor(ServiceSelector serviceSelector,
                                      ProjectAgentService projectAgentService,
+                                     ProjectService projectService,
+                                     DocumentDigitizationService documentDigitizationService,
                                      DownloadService downloadService,
                                      GendoxAPIIntegrationService gendoxAPIIntegrationService,
                                      CryptographyUtils cryptographyUtils,
                                      ApiKeyService apiKeyService,
                                      OrganizationWebSiteService organizationWebSiteService,
-                                     EncodingRegistry encodingRegistry) {
+                                     EncodingRegistry encodingRegistry,
+                                     SplitFileService splitFileService) {
         this.serviceSelector = serviceSelector;
         this.projectAgentService = projectAgentService;
+        this.projectService = projectService;
+        this.documentDigitizationService = documentDigitizationService;
         this.downloadService = downloadService;
         this.gendoxAPIIntegrationService = gendoxAPIIntegrationService;
         this.cryptographyUtils = cryptographyUtils;
@@ -72,8 +77,8 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         this.organizationWebSiteService = organizationWebSiteService;
         this.encodingRegistry = encodingRegistry;
 
-
         this.enc = encodingRegistry.getEncodingForModel(ModelType.GPT_4O);
+        this.splitFileService = splitFileService;
     }
 
 
@@ -82,6 +87,10 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
         logger.trace("Start processing document: {}", instance.getId());
 
         try {
+            // TODO DocumentSectionService#splitDocumentAndCreateSections also is splitting the document,
+            //   merge those methods somehow. The challenge is that this job is performant for 1000s of documents,
+            //   by separating the splitting and the writing. While the service method is performant for single documents
+
             // Step 1: Fetch content
             String fileContent = fetchContent(instance);
 
@@ -99,7 +108,7 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
             instance.setTotalTokens((long)totalTokens);
 
             // Step 3: Split content into sections
-            List<String> contentSections = splitContent(instance, fileContent);
+            List<String> contentSections = splitFileService.splitDocument(instance, fileContent);
 
             return new DocumentSectionDTO(instance, contentSections, true);
 
@@ -126,9 +135,19 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
 
             ApiKey apiKey = apiKeyService.getById(organizationWebSite.getApiKeyId());
             ContentDTO contentDTO = gendoxAPIIntegrationService.getContentById(instance.getRemoteUrl(), apiKey.getApiKey());
-            //update external url
             instance.setExternalUrl(contentDTO.getSource());
             return contentDTO.getContent();
+        }
+
+        // Pass it from LLM if the AutoDigitization is enabled for the project, basically the same code as the Digitization Task
+        if (projectIdParam != null) {
+            ProjectAgent agent = projectAgentService.getAgentByProjectId(UUID.fromString(projectIdParam));
+            if (agent != null && Boolean.TRUE.equals(agent.getAutoDigitization())) {
+                return documentDigitizationService.digitizeDocumentToText(
+                        instance,
+                        projectService.getProjectById(UUID.fromString(projectIdParam)),
+                        DocumentDigitizationService.DEFAULT_DIGITIZATION_PROMPT);
+            }
         }
 
         return downloadService.readDocumentContent(instance.getRemoteUrl());
@@ -143,21 +162,6 @@ public class DocumentSplitterProcessor implements ItemProcessor<DocumentInstance
             instance.setDocumentSha256Hash(newHash); // Update the hash
         }
         return true;
-    }
-
-    private List<String> splitContent(DocumentInstance instance, String fileContent) throws GendoxException {
-        ProjectAgent agent = projectAgentService.getAgentByDocumentId(instance.getId());
-        DocumentSplitter splitter = serviceSelector.getDocumentSplitterByName(agent.getDocumentSplitterType().getName());
-
-        if (splitter == null) {
-            throw new GendoxException(
-                    "DOCUMENT_SPLITTER_NOT_FOUND",
-                    "No document splitter found for agent " + agent.getId(),
-                    HttpStatus.NOT_FOUND
-            );
-        }
-
-        return splitter.split(fileContent);
     }
 
 

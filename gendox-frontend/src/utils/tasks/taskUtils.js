@@ -1,7 +1,8 @@
 export const TASK_TYPE_MAP = {
   DEEP_RESEARCH: { label: 'Deep Research', color: 'primary' },
   DOCUMENT_INSIGHTS: { label: 'Document Insights', color: 'success' },
-  DOCUMENT_DIGITIZATION: { label: 'Document Digitization', color: 'warning' }
+  DOCUMENT_DIGITIZATION: { label: 'Document Digitization', color: 'warning' },
+  EARTH_OBSERVATION: { label: 'Earth Observation', color: 'info' }
 }
 
 export const getQuestionMessageById = (questions, questionId) => {

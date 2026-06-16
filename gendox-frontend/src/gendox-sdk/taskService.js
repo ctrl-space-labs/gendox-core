@@ -353,6 +353,40 @@ const getJobsByCriteria = async (organizationId, projectId, criteria, token) => 
 }
 
 /**
+ * Get deep thinking progress steps
+ * @param organizationId
+ * @param projectId
+ * @param jobExecutionId
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<DeepThinkingStep[]>>}
+ */
+const getDeepThinkingSteps = async (organizationId, projectId, jobExecutionId, token) => {
+  return axios.get(apiRequests.getDeepThinkingSteps(organizationId, projectId, jobExecutionId), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+}
+
+/**
+ * Stop a running job execution
+ * @param organizationId
+ * @param projectId
+ * @param jobExecutionId
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<void>>}
+ */
+const stopJob = async (organizationId, projectId, jobExecutionId, token) => {
+  return axios.post(apiRequests.stopJob(organizationId, projectId, jobExecutionId), null, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+}
+
+/**
  * Delete a task node and its connected nodes
  * @param organizationId
  * @param projectId
@@ -452,6 +486,31 @@ const documentDigitizationExportCSV = async (organizationId, projectId, taskId, 
   return response.data // This is the CSV blob
 }
 
+/**
+ * Reorder Question Nodes (Document Insights columns)
+ * @param organizationId
+ * @param projectId
+ * @param taskId
+ * @param orderedQuestionNodeIds {UUID[]} array of TaskNode ids in the desired order
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<void>>}
+ */
+const reorderTaskQuestionNodes = async (organizationId, projectId, taskId, orderedQuestionNodeIds, token) => {
+  return axios.put(
+    apiRequests.reorderTaskQuestionNodes(organizationId, projectId, taskId),
+    { orderedQuestionNodeIds },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token
+      }
+    }
+  )
+}
+
+
+
+
 export default {
   createTask,
   duplicateTask,
@@ -471,9 +530,13 @@ export default {
   getTaskEdgesByCriteria,
   executeTaskByType,
   getJobsByCriteria,
+  stopJob,
+  getDeepThinkingSteps,
   deleteTaskNode,
   deleteTask,
   documentInsightsExportAllCSV,
   documentInsightsExportCSV,
-  documentDigitizationExportCSV
+  documentDigitizationExportCSV,
+  reorderTaskQuestionNodes,
+  documentDigitizationExportCSV,
 }

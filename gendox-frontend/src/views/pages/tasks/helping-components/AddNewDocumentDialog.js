@@ -31,6 +31,7 @@ const DocumentsAddNewDialog = ({
   existingDocumentIds = [],
   loading,
   onConfirm,
+  onConfirmDocuments,
   onUploadSuccess,
   organizationId,
   projectId,
@@ -38,6 +39,9 @@ const DocumentsAddNewDialog = ({
   taskId,
   mode = 'main',
   taskType = 'document-digitization',
+  allowUpload = true,
+  multiSelect = true,
+  title = 'Select Project Documents',
 }) => {
   const dispatch = useDispatch()
   const { projectDocuments, isBlurring } = useSelector(state => state.activeDocument)
@@ -53,7 +57,7 @@ const DocumentsAddNewDialog = ({
   const isFileTypeSupported = useMemo(() => {
     return getFileTypeValidator(taskType)
   }, [taskType])
-  
+
 
   useEffect(() => {
     if (!open) {
@@ -83,9 +87,9 @@ const DocumentsAddNewDialog = ({
             documentNameContains: searchTerm
           })
         )
-      }, 300) 
+      }, 800)
 
-      return () => clearTimeout(delayFetch) 
+      return () => clearTimeout(delayFetch)
     }
   }, [open, organizationId, projectId, token, page, searchTerm, dispatch])
 
@@ -103,15 +107,24 @@ const DocumentsAddNewDialog = ({
 const displayDocuments = useMemo(() => {
       return documents.filter(doc => isFileTypeSupported(doc.remoteUrl));
   }, [documents, isFileTypeSupported]);
- 
+
 
   // Handlers
   const handleToggleSelect = doc => {
     if (existingDocIds.has(doc.id)) return
     setSelectedDocIds(prev => {
       const newSet = new Set(prev)
-      if (newSet.has(doc.id)) newSet.delete(doc.id)
-      else newSet.add(doc.id)
+      if (multiSelect) {
+        if (newSet.has(doc.id)) newSet.delete(doc.id)
+        else newSet.add(doc.id)
+      } else {
+        // single select behavior
+        if (newSet.has(doc.id)) newSet.clear()
+        else {
+          newSet.clear()
+          newSet.add(doc.id)
+        }
+      }
       return newSet
     })
   }
@@ -123,20 +136,23 @@ const displayDocuments = useMemo(() => {
   }
 
   const handleConfirm = () => {
-    onConfirm(Array.from(selectedDocIds))
+    const selectedIds = Array.from(selectedDocIds)
+    const selectedDocs = displayDocuments.filter(d => selectedDocIds.has(d.id))
+    onConfirm(selectedIds)
+    if (typeof onConfirmDocuments === 'function') onConfirmDocuments(selectedDocs)
   }
 
   const handleSearchChange = e => {
       setSearchTerm(e.target.value)
-      setPage(0) 
-      setDocuments([]) 
+      setPage(0)
+      setDocuments([])
   }
 
   return (
     <>
       <Dialog open={open} onClose={onClose} disableEscapeKeyDown={false} fullWidth maxWidth='lg'>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
-          Select Project Documents
+          {title}
           <IconButton onClick={onClose} size='small' aria-label='close'>
             <CloseIcon />
           </IconButton>
@@ -254,9 +270,11 @@ const displayDocuments = useMemo(() => {
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button startIcon={<CloudUploadIcon />} variant='outlined' onClick={() => setShowUploader(true)}>
-            Upload New Document
-          </Button>
+          {allowUpload && (
+            <Button startIcon={<CloudUploadIcon />} variant='outlined' onClick={() => setShowUploader(true)}>
+              Upload New Document
+            </Button>
+          )}
           <Button onClick={handleConfirm} variant='contained' disabled={selectedDocIds.size === 0}>
             Confirm Selection
           </Button>
@@ -282,14 +300,16 @@ const displayDocuments = useMemo(() => {
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          <UploaderDocuments
-            closeUploader={() => setShowUploader(false)}
-            taskId={taskId}
-            onClose={onClose}
-            onUploadSuccess={onUploadSuccess}
-            mode={mode}
-            taskType={taskType}
-          />
+          {allowUpload && (
+            <UploaderDocuments
+              closeUploader={() => setShowUploader(false)}
+              taskId={taskId}
+              onClose={onClose}
+              onUploadSuccess={onUploadSuccess}
+              mode={mode}
+              taskType={taskType}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </>

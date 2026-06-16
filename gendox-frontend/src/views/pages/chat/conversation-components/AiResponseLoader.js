@@ -1,8 +1,33 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { Box, LinearProgress, Typography } from '@mui/material'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { Box, Button, LinearProgress, Typography, Stepper, Step, StepLabel, StepContent } from '@mui/material'
+import StopCircleIcon from '@mui/icons-material/StopCircle'
+import { pollDeepThinkingStatus, cancelDeepThinking, finalizeDeepThinkingThread } from 'src/store/chat/gendoxChat'
+import { localStorageConstants } from 'src/utils/generalConstants'
+import { useIFrameMessageManager } from 'src/authentication/context/IFrameMessageManagerContext'
+
+const STEP_TYPE_LABELS = {
+  LLM_CALL: 'AI Processing',
+  TOOL_EXECUTION: 'Executing Tool',
+  SUB_AGENT_CREATED: 'Sub-agent Created',
+  SUB_AGENT_COMPLETED: 'Sub-agent Completed',
+  FINAL_RESPONSE: 'Final Response',
+  ERROR: 'Error'
+}
 
 const AiResponseLoader = ({ isSending }) => {
+  const dispatch = useDispatch()
+  const iFrameMessageManager = useIFrameMessageManager()
   const [statusMessage, setStatusMessage] = useState('')
+  const pollingRef = useRef(null)
+
+  const {
+    isDeepThinking,
+    deepThinkingJobId,
+    deepThinkingSteps
+  } = useSelector(state => state.gendoxChat)
+
+  const currentThread = useSelector(state => state.gendoxChat.currentThread)
 
   // TODO this is an approximation, it needs to be updated with actual data, once SSE is enabled
   const simulateStatusUpdates = useCallback(async () => {
@@ -14,10 +39,156 @@ const AiResponseLoader = ({ isSending }) => {
   }, [])
 
   useEffect(() => {
-    if (isSending) {
+    if (isSending && !isDeepThinking) {
       simulateStatusUpdates()
     }
-  }, [isSending, simulateStatusUpdates])
+  }, [isSending, isDeepThinking, simulateStatusUpdates])
+
+  useEffect(() => {
+    if (!isDeepThinking || !deepThinkingJobId || !currentThread) {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+      return
+    }
+
+    const organizationId = currentThread.organizationId
+    const projectId = currentThread.projectId
+    const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
+    let pollCount = 0
+
+    const poll = () => {
+      dispatch(
+        pollDeepThinkingStatus({
+          organizationId,
+          projectId,
+          jobExecutionId: deepThinkingJobId,
+          token
+        })
+      ).then(action => {
+        if (action.payload) {
+          const { status, job } = action.payload
+          const effectiveExitCode = (job?.exitCode || '').trim().toUpperCase()
+          const terminal =
+            ['COMPLETED', 'FAILED', 'STOPPED', 'ABANDONED'].includes(status) ||
+            // Fallback: Spring Batch may return status=UNKNOWN while exitCode is terminal.
+            (status === 'UNKNOWN' && ['FAILED', 'COMPLETED', 'STOPPED', 'ABANDONED'].includes(effectiveExitCode))
+
+          if (terminal) {
+            clearInterval(pollingRef.current)
+            pollingRef.current = null
+
+            const finalStatus = status === 'UNKNOWN' ? effectiveExitCode || status : status
+
+            if (finalStatus === 'COMPLETED') {
+              dispatch(
+                finalizeDeepThinkingThread({
+                  threadId: currentThread.threadId,
+                  token,
+                  iFrameMessageManager
+                })
+              )
+            }
+          }
+        }
+      })
+      pollCount++
+    }
+
+    const getInterval = () => {
+      if (pollCount < 5) return 3000
+      if (pollCount < 15) return 8000
+      return 12000
+    }
+
+    poll()
+    pollingRef.current = setInterval(poll, getInterval())
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+    }
+  }, [isDeepThinking, deepThinkingJobId, currentThread, dispatch, iFrameMessageManager])
+
+  const handleCancel = () => {
+    if (!currentThread || !deepThinkingJobId) return
+
+    dispatch(
+      cancelDeepThinking({
+        organizationId: currentThread.organizationId,
+        projectId: currentThread.projectId,
+        jobExecutionId: deepThinkingJobId,
+        token: window.localStorage.getItem(localStorageConstants.accessTokenKey)
+      })
+    )
+  }
+
+  if (isDeepThinking) {
+    return (
+      <Box
+        sx={{
+          width: '90%',
+          maxWidth: '800px',
+          mt: 3,
+          mb: 3,
+          p: 3,
+          borderRadius: 2,
+          bgcolor: 'background.paper',
+          boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)',
+          mx: 'auto'
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant='subtitle1' sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+            Deep Thinking in progress...
+          </Typography>
+          <Button
+            variant='outlined'
+            color='error'
+            size='small'
+            startIcon={<StopCircleIcon />}
+            onClick={handleCancel}
+          >
+            Cancel
+          </Button>
+        </Box>
+
+        <LinearProgress
+          color='primary'
+          sx={{
+            height: 6,
+            borderRadius: 1,
+            mb: 2,
+            backgroundColor: 'rgba(0, 0, 0, 0.1)'
+          }}
+        />
+
+        {deepThinkingSteps.length > 0 && (
+          <Stepper activeStep={deepThinkingSteps.length - 1} orientation='vertical' sx={{ mt: 2 }}>
+            {deepThinkingSteps.map((step, index) => (
+              <Step key={step.id || index} completed={index < deepThinkingSteps.length - 1}>
+                <StepLabel>
+                  <Typography variant='body2' sx={{ fontWeight: index === deepThinkingSteps.length - 1 ? 'bold' : 'normal' }}>
+                    {STEP_TYPE_LABELS[step.stepType] || step.stepType}
+                  </Typography>
+                </StepLabel>
+                {step.summary && (
+                  <StepContent>
+                    <Typography variant='caption' color='text.secondary'>
+                      {step.summary}
+                    </Typography>
+                  </StepContent>
+                )}
+              </Step>
+            ))}
+          </Stepper>
+        )}
+      </Box>
+    )
+  }
 
   return (
     isSending && (
@@ -45,10 +216,10 @@ const AiResponseLoader = ({ isSending }) => {
           }}
         />
         <Typography variant='body1' sx={{
-              mt: 1,
-              fontWeight: 'bold', // Bold text for emphasis
-              color: 'primary.main' // Use theme's primary color for text
-            }}>
+            mt: 1,
+            fontWeight: 'bold', // Bold text for emphasis
+            color: 'primary.main' // Use theme's primary color for text
+          }}>
           {statusMessage}
         </Typography>
       </Box>

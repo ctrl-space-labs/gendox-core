@@ -121,7 +121,7 @@ class MessageManagerService {
         requestType,
         responseType,
         requestPayload,
-        maxResponses = 2,
+        maxResponses = 1,
         maxWaitTimeoutMs = 100
     ) {
         const collectedResponses = [];
@@ -142,18 +142,27 @@ class MessageManagerService {
             }
         };
 
+        // Add the temporary handler
+        this.addHandler(responseHandler);
+
+        if (maxResponses === 0) {
+          // If timeout is 0, resolve immediately after sending the message
+          resolveCondition();
+        }
+
         // Send the request message
         this.sendMessage({
             type: requestType,
             payload: requestPayload,
         });
 
-        // Add the temporary handler
-        this.addHandler(responseHandler);
+
 
         // Wait for either the messages or timeout
         const timeoutPromise = new Promise((resolve) => setTimeout(resolve, maxWaitTimeoutMs));
         await Promise.race([responsesPromise, timeoutPromise]);
+
+        console.log(`Waiting for local context responses timed out (${maxWaitTimeoutMs}ms) or max responses collected (${maxResponses} received).`);
 
         // Remove the handler
         this.removeHandler(responseHandler);

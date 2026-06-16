@@ -3,10 +3,12 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.TaskConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionRuntimeOverridesDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.TaskDuplicateDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,8 @@ public class TaskService {
     private final TaskNodeRepository taskNodeRepository;
     private final TaskEdgeService taskEdgeService;
     private final TypeService typeService;
+    private final EOScriptService eoScriptService;
+    private final EOTaskGeometryService eoTaskGeometryServicey;
     private TaskConverter taskConverter;
     private AiModelService aiModelService;
     private TaskNodeService taskNodeService;
@@ -40,6 +44,8 @@ public class TaskService {
                        TaskNodeRepository taskNodeRepository,
                        TypeService typeService,
                        TaskEdgeService taskEdgeService,
+                       EOScriptService eoScriptRepository,
+                       EOTaskGeometryService eoTaskGeometryRepository,
                        TaskConverter taskConverter,
                        AiModelService aiModelService,
                        TaskNodeService taskNodeService,
@@ -50,6 +56,8 @@ public class TaskService {
         this.taskNodeRepository = taskNodeRepository;
         this.typeService = typeService;
         this.taskEdgeService = taskEdgeService;
+        this.eoScriptService = eoScriptRepository;
+        this.eoTaskGeometryServicey = eoTaskGeometryRepository;
         this.taskConverter = taskConverter;
         this.aiModelService = aiModelService;
         this.taskNodeService = taskNodeService;
@@ -70,12 +78,19 @@ public class TaskService {
         if (task.getMaxSectionsChunkTokens() == null) {
             task.setMaxSectionsChunkTokens(this.maxSectionsChunkTokens);
         }
-        logger.info("Creating new task: {}", task);
+        if (isDocumentDigitizationTask(task) && task.getUsePrintedPage() == null) {
+            task.setUsePrintedPage(true);
+        }
+        if (isDocumentDigitizationTask(task) && task.getUsePageText() == null) {
+            task.setUsePageText(false);
+        }
+        validateDigitizationContentFields(task);
+        logger.debug("Creating new task: {}", task);
         return taskRepository.save(task);
     }
 
     public Task duplicateTask(UUID projectId, TaskDuplicateDTO taskDuplicateDTO) throws GendoxException {
-        logger.info("Duplicating task {} with options: keepQuestions={}, keepDocuments={}",
+        logger.debug("Duplicating task {} with options: keepQuestions={}, keepDocuments={}",
                 taskDuplicateDTO.getTaskId(), taskDuplicateDTO.isKeepQuestions(), taskDuplicateDTO.isKeepDocuments());
 
         Task original = taskRepository.findById(taskDuplicateDTO.getTaskId())
@@ -156,18 +171,18 @@ public class TaskService {
 
 
     public List<Task> getAllTasksByProjectId(UUID projectId) {
-        logger.info("Fetching all tasks for project: {}", projectId);
+        logger.trace("Fetching all tasks for project: {}", projectId);
         return taskRepository.findAllByProjectId(projectId);
     }
 
     public Task getTaskById(UUID taskId) {
-        logger.info("Fetching task by ID: {}", taskId);
+        logger.trace("Fetching task by ID: {}", taskId);
         return taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
     }
 
     public Task updateTask(UUID taskId, TaskDTO taskDTO) throws GendoxException {
-        logger.info("Updating task: {}", taskId);
+        logger.debug("Updating task: {}", taskId);
 
         Task existingTask = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found for update"));
@@ -233,17 +248,51 @@ public class TaskService {
             existingTask.setTopP(taskDTO.getTopP());
         }
 
+        if (taskDTO.getUsePrintedPage() != null) {
+            existingTask.setUsePrintedPage(taskDTO.getUsePrintedPage());
+        }
+        if (taskDTO.getUsePageText() != null) {
+            existingTask.setUsePageText(taskDTO.getUsePageText());
+        }
+
+        validateDigitizationContentFields(existingTask);
+
         return taskRepository.save(existingTask);
+    }
+
+    private boolean isDocumentDigitizationTask(Task task) {
+        return task.getTaskType() != null
+                && TaskTypeConstants.DOCUMENT_DIGITIZATION.equals(task.getTaskType().getName());
+    }
+
+    private void validateDigitizationContentFields(Task task) throws GendoxException {
+        if (!isDocumentDigitizationTask(task)) {
+            return;
+        }
+        if (!Boolean.TRUE.equals(task.getUsePrintedPage()) && !Boolean.TRUE.equals(task.getUsePageText())) {
+            throw new GendoxException(
+                    "INVALID_DIGITIZATION_CONTENT_MODE",
+                    "At least one of Page Images or Extracted Text must be enabled",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
     }
 
 
     @Transactional
     public void deleteTask(UUID taskId) throws GendoxException {
-        logger.info("Deleting task: {}", taskId);
+        logger.debug("Deleting task: {}", taskId);
 
         // Fetch the task to delete
         Task taskToDelete = taskRepository.findById(taskId)
                 .orElseThrow(() -> new GendoxException("TASK_NOT_FOUND", "Task not found for deletion", HttpStatus.NOT_FOUND));
+
+        // Delete EO children for task type Earth Observation
+        if (taskToDelete.getTaskType() != null &&
+                TaskTypeConstants.EARTH_OBSERVATION.equals(taskToDelete.getTaskType().getName())) {
+            eoScriptService.deleteAllEOScriptsForTask(taskId);
+            eoTaskGeometryServicey.deleteAllByTaskId(taskId);
+        }
 
         Page<TaskNode> nodesToDelete = taskNodeRepository.findAllByTaskId(taskId, Pageable.unpaged());
 
@@ -259,6 +308,27 @@ public class TaskService {
         taskRepository.delete(taskToDelete);
     }
 
+    /**
+     * Builds completion runtime overrides from task settings (model, maxTokens, temperature, topP).
+     * Used by batch job processors (documentInsights, documentDigitization) to apply task-level overrides to completions.
+     */
+    public CompletionRuntimeOverridesDTO buildDefaultCompletionOverrides(Task task) {
+        // TODO: add override to add extra tools and maybe system prompt
+        CompletionRuntimeOverridesDTO overrides = new CompletionRuntimeOverridesDTO();
+        if (task.getCompletionModel() != null) {
+            overrides.setCompletionModelName(task.getCompletionModel().getName());
+        }
+        if (task.getMaxToken() != null) {
+            overrides.setMaxTokens(task.getMaxToken());
+        }
+        if (task.getTemperature() != null) {
+            overrides.setTemperature(task.getTemperature());
+        }
+        if (task.getTopP() != null) {
+            overrides.setTopP(task.getTopP());
+        }
+        return overrides;
+    }
 
 }
 

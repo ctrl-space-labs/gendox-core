@@ -8,7 +8,6 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMe
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelRequestParams;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.CompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.ModerationResponse;
-import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.OpenAiModerationResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.AiToolRegistry;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.tools.engine.ToolExecutionContext;
@@ -16,13 +15,11 @@ import dev.ctrlspace.gendox.gendoxcoreapi.converters.MessageAiMessageConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.CompletionMessageDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionDTO;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProvenAiMetadata;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectAgentRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TemplateRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.AiModelUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.CancellationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAuthor;
@@ -70,6 +67,7 @@ public class CompletionService {
     private AiModelUtils aiModelUtils;
 
     private ObjectMapper objectMapper;
+    private AiModelService aiModelService;
 
     @Autowired
     public CompletionService(@Lazy CompletionService self,
@@ -86,7 +84,9 @@ public class CompletionService {
                              MessageService messageService,
                              AuditLogsService auditLogsService,
                              DocumentUtils documentUtils,
-                             ObjectMapper objectMapper, AiToolRegistry aiToolRegistry) {
+                             ObjectMapper objectMapper,
+                             AiModelService aiModelService,
+                             AiToolRegistry aiToolRegistry) {
         this.self = self;
         this.projectService = projectService;
         this.messageAiMessageConverter = messageAiMessageConverter;
@@ -101,6 +101,7 @@ public class CompletionService {
         this.auditLogsService = auditLogsService;
         this.documentUtils = documentUtils;
         this.objectMapper = objectMapper;
+        this.aiModelService = aiModelService;
         this.aiToolRegistry = aiToolRegistry;
     }
 
@@ -211,6 +212,16 @@ public class CompletionService {
      * @return the list of responses. Might be more than one if there are tool calls in the completion response.
      * @throws GendoxException
      */
+    public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, Project project, @Nullable ObjectNode responseJsonSchema) throws GendoxException {
+        return getCompletion(message, nearestSections, project, responseJsonSchema, null);
+    }
+
+    public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections,
+                                       @Nullable ObjectNode responseJsonSchema,
+                                       @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+        return getCompletion(message, nearestSections, null, responseJsonSchema, overrides);
+    }
+
     @Observed(name = "CompletionService.getCompletion",
             contextualName = "CompletionService#getCompletion",
             lowCardinalityKeyValues = {
@@ -219,48 +230,33 @@ public class CompletionService {
                     ObservabilityTags.LOG_METHOD_NAME, "true",
                     ObservabilityTags.LOG_ARGS, "false"
             })
-    public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, Project project, @Nullable ObjectNode responseJsonSchema) throws GendoxException {
-        String question = convertToAiModelTextQuestion(message, nearestSections, project.getId());
+    public List<Message> getCompletion(Message message, List<DocumentInstanceSectionDTO> nearestSections, @Nullable Project project,
+                                       @Nullable ObjectNode responseJsonSchema,
+                                       @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+        CompletionRuntimeContext runtimeContext = resolveCompletionRuntimeContext(message, nearestSections, project, overrides);
+        runModerationIfEnabled(runtimeContext);
 
-        ProjectAgent agent = project.getProjectAgent();
-        List<AiTools> availableTools = agent.getAiTools();
-
-        // check moderation
-        String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(agent, "MODERATION_MODEL");
-        if (agent.getModerationCheck()) {
-            ModerationResponse moderationResponse = trainingService.getModeration(question, moderationApiKey, agent.getModerationModel());
-            if (moderationResponse.getResults().get(0).isFlagged()) {
-                throw new GendoxException("MODERATION_CHECK_FAILED", "The question did not pass moderation.", HttpStatus.NOT_ACCEPTABLE);
-            }
+        List<AiModelMessage> previousMessages;
+        if (overrides != null && overrides.getPreviousMessages() != null && !overrides.getPreviousMessages().isEmpty()) {
+            // TODO handle this in the resolveCompletionRuntimeContext
+            previousMessages = overrides.getPreviousMessages();
+        } else {
+            // TODO populate previous messages with local context, attached file, and attached images (in the ContentPart)
+            // TODO rethink the logic, validate count of previous message tokens and drop messages if not enough space
+            // TODO maybe add a similar logic to the embedding service to limit the number of messages
+            previousMessages = messageService.getPreviousMessages(message, 25);
         }
-
-
-
-        // TODO rethink the logic, validate count of previous message tokens and drop messages if not enough space
-        // TODO maybe add a similar logic to the embedding service to limit the number of messages
-        List<AiModelMessage> previousMessages = messageService.getPreviousMessages(message, 25);
 
         //get contentParts without type "text"
         List<ContentPart> contentParts = message.getAdditionalResources().stream()
                 .filter(part -> !"text".equals(part.getType()))
                 .toList();
-
-        // clone message to avoid changing the original message text in DB
         AiModelMessage promptMessage = AiModelMessage.builder()
-                .content(question)
+                .content(runtimeContext.question())
                 .contentParts(contentParts)
                 .role(message.getRole() != null ? message.getRole() : "user")
                 .build();
-
         previousMessages.add(promptMessage);
-
-        String apiKey = embeddingService.getApiKey(agent, "COMPLETION_MODEL");
-
-        AiModelRequestParams aiModelRequestParams = AiModelRequestParams.builder()
-                .maxTokens(project.getProjectAgent().getMaxToken())
-                .temperature(project.getProjectAgent().getTemperature())
-                .topP(project.getProjectAgent().getTopP())
-                .build();
 
         // Pre-load audit log types so we reuse them in the loop
         Type completionRequestType = typeService.getAuditLogTypeByName("COMPLETION_REQUEST");
@@ -270,61 +266,59 @@ public class CompletionService {
 
         boolean hasToolCalls;
         int iteration = 0;
-        int maxIterations = 5; // safety guard against infinite loops
+        // TODO: this indicate that is a deep thinking task, should be more explicit and not inferred by the presence cancelation token.
+        boolean isDeepThinking = runtimeContext.cancellationToken() != null;
+        int maxIterations = isDeepThinking ? 20 : 5;
 
         do {
+            if (runtimeContext.cancellationToken() != null && runtimeContext.cancellationToken().isCancelled()) {
+                logger.info("Deep thinking cancelled, stopping completion loop at iteration {}", iteration);
+                throw new GendoxException("DEEP_THINKING_CANCELLED", "Deep thinking was cancelled", HttpStatus.CONFLICT);
+            }
+
+            // TODO add from the orginal thread, the system prompt and the first user message to give to the subagent the original context
+            //  and also to hit cache for the long original messages.
             CompletionResponse completionResponse = getCompletionForMessages(previousMessages,
-                    project.getProjectAgent().getAgentBehavior(),
-                    project.getProjectAgent().getCompletionModel(),
-                    aiModelRequestParams,
-                    apiKey,
-                    availableTools,
+                    runtimeContext.agentRole(),
+                    runtimeContext.completionModel(),
+                    runtimeContext.aiModelRequestParams(),
+                    runtimeContext.completionApiKey(),
+                    runtimeContext.availableTools(),
                     "auto",
                     responseJsonSchema);
 
-            AuditLogs requestAuditLogs = auditLogsService.createDefaultAuditLogs(completionRequestType);
-            requestAuditLogs.setTokenCount((long) completionResponse.getUsage().getPromptTokens());
-            requestAuditLogs.setCachedTokenCount((long) Optional.ofNullable(completionResponse.getUsage())
-                    .map(u -> u.getPromptTokensDetail())
-                    .map(d -> d.getCachedTokens())
-                    .orElse(0));
-            requestAuditLogs.setProjectId(project.getId());
-            requestAuditLogs.setOrganizationId(project.getOrganizationId());
-            auditLogsService.saveAuditLogs(requestAuditLogs);
-
-            AuditLogs completionAuditLogs = auditLogsService.createDefaultAuditLogs(completionResponseType);
-            completionAuditLogs.setTokenCount((long) completionResponse.getUsage().getCompletionTokens());
-            completionAuditLogs.setReasoningTokenCount((long) Optional.ofNullable(completionResponse.getUsage())
-                    .map(u -> u.getCompletionTokensDetail())
-                    .map(d -> d.getReasoningTokens())
-                    .orElse(0));
-            completionAuditLogs.setProjectId(project.getId());
-            completionAuditLogs.setOrganizationId(project.getOrganizationId());
-            auditLogsService.saveAuditLogs(completionAuditLogs);
+            saveCompletionAuditLogs(completionResponse, runtimeContext, completionRequestType, completionResponseType);
 
             Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
-
-            completionResponseMessage.setProjectId(project.getId());
+            completionResponseMessage.setProjectId(runtimeContext.projectId());
             completionResponseMessage.setThreadId(message.getThreadId());
-            completionResponseMessage.setCreatedBy(agent.getUserId());
-            completionResponseMessage.setUpdatedBy(agent.getUserId());
+            completionResponseMessage.setCreatedBy(runtimeContext.createdByAgentUserId());
+            completionResponseMessage.setUpdatedBy(runtimeContext.createdByAgentUserId());
             completionResponseMessage = messageService.createMessage(completionResponseMessage);
 
             allResponseMessages.add(completionResponseMessage);
             hasToolCalls = "tool_calls".equals(completionResponse.getChoices().getFirst().getFinishReason());
+
             if (hasToolCalls) {
                 logger.info("Tool calls detected in completion response");
 
                 // Execute all tools
-                List<AiModelMessage> toolResponseMessages = handleToolExecution(completionResponseMessage, project, agent, availableTools);
+                List<AiModelMessage> toolResponseMessages = handleToolExecution(
+                        completionResponseMessage,
+                        previousMessages,
+                        runtimeContext.project(),
+                        runtimeContext.agent(),
+                        runtimeContext.availableTools(),
+                        runtimeContext.cancellationToken()
+                );
 
                 // Save tool response messages.
                 toolResponseMessages.forEach(toolResponseMessage -> {
                     Message toolResponse = messageAiMessageConverter.toEntity(toolResponseMessage);
-                    toolResponse.setProjectId(project.getId());
+                    toolResponse.setProjectId(runtimeContext.projectId());
                     toolResponse.setThreadId(message.getThreadId());
-                    toolResponse.setCreatedBy(agent.getUserId());
-                    toolResponse.setUpdatedBy(agent.getUserId());
+                    toolResponse.setCreatedBy(runtimeContext.createdByAgentUserId());
+                    toolResponse.setUpdatedBy(runtimeContext.createdByAgentUserId());
                     messageService.createMessage(toolResponse);
                     allResponseMessages.add(toolResponse);
                 });
@@ -343,14 +337,261 @@ public class CompletionService {
 
             iteration++;
 
+            if (iteration == maxIterations - 1 && hasToolCalls) {
+                logger.warn("Sending warning message to LLM about approaching max tool-calling iterations (iteration {})", iteration);
+                previousMessages.add(AiModelMessage.builder()
+                        .role("user")
+                        .content("SYSTEM WARNING: You are approaching the maximum number of tool-calling iterations. "
+                                + "In your NEXT message you MUST provide the final answer to the user (no more tool calls). "
+                                + "If you do not provide a final answer, the request will timeout.")
+                        .build());
+            }
+
             if (iteration >= maxIterations && hasToolCalls) {
                 logger.warn("Max tool-calling iterations ({}) reached, stopping loop.", maxIterations);
                 hasToolCalls = false;
             }
-
         } while (hasToolCalls);
 
         return allResponseMessages;
+    }
+
+    private CompletionRuntimeContext resolveCompletionRuntimeContext(Message message,
+                                                                    List<DocumentInstanceSectionDTO> nearestSections,
+                                                                    @Nullable Project project,
+                                                                    @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+        ProjectAgent agent = Optional.ofNullable(project)
+                .map(Project::getProjectAgent)
+                .orElse(null);
+
+        String question = resolveQuestion(message, nearestSections, agent);
+        String agentRole = resolveSystemPrompt(agent, overrides);
+        AiModel completionModel = resolveCompletionModel(agent, overrides);
+        String completionApiKey = resolveCompletionApiKey(agent, overrides);
+        Long maxTokens = resolveMaxTokens(agent, overrides);
+        Double temperature = resolveTemperature(agent, overrides);
+        Double topP = resolveTopP(agent, overrides);
+        UUID projectId = resolveProjectId(project, overrides);
+        UUID organizationId = resolveOrganizationId(project, overrides);
+        UUID createdByAgentUserId = resolveCreatedByAgentUserId(agent, overrides);
+        List<AiTools> availableTools = resolveAvailableTools(agent, overrides);
+
+        AiModelRequestParams aiModelRequestParams = AiModelRequestParams.builder()
+                .maxTokens(maxTokens)
+                .temperature(temperature)
+                .topP(topP)
+                .build();
+
+        CancellationToken cancellationToken = Optional.ofNullable(overrides)
+                .map(CompletionRuntimeOverridesDTO::getCancellationToken)
+                .orElse(null);
+
+        return new CompletionRuntimeContext(
+                project,
+                agent,
+                question,
+                agentRole,
+                completionModel,
+                completionApiKey,
+                aiModelRequestParams,
+                availableTools,
+                projectId,
+                organizationId,
+                createdByAgentUserId,
+                cancellationToken
+        );
+    }
+
+    private String resolveQuestion(Message message,
+                                   List<DocumentInstanceSectionDTO> nearestSections,
+                                   @Nullable ProjectAgent agent) throws GendoxException {
+        if (agent == null) {
+            return message.getValue();
+        }
+        // TODO add text of attached documents in the message
+        return convertToAiModelTextQuestion(message, nearestSections, agent);
+    }
+
+    private void runModerationIfEnabled(CompletionRuntimeContext runtimeContext) throws GendoxException {
+        if (!runtimeContext.hasProjectContext() || !Boolean.TRUE.equals(runtimeContext.agent().getModerationCheck())) {
+            return;
+        }
+        String moderationApiKey = organizationModelKeyService.getDefaultKeyForAgent(runtimeContext.agent(), "MODERATION_MODEL");
+        ModerationResponse moderationResponse = trainingService.getModeration(
+                runtimeContext.question(),
+                moderationApiKey,
+                runtimeContext.agent().getModerationModel()
+        );
+        if (moderationResponse.getResults().get(0).isFlagged()) {
+            throw new GendoxException("MODERATION_CHECK_FAILED", "The question did not pass moderation.", HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
+    private void saveCompletionAuditLogs(CompletionResponse completionResponse,
+                                          CompletionRuntimeContext runtimeContext,
+                                          Type completionRequestType,
+                                          Type completionResponseType) {
+        AuditLogs requestAuditLogs = auditLogsService.createDefaultAuditLogs(completionRequestType);
+        requestAuditLogs.setTokenCount((long) completionResponse.getUsage().getPromptTokens());
+        requestAuditLogs.setCachedTokenCount((long) Optional.ofNullable(completionResponse.getUsage())
+                .map(u -> u.getPromptTokensDetail())
+                .map(d -> d.getCachedTokens())
+                .orElse(0));
+        requestAuditLogs.setProjectId(runtimeContext.projectId());
+        requestAuditLogs.setOrganizationId(runtimeContext.organizationId());
+        auditLogsService.saveAuditLogs(requestAuditLogs);
+
+        AuditLogs completionAuditLogs = auditLogsService.createDefaultAuditLogs(completionResponseType);
+        completionAuditLogs.setTokenCount((long) completionResponse.getUsage().getCompletionTokens());
+        completionAuditLogs.setReasoningTokenCount((long) Optional.ofNullable(completionResponse.getUsage())
+                .map(u -> u.getCompletionTokensDetail())
+                .map(d -> d.getReasoningTokens())
+                .orElse(0));
+        completionAuditLogs.setProjectId(runtimeContext.projectId());
+        completionAuditLogs.setOrganizationId(runtimeContext.organizationId());
+        auditLogsService.saveAuditLogs(completionAuditLogs);
+    }
+
+    private UUID resolveProjectId(@Nullable Project project,
+                                   @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+        if (project != null) return project.getId();
+        if (overrides != null && overrides.getProjectId() != null) return overrides.getProjectId();
+        throw missingOverrideException("projectId");
+    }
+
+    private UUID resolveOrganizationId(@Nullable Project project,
+                                        @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+        if (project != null) return project.getOrganizationId();
+        if (overrides != null && overrides.getOrganizationId() != null) return overrides.getOrganizationId();
+        throw missingOverrideException("organizationId");
+    }
+
+    private UUID resolveCreatedByAgentUserId(@Nullable ProjectAgent agent,
+                                             @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+        if (agent != null && agent.getUserId() != null) return agent.getUserId();
+        if (overrides != null && overrides.getCreatedByAgentUserId() != null) return overrides.getCreatedByAgentUserId();
+        throw missingOverrideException("createdByAgentUserId");
+    }
+
+    private List<AiTools> resolveAvailableTools(@Nullable ProjectAgent agent,
+                                                 @Nullable CompletionRuntimeOverridesDTO overrides) {
+        List<AiTools> tools;
+        if (overrides != null && overrides.getAiTools() != null && !overrides.getAiTools().isEmpty()) {
+            tools = overrides.getAiTools();
+        } else if (agent != null) {
+            tools = agent.getAiTools();
+        } else {
+            return Collections.emptyList();
+        }
+
+        List<String> excluded = overrides != null ? overrides.getExcludedToolNames() : Collections.emptyList();
+        if (excluded == null || excluded.isEmpty()) {
+            return tools;
+        }
+
+        return tools.stream()
+                .filter(tool -> {
+                    try {
+                        JsonNode fn = objectMapper.readTree(tool.getJsonSchema());
+                        String name = fn.path("name").asText();
+                        return !excluded.contains(name);
+                    } catch (JsonProcessingException e) {
+                        logger.warn("Could not parse tool JSON schema while filtering excluded tools; keeping tool. Error: {}", e.getMessage());
+                        return true;
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
+    private String resolveSystemPrompt(@Nullable ProjectAgent agent,
+                                       @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+        if (overrides != null && overrides.getSystemPrompt() != null && !overrides.getSystemPrompt().isBlank()) {
+            return overrides.getSystemPrompt();
+        }
+        if (agent != null && agent.getAgentBehavior() != null) {
+            return agent.getAgentBehavior();
+        }
+        throw missingOverrideException("systemPrompt");
+    }
+
+    private AiModel resolveCompletionModel(@Nullable ProjectAgent agent,
+                                           @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+        if (overrides != null && overrides.getCompletionModelName() != null && !overrides.getCompletionModelName().isBlank()) {
+            return aiModelService.getByName(overrides.getCompletionModelName());
+        }
+        if (agent != null && agent.getCompletionModel() != null) {
+            return agent.getCompletionModel();
+        }
+        throw missingOverrideException("completionModelName");
+    }
+
+    private String resolveCompletionApiKey(@Nullable ProjectAgent agent,
+                                           @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+        if (overrides != null && overrides.getCompletionApiKey() != null && !overrides.getCompletionApiKey().isBlank()) {
+            return overrides.getCompletionApiKey();
+        }
+        AiModel completionModel = resolveCompletionModel(agent, overrides);
+        UUID organizationId = resolveOrganizationId(
+                agent != null ? agent.getProject() : null, overrides);
+        return embeddingService.getApiKey(organizationId, completionModel);
+    }
+
+    private Long resolveMaxTokens(@Nullable ProjectAgent agent,
+                                  @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+        if (overrides != null && overrides.getMaxTokens() != null) {
+            return overrides.getMaxTokens();
+        }
+        if (agent != null && agent.getMaxToken() != null) {
+            return agent.getMaxToken();
+        }
+        throw missingOverrideException("maxTokens");
+    }
+
+    private Double resolveTemperature(@Nullable ProjectAgent agent,
+                                      @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+        if (overrides != null && overrides.getTemperature() != null) {
+            return overrides.getTemperature();
+        }
+        if (agent != null && agent.getTemperature() != null) {
+            return agent.getTemperature();
+        }
+        throw missingOverrideException("temperature");
+    }
+
+    private Double resolveTopP(@Nullable ProjectAgent agent,
+                               @Nullable CompletionRuntimeOverridesDTO overrides) throws GendoxException {
+        if (overrides != null && overrides.getTopP() != null) {
+            return overrides.getTopP();
+        }
+        if (agent != null && agent.getTopP() != null) {
+            return agent.getTopP();
+        }
+        throw missingOverrideException("topP");
+    }
+
+    private GendoxException missingOverrideException(String fieldName) {
+        return new GendoxException("COMPLETION_RUNTIME_OVERRIDE_REQUIRED",
+                "Missing required completion runtime value: " + fieldName,
+                HttpStatus.BAD_REQUEST);
+    }
+
+    private record CompletionRuntimeContext(
+            @Nullable Project project,
+            @Nullable ProjectAgent agent,
+            String question,
+            String agentRole,
+            AiModel completionModel,
+            String completionApiKey,
+            AiModelRequestParams aiModelRequestParams,
+            List<AiTools> availableTools,
+            UUID projectId,
+            UUID organizationId,
+            UUID createdByAgentUserId,
+            @Nullable CancellationToken cancellationToken
+    ) {
+        private boolean hasProjectContext() {
+            return project != null && agent != null;
+        }
     }
 
     /**
@@ -433,7 +674,7 @@ public class CompletionService {
      * @param availableTools
      * @return
      */
-    private List<AiModelMessage> handleToolExecution(Message completionResponseMessage, Project project, ProjectAgent agent, List<AiTools> availableTools) {
+    private List<AiModelMessage> handleToolExecution(Message completionResponseMessage, List<AiModelMessage> parentPreviousMessages, @Nullable Project project, @Nullable ProjectAgent agent, List<AiTools> availableTools, @Nullable CancellationToken cancellationToken) {
         Map<String, AiTools> toolMap = new HashMap<>();
         //map available tools for quick lookup, parse the jsonSchema to JsonNode and find the .function.name property
         availableTools.forEach(tool -> {
@@ -459,7 +700,7 @@ public class CompletionService {
             }
 
             JsonNode args = toolCall.get("function").get("arguments");
-            ToolExecutionContext ctx = new ToolExecutionContext(project, agent, completionResponseMessage, toolDefinition);
+            ToolExecutionContext ctx = new ToolExecutionContext(project, agent, completionResponseMessage, parentPreviousMessages, toolDefinition, cancellationToken);
             JsonNode result = aiToolRegistry.execute(toolName, args, ctx);
 
             AiModelMessage message = new AiModelMessage();
@@ -474,13 +715,12 @@ public class CompletionService {
     }
 
 
-    public String convertToAiModelTextQuestion(Message message, List<DocumentInstanceSectionDTO> nearestSections, UUID projectId) throws GendoxException {
+    public String convertToAiModelTextQuestion(Message message, List<DocumentInstanceSectionDTO> nearestSections, ProjectAgent agent) throws GendoxException {
 
         // TODO investigate if we want to split the context and question
         //  to 2 different messages with role: "contextProvider" and role: "user"
 
         // take the types name
-        ProjectAgent agent = projectAgentRepository.findByProjectId(projectId);
         Template agentSectionTemplate = templateRepository.findByIdIs(agent.getSectionTemplateId());
         Template agentChatTemplate = templateRepository.findByIdIs(agent.getChatTemplateId());
 

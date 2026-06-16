@@ -103,8 +103,15 @@ rsa:
 
 
 gendox:
+  rest-template:
+    connection-timeout-ms: 30000    # 30 seconds
+    read-timeout-ms: 600000         # 10 minutes
   domains:
     frontend: https://app.gendox.dev
+
+  topics:
+    document-upload: documents.upload
+    attachment-upload: attachment.upload
 
   emails:
     contact-email: contact@ctrlspace.dev
@@ -119,7 +126,7 @@ gendox:
       
       {%s}------------------------------------------------
     allowed:
-      extensions: .txt,.md,.rst,.pdf,.docx,.doc,.xls,.xlsx
+      extensions: .txt,.md,.rst,.csv,.pdf,.docx,.doc,.xls,.xlsx,.jpg
 
   integrations:
     #    poller: 30000 # 30 seconds
@@ -166,8 +173,8 @@ gendox:
   agents:
     splitter-type: "STATIC_WORD_COUNT_SPLITTER"
     max_token: 500
-    temperature: 0.8
-    top_p: 0.4
+    temperature: 0.3
+    top_p: 0.95
     max_search_limit: 5
     max_completion_limit: 5
   tasks:
@@ -202,10 +209,11 @@ gendox:
       job:
         name: documentInsightsJob
         thread-pool-size: 10
+        llm-completion-executor-pool-size: 10
         steps:
           document-insights-step:
             name: documentInsightsStep
-            chunk-size: 2
+            chunk-size: 1
             pageable-size: 1000
           delete-insights-answers-step:
             name: deleteInsightsAnswersStep
@@ -224,7 +232,7 @@ gendox:
             pageable-size: 1000
   user-invitation:
     accept-url-template: /accept-invitation/?email=%s&token=%s
-    ttl: 86400  # in seconds
+    ttl: 2592000  # 30 days in seconds
   features:
     subscription-validation: true
 

@@ -21,8 +21,6 @@ import DuplicateTaskDialog from './DuplicateTaskDialog'
 import { deleteTask } from 'src/store/activeTask/activeTask'
 import { TASK_TYPE_MAP } from 'src/utils/tasks/taskUtils'
 
-
-
 const TasksList = ({ projectTasks, page }) => {
   const dispatch = useDispatch()
   const { projectDetails } = useSelector(state => state.activeProject)
@@ -86,9 +84,11 @@ const TasksList = ({ projectTasks, page }) => {
       closeDeleteConfirm()
     } catch (error) {
       toast.error(`Failed to delete task: ${getErrorMessage(error)}`)
+      closeDeleteConfirm()
     } finally {
       setIsDeleting(false)
       setSelectedTask(null)
+      closeDeleteConfirm()
     }
   }
 
@@ -100,6 +100,8 @@ const TasksList = ({ projectTasks, page }) => {
       route = `/gendox/tasks/document-insights/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
     } else if (typeCode === 'DOCUMENT_DIGITIZATION') {
       route = `/gendox/tasks/document-digitization/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
+    } else if (typeCode === 'EARTH_OBSERVATION') {
+      route = `/gendox/tasks/earth-observation/workspace/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
     } else {
       // fallback, e.g. stay on page or show error/toast
       return
@@ -173,7 +175,7 @@ const TasksList = ({ projectTasks, page }) => {
             aria-label='task actions'
             onClick={event => {
               event.stopPropagation()
-              event.currentTarget.blur();
+              event.currentTarget.blur()
               handleMenuClick(event, params.row)
             }}
             disabled={isDeleting}

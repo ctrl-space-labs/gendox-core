@@ -1,6 +1,6 @@
 // CustomToast.js
 import React, { useMemo } from 'react';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, ToastBar, toast } from 'react-hot-toast';
 import { useTheme } from '@mui/material/styles';
 
 const CustomToast = () => {
@@ -40,7 +40,23 @@ const CustomToast = () => {
       position="top-right"
       reverseOrder={false}
       toastOptions={toastOptions}
-    />
+    >
+      {(t) => (
+        <ToastBar toast={t} style={t.style}>
+          {({ icon, message }) => (
+            <>
+              <span
+                onClick={() => t.type !== 'loading' && toast.dismiss(t.id)}
+                style={{ display: 'flex', alignItems: 'center', cursor: t.type !== 'loading' ? 'pointer' : 'default' }}
+              >
+                {icon}
+              </span>
+              {message}
+            </>
+          )}
+        </ToastBar>
+      )}
+    </Toaster>
   );
 };
 

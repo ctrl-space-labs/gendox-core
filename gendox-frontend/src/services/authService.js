@@ -1,14 +1,14 @@
 import { UserManager, WebStorageStateStore } from 'oidc-client-ts';
 import authConfig from "src/configs/auth";
 
+const localStorageStore = typeof window !== 'undefined'
+    ? new WebStorageStateStore({ store: window.localStorage })
+    : undefined;
 
-
-let userManager = new UserManager(authConfig.oidcConfig);
-
-if (typeof window !== 'undefined') {
-    authConfig.oidcConfig.userStore = new WebStorageStateStore({ store: window.localStorage });
-    userManager = new UserManager(authConfig.oidcConfig);
-}
+const userManager = new UserManager({
+    ...authConfig.oidcConfig,
+    ...(localStorageStore ? { userStore: localStorageStore, stateStore: localStorageStore } : {})
+});
 
 userManager.events.addAccessTokenExpiring(() => {
     console.log('Access token is expiring... Trying to renew...');

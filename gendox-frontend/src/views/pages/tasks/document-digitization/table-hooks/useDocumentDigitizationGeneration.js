@@ -52,11 +52,6 @@ export default function useDocumentDigitizationGeneration({ reloadAll, token, se
       // Global Generation == Generate All Documents & Generate New Documents
       const isGlobalGeneration = documentIds.length === 0
 
-      console.log('Starting digitization generation for documents:', {
-        docCount: documentIds.length,
-        reGenerate: reGenerateExistingAnswers
-      })
-
       try {
         dispatch(setDigitizationGenerating(true))
         const criteria = { taskId, documentNodeIds: documentIds, reGenerateExistingAnswers }
@@ -66,16 +61,22 @@ export default function useDocumentDigitizationGeneration({ reloadAll, token, se
         ).unwrap()
 
         startGenerationMonitor(taskId, null, 'all', 2000)
-        await pollJobByCriteria({jobExecutionId})
+        const outcome = await pollJobByCriteria({ jobExecutionId, taskId })
 
         reloadAll()
         completeGeneration(taskId, null)
 
-        toast.success(
-          isGlobalGeneration
-            ? 'Generation completed for all documents'
-            : `Generation completed for ${documentsToGenerate.length} document(s)`
-        )
+        if (outcome === 'STOPPED') {
+          toast.success('Generation stopped')
+        } else if (outcome === 'FAILED' || outcome === 'TIMEOUT') {
+          toast.error('Generation did not complete successfully')
+        } else if (outcome && outcome !== 'UNKNOWN') {
+          toast.success(
+            isGlobalGeneration
+              ? 'Generation completed for all documents'
+              : `Generation completed for ${documentsToGenerate.length} document(s)`
+          )
+        }
 
         setSelectedDocuments([])
       } catch (error) {

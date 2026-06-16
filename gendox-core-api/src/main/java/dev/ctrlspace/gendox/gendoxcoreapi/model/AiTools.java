@@ -26,7 +26,7 @@ public class AiTools {
     private UUID id;
 
     @Column(name = "type", nullable = false)
-    private String type;  // function
+    private String type;  // "function"
 
     @JdbcTypeCode(SqlTypes.JSON)        // transform it to jsonb in postgresql
     @Column(name = "json_schema", columnDefinition = "JSONB", nullable = false)

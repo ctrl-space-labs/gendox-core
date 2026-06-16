@@ -1,12 +1,16 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
+import com.knuddels.jtokkit.api.Encoding;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.DocumentInstanceSectionOrderDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.RegexSearchMatchDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.RegexSearchResultDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentInstanceSectionCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceSectionRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentSectionMetadataRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentInstanceSectionPredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.CryptographyUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.provenAi.utils.MockUniqueIdentifierServiceAdapter;
 import dev.ctrlspace.gendox.provenAi.utils.UniqueIdentifierCodeResponse;
@@ -23,9 +27,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.bitbucket.cowwoc.diffmatchpatch.DiffMatchPatch;
 
+import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 @Service
 public class DocumentSectionService {
@@ -44,6 +55,20 @@ public class DocumentSectionService {
 
     @Value("${proven-ai.sdk.iscc.enabled}")
     private Boolean isccEnabled;
+    private DownloadService downloadService;
+    private Encoding gpt4oEncoding;
+    private CryptographyUtils cryptographyUtils;
+    private SplitFileService splitFileService;
+    private DocumentService documentService;
+    private AuditLogsService auditLogsService;
+
+
+    /** Lines of unchanged context kept around each EQUAL region in {@link #patchToDecodedText}. */
+    private static final int DIFF_CONTEXT_LINES = 3;
+    // Matches Word bookmark anchors like {#_Hlk164247572}
+    private static final Pattern WORD_DOC_BOOKMARK = Pattern.compile("\\{#[^}]+}");
+    private static final int DIFF_PATCH_MARGIN = 50;
+
 
 
     @Lazy
@@ -60,7 +85,13 @@ public class DocumentSectionService {
                                   MessageService messageService,
                                   IsccCodeService isccCodeService,
                                   DocumentUtils documentUtils,
-                                  EntityManager entityManager
+                                  EntityManager entityManager,
+                                  DownloadService downloadService,
+                                  Encoding gpt4oEncoding,
+                                  CryptographyUtils cryptographyUtils,
+                                  SplitFileService splitFileService,
+                                  @Lazy DocumentService documentService,
+                                  AuditLogsService auditLogsService
     ) {
         this.typeService = typeService;
         this.documentInstanceSectionRepository = documentInstanceSectionRepository;
@@ -70,6 +101,12 @@ public class DocumentSectionService {
         this.isccCodeService = isccCodeService;
         this.documentUtils = documentUtils;
         this.entityManager = entityManager;
+        this.downloadService = downloadService;
+        this.gpt4oEncoding = gpt4oEncoding;
+        this.cryptographyUtils = cryptographyUtils;
+        this.splitFileService = splitFileService;
+        this.documentService = documentService;
+        this.auditLogsService = auditLogsService;
     }
 
 
@@ -96,19 +133,230 @@ public class DocumentSectionService {
         return documentInstanceSectionRepository.findAll(DocumentInstanceSectionPredicates.build(criteria), pageable);
     }
 
+    /**
+     * Logical lines of the full document: sections in order, one empty string between sections
+     * for the blank separator line. Same list underpins {@link #getFullDocumentText} and
+     * {@link #getFullNumberedDocumentText}.
+     */
+    public List<String> getFullDocumentLines(UUID docId) throws GendoxException {
+        return collectDocumentLines(sectionsSortedByOrder(docId));
+    }
+
+    /**
+     * Full document body as plain text: {@link #getFullDocumentLines} joined with newlines
+     * (trailing newline when non-empty).
+     */
     public String getFullDocumentText(UUID docId) throws GendoxException {
+        return joinDocumentLines(getFullDocumentLines(docId));
+    }
+
+    /**
+     * Same lines as {@link #getFullDocumentText} with each line prefixed {@code N | }
+     * (1-based). Matches document-insights convention and {@code line_start}/{@code line_end} tools.
+     */
+    public String getFullNumberedDocumentText(UUID docId) throws GendoxException {
+        return toNumberedDocumentText(getFullDocumentLines(docId));
+    }
+
+    private List<DocumentInstanceSection> sectionsSortedByOrder(UUID docId) {
         List<DocumentInstanceSection> sections = this.getSectionsByDocument(docId);
         sections.sort(Comparator.comparingInt(
                 s -> s.getDocumentSectionMetadata().getSectionOrder()
         ));
-
-        String documentText = sections.stream()
-                .map(DocumentInstanceSection::getSectionValue)
-                .reduce("", (a, b) -> a + "\n" + b);
-
-        return documentText;
+        return sections;
     }
 
+    /**
+     * Flattens sections into one list of lines; inserts {@code ""} between sections for the
+     * inter-section blank line (same layout as before).
+     */
+    private static List<String> collectDocumentLines(List<DocumentInstanceSection> sections) {
+        List<String> lines = new ArrayList<>();
+        for (int sectionIdx = 0; sectionIdx < sections.size(); sectionIdx++) {
+            String sectionText = Optional.ofNullable(sections.get(sectionIdx))
+                    .map(DocumentInstanceSection::getSectionValue)
+                    .orElse("");
+            for (String line : sectionText.split("\\R", -1)) {
+                lines.add(line);
+            }
+            if (sectionIdx < sections.size() - 1) {
+                lines.add("");
+            }
+        }
+        return lines;
+    }
+
+    private static String joinDocumentLines(List<String> lines) {
+        if (lines.isEmpty()) {
+            return "";
+        }
+        return String.join("\n", lines) + "\n";
+    }
+
+    private static String toNumberedDocumentText(List<String> lines) {
+        if (lines.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        int n = 1;
+        for (String line : lines) {
+            sb.append(n).append(" | ").append(line).append("\n");
+            n++;
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Compare two documents by full plain text (see {@link #getFullDocumentText}) and return
+     * semantic diff hunks, similar to {@code git diff a b} — DELETE only in {@code a}, INSERT only in {@code b}.
+     */
+    public List<DiffMatchPatch.Patch> diffDocuments(UUID documentAId, UUID documentBId) throws GendoxException {
+        return diffPatches(getFullDocumentText(documentAId), getFullDocumentText(documentBId));
+    }
+
+    /**
+     * Compare two documents by full plain text and return the decoded patch text
+     * (see {@link #patchToDecodedText}), which is the string payload consumed by tools.
+     */
+    public String diffDocumentsPatchToDecodedText(UUID documentAId, UUID documentBId) throws GendoxException {
+        return patchToDecodedText(diffDocuments(documentAId, documentBId));
+    }
+
+
+
+    /**
+     * Compare two arbitrary plain-text strings using diff-match-patch: semantic cleanup, EQUAL
+     * segments trimmed to {@link #DIFF_CONTEXT_LINES} lines of context when long.
+     */
+    public List<DiffMatchPatch.Patch> diffPatches(String textA, String textB) {
+        DiffMatchPatch dmp = new DiffMatchPatch();
+        dmp.patchMargin = DIFF_PATCH_MARGIN;
+
+        // Allow exhaustive search
+        dmp.diffTimeout = 0;
+        dmp.matchThreshold = 0.3f;   // Stricter — avoids false fuzzy matches
+        dmp.matchDistance = 50000;   // Long documents, content may shift far
+
+        // Use line-mode diff first for long texts, then refine
+        LinkedList<DiffMatchPatch.Diff> diffs = dmp.diffMain(
+                removeWordDocBookmark(textA),
+                removeWordDocBookmark(textB),
+                true  // checklines = true — critical for long docs!
+        );
+
+        dmp.diffCleanupSemantic(diffs);
+
+        return dmp.patchMake(diffs);
+    }
+
+    /**
+     * Converts a list of diff-match-patch patches into a decoded text representation.
+     *
+     * <p>The {@code patchToText} output is URL-encoded by the library, so this method
+     * decodes it back into readable text while preserving literal {@code +} patch
+     * markers by first escaping them as {@code %2B}. This is useful for logging,
+     * inspection, or sending patch content to an LLM.</p>
+     *
+     * <p>Note: the returned value is a decoded view intended for readability, not the
+     * canonical patch text format that should be used for patch round-tripping.</p>
+     *
+     * @param patches the patches to serialize and decode
+     * @return a human-readable decoded patch text
+     */
+    public String patchToDecodedText(List<DiffMatchPatch.Patch> patches) {
+        DiffMatchPatch dmp = new DiffMatchPatch();
+        dmp.patchMargin = DIFF_PATCH_MARGIN;
+        return URLDecoder.decode(
+                dmp.patchToText(patches).replace("+", "%2B"),
+                StandardCharsets.UTF_8
+        );
+    }
+
+    private String removeWordDocBookmark(String text) {
+        // Strip Word bookmarks — they are never contract content
+        return WORD_DOC_BOOKMARK.matcher(text).replaceAll("");
+    }
+
+    /**
+     * Scans the logical lines of each document ({@link #getFullDocumentLines}) and returns every
+     * line that matches at least one of the given Java regex patterns. Invalid patterns are
+     * collected in {@link RegexSearchResultDTO#invalidPatterns()} and skipped for matching.
+     */
+    public RegexSearchResultDTO searchDocumentsWithRegex(List<UUID> documentIds,
+                                                         List<String> rawPatterns,
+                                                         boolean caseInsensitive) throws GendoxException {
+        int flags = caseInsensitive ? Pattern.CASE_INSENSITIVE : 0;
+        List<CompiledRegex> compiled = new ArrayList<>();
+        List<String> invalidPatterns = new ArrayList<>();
+        for (String raw : rawPatterns) {
+            try {
+                compiled.add(new CompiledRegex(raw, Pattern.compile(raw, flags)));
+            } catch (PatternSyntaxException e) {
+                logger.warn("Invalid regex pattern '{}': {}", raw, e.getMessage());
+                invalidPatterns.add(raw);
+            }
+        }
+
+        List<RegexSearchMatchDTO> matches = new ArrayList<>();
+        for (UUID docId : documentIds) {
+            List<String> lines = getFullDocumentLines(docId).stream()
+                    .map(this::removeWordDocBookmark)
+                    .toList();
+            String docIdStr = docId.toString();
+            for (int i = 0; i < lines.size(); i++) {
+                String content = lines.get(i);
+                int lineNum = i + 1;
+                for (CompiledRegex cp : compiled) {
+                    Matcher m = cp.pattern().matcher(content);
+                    if (m.find()) {
+                        ContextWindow ctx = extractContextWindow(lines, i, m.start(), m.end(), 90);
+                        matches.add(new RegexSearchMatchDTO(
+                                docIdStr, lineNum, cp.raw(),
+                                ctx.before() + m.group() + ctx.after()));
+
+                        break;
+                    }
+                }
+            }
+            logger.debug("searchDocumentsWithRegex: document {} -> {} matches cumulative", docId, matches.size());
+        }
+
+        return new RegexSearchResultDTO(
+                matches.size(),
+                matches,
+                invalidPatterns.isEmpty() ? null : invalidPatterns
+        );
+    }
+
+    private record CompiledRegex(String raw, Pattern pattern) {}
+
+    private record ContextWindow(String before, String after) {}
+
+    private static ContextWindow extractContextWindow(List<String> lines, int lineIndex,
+                                                      int matchStart, int matchEnd,
+                                                      int windowChars) {
+        String currentLine = lines.get(lineIndex);
+
+        // ── before: up to windowChars chars ending exactly at matchStart ──
+        StringBuilder before = new StringBuilder(currentLine.substring(0, matchStart));
+        for (int p = lineIndex - 1; p >= 0 && before.length() < windowChars; p--) {
+            before.insert(0, lines.get(p) + "\n");
+        }
+        if (before.length() > windowChars) {
+            before.delete(0, before.length() - windowChars);
+        }
+
+        // ── after: up to windowChars chars starting exactly at matchEnd ──
+        StringBuilder after = new StringBuilder(currentLine.substring(matchEnd));
+        for (int n = lineIndex + 1; n < lines.size() && after.length() < windowChars; n++) {
+            after.append("\n").append(lines.get(n));
+        }
+        if (after.length() > windowChars) {
+            after.setLength(windowChars);
+        }
+
+        return new ContextWindow(before.toString(), after.toString());
+    }
 
     /**
      * TODO merge this with the above to findSectionsByCriteria
@@ -379,4 +627,62 @@ public class DocumentSectionService {
     public void deleteMetadata(DocumentSectionMetadata metadata) throws GendoxException {
         documentSectionMetadataRepository.delete(metadata);
     }
+
+
+    /**
+     *  End-to-End split of document:
+     *  * Read document content
+     *  * Check if has changed since last split (by comparing document hash)
+     *  * If changed, split document into sections
+     *  * calculate new hash, total tokens and update document instance
+     *  * Create Sections
+     *
+     * @param documentInstance
+     * @param changeCheckFlag flag to enable checking if the document has changed since last split.
+     * @return
+     * @throws GendoxException
+     */
+    @Transactional(rollbackOn = Exception.class)
+    public List<DocumentInstanceSection> splitDocumentAndCreateSections(DocumentInstance documentInstance, boolean changeCheckFlag) throws GendoxException, IOException, NoSuchAlgorithmException {
+
+        String fileContent;
+        try {
+            fileContent = downloadService.readDocumentContent(documentInstance.getRemoteUrl());
+        } catch (GendoxException e) {
+            if ("ERROR_IMAGE_FILE_TYPE".equals(e.getErrorCode())) {
+                fileContent = ""; // For image files, no sections will be created
+            } else {
+                throw e;
+            }
+        }
+
+        if (changeCheckFlag) {
+            boolean hasChanged = documentUtils.hasChanged(fileContent, documentInstance.getDocumentSha256Hash());
+            if (!hasChanged) {
+                logger.trace("Document {} has not changed since last split. Skipping section creation.", documentInstance.getId());
+                return this.getSectionsByDocument(documentInstance.getId());
+            }
+        }
+
+        List<String> contentSections = splitFileService.splitDocument(documentInstance, fileContent);
+        logger.debug("Creating {} sections for document instance {}", contentSections.size(), documentInstance.getId());
+
+        int totalTokens = gpt4oEncoding.countTokens(fileContent);
+        // TODO in case of image files, the hash is always for the "" string, not the actual file content.
+        String contentSHA256 = cryptographyUtils.calculateSHA256(fileContent);
+        
+        documentInstance.setTotalTokens((long)totalTokens);
+        documentInstance.setDocumentSha256Hash(contentSHA256);
+        documentInstance = documentService.saveDocumentInstance(documentInstance);
+
+        List<DocumentInstanceSection> documentSections =
+                this.createSections(documentInstance, contentSections);
+
+        auditLogsService.createAuditLog(documentInstance.getOrganizationId(),
+                null,"CREATE_DOCUMENT_SECTIONS", (long) documentSections.size());
+
+        
+        return documentSections;
+    }
+
 }

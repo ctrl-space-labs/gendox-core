@@ -45,13 +45,15 @@ public class TaskController {
                           TaskEdgeConverter taskEdgeConverter,
                           TaskCsvExportService taskCsvExportService,
                           TaskNodeService taskNodeService,
-                          TaskEdgeService taskEdgeService) {
+                          TaskEdgeService taskEdgeService
+    ) {
         this.taskService = taskService;
         this.taskNodeConverter = taskNodeConverter;
         this.taskEdgeConverter = taskEdgeConverter;
         this.taskCsvExportService = taskCsvExportService;
         this.taskNodeService = taskNodeService;
         this.taskEdgeService = taskEdgeService;
+
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -373,6 +375,17 @@ public class TaskController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(fileResource);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PutMapping("/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/questions/order")
+    @ResponseStatus(HttpStatus.OK)
+    public void reorderQuestionColumns(@PathVariable UUID organizationId,
+                                       @PathVariable UUID projectId,
+                                       @PathVariable UUID taskId,
+                                       @RequestBody ReorderTaskQuestionNodesDTO dto) throws GendoxException {
+
+        taskNodeService.reorderQuestionNodes(taskId, projectId, dto.getOrderedQuestionNodeIds());
     }
 
 

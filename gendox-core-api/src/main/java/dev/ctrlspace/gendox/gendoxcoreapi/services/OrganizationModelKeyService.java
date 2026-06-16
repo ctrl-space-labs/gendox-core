@@ -102,17 +102,27 @@ public class OrganizationModelKeyService {
     @Nullable
     public OrganizationModelProviderKey getKeyForAgent(ProjectAgent agent, String aiModelType) throws GendoxException {
         AiModel model = getAgentModelByType(agent, aiModelType);
+        return getKeyForModel(agent.getProject().getOrganizationId(), model);
+    }
 
-        // find Organization Key
-        OrganizationModelProviderKey organizationKey = this.getAllByCriteria(OrganizationModelKeyCriteria.builder()
-                        .organizationId(agent.getProject().getOrganizationId())
+    /**
+     * Returns the organization key for the given organization and AI model (e.g. when using an overridden model).
+     * @param organizationId organization context
+     * @param model the AI model to resolve the key for
+     * @return organization key for the model's provider, or null if none configured
+     */
+    @Nullable
+    public OrganizationModelProviderKey getKeyForModel(UUID organizationId, AiModel model) {
+        if (organizationId == null || model == null) {
+            return null;
+        }
+        return this.getAllByCriteria(OrganizationModelKeyCriteria.builder()
+                        .organizationId(organizationId)
                         .aiModelProviderName(model.getAiModelProvider().getName())
                         .build(), Pageable.unpaged())
                 .stream()
                 .findFirst()
                 .orElse(null);
-
-        return organizationKey;
     }
 
     /**
@@ -125,20 +135,27 @@ public class OrganizationModelKeyService {
      */
     public String getDefaultKeyForAgent(ProjectAgent agent, String aiModelType) throws GendoxException {
         AiModel model = getAgentModelByType(agent, aiModelType);
+        return getDefaultKeyForModel(agent.getProject().getOrganizationId(), model);
+    }
 
-
+    /**
+     * Return the Gendox default key for the given organization and model (e.g. when using an overridden model).
+     *
+     * @param organizationId organization context (used for logging; key is resolved from model's provider)
+     * @param model the AI model to resolve the default key for
+     * @return default API key from environment for the model's provider
+     * @throws GendoxException if model tier does not allow default key
+     */
+    public String getDefaultKeyForModel(UUID organizationId, AiModel model) throws GendoxException {
         // validate that the default key is used only for free and standard model tiers
         var modelTierNames = List.of("FREE_MODEL");
         if (!modelTierNames.contains(model.getModelTierType().getName())) {
-            throw new GendoxException("MISSING_API_KEY_FOR_MODEL_TIER", "You need to provide your " + model.getAiModelProvider().getDescription() + " API key to use model " + model.getModel() , HttpStatus.BAD_REQUEST);
+            throw new GendoxException("MISSING_API_KEY_FOR_MODEL_TIER", "You need to provide your " + model.getAiModelProvider().getDescription() + " API key to use model " + model.getModel(), HttpStatus.BAD_REQUEST);
         }
 
         String providerKeyProperty = "gendox.models." + model.getAiModelProvider().getName().toLowerCase() + ".key";
-
-        logger.info("Using default provider key: {} - for agent: {}", providerKeyProperty, agent.getId());
+        logger.info("Using default provider key: {} - for organization: {}", providerKeyProperty, organizationId);
         return environment.getProperty(providerKeyProperty);
-
-
     }
 
     public @Nullable AiModel getAgentModelByType(ProjectAgent agent, String aiModelType) {

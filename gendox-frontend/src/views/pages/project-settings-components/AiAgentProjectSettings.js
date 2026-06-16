@@ -34,10 +34,13 @@ import commonConfig from 'src/configs/common.config.js'
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import Chip from "@mui/material/Chip";
+import { useRouter } from 'next/router'
+import RequireOrgRoles from 'src/authentication/components/RequireOrgRoles'
 
 
 const AiAgentProjectSettings = () => {
   const dispatch = useDispatch()
+  const router = useRouter()
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   const { provenAiEnabled, provenAiUrl } = commonConfig
 
@@ -64,6 +67,7 @@ const AiAgentProjectSettings = () => {
     moderationCheck: project.projectAgent.moderationCheck,
     rerankEnable: project.projectAgent.rerankEnable,
     advancedSearchEnable: project.projectAgent.advancedSearchEnable,
+    autoDigitization: project.projectAgent.autoDigitization ?? false,
     documentSplitterType: project.projectAgent.documentSplitterType?.name || '',
     maxToken: project.projectAgent.maxToken,
     temperature: project.projectAgent.temperature,
@@ -91,6 +95,11 @@ const AiAgentProjectSettings = () => {
     setEditingIndex(null)
     setToolSchema('')
     setToolModalOpen(true)
+  }
+
+  const handleOpenValidateTools = () => {
+    const qs = `?organizationId=${organizationId}&projectId=${projectId}`
+    router.push(`/gendox/project-settings/validate-tools/${qs}`)
   }
 
   const handleEditTool = (idx) => {
@@ -218,6 +227,7 @@ const AiAgentProjectSettings = () => {
         moderationCheck: data.moderationCheck,
         advancedSearchEnable: data.advancedSearchEnable,
         rerankEnable: data.rerankEnable,
+        autoDigitization: data.autoDigitization,
         aiTools: data.aiTools
       }
     }
@@ -229,6 +239,12 @@ const AiAgentProjectSettings = () => {
       })
       .catch(error => {
         console.error('Failed to update project', error)
+        const message =
+          error?.message ||
+          error?.error?.message ||
+          error?.payload?.message ||
+          'Failed to update project'
+        toast.error(message)
       })
   }
 
@@ -652,6 +668,29 @@ const AiAgentProjectSettings = () => {
                         </FormControl>
                       </Grid>
                     )}
+
+                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                      <FormControlLabel
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            Advanced Digitization
+                            <Tooltip
+                              title='Uses per-page LLM digitization when documents are split instead of plain text extraction. This is slower and consumes significantly more tokens. Requires Basic or Pro subscription.'
+                              arrow
+                            >
+                              <span>
+                                <IconButton color='primary' size='small' sx={{ ml: 0.5, p: 0.25 }}>
+                                  <Icon icon='mdi:information-outline' fontSize='small' />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          </Box>
+                        }
+                        control={
+                          <Checkbox {...register('autoDigitization')} checked={watch('autoDigitization')} />
+                        }
+                      />
+                    </Grid>
                   </Grid>
                 </Grid>
                 <Grid item xs={12} sm={6}>
@@ -714,9 +753,17 @@ const AiAgentProjectSettings = () => {
                   </Grid>
                   {/* add tool button */}
                   <Grid item xs={12}>
-                    <Button variant='outlined' startIcon={<Icon icon='mdi:plus' />} onClick={handleAddTool}>
-                      Add Tool
-                    </Button>
+                    <Stack direction='row' spacing={2} flexWrap='wrap'>
+                      <Button variant='outlined' startIcon={<Icon icon='mdi:plus' />} onClick={handleAddTool}>
+                        Add Tool
+                      </Button>
+
+                      <RequireOrgRoles organizationId={organizationId} roles={['ROLE_OWNER', 'ROLE_ADMIN']}>
+                        <Button variant='outlined' startIcon={<Icon icon='mdi:ab-testing' />} onClick={handleOpenValidateTools}>
+                          Validate tools
+                        </Button>
+                      </RequireOrgRoles>
+                    </Stack>
                   </Grid>
 
                   {/* add / edit modal (merged with examples) */}

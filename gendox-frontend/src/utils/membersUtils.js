@@ -6,6 +6,8 @@ import CustomAvatar from "src/views/custom-components/mui/avatar";
 export const userTypeStatus = {
   GENDOX_USER: { title: "User", color: "primary" },
   GENDOX_AGENT: { title: "AI Agent", color: "success" },
+  PENDING: { title: "Pending", color: "warning" },
+  ACCEPTED: { title: "Accepted", color: "success" },
   UNKNOWN: { title: "Unknown", color: "error" },
   DISCORD_USER: { title: "Discord User", color: "warning" },
   GENDOX_SUPER_ADMIN: { title: "GENDOX_SUPER_ADMIN", color: "info" },

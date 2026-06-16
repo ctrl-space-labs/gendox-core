@@ -7,6 +7,7 @@ import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.core.util.StringUtils;
 import com.querydsl.jpa.JPAExpressions;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.QChatThreadDocument;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QDocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QProjectDocument;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
@@ -22,12 +23,13 @@ public class DocumentPredicates {
 
     private static QDocumentInstance qDocumentInstance = QDocumentInstance.documentInstance;
     private static QProjectDocument qProjectDocument = QProjectDocument.projectDocument;
+    private static QChatThreadDocument qChatThreadDocument = QChatThreadDocument.chatThreadDocument;
 
 
     public static Predicate build(DocumentCriteria criteria) {
         return ExpressionUtils.allOf(
                 organizationsId(criteria.getOrganizationId()),
-                projectId(criteria.getProjectId()),
+                projectIdPredicateBuilder(criteria.getProjectId(), criteria.getChatThreadProjectId()),
                 documentNameContains(criteria.getDocumentNameContains()),
                 createdBetween(criteria.getCreatedBetween()),
                 updatedBetween(criteria.getUpdatedBetween()),
@@ -90,7 +92,33 @@ public class DocumentPredicates {
 
     }
 
-    private static Predicate projectId(String projectId) {
+    /**
+     * Builds the document scope predicate based on project-linked documents and chat-thread-linked documents.
+     * Returns either one scope when only one filter is provided, or an OR predicate when both are present.
+     *
+     *
+     * @param projectId
+     * @param chatThreadProjectId
+     * @return
+     */
+    private static Predicate projectIdPredicateBuilder(String projectId, String chatThreadProjectId) {
+        Predicate inProjectDocuments = projectDocumentProjectId(projectId);
+        Predicate inChatThreadDocuments = chatThreadProjectIdPredicate(chatThreadProjectId);
+
+        if (inProjectDocuments == null && inChatThreadDocuments == null) {
+            return null;
+        }
+        if (inProjectDocuments == null) {
+            return inChatThreadDocuments;
+        }
+        if (inChatThreadDocuments == null) {
+            return inProjectDocuments;
+        }
+
+        return ExpressionUtils.anyOf(inProjectDocuments, inChatThreadDocuments);
+    }
+
+    private static Predicate projectDocumentProjectId(String projectId) {
         if (StringUtils.isNullOrEmpty(projectId)) {
             return null;
         }
@@ -104,6 +132,20 @@ public class DocumentPredicates {
                                 .where(qProjectDocument.project.id.eq(UUID.fromString(projectId))
                                 ));
     }
+
+    private static Predicate chatThreadProjectIdPredicate(String chatThreadProjectId) {
+        if (StringUtils.isNullOrEmpty(chatThreadProjectId)) {
+            return null;
+        }
+
+        return qDocumentInstance.id.in(
+                JPAExpressions
+                        .select(qChatThreadDocument.documentId)
+                        .from(qChatThreadDocument)
+                        .where(qChatThreadDocument.project.id.eq(UUID.fromString(chatThreadProjectId)))
+        );
+    }
+
 
     private static Predicate documentInstanceId(String documentInstanceId) {
         if (StringUtils.isNullOrEmpty(documentInstanceId)) {

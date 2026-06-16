@@ -83,6 +83,9 @@ public class DocumentDigitizationReader extends GendoxJpaPageReader<TaskDocument
         // split document metadata to smaller parts, to process pages in chunks, instead of whole documents at once
         List<TaskDocumentMetadataDTO> documentPageChunks = splitDocumentsToMultiplePageChunks(documentsPage);
 
+        // TODO probably there is an issue here with the pageable info, since we are splitting each document into multiple chunks,
+        //  the total number of items in the page is different, and the page info is not accurate anymore.
+        //  need to check if it affects the processing of the pages in the writer, and if yes, need to find a way to fix it (maybe by creating a custom pageable implementation that takes into account the splitting of the documents into chunks)
         Page<TaskDocumentMetadataDTO> chunkedDocumentPages = new org.springframework.data.domain.PageImpl<>(
                 documentPageChunks,
                 documentsPage.getPageable(),
@@ -96,7 +99,8 @@ public class DocumentDigitizationReader extends GendoxJpaPageReader<TaskDocument
         List<TaskDocumentMetadataDTO> documentPageChunks = new ArrayList<>();
         // for each document, create smaller chunks
         for (TaskDocumentMetadataDTO dto : documentsPage.getContent()) {
-            int totalDocumentPages = dto.getDocumentInstance().getNumberOfPages();
+            Integer rawPages = dto.getDocumentInstance().getNumberOfPages();
+            int totalDocumentPages = (rawPages != null && rawPages > 0) ? rawPages : 1;
             // page numbering starts from 1
             int pageStartIndex = 1;
             int pageEndIndex = totalDocumentPages;

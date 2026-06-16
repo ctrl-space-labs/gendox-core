@@ -1,9 +1,9 @@
-import React, {useState, useEffect, useMemo, useCallback, useRef} from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { Box } from '@mui/material'
 import Paper from '@mui/material/Paper'
-import { loadTaskInsightsData } from 'src/store/activeTaskNode/activeTaskNode'
+import { loadTaskInsightsData, reorderQuestionNodes, applyQuestionOrder } from 'src/store/activeTaskNode/activeTaskNode'
 import useDocumentInsightsGeneration from 'src/views/pages/tasks/document-insights/table-hooks/useDocumentInsightsGeneration'
 import useExportFile from 'src/views/pages/tasks/helping-components/TaskExportFiles'
 import DocumentInsightsGrid from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsGrid'
@@ -16,8 +16,9 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   const dispatch = useDispatch()
   const token = window.localStorage.getItem('accessToken')
   const { organizationId, taskId, projectId } = router.query
-  const { taskNodesDocumentList, taskNodesQuestionList, taskNodesAnswerList, isLoading } =
-    useSelector(state => state.activeTaskNode)
+  const { taskNodesDocumentList, taskNodesQuestionList, taskNodesAnswerList, isLoading } = useSelector(
+    state => state.activeTaskNode
+  )
 
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
@@ -49,8 +50,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     [isLoading, taskNodesQuestionList]
   )
 
-
-
   const isPageLoading = isDocumentsLoading || isQuestionsLoading || isPageReloading
 
   // --- Extract normalized lists from Redux ---
@@ -80,6 +79,41 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     }))
   }, [taskNodesQuestionList])
 
+  const handleMoveQuestion = useCallback(
+    (questionId, direction) => {
+      if (!organizationId || !projectId || !taskId) return
+
+      // find current index
+      const current = [...questions].sort((a, b) => a.order - b.order)
+      const idx = current.findIndex(q => q.id === questionId)
+      if (idx === -1) return
+
+      const targetIdx = direction === 'LEFT' ? idx - 1 : idx + 1
+      if (targetIdx < 0 || targetIdx >= current.length) return
+
+      // swap
+      const next = [...current]
+      ;[next[idx], next[targetIdx]] = [next[targetIdx], next[idx]]
+
+      const orderedIds = next.map(q => q.id)
+
+      // optimistic redux update (update nodeValue.order in taskNodesQuestionList)
+      dispatch(applyQuestionOrder(orderedIds))
+
+      // persist to backend
+      dispatch(
+        reorderQuestionNodes({
+          organizationId,
+          projectId,
+          taskId,
+          orderedQuestionNodeIds: orderedIds,
+          token
+        })
+      )
+    },
+    [questions, organizationId, projectId, taskId, token, dispatch]
+  )
+
   const answers = useMemo(() => {
     const nodes = taskNodesAnswerList?.content || []
     return nodes.map(node => ({
@@ -92,7 +126,6 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     }))
   }, [taskNodesAnswerList])
 
-  // console.log('ANSWERS:', answers)
 
   const reloadAll = useCallback(async () => {
     if (!organizationId || !projectId || !taskId) return
@@ -150,7 +183,15 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   useEffect(() => {
     if (hasResumedRef.current) return
 
-    if (!organizationId || !projectId || !taskId || !taskNodesDocumentList || !taskNodesQuestionList || !taskNodesAnswerList) return
+    if (
+      !organizationId ||
+      !projectId ||
+      !taskId ||
+      !taskNodesDocumentList ||
+      !taskNodesQuestionList ||
+      !taskNodesAnswerList
+    )
+      return
 
     const docsReady = Array.isArray(taskNodesDocumentList?.content) && taskNodesDocumentList.content.length > 0
     const questionsReady = Array.isArray(taskNodesQuestionList?.content) && taskNodesQuestionList.content.length > 0
@@ -248,6 +289,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             onSelectDocument={handleSelectDocument}
             handleGenerate={handleGenerate}
             isGeneratingCells={isInsightsGeneratingCells}
+            isGenerating={isGenerating}
+            onMoveQuestion={handleMoveQuestion}
           />
         </Box>
       </Paper>

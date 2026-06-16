@@ -127,6 +127,10 @@ public class ProjectAgent {
     @JoinColumn(name= "advanced_search_model_id", referencedColumnName = "id", nullable = true)
     private AiModel advancedSearchModel;
 
+    @Basic
+    @Column(name = "auto_digitization")
+    private Boolean autoDigitization;
+
     @JsonManagedReference(value = "aiTools")
     @OneToMany(mappedBy = "agent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AiTools> aiTools = new ArrayList<>();
@@ -357,6 +361,13 @@ public class ProjectAgent {
         this.advancedSearchModel = advancedSearchModel;
     }
 
+    public Boolean getAutoDigitization() {
+        return autoDigitization;
+    }
+
+    public void setAutoDigitization(Boolean autoDigitization) {
+        this.autoDigitization = autoDigitization;
+    }
 
     @Override
     public boolean equals(Object o) {

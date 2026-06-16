@@ -82,6 +82,14 @@ public class Task {
     @Column(name = "max_sections_chunk_tokens", nullable = false, length = -1)
     private Integer maxSectionsChunkTokens;
 
+    @Basic
+    @Column(name = "use_printed_page", nullable = true)
+    private Boolean usePrintedPage;
+
+    @Basic
+    @Column(name = "use_page_text", nullable = true)
+    private Boolean usePageText;
+
 
     public UUID getId() {
         return id;
@@ -226,6 +234,22 @@ public class Task {
 
     public void setMaxSectionsChunkTokens(Integer maxSectionsChunkTokens) {
         this.maxSectionsChunkTokens = maxSectionsChunkTokens;
+    }
+
+    public Boolean getUsePrintedPage() {
+        return usePrintedPage;
+    }
+
+    public void setUsePrintedPage(Boolean usePrintedPage) {
+        this.usePrintedPage = usePrintedPage;
+    }
+
+    public Boolean getUsePageText() {
+        return usePageText;
+    }
+
+    public void setUsePageText(Boolean usePageText) {
+        this.usePageText = usePageText;
     }
 
 

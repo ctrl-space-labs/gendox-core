@@ -1,9 +1,7 @@
 package dev.ctrlspace.gendox.spring.batch.jobs.documentDigitization.steps;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ContentPart;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.documents.DocPageToImageOptions;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
@@ -16,7 +14,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
@@ -31,19 +28,18 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
     private static final Logger logger = org.slf4j.LoggerFactory.getLogger(DocumentDigitizationProcessor.class);
     private final DownloadService downloadService;
-    private final MessageService messageService;
-    private final CompletionService completionService;
     private final ProjectService projectService;
-    private final TaskExecutor asyncLlmCompletionsExecutor;
+    private final TaskExecutor asyncDigitizationLlmCompletionsExecutor;
 
     @Value("#{jobParameters['reGenerateExistingAnswers'] == 'true'}")
     private boolean reGenerateExistingAnswers;
     @Value("#{stepExecution.jobExecution.jobInstance.id}")
     private Long jobInstanceId;
 
+    private final DocumentDigitizationService documentDigitizationService;
+
     private TaskService taskService;
     private TaskNodeService taskNodeService;
-    private DocumentService documentService;
 
     private Project project;
     private Task task;
@@ -51,20 +47,16 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
     @Autowired
     public DocumentDigitizationProcessor(TaskService taskService,
                                          TaskNodeService taskNodeService,
-                                         CompletionService completionService,
                                          ProjectService projectService,
-                                         DocumentService documentService,
                                          DownloadService downloadService,
-                                         MessageService messageService,
-                                         TaskExecutor asyncLlmCompletionsExecutor) {
+                                         DocumentDigitizationService documentDigitizationService,
+                                         TaskExecutor asyncDigitizationLlmCompletionsExecutor) {
         this.taskService = taskService;
         this.taskNodeService = taskNodeService;
-        this.documentService = documentService;
         this.downloadService = downloadService;
-        this.completionService = completionService;
         this.projectService = projectService;
-        this.messageService = messageService;
-        this.asyncLlmCompletionsExecutor = asyncLlmCompletionsExecutor;
+        this.documentDigitizationService = documentDigitizationService;
+        this.asyncDigitizationLlmCompletionsExecutor = asyncDigitizationLlmCompletionsExecutor;
     }
 
 
@@ -117,30 +109,25 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
                 .map(n -> n.getNodeValue().getOrder() - 1)
                 .collect(Collectors.toSet());
 
+        Integer totalPagesRaw = documentInstance.getNumberOfPages();
+        int totalPages = (totalPagesRaw != null && totalPagesRaw > 0) ? totalPagesRaw : 1;
 
-        Integer totalPages = documentInstance.getNumberOfPages();
-        if (totalPages == null || totalPages <= 0) {
-            logger.warn("Document instance {} has no totalPages, skipping.", documentInstance.getId());
-            return null;
-        }
-
-        // Determine page range to process
-        int startPage = 0; // 0-based indexing for internal processing
+        int startPage = 0;
         int endPage = totalPages - 1;
         Integer pageFromParam = documentMetadata.getPageFrom();
         Integer pageToParam = documentMetadata.getPageTo();
-        
+
         if (pageFromParam != null) {
             startPage = Math.max(0, pageFromParam - 1); // Convert from 1-based to 0-based
         }
-        
+
         if (pageToParam != null) {
             endPage = Math.min(totalPages - 1, pageToParam - 1); // Convert from 1-based to 0-based
         }
-        
+
         if (startPage > endPage) {
-            logger.warn("Invalid page range: pageFrom {} is greater than pageTo {} for document {}", 
-                       startPage + 1, endPage + 1, documentInstance.getId());
+            logger.warn("Invalid page range: pageFrom {} is greater than pageTo {} for document {}",
+                    startPage + 1, endPage + 1, documentInstance.getId());
             return null;
         }
 
@@ -152,7 +139,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
             pagesToProcess = IntStream.rangeClosed(startPage, endPage)
                     .filter(i -> !existingPageNums.contains(i))
                     .boxed()
-                    .collect(Collectors.toList());
+                    .toList();
 
             if (pagesToProcess.isEmpty()) {
                 logger.info("Nothing to generate for documentNode {}: all pages in range [{}, {}] already have answers.",
@@ -161,30 +148,24 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
             }
         }
 
-        String prompt = documentMetadata.getPrompt();
-        String structure = documentMetadata.getStructure();
-        DocPageToImageOptions printOptions = DocPageToImageOptions.builder().build();
-        // increase print quality, this doubles the input tokens, compare to the default 768
-        printOptions.setMinSide(1024);
-        printOptions.setPageFrom(Collections.min(pagesToProcess));
-        printOptions.setPageTo(Collections.max(pagesToProcess));
+        PageContent content = loadPageContent(documentInstance, pagesToProcess);
 
+        String digitizationPrompt = DocumentDigitizationService.composeDigitizationPrompt(
+                task.getTaskPrompt(),
+                documentMetadata.getPrompt(),
+                DocumentDigitizationService.DEFAULT_DIGITIZATION_PROMPT);
 
-        // TODO change this to optionally get a list of page numbers to print
-        // temp file will be deleted by TempFileCleanupListener at the end of the step
-        Path tempFilePath = downloadService.downloadToTemp(documentInstance.getRemoteUrl(), "digitization-instance-id-" + jobInstanceId);
-        List<String> printedPagesBase64 = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), tempFilePath, printOptions);
-
-        // Validate that we have enough pages and create safe mapping
-        Map<Integer, String> pageImages = pagesToProcess.stream()
-                .collect(Collectors.toMap(i -> i, i -> printedPagesBase64.get(i - printOptions.getPageFrom())));
-
-        // CORE PROCESSING:
-        // There are 2 thread pools: 1 for the docs, 1 for the LLM completions
-        // This runs 10 files in parallel, then these 10 files are competing against each other for LLM completions
-        // 1. When there are multiple files, they progress all together, 2. When there is a single file, it will run all the pages in parallel
+        int finalTotalPages = totalPages;
         List<CompletableFuture<AnswerCreationDTO>> completionFutures = pagesToProcess.stream()
-                .map(pageNumber -> getCompletionAnswerFuture(prompt, pageImages.get(pageNumber), totalPages, documentNode, pageNumber))
+                .map(pageIndex -> getCompletionAnswerFuture(
+                        digitizationPrompt,
+                        documentNode,
+                        documentInstance,
+                        pageIndex,
+                        finalTotalPages,
+                        content.images(),
+                        content.texts(),
+                        content.pageOffset()))
                 .toList();
 
 
@@ -193,78 +174,120 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        // incentivize GC to free memory
-        printedPagesBase64.clear();
+        // Release large image data eagerly before the writer step to reduce heap pressure.
+        content.images().clear();
+        content.texts().clear();
 
         batch.setNewAnswers(newAnswers);
 
-        logger.debug("Processing document node: {}, instance id: {}, prompt: {}, structure: {}",
-                documentNode.getId(), documentInstance.getId(), promptPreview, structure);
-
-
+        logger.debug("Processing document node: {}, instance id: {}, prompt: {}",
+                documentNode.getId(), documentInstance.getId(), promptPreview);
 
         return batch;
     }
 
-    private CompletableFuture<AnswerCreationDTO> getCompletionAnswerFuture(String prompt, String pageImageBase64, int totalPages, TaskNode documentNode, int pageIndex) {
-        return CompletableFuture.supplyAsync(() -> {
-                    ChatThread newThread = messageService.createThreadForMessage(
-                            List.of(project.getProjectAgent().getUserId()),
-                            project.getId(),
-                            "DOCUMENT_DIGITIZATION - Task:" + task.getId()
-                    );
+    private record PageContent(List<String> images, List<String> texts, int pageOffset) {}
 
-                    StringBuilder promptBuilder = new StringBuilder()
-                            .append(prompt).append("\n\n")
-                            .append("Document Page: ").append(pageIndex + 1).append(" out of ").append(totalPages).append("\n\n");
+    /**
+     * Loads page images and text for the given document, routing by file type:
+     * <ul>
+     *   <li>Paged formats (PDF, DOCX, PPT): renders images and extracts text for the requested slice.</li>
+     *   <li>Image files: returns a single Base64 image; no text.</li>
+     *   <li>Text/spreadsheet files: returns text pages only; no images.</li>
+     * </ul>
+     * The {@code pageOffset} in the returned record is the 0-based index of the first page in
+     * {@code images}, used to map an absolute page index to its position in the image list.
+     */
+    private PageContent loadPageContent(DocumentInstance documentInstance,
+                                        List<Integer> pagesToProcess) throws Exception {
+        String ext = downloadService.getFileExtension(documentInstance.getRemoteUrl());
 
-                    Message message = new Message();
-                    message.setValue(promptBuilder.toString());
-                    message.setThreadId(newThread.getId());
-                    message.setProjectId(project.getId());
-                    message.setCreatedBy(project.getProjectAgent().getUserId());
-                    message.setUpdatedBy(project.getProjectAgent().getUserId());
-                    message = messageService.createMessage(message);
+        if (downloadService.isPagedFormat(ext)) {
+            DocPageToImageOptions printOptions = DocPageToImageOptions.builder()
+                    .minSide(1024)
+                    .pageFrom(Collections.min(pagesToProcess))
+                    .pageTo(Collections.max(pagesToProcess))
+                    .build();
+            Path tempFilePath = downloadService.downloadToTemp(
+                    documentInstance.getRemoteUrl(), "digitization-instance-id-" + jobInstanceId);
+            List<String> images = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), tempFilePath, printOptions);
+            List<String> texts  = downloadService.readDocumentPages(documentInstance.getRemoteUrl(), tempFilePath);
+            int pageOffset = pagesToProcess.isEmpty() ? 0 : Collections.min(pagesToProcess);
+            return new PageContent(images, texts, pageOffset);
 
-                    message.setAdditionalResources(List.of(
-                            ContentPart.builder()
-                                    .type("image_url")
-                                    .imageUrl(ContentPart.ImageInput.builder()
-                                            .url(pageImageBase64)
-                                            .build())
-                                    .build()
-                    ));
+        } else if (downloadService.isImageFile(ext)) {
+            String singleImage = downloadService.readDocumentImageToBase64(documentInstance.getRemoteUrl());
+            return new PageContent(new ArrayList<>(List.of(singleImage)), new ArrayList<>(), 0);
 
-                    List<Message> response;
-                    try {
-                        response = completionService.getCompletion(message, new ArrayList<>(), project, null);
-                    } catch (GendoxException e) {
-                        throw new GendoxRuntimeException(e.getHttpStatus(), e.getErrorCode(), e.getMessage(), e);
-                    }
-
-                    return AnswerCreationDTO.builder()
-                            .documentNode(documentNode)
-                            .newAnswer(TaskNodeDTO.builder()
-                                    .nodeType("ANSWER")
-                                    .taskId(task.getId())
-                                    .nodeValue(TaskNodeValueDTO.builder()
-                                            .message(response.getLast().getValue())
-                                            .order(pageIndex + 1)
-                                            .nodeDocumentId(documentNode.getId())
-                                            .build())
-                                    .documentId(documentNode.getDocumentId())
-                                    .build())
-                            .build();
-                }, asyncLlmCompletionsExecutor)
-                .handle((newPage, throwable) -> {
-                    if (throwable != null) {
-                        logger.error("Failed to get completion for docNode {}, page {}: ",
-                                documentNode.getId(), pageIndex + 1, throwable);
-                        return null;
-                    }
-                    return newPage;
-                });
+        } else {
+            List<String> texts = downloadService.readDocumentPages(documentInstance.getRemoteUrl());
+            return new PageContent(new ArrayList<>(), texts, 0);
+        }
     }
 
+    private CompletableFuture<AnswerCreationDTO> getCompletionAnswerFuture(String prompt,
+                                                                           TaskNode documentNode,
+                                                                           DocumentInstance documentInstance,
+                                                                           int pageIndex,
+                                                                           int totalPages,
+                                                                           List<String> pageImages,
+                                                                           List<String> pageTexts,
+                                                                           int pageOffset) {
+        return CompletableFuture.supplyAsync(() -> {
+            String pageImage = null;
+            if (!pageImages.isEmpty()) {
+                // printDocumentPages returns only the requested slice [pageFrom..pageTo], so
+                // subtract the slice offset to get the position within the returned list.
+                int idx = pageIndex - pageOffset;
+                pageImage = (idx >= 0 && idx < pageImages.size()) ? pageImages.get(idx) : null;
+            }
+            String pageText = null;
+            if (!pageTexts.isEmpty()) {
+                // readDocumentPages returns all pages, so pageIndex maps directly (clamped for safety).
+                int idx = Math.min(pageIndex, pageTexts.size() - 1);
+                pageText = pageTexts.get(idx);
+            }
 
+            String responseText;
+            try {
+                responseText = documentDigitizationService.digitizePage(
+                        prompt,
+                        documentInstance,
+                        project,
+                        task,
+                        documentNode,
+                        pageIndex,
+                        totalPages,
+                        pageText,
+                        pageImage);
+            } catch (Exception e) {
+                throw new GendoxRuntimeException(
+                        org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
+                        "DIGITIZATION_FAILED",
+                        "Failed to digitize page " + (pageIndex + 1) + ": " + e.getMessage(), e);
+            }
+
+            return AnswerCreationDTO.builder()
+                    .documentNode(documentNode)
+                    .newAnswer(TaskNodeDTO.builder()
+                            .nodeType("ANSWER")
+                            .taskId(task.getId())
+                            .nodeValue(TaskNodeValueDTO.builder()
+                                    .message(responseText)
+                                    .order(pageIndex + 1)
+                                    .nodeDocumentId(documentNode.getId())
+                                    .build())
+                            .documentId(documentNode.getDocumentId())
+                            .build())
+                    .build();
+        }, asyncDigitizationLlmCompletionsExecutor)
+        .handle((newPage, throwable) -> {
+            if (throwable != null) {
+                logger.error("Failed to get completion for docNode {}, page {}: ",
+                        documentNode.getId(), pageIndex + 1, throwable);
+                return null;
+            }
+            return newPage;
+        });
+    }
 }

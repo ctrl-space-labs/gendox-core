@@ -39,6 +39,8 @@ public class TaskConverter implements GendoxConverter <Task, TaskDTO> {
                 .maxToken(task.getMaxToken())
                 .temperature(task.getTemperature())
                 .topP(task.getTopP())
+                .usePrintedPage(task.getUsePrintedPage())
+                .usePageText(task.getUsePageText())
                 .build();
     }
 
@@ -88,6 +90,12 @@ public class TaskConverter implements GendoxConverter <Task, TaskDTO> {
         }
         if (taskDTO.getTopP() != null) {
             task.setTopP(taskDTO.getTopP());
+        }
+        if (taskDTO.getUsePrintedPage() != null) {
+            task.setUsePrintedPage(taskDTO.getUsePrintedPage());
+        }
+        if (taskDTO.getUsePageText() != null) {
+            task.setUsePageText(taskDTO.getUsePageText());
         }
         return task;
     }

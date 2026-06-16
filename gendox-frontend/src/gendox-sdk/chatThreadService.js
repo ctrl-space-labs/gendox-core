@@ -38,6 +38,25 @@ const getThreadMessageMetadataByMessageId = async (threadId, messageId, token) =
   return axios.get(apiRequests.getThreadMessageMetadata(threadId, messageId), { headers })
 
 }
+/**
+ * 
+ * @param {*} organizationId 
+ * @param {*} threadId 
+ * @param {*} messageIds 
+ * @param {*} token 
+ * @returns 
+ */
+const getMessageAttachmentsBatch = async (organizationId, threadId, messageIds, token) => {
+  let headers = { 'Content-Type': 'application/json' }
+  if (token) headers.Authorization = 'Bearer ' + token
+
+  return axios.post(
+    apiRequests.getThreadMessageAttachmentsBatch(organizationId, threadId),
+    { messageIds },
+    { headers }
+  )
+}
+
 
 /**
  * Update Chat Thread
@@ -76,6 +95,7 @@ export default {
   getThreadMessagesByCriteria,
   getThreadsByCriteria,
   getThreadMessageMetadataByMessageId,
+  getMessageAttachmentsBatch,
   updateChatThread,
   deleteChatThread
 }

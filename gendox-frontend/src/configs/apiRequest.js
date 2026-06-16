@@ -1,3 +1,5 @@
+import { create, update } from 'lodash'
+import { remove } from 'nprogress'
 import commonConfig from 'src/configs/common.config.js'
 import { duplicateTask } from 'src/store/activeTask/activeTask'
 
@@ -12,7 +14,7 @@ export default {
   getPublicUsers: (page = 0, size = 10000) => `${url}users/public?page=${page}&size=${size}`,
 
   getProjectById: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}`,
-  
+
   getProjectsByOrganization: organizationId => `${url}organizations/${organizationId}/projects`,
 
   findDocumentsByCriteria: (organizationId, projectId, page, size, sort = 'createdAt,desc') =>
@@ -26,6 +28,17 @@ export default {
   updateProject: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}`,
 
   updateOrganization: organizationId => `${url}organizations/${organizationId}`,
+
+  getOrganizationConnectors: organizationId => `${url}organizations/${organizationId}/connectors`,
+
+  getOrganizationConnector: (organizationId, connectorType) =>
+    `${url}organizations/${organizationId}/connectors/${connectorType}`,
+
+  upsertOrganizationConnector: (organizationId, connectorType) =>
+    `${url}organizations/${organizationId}/connectors/${connectorType}`,
+
+  deleteOrganizationConnector: (organizationId, connectorType) =>
+    `${url}organizations/${organizationId}/connectors/${connectorType}`,
 
   createProject: organizationId => `${url}organizations/${organizationId}/projects`,
 
@@ -59,6 +72,9 @@ export default {
   getThreadMessagesByCriteria: (threadId, page = 0, size = 10, sort = 'createdAt,desc') =>
     `${url}threads/${threadId}/messages?page=${page}&size=${size}&sort=${sort}`,
 
+  getThreadMessageAttachmentsBatch: (organizationId, threadId) =>
+    `${url}organizations/${organizationId}/threads/${threadId}/messages/attachments`,
+
   documentSections: documentId => `${url}documents/${documentId}/sections`,
 
   documentInstance: (organizationId, projectId, documentId) =>
@@ -69,6 +85,9 @@ export default {
   getDocumentById: documentId => `${url}documents/${documentId}`,
 
   updateSectionsOrder: documentId => `${url}documents/${documentId}/sections-order`,
+
+  diffDocumentsPatchText: (documentIdA, documentIdB) =>
+    `${url}documents/diff/patch-text?documentIds=${documentIdA}&documentIds=${documentIdB}`,
 
   uploadDocument: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/upload`,
@@ -95,6 +114,8 @@ export default {
     `${url}organizations/${organizationId}/projects/${projectId}/users/${userId}`,
 
   inviteProjectMember: organizationId => `${url}organizations/${organizationId}/invitations`,
+
+  getProjectInvitations: organizationId => `${url}organizations/${organizationId}/invitations`,
 
   addOrganizationMember: organizationId => `${url}organizations/${organizationId}/users`,
 
@@ -204,6 +225,12 @@ export default {
 
   getJobsByCriteria: (organizationId, projectId) => `${url}organizations/${organizationId}/projects/${projectId}/jobs`,
 
+  stopJob: (organizationId, projectId, jobExecutionId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/jobs/${jobExecutionId}/stop`,
+
+  getDeepThinkingSteps: (organizationId, projectId, jobExecutionId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/jobs/${jobExecutionId}/deep-thinking-steps`,
+
   deleteTaskNode: (organizationId, projectId, taskNodeId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/task-nodes/${taskNodeId}`,
 
@@ -211,11 +238,43 @@ export default {
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`,
 
   documentInsightsExportAllCSV: (organizationId, projectId, taskId) =>
-  `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/insights/export-csv`,
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/insights/export-csv`,
 
   documentInsightsExportCSV: (organizationId, projectId, taskId, documentNodeId) =>
-  `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/insights/export-csv`,
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/insights/export-csv`,
 
   documentDigitizationExportCSV: (organizationId, projectId, taskId, documentNodeId) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/digitization/export-csv`
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/documents/${documentNodeId}/digitization/export-csv`,
+
+  reorderTaskQuestionNodes: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/questions/order`,
+
+  createEOScript: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-scripts`,
+
+  getEOScripts: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-scripts`,
+
+  getLatestEOScript: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-scripts/latest`,
+
+  getEOGeometries: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-geometries`,
+
+  createEOGeometry: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-geometries`,
+
+  updateEOGeometry: (organizationId, projectId, taskId, geometryId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-geometries/${geometryId}`,
+
+  deleteEOGeometry: (organizationId, projectId, taskId, geometryId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-geometries/${geometryId}`,
+
+  deleteEOGeometries: (organizationId, projectId, taskId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/earth-observation/eo-geometries`,
+
+  // Document content (inline preview) + download
+  viewDocumentContent: (threadId, documentId) => `${url}threads/${threadId}/documents/${documentId}/content`,
+
+  downloadDocument: (threadId, documentId) => `${url}threads/${threadId}/documents/${documentId}/download`
 }

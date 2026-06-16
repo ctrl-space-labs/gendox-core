@@ -11,6 +11,9 @@ public class AiModelConstants {
     public static final String GPT_4_1_MINI = "GPT-4.1-MINI";
     public static final String GPT_4_1 = "GPT-4.1";
     public static final String GPT_4_1_NANO = "GPT-4.1-NANO";
+    public static final String GPT_5_NANO = "GPT-5-NANO";
+    public static final String GPT_5_MINI = "GPT-5-MINI";
+    public static final String GPT_5_2 = "GPT-5.2";
     public static final String O4_MINI = "O4-MINI";
     public static final String O1_MINI = "O1-MINI";
     public static final String O3 = "O3";

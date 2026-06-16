@@ -24,6 +24,7 @@ public class TaskDTO {
     private Long maxToken;
     private Double temperature;
     private Double topP;
-
+    private Boolean usePrintedPage;
+    private Boolean usePageText;
 
 }

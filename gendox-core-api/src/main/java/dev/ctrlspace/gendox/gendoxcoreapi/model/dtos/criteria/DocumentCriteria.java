@@ -17,7 +17,8 @@ import java.util.List;
 //@AtLeastOneFieldIsNotEmpty(fieldNames = {QueryParamNames.PROJECT_ID, QueryParamNames.ORGANIZATION_ID, QueryParamNames.DOCUMENT_INSTANCE_ID, QueryParamNames.DOCUMENT_INSTANCE_IDS})
 public class DocumentCriteria {
 
-    private String projectId;
+    private String projectId;               // referrers to ProjectDocuments.project_id, documents that are part of the Knowledge Base.
+    private String chatThreadProjectId;     // for documents that have been uploaded to chat thread (ChatThreadDocuments.project_id), and they are not part of the Knowledge Base (ProjectDocuments)
     private String organizationId;
     private String documentInstanceId;
     private String documentNameContains;

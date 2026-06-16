@@ -87,7 +87,13 @@ public class UserInvitationService {
     }
 
     public Page<Invitation> getInvitationsByCriteria(InvitationCriteria criteria, Pageable pageable) {
-        return invitationRepository.findAll(InvitationPredicate.build(criteria), pageable);
+        return invitationRepository.findAll(InvitationPredicate.build(criteria), pageable)
+                .map(invitation -> {
+                    invitation.setInvitationLink(
+                            frontendDomain + String.format(acceptUrlTemplate, invitation.getInviteeEmail(), invitation.getToken())
+                    );
+                    return invitation;
+                });
     }
 
     public Invitation getByInviteeEmailAndToken(String inviteeEmail, String token) throws GendoxException {

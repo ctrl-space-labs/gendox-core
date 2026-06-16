@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Box, useTheme, useMediaQuery } from '@mui/material'
 import { useDispatch, useSelector } from 'react-redux'
 import { useAuth } from 'src/authentication/useAuth'
-import { fetchThreads, loadThread, chatActions } from 'src/store/chat/gendoxChat'
+import { fetchThreads, loadThread, chatActions, hydrateAttachmentPreviews } from 'src/store/chat/gendoxChat'
 import { localStorageConstants } from '../../../utils/generalConstants'
 import { useRouter } from 'next/router'
 import ChatNavigation from 'src/views/pages/chat/ChatNavigation'
@@ -28,9 +28,10 @@ const GendoxChat = props => {
   const chatUrlPath = props.chatUrlPath || '/gendox/chat'
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   const embedMode = props.embedView || false
-  const chatInsightView = props.chatInsightView ?? true;
+  const chatInsightView = props.chatInsightView ?? true
+  const hideSidebar = props.hideSidebar || false
   // Redux state from chat store
-  const { currentThread, agents, threads } = useSelector(state => state.gendoxChat)
+  const { currentThread, agents, threads, newlyCreatedThreadId } = useSelector(state => state.gendoxChat)
   // For responsive layout: hide sidebar if below large breakpoint
   const hidden = useMediaQuery(theme.breakpoints.down('lg'))
 
@@ -55,6 +56,18 @@ const GendoxChat = props => {
     closeInsightsToggle()
     dispatch(loadThread({ projectId, threadId: threadId || null, organizationId, token }))
   }, [dispatch, projectId, threadId, organizationId, token])
+
+  useEffect(() => {
+    if (!currentThread?.threadId) return
+
+    dispatch(
+      hydrateAttachmentPreviews({
+        threadId: currentThread.threadId,        
+        token,
+        messages: currentThread.messages
+      })
+    )
+  }, [currentThread?.threadId])
 
   // when the current thread has been loaded along with agents and threads,
   // update the currentThread object with the agent and thread objects.
@@ -99,6 +112,45 @@ const GendoxChat = props => {
     dispatch(chatActions.clearCurrentMessageMetadata())
   }
 
+  const handleCreateNewThread = () => {
+    const nextQuery = { ...router.query }
+    delete nextQuery.threadId
+    router.replace(
+      {
+        pathname: router.pathname,
+        query: nextQuery
+      },
+      undefined,
+      { shallow: true }
+    )
+  }
+
+  useEffect(() => {
+    if (!router.isReady || !newlyCreatedThreadId) return
+
+    const queryThreadId = Array.isArray(threadId) ? threadId[0] : threadId
+    if (queryThreadId === newlyCreatedThreadId) {
+      dispatch(chatActions.clearNewlyCreatedThreadId())
+      return
+    }
+
+    router
+      .replace(
+        {
+          pathname: router.pathname,
+          query: {
+            ...router.query,
+            threadId: newlyCreatedThreadId
+          }
+        },
+        undefined,
+        { shallow: true }
+      )
+      .finally(() => {
+        dispatch(chatActions.clearNewlyCreatedThreadId())
+      })
+  }, [router, dispatch, newlyCreatedThreadId, threadId])
+
   return (
     <Box
       sx={{
@@ -108,12 +160,14 @@ const GendoxChat = props => {
       }}
     >
       {/* Left sidebar for navigation */}
-      <ChatNavigation
-        mobileOpen={mobileOpen}
-        onClose={handleNavigationToggle}
-        chatUrlPath={chatUrlPath}
-        embedMode={embedMode}
-      />
+      {!hideSidebar && (
+        <ChatNavigation
+          mobileOpen={mobileOpen}
+          onClose={handleNavigationToggle}
+          chatUrlPath={chatUrlPath}
+          embedMode={embedMode}
+        />
+      )}
 
       {/* Main chat conversation area */}
       <ChatConversation
@@ -124,6 +178,7 @@ const GendoxChat = props => {
         handleInsightsToggle={handleInsightsToggle}
         embedMode={embedMode}
         chatInsightView={chatInsightView}
+        onCreateNewThread={handleCreateNewThread}
       />
 
       {/* Right sidebar for additional chat insights */}

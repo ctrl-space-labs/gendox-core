@@ -1,10 +1,19 @@
 import React from 'react'
-import { Box, IconButton, ListItemIcon, Typography, useTheme } from '@mui/material'
+import { Box, IconButton, ListItemIcon, Tooltip, Typography, useTheme } from '@mui/material'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import UserIcon from 'src/layouts/components/UserIcon'
 import { AgentAvatar } from 'src/views/pages/chat/utils/chatUtils'
 
-const ChatConversationHeader = ({ hidden, handleDrawerToggle, currentThread, themeConfig, handleInsightsToggle, isLoadingMessages }) => {
+const ChatConversationHeader = ({
+  hidden,
+  handleDrawerToggle,
+  currentThread,
+  themeConfig,
+  handleInsightsToggle,
+  isLoadingMessages,
+  chatInsightView,
+  onCreateNewThread
+}) => {
   const theme = useTheme()
 
   return (
@@ -16,8 +25,9 @@ const ChatConversationHeader = ({ hidden, handleDrawerToggle, currentThread, the
         justifyContent: 'space-between',
         borderBottom: `1px solid ${theme.palette.divider}`,
         height: 60,
-        filter: isLoadingMessages  ? 'blur(6px)' : 'none',
+        filter: isLoadingMessages ? 'blur(6px)' : 'none'
       }}
+      id={'chat-conversation-header'}
     >
       {/* Left group */}
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -27,7 +37,15 @@ const ChatConversationHeader = ({ hidden, handleDrawerToggle, currentThread, the
           </IconButton>
         )}
 
-        <ListItemIcon sx={{ mr: 2.5, color: 'text.primary', transition: 'margin .25s ease-in-out', cursor: 'pointer' }} onClick={handleInsightsToggle}> 
+        <ListItemIcon
+          sx={{
+            mr: 2.5,
+            color: 'text.primary',
+            transition: 'margin .25s ease-in-out',
+            cursor: chatInsightView ? 'pointer' : 'default'
+          }}
+          onClick={handleInsightsToggle}
+        >
           <UserIcon icon={() => <AgentAvatar isSelected={false} fullName={currentThread?.agent?.fullName} />} />
         </ListItemIcon>
 
@@ -65,6 +83,13 @@ const ChatConversationHeader = ({ hidden, handleDrawerToggle, currentThread, the
           </Typography>
         </Box>
       </Box>
+
+      {/* TODO: Remove this, in the embedded chat, it falls directly under the 'x' button */}
+      {/* <Tooltip title='New chat'>
+        <IconButton onClick={onCreateNewThread} size='small'>
+          <Icon icon='mdi:plus' />
+        </IconButton>
+      </Tooltip> */}
     </Box>
   )
 }

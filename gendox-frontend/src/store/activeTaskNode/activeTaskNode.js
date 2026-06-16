@@ -355,6 +355,22 @@ export const loadTaskInsightsData = createAsyncThunk(
   }
 )
 
+export const reorderQuestionNodes = createAsyncThunk(
+  'taskNode/reorderQuestionNodes',
+  async ({ organizationId, projectId, taskId, orderedQuestionNodeIds, token }, thunkAPI) => {
+    try {
+      await taskService.reorderTaskQuestionNodes(organizationId, projectId, taskId, orderedQuestionNodeIds, token)
+      return { orderedQuestionNodeIds }
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return thunkAPI.rejectWithValue({
+        message: error.response?.data || error.message,
+        orderedQuestionNodeIds
+      })
+    }
+  }
+)
+
 // -------- State --------
 
 const initialState = {
@@ -367,7 +383,8 @@ const initialState = {
   taskDocumentPages: [],
   isLoading: false,
   isLoadingDocumentPages: false,
-  error: null
+  error: null,
+  _prevQuestionsSnapshot: null // for optimistic reorder rollback
 }
 
 const taskNodeSlice = createSlice({
@@ -379,6 +396,26 @@ const taskNodeSlice = createSlice({
         ...state.taskNodesDocumentList,
         content: action.payload
       }
+    },
+    // optimistically reorder questions in state
+    applyQuestionOrder(state, action) {
+      const orderedIds = action.payload
+      if (!state.taskNodesQuestionList?.content) return
+      const questions = state.taskNodesQuestionList.content
+      const byId = new Map(questions.map(q => [q.id, q]))
+      // update order numbers (1-based like backend)
+      state.taskNodesQuestionList.content = orderedIds
+        .map((id, index) => {
+          const q = byId.get(id)
+          if (!q) return null
+          return { ...q, nodeValue: { ...q.nodeValue, order: index + 1 }, order: index + 1 }
+        })
+        .filter(Boolean)
+    },
+
+    // rollback: restore previous content snapshot
+    rollbackQuestionOrder(state, action) {
+      state.taskNodesQuestionList.content = action.payload
     }
   },
   extraReducers: builder => {
@@ -471,6 +508,25 @@ const taskNodeSlice = createSlice({
           state.taskNodesList.content = state.taskNodesList.content.filter(n => n.id !== action.payload)
         }
       })
+      // reorder question nodes with rollback support
+      .addCase(reorderQuestionNodes.pending, (state, action) => {
+        // we keep a snapshot of current questions to allow rollback on failure
+        state._prevQuestionsSnapshot = state.taskNodesQuestionList?.content
+          ? [...state.taskNodesQuestionList.content]
+          : null
+      })
+      .addCase(reorderQuestionNodes.fulfilled, (state, action) => {
+        // success: clear snapshot
+        state._prevQuestionsSnapshot = null
+      })
+      .addCase(reorderQuestionNodes.rejected, (state, action) => {
+        // rollback if snapshot exists
+        if (state._prevQuestionsSnapshot) {
+          state.taskNodesQuestionList.content = state._prevQuestionsSnapshot
+          state._prevQuestionsSnapshot = null
+        }
+      })
   }
 })
+export const { applyQuestionOrder, rollbackQuestionOrder } = taskNodeSlice.actions
 export default taskNodeSlice.reducer

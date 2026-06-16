@@ -4,11 +4,26 @@ import {useRouter} from "next/router";
 
 
 const IFrameMessageManagerContext = createContext();
+const CONFIG_UPDATE_EVENT = 'gendox.events.embedded.config.update';
+const DEFAULT_IFRAME_CONFIGURATION = {
+    externalToken: null,
+    chatInitialState: 'closed',   // 'open' or 'closed'
+    localContextMaxResponses: 1,
+    localContextMaxWaitMs: 200
+};
+
+const normalizeChatInitialState = (value) => value === 'open' ? 'open' : 'closed';
+
+const parseNonNegativeInt = (value, fallback) => {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+};
 
 export const IFrameMessageManagerProvider = ({ children }) => {
     const [messageManager, setMessageManager] = useState(new MessageManagerService());
     const [originUrl, setOriginUrl] = useState(null);
     const [isEmbedded, setIsEmbedded] = useState(false);
+    const [iFrameConfiguration, setIFrameConfiguration] = useState(DEFAULT_IFRAME_CONFIGURATION);
 
     const router = useRouter();
 
@@ -18,8 +33,34 @@ export const IFrameMessageManagerProvider = ({ children }) => {
         if (data.type !== 'gendox.events.initialization.response') {
             return;
         }
-        // Handle the incoming message
-        console.log('Received message:', data);
+        const payload = data.payload || data;
+        setIFrameConfiguration({
+            externalToken: payload.externalToken || payload.accessToken || null,
+            chatInitialState: normalizeChatInitialState(payload.chatInitialState),
+            localContextMaxResponses: parseNonNegativeInt(
+                payload.localContextMaxResponses,
+                DEFAULT_IFRAME_CONFIGURATION.localContextMaxResponses
+            ),
+            localContextMaxWaitMs: parseNonNegativeInt(
+                payload.localContextMaxWaitMs,
+                DEFAULT_IFRAME_CONFIGURATION.localContextMaxWaitMs
+            )
+        });
+    };
+
+    const configUpdateHandler = (data) => {
+        if (data.type !== CONFIG_UPDATE_EVENT || !data.payload) return;
+        const p = data.payload;
+        setIFrameConfiguration(prev => ({
+            ...prev,
+            ...(p.chatInitialState !== undefined && { chatInitialState: normalizeChatInitialState(p.chatInitialState) }),
+            ...(p.localContextMaxResponses !== undefined && {
+                localContextMaxResponses: Math.max(1, parseNonNegativeInt(p.localContextMaxResponses, prev.localContextMaxResponses))
+            }),
+            ...(p.localContextMaxWaitMs !== undefined && {
+                localContextMaxWaitMs: parseNonNegativeInt(p.localContextMaxWaitMs, prev.localContextMaxWaitMs)
+            })
+        }));
     };
 
     useEffect(() => {
@@ -36,10 +77,9 @@ export const IFrameMessageManagerProvider = ({ children }) => {
 
         if (_inIframe()) {
             setIsEmbedded(true);
-            messageManager.addHandler(initializationHandler)
+            messageManager.addHandler(initializationHandler);
+            messageManager.addHandler(configUpdateHandler);
             messageManager.sendMessage({ type: 'gendox.events.initialization.request', payload: {} });
-            // console.log("In iframe. Sending initialization request to parent...");
-
         }
 
         return () => {
@@ -70,9 +110,7 @@ export const IFrameMessageManagerProvider = ({ children }) => {
     const values = {
         messageManager,
         isEmbedded,
-        iFrameConfiguration: {
-            externalToken: null,
-        }
+        iFrameConfiguration
     };
 
     return (

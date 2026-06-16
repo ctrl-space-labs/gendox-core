@@ -1,14 +1,17 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.ChatThread;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ChatThreadDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ChatThreadLastMessageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ChatThreadCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadDocumentsRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadMemberRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.ChatThreadPredicates;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -20,15 +23,24 @@ import java.util.UUID;
 @Service
 public class ChatThreadService {
 
+    private final ProjectService projectService;
+    private final DocumentService documentService;
+    private final ChatThreadDocumentsRepository chatThreadDocumentsRepository;
     private ChatThreadRepository chatThreadRepository;
     private ChatThreadMemberRepository chatThreadMemberRepository;
 
 
     @Autowired
     public ChatThreadService(ChatThreadRepository chatThreadRepository,
-                             ChatThreadMemberRepository chatThreadMemberRepository) {
+                             ChatThreadMemberRepository chatThreadMemberRepository,
+                             @Lazy ProjectService projectService,
+                             @Lazy DocumentService documentService,
+                             ChatThreadDocumentsRepository chatThreadDocumentsRepository) {
         this.chatThreadRepository = chatThreadRepository;
         this.chatThreadMemberRepository = chatThreadMemberRepository;
+        this.projectService = projectService;
+        this.documentService = documentService;
+        this.chatThreadDocumentsRepository = chatThreadDocumentsRepository;
     }
 
     // getOptionalChatThreadById
@@ -81,5 +93,32 @@ public class ChatThreadService {
     public void deleteChatThreadMembersByThreadId(UUID threadId) {
         chatThreadMemberRepository.deleteByChatThread_Id(threadId);
     }
+
+
+    @Transactional
+    public ChatThreadDocument createThreadDocument(UUID projectId,
+                                                   UUID documentId,
+                                                   UUID threadId) throws GendoxException {
+
+        Project project = projectService.getProjectById(projectId);
+
+        DocumentInstance documentInstance = documentService.getDocumentInstanceById(documentId);
+
+        // Optional: prevent duplicates (recommended)
+        Optional<ChatThreadDocument> existing = chatThreadDocumentsRepository
+                .findByProjectIdAndDocumentIdAndThreadId(projectId, documentId, threadId);
+
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
+        ChatThreadDocument ctd = new ChatThreadDocument();
+        ctd.setProject(project);
+        ctd.setDocumentId(documentInstance.getId());
+        ctd.setThreadId(threadId);
+
+        return chatThreadDocumentsRepository.save(ctd);
+    }
+
 
 }

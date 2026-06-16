@@ -31,7 +31,26 @@ const inviteProjectMember = async (organizationId, token, invitationBody) => {
   })
 }
 
+/**
+ * Get project invitations (paged).
+ * @param {string} organizationId
+ * @param {string} projectId
+ * @param {string} token
+ * @param {object} params query params (e.g. statusName, page, size, sort)
+ * @returns {Promise<axios.AxiosResponse<any>>}
+ */
+const getProjectInvitations = async (organizationId, projectId, token, params) => {
+  return axios.get(apiRequests.getProjectInvitations(organizationId), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    },
+    params
+  })
+}
+
 export default {
   acceptInvitation,
-  inviteProjectMember
+  inviteProjectMember,
+  getProjectInvitations
 }

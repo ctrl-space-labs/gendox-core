@@ -5,12 +5,14 @@ import dev.ctrlspace.gendox.spring.batch.jobs.common.ObservabilityTaskDecorator;
 import io.micrometer.observation.ObservationRegistry;
 import io.micrometer.tracing.Tracer;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
@@ -18,6 +20,12 @@ import java.util.List;
 
 @Configuration
 public class RestTemplateConfiguration {
+
+    @Value("${gendox.rest-template.connection-timeout-ms}")
+    private int connectionTimeoutMillis;
+
+    @Value("${gendox.rest-template.read-timeout-ms}")
+    private int readTimeoutMillis;
 
     /**
      * This bean will be used by all @Async methods (because it's named "taskExecutor").
@@ -42,8 +50,12 @@ public class RestTemplateConfiguration {
 
 
     @NotNull
-    private static RestTemplate createRestTemplateWithObservabilityParams(Tracer tracer) {
-        RestTemplate restTemplate = new RestTemplate();
+    private RestTemplate createRestTemplateWithObservabilityParams(Tracer tracer) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(connectionTimeoutMillis);
+        requestFactory.setReadTimeout(readTimeoutMillis);
+
+        RestTemplate restTemplate = new RestTemplate(requestFactory);
 
         List<ClientHttpRequestInterceptor> interceptors = new ArrayList<>(restTemplate.getInterceptors());
 

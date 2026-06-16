@@ -7,6 +7,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.ProjectAgent;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.User;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.ProjectAgentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
@@ -16,6 +17,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.AiModelConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import dev.ctrlspace.provenai.ssi.issuer.VerifiablePresentationBuilder;
 import id.walt.crypto.keys.jwk.JWKKey;
+import jakarta.annotation.Nullable;
 import kotlinx.serialization.json.Json;
 import kotlinx.serialization.json.JsonPrimitive;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -94,9 +96,23 @@ public class ProjectAgentService {
         return projectAgentRepository.existsByProjectIdAndPrivateAgentIsFalse(projectId);
     }
 
-    public ProjectAgent getAgentByDocumentId(UUID documentId) {
-        return projectAgentRepository.findAgentByDocumentInstanceId(documentId)
-                .orElse(null);
+    /**
+     *  Gets the agent that the Document is connected to.
+     *  * It first check in project documents
+     *  * and then in chat thread documents
+     *
+     * @param documentId
+     * @return
+     */
+    public @Nullable ProjectAgent getAgentByDocumentId(UUID documentId) {
+        Optional<ProjectAgent> projectDocumentsAgent = projectAgentRepository.findAgentByProjectDocumentInstanceId(documentId);
+        if (projectDocumentsAgent.isPresent()) {
+            return projectDocumentsAgent.get();
+        }
+
+        Optional<ProjectAgent> chatThreadDocumentsAgent = projectAgentRepository.findAgentByChatThreadDocumentInstanceId(documentId);
+
+        return chatThreadDocumentsAgent.orElse(null);
     }
 
     public ProjectAgent getAgentById(UUID agentId) {
@@ -165,7 +181,7 @@ public class ProjectAgentService {
             projectAgent.setSemanticSearchModel(aiModelService.getByName(AiModelConstants.OPENAI_EMBEDDING_V3_SMALL));
         }
         if (projectAgent.getCompletionModel() == null) {
-            projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GEMINI_2_FLASH));
+            projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_5_NANO));
         }
         if (projectAgent.getModerationModel() == null) {
             projectAgent.setModerationModel(aiModelService.getByName(AiModelConstants.OMNI_MODERATION));
@@ -174,16 +190,19 @@ public class ProjectAgentService {
             projectAgent.setRerankModel(aiModelService.getByName(AiModelConstants.VOYAGE_RERANK_2));
         }
         if (projectAgent.getAdvancedSearchModel() == null) {
-            projectAgent.setAdvancedSearchModel(aiModelService.getByName(AiModelConstants.GEMINI_2_FLASH));
+            projectAgent.setAdvancedSearchModel(aiModelService.getByName(AiModelConstants.GPT_5_NANO));
         }
         if (projectAgent.getModerationCheck() == null) {
-            projectAgent.setModerationCheck(true);
+            projectAgent.setModerationCheck(false);
         }
         if (projectAgent.getRerankEnable() == null) {
             projectAgent.setRerankEnable(false);
         }
         if (projectAgent.getAdvancedSearchEnable() == null) {
             projectAgent.setAdvancedSearchEnable(false);
+        }
+        if (projectAgent.getAutoDigitization() == null) {
+            projectAgent.setAutoDigitization(false);
         }
         if (projectAgent.getChatTemplateId() == null) {
             projectAgent.setChatTemplateId(templateRepository.findIdByIsDefaultTrueAndTemplateTypeName("CHAT_TEMPLATE"));
@@ -270,8 +289,14 @@ public class ProjectAgentService {
                     HttpStatus.FORBIDDEN);
         }
 
-        // TODO add validation if can enable advanced search based on subscription plan
-
+        if (Boolean.TRUE.equals(projectAgent.getAutoDigitization())) {
+            Type standardTier = typeService.getByCategoryAndName("MODEL_TIER", "STANDARD_MODEL");
+            if (!subscriptionAiModelTierService.hasAccessToModelTier(subscriptionPlanId, standardTier.getId())) {
+                throw new GendoxException("NO_ACCESS_TO_AUTO_DIGITIZATION",
+                        "Advanced Digitization requires Basic or Pro subscription",
+                        HttpStatus.FORBIDDEN);
+            }
+        }
 
         existingProjectAgent.setAgentName(projectAgent.getAgentName());
         existingProjectAgent.setCompletionModel(completionModel);
@@ -298,6 +323,9 @@ public class ProjectAgentService {
         existingProjectAgent.setAdvancedSearchEnable(projectAgent.getAdvancedSearchEnable());
         if (projectAgent.getAdvancedSearchModel() != null && projectAgent.getAdvancedSearchEnable()) {
             existingProjectAgent.setAdvancedSearchModel(aiModelService.getByName(projectAgent.getAdvancedSearchModel().getName()));
+        }
+        if (projectAgent.getAutoDigitization() != null) {
+            existingProjectAgent.setAutoDigitization(projectAgent.getAutoDigitization());
         }
         existingProjectAgent.setOrganizationDid(projectAgent.getOrganizationDid());
 

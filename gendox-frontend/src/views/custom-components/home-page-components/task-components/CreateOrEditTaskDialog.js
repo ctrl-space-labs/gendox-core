@@ -33,7 +33,6 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 import { useRouter } from 'next/router'
 import { sortModels } from 'src/utils/sortModels'
 import { updateTask, fetchTasks, createTask } from 'src/store/activeTask/activeTask'
-import { set } from 'nprogress'
 
 const TASK_OPTIONS = [
   {
@@ -45,7 +44,12 @@ const TASK_OPTIONS = [
     value: 'DOCUMENT_DIGITIZATION',
     label: 'Digitize scanned documents page-by-page',
     description: 'Convert scanned documents into editable digital formats.'
-  }
+  },
+  {
+    value: 'EARTH_OBSERVATION',
+    label: 'Analyze Earth Observation data',
+    description: 'Process and analyze satellite imagery and geospatial data.'
+  },
   // {
   //   value: 'DEEP_RESEARCH',
   //   label: 'Conduct deep research and analysis',
@@ -62,7 +66,6 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
   const { isFetchingAiModels, aiModels } = useSelector(state => state.activeProjectAgent)
   const { completionModels } = aiModels
 
-  // console.log('Completion Models in CreateTaskDialog:', completionModels)
   const [task, setTask] = useState({
     title: '',
     description: '',
@@ -71,24 +74,32 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
     topP: '',
     temperature: '',
     maxToken: '',
-    completionModel: ''
+    completionModel: '',
+    usePrintedPage: null,
+    usePageText: null
   })
   const [errors, setErrors] = useState({})
   const [showAdvanced, setShowAdvanced] = useState(false)
 
 
+  const isDigitizationTask = taskType =>
+    taskType === 'DOCUMENT_DIGITIZATION'
+
   // --- Load initial data when editing ---
   useEffect(() => {
     if (open) {
+      const taskType = initialData.taskType?.name || initialData.taskType || ''
       setTask({
         title: initialData.title || '',
         description: initialData.description || '',
-        taskType: initialData.taskType?.name || initialData.taskType || '',
+        taskType,
         taskPrompt: initialData.taskPrompt || '',
         topP: initialData.topP || '',
         temperature: initialData.temperature || '',
         maxToken: initialData.maxToken || '',
-        completionModel: initialData.completionModel?.name || ''
+        completionModel: initialData.completionModel?.name || '',
+        usePrintedPage: isDigitizationTask(taskType) ? initialData.usePrintedPage ?? true : null,
+        usePageText: isDigitizationTask(taskType) ? initialData.usePageText ?? false : null
       })
       setErrors({})
     }
@@ -105,7 +116,19 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
   }, [organizationId, projectId, token, dispatch])
 
   const handleChange = (key, value) => {
-    setTask(prev => ({ ...prev, [key]: value }))
+    setTask(prev => {
+      const next = { ...prev, [key]: value }
+      if (key === 'taskType') {
+        if (value === 'DOCUMENT_DIGITIZATION') {
+          next.usePrintedPage = true
+          next.usePageText = prev.usePageText ?? false
+        } else {
+          next.usePrintedPage = null
+          next.usePageText = null
+        }
+      }
+      return next
+    })
   }
 
   const validate = () => {
@@ -137,6 +160,11 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
       }
     }
 
+    if (isDigitizationTask(task.taskType) && !task.usePrintedPage && !task.usePageText) {
+      newErrors.digitizationContentMode =
+        'Enable at least one of Use Printed pages or Use extracted text'
+    }
+
     setErrors(newErrors)
 
     return Object.keys(newErrors).length === 0
@@ -149,14 +177,16 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
     try {
       const payload = {
         projectId,
-        type: task.taskType, 
+        type: task.taskType,
         title: task.title,
         description: task.description,
         taskPrompt: task.taskPrompt,
         maxToken: task.maxToken || null,
-        temperature: task.temperature ? Number(task.temperature) : null, 
+        temperature: task.temperature ? Number(task.temperature) : null,
         topP: task.topP ? Number(task.topP) : null,
-        completionModel: task.completionModel ? { name: task.completionModel } : null 
+        completionModel: task.completionModel ? { name: task.completionModel } : null,
+        usePrintedPage: task.usePrintedPage ?? null,
+        usePageText: task.usePageText ?? null
       }
 
       if (editMode) {
@@ -188,7 +218,12 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
       setShowAdvanced(false)
       onClose()
     } catch (err) {
-      toast.error('Failed to save task.')
+      const message =
+        err?.message ||
+        err?.error?.message ||
+        err?.payload?.message ||
+        'Failed to save task.'
+      toast.error(message)
     }
   }
 
@@ -232,7 +267,7 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
                   transition: 'border-color 0.3s ease',
                   '&:hover': { borderColor: theme.palette.primary.main }
                 }}
-                onClick={() => setTask({ ...task, taskType: option.value })}
+                onClick={() => handleChange('taskType', option.value)}
               >
                 <FormControlLabel
                   value={option.value}
@@ -479,6 +514,62 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
                 />
               </Grid>
             </Grid>
+
+            {isDigitizationTask(task.taskType) && (
+              <Box sx={{ mt: 2 }}>
+                <FormControlLabel
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      Use Printed pages
+                      <Tooltip
+                        title='Each page is rendered to an image and sent to the LLM for digitization.'
+                        arrow
+                      >
+                        <span>
+                          <IconButton size='small' color='primary' sx={{ ml: 0.5, p: 0.25 }}>
+                            <InfoOutlinedIcon fontSize='small' />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </Box>
+                  }
+                  control={
+                    <Checkbox
+                      checked={Boolean(task.usePrintedPage)}
+                      onChange={e => handleChange('usePrintedPage', e.target.checked)}
+                    />
+                  }
+                />
+                <FormControlLabel
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      Use extracted text
+                      <Tooltip
+                        title='Extracted text is sent to the LLM. Icons and other visual elements on the page are not included.'
+                        arrow
+                      >
+                        <span>
+                          <IconButton size='small' color='primary' sx={{ ml: 0.5, p: 0.25 }}>
+                            <InfoOutlinedIcon fontSize='small' />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </Box>
+                  }
+                  control={
+                    <Checkbox
+                      checked={Boolean(task.usePageText)}
+                      onChange={e => handleChange('usePageText', e.target.checked)}
+                    />
+                  }
+                />
+                {errors.digitizationContentMode && (
+                  <Typography variant='caption' color='error' sx={{ display: 'block', mt: 0.5 }}>
+                    {errors.digitizationContentMode}
+                  </Typography>
+                )}
+              </Box>
+            )}
           </Box>
         </Collapse>
       </DialogContent>

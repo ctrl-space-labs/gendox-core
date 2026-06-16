@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>GEE Sandbox</title>
+
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+    default-src 'none';
+    script-src 'unsafe-inline' 'unsafe-eval' https://ajax.googleapis.com https://apis.google.com https://accounts.google.com;
+    connect-src https://earthengine.googleapis.com https://*.googleapis.com https://*.google.com;
+    img-src data: blob: *;
+    style-src 'unsafe-inline';
+  "
+    />
+
+    <!-- Browser-native EE client build (no bundler/module required). -->
+    <script src="https://ajax.googleapis.com/ajax/libs/earthengine/0.1.419/earthengine-api.min.js"></script>
+  </head>
+  <body>
+    <script>
+      let layerAdded = false
+      let mapCenter = null  // stored when user calls Map.setCenter()
+      let lastLayerData = null  // { eeImg, visParams } — reused for on-demand screenshots
+      let currentEeInstance = null // set after ee.initialize — used for cancelOperation from parent
+
+      const ProxyMap = {
+        addLayer: (image, visParams = {}, name) => {
+          layerAdded = true
+
+          try {
+            // 1. check for Geometry/Feature/FeatureCollection and convert to Image
+            if (image instanceof ee.Geometry || image instanceof ee.Feature || image instanceof ee.FeatureCollection) {
+              const color = visParams.color || 'red'
+              image = ee
+                .Image()
+                .paint(image, 2)
+                .visualize({ palette: [color] })
+              visParams = {}
+            }
+
+            // 2. Ensure image is an ee.Image
+            image = ee.Image(image)
+
+            // 3. Get map tiles using the HIGH-LEVEL Image API.
+            // Passing raw JSON objects to ee.data.getMapId can break (e.g. a.split is not a function).
+            // The Image API handles serialization correctly.
+
+            // Normalize vis params to what the API expects.
+            const normalizedVisParams = { ...(visParams || {}) }
+            if (Array.isArray(normalizedVisParams.palette)) {
+              normalizedVisParams.palette = normalizedVisParams.palette.join(',')
+            }
+            if (Array.isArray(normalizedVisParams.bands)) {
+              normalizedVisParams.bands = normalizedVisParams.bands.join(',')
+            }
+
+            const eeImg = ee.Image(image)
+
+            // Prefer ee.Image.getMap (returns urlFormat in some builds), otherwise ee.Image.getMapId.
+            const getMapFn =
+              typeof eeImg.getMap === 'function'
+                ? eeImg.getMap.bind(eeImg)
+                : typeof eeImg.getMapId === 'function'
+                ? eeImg.getMapId.bind(eeImg)
+                : null
+
+            if (!getMapFn) {
+              throw new Error('Earth Engine Image map function not available (getMap/getMapId missing).')
+            }
+
+            getMapFn(normalizedVisParams, (map, error) => {
+              if (error) {
+                console.error('[Sandbox] GEE Error:', error)
+                window.parent.postMessage({ type: 'ERROR', message: error.message || String(error) }, '*')
+                return
+              }
+
+              // Different EE builds return slightly different shapes.
+              // We want a Leaflet URL template like .../{z}/{x}/{y}
+              const urlFormat = map && (map.urlFormat || map.url || (map.tiles && map.tiles[0] && map.tiles[0].url))
+
+              if (!urlFormat) {
+                console.warn('[Sandbox] Map response without urlFormat:', map)
+                window.parent.postMessage({ type: 'ERROR', message: 'Map response missing urlFormat.' }, '*')
+                return
+              }
+
+              window.parent.postMessage({ type: 'SUCCESS', payload: { url: urlFormat, name: name || 'Layer' } }, '*')
+
+              // Store the last rendered image so on-demand screenshots can reuse it
+              lastLayerData = { eeImg, visParams: normalizedVisParams }
+
+              // Request a static thumbnail asynchronously so the map tiles
+              // appear immediately while the thumbnail is still being generated.
+              // A region is required — without it GEE renders a blank image.
+              // We derive the region from the center+zoom the user set via Map.setCenter().
+              // Skip the thumbnail entirely if the user script never called Map.setCenter().
+              if (mapCenter) try {
+                const thumbParams = { dimensions: '512', format: 'png' }
+                if (normalizedVisParams.bands)            thumbParams.bands   = normalizedVisParams.bands
+                if (normalizedVisParams.min !== undefined) thumbParams.min    = normalizedVisParams.min
+                if (normalizedVisParams.max !== undefined) thumbParams.max    = normalizedVisParams.max
+                if (normalizedVisParams.palette)           thumbParams.palette = normalizedVisParams.palette
+
+                // At zoom z a 512-px wide tile covers 360/2^z degrees of longitude.
+                // We use the same value for latitude (clamped) to get a square region.
+                const halfDeg = 360 / Math.pow(2, mapCenter.zoom || 6)
+                thumbParams.region = ee.Geometry.Rectangle([
+                  Math.max(-180, mapCenter.lon - halfDeg),
+                  Math.max(-90,  mapCenter.lat - halfDeg),
+                  Math.min(180,  mapCenter.lon + halfDeg),
+                  Math.min(90,   mapCenter.lat + halfDeg)
+                ])
+
+                eeImg.getThumbURL(thumbParams, (thumbUrl, thumbErr) => {
+                  if (thumbErr || !thumbUrl) {
+                    console.warn('[Sandbox] Thumbnail error:', thumbErr)
+                    return
+                  }
+                  window.parent.postMessage({ type: 'THUMBNAIL', payload: { url: thumbUrl } }, '*')
+                })
+              } catch (thumbEx) {
+                console.warn('[Sandbox] getThumbURL unavailable:', thumbEx)
+              }  // end if (mapCenter)
+            })
+          } catch (err) {
+            console.error('[Sandbox] addLayer crash:', err)
+            window.parent.postMessage({ type: 'ERROR', message: 'addLayer Error: ' + err.message }, '*')
+          }
+        },
+
+        setCenter: (lon, lat, zoom) => {
+          mapCenter = { lon, lat, zoom }  // save for thumbnail region
+          window.parent.postMessage({ type: 'CENTER', payload: { center: { lon, lat, zoom } } }, '*')
+        },
+
+        centerObject: (obj, zoom) => {
+          try {
+            const geom = (obj && typeof obj.geometry === 'function') ? obj.geometry() : obj
+            ee.Geometry(geom).centroid(1).evaluate((result, err) => {
+              if (err || !result || !result.coordinates) return
+              const [lon, lat] = result.coordinates
+              const z = zoom != null ? zoom : (mapCenter ? mapCenter.zoom : 6)
+              mapCenter = { lon, lat, zoom: z }
+              window.parent.postMessage({ type: 'CENTER', payload: { center: { lon, lat, zoom: z } } }, '*')
+            })
+          } catch (ex) {
+            console.warn('[Sandbox] centerObject failed:', ex)
+          }
+        },
+
+        setZoom: zoom => {
+          if (mapCenter) mapCenter.zoom = zoom
+          else mapCenter = { lon: 0, lat: 0, zoom }
+          window.parent.postMessage({ type: 'ZOOM', payload: { zoom } }, '*')
+        },
+
+        getBounds: () => {
+          if (!mapCenter) return null
+          const halfDeg = 360 / Math.pow(2, mapCenter.zoom || 6)
+          return ee.Geometry.Rectangle([
+            Math.max(-180, mapCenter.lon - halfDeg),
+            Math.max(-90,  mapCenter.lat - halfDeg),
+            Math.min(180,  mapCenter.lon + halfDeg),
+            Math.min(90,   mapCenter.lat + halfDeg)
+          ])
+        },
+
+        clear: () => {
+          window.parent.postMessage({ type: 'CLEAR_LAYERS' }, '*')
+        },
+
+        getZoom: () => mapCenter?.zoom ?? 6,
+
+        getScale: () => {
+          if (!mapCenter) return 1000
+          const zoom = mapCenter.zoom ?? 6
+          const lat  = mapCenter.lat  ?? 0
+          return 156543.03 * Math.cos(lat * Math.PI / 180) / Math.pow(2, zoom)
+        },
+
+        setOptions: options => {
+          window.parent.postMessage({ type: 'MAP_OPTIONS', payload: options }, '*')
+        },
+
+        // Code-Editor-only / UI methods — silent no-ops
+        layers:                () => [],
+        add:                   () => {},
+        setControlVisibility:  () => {},
+        onClick:               () => {},
+        onChangeCenter:        () => {},
+        onChangeZoom:          () => {},
+        drawingTools:          () => ({ setShown: () => {}, getShapes: () => [] }),
+        style:                 () => ({ set: () => {} })
+      }
+
+      // ---------------------------------------------------------------------------
+      // GEE export — split with the parent app (Redux + hooks):
+      //
+      // - Starting an export (confirm, region.evaluate, batch/startProcessing) runs here because
+      //   the user script calls Export.* inside this iframe.
+      // - After EXPORT_STARTED, the parent owns polling, progress mapping, and UI. It does not
+      //   load the EE client or hold the Bearer token for API calls.
+      // - ee.data.getOperation / getTaskStatus / cancelOperation ONLY work on the `ee` instance
+      //   initialized below (currentEeInstance). The parent therefore asks for one-shot RPCs via
+      //   postMessage: GEE_FETCH_OPERATION → raw result back as GEE_OPERATION_RESULT;
+      //   CANCEL_EXPORT → callCancelEarthEngineOperation only (no task registry here).
+      //
+      // All export-only helpers and RPC entry points live on GeeSandboxExport (IIFE).
+      // ---------------------------------------------------------------------------
+      const GeeSandboxExport = (function () {
+        function exportTaskMeta(domain, target, description) {
+          return { domain, target, description: description ?? null }
+        }
+
+        function postExportStarted(metaWithId) {
+          window.parent.postMessage(
+            {
+              type: 'EXPORT_STARTED',
+              payload: {
+                taskId: metaWithId.id,
+                domain: metaWithId.domain,
+                target: metaWithId.target,
+                description: metaWithId.description ?? null
+              }
+            },
+            '*'
+          )
+        }
+
+        function normalizeExportRegion(params, done) {
+          try {
+            const region = params?.region
+            if (region && typeof region.evaluate === 'function') {
+              region.evaluate((geojson, err) => {
+                if (err) return done(err)
+                const normalized = geojson?.coordinates ? geojson.coordinates : geojson
+                done(null, { ...params, region: normalized })
+              })
+              return
+            }
+            done(null, params)
+          } catch (ex) {
+            done(ex)
+          }
+        }
+
+        function callGetTaskStatus(getTaskStatus, taskId, onOk, onErr) {
+          if (getTaskStatus.length >= 2) {
+            try {
+              getTaskStatus([taskId], (status, err) => (err ? onErr(err) : onOk(status)))
+            } catch (_) {
+              getTaskStatus(taskId, (status, err) => (err ? onErr(err) : onOk(status)))
+            }
+            return
+          }
+          Promise.resolve()
+            .then(() => {
+              try {
+                return getTaskStatus([taskId])
+              } catch (_) {
+                return getTaskStatus(taskId)
+              }
+            })
+            .then(onOk)
+            .catch(onErr)
+        }
+
+        /**
+         * Raw Cloud operation (incl. metadata.progress / stages). Prefer over getTaskStatus, which
+         * maps through zk() and drops those fields in the EE JS client.
+         */
+        function callGetOperation(getOperation, taskId, onOk, onErr) {
+          if (getOperation.length >= 2) {
+            try {
+              getOperation([taskId], (op, err) => (err ? onErr(err) : onOk(op)))
+            } catch (_) {
+              getOperation(taskId, (op, err) => (err ? onErr(err) : onOk(op)))
+            }
+            return
+          }
+          Promise.resolve()
+            .then(() => {
+              try {
+                return getOperation([taskId])
+              } catch (_) {
+                return getOperation(taskId)
+              }
+            })
+            .then(onOk)
+            .catch(onErr)
+        }
+
+        /** Parent maps `raw` to geeExports rows; sandbox does not interpret progress/state. */
+        function postGeeOperationResult(taskId, raw, err) {
+          const payload = { taskId }
+          if (err != null) {
+            payload.error = String(err.message != null ? err.message : err)
+          } else {
+            payload.raw = raw
+          }
+          window.parent.postMessage({ type: 'GEE_OPERATION_RESULT', payload }, '*')
+        }
+
+        /** Single EE API read for one taskId; invoked when parent posts GEE_FETCH_OPERATION. */
+        function fetchEarthEngineOperationOnce(eeInst, taskId) {
+          if (!eeInst || !taskId) return
+          const getOperation =
+            eeInst.data && typeof eeInst.data.getOperation === 'function' ? eeInst.data.getOperation : null
+          const getTaskStatus =
+            eeInst.data && typeof eeInst.data.getTaskStatus === 'function' ? eeInst.data.getTaskStatus : null
+          if (getOperation) {
+            callGetOperation(
+              getOperation,
+              taskId,
+              raw => postGeeOperationResult(taskId, raw, null),
+              err => postGeeOperationResult(taskId, null, err)
+            )
+          } else if (getTaskStatus) {
+            callGetTaskStatus(
+              getTaskStatus,
+              taskId,
+              raw => postGeeOperationResult(taskId, raw, null),
+              err => postGeeOperationResult(taskId, null, err)
+            )
+          }
+        }
+
+        function buildStartProcessingConfig(domain, target, params) {
+          const config = { ...(params || {}) }
+
+          const elementKey =
+            domain === 'table' || domain === 'video' || domain === 'map' ? 'collection' : 'image'
+          if (!('element' in config) && elementKey in config) config.element = config[elementKey]
+          if (!config.element) config.element = config.image || config.collection
+
+          if (domain === 'image') config.type = 'EXPORT_IMAGE'
+          else if (domain === 'table') config.type = 'EXPORT_FEATURES'
+          else if (domain === 'video') config.type = 'EXPORT_VIDEO'
+          else if (domain === 'map') config.type = 'EXPORT_TILES'
+
+          if (target === 'toDrive') {
+            config.driveFolder = config.driveFolder ?? config.folder ?? ''
+            config.driveFileNamePrefix =
+              config.driveFileNamePrefix ??
+              config.fileNamePrefix ??
+              config.filenamePrefix ??
+              config.description ??
+              ''
+            delete config.folder
+            delete config.fileNamePrefix
+          }
+
+          return config
+        }
+
+        function allocateEarthEngineTaskId(newTaskIdFn, callback) {
+          try {
+            if (newTaskIdFn.length >= 2) {
+              newTaskIdFn(1, ids => callback(ids && ids[0] ? ids[0] : null))
+              return
+            }
+            const ids = newTaskIdFn(1)
+            callback(Array.isArray(ids) ? ids[0] : ids)
+          } catch (ex) {
+            callback(null, ex)
+          }
+        }
+
+        function postExportError(domain, target, detail) {
+          window.parent.postMessage({ type: 'ERROR', message: `Export.${domain}.${target} ${detail}` }, '*')
+        }
+
+        function truncateForConfirm(s, maxLen) {
+          if (s == null) return ''
+          const t = String(s)
+          return t.length > maxLen ? `${t.slice(0, maxLen)}…` : t
+        }
+
+        function stringifyForConfirm(value, maxLen) {
+          if (value == null) return null
+          if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+          if (typeof value === 'string') return truncateForConfirm(value, maxLen)
+          if (typeof value.encode === 'function') return '(Earth Engine object — size unknown until run)'
+          if (Array.isArray(value)) return truncateForConfirm(JSON.stringify(value), maxLen)
+          try {
+            return truncateForConfirm(JSON.stringify(value), maxLen)
+          } catch (_) {
+            return truncateForConfirm(String(value), maxLen)
+          }
+        }
+
+        /**
+         * Human-readable fields for the pre-export confirm dialog (no EE elements).
+         */
+        function collectExportConfirmFields(params, taskConfig) {
+          const merged = { ...(params || {}) }
+          if (taskConfig && typeof taskConfig === 'object') {
+            for (const [k, v] of Object.entries(taskConfig)) {
+              if (merged[k] == null && v != null) merged[k] = v
+            }
+          }
+
+          const preferredOrder = [
+            'description',
+            'folder',
+            'fileNamePrefix',
+            'filenamePrefix',
+            'scale',
+            'maxPixels',
+            'crs',
+            'fileFormat',
+            'dimensions',
+            'shardSize',
+            'fileDimensions',
+            'maxFrames',
+            'framesPerSecond',
+            'selectors',
+            'bucket',
+            'path',
+            'assetId',
+            'table',
+            'mapName',
+            'priority',
+            'driveFolder',
+            'driveFileNamePrefix'
+          ]
+
+          const skipKeys = new Set([
+            'element',
+            'image',
+            'collection',
+            'classifier',
+            'type',
+            'config',
+            'callback'
+          ])
+
+          const lines = []
+          const seen = new Set()
+
+          function addLine(key, label) {
+            const v = merged[key]
+            if (v == null || typeof v === 'function') return
+            if (skipKeys.has(key)) return
+            const text = stringifyForConfirm(v, 220)
+            if (text == null) return
+            lines.push(`  • ${label || key}: ${text}`)
+            seen.add(key)
+          }
+
+          preferredOrder.forEach(k => addLine(k))
+
+          if (merged.region != null) {
+            const r = merged.region
+            const desc = stringifyForConfirm(r, 200)
+            lines.push(`  • region: ${desc || '(set)'}`)
+            seen.add('region')
+          }
+
+          Object.keys(merged).forEach(key => {
+            if (seen.has(key) || skipKeys.has(key)) return
+            const v = merged[key]
+            if (v == null || typeof v === 'function') return
+            if (typeof v === 'object' && typeof v.encode === 'function') return
+            addLine(key)
+          })
+
+          return lines
+        }
+
+        /**
+         * @returns {boolean} true if the user confirmed (OK), false if cancelled.
+         */
+        function confirmEarthEngineExport(domain, target, params, taskConfig) {
+          const detailLines = collectExportConfirmFields(params, taskConfig)
+          const message = [
+            'Earth Engine export is about to start.',
+            '',
+            `Export.${domain}.${target}`,
+            '',
+            detailLines.length ? 'Available details:' : 'No extra parameters to show.',
+            ...detailLines,
+            '',
+            'Output size (bytes / file count) is not known until the task runs on Earth Engine.',
+            '',
+            'Click OK to start this export, or Cancel to skip it.'
+          ].join('\n')
+
+          return window.confirm(message)
+        }
+
+        function startExportViaStartProcessing(domain, target, params, apis) {
+          const { newTaskId, startProcessing } = apis
+          if (typeof newTaskId !== 'function' || typeof startProcessing !== 'function') {
+            throw new Error('missing ee.data.newTaskId / ee.data.startProcessing')
+          }
+
+          const meta = exportTaskMeta(domain, target, params?.description)
+          const config = buildStartProcessingConfig(domain, target, params)
+
+          allocateEarthEngineTaskId(newTaskId, (taskId, idErr) => {
+            if (!taskId || idErr) {
+              console.warn('[GEE export] newTaskId failed', idErr)
+              postExportError(domain, target, `failed to allocate task id: ${String(idErr?.message || idErr || 'unknown')}`)
+              return
+            }
+
+            startProcessing(taskId, config, (resp, procErr) => {
+              if (procErr) {
+                console.warn('[GEE export] startProcessing failed', procErr)
+                postExportError(domain, target, `startProcessing failed: ${String(procErr?.message || procErr)}`)
+                return
+              }
+
+              const id = resp?.taskId ?? taskId
+              const metaWithId = { ...meta, id, taskId: id }
+              postExportStarted(metaWithId)
+            })
+          })
+        }
+
+        function createExport(ee) {
+          const batchExport = ee?.batch?.Export
+          const newTaskId = ee?.data?.newTaskId
+          const startProcessing = ee?.data?.startProcessing
+          const apis = { newTaskId, startProcessing }
+
+          function startBatchExportTask(eeTask, domain, target) {
+            try {
+              if (eeTask && typeof eeTask.start === 'function') eeTask.start()
+            } catch (_) {}
+
+            const description = eeTask?.config?.description ?? null
+            const id = eeTask?.id ?? null
+            const metaWithId = { ...exportTaskMeta(domain, target, description), id, taskId: id }
+
+            postExportStarted(metaWithId)
+            return eeTask
+          }
+
+          function wrapBatchExport(fn, domain, target) {
+            return params => {
+              normalizeExportRegion(params, (err, normalized) => {
+                if (err) {
+                  postExportError(domain, target, `region evaluate failed: ${String(err?.message || err)}`)
+                  return
+                }
+                try {
+                  const eeTask = fn(normalized)
+                  const taskConfig =
+                    eeTask && typeof eeTask === 'object' ? eeTask.config || eeTask.Ye || null : null
+                  if (!confirmEarthEngineExport(domain, target, normalized, taskConfig)) return
+                  startBatchExportTask(eeTask, domain, target)
+                } catch (ex) {
+                  postExportError(domain, target, `failed: ${String(ex?.message || ex)}`)
+                }
+              })
+              return null
+            }
+          }
+
+          function wrapStartProcessing(domain, target) {
+            return params => {
+              normalizeExportRegion(params, (err, normalized) => {
+                if (err) {
+                  postExportError(domain, target, `region evaluate failed: ${String(err?.message || err)}`)
+                  return
+                }
+                try {
+                  if (!confirmEarthEngineExport(domain, target, normalized, null)) return
+                  startExportViaStartProcessing(domain, target, normalized, apis)
+                } catch (ex) {
+                  postExportError(domain, target, `failed: ${String(ex?.message || ex)}`)
+                }
+              })
+              return null
+            }
+          }
+
+          function makeDomain(domain) {
+            const src = batchExport && batchExport[domain]
+            return {
+              toDrive:        src?.toDrive        ? wrapBatchExport(src.toDrive,        domain, 'toDrive')        : wrapStartProcessing(domain, 'toDrive'),
+              toCloudStorage: src?.toCloudStorage ? wrapBatchExport(src.toCloudStorage, domain, 'toCloudStorage') : wrapStartProcessing(domain, 'toCloudStorage'),
+              toAsset:        src?.toAsset        ? wrapBatchExport(src.toAsset,        domain, 'toAsset')        : wrapStartProcessing(domain, 'toAsset'),
+              toBigQuery:     src?.toBigQuery     ? wrapBatchExport(src.toBigQuery,     domain, 'toBigQuery')     : wrapStartProcessing(domain, 'toBigQuery'),
+              toGCS:          src?.toCloudStorage ? wrapBatchExport(src.toCloudStorage, domain, 'toCloudStorage') : wrapStartProcessing(domain, 'toCloudStorage')
+            }
+          }
+
+          return {
+            image: makeDomain('image'),
+            table: makeDomain('table'),
+            video: makeDomain('video'),
+            map:   makeDomain('map')
+          }
+        }
+
+        /**
+         * Redux dispatches cancel → parent posts CANCEL_EXPORT. Only the sandbox can call
+         * ee.data.cancelOperation (authenticated ee). No local task list; EE decides if the op exists.
+         */
+        function callCancelEarthEngineOperation(eeInst, taskId) {
+          const cancel = eeInst && eeInst.data && eeInst.data.cancelOperation
+          if (typeof cancel !== 'function' || !taskId) return
+          try {
+            if (cancel.length >= 2) {
+              try {
+                cancel([taskId], (_, err) => {
+                  if (err) console.warn('[GEE sandbox] cancelOperation:', err)
+                })
+              } catch (_) {
+                cancel(taskId, (_, err) => {
+                  if (err) console.warn('[GEE sandbox] cancelOperation:', err)
+                })
+              }
+              return
+            }
+            Promise.resolve()
+              .then(() => {
+                try {
+                  return cancel([taskId])
+                } catch (_) {
+                  return cancel(taskId)
+                }
+              })
+              .catch(err => console.warn('[GEE sandbox] cancelOperation:', err))
+          } catch (ex) {
+            console.warn('[GEE sandbox] cancelOperation:', ex)
+          }
+        }
+
+        return {
+          createExport,
+          fetchEarthEngineOperationOnce,
+          callCancelEarthEngineOperation
+        }
+      })()
+
+      /**
+       * Builds the `geometries` object passed into the user script (4th argument to `new Function(..., 'geometries', code)`).
+       *
+       * **Return value:** a plain object (not an Array). Each own property value is an `ee.Geometry` for one map-drawn
+       * geometry. The same `ee.Geometry` instance may appear under several keys:
+       * - **Index** — `0`, `1`, … so `geometries[2]` and `geometries["2"]` work (object keys are strings in JS).
+       * - **Exact label** — `title` or `name` from the parent payload, e.g. `geometries["Polygon 3"]`.
+       * - **Slug** — label lowercased with non-alphanumerics removed, e.g. `geometries.polygon3`, `geometries.athens`.
+       *
+       * Call only after the Earth Engine client is loaded (`ee` global). Rows that fail to parse are skipped.
+       *
+       * @param {Array<{ geometryTypeName?: string, coordinates?: string|Array, title?: string, name?: string }>} rawGeometries
+       * @returns {Object<string, *>} Plain object; each value is an `ee.Geometry` from the Earth Engine API.
+       */
+      function buildGeometriesLookup(rawGeometries) {
+        const list = rawGeometries || []
+
+        function parseOne(g) {
+          try {
+            const coords = typeof g.coordinates === 'string' ? JSON.parse(g.coordinates) : g.coordinates
+            const type = (g.geometryTypeName || '').toUpperCase()
+            if (type === 'POINT') return ee.Geometry.Point(coords)
+            if (type === 'LINEAR_RING') return ee.Geometry.LinearRing(coords)
+            if (type === 'POLYGON') return ee.Geometry.Polygon(coords)
+          } catch (ex) {
+            console.warn('[Sandbox] buildGeometriesLookup parse failed for', g, ex)
+          }
+          return null
+        }
+
+        function slugKey(label) {
+          return String(label).toLowerCase().replace(/[^a-z0-9]+/g, '')
+        }
+
+        const out = {}
+        list.forEach((g, i) => {
+          const geom = parseOne(g)
+          if (!geom) return
+          out[i] = geom
+          const label = g.title || g.name
+          if (label) {
+            out[label] = geom
+            const slug = slugKey(label)
+            if (slug) out[slug] = geom
+          }
+        })
+        return out
+      }
+
+      window.addEventListener('message', event => {
+        const { type, code, token } = event.data
+
+        // Parent-driven poll tick: parent Redux/hook sends this; we only forward to ee.data.* .
+        if (type === 'GEE_FETCH_OPERATION') {
+          const taskId = event.data.taskId ?? event.data.payload?.taskId
+          GeeSandboxExport.fetchEarthEngineOperationOnce(currentEeInstance, taskId)
+          return
+        }
+
+        if (type === 'CANCEL_EXPORT') {
+          const taskId = event.data.taskId ?? event.data.payload?.taskId
+          GeeSandboxExport.callCancelEarthEngineOperation(currentEeInstance, taskId)
+          return
+        }
+
+        // On-demand screenshot: use current Leaflet map bounds from MapPanel
+        if (type === 'GET_THUMB') {
+          if (!lastLayerData) return
+          const { eeImg, visParams } = lastLayerData
+          const { south, west, north, east } = event.data.payload
+          try {
+            const thumbParams = { dimensions: '1024', format: 'png', bestEffort: true }
+            if (visParams.bands)            thumbParams.bands   = visParams.bands
+            if (visParams.min !== undefined) thumbParams.min    = visParams.min
+            if (visParams.max !== undefined) thumbParams.max    = visParams.max
+            if (visParams.palette)           thumbParams.palette = visParams.palette
+            thumbParams.region = ee.Geometry.Rectangle([west, south, east, north])
+            eeImg.getThumbURL(thumbParams, (thumbUrl, thumbErr) => {
+              if (thumbErr || !thumbUrl) {
+                console.warn('[Sandbox] Screenshot thumbnail error:', thumbErr)
+                window.parent.postMessage({ type: 'ERROR', message: 'Screenshot failed: ' + thumbErr }, '*')
+                return
+              }
+              window.parent.postMessage({ type: 'SCREENSHOT', payload: { url: thumbUrl } }, '*')
+            })
+          } catch (ex) {
+            console.warn('[Sandbox] GET_THUMB error:', ex)
+          }
+          return
+        }
+
+        if (type === 'EXECUTE') {
+          layerAdded = false
+          mapCenter = null  // reset for new run
+          lastLayerData = null  // reset for new run
+          currentEeInstance = null
+
+          try {
+            ee.data.setAuthToken(null, 'Bearer', token)
+
+            ee.initialize(
+              null,
+              null,
+              () => {
+                currentEeInstance = ee
+                try {
+                  // Proxy for GEE print() — handles both plain values and lazy EE objects
+                  const proxyPrint = (...args) => {
+                    args.forEach(a => {
+                      if (a != null && typeof a.evaluate === 'function') {
+                        // EE lazy object — evaluate server-side then post result
+                        a.evaluate((val, err) => {
+                          const text = err ? `[Error: ${err}]` : JSON.stringify(val, null, 2)
+                          console.log('[GEE print]', text)
+                          window.parent.postMessage({ type: 'PRINT', payload: { message: text } }, '*')
+                        })
+                      } else {
+                        const text = (typeof a === 'object' && a !== null) ? JSON.stringify(a) : String(a ?? '')
+                        console.log('[GEE print]', text)
+                        window.parent.postMessage({ type: 'PRINT', payload: { message: text } }, '*')
+                      }
+                    })
+                  }
+
+                  const geometries = buildGeometriesLookup(event.data.geometries)
+
+                  const Export = GeeSandboxExport.createExport(ee)
+
+                  const userFunc = new Function('ee', 'Map', 'print', 'geometries', 'Export', code)
+                  userFunc(ee, ProxyMap, proxyPrint, geometries, Export)
+
+                  setTimeout(() => {
+                    if (!layerAdded) {
+                      window.parent.postMessage({ type: 'SUCCESS', payload: { url: null } }, '*')
+                    }
+                  }, 500)
+                } catch (runErr) {
+                  window.parent.postMessage({ type: 'ERROR', message: 'Runtime Error: ' + runErr.message }, '*')
+                }
+              },
+              initErr => {
+                window.parent.postMessage({ type: 'ERROR', message: 'Init Failed: ' + initErr }, '*')
+              },
+              undefined, // opt_xsrf_token (5th arg — unused)
+              event.data.geeProjectId || undefined // opt_project (6th arg)
+            )
+          } catch (err) {
+            window.parent.postMessage({ type: 'ERROR', message: err.message }, '*')
+          }
+        }
+      })
+
+      window.parent.postMessage({ type: 'IFRAME_READY' }, '*')
+    </script>
+  </body>
+</html>
