@@ -36,6 +36,7 @@ import DialogContent from "@mui/material/DialogContent";
 import Chip from "@mui/material/Chip";
 import { useRouter } from 'next/router'
 import RequireOrgRoles from 'src/authentication/components/RequireOrgRoles'
+import AgentEmbedSnippet from 'src/views/pages/project-settings-components/AgentEmbedSnippet'
 
 
 const AiAgentProjectSettings = () => {
@@ -883,6 +884,10 @@ const AiAgentProjectSettings = () => {
                         </Box>
                       </ButtonBase>
                     ))}
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <AgentEmbedSnippet organizationId={organizationId} projectId={projectId} />
                   </Grid>
 
                   {provenAiEnabled && (
