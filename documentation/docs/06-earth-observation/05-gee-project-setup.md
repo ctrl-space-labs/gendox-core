@@ -9,10 +9,8 @@ The [Earth Observation Task](./01-intro.md) uses **Google Earth Engine (GEE)** t
 This page walks you through:
 
 1. Creating (or picking) a **Google Cloud project** to use with Earth Engine.
-2. **Enabling the Earth Engine API** on that project.
-3. **Registering the project with Earth Engine** (separate from enabling the API — required for noncommercial or commercial use).
-4. **Registering the OAuth scopes** Gendox needs to call Earth Engine on the user's behalf.
-5. Copying the **Project ID** and entering it in Gendox.
+2. **Creating a Google Earth Engine account** for your project (a one-time signup with Google).
+3. Copying the **Project ID** and entering it in Gendox.
 
 The whole process takes ~10 minutes and only needs to be done once per organization.
 
@@ -22,7 +20,7 @@ The whole process takes ~10 minutes and only needs to be done once per organizat
 
 You will need:
 
-- A **Google account** that you will use to sign in to Earth Engine through Gendox. Any personal or workspace Google account works — you no longer need a separate "Earth Engine personal signup". Project-level access (configured in Step 3) is what unlocks EE for this account.
+- A **Google account** that you will use to sign in to Earth Engine through Gendox. Any personal or workspace Google account works. In Step 2 you will link that account to Earth Engine for your project.
 - The right to manage Cloud projects on that Google account (any personal Google account works for a personal project; for a corporate account, ask your Google Workspace admin if you cannot create projects yourself).
 - **Owner** or **Admin** access to your Gendox organization (so you can save the connector).
 
@@ -43,88 +41,53 @@ The project name is what you see in the UI. The **Project ID** (which is what Ge
 
 ---
 
-## Step 2 — Enable the Earth Engine API
+## Step 2 — Create a Google Earth Engine account
 
-With your project selected:
+Google asks you to **sign up for Earth Engine** and link it to your Cloud project. Think of it as creating your Earth Engine account — a short form where you tell Google who you are and how you plan to use the service.
 
-1. Go to **APIs & Services → Library**, or open directly: [console.cloud.google.com/apis/library/earthengine.googleapis.com](https://console.cloud.google.com/apis/library/earthengine.googleapis.com).
-2. Make sure the project selector at the top still shows the project you want.
-3. Click **ENABLE**.
-4. Wait until the page refreshes and shows the **MANAGE** button — that means the API is enabled. (Allow a few minutes for the change to propagate to Earth Engine.)
-
----
-
-## Step 3 — Register the project with Earth Engine
-
-Enabling the Earth Engine API (Step 2) is **not enough on its own**. Google requires every Cloud project that calls Earth Engine to also go through a separate **Earth Engine registration** that declares whether the project will be used for *noncommercial* (research, education, nonprofit) or *commercial* purposes. Without this step, Gendox sign-in succeeds but the first Earth Engine call fails with:
+If you skip this step, you can still sign in to Gendox, but Earth Engine will not work. You may see an error like:
 
 > *"Project &lt;your-id&gt; is not registered to use Earth Engine."*
 
-1. Open the Earth Engine registration page for your project: [console.cloud.google.com/earth-engine/configuration](https://console.cloud.google.com/earth-engine/configuration).
-2. Make sure the project selector at the top shows the project you want (the URL also accepts a `?project=<your-project-id>` parameter).
-3. Click **Register** (or **Configure** if the project was registered before).
-4. Walk through the 5-step wizard:
-   1. **Select your organization type** — pick the entity that owns the project (individual, nonprofit, academic, government, business, etc.).
-   2. **Check noncommercial eligibility** — if you intend to use the project for free under the noncommercial tier, fill in your nonprofit/educational institution name and confirm you will not receive payment for Earth Engine outputs. Click **Check eligibility**.
-   3. **Choose your plan** — Noncommercial (free), Professional, Premium, or pay-as-you-go. For most internal Gendox setups, *Noncommercial* is fine if you qualify.
-   4. **Describe your work** — a short paragraph about how you intend to use Earth Engine. Google reads these.
-   5. **Review summary** — confirm the details.
-5. Click **Register** at the bottom.
+### What to do
 
-The registration is typically activated **immediately** for noncommercial use; commercial plans require billing setup and may take a few minutes. After it is active, the Configuration page shows the project as *Registered* with the chosen plan.
+1. Open Google's Earth Engine signup page: [console.cloud.google.com/earth-engine/configuration](https://console.cloud.google.com/earth-engine/configuration).
+2. At the top of the page, make sure the correct project is selected (the one you created in Step 1).
+3. Click **Register** (or **Configure** if you have done this before).
+4. Follow the on-screen wizard. Google will ask you a few questions:
+   - **Who you are** — for example, an individual, a nonprofit, a school, a government body, or a business.
+   - **Whether you qualify for free use** — if you are using Earth Engine for research, education, or nonprofit work (not for paid commercial products), you can usually choose the free *Noncommercial* option. Google may ask you to confirm this.
+   - **Which plan you want** — most Gendox users who qualify pick *Noncommercial* (free). Businesses that need commercial use can choose a paid plan instead.
+   - **What you plan to do** — a short description of your work. Google reads these to understand how people use Earth Engine.
+   - **A final review** — check that everything looks right.
+5. Click **Register** at the bottom to finish.
+
+For the free noncommercial plan, access is usually granted right away. Paid plans may take a few minutes while Google sets up billing. When you are done, the page should show your project as *Registered*.
 
 :::tip
 
-If you previously registered the project for noncommercial use and lost access (e.g. after a Workspace migration), you must **re-verify eligibility** at the same URL — Earth Engine will reject API calls until you do.
+If you used Earth Engine before and suddenly lost access (for example after switching to a new Google Workspace), go back to the same page and **re-verify your eligibility**. Earth Engine will not work until you do.
 
 :::
 
----
+### Double-check: enable the Earth Engine API
 
-## Step 4 — Register the OAuth scopes
+One more thing Google requires: the **Earth Engine API** must be turned on for your project. This is easy to miss, so it is worth confirming before you move on.
 
-When a user signs in to Earth Engine through Gendox, the browser asks Google's OAuth consent screen for permission to call the Earth Engine API on the user's behalf. That permission ("scope") must be **declared in advance** in your Google Auth Platform configuration — otherwise the user either sees an "unverified app" warning, or Gendox is rejected with *"Request had insufficient authentication scopes"* immediately after sign-in.
-
-Gendox requests **two** OAuth scopes:
-
-| Scope | What it allows | Why Gendox needs it |
-| --- | --- | --- |
-| `https://www.googleapis.com/auth/earthengine` | View and manage your Google Earth Engine data | Run EE algorithms and request tiles on the user's behalf. |
-| `https://www.googleapis.com/auth/userinfo.email` | See your primary Google Account email address | Display the connected Google account in the workspace header. |
-
-To register both:
-
-1. Open the **Data Access** page of the Google Auth Platform for your project: [console.cloud.google.com/auth/scopes](https://console.cloud.google.com/auth/scopes).
+1. Open the Earth Engine API page: [console.cloud.google.com/apis/library/earthengine.googleapis.com](https://console.cloud.google.com/apis/library/earthengine.googleapis.com).
 2. Make sure the project selector at the top still shows the project you want.
-3. Click **Add or remove scopes**.
-4. In the filter, type `earthengine` and tick the entry:
-   - `https://www.googleapis.com/auth/earthengine` — *"View and manage your Google Earth Engine data"*
-5. Clear the filter and type `userinfo.email` (or just `email`) and tick the entry:
-   - `https://www.googleapis.com/auth/userinfo.email` — *"See your primary Google Account email address"*
-6. Click **Update**, then **Save** at the bottom of the Data Access page.
-
-After saving you should see both scopes listed (the `earthengine` one usually under *Your non-sensitive scopes* — or *sensitive* depending on Google's current classification — and `userinfo.email` under *Your non-sensitive scopes*):
-
-| API | Scope | User-facing description |
-| --- | --- | --- |
-| Google Earth Engine API | `.../auth/earthengine` | View and manage your Google Earth Engine data |
-| Google OAuth2 API | `.../auth/userinfo.email` | See your primary Google Account email address |
-
-:::tip
-
-Technically `userinfo.email` is auto-allowed by Google even when not declared — but we recommend registering it explicitly so the Data Access page truthfully reflects every scope Gendox asks for. This also avoids friction when you submit the app for **verification** later, since Google's review requires every requested scope to be declared upfront.
-
-:::
+3. If you see an **ENABLE** button, click it and wait until the page shows **MANAGE** instead — that means the API is on. (It can take a few minutes to take effect.)
+4. If you already see **MANAGE**, you are all set — the API is already enabled.
 
 :::info
 
-If your Google Auth Platform is in **Testing** mode (the default for new projects), only users you explicitly add as **Test users** under the *Audience* tab will get past the "unverified app" warning. Add the Google accounts of every Gendox user who will sign in to Earth Engine, or submit the app for verification when you go to production.
+You need both steps above for Gendox to work: your Earth Engine account (the signup wizard) **and** the Earth Engine API enabled on the same project. If either one is missing, maps may fail to load or show a *rate limited* warning in Gendox.
 
 :::
 
 ---
 
-## Step 5 — Copy the Project ID
+## Step 3 — Copy the Project ID
 
 The Project ID is **not** the project name. To find it:
 
@@ -134,7 +97,7 @@ The Project ID is **not** the project name. To find it:
 
 ---
 
-## Step 6 — Enter the Project ID in Gendox
+## Step 4 — Enter the Project ID in Gendox
 
 1. In Gendox, open the user menu and go to **Organization Settings**.
 2. Select the **Advanced Settings** tab.
@@ -196,11 +159,10 @@ The most likely causes if the chip turns yellow or sign-in fails are:
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Sign-in fails with *"insufficient authentication scopes"* | The `earthengine` scope is not declared in the Google Auth Platform | Revisit [Step 4](#step-4--register-the-oauth-scopes). |
 | Sign-in shows the red *"Google hasn't verified this app"* screen | Your Auth Platform is in Testing mode and your account is not on the test user list | Add yourself as a *Test user* under **Audience** in the Google Auth Platform, or submit the app for verification. |
-| Chip says *rate limited* | Earth Engine API not enabled on this project | Revisit [Step 2](#step-2--enable-the-earth-engine-api). |
-| Chip says *rate limited* | Project is enabled but **not registered** with Earth Engine | Revisit [Step 3](#step-3--register-the-project-with-earth-engine). |
-| Chip says *rate limited* | Project ID is wrong (e.g. you pasted the project *name*) | Revisit [Step 5](#step-5--copy-the-project-id). |
+| Chip says *rate limited* | Earth Engine API not enabled on this project | Revisit the [Double-check: enable the Earth Engine API](#double-check-enable-the-earth-engine-api) section in [Step 2](#step-2--create-a-google-earth-engine-account). |
+| Chip says *rate limited* | Earth Engine account not set up for this project | Revisit [Step 2](#step-2--create-a-google-earth-engine-account). |
+| Chip says *rate limited* | Project ID is wrong (e.g. you pasted the project *name*) | Revisit [Step 3](#step-3--copy-the-project-id). |
 | Chip says *rate limited* | Your Google account does not have access to this project | Add your Google account as a *Viewer* (minimum) in **IAM & Admin → IAM** in the Cloud Console. |
 | Chip says *No project · rate limited* | Empty `Project ID` field, no connector saved | Re-enter the ID via Org Settings and click **Save** again. Refresh the EO Task. |
 
@@ -218,7 +180,7 @@ Earth Engine is free for projects registered under the [noncommercial plan](http
 
 ### Can I change the Project ID later?
 
-Yes. Repeat *Step 6* with a different ID. Gendox automatically clears the cached Earth Engine session for your organization when you save, so the next time an EO Task is opened, Earth Engine re-initialises with the new project. Users currently inside a workspace will be prompted to sign in again on their next page load.
+Yes. Repeat *Step 4* with a different ID. Gendox automatically clears the cached Earth Engine session for your organization when you save, so the next time an EO Task is opened, Earth Engine re-initialises with the new project. Users currently inside a workspace will be prompted to sign in again on their next page load.
 
 ### What happens if the project is disabled or wrong?
 

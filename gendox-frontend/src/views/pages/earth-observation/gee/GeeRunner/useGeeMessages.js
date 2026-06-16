@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import {
   setMapData,
   addMapLayer,
@@ -13,6 +13,7 @@ import {
   createEOScriptThunk
 } from 'src/store/earthObservation'
 import { buildSubmittedGeeExportPayload } from 'src/store/earthObservation/geeExportPayload'
+import { CONNECTOR_TYPES } from 'src/gendox-sdk/organizationConnectorService'
 import { fetchGeeImage } from './fetchGeeImage'
 
 // Handles all window.message events coming from the GEE sandbox iframe.
@@ -31,6 +32,9 @@ export function useGeeMessages({
   setIsRunning
 }) {
   const dispatch = useDispatch()
+  const connectors = useSelector(state => state.activeOrganization.organizationConnectors)
+  const geeProjectId =
+    (connectors || []).find(c => c.connectorType === CONNECTOR_TYPES.GOOGLE_EARTH_ENGINE)?.config?.projectId || null
 
   useEffect(() => {
     const handleMessage = event => {
@@ -50,7 +54,8 @@ export function useGeeMessages({
               type: 'EXECUTE',
               code: pendingCodeRef.current,
               token: pendingTokenRef.current,
-              geometries: pendingGeometriesRef?.current ?? []
+              geometries: pendingGeometriesRef?.current ?? [],
+              geeProjectId: geeProjectId
             },
             '*'
           )
@@ -162,5 +167,5 @@ export function useGeeMessages({
 
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [dispatch, organizationId, projectId, taskId, token])
+  }, [dispatch, organizationId, projectId, taskId, token, geeProjectId])
 }

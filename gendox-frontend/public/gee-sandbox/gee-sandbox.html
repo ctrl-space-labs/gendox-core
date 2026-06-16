@@ -782,7 +782,9 @@
               },
               initErr => {
                 window.parent.postMessage({ type: 'ERROR', message: 'Init Failed: ' + initErr }, '*')
-              }
+              },
+              undefined, // opt_xsrf_token (5th arg — unused)
+              event.data.geeProjectId || undefined // opt_project (6th arg)
             )
           } catch (err) {
             window.parent.postMessage({ type: 'ERROR', message: err.message }, '*')

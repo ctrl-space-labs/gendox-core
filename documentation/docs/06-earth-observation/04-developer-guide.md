@@ -16,7 +16,6 @@ This guide explains how SeaScope is assembled, where the important code lives, a
 In `gendox-frontend/.env.local`:
 
 - **`NEXT_PUBLIC_GEE_CLIENT_ID`**: Google OAuth client id used for Earth Engine authentication.
-- **`NEXT_PUBLIC_MAPS_API_KEY`**: used by map-related features (if enabled in your build).
 - **`NEXT_PUBLIC_GENDOX_URL`**: base URL of the Gendox API.
 
 ### Run the apps locally
