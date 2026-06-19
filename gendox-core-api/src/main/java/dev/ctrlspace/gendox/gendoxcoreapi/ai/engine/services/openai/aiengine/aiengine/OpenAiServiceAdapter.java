@@ -319,6 +319,19 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
             messages.getFirst().setRole("developer");
         }
 
+        String vertexAIRegex = ".*aiplatform\\.googleapis\\.com.*";
+        if (aiModel.getUrl().matches(vertexAIRegex)) {
+            openAiGptRequestBuilder
+                    .reasoningEffort(null)
+                    .extraBody(OpenAiExtraBody.builder()
+                            .google(GoogleExtraBody.builder()
+                                    .thinkingConfig(GoogleThinkingConfig.builder()
+                                            .thinkingBudget(0)
+                                            .build())
+                                    .build())
+                            .build());
+        }
+
         OpenAiCompletionRequest openAiCompletionRequest = openAiGptRequestBuilder.build();
         OpenAiCompletionResponse openAiCompletionResponse = this.getCompletionResponse(openAiCompletionRequest, aiModel, apiKey);
         CompletionResponse completionResponse = openAiCompletionResponseConverter.toCompletionResponse(openAiCompletionResponse);

@@ -36,6 +36,9 @@ public class OpenAiCompletionRequest {
     private List<ToolDto> tools = new ArrayList<>();
     @JsonProperty("response_format")
     private ResponseFormat responseFormat;
+    // for Google and VertexAI
+    @JsonProperty("extra_body")
+    private OpenAiExtraBody extraBody;
 
 
     @Data
