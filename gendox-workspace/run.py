@@ -6,8 +6,10 @@ Usage:
     python run.py
 
 Reads all configuration from .env in the same directory.
+Optional: create a pages.json to restrict which pages are digitized per file.
 """
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -31,6 +33,18 @@ def _require(key: str) -> str:
     return value
 
 
+def _load_pages_config() -> dict | None:
+    """Load pages.json if GENDOX_PAGES_CONFIG is set or pages.json exists next to run.py."""
+    path_str = os.getenv("GENDOX_PAGES_CONFIG", "").strip()
+    path = Path(path_str) if path_str else HERE / "pages.json"
+    if not path.is_absolute():
+        path = HERE / path
+    if not path.exists():
+        return None
+    print(f"  [config] Loading page ranges from: {path.name}")
+    return json.loads(path.read_text())
+
+
 def on_progress(step: str, message: str) -> None:
     print(f"  [{step}] {message}")
 
@@ -38,6 +52,8 @@ def on_progress(step: str, message: str) -> None:
 def main() -> None:
     INPUT_FOLDER.mkdir(exist_ok=True)
     OUTPUT_FOLDER.mkdir(exist_ok=True)
+
+    pages_config = _load_pages_config()
 
     client = GendoxClient(
         token=_require("GENDOX_TOKEN"),
@@ -57,6 +73,7 @@ def main() -> None:
             export_format=os.getenv("GENDOX_EXPORT_FORMAT", "csv"),
             clean=os.getenv("GENDOX_CLEAN_TASK", "false").lower() == "true",
             skip_upload=os.getenv("GENDOX_SKIP_UPLOAD", "false").lower() == "true",
+            pages_config=pages_config,
             on_progress=on_progress,
         )
     except GendoxAuthError:

@@ -1,6 +1,7 @@
 """CLI entry point for the Gendox SDK."""
 
 import argparse
+import json
 import logging
 import os
 import sys
@@ -74,6 +75,7 @@ def _add_digitize_args(parser: argparse.ArgumentParser) -> None:
         "  GENDOX_EXPORT_FORMAT   csv | json | markdown | all  (prompts if not set)\n"
         "  GENDOX_SKIP_UPLOAD     true → skip upload+train step\n"
         "  GENDOX_CLEAN_TASK      true → delete old DOCUMENT nodes before upload\n"
+        "  GENDOX_PAGES_CONFIG    Path to JSON file mapping filename → {page_from, page_to}\n"
         "\n"
         "─── export formats ─────────────────────────────────────────\n"
         "  csv        API /digitization/export-csv    → saves a .csv file\n"
@@ -87,6 +89,7 @@ def _add_digitize_args(parser: argparse.ArgumentParser) -> None:
         "  gendox digitize --skip-upload\n"
         "  gendox digitize --skip-upload --export-format json\n"
         "  gendox digitize --resume\n"
+        "  gendox digitize --pages-config pages.json\n"
     )
     parser.add_argument("--token",           default=None, help="Override GENDOX_TOKEN")
     parser.add_argument("--api-url",         default=None, help="Override GENDOX_API_URL")
@@ -107,6 +110,9 @@ def _add_digitize_args(parser: argparse.ArgumentParser) -> None:
                         help="Delete existing DOCUMENT nodes before upload")
     parser.add_argument("--resume", action="store_true",
                         help="Resume a previously interrupted run")
+    parser.add_argument("--pages-config", default=None,
+                        help="Path to a JSON file mapping filename → {page_from, page_to} "
+                             "or a list of ranges [{page_from, page_to}, ...] for non-contiguous pages")
     parser.add_argument("--verbose", "-v", action="store_true",
                         help="Enable debug logging")
 
@@ -156,6 +162,19 @@ def _run_digitize(args: argparse.Namespace) -> None:
     skip_upload = args.skip_upload or os.getenv("GENDOX_SKIP_UPLOAD", "false").lower() == "true"
     clean_task  = args.clean_task  or os.getenv("GENDOX_CLEAN_TASK",  "false").lower() == "true"
 
+    pages_config: dict | None = None
+    _pages_config_path = args.pages_config or os.getenv("GENDOX_PAGES_CONFIG", "").strip()
+    if not _pages_config_path and (cwd / "pages.json").exists():
+        _pages_config_path = str(cwd / "pages.json")
+    if _pages_config_path:
+        p = Path(_pages_config_path)
+        if not p.is_absolute():
+            p = cwd / p
+        if not p.exists():
+            print(f"[ERROR] --pages-config file not found: {p}")
+            sys.exit(1)
+        pages_config = json.loads(p.read_text())
+
     # Format: flag → env var → interactive prompt
     env_format    = os.getenv("GENDOX_EXPORT_FORMAT", "").strip().lower()
     export_format = args.export_format or (env_format if env_format in _VALID_FORMATS else None)
@@ -173,6 +192,8 @@ def _run_digitize(args: argparse.Namespace) -> None:
     print(f"  Output:     {output_folder}")
     print(f"  Format:     {export_format}")
     print(f"  Clean:      {clean_task}  |  Skip upload: {skip_upload}  |  Resume: {args.resume}")
+    if pages_config:
+        print(f"  Pages:      per-file config ({len(pages_config)} file(s))")
     if prompt:
         print(f"  Prompt:     {prompt[:80]}{'…' if len(prompt) > 80 else ''}")
     print("=" * 60)
@@ -190,6 +211,7 @@ def _run_digitize(args: argparse.Namespace) -> None:
             export_format=export_format,
             on_progress=_on_progress,
             resume=args.resume,
+            pages_config=pages_config,
         )
     except GendoxError as e:
         print(f"\n[ERROR] {e}")

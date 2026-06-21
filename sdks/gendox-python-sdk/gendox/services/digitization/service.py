@@ -210,7 +210,7 @@ class DigitizationService:
                     resp = self._http.post(
                         url,
                         files=[("file", (file_path.name, fh))],
-                        timeout=180,
+                        timeout=600,
                     )
                 if resp.status_code not in (200, 201):
                     reason = f"{resp.status_code} {resp.text[:120]}"
@@ -239,22 +239,34 @@ class DigitizationService:
         task_id: str,
         doc_ids: list[str],
         prompt: str = "",
+        pages_map: Optional[dict[str, dict]] = None,
         on_progress: Optional[Callable] = None,
     ) -> None:
-        """Create DOCUMENT task nodes linking uploaded documents to the task."""
+        """Create DOCUMENT task nodes linking uploaded documents to the task.
+
+        pages_map maps doc_id → {"page_from": int, "page_to": int}.
+        Documents not present in pages_map are processed with all pages.
+        """
         if not doc_ids:
             logger.warning("No document IDs to link — skipping")
             return
 
-        payload = [
-            {
-                "taskId": task_id,
-                "nodeType": "DOCUMENT",
-                "documentId": doc_id,
-                "nodeValue": {"documentMetadata": {"prompt": prompt or "", "structure": ""}},
-            }
-            for doc_id in doc_ids
-        ]
+        payload = []
+        for doc_id in doc_ids:
+            per_doc = (pages_map or {}).get(doc_id, {})
+            metadata: dict = {"prompt": prompt or "", "structure": ""}
+            if "page_from" in per_doc:
+                metadata["pageFrom"] = per_doc["page_from"]
+            if "page_to" in per_doc:
+                metadata["pageTo"] = per_doc["page_to"]
+            payload.append(
+                {
+                    "taskId": task_id,
+                    "nodeType": "DOCUMENT",
+                    "documentId": doc_id,
+                    "nodeValue": {"documentMetadata": metadata},
+                }
+            )
 
         resp = self._http.post(
             f"{self._base}/task-nodes/batch",
@@ -265,6 +277,46 @@ class DigitizationService:
             raise GendoxAPIError(f"Failed to link documents: {resp.status_code} {resp.text[:200]}")
 
         self._emit(on_progress, "link", f"Linked {len(doc_ids)} document(s) to task")
+
+    def _update_nodes_pages(
+        self,
+        task_id: str,
+        round_docs: dict[str, dict],
+        prompt: str = "",
+        on_progress: Optional[Callable] = None,
+    ) -> None:
+        """PUT-update existing DOCUMENT nodes with new page params (preserves connected ANSWER nodes)."""
+        doc_nodes = self._get_nodes_by_type(task_id, "DOCUMENT")
+        node_by_doc = {n.documentId: n for n in doc_nodes}
+        updated = 0
+        for doc_id, page_range in round_docs.items():
+            node = node_by_doc.get(doc_id)
+            if not node:
+                logger.warning("No DOCUMENT node found for doc %s — skipping update", doc_id)
+                continue
+            metadata: dict = {"prompt": prompt or "", "structure": ""}
+            if "page_from" in page_range:
+                metadata["pageFrom"] = page_range["page_from"]
+            if "page_to" in page_range:
+                metadata["pageTo"] = page_range["page_to"]
+            payload = {
+                "id": node.id,
+                "taskId": task_id,
+                "nodeType": "DOCUMENT",
+                "documentId": doc_id,
+                "nodeValue": {"documentMetadata": metadata},
+            }
+            resp = self._http.put(
+                f"{self._base}/tasks/{task_id}/task-nodes",
+                json=payload,
+                headers={"Content-Type": "application/json"},
+            )
+            if resp.status_code not in (200, 201):
+                logger.warning("Could not update node %s: %s %s", node.id, resp.status_code, resp.text[:120])
+            else:
+                updated += 1
+        if updated:
+            self._emit(on_progress, "link", f"Updated page range for {updated} node(s)")
 
     def execute(self, task_id: str, on_progress: Optional[Callable] = None) -> None:
         """Execute the Document Digitization task and wait for completion."""
@@ -418,6 +470,7 @@ class DigitizationService:
         export_format: str = "csv",
         on_progress: Optional[Callable] = None,
         resume: bool = False,
+        pages_config: Optional[dict[str, dict]] = None,
     ) -> RunSummary:
         """
         Run the full digitization pipeline:
@@ -427,6 +480,8 @@ class DigitizationService:
           3. Execute task
           4. Export results
 
+        pages_config maps filename → {"page_from": int, "page_to": int}.
+        Files not listed in pages_config are processed with all pages.
         Set resume=True to skip already-completed steps from a previous interrupted run.
         State is stored in output_folder/.gendox_run_state.json and deleted on success.
         """
@@ -447,22 +502,47 @@ class DigitizationService:
             state["cleaned"] = True
             self._save_state(state_file, state)
 
-        # Steps 1–2: Upload → Link
+        # Steps 1–3: Upload → Link → Execute (one round per page-range set)
         if not skip_upload and not state.get("linked"):
             upload_results = self.upload(input_folder, on_progress)
             summary.uploads = upload_results
 
-            doc_ids = [r.doc_id for r in upload_results if r.ok]
-            if doc_ids:
-                self.link(task_id, doc_ids, prompt, on_progress)
+            # Build doc_ranges: doc_id → list of range dicts (empty dict = all pages)
+            doc_ranges: dict[str, list[dict]] = {}
+            for r in upload_results:
+                if r.ok:
+                    if pages_config and r.file in pages_config:
+                        val = pages_config[r.file]
+                        doc_ranges[r.doc_id] = val if isinstance(val, list) else [val]
+                    else:
+                        doc_ranges[r.doc_id] = [{}]
+
+            max_rounds = max((len(v) for v in doc_ranges.values()), default=0)
+            for round_idx in range(max_rounds):
+                round_docs = {
+                    doc_id: ranges[round_idx]
+                    for doc_id, ranges in doc_ranges.items()
+                    if round_idx < len(ranges)
+                }
+                if not round_docs:
+                    break
+                if round_idx == 0:
+                    self.link(task_id, list(round_docs.keys()), prompt, pages_map=round_docs, on_progress=on_progress)
+                else:
+                    # UPDATE existing DOCUMENT nodes (preserves ANSWER nodes from previous round)
+                    self._update_nodes_pages(task_id, round_docs, prompt, on_progress)
+                self.execute(task_id, on_progress)
+                if max_rounds > 1:
+                    self._emit(on_progress, "execute", f"Round {round_idx + 1}/{max_rounds} complete")
 
             state["linked"] = True
+            state["executed"] = True
             state["uploaded"] = [
                 {"file": r.file, "doc_id": r.doc_id} for r in upload_results if r.ok
             ]
             self._save_state(state_file, state)
 
-        # Step 4: Execute
+        # Execute-only path: skip_upload=True or resume after upload
         if not state.get("executed"):
             self.execute(task_id, on_progress)
             state["executed"] = True
