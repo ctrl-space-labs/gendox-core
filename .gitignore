@@ -116,3 +116,6 @@ scripts/input/*
 !scripts/input/.gitkeep
 scripts/output/*
 !scripts/output/.gitkeep
+
+# Accidentally created file: URL paths
+file:/
