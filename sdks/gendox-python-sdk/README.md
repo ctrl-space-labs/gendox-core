@@ -46,6 +46,40 @@ gendox digitize --resume              # resume an interrupted run
 
 ---
 
+## Selecting pages per file
+
+By default all pages of every uploaded file are processed. To restrict which pages are digitized, create a `pages.json` file in your working directory.
+
+The file maps each filename to a page range or a list of ranges:
+
+```json
+{
+  "report.pdf": { "page_from": 1, "page_to": 5 },
+  "manual.pdf": [
+    { "page_from": 10, "page_to": 15 },
+    { "page_from": 22, "page_to": 26 }
+  ]
+}
+```
+
+- Files **not listed** in `pages.json` are processed with all pages.
+- A **single range** (`{ "page_from": ..., "page_to": ... }`) processes those pages in one pass.
+- A **list of ranges** processes each range sequentially, accumulating results — useful for non-contiguous sections of the same document.
+
+`pages.json` is detected automatically by both `gendox digitize` and `run.py` when placed in the working directory. You can also point to a different file:
+
+```bash
+gendox digitize --pages-config path/to/my-pages.json
+```
+
+Or set the path in `.env`:
+
+```env
+GENDOX_PAGES_CONFIG=pages.json
+```
+
+---
+
 ## Quick start — Python library
 
 ```python
@@ -64,6 +98,13 @@ summary = client.digitization.run(
     input_folder=Path("./input"),
     output_folder=Path("./output"),
     export_format="all",
+    pages_config={
+        "report.pdf": {"page_from": 1, "page_to": 5},
+        "manual.pdf": [
+            {"page_from": 10, "page_to": 15},
+            {"page_from": 22, "page_to": 26},
+        ],
+    },
 )
 
 print(f"Uploaded: {len(summary.upload_ok)} ok, {len(summary.upload_failed)} failed")
