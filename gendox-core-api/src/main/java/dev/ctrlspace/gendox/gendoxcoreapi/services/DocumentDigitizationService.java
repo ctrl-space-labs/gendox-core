@@ -93,6 +93,16 @@ public class DocumentDigitizationService {
         return sb.isEmpty() ? fallbackWhenEmpty : sb.toString();
     }
 
+    public static boolean shouldUsePrintedPage(@Nullable Task task) {
+        return task == null
+                || Boolean.TRUE.equals(task.getUsePrintedPage())
+                || (task.getUsePrintedPage() == null && task.getUsePageText() == null);
+    }
+
+    public static boolean shouldUsePageText(@Nullable Task task) {
+        return task != null && Boolean.TRUE.equals(task.getUsePageText());
+    }
+
     /**
      * Runs one LLM call for a single document page.
      *
@@ -127,13 +137,8 @@ public class DocumentDigitizationService {
                 .append(prompt).append("\n\n")
                 .append("Document Page: ").append(pageIndex + 1).append(" out of ").append(totalPages);
 
-        boolean usePrintedPage = task == null
-                || Boolean.TRUE.equals(task.getUsePrintedPage())
-                || (task.getUsePrintedPage() == null && task.getUsePageText() == null);
-        boolean usePageText = task != null && Boolean.TRUE.equals(task.getUsePageText());
-
-        boolean sendImage = usePrintedPage && pageImageBase64 != null;
-        boolean sendText = usePageText && pageText != null;
+        boolean sendImage = shouldUsePrintedPage(task) && pageImageBase64 != null;
+        boolean sendText = shouldUsePageText(task) && pageText != null;
 
         if (sendText) {
             promptBuilder.append("\n\n")

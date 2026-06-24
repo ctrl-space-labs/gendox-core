@@ -148,7 +148,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
             }
         }
 
-        PageContent content = loadPageContent(documentInstance, pagesToProcess);
+        PageContent content = loadPageContent(documentInstance, pagesToProcess, task);
 
         String digitizationPrompt = DocumentDigitizationService.composeDigitizationPrompt(
                 task.getTaskPrompt(),
@@ -189,38 +189,54 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
     private record PageContent(List<String> images, List<String> texts, int pageOffset) {}
 
     /**
-     * Loads page images and text for the given document, routing by file type:
-     * <ul>
-     *   <li>Paged formats (PDF, DOCX, PPT): renders images and extracts text for the requested slice.</li>
-     *   <li>Image files: returns a single Base64 image; no text.</li>
-     *   <li>Text/spreadsheet files: returns text pages only; no images.</li>
-     * </ul>
+     * Loads page images and/or text for the given document, routing by file type.
+     * Only the content types enabled on the task ({@link DocumentDigitizationService#shouldUsePrintedPage}
+     * / {@link DocumentDigitizationService#shouldUsePageText}) are loaded.
      * The {@code pageOffset} in the returned record is the 0-based index of the first page in
      * {@code images}, used to map an absolute page index to its position in the image list.
      */
     private PageContent loadPageContent(DocumentInstance documentInstance,
-                                        List<Integer> pagesToProcess) throws Exception {
+                                        List<Integer> pagesToProcess,
+                                        Task task) throws Exception {
         String ext = downloadService.getFileExtension(documentInstance.getRemoteUrl());
+        boolean loadImages = DocumentDigitizationService.shouldUsePrintedPage(task);
+        boolean loadTexts = DocumentDigitizationService.shouldUsePageText(task);
 
         if (downloadService.isPagedFormat(ext)) {
-            DocPageToImageOptions printOptions = DocPageToImageOptions.builder()
-                    .minSide(1024)
-                    .pageFrom(Collections.min(pagesToProcess))
-                    .pageTo(Collections.max(pagesToProcess))
-                    .build();
             Path tempFilePath = downloadService.downloadToTemp(
                     documentInstance.getRemoteUrl(), "digitization-instance-id-" + jobInstanceId);
-            List<String> images = downloadService.printDocumentPages(documentInstance.getRemoteUrl(), tempFilePath, printOptions);
-            List<String> texts  = downloadService.readDocumentPages(documentInstance.getRemoteUrl(), tempFilePath);
+
+            List<String> images = new ArrayList<>();
+            if (loadImages) {
+                DocPageToImageOptions printOptions = DocPageToImageOptions.builder()
+                        .minSide(1024)
+                        .pageFrom(Collections.min(pagesToProcess))
+                        .pageTo(Collections.max(pagesToProcess))
+                        .build();
+                images.addAll(downloadService.printDocumentPages(
+                        documentInstance.getRemoteUrl(), tempFilePath, printOptions));
+            }
+
+            List<String> texts = new ArrayList<>();
+            if (loadTexts) {
+                texts.addAll(downloadService.readDocumentPages(
+                        documentInstance.getRemoteUrl(), tempFilePath));
+            }
+
             int pageOffset = pagesToProcess.isEmpty() ? 0 : Collections.min(pagesToProcess);
             return new PageContent(images, texts, pageOffset);
 
         } else if (downloadService.isImageFile(ext)) {
-            String singleImage = downloadService.readDocumentImageToBase64(documentInstance.getRemoteUrl());
-            return new PageContent(new ArrayList<>(List.of(singleImage)), new ArrayList<>(), 0);
+            if (loadImages) {
+                String singleImage = downloadService.readDocumentImageToBase64(documentInstance.getRemoteUrl());
+                return new PageContent(new ArrayList<>(List.of(singleImage)), new ArrayList<>(), 0);
+            }
+            return new PageContent(new ArrayList<>(), new ArrayList<>(), 0);
 
         } else {
-            List<String> texts = downloadService.readDocumentPages(documentInstance.getRemoteUrl());
+            List<String> texts = loadTexts
+                    ? downloadService.readDocumentPages(documentInstance.getRemoteUrl())
+                    : new ArrayList<>();
             return new PageContent(new ArrayList<>(), texts, 0);
         }
     }

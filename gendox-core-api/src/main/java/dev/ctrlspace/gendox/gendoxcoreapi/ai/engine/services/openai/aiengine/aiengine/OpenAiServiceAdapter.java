@@ -319,8 +319,8 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
             messages.getFirst().setRole("developer");
         }
 
-        String vertexAIRegex = ".*aiplatform\\.googleapis\\.com.*";
-        if (aiModel.getUrl().matches(vertexAIRegex)) {
+        // Vertex AI strongly suggest to not set reasoning effort, and to set thinking budget to 0
+        if ("VERTEX_AI".equals(aiModel.getAiModelProvider().getName())) {
             openAiGptRequestBuilder
                     .reasoningEffort(null)
                     .extraBody(OpenAiExtraBody.builder()
