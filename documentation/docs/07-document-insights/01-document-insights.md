@@ -8,8 +8,9 @@ title: Document Insights
 
 **Document Insights** lets you upload a batch of documents, define the questions you care about, and use AI to extract answers across every document at once. Results appear in a **spreadsheet-style matrix** — one row per document, one column per question — with status flags, detailed explanations, per-document summaries, and CSV export.
 
-<!-- Replace the placeholder below with a screen recording of the full Document Insights workflow. -->
+<!-- Replace the placeholder below with a screen recording of the full Document Insights workflow.
 ![Document Insights — overview](./img/feature-document-insights.gif)
+-->
 
 ---
 
