@@ -1,10 +1,21 @@
 # Setup your first project
 
+import uploadAndChatVideo from './img/Gendox-Add_Documents_and_Chat_best.mp4';
+
 A Gendox Project combines two basic components:
 - AI Agents
 - A collection of files the agent learns from
 
 An AI Agent is a virtual assistant that can help you, trained on the content you upload in each project.
+
+## Quick demo
+
+<video autoPlay muted playsInline loop width="100%">
+  <source src={uploadAndChatVideo} type="video/mp4" />
+  Your browser does not support the video tag.
+</video>
+
+Upload a document, then open **Chat** and ask the agent questions grounded in your files.
 
 ---
 
