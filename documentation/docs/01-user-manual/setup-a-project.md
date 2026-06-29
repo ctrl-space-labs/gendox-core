@@ -10,7 +10,7 @@ An AI Agent is a virtual assistant that can help you, trained on the content you
 
 ## Quick demo
 
-<video autoPlay muted playsInline loop width="100%">
+<video controls autoPlay muted playsInline loop width="100%">
   <source src={uploadAndChatVideo} type="video/mp4" />
   Your browser does not support the video tag.
 </video>
