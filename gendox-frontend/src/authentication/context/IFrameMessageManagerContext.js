@@ -9,7 +9,8 @@ const DEFAULT_IFRAME_CONFIGURATION = {
     externalToken: null,
     chatInitialState: 'closed',   // 'open' or 'closed'
     localContextMaxResponses: 1,
-    localContextMaxWaitMs: 200
+    localContextMaxWaitMs: 200,
+    sessionResumeTimeoutMs: 600_000
 };
 
 const normalizeChatInitialState = (value) => value === 'open' ? 'open' : 'closed';
@@ -44,6 +45,10 @@ export const IFrameMessageManagerProvider = ({ children }) => {
             localContextMaxWaitMs: parseNonNegativeInt(
                 payload.localContextMaxWaitMs,
                 DEFAULT_IFRAME_CONFIGURATION.localContextMaxWaitMs
+            ),
+            sessionResumeTimeoutMs: parseNonNegativeInt(
+                payload.sessionResumeTimeoutMs,
+                DEFAULT_IFRAME_CONFIGURATION.sessionResumeTimeoutMs
             )
         });
     };
@@ -110,7 +115,8 @@ export const IFrameMessageManagerProvider = ({ children }) => {
     const values = {
         messageManager,
         isEmbedded,
-        iFrameConfiguration
+        iFrameConfiguration,
+        originUrl
     };
 
     return (

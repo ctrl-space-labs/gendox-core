@@ -59,8 +59,6 @@ const EarthObservationWorkspacePage = () => {
   const showProjectWarning = !geeProjectId || geeProjectFallbackActive
   const geeUserLabel = geeUserEmail || 'Resolving Google account…'
 
-  console.log('Workspace render', { geeUserEmail, geeProjectId, showProjectWarning })
-
   const orgSettingsHref = activeOrganizationId
     ? `/gendox/organization-settings/?organizationId=${activeOrganizationId}&tab=advancedSettings#connectors`
     : '/gendox/organization-settings/?tab=advancedSettings#connectors'

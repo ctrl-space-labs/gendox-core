@@ -2,6 +2,7 @@
   const DEFAULT_CHAT_INITIAL_STATE = 'closed'
   const DEFAULT_LOCAL_CONTEXT_MAX_RESPONSES = 1
   const DEFAULT_LOCAL_CONTEXT_MAX_WAIT_MS = 200
+  const DEFAULT_SESSION_RESUME_TIMEOUT_MS = 600_000
   const DEFAULT_AUTO_SELECTED_TEXT_LOCAL_CONTEXT_ENABLED = true
   const DEFAULT_OPEN_WEB_PAGE_TOOL_ENABLED = true
   const CHAT_TOGGLE_REQUEST_EVENT = 'gendox.events.embedded.chat.toggle.request'
@@ -68,6 +69,10 @@
       scriptTag.getAttribute('data-gendox-open-web-page-tool-enabled'),
       DEFAULT_OPEN_WEB_PAGE_TOOL_ENABLED
     )
+    const sessionResumeTimeoutMs = parseNonNegativeInt(
+      scriptTag.getAttribute('data-gendox-session-resume-timeout-ms'),
+      DEFAULT_SESSION_RESUME_TIMEOUT_MS
+    )
 
     return {
       gendoxSrc: scriptTag.getAttribute('data-gendox-src') || '',
@@ -79,7 +84,8 @@
       localContextMaxResponses,
       localContextMaxWaitMs,
       autoSelectedTextLocalContextEnabled,
-      openWebPageToolEnabled
+      openWebPageToolEnabled,
+      sessionResumeTimeoutMs
     }
   }
 
@@ -250,7 +256,8 @@
           payload: {
             chatInitialState: config.chatInitialState,
             localContextMaxResponses: config.localContextMaxResponses,
-            localContextMaxWaitMs: config.localContextMaxWaitMs
+            localContextMaxWaitMs: config.localContextMaxWaitMs,
+            sessionResumeTimeoutMs: config.sessionResumeTimeoutMs
           }
         }
         iframe.contentWindow.postMessage(message, gendoxSrc)

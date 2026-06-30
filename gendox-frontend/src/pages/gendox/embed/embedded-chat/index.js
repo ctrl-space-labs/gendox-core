@@ -5,11 +5,13 @@ import { useSettings } from 'src/@core/hooks/useSettings'
 import BlankLayout from 'src/@core/layouts/BlankLayout'
 import PoweredByGendox from 'src/layouts/components/shared-components/PoweredByGendox'
 import IconButton from '@mui/material/IconButton'
+import { useRouter } from 'next/router'
 import { useIFrameMessageManager } from 'src/authentication/context/IFrameMessageManagerContext'
 import GendoxChat from 'src/views/pages/chat/GendoxChat'
 import { routeTypes } from 'src/authentication/components/RouteHandler'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import ChatInsight from 'src/views/pages/chat/ChatInsight'
+import { loadSession, saveSession } from './embeddedChatSession'
 
 // Add any extra configurations here
 const gendoxChatConfig = {
@@ -45,9 +47,13 @@ const StyledWrapper = styled(Box, {
 const EmbeddedChatPage = props => {
   const theme = useTheme()
   const { settings, saveSettings } = useSettings()
+  const router = useRouter()
+  const { organizationId, projectId } = router.query
   const [isOpen, setIsOpen] = useState(false) // Manage chat window visibility
   const iFrameMessageManager = useIFrameMessageManager()
+  const { isEmbedded, iFrameConfiguration, originUrl } = iFrameMessageManager
   const isOpenRef = useRef(false)
+  const sessionRestoredRef = useRef(false)
 
   const sendToggleMessage = nextState => {
     iFrameMessageManager.messageManager.sendMessage({
@@ -94,6 +100,42 @@ const EmbeddedChatPage = props => {
   useEffect(() => {
     isOpenRef.current = isOpen
   }, [isOpen])
+
+  // Restore session: runs once after the init response provides sessionResumeTimeoutMs.
+  // Gated by isEmbedded so it never fires when the chat page is opened directly.
+  useEffect(() => {
+    const timeoutMs = iFrameConfiguration?.sessionResumeTimeoutMs
+    if (!isEmbedded || !timeoutMs || !originUrl || !organizationId || !projectId) return
+    if (sessionRestoredRef.current) return
+    sessionRestoredRef.current = true
+
+    const session = loadSession(originUrl, organizationId, projectId, timeoutMs)
+    if (!session || !session.isOpen) return
+
+    applyChatState(true, false)
+    if (session.threadId) {
+      router.replace(
+        { pathname: router.pathname, query: { ...router.query, threadId: session.threadId } },
+        undefined,
+        { shallow: true }
+      )
+    }
+  }, [isEmbedded, iFrameConfiguration?.sessionResumeTimeoutMs, originUrl, organizationId, projectId])
+
+  // Save session whenever the open state or active thread changes.
+  // Gated by isEmbedded so host-page-less usage is unaffected.
+  useEffect(() => {
+    const timeoutMs = iFrameConfiguration?.sessionResumeTimeoutMs
+    if (!isEmbedded || !timeoutMs || !originUrl || !organizationId || !projectId) return
+
+    saveSession(
+      originUrl,
+      organizationId,
+      projectId,
+      { threadId: router.query.threadId ?? null, isOpen },
+      timeoutMs
+    )
+  }, [isOpen, router.query.threadId, isEmbedded, iFrameConfiguration?.sessionResumeTimeoutMs, originUrl, organizationId, projectId])
 
   // Apply chat open/closed state from config (initial load and when parent calls updateConfig)
   useEffect(() => {

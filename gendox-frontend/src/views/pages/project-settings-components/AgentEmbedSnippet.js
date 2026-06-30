@@ -32,7 +32,7 @@ const buildEmbedSnippet = (gendoxSrc, organizationId, projectId) => `<script
 </script>`
 
 const AgentEmbedSnippet = ({ organizationId, projectId }) => {
-  const gendoxSrc = commonConfig.gendoxUrl || 'https://app.gendox.dev'
+  const gendoxSrc = (commonConfig.gendoxUrl || 'https://app.gendox.dev').replace(/\/gendox\/api\/v1\/?$/, '')
   const embedSnippet = buildEmbedSnippet(gendoxSrc, organizationId, projectId)
   const [copied, setCopied] = useState(false)
 

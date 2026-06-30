@@ -126,7 +126,6 @@ export default function GeeAuthGuard({ children, reconnectRef }) {
       ee.data.setAuthToken(CLIENT_ID, 'Bearer', stored.token, stored.expiresIn, [], null, false)
       initializeEarthEngineWithFallback(geeProjectId, stored.token)
         .then(({ projectFailed }) => {
-          console.log('[REFRESH] dispatching fallback=', projectFailed)
           scheduleTokenRefresh(stored.expiresIn)
           dispatch(setGeeProjectFallbackActive(projectFailed))
           dispatch(setGeeReady(true))
