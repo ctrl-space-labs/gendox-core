@@ -11,7 +11,7 @@ import GendoxChat from 'src/views/pages/chat/GendoxChat'
 import { routeTypes } from 'src/authentication/components/RouteHandler'
 import Icon from 'src/views/custom-components/mui/icon/icon'
 import ChatInsight from 'src/views/pages/chat/ChatInsight'
-import { loadSession, saveSession } from './embeddedChatSession'
+import { loadSession, saveSession } from 'src/utils/embeddedChatSession'
 
 // Add any extra configurations here
 const gendoxChatConfig = {
