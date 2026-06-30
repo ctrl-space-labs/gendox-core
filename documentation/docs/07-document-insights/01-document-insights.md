@@ -37,9 +37,9 @@ You will:
 2. Choose **Get insights from multiple documents**.
 3. Name the task (for example, **Contract Review**) and click **CREATE**.
 
-![Create a Document Insights task](./img/document-insights/document-insights-25.png)
+![Create a Document Insights task](./img/document-insights/document-insights-25.jpg)
 
-![Name the task Contract Review](./img/document-insights/document-insights-28.png)
+![Name the task Contract Review](./img/document-insights/document-insights-28.jpg)
 
 ---
 
@@ -54,11 +54,11 @@ In this example we add two questions:
 | **Template** | Cross-check each contract against the template and report deviations (amounts, removed terms, new terms, updated terms). |
 | **Review** | Review the contract for unfavourable terms, missing clauses, and items that should be updated. |
 
-![Add Template and Review questions](./img/document-insights/document-insights-33.png)
+![Add Template and Review questions](./img/document-insights/document-insights-33.jpg)
 
 For the **Template** question, attach the template contract as a **supporting document** so the AI can reference it during analysis. Click **ADD DOCUMENT** inside the question editor, select or upload `Contract template.pdf`, then click **SAVE**.
 
-![Attach the contract template as a supporting document](./img/document-insights/document-insights-42.png)
+![Attach the contract template as a supporting document](./img/document-insights/document-insights-42.jpg)
 
 Click **SAVE QUESTIONS** when you are done.
 
@@ -71,11 +71,11 @@ Click **ADD DOCUMENT** and upload the contracts you want to analyse. In this exa
 - `DevOps Webinar.pdf`
 - `GenAI for Developers.pdf`
 
-![Upload two contract PDFs](./img/document-insights/document-insights-48.png)
+![Upload two contract PDFs](./img/document-insights/document-insights-48.jpg)
 
 Each uploaded document becomes one **row** in the insights grid. Supported formats include PDF, Word (`.docx`/`.doc`), Excel (`.xlsx`/`.xls`), PowerPoint (`.pptx`), plain text, and more.
 
-![Documents ready for generation](./img/document-insights/document-insights-50.png)
+![Documents ready for generation](./img/document-insights/document-insights-50.jpg)
 
 ---
 
@@ -86,7 +86,7 @@ Click a document name to open its detail panel. Use the **Prompt** field to add 
 > This is for 15 hours.
 > It will start at 13/6/2026.
 
-![Per-document prompt](./img/document-insights/document-insights-52.png)
+![Per-document prompt](./img/document-insights/document-insights-52.jpg)
 
 Saving changes to a document prompt or its supporting files will clear existing answers for that document.
 
@@ -96,11 +96,11 @@ Saving changes to a document prompt or its supporting files will clear existing 
 
 Click **GENERATE NEW** and confirm in the dialog. Gendox fills only cells that do not have an answer yet — existing content is not overwritten.
 
-![Generate New confirmation](./img/document-insights/document-insights-56.png)
+![Generate New confirmation](./img/document-insights/document-insights-56.jpg)
 
 Generation runs as a background batch job. A progress indicator appears while it is running; click **Stop** to cancel early.
 
-![Generation in progress](./img/document-insights/document-insights-58.png)
+![Generation in progress](./img/document-insights/document-insights-58.jpg)
 
 You can also use the **Generate** dropdown for other modes:
 
@@ -118,7 +118,7 @@ Click an individual cell to regenerate a single answer.
 
 When generation completes, each cell shows a short answer, a colour-coded status flag, and a detailed explanation.
 
-![Results matrix with deviations and issues](./img/document-insights/document-insights-62.png)
+![Results matrix with deviations and issues](./img/document-insights/document-insights-62.jpg)
 
 In our example:
 
@@ -127,7 +127,7 @@ In our example:
 
 Hover a status flag and click **View Summary** to open the consolidated findings for that document.
 
-![Summary details with severity, location, and action required](./img/document-insights/document-insights-64.png)
+![Summary details with severity, location, and action required](./img/document-insights/document-insights-64.jpg)
 
 Each cell in the grid contains:
 
