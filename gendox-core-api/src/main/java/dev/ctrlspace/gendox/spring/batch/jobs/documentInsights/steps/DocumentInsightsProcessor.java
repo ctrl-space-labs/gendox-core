@@ -419,7 +419,7 @@ public class DocumentInsightsProcessor implements ItemProcessor<TaskDocumentQues
                             \"\"\"\"\"
                             """.formatted(documentNode.getNodeValue().getDocumentMetadata().getPrompt()))
                     .build();
-            localContext.add(2, documentPrompt);
+            localContext.addLast(documentPrompt);
         }
     }
 
