@@ -46,8 +46,7 @@ Define tools with **OpenAI-style JSON schemas** (e.g. `open_web_page`, `set_filt
 
 Upload a batch of documents, define the questions that matter to you, and let AI answer them across every document at once. Results appear in a **spreadsheet-style matrix** — one row per document, one column per question — with short answer values, detailed explanations, status flags (OK, Warning, Issue…), per-document summaries, and full **CSV export**.
 
-<!-- Replace the placeholder below with a screen recording: create a Document Insights task, add documents and questions, run generation, inspect the matrix, export CSV. -->
-![Document Insights](documentation/docs/07-document-insights/img/feature-document-insights.gif)
+![Document Insights](documentation/docs/07-document-insights/img/document-insights/document-insights.gif)
 
 [Document Insights guide →](documentation/docs/07-document-insights/01-document-insights.md)
 

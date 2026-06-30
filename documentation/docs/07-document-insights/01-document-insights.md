@@ -6,43 +6,103 @@ title: Document Insights
 
 # Document Insights
 
+import documentInsightsDemo from './img/document-insights/document-insights.gif';
+
 **Document Insights** lets you upload a batch of documents, define the questions you care about, and use AI to extract answers across every document at once. Results appear in a **spreadsheet-style matrix** — one row per document, one column per question — with status flags, detailed explanations, per-document summaries, and CSV export.
 
-<!-- Replace the placeholder below with a screen recording of the full Document Insights workflow.
-![Document Insights — overview](./img/feature-document-insights.gif)
--->
+## Quick demo
+
+<img src={documentInsightsDemo} alt="Document Insights walkthrough" width="100%" />
 
 ---
 
-## Creating a Document Insights Task
+## Example: Contract review
 
-1. Open your project and click **"+"** next to **Tasks** in the sidebar (or from the project home page).
-2. Choose **"Get insights from multiple documents"** as the task type.
-3. Give the task a name and (optionally) a description, then click **Create**.
+This walkthrough cross-checks **two signed contracts** against a **template contract** and runs a separate legal review on each document.
 
----
+You will:
 
-## Adding Documents
-
-On the task page, click **Add Document** and upload the files you want to analyse. Supported formats include PDF, Word (.docx/.doc), Excel (.xlsx/.xls), PowerPoint (.pptx), plain text, and more.
-
-Each uploaded document becomes one **row** in the insights grid.
-
----
-
-## Defining Questions
-
-Click **Questions** (top-right of the grid) to open the questions panel.
-
-- Click **Add Question** and enter a title and the question text.
-- Questions become **columns** in the matrix — the AI answers every question for every document.
-- You can reorder questions by dragging them, and optionally attach **supporting documents** to a question for extra context.
+1. Create a Document Insights task.
+2. Define two questions — one for template comparison, one for legal review.
+3. Attach the template as a supporting document.
+4. Upload the two contracts.
+5. Add per-document context (optional).
+6. Generate answers and inspect the results.
 
 ---
 
-## Running Generation
+### Create the task
 
-Use the **Generate** button and choose one of the following modes:
+1. Open your project and click **CREATE NEW TASK** on the project home page.
+2. Choose **Get insights from multiple documents**.
+3. Name the task (for example, **Contract Review**) and click **CREATE**.
+
+![Create a Document Insights task](./img/document-insights/document-insights-25.png)
+
+![Name the task Contract Review](./img/document-insights/document-insights-28.png)
+
+---
+
+### Define questions
+
+Click **ADD QUESTIONS** to open the questions panel. Each question becomes a **column** in the insights grid.
+
+In this example we add two questions:
+
+| Column | Purpose |
+|--------|---------|
+| **Template** | Cross-check each contract against the template and report deviations (amounts, removed terms, new terms, updated terms). |
+| **Review** | Review the contract for unfavourable terms, missing clauses, and items that should be updated. |
+
+![Add Template and Review questions](./img/document-insights/document-insights-33.png)
+
+For the **Template** question, attach the template contract as a **supporting document** so the AI can reference it during analysis. Click **ADD DOCUMENT** inside the question editor, select or upload `Contract template.pdf`, then click **SAVE**.
+
+![Attach the contract template as a supporting document](./img/document-insights/document-insights-42.png)
+
+Click **SAVE QUESTIONS** when you are done.
+
+---
+
+### Upload documents
+
+Click **ADD DOCUMENT** and upload the contracts you want to analyse. In this example we upload two PDFs:
+
+- `DevOps Webinar.pdf`
+- `GenAI for Developers.pdf`
+
+![Upload two contract PDFs](./img/document-insights/document-insights-48.png)
+
+Each uploaded document becomes one **row** in the insights grid. Supported formats include PDF, Word (`.docx`/`.doc`), Excel (`.xlsx`/`.xls`), PowerPoint (`.pptx`), plain text, and more.
+
+![Documents ready for generation](./img/document-insights/document-insights-50.png)
+
+---
+
+### Add per-document context (optional)
+
+Click a document name to open its detail panel. Use the **Prompt** field to add document-specific instructions — for example, agreed changes that differ from the template:
+
+> This is for 15 hours.
+> It will start at 13/6/2026.
+
+![Per-document prompt](./img/document-insights/document-insights-52.png)
+
+Saving changes to a document prompt or its supporting files will clear existing answers for that document.
+
+---
+
+### Run generation
+
+Click **GENERATE NEW** and confirm in the dialog. Gendox fills only cells that do not have an answer yet — existing content is not overwritten.
+
+![Generate New confirmation](./img/document-insights/document-insights-56.png)
+
+Generation runs as a background batch job. A progress indicator appears while it is running; click **Stop** to cancel early.
+
+![Generation in progress](./img/document-insights/document-insights-58.png)
+
+You can also use the **Generate** dropdown for other modes:
 
 | Mode | Behaviour |
 |------|-----------|
@@ -50,13 +110,24 @@ Use the **Generate** button and choose one of the following modes:
 | **Generate All** | Regenerate all cells (overwrites existing answers). |
 | **Generate Selected** | Regenerate answers only for the checked documents. |
 
-You can also click an individual cell to regenerate a single answer.
-
-Generation runs as a background batch job. A progress indicator appears while it is running; click **Stop** to cancel early.
+Click an individual cell to regenerate a single answer.
 
 ---
 
-## Reading Results
+### Read results
+
+When generation completes, each cell shows a short answer, a colour-coded status flag, and a detailed explanation.
+
+![Results matrix with deviations and issues](./img/document-insights/document-insights-62.png)
+
+In our example:
+
+- The **Template** column reports deviations found against the template (for example, *5 deviations found*).
+- The **Review** column reports legal review findings (for example, *5 Issues Found* or *Multiple issues found*).
+
+Hover a status flag and click **View Summary** to open the consolidated findings for that document.
+
+![Summary details with severity, location, and action required](./img/document-insights/document-insights-64.png)
 
 Each cell in the grid contains:
 
@@ -78,14 +149,15 @@ Click the summary icon in the first column of a document row to view or regenera
 
 ---
 
-## Exporting to CSV
+### Export to CSV
 
-Click **Export** in the header to download the full matrix as a CSV file. You can also export the results for a single document from the document detail panel.
+Click **EXPORT CSV** in the header to download the full matrix. You can also export results for a single document from the document detail panel.
 
 ---
 
 ## Tips
 
-- Add a **task prompt** (in task settings) to guide all AI answers with shared context or instructions.
-- Attach supporting documents to individual questions when the question requires reference material that isn't in the document itself.
+- Add a **task prompt** (in task settings → Advanced Settings) to guide all AI answers with shared context or instructions.
+- Attach **supporting documents** to individual questions when the question requires reference material that is not in the document being analysed — as we did with the contract template on the Review question.
 - Use **Generate Selected** after editing a question to refresh only the affected rows without re-running the entire batch.
+- Reorder questions by dragging them in the questions panel.

@@ -91,3 +91,16 @@ Gendox currently supports text files (e.g., `.txt`, `.md`) and PDFs. You can upl
 
 ![05-gendox-chat.png](./img/05-gendox-chat.png)
 
+---
+
+## Document analytics tasks
+
+On the project home page, click **CREATE NEW TASK** to run structured batch workflows on your documents — beyond one-off chat.
+
+| Task type | What it does |
+|-----------|--------------|
+| **Get insights from multiple documents** | Define questions once and get answers across every document in a spreadsheet-style matrix. |
+| **Digitize scanned documents page-by-page** | Turn scanned PDFs and office files into clean, machine-readable output. |
+
+For a full walkthrough, see [Document Insights](../07-document-insights/01-document-insights.md) (contract cross-check example) and [Document Digitization](../08-document-digitization/01-document-digitization.md).
+
