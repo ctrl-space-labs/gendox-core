@@ -33,3 +33,8 @@ def service(http_client: HttpClient) -> DigitizationService:
 @pytest.fixture
 def api_base() -> str:
     return f"{API_URL}/organizations/{ORG_ID}/projects/{PROJECT_ID}"
+
+
+@pytest.fixture
+def api_root() -> str:
+    return API_URL

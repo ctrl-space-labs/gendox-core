@@ -588,11 +588,10 @@ class TestDeleteAnswers:
         responses.add(
             responses.DELETE,
             f"{api_base}/tasks/{TASK_ID}/answers",
-            json={"deleted": 7},
-            status=200,
+            status=204,
         )
         result = service.delete_answers(TASK_ID)
-        assert result == {"deleted": 7}
+        assert result is None
         # no documentNodeIds filter when unscoped
         call = responses.calls[0]
         assert "documentNodeIds" not in call.request.url
@@ -602,11 +601,10 @@ class TestDeleteAnswers:
         responses.add(
             responses.DELETE,
             f"{api_base}/tasks/{TASK_ID}/answers",
-            json={"deleted": 3},
-            status=200,
+            status=204,
         )
         result = service.delete_answers(TASK_ID, document_node_ids=["n1", "n2"])
-        assert result == {"deleted": 3}
+        assert result is None
         call = responses.calls[0]
         assert "documentNodeIds=n1%2Cn2" in call.request.url or "documentNodeIds=n1,n2" in call.request.url
 
@@ -615,11 +613,10 @@ class TestDeleteAnswers:
         responses.add(
             responses.DELETE,
             f"{api_base}/tasks/{TASK_ID}/answers",
-            json={"deleted": 2},
-            status=200,
+            status=204,
         )
         result = service.delete_answers(TASK_ID, answer_node_ids=["a3", "a7"])
-        assert result == {"deleted": 2}
+        assert result is None
         url = responses.calls[0].request.url
         assert "answerNodeIds=a3%2Ca7" in url or "answerNodeIds=a3,a7" in url
 
@@ -651,7 +648,7 @@ class TestRegeneratePages:
         # delete of page-2's answer node
         responses.add(
             responses.DELETE, f"{api_base}/tasks/{TASK_ID}/answers",
-            json={"deleted": 1}, status=200,
+            status=204,
         )
         # generate_new → get_missing_pages reads: document-pages, the doc node, answers again
         responses.add(
@@ -691,5 +688,73 @@ class TestRegeneratePages:
         assert "answerNodeIds=a2" in delete_call.request.url
         execute_call = next(c for c in responses.calls if c.request.url.endswith("/execute"))
         assert _json.loads(execute_call.request.body) == {"documentNodeIds": ["n1"]}
+
+
+class TestDocumentLookup:
+    @responses.activate
+    def test_get_document_uses_root_path_not_project_scoped(self, service, api_root):
+        responses.add(
+            responses.GET,
+            f"{api_root}/documents/doc-1",
+            json={"id": "doc-1", "title": "Report",
+                  "remoteUrl": "s3://b/ROS1790.pdf", "numberOfPages": 12},
+        )
+        doc = service.get_document("doc-1")
+        assert doc.id == "doc-1"
+        assert doc.display_name == "Report"
+        assert doc.numberOfPages == 12
+        # must hit the API root, NOT the /organizations/.../projects/... path
+        assert "/organizations/" not in responses.calls[0].request.url
+
+    @responses.activate
+    def test_list_documents(self, service, api_base):
+        responses.add(
+            responses.GET,
+            f"{api_base}/documents",
+            json={"content": [
+                {"id": "d1", "remoteUrl": "s3://b/A.pdf"},
+                {"id": "d2", "title": "B"},
+            ], "last": True},
+        )
+        docs = service.list_documents()
+        assert [d.id for d in docs] == ["d1", "d2"]
+        assert docs[0].file_stem == "A"
+
+    @responses.activate
+    def test_find_document_node_matches_by_remote_url_stem(self, service, api_base):
+        responses.add(
+            responses.GET, f"{api_base}/tasks/{TASK_ID}/task-nodes",
+            json={"content": [
+                _node("n1", "DOCUMENT", doc_id="d1"),
+                _node("n2", "DOCUMENT", doc_id="d2"),
+            ], "last": True},
+        )
+        responses.add(
+            responses.GET, f"{api_base}/documents",
+            json={"content": [
+                {"id": "d1", "remoteUrl": "s3://b/OLD_BOOK.pdf"},
+                {"id": "d2", "remoteUrl": "s3://b/path/ROS1790.pdf"},
+            ], "last": True},
+        )
+        node = service.find_document_node(TASK_ID, "ROS1790")
+        assert node is not None and node.id == "n2"
+
+    @responses.activate
+    def test_find_document_node_none_when_no_match(self, service, api_base):
+        responses.add(
+            responses.GET, f"{api_base}/tasks/{TASK_ID}/task-nodes",
+            json={"content": [
+                _node("n1", "DOCUMENT", doc_id="d1"),
+                _node("n2", "DOCUMENT", doc_id="d2"),
+            ], "last": True},
+        )
+        responses.add(
+            responses.GET, f"{api_base}/documents",
+            json={"content": [
+                {"id": "d1", "remoteUrl": "s3://b/OLD.pdf"},
+                {"id": "d2", "remoteUrl": "s3://b/OTHER.pdf"},
+            ], "last": True},
+        )
+        assert service.find_document_node(TASK_ID, "ROS1790") is None
 
 

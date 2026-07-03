@@ -11,6 +11,7 @@ from ...exceptions import GendoxAPIError, GendoxTimeoutError
 from ..._http import HttpClient
 from .models import (
     CleanupFailure,
+    Document,
     DocumentPageStatus,
     ExportResult,
     RunSummary,
@@ -74,8 +75,10 @@ def _stem_from_name(name: str) -> str:
 class DigitizationService:
     def __init__(self, http: HttpClient, api_url: str, org_id: str, project_id: str):
         self._http = http
+        self._api_url = api_url.rstrip("/")  # API root, for non-project-scoped endpoints
+        self._org_id = org_id
         self._project_id = project_id
-        self._base = f"{api_url}/organizations/{org_id}/projects/{project_id}"
+        self._base = f"{self._api_url}/organizations/{org_id}/projects/{project_id}"
 
     # ── internal helpers ─────────────────────────────────────────────────────
 
@@ -197,6 +200,61 @@ class DigitizationService:
         """Return every generated ANSWER task node for the task."""
         return self._get_nodes_by_type(task_id, "ANSWER")
 
+    def get_document(self, document_id: str) -> Document:
+        """Fetch a document instance by id.
+
+        Note: this endpoint is **not** project-scoped — it lives at the API root
+        (``{api_url}/documents/{id}``), not under ``/organizations/.../projects/...``.
+        """
+        resp = self._http.get(f"{self._api_url}/documents/{document_id}")
+        if resp.status_code != 200:
+            raise GendoxAPIError(f"Failed to fetch document {document_id}: {resp.status_code}")
+        return Document.model_validate(resp.json())
+
+    def list_documents(self) -> list[Document]:
+        """List all documents in the project (``GET {base}/documents``, paginated)."""
+        url = f"{self._base}/documents"
+        return [Document.model_validate(d) for d in self._paginate(url)]
+
+    def find_document_node(self, task_id: str, name: str) -> Optional[TaskNode]:
+        """Best-effort lookup of the DOCUMENT node whose document matches ``name``.
+
+        Matches ``name`` (case-insensitively, extension ignored) against each
+        document's ``title`` and its ``remoteUrl`` file stem.
+
+        Name matching is inherently fragile (titles are often null, filenames can
+        collide). When you uploaded the file in this run, prefer correlating by id:
+        ``UploadResult.doc_id == TaskNode.documentId``. Use this helper only for
+        pre-existing documents you can't correlate by id.
+
+        Returns the single matching node, or ``None`` when there is no match or the
+        match is ambiguous (more than one candidate).
+        """
+        target = Path(name).stem.strip().lower()
+        doc_nodes = self.list_document_nodes(task_id)
+        if not doc_nodes:
+            return None
+
+        docs_by_id = {d.id: d for d in self.list_documents()}
+
+        matches = []
+        for node in doc_nodes:
+            doc = docs_by_id.get(node.documentId)
+            if doc is None:
+                continue
+            candidates = set()
+            if doc.title:
+                candidates.add(doc.title.strip().lower())
+                candidates.add(Path(doc.title).stem.strip().lower())
+            if doc.file_stem:
+                candidates.add(doc.file_stem.strip().lower())
+            if target in candidates:
+                matches.append(node)
+
+        if len(matches) == 1:
+            return matches[0]
+        return None
+
     @staticmethod
     def _save_state(path: Path, state: dict) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -261,13 +319,20 @@ class DigitizationService:
                     results.append(UploadResult(file=file_path.name, error=reason))
                     continue
 
-                doc_id = resp.json().get("id")
+                body = resp.json()
+                doc_id = body.get("id")
                 if not doc_id:
                     results.append(UploadResult(file=file_path.name, error="response missing 'id'"))
                     continue
 
                 logger.info("Uploaded %s → %s", file_path.name, doc_id)
-                results.append(UploadResult(file=file_path.name, doc_id=str(doc_id)))
+                results.append(UploadResult(
+                    file=file_path.name,
+                    doc_id=str(doc_id),
+                    title=body.get("title"),
+                    remote_url=body.get("remoteUrl"),
+                    pages=body.get("numberOfPages"),
+                ))
 
             except Exception as e:
                 logger.warning("Exception uploading %s: %s", file_path.name, e)
@@ -508,7 +573,7 @@ class DigitizationService:
         document_node_ids: Optional[list[str]] = None,
         answer_node_ids: Optional[list[str]] = None,
         on_progress: Optional[Callable] = None,
-    ) -> dict:
+    ) -> None:
         """Delete generated ANSWER nodes (and their edges) for a task.
 
         document_node_ids: when given, only answers belonging to these DOCUMENT nodes
@@ -517,7 +582,8 @@ class DigitizationService:
             (e.g. individual pages found to be wrong). Combined with
             ``document_node_ids`` as an intersection.
         When neither is given, every answer node in the task is removed.
-        Returns ``{"deleted": <count>}``.
+
+        The endpoint responds ``204 No Content``, so no count is returned.
         """
         if answer_node_ids:
             scope = f"{len(answer_node_ids)} answer node(s)"
@@ -539,15 +605,7 @@ class DigitizationService:
                 f"Failed to delete answers: {resp.status_code} {resp.text[:200]}"
             )
 
-        deleted = 0
-        if resp.status_code == 200 and resp.content:
-            try:
-                deleted = int(resp.json().get("deleted", 0))
-            except (ValueError, TypeError, json.JSONDecodeError):
-                pass
-
-        self._emit(on_progress, "delete-answers", f"Deleted {deleted} answer node(s)")
-        return {"deleted": deleted}
+        self._emit(on_progress, "delete-answers", f"Deleted answer nodes ({scope})")
 
     def regenerate_pages(
         self,

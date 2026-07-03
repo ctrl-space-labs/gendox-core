@@ -67,24 +67,30 @@ class TestRunSummary:
 
 
 class TestDocument:
-    def test_display_name_prefers_name(self):
-        d = Document(id="1", name="report.pdf", fileName="report_raw.pdf")
-        assert d.display_name == "report.pdf"
+    def test_display_name_prefers_title(self):
+        d = Document(id="1", title="Report", remoteUrl="s3://bucket/report_raw.pdf")
+        assert d.display_name == "Report"
 
-    def test_display_name_falls_back(self):
-        d = Document(id="1", fileName="raw.pdf")
-        assert d.display_name == "raw.pdf"
+    def test_display_name_falls_back_to_remote_url_stem(self):
+        d = Document(id="1", remoteUrl="s3://bucket/path/ROS1790.pdf")
+        assert d.display_name == "ROS1790"
+        assert d.file_stem == "ROS1790"
+
+    def test_file_stem_ignores_query_string(self):
+        d = Document(id="1", remoteUrl="https://host/path/ROS1790.pdf?sig=abc")
+        assert d.file_stem == "ROS1790"
 
     def test_display_name_fallback_to_id(self):
         d = Document(id="abcd")
         assert d.display_name == "abcd"
+        assert d.file_stem is None
 
     def test_extra_fields_allowed(self):
-        Document(id="1", name="x.pdf", brandNewField="ignored")
+        Document(id="1", title="x", brandNewField="ignored")
 
     def test_id_required(self):
         with pytest.raises(ValidationError):
-            Document(name="x.pdf")
+            Document(title="x")
 
 
 class TestTaskNode:

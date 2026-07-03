@@ -30,6 +30,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   answer node id, deletes them, then `generate_new`).
 - `DigitizationService.list_document_nodes()`, `list_answer_nodes()` and
   `get_task_node()` helpers to discover node ids.
+- `DigitizationService.get_document(document_id)` (root `/documents/{id}` endpoint),
+  `list_documents()` (project documents) and `find_document_node(task_id, name)` —
+  resolve which DOCUMENT node corresponds to a document/book without hand-rolling URLs.
+- `UploadResult` now carries `title`, `remote_url` and `pages` from the upload response,
+  so a file can be correlated to its DOCUMENT node by id (`doc_id == TaskNode.documentId`)
+  without name matching.
+
+### Fixed
+- `Document` model now reflects the fields the API actually returns (`title`,
+  `remoteUrl`, `numberOfPages`) instead of non-existent `name`/`fileName`/
+  `originalFileName`. Added `Document.file_stem`; `display_name` falls back to the
+  `remoteUrl` filename stem.
 
 ## [0.1.0] - 2026-04-25
 

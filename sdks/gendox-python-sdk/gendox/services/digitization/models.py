@@ -5,6 +5,7 @@ Divided into two groups:
   - API response models: parsed from API payloads (Document, TaskNode). They use
     ``extra="allow"`` so the SDK keeps working if the backend adds fields.
 """
+from pathlib import Path
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
@@ -14,9 +15,16 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 
 class UploadResult(BaseModel):
-    """Outcome of a single file upload."""
+    """Outcome of a single file upload.
+
+    ``doc_id`` is the DocumentInstance id and equals the ``documentId`` of the
+    DOCUMENT node created for this file — correlate by it instead of matching names.
+    """
     file: str
     doc_id: Optional[str] = None
+    title: Optional[str] = None
+    remote_url: Optional[str] = None
+    pages: Optional[int] = None
     error: Optional[str] = None
 
     @computed_field
@@ -76,22 +84,35 @@ class RunSummary(BaseModel):
 
 
 class Document(BaseModel):
-    """A Gendox document as returned by GET /documents/{id}."""
+    """A Gendox document instance as returned by ``GET /documents/{id}``.
+
+    Only the fields the API actually returns are declared. The human-readable name
+    lives in ``title`` (often null) or in the filename embedded in ``remoteUrl``.
+    """
     model_config = ConfigDict(extra="allow")
 
     id: str
-    name: Optional[str] = None
     title: Optional[str] = None
-    fileName: Optional[str] = None
-    originalFileName: Optional[str] = None
+    remoteUrl: Optional[str] = None
+    numberOfPages: Optional[int] = None
+
+    @property
+    def file_stem(self) -> Optional[str]:
+        """Filename without extension, taken from ``remoteUrl``
+        (e.g. ``s3://.../ROS1790.pdf`` → ``ROS1790``)."""
+        if not self.remoteUrl:
+            return None
+        last = self.remoteUrl.rstrip("/").split("/")[-1].split("?")[0]
+        stem = Path(last).stem
+        return stem or None
 
     @property
     def display_name(self) -> str:
-        """Best-effort human-readable name (falls back across common fields)."""
-        for candidate in (self.name, self.title, self.fileName, self.originalFileName):
-            if candidate and candidate.strip():
-                return candidate.strip()
-        return self.id
+        """Best-effort human name: ``title``, else the ``remoteUrl`` file stem, else the id."""
+        if self.title and self.title.strip():
+            return self.title.strip()
+        stem = self.file_stem
+        return stem if stem else self.id
 
 
 class TaskNode(BaseModel):
