@@ -42,6 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `remoteUrl`, `numberOfPages`) instead of non-existent `name`/`fileName`/
   `originalFileName`. Added `Document.file_stem`; `display_name` falls back to the
   `remoteUrl` filename stem.
+- `find_document_node()` no longer depends on the bulk `list_documents()` endpoint
+  (which returns HTTP 400 for `size > 100`). It now resolves each DOCUMENT node via
+  the per-document `get_document()` root endpoint — O(#document nodes on the task).
+- `list_documents()` now requests `size=100` (the endpoint's cap; `size=200` was
+  rejected with HTTP 400).
+- `find_document_node()` and `list_documents()` are now best-effort: they return
+  `None` / `[]` and log on lookup failure instead of raising.
 
 ## [0.1.0] - 2026-04-25
 

@@ -212,35 +212,57 @@ class DigitizationService:
         return Document.model_validate(resp.json())
 
     def list_documents(self) -> list[Document]:
-        """List all documents in the project (``GET {base}/documents``, paginated)."""
+        """List all documents in the project (``GET {base}/documents``, paginated).
+
+        Best-effort: returns ``[]`` (and logs) if the endpoint fails, so a listing
+        problem degrades gracefully instead of raising. Note this endpoint caps the
+        page size at 100.
+        """
         url = f"{self._base}/documents"
-        return [Document.model_validate(d) for d in self._paginate(url)]
+        try:
+            # The project documents endpoint rejects size > 100 with HTTP 400.
+            return [Document.model_validate(d) for d in self._paginate(url, page_size=100)]
+        except GendoxAPIError as exc:
+            logger.warning("list_documents failed: %s", exc)
+            return []
 
     def find_document_node(self, task_id: str, name: str) -> Optional[TaskNode]:
         """Best-effort lookup of the DOCUMENT node whose document matches ``name``.
 
-        Matches ``name`` (case-insensitively, extension ignored) against each
-        document's ``title`` and its ``remoteUrl`` file stem.
+        Resolves each of the task's DOCUMENT nodes via the per-document endpoint
+        (:meth:`get_document`, which uses the working root path) and matches ``name``
+        case-insensitively (extension ignored) against the document's ``title`` and
+        its ``remoteUrl`` file stem. It does **not** depend on the bulk
+        :meth:`list_documents` endpoint.
 
         Name matching is inherently fragile (titles are often null, filenames can
         collide). When you uploaded the file in this run, prefer correlating by id:
         ``UploadResult.doc_id == TaskNode.documentId``. Use this helper only for
         pre-existing documents you can't correlate by id.
 
-        Returns the single matching node, or ``None`` when there is no match or the
-        match is ambiguous (more than one candidate).
+        Best-effort: never raises. Returns the single matching node, or ``None`` when
+        there is no match, the match is ambiguous (more than one candidate), or a
+        lookup failed (logged).
         """
         target = Path(name).stem.strip().lower()
-        doc_nodes = self.list_document_nodes(task_id)
-        if not doc_nodes:
-            return None
 
-        docs_by_id = {d.id: d for d in self.list_documents()}
+        try:
+            doc_nodes = self.list_document_nodes(task_id)
+        except GendoxAPIError as exc:
+            logger.warning("find_document_node: could not list document nodes for task %s: %s", task_id, exc)
+            return None
 
         matches = []
         for node in doc_nodes:
-            doc = docs_by_id.get(node.documentId)
-            if doc is None:
+            if not node.documentId:
+                continue
+            try:
+                doc = self.get_document(node.documentId)
+            except GendoxAPIError as exc:
+                logger.warning(
+                    "find_document_node: could not fetch document %s (node %s): %s",
+                    node.documentId, node.id, exc,
+                )
                 continue
             candidates = set()
             if doc.title:
@@ -253,6 +275,11 @@ class DigitizationService:
 
         if len(matches) == 1:
             return matches[0]
+        if len(matches) > 1:
+            logger.warning(
+                "find_document_node: ambiguous match for %r on task %s (%d candidates)",
+                name, task_id, len(matches),
+            )
         return None
 
     @staticmethod

@@ -719,9 +719,51 @@ class TestDocumentLookup:
         docs = service.list_documents()
         assert [d.id for d in docs] == ["d1", "d2"]
         assert docs[0].file_stem == "A"
+        # must request within the endpoint's page-size cap (<= 100)
+        assert "size=100" in responses.calls[0].request.url
 
     @responses.activate
-    def test_find_document_node_matches_by_remote_url_stem(self, service, api_base):
+    def test_list_documents_returns_empty_on_error(self, service, api_base):
+        responses.add(
+            responses.GET, f"{api_base}/documents", status=400,
+        )
+        assert service.list_documents() == []
+
+    def _mock_doc_nodes_and_docs(self, api_base, api_root, docs):
+        """Mock list_document_nodes + a per-document GET for each (root path)."""
+        responses.add(
+            responses.GET, f"{api_base}/tasks/{TASK_ID}/task-nodes",
+            json={"content": [
+                _node(f"n{i}", "DOCUMENT", doc_id=d["id"])
+                for i, d in enumerate(docs, start=1)
+            ], "last": True},
+        )
+        for d in docs:
+            responses.add(responses.GET, f"{api_root}/documents/{d['id']}", json=d)
+
+    @responses.activate
+    def test_find_document_node_matches_by_remote_url_stem(self, service, api_base, api_root):
+        self._mock_doc_nodes_and_docs(api_base, api_root, [
+            {"id": "d1", "remoteUrl": "s3://b/OLD_BOOK.pdf"},
+            {"id": "d2", "remoteUrl": "s3://b/path/ROS1790.pdf"},
+        ])
+        node = service.find_document_node(TASK_ID, "ROS1790")
+        assert node is not None and node.id == "n2"
+        # never touches the (broken) bulk list endpoint
+        assert not [c for c in responses.calls if c.request.url.endswith("/documents")
+                    or "/documents?" in c.request.url]
+
+    @responses.activate
+    def test_find_document_node_none_when_no_match(self, service, api_base, api_root):
+        self._mock_doc_nodes_and_docs(api_base, api_root, [
+            {"id": "d1", "remoteUrl": "s3://b/OLD.pdf"},
+            {"id": "d2", "remoteUrl": "s3://b/OTHER.pdf"},
+        ])
+        assert service.find_document_node(TASK_ID, "ROS1790") is None
+
+    @responses.activate
+    def test_find_document_node_skips_unfetchable_document(self, service, api_base, api_root):
+        # d1 fetch fails (500), d2 matches → still resolves, no raise
         responses.add(
             responses.GET, f"{api_base}/tasks/{TASK_ID}/task-nodes",
             json={"content": [
@@ -729,31 +771,19 @@ class TestDocumentLookup:
                 _node("n2", "DOCUMENT", doc_id="d2"),
             ], "last": True},
         )
+        responses.add(responses.GET, f"{api_root}/documents/d1", status=500)
         responses.add(
-            responses.GET, f"{api_base}/documents",
-            json={"content": [
-                {"id": "d1", "remoteUrl": "s3://b/OLD_BOOK.pdf"},
-                {"id": "d2", "remoteUrl": "s3://b/path/ROS1790.pdf"},
-            ], "last": True},
+            responses.GET, f"{api_root}/documents/d2",
+            json={"id": "d2", "remoteUrl": "s3://b/ROS1790.pdf"},
         )
-        node = service.find_document_node(TASK_ID, "ROS1790")
+        with patch("gendox._http.time.sleep"):
+            node = service.find_document_node(TASK_ID, "ROS1790")
         assert node is not None and node.id == "n2"
 
     @responses.activate
-    def test_find_document_node_none_when_no_match(self, service, api_base):
+    def test_find_document_node_returns_none_on_node_list_failure(self, service, api_base):
         responses.add(
-            responses.GET, f"{api_base}/tasks/{TASK_ID}/task-nodes",
-            json={"content": [
-                _node("n1", "DOCUMENT", doc_id="d1"),
-                _node("n2", "DOCUMENT", doc_id="d2"),
-            ], "last": True},
-        )
-        responses.add(
-            responses.GET, f"{api_base}/documents",
-            json={"content": [
-                {"id": "d1", "remoteUrl": "s3://b/OLD.pdf"},
-                {"id": "d2", "remoteUrl": "s3://b/OTHER.pdf"},
-            ], "last": True},
+            responses.GET, f"{api_base}/tasks/{TASK_ID}/task-nodes", status=400,
         )
         assert service.find_document_node(TASK_ID, "ROS1790") is None
 
