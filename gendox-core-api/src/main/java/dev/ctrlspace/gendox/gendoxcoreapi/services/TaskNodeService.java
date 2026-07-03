@@ -319,6 +319,55 @@ public class TaskNodeService {
         deleteTaskNodesByIds(nodeIdsToDelete);
     }
 
+    /**
+     * Delete generated ANSWER nodes of a task, cleaning up their connecting edges first
+     * so the foreign keys on {@code task_edges} are not violated.
+     *
+     * @param taskId          the task whose answers to delete
+     * @param documentNodeIds when non-empty, only answers linked to these DOCUMENT nodes
+     *                        are removed
+     * @param answerNodeIds   when non-empty, only these specific ANSWER nodes are removed
+     *                        (e.g. individual pages). Combined with {@code documentNodeIds}
+     *                        as an intersection. When both are null/empty, every ANSWER node
+     *                        of the task is removed.
+     * @return the number of ANSWER nodes deleted
+     */
+    @Transactional
+    public int deleteAnswerNodes(UUID taskId, List<UUID> documentNodeIds, List<UUID> answerNodeIds) {
+        TaskNodeCriteria.TaskNodeCriteriaBuilder criteriaBuilder = TaskNodeCriteria.builder()
+                .taskId(taskId)
+                .nodeTypeNames(List.of(TaskNodeTypeConstants.ANSWER));
+        if (documentNodeIds != null && !documentNodeIds.isEmpty()) {
+            criteriaBuilder.documentNodeIds(documentNodeIds);
+        }
+        if (answerNodeIds != null && !answerNodeIds.isEmpty()) {
+            criteriaBuilder.nodeIds(answerNodeIds);
+        }
+
+        Page<TaskNode> answerNodes = getTaskNodesByCriteria(criteriaBuilder.build(), Pageable.unpaged());
+
+        // Safety guard: never delete anything that is not an ANSWER node.
+        List<TaskNode> onlyAnswers = answerNodes.getContent().stream()
+                .filter(node -> TaskNodeTypeConstants.ANSWER.equals(node.getNodeType().getName()))
+                .toList();
+        if (onlyAnswers.size() != answerNodes.getNumberOfElements()) {
+            logger.warn("SAFETY GUARD: filtered {} non-ANSWER node(s) out of answer deletion for task {}",
+                    answerNodes.getNumberOfElements() - onlyAnswers.size(), taskId);
+        }
+        if (onlyAnswers.isEmpty()) {
+            logger.info("No answer nodes to delete for task {} (documentNodeIds={}, answerNodeIds={})",
+                    taskId, documentNodeIds, answerNodeIds);
+            return 0;
+        }
+
+        List<UUID> idsToDelete = onlyAnswers.stream().map(TaskNode::getId).toList();
+        deleteAnswersConnectionEdges(idsToDelete);
+        deleteTaskNodesByIds(idsToDelete);
+        logger.info("Deleted {} answer node(s) for task {} (documentNodeIds={}, answerNodeIds={})",
+                idsToDelete.size(), taskId, documentNodeIds, answerNodeIds);
+        return idsToDelete.size();
+    }
+
     public void deleteDocumentNodeAndConnectionNodesByDocumentId(UUID documentId) throws GendoxException {
         logger.info("Deleting document node and its connection nodes for document: {}", documentId);
 

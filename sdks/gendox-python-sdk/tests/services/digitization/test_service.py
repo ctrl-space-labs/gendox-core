@@ -582,3 +582,114 @@ class TestGenerateNew:
         assert not [c for c in responses.calls if c.request.url.endswith("/execute")]
 
 
+class TestDeleteAnswers:
+    @responses.activate
+    def test_delete_all_answers(self, service, api_base):
+        responses.add(
+            responses.DELETE,
+            f"{api_base}/tasks/{TASK_ID}/answers",
+            json={"deleted": 7},
+            status=200,
+        )
+        result = service.delete_answers(TASK_ID)
+        assert result == {"deleted": 7}
+        # no documentNodeIds filter when unscoped
+        call = responses.calls[0]
+        assert "documentNodeIds" not in call.request.url
+
+    @responses.activate
+    def test_delete_answers_scoped_to_documents(self, service, api_base):
+        responses.add(
+            responses.DELETE,
+            f"{api_base}/tasks/{TASK_ID}/answers",
+            json={"deleted": 3},
+            status=200,
+        )
+        result = service.delete_answers(TASK_ID, document_node_ids=["n1", "n2"])
+        assert result == {"deleted": 3}
+        call = responses.calls[0]
+        assert "documentNodeIds=n1%2Cn2" in call.request.url or "documentNodeIds=n1,n2" in call.request.url
+
+    @responses.activate
+    def test_delete_answers_scoped_to_answer_nodes(self, service, api_base):
+        responses.add(
+            responses.DELETE,
+            f"{api_base}/tasks/{TASK_ID}/answers",
+            json={"deleted": 2},
+            status=200,
+        )
+        result = service.delete_answers(TASK_ID, answer_node_ids=["a3", "a7"])
+        assert result == {"deleted": 2}
+        url = responses.calls[0].request.url
+        assert "answerNodeIds=a3%2Ca7" in url or "answerNodeIds=a3,a7" in url
+
+    @responses.activate
+    def test_delete_answers_raises_on_error(self, service, api_base):
+        responses.add(
+            responses.DELETE,
+            f"{api_base}/tasks/{TASK_ID}/answers",
+            status=500,
+        )
+        with patch("gendox._http.time.sleep"), pytest.raises(GendoxAPIError):
+            service.delete_answers(TASK_ID)
+
+
+class TestRegeneratePages:
+    def _answer_search_page(self, orders):
+        return {"content": [
+            {"id": f"a{o}", "nodeType": {"name": "ANSWER"}, "nodeValue": {"order": o}}
+            for o in orders
+        ], "last": True}
+
+    @responses.activate
+    def test_regenerate_pages_deletes_then_generates(self, service, api_base):
+        # 1st answer search (in regenerate_pages) → pages 1,2,3 all present
+        responses.add(
+            responses.POST, f"{api_base}/tasks/{TASK_ID}/task-nodes/search",
+            json=self._answer_search_page([1, 2, 3]),
+        )
+        # delete of page-2's answer node
+        responses.add(
+            responses.DELETE, f"{api_base}/tasks/{TASK_ID}/answers",
+            json={"deleted": 1}, status=200,
+        )
+        # generate_new → get_missing_pages reads: document-pages, the doc node, answers again
+        responses.add(
+            responses.GET, f"{api_base}/tasks/{TASK_ID}/document-pages",
+            json={"content": [{
+                "taskDocumentNodeId": "n1", "documentPages": 3,
+                "numberOfNodePages": 2, "maxNodePage": 3,
+            }], "last": True},
+        )
+        responses.add(
+            responses.GET, f"{api_base}/task-nodes",
+            json={"id": "n1", "nodeType": {"name": "DOCUMENT"},
+                  "nodeValue": {"documentMetadata": {}}},
+        )
+        # 2nd answer search (inside get_missing_pages) → page 2 now gone
+        responses.add(
+            responses.POST, f"{api_base}/tasks/{TASK_ID}/task-nodes/search",
+            json=self._answer_search_page([1, 3]),
+        )
+        responses.add(responses.POST, f"{api_base}/tasks/{TASK_ID}/execute", status=202)
+        responses.add(
+            responses.GET, f"{api_base}/jobs",
+            json={"content": [{"status": "STARTED"}]},
+        )
+        responses.add(
+            responses.GET, f"{api_base}/jobs",
+            json={"content": [{"status": "COMPLETED"}]},
+        )
+
+        with patch("gendox.services.digitization.service.time.sleep"):
+            regenerated = service.regenerate_pages(TASK_ID, "n1", pages=[2])
+
+        assert regenerated == [2]
+
+        import json as _json
+        delete_call = next(c for c in responses.calls if c.request.method == "DELETE")
+        assert "answerNodeIds=a2" in delete_call.request.url
+        execute_call = next(c for c in responses.calls if c.request.url.endswith("/execute"))
+        assert _json.loads(execute_call.request.body) == {"documentNodeIds": ["n1"]}
+
+

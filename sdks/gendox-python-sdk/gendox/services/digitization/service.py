@@ -502,6 +502,94 @@ class DigitizationService:
             regenerate=True,
         )
 
+    def delete_answers(
+        self,
+        task_id: str,
+        document_node_ids: Optional[list[str]] = None,
+        answer_node_ids: Optional[list[str]] = None,
+        on_progress: Optional[Callable] = None,
+    ) -> dict:
+        """Delete generated ANSWER nodes (and their edges) for a task.
+
+        document_node_ids: when given, only answers belonging to these DOCUMENT nodes
+            are removed (e.g. the generated pages of a single book).
+        answer_node_ids: when given, only these specific ANSWER nodes are removed
+            (e.g. individual pages found to be wrong). Combined with
+            ``document_node_ids`` as an intersection.
+        When neither is given, every answer node in the task is removed.
+        Returns ``{"deleted": <count>}``.
+        """
+        if answer_node_ids:
+            scope = f"{len(answer_node_ids)} answer node(s)"
+        elif document_node_ids:
+            scope = f"{len(document_node_ids)} document(s)"
+        else:
+            scope = "whole task"
+        self._emit(on_progress, "delete-answers", f"Deleting answer nodes ({scope})...")
+
+        params = {}
+        if document_node_ids:
+            params["documentNodeIds"] = ",".join(document_node_ids)
+        if answer_node_ids:
+            params["answerNodeIds"] = ",".join(answer_node_ids)
+
+        resp = self._http.delete(f"{self._base}/tasks/{task_id}/answers", params=params)
+        if resp.status_code not in (200, 204):
+            raise GendoxAPIError(
+                f"Failed to delete answers: {resp.status_code} {resp.text[:200]}"
+            )
+
+        deleted = 0
+        if resp.status_code == 200 and resp.content:
+            try:
+                deleted = int(resp.json().get("deleted", 0))
+            except (ValueError, TypeError, json.JSONDecodeError):
+                pass
+
+        self._emit(on_progress, "delete-answers", f"Deleted {deleted} answer node(s)")
+        return {"deleted": deleted}
+
+    def regenerate_pages(
+        self,
+        task_id: str,
+        document_node_id: str,
+        pages: list[int],
+        on_progress: Optional[Callable] = None,
+    ) -> list[int]:
+        """Delete the answers for specific 1-based pages of a document and re-generate
+        them — the "found errors on these pages, redo just these" flow.
+
+        Looks up the ANSWER node id for each requested page (via the page number stored
+        in ``nodeValue.order``), deletes those nodes, then runs :meth:`generate_new`,
+        which regenerates every page that no longer has an answer.
+
+        Requested pages that had no answer yet are simply generated. Note that
+        generation also picks up any *other* pages of the document that were already
+        missing — for a fully-digitized document that means exactly ``pages``.
+
+        Returns the list of page numbers that were submitted for generation.
+        """
+        requested = set(pages)
+        answers = self._answer_nodes_for_document(task_id, document_node_id)
+        ids_to_delete = [
+            n.id for n in answers
+            if n.page_number is not None and n.page_number in requested
+        ]
+
+        if ids_to_delete:
+            self._emit(
+                on_progress, "regenerate-pages",
+                f"Deleting {len(ids_to_delete)} answer node(s) for page(s) {sorted(requested)}",
+            )
+            self.delete_answers(task_id, answer_node_ids=ids_to_delete, on_progress=on_progress)
+        else:
+            self._emit(
+                on_progress, "regenerate-pages",
+                f"No existing answers for page(s) {sorted(requested)} - they will just be generated",
+            )
+
+        return self.generate_new(task_id, document_node_id, on_progress)
+
     def export(
         self,
         task_id: str,

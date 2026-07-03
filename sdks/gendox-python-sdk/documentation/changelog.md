@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `DigitizationService.get_page_status()` — per-document generated-vs-total page counts.
 - `DigitizationService.get_missing_pages(task_id, document_node_id)` — exact 1-based
   page numbers that still need generation.
+- `DigitizationService.delete_answers(task_id, document_node_ids=None, answer_node_ids=None)`
+  — delete generated ANSWER nodes for the whole task, specific documents, or specific
+  answer nodes (individual pages). Backed by a new `DELETE .../tasks/{taskId}/answers`
+  API endpoint (`?documentNodeIds=` / `?answerNodeIds=`) that removes the answers' edges
+  before the nodes (avoids the foreign-key violation that `DELETE /task-nodes/{id}` hits
+  on answer nodes).
+- `DigitizationService.regenerate_pages(task_id, document_node_id, pages)` — delete the
+  answers for specific 1-based pages and re-generate just those (maps page number →
+  answer node id, deletes them, then `generate_new`).
 - `DigitizationService.list_document_nodes()`, `list_answer_nodes()` and
   `get_task_node()` helpers to discover node ids.
 

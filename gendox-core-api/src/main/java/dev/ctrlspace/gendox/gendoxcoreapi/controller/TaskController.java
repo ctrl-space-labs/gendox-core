@@ -288,6 +288,25 @@ public class TaskController {
 
     }
 
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @DeleteMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/answers", produces = {"application/json"})
+    @ResponseStatus(value = HttpStatus.OK)
+    public Map<String, Integer> deleteAnswerNodes(@PathVariable UUID organizationId,
+                                                  @PathVariable UUID projectId,
+                                                  @PathVariable UUID taskId,
+                                                  @RequestParam(name = "documentNodeIds", required = false) List<UUID> documentNodeIds,
+                                                  @RequestParam(name = "answerNodeIds", required = false) List<UUID> answerNodeIds) throws GendoxException {
+        Task task = taskService.getTaskById(taskId);
+        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        }
+
+        int deleted = taskNodeService.deleteAnswerNodes(taskId, documentNodeIds, answerNodeIds);
+        logger.info("Request to delete answer nodes: taskId={}, documentNodeIds={}, answerNodeIds={}, deleted={}",
+                taskId, documentNodeIds, answerNodeIds, deleted);
+        return Map.of("deleted", deleted);
+    }
+
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @DeleteMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}")
