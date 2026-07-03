@@ -9,7 +9,14 @@ from typing import Callable, Iterator, Optional
 
 from ...exceptions import GendoxAPIError, GendoxTimeoutError
 from ..._http import HttpClient
-from .models import CleanupFailure, ExportResult, RunSummary, TaskNode, UploadResult
+from .models import (
+    CleanupFailure,
+    DocumentPageStatus,
+    ExportResult,
+    RunSummary,
+    TaskNode,
+    UploadResult,
+)
 
 logger = logging.getLogger("gendox.digitization")
 
@@ -148,11 +155,47 @@ class DigitizationService:
                 return
             page += 1
 
+    def _paginate_post(
+        self, url: str, json_body: dict, page_size: int = _DEFAULT_PAGE_SIZE
+    ) -> Iterator[dict]:
+        """Like :meth:`_paginate` but for POST endpoints that take a JSON body
+        (e.g. the task-node criteria search) and page via query params."""
+        separator = "&" if "?" in url else "?"
+        page = 0
+        while True:
+            paged_url = f"{url}{separator}page={page}&size={page_size}"
+            resp = self._http.post(
+                paged_url,
+                json=json_body,
+                headers={"Content-Type": "application/json"},
+            )
+            if resp.status_code != 200:
+                raise GendoxAPIError(f"Failed to paginate {url}: {resp.status_code}")
+            data = resp.json()
+            content = data.get("content", []) or []
+            yield from content
+
+            if "last" in data:
+                if data["last"] is True or not content:
+                    return
+            elif len(content) < page_size:
+                return
+            page += 1
+
     def _get_nodes_by_type(self, task_id: str, node_type: str) -> list[TaskNode]:
         """Fetch all task nodes (across pages) and return the ones matching node_type."""
         url = f"{self._base}/tasks/{task_id}/task-nodes"
         nodes = [TaskNode.model_validate(n) for n in self._paginate(url)]
         return [n for n in nodes if n.node_type_name == node_type]
+
+    def list_document_nodes(self, task_id: str) -> list[TaskNode]:
+        """Return every DOCUMENT task node for the task (their ``id`` values are the
+        document-node ids accepted by :meth:`execute` and :meth:`delete_answers`)."""
+        return self._get_nodes_by_type(task_id, "DOCUMENT")
+
+    def list_answer_nodes(self, task_id: str) -> list[TaskNode]:
+        """Return every generated ANSWER task node for the task."""
+        return self._get_nodes_by_type(task_id, "ANSWER")
 
     @staticmethod
     def _save_state(path: Path, state: dict) -> None:
@@ -318,18 +361,146 @@ class DigitizationService:
         if updated:
             self._emit(on_progress, "link", f"Updated page range for {updated} node(s)")
 
-    def execute(self, task_id: str, on_progress: Optional[Callable] = None) -> None:
-        """Execute the Document Digitization task and wait for completion."""
-        self._emit(on_progress, "execute", "Starting Document Digitization task...")
+    def execute(
+        self,
+        task_id: str,
+        on_progress: Optional[Callable] = None,
+        *,
+        document_node_ids: Optional[list[str]] = None,
+        regenerate: bool = False,
+    ) -> None:
+        """Execute the Document Digitization task and wait for completion.
+
+        document_node_ids: restrict generation to these DOCUMENT task-node ids
+            (from :meth:`list_document_nodes`). When omitted, every document node
+            in the task is processed.
+        regenerate: when False (default), the backend only generates pages that
+            don't already have an answer (incremental — untouched pages are skipped).
+            When True, it deletes existing answers and regenerates every page from
+            scratch.
+        """
+        criteria: dict = {}
+        if document_node_ids:
+            criteria["documentNodeIds"] = list(document_node_ids)
+        if regenerate:
+            criteria["reGenerateExistingAnswers"] = True
+
+        scope = f"{len(document_node_ids)} document node(s)" if document_node_ids else "all documents"
+        mode = "regenerating existing answers" if regenerate else "new answers only"
+        self._emit(on_progress, "execute", f"Starting Document Digitization task ({scope}, {mode})...")
         resp = self._http.post(
             f"{self._base}/tasks/{task_id}/execute",
-            json={},
+            json=criteria,
             headers={"Content-Type": "application/json"},
         )
         if resp.status_code not in (200, 202):
             raise GendoxAPIError(f"Failed to execute task: {resp.status_code} {resp.text[:200]}")
         self._poll("execute", job_name="documentDigitizationJob", callback=on_progress)
         self._emit(on_progress, "execute", "Completed")
+
+    def get_page_status(self, task_id: str) -> list[DocumentPageStatus]:
+        """Return, per DOCUMENT node, how many pages already have generated answers
+        vs. the document's total page count (``GET .../tasks/{taskId}/document-pages``)."""
+        url = f"{self._base}/tasks/{task_id}/document-pages"
+        return [DocumentPageStatus.model_validate(r) for r in self._paginate(url)]
+
+    def get_task_node(self, node_id: str) -> TaskNode:
+        """Fetch a single task node by id (``GET .../task-nodes?id=...``)."""
+        resp = self._http.get(f"{self._base}/task-nodes", params={"id": node_id})
+        if resp.status_code != 200:
+            raise GendoxAPIError(f"Failed to fetch task node {node_id}: {resp.status_code}")
+        return TaskNode.model_validate(resp.json())
+
+    def _answer_nodes_for_document(self, task_id: str, document_node_id: str) -> list[TaskNode]:
+        """Fetch the ANSWER nodes generated for a single DOCUMENT node.
+
+        Uses the same criteria the backend uses internally
+        (``nodeValueNodeDocumentId``), so it works for Document Digitization tasks
+        where answers link only to the document node (not to a question node).
+        """
+        url = f"{self._base}/tasks/{task_id}/task-nodes/search"
+        body = {"nodeTypeNames": ["ANSWER"], "nodeValueNodeDocumentId": document_node_id}
+        return [TaskNode.model_validate(n) for n in self._paginate_post(url, body)]
+
+    def get_missing_pages(self, task_id: str, document_node_id: str) -> list[int]:
+        """Return the 1-based page numbers of a document that don't have an answer yet.
+
+        Respects the document node's configured page range (``pageFrom``/``pageTo``)
+        when present, otherwise considers the whole document. These are exactly the
+        pages :meth:`generate_new` would generate.
+        """
+        status = {s.taskDocumentNodeId: s for s in self.get_page_status(task_id)}.get(document_node_id)
+        total = status.documentPages if status else None
+
+        node = self.get_task_node(document_node_id)
+        metadata = (node.nodeValue or {}).get("documentMetadata") or {}
+        page_from = metadata.get("pageFrom") or 1
+        page_to = metadata.get("pageTo") or total
+        if page_to is None:
+            raise GendoxAPIError(
+                f"Cannot determine total pages for document node {document_node_id}"
+            )
+
+        existing = {
+            n.page_number
+            for n in self._answer_nodes_for_document(task_id, document_node_id)
+            if n.page_number is not None
+        }
+        return [p for p in range(page_from, page_to + 1) if p not in existing]
+
+    def generate_new(
+        self,
+        task_id: str,
+        document_node_id: str,
+        on_progress: Optional[Callable] = None,
+    ) -> list[int]:
+        """Generate answers for a single document, but only for the pages that don't
+        have one yet — already-generated pages are left untouched (the backend skips
+        them). Returns the list of page numbers that were submitted for generation.
+
+        Use :meth:`regenerate` to redo a document from scratch instead.
+        """
+        try:
+            missing = self.get_missing_pages(task_id, document_node_id)
+        except GendoxAPIError as exc:
+            # Pre-check is best-effort; the backend skips existing pages regardless.
+            logger.warning("Could not pre-compute missing pages: %s", exc)
+            missing = None
+
+        if missing == []:
+            self._emit(
+                on_progress, "generate",
+                f"Document node {document_node_id}: all pages already generated - nothing to do",
+            )
+            return []
+
+        if missing:
+            self._emit(on_progress, "generate", f"Generating {len(missing)} missing page(s): {missing}")
+
+        self.execute(
+            task_id,
+            on_progress,
+            document_node_ids=[document_node_id],
+            regenerate=False,
+        )
+        return missing or []
+
+    def regenerate(
+        self,
+        task_id: str,
+        document_node_ids: Optional[list[str]] = None,
+        on_progress: Optional[Callable] = None,
+    ) -> None:
+        """Re-generate answers from scratch: delete existing answers and redo every
+        page. Pass ``document_node_ids`` to target specific documents; omit to cover
+        the whole task. Use :meth:`generate_new` to only fill in still-missing pages.
+        """
+        self.execute(
+            task_id,
+            on_progress,
+            document_node_ids=document_node_ids,
+            regenerate=True,
+        )
 
     def export(
         self,

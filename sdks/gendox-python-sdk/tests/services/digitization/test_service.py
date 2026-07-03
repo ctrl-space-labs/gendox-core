@@ -1,5 +1,6 @@
 """Tests for DigitizationService with mocked HTTP."""
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 import responses
@@ -455,5 +456,129 @@ class TestRun:
         assert summary.uploads == []
         executed_calls = [c for c in responses.calls if "execute" in c.request.url]
         assert executed_calls == []
+
+
+class TestExecute:
+    def _mock_job_completion(self, api_base):
+        responses.add(
+            responses.POST, f"{api_base}/tasks/{TASK_ID}/execute", status=202
+        )
+        responses.add(
+            responses.GET, f"{api_base}/jobs",
+            json={"content": [{"status": "STARTED"}]},
+        )
+        responses.add(
+            responses.GET, f"{api_base}/jobs",
+            json={"content": [{"status": "COMPLETED"}]},
+        )
+
+    def _execute_body(self):
+        import json as _json
+        call = next(c for c in responses.calls if "execute" in c.request.url)
+        return _json.loads(call.request.body)
+
+    @responses.activate
+    def test_default_execute_sends_empty_criteria(self, service, api_base):
+        self._mock_job_completion(api_base)
+        with patch("gendox.services.digitization.service.time.sleep"):
+            service.execute(TASK_ID)
+        assert self._execute_body() == {}
+
+    @responses.activate
+    def test_execute_scopes_documents_and_regenerates(self, service, api_base):
+        self._mock_job_completion(api_base)
+        with patch("gendox.services.digitization.service.time.sleep"):
+            service.execute(
+                TASK_ID, document_node_ids=["n1", "n2"], regenerate=True
+            )
+        assert self._execute_body() == {
+            "documentNodeIds": ["n1", "n2"],
+            "reGenerateExistingAnswers": True,
+        }
+
+    @responses.activate
+    def test_regenerate_sets_flag_and_scope(self, service, api_base):
+        self._mock_job_completion(api_base)
+        with patch("gendox.services.digitization.service.time.sleep"):
+            service.regenerate(TASK_ID, document_node_ids=["n1"])
+        assert self._execute_body() == {
+            "documentNodeIds": ["n1"],
+            "reGenerateExistingAnswers": True,
+        }
+
+
+class TestGenerateNew:
+    def _mock_missing_pages(self, api_base, *, total, metadata, existing_orders):
+        """Mock the three reads get_missing_pages performs for document node 'n1'."""
+        responses.add(
+            responses.GET,
+            f"{api_base}/tasks/{TASK_ID}/document-pages",
+            json={
+                "content": [{
+                    "taskDocumentNodeId": "n1",
+                    "documentPages": total,
+                    "numberOfNodePages": len(existing_orders),
+                    "maxNodePage": max(existing_orders, default=0),
+                }],
+                "last": True,
+            },
+        )
+        responses.add(
+            responses.GET,
+            f"{api_base}/task-nodes",
+            json={"id": "n1", "nodeType": {"name": "DOCUMENT"},
+                  "nodeValue": {"documentMetadata": metadata}},
+        )
+        responses.add(
+            responses.POST,
+            f"{api_base}/tasks/{TASK_ID}/task-nodes/search",
+            json={"content": [
+                {"id": f"a{o}", "nodeType": {"name": "ANSWER"}, "nodeValue": {"order": o}}
+                for o in existing_orders
+            ], "last": True},
+        )
+
+    @responses.activate
+    def test_get_missing_pages_full_document(self, service, api_base):
+        self._mock_missing_pages(api_base, total=3, metadata={}, existing_orders=[1])
+        assert service.get_missing_pages(TASK_ID, "n1") == [2, 3]
+
+    @responses.activate
+    def test_get_missing_pages_respects_node_range(self, service, api_base):
+        self._mock_missing_pages(
+            api_base, total=10, metadata={"pageFrom": 2, "pageTo": 4}, existing_orders=[3]
+        )
+        assert service.get_missing_pages(TASK_ID, "n1") == [2, 4]
+
+    @responses.activate
+    def test_generate_new_executes_scoped_incremental(self, service, api_base):
+        self._mock_missing_pages(api_base, total=3, metadata={}, existing_orders=[1])
+        responses.add(
+            responses.POST, f"{api_base}/tasks/{TASK_ID}/execute", status=202
+        )
+        responses.add(
+            responses.GET, f"{api_base}/jobs",
+            json={"content": [{"status": "STARTED"}]},
+        )
+        responses.add(
+            responses.GET, f"{api_base}/jobs",
+            json={"content": [{"status": "COMPLETED"}]},
+        )
+        with patch("gendox.services.digitization.service.time.sleep"):
+            missing = service.generate_new(TASK_ID, "n1")
+
+        assert missing == [2, 3]
+        import json as _json
+        execute_call = next(c for c in responses.calls if c.request.url.endswith("/execute"))
+        # incremental: only scoped to the document, no regenerate flag
+        assert _json.loads(execute_call.request.body) == {"documentNodeIds": ["n1"]}
+
+    @responses.activate
+    def test_generate_new_skips_when_nothing_missing(self, service, api_base):
+        self._mock_missing_pages(api_base, total=2, metadata={}, existing_orders=[1, 2])
+        with patch("gendox.services.digitization.service.time.sleep"):
+            missing = service.generate_new(TASK_ID, "n1")
+        assert missing == []
+        assert not [c for c in responses.calls if c.request.url.endswith("/execute")]
 
 

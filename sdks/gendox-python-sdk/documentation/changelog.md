@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `DigitizationService.execute()` now accepts `document_node_ids` (scope generation
+  to specific DOCUMENT nodes) and `regenerate` (default `False` = only generate pages
+  that don't have an answer yet; `True` = redo every page from scratch).
+- `DigitizationService.generate_new(task_id, document_node_id)` — generate only the
+  still-missing pages of a single document (already-generated pages are skipped by the
+  backend). Returns the page numbers submitted for generation.
+- `DigitizationService.regenerate()` — re-generate answers from scratch for the whole
+  task or specific documents.
+- `DigitizationService.get_page_status()` — per-document generated-vs-total page counts.
+- `DigitizationService.get_missing_pages(task_id, document_node_id)` — exact 1-based
+  page numbers that still need generation.
+- `DigitizationService.list_document_nodes()`, `list_answer_nodes()` and
+  `get_task_node()` helpers to discover node ids.
+
 ## [0.1.0] - 2026-04-25
 
 ### Added

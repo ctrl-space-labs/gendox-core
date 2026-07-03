@@ -112,3 +112,33 @@ class TaskNode(BaseModel):
         if isinstance(nt, str):
             return nt
         return None
+
+    @property
+    def page_number(self) -> Optional[int]:
+        """1-based page number of an ANSWER node (stored as ``nodeValue.order``)."""
+        order = (self.nodeValue or {}).get("order")
+        return int(order) if order is not None else None
+
+
+class DocumentPageStatus(BaseModel):
+    """Per-document view of how many pages already have generated answers.
+
+    Returned by ``GET .../tasks/{taskId}/document-pages``.
+    """
+    model_config = ConfigDict(extra="allow")
+
+    taskDocumentNodeId: str
+    documentPages: Optional[int] = None   # total pages in the source document
+    numberOfNodePages: int = 0            # pages that already have an answer
+    maxNodePage: int = 0                  # highest generated page number
+
+    @property
+    def missing_count(self) -> Optional[int]:
+        """How many pages still lack an answer (None if total is unknown)."""
+        if self.documentPages is None:
+            return None
+        return max(self.documentPages - self.numberOfNodePages, 0)
+
+    @property
+    def fully_generated(self) -> bool:
+        return self.documentPages is not None and self.numberOfNodePages >= self.documentPages
