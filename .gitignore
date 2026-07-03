@@ -119,3 +119,6 @@ scripts/output/*
 
 # Accidentally created file: URL paths
 file:/
+
+# Local-only end-user workspace (kept locally, not tracked)
+gendox-workspace/

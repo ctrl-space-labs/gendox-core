@@ -1,9 +1,0 @@
-.env
-.venv/
-output/*
-!output/.gitkeep
-input/*
-!input/.gitkeep
-__pycache__/
-*.py[cod]
-.DS_Store
