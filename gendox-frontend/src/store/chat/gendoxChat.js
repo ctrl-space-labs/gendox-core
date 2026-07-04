@@ -6,6 +6,7 @@ import chatConverter from '../../converters/chat.converter'
 import chatThreadService from '../../gendox-sdk/chatThreadService'
 import completionService from '../../gendox-sdk/completionService'
 import documentService from '../../gendox-sdk/documentService'
+import { updateSessionThreadId } from 'src/utils/embeddedChatSession'
 
 const DEFAULT_LOCAL_CONTEXT_MAX_RESPONSES = 0 // basically dont wait
 const DEFAULT_LOCAL_CONTEXT_MAX_WAIT_MS = 10
@@ -238,7 +239,13 @@ export const sendMessage = createAsyncThunk(
       apiMessages,
       responseThreadId,
       dispatch,
-      iFrameMessageManager
+      iFrameMessageManager,
+      sessionContext: {
+        isEmbedded: iFrameMessageManager?.isEmbedded,
+        originUrl: iFrameMessageManager?.originUrl,
+        organizationId,
+        projectId
+      }
     })
 
     const { finalThreadId } = await _handleThreadPostSend({
@@ -307,11 +314,18 @@ export const finalizeDeepThinkingThread = createAsyncThunk(
         })
         .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
 
+      const currentThread = getState()?.gendoxChat?.currentThread
       _dispatchIncomingMessagesAndToolCalls({
         apiMessages: newApiMessages,
         responseThreadId: threadId,
         dispatch,
-        iFrameMessageManager
+        iFrameMessageManager,
+        sessionContext: {
+          isEmbedded: iFrameMessageManager?.isEmbedded,
+          originUrl: iFrameMessageManager?.originUrl,
+          organizationId: currentThread?.organizationId,
+          projectId: currentThread?.projectId
+        }
       })
 
       return { addedCount: newApiMessages.length }
@@ -773,7 +787,7 @@ async function _handleThreadPostSend({ threadId, responseThreadId, projectId, or
   return { isNewThread, finalThreadId }
 }
 
-function _dispatchIncomingMessagesAndToolCalls({ apiMessages = [], responseThreadId, dispatch, iFrameMessageManager }) {
+function _dispatchIncomingMessagesAndToolCalls({ apiMessages = [], responseThreadId, dispatch, iFrameMessageManager, sessionContext }) {
   if (!Array.isArray(apiMessages) || apiMessages.length === 0) return
 
   // sending PostMessage notification
@@ -800,6 +814,18 @@ function _dispatchIncomingMessagesAndToolCalls({ apiMessages = [], responseThrea
   })
 
   if (toolCallsToProcess.length > 0) {
+    // Persist the (possibly newly created) thread ID synchronously BEFORE dispatching the
+    // tool calls. A tool such as open_web_page navigates the host page, which would otherwise
+    // race ahead of the async URL update and lose the new thread ID for session resume.
+    if (sessionContext?.isEmbedded && responseThreadId) {
+      updateSessionThreadId(
+        sessionContext.originUrl,
+        sessionContext.organizationId,
+        sessionContext.projectId,
+        responseThreadId
+      )
+    }
+
     // Process tool calls after the message has been added
     // Currently, this is 1-way communication, so we send the tool calls to the parent frame
     // TODO this should be a 2-way communication, where the parent frame processes the tool calls and sends back the results

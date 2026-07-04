@@ -9,6 +9,10 @@
   const CHAT_TOGGLE_ACTION_EVENT = 'gendox.events.embedded.chat.toggle.action'
   const CONFIG_UPDATE_EVENT = 'gendox.events.embedded.config.update'
   const LOCAL_CONTEXT_RESPONSE_EVENT = 'gendox.events.chat.message.context.local.response'
+  const PENDING_TOOL_CALLS_STORAGE_KEY = 'gendox-widget-pending-tool-calls'
+  const PENDING_TOOL_CALLS_MAX_AGE_MS = 600_000
+  const DEFAULT_PENDING_TOOL_HANDLER_WAIT_MS = 1_000
+  const PENDING_TOOL_HANDLER_POLL_INTERVAL_MS = 50
 
   // Default CSS styles
   const defaultStyles = `
@@ -73,6 +77,10 @@
       scriptTag.getAttribute('data-gendox-session-resume-timeout-ms'),
       DEFAULT_SESSION_RESUME_TIMEOUT_MS
     )
+    const pendingToolHandlerWaitMs = parseNonNegativeInt(
+      scriptTag.getAttribute('data-gendox-pending-tool-handler-wait-ms'),
+      DEFAULT_PENDING_TOOL_HANDLER_WAIT_MS
+    )
 
     return {
       gendoxSrc: scriptTag.getAttribute('data-gendox-src') || '',
@@ -85,7 +93,8 @@
       localContextMaxWaitMs,
       autoSelectedTextLocalContextEnabled,
       openWebPageToolEnabled,
-      sessionResumeTimeoutMs
+      sessionResumeTimeoutMs,
+      pendingToolHandlerWaitMs
     }
   }
 
@@ -334,30 +343,15 @@
         const toolCalls = event.data.payload
         console.log('Tool Calls Request Received:', event.data.payload)
 
-        toolCalls.forEach(tool => {
-          const fnName = tool.function.name
-          let parsedArgs = {}
+        if (!Array.isArray(toolCalls) || toolCalls.length === 0) {
+          return
+        }
 
-          try {
-            parsedArgs = JSON.parse(tool.function.arguments || '{}')
-          } catch (err) {
-            console.error('Failed to parse arguments for', fnName, err)
-            return
-          }
-
-          const handler = window.gendox.tools.allTools[fnName]
-          if (handler) {
-            try {
-              const result = handler(parsedArgs)
-              console.log(`Tool “${fnName}” returned:`, result)
-              tool.response = result
-            } catch (err) {
-              console.error(`Error executing handler "${fnName}":`, err)
-            }
-          } else {
-            console.warn('Unknown tool call function:', fnName)
-          }
-        })
+        // Persist the batch first, then execute in the agent's requested order. A tool such as
+        // open_web_page navigates the host page, which tears down this script; persisting the
+        // queue lets the remaining tool calls resume once the destination page reloads the widget.
+        enqueuePendingToolCalls(toolCalls)
+        executePendingToolCalls()
 
         // TODO return all toolCalls->response to the iframe with 'gendox.events.chat.message.tool_calls.response' type
       }
@@ -383,6 +377,137 @@
 
     // Register the default "open_web_page" tool
     registerTool('open_web_page', openWebPageToolHandler)
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  ///////     Pending tool-call queue (survives host-page navigation via open_web_page)     //////////////////
+
+  function readPendingToolCalls() {
+    try {
+      return JSON.parse(sessionStorage.getItem(PENDING_TOOL_CALLS_STORAGE_KEY)) || null
+    } catch {
+      return null
+    }
+  }
+
+  function writePendingToolCalls(queue) {
+    try {
+      sessionStorage.setItem(PENDING_TOOL_CALLS_STORAGE_KEY, JSON.stringify(queue))
+    } catch (err) {
+      console.warn('Could not persist pending tool calls:', err)
+    }
+  }
+
+  function clearPendingToolCalls() {
+    try {
+      sessionStorage.removeItem(PENDING_TOOL_CALLS_STORAGE_KEY)
+    } catch {
+      // ignore
+    }
+  }
+
+  function enqueuePendingToolCalls(toolCalls) {
+    writePendingToolCalls({ createdAt: Date.now(), tools: toolCalls })
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  function getPendingToolHandlerWaitMs() {
+    return window.gendox?.widget?.config?.pendingToolHandlerWaitMs ?? DEFAULT_PENDING_TOOL_HANDLER_WAIT_MS
+  }
+
+  async function waitForToolHandler(fnName, maxWaitMs) {
+    if (!fnName) {
+      return false
+    }
+
+    const deadline = Date.now() + maxWaitMs
+    while (Date.now() < deadline) {
+      if (window.gendox?.tools?.allTools?.[fnName]) {
+        return true
+      }
+      await sleep(PENDING_TOOL_HANDLER_POLL_INTERVAL_MS)
+    }
+
+    return Boolean(window.gendox?.tools?.allTools?.[fnName])
+  }
+
+  // Runs one tool handler and stores the result on the tool object.
+  function runSingleToolCall(tool) {
+    const fnName = tool?.function?.name
+    let parsedArgs = {}
+    try {
+      parsedArgs = JSON.parse(tool?.function?.arguments || '{}')
+    } catch (err) {
+      console.error('Failed to parse arguments for', fnName, err)
+      return
+    }
+
+    const handler = window.gendox?.tools?.allTools?.[fnName]
+    if (!handler) {
+      return
+    }
+
+    try {
+      const result = handler(parsedArgs)
+      console.log(`Tool “${fnName}” returned:`, result)
+      tool.response = result
+    } catch (err) {
+      console.error(`Error executing handler "${fnName}":`, err)
+    }
+  }
+
+  // Runs pending tool calls in the agent's requested order. Session storage holds only tools
+  // that have not run yet; each tool is removed after it executes.
+  async function executePendingToolCalls() {
+    const queue = readPendingToolCalls()
+    if (!queue || !Array.isArray(queue.tools)) {
+      return
+    }
+
+    if (Date.now() - (queue.createdAt || 0) > PENDING_TOOL_CALLS_MAX_AGE_MS) {
+      clearPendingToolCalls()
+      return
+    }
+
+    const handlerWaitMs = getPendingToolHandlerWaitMs()
+    const remaining = [...queue.tools]
+
+    while (remaining.length > 0) {
+      const tool = remaining[0]
+      const fnName = tool?.function?.name
+
+      const handlerReady = await waitForToolHandler(fnName, handlerWaitMs)
+      if (!handlerReady) {
+        console.warn(
+          `Tool handler "${fnName}" was not registered within ${handlerWaitMs}ms; skipping pending tool call.`
+        )
+        remaining.shift()
+        if (remaining.length > 0) {
+          writePendingToolCalls({ createdAt: queue.createdAt, tools: remaining })
+        } else {
+          clearPendingToolCalls()
+        }
+        continue
+      }
+
+      runSingleToolCall(tool)
+      remaining.shift()
+
+      if (remaining.length > 0) {
+        writePendingToolCalls({ createdAt: queue.createdAt, tools: remaining })
+      } else {
+        clearPendingToolCalls()
+      }
+
+      // open_web_page sets response.navigated when it schedules a host-page navigation.
+      // Stop here; the destination page resumes any tools still in session storage.
+      if (tool.response?.navigated) {
+        return
+      }
+    }
   }
 
   window.gendox = {}
@@ -421,6 +546,9 @@
 
       initializeChat(config)
       initializeDefaultTools(config)
+
+      // Resume tool calls deferred by a previous navigation (e.g. open_web_page).
+      setTimeout(executePendingToolCalls, 0)
     }
 
     // Check if DOM is already loaded
@@ -791,8 +919,11 @@
   function openWebPageToolHandler(arguments) {
     console.log('Opening web page:', arguments.url)
     if (window.location.href !== arguments.url) {
+      // Assigning location.href only schedules navigation; synchronous code below still runs to completion.
       window.location.href = arguments.url
+      return { status: 'executed', navigated: true, url: arguments.url }
     }
-    return { status: 'executed' }
+    // Same URL: no navigation happens, so the queue should keep executing the remaining tools.
+    return { status: 'executed', navigated: false, url: arguments.url }
   }
 })()

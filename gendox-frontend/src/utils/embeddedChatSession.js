@@ -55,6 +55,37 @@ export function saveSession(origin, orgId, projId, { threadId, isOpen }, timeout
 }
 
 /**
+ * Patch only the threadId on an existing session entry, preserving isOpen.
+ * If no entry exists yet (defensive), a minimal one is created with isOpen: true,
+ * since a completion response implies the chat is open.
+ *
+ * This is used to persist a newly created thread ID synchronously the moment it is
+ * known (before dispatching tool calls), so a tool that navigates the host page
+ * cannot race ahead of the save.
+ *
+ * @param {string} origin   - Host page origin
+ * @param {string} orgId    - Organization ID
+ * @param {string} projId   - Project ID
+ * @param {string} threadId - The thread ID to persist
+ */
+export function updateSessionThreadId(origin, orgId, projId, threadId) {
+  if (!origin || !orgId || !projId || !threadId) return
+
+  const data = readStorage()
+  const sessions = data.sessions || {}
+  const key = buildSessionKey(origin, orgId, projId)
+  const existing = sessions[key]
+
+  sessions[key] = {
+    threadId,
+    isOpen: existing ? Boolean(existing.isOpen) : true,
+    updatedAt: Date.now()
+  }
+
+  writeStorage({ ...data, sessions })
+}
+
+/**
  * Load a previously saved session for an embedded chat instance.
  * Returns null if no entry exists or if the entry has expired.
  *
