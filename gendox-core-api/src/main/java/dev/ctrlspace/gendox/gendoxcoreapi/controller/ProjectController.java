@@ -94,6 +94,7 @@ public class ProjectController {
     public Page<Project> getAllProjects(@Valid ProjectCriteria criteria, @PathVariable("organizationId") String organizationId, Pageable pageable, Authentication authentication) throws GendoxException {
         // override requested org id with the path variable
         criteria.setOrganizationId(organizationId);
+        criteria.setIsActive(true);
         // if it is anonymous, gets only the public projects
         if (!(authentication instanceof GendoxAuthenticationToken)) {
             criteria.setPrivateProjectAgent(false);

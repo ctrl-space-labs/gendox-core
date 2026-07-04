@@ -20,7 +20,8 @@ public class ProjectPredicates {
                 userId(criteria.getUserId()),
                 name(criteria.getName()),
                 projectIdIn(criteria.getProjectIdIn()),
-                privateProjectAgent(criteria.getPrivateProjectAgent())
+                privateProjectAgent(criteria.getPrivateProjectAgent()),
+                isActive(criteria.getIsActive())
         );
     }
 
@@ -57,5 +58,12 @@ public class ProjectPredicates {
             return null;
         }
         return qProject.projectAgent.privateAgent.eq(privateProjectAgent);
+    }
+
+    private static Predicate isActive(Boolean isActive) {
+        if (isActive == null) {
+            return null;
+        }
+        return qProject.isActive.eq(isActive);
     }
 }

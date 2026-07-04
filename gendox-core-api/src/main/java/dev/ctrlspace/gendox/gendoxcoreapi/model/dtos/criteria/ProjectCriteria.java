@@ -23,4 +23,6 @@ public class ProjectCriteria {
         //populate in controller as default with user's projects
         private List<String> projectIdIn = new ArrayList<>();
         private Boolean privateProjectAgent = null;
+        @Builder.Default
+        private Boolean isActive = true;
 }
