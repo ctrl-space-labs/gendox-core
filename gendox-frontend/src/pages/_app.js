@@ -35,8 +35,12 @@ import OrganizationProjectGuard from 'src/authentication/components/Organization
 import { AuthProvider } from '../authentication/context/AuthContext'
 import { IFrameMessageManagerProvider } from '../authentication/context/IFrameMessageManagerContext'
 import GlobalScrollbar from 'src/views/custom-components/global-scrollbar/GlobalScrollbar'
+import { registerAxiosInterceptors } from 'src/configs/axiosInterceptors'
 
 const clientSideEmotionCache = createEmotionCache()
+
+// Register the global 401 -> '/' redirect interceptor once for the whole app
+registerAxiosInterceptors()
 
 // ** Pace Loader
 if (themeConfig.routingLoader) {
