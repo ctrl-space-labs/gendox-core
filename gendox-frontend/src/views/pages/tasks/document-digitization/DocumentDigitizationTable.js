@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { Box } from '@mui/material'
@@ -37,6 +37,7 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   const [editMode, setEditMode] = useState(false)
   const [selectedDocuments, setSelectedDocuments] = useState([])
   const [isPageLoading, setIsPageLoading] = useState(false)
+  const hasResumedRef = useRef(false)
 
   const showLoader = isPageLoading || isLoading || isLoadingDocumentPages
 
@@ -112,9 +113,13 @@ const DocumentDigitizationTable = ({ selectedTask }) => {
   })
 
   useEffect(() => {
-    if (!organizationId || !projectId || !taskId) return
+    if (hasResumedRef.current) return
+    if (!organizationId || !projectId || !taskId || !taskNodesDocumentList) return
+    if (!Array.isArray(taskNodesDocumentList?.content)) return
+
+    hasResumedRef.current = true
     resumeStartedJobs({ taskId })
-  }, [organizationId, projectId, taskId, resumeStartedJobs])
+  }, [organizationId, projectId, taskId, taskNodesDocumentList])
 
   useEffect(() => {
     router.replace(
