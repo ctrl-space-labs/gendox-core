@@ -12,8 +12,6 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
@@ -102,10 +100,12 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
                 .pageFrom(documentMetadata.getPageFrom())
                 .pageTo(documentMetadata.getPageTo())
                 .build();
-        Page<TaskNode> existingNodes = taskNodeService.getTaskNodesByCriteria(existingAnswersCriteria, Pageable.unpaged());
 
+        // Single lightweight query: it's needed to know which pages already exist either way, and,
+        // when regenerating, the same result (with node ids) is reused for batch.setAnswersToDelete().
+        List<TaskNode> existingNodes = taskNodeService.getExistingAnswerNodesLite(existingAnswersCriteria);
 
-        Set<Integer> existingPageNums = existingNodes.getContent().stream()
+        Set<Integer> existingPageNums = existingNodes.stream()
                 .map(n -> n.getNodeValue().getOrder() - 1)
                 .collect(Collectors.toSet());
 
@@ -133,7 +133,7 @@ public class DocumentDigitizationProcessor implements ItemProcessor<TaskDocument
 
         List<Integer> pagesToProcess;
         if (reGenerateExistingAnswers) {
-            batch.setAnswersToDelete(existingNodes.getContent());
+            batch.setAnswersToDelete(existingNodes);
             pagesToProcess = IntStream.rangeClosed(startPage, endPage).boxed().toList();
         } else {
             pagesToProcess = IntStream.rangeClosed(startPage, endPage)

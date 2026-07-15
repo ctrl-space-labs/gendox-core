@@ -18,7 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface TaskNodeRepository extends JpaRepository<TaskNode, UUID>, QuerydslPredicateExecutor<TaskNode> {
+public interface TaskNodeRepository extends JpaRepository<TaskNode, UUID>, QuerydslPredicateExecutor<TaskNode>, TaskNodeRepositoryCustom {
 
     Page<TaskNode> findAllByTaskId(UUID taskId, Pageable pageable);
 

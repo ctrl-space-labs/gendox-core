@@ -253,6 +253,15 @@ public class TaskNodeService {
         return taskNodeRepository.findAll(TaskNodePredicates.build(criteria), pageable);
     }
 
+    /**
+     * Lightweight alternative to {@link #getTaskNodesByCriteria} that avoids hydrating full
+     * {@code TaskNode} entities. See
+     * {@link dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskNodeRepositoryCustom#findExistingAnswerNodesLite}.
+     */
+    public List<TaskNode> getExistingAnswerNodesLite(TaskNodeCriteria criteria) {
+        return taskNodeRepository.findExistingAnswerNodesLite(criteria);
+    }
+
     public Page<DocumentNodeAnswerPagesDTO> getDocumentNodeAnswerPages(UUID taskId, Pageable pageable) {
         Type documentNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.DOCUMENT);
         Type answerNodeType = typeService.getTaskNodeTypeByName(TaskNodeTypeConstants.ANSWER);

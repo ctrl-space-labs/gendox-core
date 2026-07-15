@@ -16,6 +16,20 @@ import java.util.UUID;
 public class TaskNodePredicates {
     private static final QTaskNode qTaskNode = QTaskNode.taskNode;
 
+    /**
+     * ((node_value ->> 'order')::int) — exposed so it can be reused as a
+     * lightweight projection (e.g. selecting only page numbers) instead of
+     * always fetching full {@code TaskNode} entities.
+     */
+    public static NumberExpression<Integer> nodeOrder() {
+        return Expressions.numberTemplate(
+                Integer.class,
+                "cast(function('jsonb_extract_path_text', {0}, {1}) as int)",
+                qTaskNode.nodeValue,
+                Expressions.constant("order")
+        );
+    }
+
     public static Predicate build(TaskNodeCriteria criteria) {
         return ExpressionUtils.allOf(
                 taskIdEq(criteria.getTaskId()),
@@ -173,15 +187,7 @@ public class TaskNodePredicates {
             return null;
         }
 
-        //  ((node_value ->> 'order')::int)
-        NumberExpression<Integer> orderInt = Expressions.numberTemplate(
-                Integer.class,
-                "cast(function('jsonb_extract_path_text', {0}, {1}) as int)",
-                qTaskNode.nodeValue,
-                Expressions.constant("order")
-        );
-
-        return orderInt.goe(pageFrom);
+        return nodeOrder().goe(pageFrom);
     }
 
     public static Predicate pageTo(Integer pageTo) {
@@ -189,15 +195,7 @@ public class TaskNodePredicates {
             return null;
         }
 
-        //  ((node_value ->> 'order')::int)
-        NumberExpression<Integer> orderInt = Expressions.numberTemplate(
-                Integer.class,
-                "cast(function('jsonb_extract_path_text', {0}, {1}) as int)",
-                qTaskNode.nodeValue,
-                Expressions.constant("order")
-        );
-
-        return orderInt.loe(pageTo);
+        return nodeOrder().loe(pageTo);
     }
 }
 
