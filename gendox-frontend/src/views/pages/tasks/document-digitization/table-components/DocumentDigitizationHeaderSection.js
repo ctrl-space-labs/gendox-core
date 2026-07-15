@@ -82,7 +82,12 @@ const HeaderSection = ({
         handleGenerate({ documentsToGenerate: [], reGenerateExistingAnswers: true })
         break
       case 'new':
-        handleGenerate({ documentsToGenerate: [], reGenerateExistingAnswers: false })
+        if (selectedDocuments.length > 0) {
+          const selectedDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
+          handleGenerate({ documentsToGenerate: selectedDocs, reGenerateExistingAnswers: false })
+        } else {
+          handleGenerate({ documentsToGenerate: [], reGenerateExistingAnswers: false })
+        }
         break
       case 'selected':
         const selectedDocs = documents.filter(doc => selectedDocuments.includes(doc.id))
@@ -306,7 +311,7 @@ const HeaderSection = ({
                     ) : (
                       <RocketLaunchIcon fontSize='small' color='primary' />
                     )}
-                    Generate New
+                    Generate New ({selectedDocuments.length})
                   </Box>
                 </MenuItem>,
 

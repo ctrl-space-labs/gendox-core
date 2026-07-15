@@ -24,14 +24,16 @@ const GENERATION_CONFIGS = {
     buttonColor: 'warning',
     showWarning: true
   },
-  new: {
-    title: 'Generate New Documents', 
-    description: 'This will generate answers for documents that don\'t have existing content yet. Only documents with prompts that haven\'t been generated will be processed.',
+  new: (count) => ({
+    title: count > 0 ? `Generate New for Selected (${count})` : 'Generate New Documents',
+    description: count > 0
+      ? `This will generate answers only for the ${count} selected document(s) that don't have existing content yet. No existing content will be overwritten.`
+      : "This will generate answers for documents that don't have existing content yet. Only documents with prompts that haven't been generated will be processed.",
     info: 'ℹ️ This is a safe operation - no existing content will be overwritten.',
-    buttonText: 'Generate New',
+    buttonText: count > 0 ? `Generate New (${count})` : 'Generate New',
     buttonColor: 'primary',
     showWarning: false
-  },
+  }),
   selected: (count) => ({
     title: `Regenerate Selected Documents (${count})`,
     description: 'Some selected documents already have generated answers. Regenerating will replace existing answers with new ones.',
@@ -76,10 +78,9 @@ export const GenerateConfirmDialog = ({
 }) => {
   // Get configuration based on type
   const getConfig = () => {
-    if (type === 'selected' && typeof GENERATION_CONFIGS.selected === 'function') {
-      return GENERATION_CONFIGS.selected(selectedCount)
-    }
-    return GENERATION_CONFIGS[type] || GENERATION_CONFIGS.new
+    const cfg = GENERATION_CONFIGS[type]
+    if (typeof cfg === 'function') return cfg(selectedCount)
+    return cfg || GENERATION_CONFIGS.new(0)
   }
 
   const config = getConfig()
