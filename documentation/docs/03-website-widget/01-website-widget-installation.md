@@ -12,9 +12,9 @@ The Gendox Chat Widget is the easiest way to integrate an AI chat system into yo
 ## Getting Started
 To begin using the Gendox Chat Widget, you must first create an account on the Gendox platform. Follow these steps:
 1. **Create a Gendox Account**.
-2. **Create a Project and an Agent** [link to guide].
-3. **Upload Information** [link to guide].
-4. **Make the Project Public**. _(This step is crucial for the widget to function properly)_.
+2. **Create a Project and an Agent** — see [Setup your first project](../01-user-manual/setup-a-project.md).
+3. **Upload documents and train the agent** — see [Setup your first project](../01-user-manual/setup-a-project.md).
+4. **Enable the Public Agent**. _(This step is crucial for the widget to function properly)_. Go to **Project → Settings → AI Agent** and toggle the agent to **Public**.
 
 Once your agent has been created, navigate to the **Gendox webapp homepage**, click on your project, and retrieve the following from the browser's URL parameters:
 - `organizationId`
@@ -72,7 +72,7 @@ The following parameters can be customized by passing them into the script:
 | data-gendox-local-context-selected-text-enabled | Enable or disable the SDK's automatically registered selected-text local-context callback. Allowed values: `true`, `false`. | `true` | `data-gendox-local-context-selected-text-enabled="false"` |
 | data-gendox-open-web-page-tool-enabled | Enable or disable the SDK's automatically registered `open_web_page` tool handler. Allowed values: `true`, `false`. | `true` | `data-gendox-open-web-page-tool-enabled="false"` |
 | data-gendox-local-context-max-responses | Max number of local context responses to wait for per user message. Positive integer only.                          | `1`                          | `data-gendox-local-context-max-responses="2"`   |
-| data-gendox-local-context-max-wait-ms | Max wait time (ms) for local context responses per user message. Non-negative integer only.                            | `500`                        | `data-gendox-local-context-max-wait-ms="1200"`  |
+| data-gendox-local-context-max-wait-ms | Max wait time (ms) for local context responses per user message. Non-negative integer only.                            | `200`                        | `data-gendox-local-context-max-wait-ms="1200"`  |
 
 
 More parameter configurations will be documented in future updates.
@@ -97,8 +97,8 @@ The Gendox widget uses the **Post Message API** to exchange messages between the
 
 | Event Type                                       | Description                                                                                                                                                                          |
 |--------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| gendox.events.initialization.request             | Gendox requests initial configuration from the parent website.                                                                                                                       |
-| gendox.events.initialization.response            | The agent sends a response message back to the user.                                                                                                                                 |
+| gendox.events.initialization.request             | Iframe sends this to the parent SDK on load, requesting initial configuration.                                                                                                       |
+| gendox.events.initialization.response            | Parent SDK responds with initial config (`chatInitialState`, `localContextMaxResponses`, `localContextMaxWaitMs`).                                                                    |
 | gendox.events.embedded.chat.toggle.request       | Event sent by parent SDK to embedded chat iframe to request state change (`open`, `close`, `toggle`).                                                                              |
 | gendox.events.embedded.chat.toggle.action        | Event sent by embedded chat iframe to parent SDK when chat window has opened or closed.                                                                                             |
 | gendox.events.listener.removed                   | Event triggered when message listener from parent window has been removed from gendox.                                                                                               |

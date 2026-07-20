@@ -46,7 +46,7 @@ The SDK reads configuration from **data attributes on the script tag** with `id=
 | `data-gendox-local-context-selected-text-enabled` | Only `"true"` and `"false"` are accepted; anything else → default | `true` |
 | `data-gendox-open-web-page-tool-enabled` | Only `"true"` and `"false"` are accepted; anything else → default | `true` |
 | `data-gendox-local-context-max-responses` | Positive integer; non-integer or &lt; 0 → default | `1` |
-| `data-gendox-local-context-max-wait-ms` | Non-negative integer; invalid → default | `500` |
+| `data-gendox-local-context-max-wait-ms` | Non-negative integer; invalid → default | `200` |
 
 Example: starting with chat open and waiting for up to 2 local-context responses with a 1.2s timeout:
 
@@ -178,7 +178,7 @@ Always check `event.origin` in listeners to avoid processing messages from untru
   "payload": {
     "chatInitialState": "closed",
     "localContextMaxResponses": 1,
-    "localContextMaxWaitMs": 500
+    "localContextMaxWaitMs": 200
   }
 }
 ```
@@ -251,7 +251,7 @@ The iframe waits for up to **`localContextMaxResponses`** responses (from initia
 </script>
 ```
 
-Defaults: chat starts closed, `localContextMaxResponses=1`, `localContextMaxWaitMs=500`.
+Defaults: chat starts closed, `localContextMaxResponses=1`, `localContextMaxWaitMs=200`.
 
 ### 5.2 Open chat programmatically after 2 seconds
 
@@ -430,6 +430,7 @@ API: `window.gendox.tools.registerTool(name, handler)` — `name` is the tool na
 - **Default `open_web_page` tool:** `data-gendox-open-web-page-tool-enabled` accepts only `"true"` or `"false"`. Missing or invalid values fall back to `true`.
 - **Integers (max-responses, max-wait-ms):** Parsed with `parseInt(..., 10)`. If the result is not a non-negative integer (for max-wait) or positive (for max-responses), the default is used. No errors are thrown; invalid attributes are silently replaced.
 - **Widget methods:** `open()`, `close()`, `toggle()` return `true` if the postMessage was sent; they do not throw if the iframe is not ready (the SDK may log a console warning instead).
+- **`removeTool` and `removeLocalContextRequestCallback`:** both **throw** if the name is not currently registered. Track registration state in your code and only call remove when you know registration succeeded.
 
 ---
 
