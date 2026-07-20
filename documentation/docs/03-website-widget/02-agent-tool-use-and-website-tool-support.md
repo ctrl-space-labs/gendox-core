@@ -29,7 +29,7 @@ Chat window initialization and open/close controls are part of the **Widget API*
 
 | Tool name        | What you implement in JS      | Example use-case                           |
 |------------------|------------------------------|--------------------------------------------|
-| `open_web_page`  | `window.open(url)`           | Open a new product page in a new tab       |
+| `open_web_page`  | `window.location.href = url` | Navigate to a product page (same tab)      |
 | `set_filters`    | Update DOM or URL parameters | Filter product listings                    |
 | `fill_form`      | Fill input elements          | Speed-fill checkout or inquiry forms       |
 
@@ -82,18 +82,16 @@ window.gendox.tools = {
 };
 ```
 
-Currently, there is 1 registered default tool: `open_web_page`, which opens a new tab with the specified URL. To add yours you can use the `registerTool` function:
+Currently, there is 1 registered default tool: `open_web_page`, which navigates the current tab to the specified URL. To override or add your own tools, use `registerTool(name, handler)`:
 
 ```javascript
-window.gendox.tools.removeTool('open_web_page'); // Remove existing tool if needed
-window.gendox.tools.registerTool({
-  name: 'open_web_page',
-  handler: (args) => {
-      // TODO add your implementation here
-     console.log("Opening web page:", arguments.url);
-     window.open(arguments.url, '_blank');
-     return {"status": "executed"}
-  }
+window.gendox.tools.removeTool('open_web_page'); // Remove existing tool before replacing
+window.gendox.tools.registerTool('open_web_page', (args) => {
+  // args is the parsed arguments object
+   // TODO replace with your implementation here
+  console.log("Navigating to:", args.url);
+  window.location.href = args.url;
+  return { status: "executed" };
 });
 ```
 

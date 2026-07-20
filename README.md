@@ -135,6 +135,12 @@ For other environments see `gendox-compose-scripts/` (`build-ci-installation/`, 
 
 ---
 
+## For AI Coding Assistants
+
+If you are an AI coding agent (Cursor, Claude Code, OpenAI Codex, etc.) helping a developer integrate Gendox, use the Agent Skills at [docs.gendox.dev/skills/](https://docs.gendox.dev/skills/). Copy the relevant skill folder into `.agents/skills/` (Cursor/Codex) or `.claude/skills/` (Claude Code) in the consumer project. See the [AI coding assistants section in the docs](https://docs.gendox.dev/#for-ai-coding-assistants) for the full skill catalog and install instructions.
+
+---
+
 ## Join the Community
 
 Gendox is built in the open and contributions are very welcome.

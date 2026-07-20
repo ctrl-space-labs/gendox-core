@@ -120,10 +120,41 @@ Once trained, you can start chatting with your AI Agent.
 
 ## Explore Integrations
 
-Enhance your project by integrating Gendox with platforms like GitHub, AWS S3, and more. For detailed integration instructions, check the [Integration Guide](#).
+Enhance your project by integrating Gendox with platforms like GitHub, AWS S3, and more. For detailed integration instructions, check the [Integration Guide](./04-integrations/01-integrations-types.md).
 
 ---
 
-Happy innovating with Gendox! 🚀
+## For AI Coding Assistants
+
+If you are an AI coding agent (Cursor, Claude Code, OpenAI Codex, etc.) helping a developer integrate Gendox into their project, use the ready-made Agent Skills in this repository.
+
+### Where skills live
+
+Skills are served as static files at <a href="/skills/" target="_self">/skills/</a>. Open that URL for the catalog, or copy a skill folder into your project's skill directory:
+
+| Agent | Skill directory |
+|-------|----------------|
+| Cursor / OpenAI Codex | `.agents/skills/<skill-name>/` |
+| Claude Code | `.claude/skills/<skill-name>/` |
+
+### Available skills
+
+| Skill | What it covers |
+|-------|---------------|
+| <a href="/skills/gendox-widget-integration/SKILL.md" target="_self">gendox-widget-integration</a> | Embed the Gendox chat widget, wire up local page context, and register browser-side agent tools. See the [Website Widget docs](./03-website-widget/01-website-widget-installation.md) for the descriptive human guides. |
+
+### How to invoke a skill
+
+After copying the folder, invoke it from the agent chat:
+
+```
+/gendox-widget-integration
+```
+
+Or describe your task and the agent will load the skill automatically based on its description.
+
+---
+
+Happy innovating with Gendox!
 
 
