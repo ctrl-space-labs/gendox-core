@@ -137,8 +137,17 @@ const PKCEAuthProvider = ({ children, initialAuth }) => {
       if (window.opener) {
         console.log('Sending message to parent window')
         const trustedDomain = window.location.origin; // gets the current domain
+        // The opener is this same app running as a cross-site iframe on the WordPress
+        // admin page, so its localStorage is partitioned and cannot see the session we
+        // just stored here. Ship the session across so it can store its own copy.
         window.opener.postMessage(
-          { type: 'LOGIN_SUCCESS', payload: { /* any token or user info */ } },
+          {
+            type: 'LOGIN_SUCCESS',
+            payload: {
+              oidcUser: user.toStorageString(),
+              userData: userDataResponse.data
+            }
+          },
           trustedDomain
         );
         window.close();
