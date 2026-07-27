@@ -57,10 +57,9 @@ URL under the **API Settings** tab (Chat Script URL and Gendox API Base URL).
 Registering custom [local context](./02-agent-tool-use-and-website-tool-support.md) or
 browser tools works a little differently on WordPress than on a generic site, because the
 plugin injects the widget script for you rather than you adding it yourself. See the
-[`gendox-wordpress-integration`](/skills/gendox-wordpress-integration/SKILL.md) agent skill
-for the WordPress-specific hook points, or the plugin's own
-[README](https://github.com/ctrl-space-labs/gendox-wp-ai-agent#readme) and
-[`docs/agent-integration.md`](https://github.com/ctrl-space-labs/gendox-wp-ai-agent/blob/main/docs/agent-integration.md).
+<a href="/skills/gendox-wordpress-integration/SKILL.md" target="_self">gendox-wordpress-integration</a> agent
+skill for the WordPress-specific hook points, or the plugin's own
+[README](https://github.com/ctrl-space-labs/gendox-wp-ai-agent#readme).
 
 ## Related
 
