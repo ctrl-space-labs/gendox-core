@@ -142,6 +142,7 @@ Skills are served as static files at <a href="/skills/" target="_self">/skills/<
 | Skill | What it covers |
 |-------|---------------|
 | <a href="/skills/gendox-widget-integration/SKILL.md" target="_self">gendox-widget-integration</a> | Embed the Gendox chat widget, wire up local page context, and register browser-side agent tools. See the [Website Widget docs](./03-website-widget/01-website-widget-installation.md) for the descriptive human guides. |
+| <a href="/skills/gendox-wordpress-integration/SKILL.md" target="_self">gendox-wordpress-integration</a> | Set up the Gendox WP AI Agent plugin, and register agent tools/local context on WordPress specifically. See the [WordPress Plugin docs](./03-website-widget/04-wordpress-plugin.md) for the descriptive human guide. |
 
 ### How to invoke a skill
 
