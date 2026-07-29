@@ -398,6 +398,19 @@ public class SecurityUtils {
         return getRequestedDocumentIdsAccessCriteria(documentIds);
     }
 
+    public boolean requestedDocumentsBelongToRequestedProject() {
+        Set<String> projectIds = getRequestedProjectIdFromPathVariable().getProjectIds();
+        Set<String> documentIds = new HashSet<>(getRequestedDocumentIdsFromRequestParam().getDocumentIds());
+        documentIds.addAll(getRequestedDocumentIdFromPathVariable().getDocumentIds());
+        documentIds.removeIf(id -> id == null || id.isBlank());
+
+        return projectIds.size() == 1
+                && !documentIds.isEmpty()
+                && documentInstanceRepository.areAllDocumentIdsInAnyProject(
+                    documentIds.stream().map(UUID::fromString).toArray(UUID[]::new),
+                    projectIds.stream().map(UUID::fromString).toArray(UUID[]::new));
+    }
+
     public AccessCriteria getRequestedDocumentIdAccessCriteria(String documentId) {
 
         String documentIdParam = Objects.toString(documentId, "");

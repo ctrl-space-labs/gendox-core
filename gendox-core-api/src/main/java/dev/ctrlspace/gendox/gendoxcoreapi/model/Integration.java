@@ -1,5 +1,6 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Builder;
 import org.eclipse.jgit.lib.ObjectId;
@@ -52,6 +53,7 @@ public class Integration {
     private String userName;
     @Basic
     @Column(name = "password")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
     @Basic
     @Column(name = "created_at", nullable = true)

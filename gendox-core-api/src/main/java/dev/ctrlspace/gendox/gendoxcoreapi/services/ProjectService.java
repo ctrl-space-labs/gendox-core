@@ -14,6 +14,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+
+import java.util.Collection;
 import java.util.UUID;
 
 @Service
@@ -48,6 +50,14 @@ public class ProjectService {
     public Project getProjectById(UUID id) throws GendoxException {
         return projectRepository.findById(id)
                 .orElseThrow(() -> new GendoxException("PROJECT_NOT_FOUND", "Project not found with id: " + id, HttpStatus.NOT_FOUND));
+    }
+
+    public void validateProjectsBelongToOrganization(Collection<UUID> projectIds, UUID organizationId) throws GendoxException {
+        if (projectIds.contains(null)
+                || projectRepository.countByIdInAndOrganizationId(projectIds, organizationId) != projectIds.size()) {
+            throw new GendoxException("PROJECT_ORGANIZATION_MISMATCH",
+                    "All projects must belong to the requested organization", HttpStatus.FORBIDDEN);
+        }
     }
 
     public Page<Project> getAllProjects(ProjectCriteria criteria) throws GendoxException {

@@ -50,6 +50,10 @@ public class IntegrationController {
     }
 
     @GetMapping("/integrations")
+    @PreAuthorize("(#criteria.organizationId == null || " +
+            "@securityUtils.hasAuthority('OP_READ_ORGANIZATION_WEB_SITES', 'getRequestedOrgsFromRequestParams')) && " +
+            "(#criteria.projectId == null || " +
+            "@securityUtils.hasAuthority('OP_READ_DOCUMENT', 'getRequestedProjectsFromRequestParams'))")
     @Operation(summary = "Get all integrations.",
             description = "Retrieve a list of all projects based on the provided criteria." +
                     " The project ID is a necessary criterion")

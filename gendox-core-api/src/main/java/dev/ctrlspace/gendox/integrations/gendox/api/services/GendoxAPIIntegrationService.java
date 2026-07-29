@@ -16,6 +16,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class GendoxAPIIntegrationService {
@@ -65,7 +66,7 @@ public class GendoxAPIIntegrationService {
                     new ParameterizedTypeReference<List<AssignedProjectDTO>>() {}
             );
 
-            List<AssignedProjectDTO> projects = response.getBody();
+            List<AssignedProjectDTO> projects = Objects.requireNonNullElse(response.getBody(), List.of());
 
 
 

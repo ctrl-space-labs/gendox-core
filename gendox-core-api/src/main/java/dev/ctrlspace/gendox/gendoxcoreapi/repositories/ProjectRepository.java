@@ -11,6 +11,7 @@ import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +31,7 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, Queryds
     @Query(value = "SELECT COUNT(*) FROM gendox_core.projects WHERE organization_id = :organizationId AND is_active = TRUE", nativeQuery = true)
     long countActiveProjectsByOrganizationId(@Param("organizationId") UUID organizationId);
 
+    long countByIdInAndOrganizationId(Collection<UUID> projectIds, UUID organizationId);
 
 
 

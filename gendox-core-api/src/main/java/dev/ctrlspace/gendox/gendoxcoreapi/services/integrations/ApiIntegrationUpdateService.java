@@ -10,6 +10,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationWebSiteReposi
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ApiKeyService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationWebSiteService;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TempIntegrationFileCheckService;
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.AssignedContentDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.AssignedProjectDTO;
@@ -35,6 +36,7 @@ public class ApiIntegrationUpdateService implements IntegrationUpdateService {
     private TempIntegrationFileCheckService tempIntegrationFileCheckService;
     private ApiKeyService apiKeyService;
     private OrganizationWebSiteService organizationWebSiteService;
+    private ProjectService projectService;
     private Tracer tracer;
 
     @Autowired
@@ -43,12 +45,14 @@ public class ApiIntegrationUpdateService implements IntegrationUpdateService {
                                        TempIntegrationFileCheckService tempIntegrationFileCheckService,
                                        ApiKeyService apiKeyService,
                                        OrganizationWebSiteService organizationWebSiteService,
+                                       ProjectService projectService,
                                        Tracer tracer) {
         this.documentService = documentService;
         this.gendoxAPIIntegrationService = gendoxAPIIntegrationService;
         this.tempIntegrationFileCheckService = tempIntegrationFileCheckService;
         this.apiKeyService = apiKeyService;
         this.organizationWebSiteService = organizationWebSiteService;
+        this.projectService = projectService;
         this.tracer = tracer;
     }
 
@@ -63,14 +67,13 @@ public class ApiIntegrationUpdateService implements IntegrationUpdateService {
         Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> organizationMap = new HashMap<>();
         OrganizationAssignedContentDTO organizationAssignedContentDTO = gendoxAPIIntegrationService.getProjectAssignedContentsByOrganizationId(baseUrl, organizationId.toString(), apiKey);
 
-        tempIntegrationFileCheckService.createTempIntegrationFileChecksByOrganization(organizationAssignedContentDTO, integration);
-
-        List<UUID> projectIds = Optional.ofNullable(organizationAssignedContentDTO.getProjects())
-                .orElse(Collections.emptyList())
-                .stream()
+        List<UUID> projectIds = organizationAssignedContentDTO.getProjects().stream()
                 .map(AssignedProjectDTO::getProjectId)
-                .filter(Objects::nonNull)
+                .distinct()
                 .toList();
+
+        projectService.validateProjectsBelongToOrganization(projectIds, organizationId);
+        tempIntegrationFileCheckService.createTempIntegrationFileChecksByOrganization(organizationAssignedContentDTO, integration);
 
         // Retrieve lists of document actions
         List<TempIntegrationFileCheck> docsToCreate = tempIntegrationFileCheckService.getDocsToCreate(integration.getId(), traceId);
