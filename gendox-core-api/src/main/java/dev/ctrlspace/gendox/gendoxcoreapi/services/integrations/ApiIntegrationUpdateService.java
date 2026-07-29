@@ -12,6 +12,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.services.DocumentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationWebSiteService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TempIntegrationFileCheckService;
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.AssignedContentDTO;
+import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.AssignedProjectDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.model.dto.OrganizationAssignedContentDTO;
 import dev.ctrlspace.gendox.integrations.gendox.api.services.GendoxAPIIntegrationService;
 import io.micrometer.tracing.Tracer;
@@ -64,11 +65,17 @@ public class ApiIntegrationUpdateService implements IntegrationUpdateService {
 
         tempIntegrationFileCheckService.createTempIntegrationFileChecksByOrganization(organizationAssignedContentDTO, integration);
 
+        List<UUID> projectIds = Optional.ofNullable(organizationAssignedContentDTO.getProjects())
+                .orElse(Collections.emptyList())
+                .stream()
+                .map(AssignedProjectDTO::getProjectId)
+                .filter(Objects::nonNull)
+                .toList();
 
         // Retrieve lists of document actions
         List<TempIntegrationFileCheck> docsToCreate = tempIntegrationFileCheckService.getDocsToCreate(integration.getId(), traceId);
         List<TempIntegrationFileCheck> docsToUpdate = tempIntegrationFileCheckService.getDocsToUpdate(integration.getId(), traceId);
-        List<UUID> docsToDelete = tempIntegrationFileCheckService.getDocsToDelete(integration.getId(), organizationId, traceId);
+        List<UUID> docsToDelete = tempIntegrationFileCheckService.getDocsToDelete(integration.getId(), organizationId, projectIds);
 
         // Log the results
         logger.debug("Docs to Create (content IDs): {}", docsToCreate.size());

@@ -13,6 +13,8 @@ public class IntegrationPredicates {
     public static Predicate build(IntegrationCriteria criteria) {
         return ExpressionUtils.allOf(
                 projectId(criteria.getProjectId()),
+                organizationId(criteria.getOrganizationId()),
+                isActive(criteria.getIsActive()),
                 directoryPath(criteria.getDirectoryPath()),
                 url(criteria.getUrl()),
                 repoHead(criteria.getRepoHead())
@@ -24,6 +26,20 @@ public class IntegrationPredicates {
             return null;
         }
         return qIntegration.projectId.eq(UUID.fromString(projectId));
+    }
+
+    private static Predicate organizationId(String organizationId) {
+        if (StringUtils.isNullOrEmpty(organizationId)) {
+            return null;
+        }
+        return qIntegration.organizationId.eq(UUID.fromString(organizationId));
+    }
+
+    private static Predicate isActive(Boolean isActive) {
+        if (isActive == null) {
+            return null;
+        }
+        return qIntegration.isActive.eq(isActive);
     }
 
     private static Predicate directoryPath(String directoryPath) {

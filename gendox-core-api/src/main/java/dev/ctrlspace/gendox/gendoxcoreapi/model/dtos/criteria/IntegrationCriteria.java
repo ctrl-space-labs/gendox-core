@@ -13,16 +13,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(toBuilder = true)
-@AtLeastOneFieldIsNotEmpty(fieldNames = {QueryParamNames.PROJECT_ID})
+@AtLeastOneFieldIsNotEmpty(fieldNames = {QueryParamNames.PROJECT_ID, QueryParamNames.ORGANIZATION_ID})
 public class IntegrationCriteria {
     private String projectId;
+    private String organizationId;
+    private Boolean isActive;
     private String directoryPath;
     private String url;
     private String repoHead;
-
-
-
-
-
-
 }

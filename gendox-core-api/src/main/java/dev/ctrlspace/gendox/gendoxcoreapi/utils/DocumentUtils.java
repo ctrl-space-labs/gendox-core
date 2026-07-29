@@ -186,7 +186,12 @@ public class DocumentUtils {
     public String extractBaseDomain(String url) {
         try {
             URL parsedUrl = new URL(url);
-            return parsedUrl.getProtocol() + "://" + parsedUrl.getHost();
+            String base = parsedUrl.getProtocol() + "://" + parsedUrl.getHost();
+            int port = parsedUrl.getPort();
+            if (port != -1) {
+                base += ":" + port;
+            }
+            return base;
         } catch (MalformedURLException e) {
             logger.error("Invalid URL: {}", url);
             throw new IllegalArgumentException("Invalid URL provided: " + url, e);

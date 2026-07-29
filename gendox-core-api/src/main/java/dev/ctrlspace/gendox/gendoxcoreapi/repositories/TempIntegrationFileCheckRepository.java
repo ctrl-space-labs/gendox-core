@@ -53,11 +53,11 @@ public interface TempIntegrationFileCheckRepository extends JpaRepository<TempIn
 
 
     /**
-     * Finds DocumentInstance IDs (UUID) to delete based on the absence of corresponding content_id in TempIntegrationFileCheck
-     * and filters by the given organizationId.
+     * Finds DocumentInstance IDs to delete: API integration docs in the given projects
+     * that are no longer present in TempIntegrationFileCheck for this integration.
      */
     @Query(nativeQuery = true, value = """
-            SELECT distinct di.id, di.title
+            SELECT DISTINCT di.id
             FROM gendox_core.project_documents pd
                 INNER JOIN gendox_core.document_instance di
                     ON di.id = pd.document_id
@@ -68,11 +68,13 @@ public interface TempIntegrationFileCheckRepository extends JpaRepository<TempIn
                         AND temp.content_id = di.content_id
                         AND temp.integration_id = :integrationId
             WHERE di.organization_id = :organizationId
-              and t.name = 'API_INTEGRATION_FILE'
-              and temp.id is null
+              AND t.name = 'API_INTEGRATION_FILE'
+              AND temp.id IS NULL
+              AND pd.project_id IN (:projectIds)
             """)
     List<UUID> findDocsToDeleteByOrganizationId(@Param("integrationId") UUID integrationId,
-                                                @Param("organizationId") UUID organizationId);
+                                                @Param("organizationId") UUID organizationId,
+                                                @Param("projectIds") List<UUID> projectIds);
 
 
 

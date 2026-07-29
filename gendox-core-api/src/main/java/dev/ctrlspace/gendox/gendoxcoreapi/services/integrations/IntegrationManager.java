@@ -5,7 +5,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFileDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectIntegrationDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.IntegrationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.IntegrationRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.IntegrationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.TypeService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
@@ -13,6 +15,7 @@ import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +29,7 @@ public class IntegrationManager {
 
     private GitIntegrationUpdateService gitIntegrationUpdateService;
     private IntegrationRepository integrationRepository;
+    private IntegrationService integrationService;
     private TypeService typeService;
     private S3BucketIntegrationUpdateService s3BucketIntegrationUpdateService;
     private ApiIntegrationUpdateService apiIntegrationUpdateService;
@@ -33,16 +37,21 @@ public class IntegrationManager {
     @Autowired
     public IntegrationManager(GitIntegrationUpdateService gitIntegrationUpdateService,
                               IntegrationRepository integrationRepository,
+                              @Lazy IntegrationService integrationService,
                               TypeService typeService,
                               S3BucketIntegrationUpdateService s3BucketIntegrationUpdateService,
                               ApiIntegrationUpdateService apiIntegrationUpdateService) {
         this.gitIntegrationUpdateService = gitIntegrationUpdateService;
         this.integrationRepository = integrationRepository;
+        this.integrationService = integrationService;
         this.typeService = typeService;
         this.s3BucketIntegrationUpdateService = s3BucketIntegrationUpdateService;
         this.apiIntegrationUpdateService = apiIntegrationUpdateService;
     }
 
+    /**
+     * Called by the scheduled integration poller to check all active integrations across organizations.
+     */
     @Observed(name = "integrationManager.dispatchToIntegrationServices",
             contextualName = "dispatchToIntegrationServices-integrationManager",
             lowCardinalityKeyValues = {
@@ -52,20 +61,29 @@ public class IntegrationManager {
                     ObservabilityTags.LOG_ARGS, "false"
             })
     public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> dispatchToIntegrationServices() throws GendoxException {
+        return processIntegrations(findActiveIntegrations());
+    }
+
+    /**
+     * Called by the manual Reload Content trigger for a single organization.
+      */
+    public Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> dispatchToIntegrationServices(UUID organizationId) throws GendoxException {
+        IntegrationCriteria criteria = IntegrationCriteria.builder()
+                .organizationId(organizationId.toString())
+                .isActive(true)
+                .build();
+        return processIntegrations(integrationService.getAllIntegrations(criteria));
+    }
+
+    private Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> processIntegrations(Iterable<Integration> integrations) {
         Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map = new HashMap<>();
-        List<Integration> activeIntegrations = findActiveIntegrations();
-
-
-        for (Integration integration : activeIntegrations) {
+        for (Integration integration : integrations) {
             try {
                 processIntegration(integration, map);
-
             } catch (Exception e) {
                 logger.error("Error processing integration with id: {}. Continuing with the next integration...", integration.getId(), e);
             }
         }
-
-
         return map;
     }
 

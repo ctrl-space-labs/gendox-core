@@ -3,26 +3,34 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.converters.IntegrationConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Organization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFileDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebsiteIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.IntegrationCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.IntegrationRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.IntegrationPredicates;
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.IntegrationManager;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -32,17 +40,23 @@ public class IntegrationService {
     private IntegrationConverter integrationConverter;
     private TypeService typeService;
     private SubscriptionValidationService subscriptionValidationService;
+    private IntegrationManager integrationManager;
+    private MessageChannel integrationChannel;
 
 
     @Autowired
     public IntegrationService(IntegrationRepository integrationRepository,
                               IntegrationConverter integrationConverter,
                               TypeService typeService,
-                              SubscriptionValidationService subscriptionValidationService) {
+                              SubscriptionValidationService subscriptionValidationService,
+                              @Lazy IntegrationManager integrationManager,
+                              @Lazy @Qualifier("integrationChannel") MessageChannel integrationChannel) {
         this.integrationRepository = integrationRepository;
         this.integrationConverter = integrationConverter;
         this.typeService = typeService;
         this.subscriptionValidationService = subscriptionValidationService;
+        this.integrationManager = integrationManager;
+        this.integrationChannel = integrationChannel;
     }
 
 
@@ -142,6 +156,24 @@ public class IntegrationService {
 
     private boolean isActiveStatus(String statusName) {
         return "ACTIVE".equals(statusName);
+    }
+
+    @Async
+    @SchedulerLock(name = "apiIntegrationManualTrigger-#{#organizationId}", lockAtMostFor = "PT10M", lockAtLeastFor = "PT5S")
+    public void triggerForOrganization(UUID organizationId) {
+        try {
+            logger.info("Manually triggering integrations for organization: {}", organizationId);
+            Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map =
+                    integrationManager.dispatchToIntegrationServices(organizationId);
+            if (map != null && !map.isEmpty()) {
+                integrationChannel.send(MessageBuilder.withPayload(map).build());
+                logger.info("Integration trigger dispatched for organization: {}", organizationId);
+            } else {
+                logger.info("No integration updates found for organization: {}", organizationId);
+            }
+        } catch (Exception e) {
+            logger.error("Error triggering integrations for organization: {}", organizationId, e);
+        }
     }
 
 

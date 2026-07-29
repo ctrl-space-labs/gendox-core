@@ -101,8 +101,11 @@ public class TempIntegrationFileCheckService {
     /**
      * Retrieves the IDs of DocumentInstance entities to be deleted.
      */
-    public List<UUID> getDocsToDelete(UUID integrationId, UUID organizationId, String traceId) {
-        return tempIntegrationFileCheckRepository.findDocsToDeleteByOrganizationId(integrationId, organizationId);
+    public List<UUID> getDocsToDelete(UUID integrationId, UUID organizationId, List<UUID> projectIds) {
+        if (projectIds == null || projectIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return tempIntegrationFileCheckRepository.findDocsToDeleteByOrganizationId(integrationId, organizationId, projectIds);
     }
 
     public void deleteTempIntegrationFileCheck(UUID tempIntegrationFileCheckId) {

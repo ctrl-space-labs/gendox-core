@@ -6,11 +6,9 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.IntegrationCriteria;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ProjectRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.IntegrationService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectService;
 
-import dev.ctrlspace.gendox.gendoxcoreapi.utils.JWTUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +16,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -66,6 +66,15 @@ public class IntegrationController {
         }
 
         return integrationService.getAllIntegrations(criteria, pageable);
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PostMapping("/organizations/{organizationId}/integrations/trigger")
+    @Operation(summary = "Trigger integrations for an organization",
+            description = "Asynchronously trigger active integrations for the given organization. Returns 202 Accepted immediately.")
+    public ResponseEntity<Void> triggerIntegration(@PathVariable UUID organizationId) {
+        integrationService.triggerForOrganization(organizationId);
+        return ResponseEntity.accepted().build();
     }
 
     // TODO: preauthorize has OP_CREATE_INTEGRATION
