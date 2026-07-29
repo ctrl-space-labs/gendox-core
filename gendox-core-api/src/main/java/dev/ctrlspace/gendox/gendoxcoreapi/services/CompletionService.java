@@ -25,6 +25,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.ChatTemplateAuthor;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.templates.agents.SectionTemplateAuthor;
 import io.micrometer.observation.annotation.Observed;
+import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -724,8 +725,14 @@ public class CompletionService {
         Template agentSectionTemplate = templateRepository.findByIdIs(agent.getSectionTemplateId());
         Template agentChatTemplate = templateRepository.findByIdIs(agent.getChatTemplateId());
 
+        // Prefer the document's own title; fall back to deriving a name from the remote URL when the title is missing
         List<String> documentTitles = nearestSections.stream()
-                .map(section -> documentUtils.extractDocumentNameFromUrl(section.getDocumentInstanceDTO().getRemoteUrl()))
+                .map(section -> {
+                    String title = section.getDocumentInstanceDTO().getTitle();
+                    return Strings.isNotBlank(title)
+                            ? title
+                            : documentUtils.extractDocumentNameFromUrl(section.getDocumentInstanceDTO().getRemoteUrl());
+                })
                 .toList();
 
         // run sectionTemplate
