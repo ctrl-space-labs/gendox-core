@@ -54,6 +54,8 @@ public class DocumentSplitterWriter implements ItemWriter<DocumentSectionDTO> {
 
             // fetch fresh DocumentInstance since the param has been detached from hibernate session
             DocumentInstance freshDoc = documentService.getDocumentInstanceById(documentSectionDTO.documentInstance().getId());
+            // in case of API_INTEGRATION_FILE also the external url is populated
+            freshDoc.setExternalUrl(documentSectionDTO.documentInstance().getExternalUrl());
             freshDoc.setDocumentSha256Hash(documentSectionDTO.documentInstance().getDocumentSha256Hash());
             freshDoc.setTotalTokens(documentSectionDTO.documentInstance().getTotalTokens());
             if (documentSectionDTO.documentUpdated()) {
