@@ -12,10 +12,11 @@ const SearchToolbar = (props) => {
         display: 'flex',
         flexWrap: 'wrap',
         alignItems: 'center',
-        justifyContent: 'flex-end',
-        p: '1rem',
+        justifyContent: props.leftContent ? 'space-between' : 'flex-end',
+        p: '1rem'
       }}
     >
+      {props.leftContent ? <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>{props.leftContent}</Box> : null}
 
       <TextField
         size="small"

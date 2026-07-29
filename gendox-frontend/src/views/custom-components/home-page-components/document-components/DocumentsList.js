@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { isValid, parseISO, format } from 'date-fns'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
+import CircularProgress from '@mui/material/CircularProgress'
+import LinearProgress from '@mui/material/LinearProgress'
 import { DataGrid } from '@mui/x-data-grid'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
@@ -28,8 +32,11 @@ const DocumentsList = ({ documents, page }) => {
 
   const [anchorEl, setAnchorEl] = useState(null)
   const [selectedDocument, setSelectedDocument] = useState(null)
+  const [rowSelectionModel, setRowSelectionModel] = useState([])
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [isBlurring, setIsBlurring] = useState(false)
+  const [deleteMode, setDeleteMode] = useState('single') // 'single' | 'bulk'
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteProgress, setDeleteProgress] = useState({ completed: 0, total: 0 })
   const [searchText, setSearchText] = useState('')
   const [filteredDocuments, setFilteredDocuments] = useState(documents)
   const [paginationModel, setPaginationModel] = useState({
@@ -39,6 +46,7 @@ const DocumentsList = ({ documents, page }) => {
 
   useEffect(() => {
     setFilteredDocuments(documents || [])
+    setRowSelectionModel([])
   }, [documents])
 
   const handleMenuClick = (event, document) => {
@@ -52,6 +60,12 @@ const DocumentsList = ({ documents, page }) => {
 
   const handleDeleteConfirmOpen = () => {
     handleMenuClose()
+    setDeleteMode('single')
+    setConfirmDelete(true)
+  }
+
+  const handleBulkDeleteConfirmOpen = () => {
+    setDeleteMode('bulk')
     setConfirmDelete(true)
   }
 
@@ -70,38 +84,109 @@ const DocumentsList = ({ documents, page }) => {
     })
 
     setFilteredDocuments(searchValue.length ? filteredRows : documents)
+    setRowSelectionModel([])
+  }
+
+  const refreshDocuments = () => {
+    dispatch(
+      fetchDocuments({
+        organizationId,
+        projectId,
+        token,
+        page: page,
+        target: 'projectDocuments'
+      })
+    )
   }
 
   const handleDeleteDocument = async () => {
-    if (selectedDocument) {
-      setIsBlurring(true)
-      setConfirmDelete(false)
+    if (!selectedDocument) return
+
+    setConfirmDelete(false)
+    setIsDeleting(true)
+    setDeleteProgress({ completed: 0, total: 1 })
+
+    try {
+      await documentService.deleteDocument(organizationId, projectId, selectedDocument.id, token)
+      setDeleteProgress({ completed: 1, total: 1 })
+      toast.success('The document has been successfully deleted.')
+      setSelectedDocument(null)
+      setRowSelectionModel(prev => prev.filter(id => id !== selectedDocument.id))
+      refreshDocuments()
+    } catch (error) {
+      console.error('Failed to delete document:', error)
+      toast.error(`Document deletion failed. Error: ${getErrorMessage(error)}`)
+      setSelectedDocument(null)
+    } finally {
+      setIsDeleting(false)
+      setDeleteProgress({ completed: 0, total: 0 })
+    }
+  }
+
+  const handleBulkDeleteDocuments = async () => {
+    if (!rowSelectionModel.length) return
+
+    const idsToDelete = [...rowSelectionModel]
+    setConfirmDelete(false)
+    setIsDeleting(true)
+    setDeleteProgress({ completed: 0, total: idsToDelete.length })
+
+    let successCount = 0
+    let failureCount = 0
+
+    for (const documentId of idsToDelete) {
       try {
-        const response = await documentService.deleteDocument(organizationId, projectId, selectedDocument.id, token)
-        toast.success('The document has been successfully deleted.')
-        setSelectedDocument(null)
-        setIsBlurring(false)
-        dispatch(
-          fetchDocuments({
-            organizationId,
-            projectId,
-            token,
-            page: page,
-            target: 'projectDocuments'
-          })
-        )
+        await documentService.deleteDocument(organizationId, projectId, documentId, token)
+        successCount += 1
       } catch (error) {
-        console.error('Failed to delete document:', error)
-        toast.error(`Document deletion failed. Error: ${getErrorMessage(error)}`)
-        setSelectedDocument(null)
-        setIsBlurring(false)
+        console.error(`Failed to delete document ${documentId}:`, error)
+        failureCount += 1
       }
+      setDeleteProgress({ completed: successCount + failureCount, total: idsToDelete.length })
+    }
+
+    setRowSelectionModel([])
+    setIsDeleting(false)
+    setDeleteProgress({ completed: 0, total: 0 })
+    refreshDocuments()
+
+    if (failureCount === 0) {
+      toast.success(
+        successCount === 1
+          ? 'The document has been successfully deleted.'
+          : `${successCount} documents have been successfully deleted.`
+      )
+    } else if (successCount === 0) {
+      toast.error('Failed to delete the selected documents.')
+    } else {
+      toast.error(`${successCount} deleted, ${failureCount} failed.`)
+    }
+  }
+
+  const handleConfirmDelete = () => {
+    if (deleteMode === 'bulk') {
+      handleBulkDeleteDocuments()
+    } else {
+      handleDeleteDocument()
     }
   }
 
   const handleRowClick = params => {
     const { id } = params.row
     router.push(`/gendox/document-instance/?organizationId=${organizationId}&documentId=${id}&projectId=${projectId}`)
+  }
+
+  const getDeleteDialogContent = () => {
+    if (deleteMode === 'bulk') {
+      const count = rowSelectionModel.length
+      return count === 1
+        ? 'Are you sure you want to delete the selected document? This action cannot be undone.'
+        : `Are you sure you want to delete ${count} selected documents? This action cannot be undone.`
+    }
+
+    return selectedDocument
+      ? `Are you sure you want to delete "${selectedDocument.title}"? This action cannot be undone.`
+      : 'Are you sure you want to delete this document? This action cannot be undone.'
   }
 
   const columns = [
@@ -192,46 +277,95 @@ const DocumentsList = ({ documents, page }) => {
   ]
 
   return (
-    <Card
-      sx={{
-        filter: isBlurring ? 'blur(6px)' : 'none',
-        transition: 'filter 0.3s ease'
-      }}
-    >
-      <CardHeader />
-      <DataGrid
-        rows={filteredDocuments}
-        columns={columns}
-        pageSizeOptions={[10, 25, 50]}
-        paginationModel={paginationModel}
-        onPaginationModelChange={setPaginationModel}
-        disableRowSelectionOnClick
-        onRowClick={handleRowClick}
-        slots={{ toolbar: SearchToolbar }}
-        slotProps={{
-          toolbar: {
-            value: searchText,
-            clearSearch: () => handleSearch(''),
-            onChange: event => handleSearch(event.target.value)
-          }
-        }}
+    <Card sx={{ position: 'relative' }}>
+      {isDeleting && <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 2 }} />}
+
+      {isDeleting && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2
+          }}
+        >
+          <CircularProgress size={36} />
+          <Typography variant='body1' color='text.primary'>
+            {deleteProgress.total === 1
+              ? 'Deleting document...'
+              : `Deleted ${deleteProgress.completed} of ${deleteProgress.total} documents`}
+          </Typography>
+        </Box>
+      )}
+
+      <Box
         sx={{
-          '& .MuiDataGrid-row': {
-            cursor: 'pointer' // Make rows have a pointer cursor
-          }
+          filter: isDeleting ? 'blur(3px)' : 'none',
+          transition: 'filter 0.3s ease',
+          pointerEvents: isDeleting ? 'none' : 'auto'
         }}
-      />
+      >
+        <CardHeader />
+        <DataGrid
+          autoHeight
+          rows={filteredDocuments}
+          columns={columns}
+          pageSizeOptions={[10, 25, 50]}
+          paginationModel={paginationModel}
+          onPaginationModelChange={model => {
+            setPaginationModel(model)
+            setRowSelectionModel([])
+          }}
+          checkboxSelection
+          disableRowSelectionOnClick
+          rowSelectionModel={rowSelectionModel}
+          onRowSelectionModelChange={setRowSelectionModel}
+          onRowClick={handleRowClick}
+          slots={{ toolbar: SearchToolbar }}
+          slotProps={{
+            toolbar: {
+              value: searchText,
+              clearSearch: () => handleSearch(''),
+              onChange: event => handleSearch(event.target.value),
+              leftContent:
+                rowSelectionModel.length > 0 ? (
+                  <>
+                    <Typography variant='body1' sx={{ fontWeight: 600 }}>
+                      {rowSelectionModel.length} selected
+                    </Typography>
+                    <Button
+                      variant='outlined'
+                      color='error'
+                      size='small'
+                      startIcon={<Icon icon='mdi:delete-outline' />}
+                      onClick={handleBulkDeleteConfirmOpen}
+                      disabled={isDeleting}
+                    >
+                      Delete Selected
+                    </Button>
+                  </>
+                ) : null
+            }
+          }}
+          sx={{
+            '& .MuiDataGrid-row': {
+              cursor: 'pointer' // Make rows have a pointer cursor
+            }
+          }}
+        />
+      </Box>
 
       <DeleteConfirmDialog
         open={confirmDelete}
         onClose={handleDeleteConfirmClose}
-        onConfirm={handleDeleteDocument}
+        onConfirm={handleConfirmDelete}
         title='Confirm Deletion'
-        contentText={
-          selectedDocument
-            ? `Are you sure you want to delete "${selectedDocument.title}"? This action cannot be undone.`
-            : 'Are you sure you want to delete this document? This action cannot be undone.'
-        }
+        contentText={getDeleteDialogContent()}
         confirmButtonText='Delete'
         cancelButtonText='Cancel'
       />
