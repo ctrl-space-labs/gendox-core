@@ -40,10 +40,19 @@ const duplicateTask = async (organizationId, projectId, payload, token) => {
  * @param organizationId
  * @param projectId
  * @param token
- * @returns {Promise<axios.AxiosResponse<Task[]>>}
+ * @param {{ page?: number, size?: number, sort?: string, taskNameContains?: string }} [options]
+ * @returns {Promise<axios.AxiosResponse>}
  */
-const getTasks = async (organizationId, projectId, token) => {
+const getTasks = async (organizationId, projectId, token, options = {}) => {
+  const { page = 0, size = 100, sort = 'createdAt,desc', taskNameContains } = options
+
   return axios.get(apiRequests.getTasks(organizationId, projectId), {
+    params: {
+      page,
+      size,
+      sort,
+      ...(taskNameContains ? { taskNameContains } : {})
+    },
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token

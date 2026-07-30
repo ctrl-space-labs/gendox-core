@@ -31,10 +31,16 @@ export const duplicateTask = createAsyncThunk(
 
 export const fetchTasks = createAsyncThunk(
   'task/fetchTasks',
-  async ({ organizationId, projectId, token }, thunkAPI) => {
+  async ({ organizationId, projectId, token, taskNameContains, sort = 'createdAt,desc', page = 0, size = 100 }, thunkAPI) => {
     try {
-      const response = await taskService.getTasks(organizationId, projectId, token)
-      return response.data
+      const response = await taskService.getTasks(organizationId, projectId, token, {
+        page,
+        size,
+        sort,
+        taskNameContains
+      })
+      // API returns Spring Page; keep store as task array for existing consumers
+      return response.data?.content ?? response.data ?? []
     } catch (error) {
       toast.error(getErrorMessage(error))
       return thunkAPI.rejectWithValue(error.response?.data || error.message)
@@ -169,8 +175,17 @@ const taskSlice = createSlice({
         state.isLoading = false
         state.error = action.payload
       })
+      .addCase(fetchTasks.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
       .addCase(fetchTasks.fulfilled, (state, action) => {
+        state.isLoading = false
         state.projectTasks = action.payload
+      })
+      .addCase(fetchTasks.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
       })
       .addCase(fetchTaskById.fulfilled, (state, action) => {
         state.selectedTask = action.payload

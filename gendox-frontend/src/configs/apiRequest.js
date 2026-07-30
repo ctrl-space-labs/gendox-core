@@ -184,8 +184,8 @@ export default {
   duplicateTask: (organizationId, projectId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/duplicate`,
 
-  getTasks: (organizationId, projectId, sort = 'createdAt,desc') =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks?sort=${sort}`,
+  getTasks: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks`,
 
   taskRequest: (organizationId, projectId, taskId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}`,

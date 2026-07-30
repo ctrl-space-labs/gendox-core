@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { useAuth } from 'src/authentication/useAuth'
-import { Box, Typography, Button, IconButton, Tooltip, CircularProgress, Stack, useTheme } from '@mui/material'
+import { Box, Typography, Button, IconButton, Tooltip, Stack } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import Icon from 'src/views/custom-components/mui/icon/icon'
-import { debounce } from 'lodash'
 import toast from 'react-hot-toast'
 
 import TasksList from './TasksList'
@@ -16,11 +15,32 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 import SearchBar from 'src/utils/SearchBar'
 import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 
+const DEFAULT_SORT = 'createdAt,desc'
+const SORTABLE_FIELDS = new Set(['title', 'type', 'description', 'createdAt'])
+
+const sortModelToParam = sortModel => {
+  const active = sortModel?.[0]
+  if (!active?.field || !active?.sort || !SORTABLE_FIELDS.has(active.field)) {
+    return DEFAULT_SORT
+  }
+  // Type is a relation — sort by the type name column
+  const field = active.field === 'type' ? 'taskType.name' : active.field
+  return `${field},${active.sort}`
+}
+
+const sortParamToModel = (sortParam = DEFAULT_SORT) => {
+  const [rawField, sort] = sortParam.split(',')
+  const field = rawField === 'taskType.name' ? 'type' : rawField
+  if (!SORTABLE_FIELDS.has(field) || (sort !== 'asc' && sort !== 'desc')) {
+    return [{ field: 'createdAt', sort: 'desc' }]
+  }
+  return [{ field, sort }]
+}
+
 const Tasks = () => {
   const { user } = useAuth()
   const router = useRouter()
   const dispatch = useDispatch()
-  const theme = useTheme()
 
   const { organizationId, projectId } = router.query
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
@@ -28,46 +48,78 @@ const Tasks = () => {
   const { projectTasks, isLoading } = useSelector(state => state.activeTask)
 
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [searchText, setSearchText] = useState('')
-  const [filteredTasks, setFilteredTasks] = useState([])
-  const [currentPage, setCurrentPage] = useState(0)
+  const [searchInput, setSearchInput] = useState('')
+  const [taskNameContains, setTaskNameContains] = useState('')
+  const [sort, setSort] = useState(DEFAULT_SORT)
+  const skipDebounceRef = useRef(false)
+  const isSearchMountedRef = useRef(false)
 
-  // Debounced search function for better UX/performance
-  const debouncedSearch = useCallback(
-    debounce(value => {
-      if (!value) {
-        setFilteredTasks(projectTasks)
-        return
-      }
-      const lower = value.toLowerCase()
-      setFilteredTasks(
-        projectTasks.filter(
-          task =>
-            task.title.toLowerCase().includes(lower) ||
-            (task.description && task.description.toLowerCase().includes(lower))
-        )
-      )
-    }, 300),
-    [projectTasks]
-  )
+  const sortModel = sortParamToModel(sort)
+
+  useEffect(() => {
+    setSearchInput('')
+    setTaskNameContains('')
+    setSort(DEFAULT_SORT)
+    isSearchMountedRef.current = false
+  }, [projectId])
 
   useEffect(() => {
     if (isValidOrganizationAndProject(organizationId, projectId, user)) {
-      dispatch(fetchTasks({ organizationId, projectId, token }))
+      dispatch(
+        fetchTasks({
+          organizationId,
+          projectId,
+          token,
+          taskNameContains: taskNameContains || undefined,
+          sort
+        })
+      )
     }
-  }, [organizationId, projectId, dispatch, token, user])
+  }, [organizationId, projectId, taskNameContains, sort, dispatch, token, user])
 
   useEffect(() => {
-    setFilteredTasks(projectTasks)
-  }, [projectTasks])
+    if (!isSearchMountedRef.current) {
+      isSearchMountedRef.current = true
+      return
+    }
 
-  useEffect(() => {
-    debouncedSearch(searchText)
-  }, [searchText, debouncedSearch])
+    if (skipDebounceRef.current) {
+      skipDebounceRef.current = false
+      return
+    }
 
-  useEffect(() => {
-    setCurrentPage(0)
-  }, [projectId])
+    const timer = setTimeout(() => {
+      if (searchInput !== taskNameContains) {
+        setTaskNameContains(searchInput)
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchInput, taskNameContains])
+
+  const applySearch = value => {
+    skipDebounceRef.current = true
+    setSearchInput(value)
+    if (value !== taskNameContains) {
+      setTaskNameContains(value)
+    }
+  }
+
+  const handleSearchKeyDown = event => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      applySearch(searchInput)
+    }
+  }
+
+  const handleSortModelChange = useCallback(
+    nextSortModel => {
+      const nextSort = sortModelToParam(nextSortModel)
+      if (nextSort === sort) return
+      setSort(nextSort)
+    },
+    [sort]
+  )
 
   const handleDialogOpen = () => setDialogOpen(true)
   const handleDialogClose = () => setDialogOpen(false)
@@ -84,12 +136,22 @@ const Tasks = () => {
       await dispatch(createTask({ organizationId, projectId, taskPayload: payload, token })).unwrap()
       toast.success('Task created successfully!')
       handleDialogClose()
-      dispatch(fetchTasks({ organizationId, projectId, token }))
-      setSearchText('') // Reset search on new task creation
+      dispatch(
+        fetchTasks({
+          organizationId,
+          projectId,
+          token,
+          taskNameContains: taskNameContains || undefined,
+          sort
+        })
+      )
+      applySearch('')
     } catch (error) {
       toast.error(`Failed to create task: ${error}`)
     }
   }
+
+  const showEmpty = !isLoading && projectTasks.length === 0 && !taskNameContains
 
   return (
     <ResponsiveCardContent
@@ -131,11 +193,12 @@ const Tasks = () => {
       </Stack>
 
       {/* Search */}
-      {projectTasks.length > 0 && (
+      {(projectTasks.length > 0 || taskNameContains) && (
         <Box mb={3}>
           <SearchBar
-            value={searchText}
-            onChange={e => setSearchText(e.target.value)}
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
             placeholder='Search tasks'
             clearable
             sx={{ maxWidth: 400 }}
@@ -144,11 +207,7 @@ const Tasks = () => {
       )}
 
       {/* Content */}
-      {isLoading ? (
-        <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <CircularProgress aria-label='Loading tasks' />
-        </Box>
-      ) : filteredTasks.length === 0 ? (
+      {showEmpty ? (
         <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
           <Typography variant='body2' sx={{ mb: 2, fontStyle: 'italic' }}>
             There are currently no tasks available. Consider creating a new task to begin organizing your work
@@ -156,7 +215,12 @@ const Tasks = () => {
           </Typography>
         </Box>
       ) : (
-        <TasksList projectTasks={filteredTasks} page={currentPage} onPageChange={setCurrentPage} />
+        <TasksList
+          projectTasks={projectTasks}
+          sortModel={sortModel}
+          onSortModelChange={handleSortModelChange}
+          emptySearch={Boolean(taskNameContains) && projectTasks.length === 0}
+        />
       )}
 
       {/* Create Task Dialog */}

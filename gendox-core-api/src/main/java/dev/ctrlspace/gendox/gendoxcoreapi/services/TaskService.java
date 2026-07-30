@@ -13,7 +13,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskCriteria;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.TaskPredicates;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -173,6 +176,14 @@ public class TaskService {
     public List<Task> getAllTasksByProjectId(UUID projectId) {
         logger.trace("Fetching all tasks for project: {}", projectId);
         return taskRepository.findAllByProjectId(projectId);
+    }
+
+    public Page<Task> getTasks(TaskCriteria criteria, Pageable pageable) {
+        if (pageable == null) {
+            pageable = PageRequest.of(0, 100);
+        }
+        logger.trace("Fetching tasks with criteria: {}", criteria);
+        return taskRepository.findAll(TaskPredicates.build(criteria), pageable);
     }
 
     public Task getTaskById(UUID taskId) {

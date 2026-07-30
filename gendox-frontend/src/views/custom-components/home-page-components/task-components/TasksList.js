@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
+import { isValid, parseISO, format } from 'date-fns'
 import Card from '@mui/material/Card'
 import { DataGrid } from '@mui/x-data-grid'
 import Typography from '@mui/material/Typography'
@@ -21,7 +22,12 @@ import DuplicateTaskDialog from './DuplicateTaskDialog'
 import { deleteTask } from 'src/store/activeTask/activeTask'
 import { TASK_TYPE_MAP } from 'src/utils/tasks/taskUtils'
 
-const TasksList = ({ projectTasks, page }) => {
+const TasksList = ({
+  projectTasks,
+  sortModel = [{ field: 'createdAt', sort: 'desc' }],
+  onSortModelChange,
+  emptySearch = false
+}) => {
   const dispatch = useDispatch()
   const { projectDetails } = useSelector(state => state.activeProject)
   const router = useRouter()
@@ -32,24 +38,8 @@ const TasksList = ({ projectTasks, page }) => {
   const [selectedTask, setSelectedTask] = useState(null)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [searchText, setSearchText] = useState('')
-  const [filteredTasks, setFilteredTasks] = useState(projectTasks)
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
-
-  useEffect(() => {
-    setFilteredTasks(projectTasks || [])
-  }, [projectTasks])
-
-  useEffect(() => {
-    if (!searchText.trim()) {
-      setFilteredTasks(projectTasks)
-    } else {
-      const filtered = projectTasks.filter(task =>
-        Object.values(task).some(value => value && value.toString().toLowerCase().includes(searchText.toLowerCase()))
-      )
-      setFilteredTasks(filtered)
-    }
-  }, [searchText, projectTasks])
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 20 })
 
   const handleMenuClick = (event, task) => {
     setAnchorEl(event.currentTarget)
@@ -67,11 +57,6 @@ const TasksList = ({ projectTasks, page }) => {
 
   const closeDeleteConfirm = () => {
     setConfirmDeleteOpen(false)
-  }
-
-  const openEditDialog = () => {
-    setEditDialogOpen(true)
-    handleMenuClose()
   }
 
   const handleDeleteTask = async () => {
@@ -103,7 +88,6 @@ const TasksList = ({ projectTasks, page }) => {
     } else if (typeCode === 'EARTH_OBSERVATION') {
       route = `/gendox/tasks/earth-observation/workspace/?organizationId=${organizationId}&projectId=${projectId}&taskId=${params.row.id}`
     } else {
-      // fallback, e.g. stay on page or show error/toast
       return
     }
 
@@ -166,9 +150,24 @@ const TasksList = ({ projectTasks, page }) => {
       )
     },
     {
+      field: 'createdAt',
+      headerName: 'Created At',
+      flex: 0.25,
+      minWidth: 160,
+      sortable: true,
+      renderCell: params => {
+        const createdAt = params.row.createdAt
+        const formattedDate =
+          createdAt && isValid(parseISO(createdAt)) ? format(parseISO(createdAt), 'dd/MM/yyyy - HH:mm') : 'Unknown Date'
+
+        return <Typography variant='body2'>{formattedDate}</Typography>
+      }
+    },
+    {
       field: 'actions',
       headerName: 'Actions',
       width: 80,
+      sortable: false,
       renderCell: params => (
         <>
           <IconButton
@@ -259,23 +258,28 @@ const TasksList = ({ projectTasks, page }) => {
     >
       {isDeleting && <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0 }} />}
 
-      {!filteredTasks || filteredTasks.length === 0 ? (
+      {emptySearch || !projectTasks || projectTasks.length === 0 ? (
         <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
-          <Box sx={{ fontSize: 48, mb: 2 }} role='img' aria-label='Empty inbox'>
-            📭
-          </Box>
           <Typography variant='h6' sx={{ mb: 1, fontWeight: 'bold' }}>
-            No tasks here yet!
+            {emptySearch ? 'No tasks match your search' : 'No tasks here yet!'}
           </Typography>
           <Typography variant='body2'>
-            Looks like you don’t have any tasks yet. Why not create one and get started? 🚀
+            {emptySearch
+              ? 'Try a different search term.'
+              : 'Looks like you don’t have any tasks yet. Why not create one and get started?'}
           </Typography>
         </Box>
       ) : (
         <DataGrid
-          rows={filteredTasks}
+          rows={projectTasks}
           columns={columns}
           pageSizeOptions={[10, 20, 40, 100]}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
+          sortingMode='server'
+          sortingOrder={['asc', 'desc']}
+          sortModel={sortModel}
+          onSortModelChange={onSortModelChange}
           disableRowSelectionOnClick
           onRowClick={handleRowClick}
           sx={{

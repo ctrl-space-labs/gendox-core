@@ -17,8 +17,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskCriteria;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -77,9 +80,27 @@ public class TaskController {
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks", produces = {"application/json"})
     @ResponseStatus(value = HttpStatus.OK)
-    public List<Task> getAllTasks(@PathVariable UUID organizationId,
-                                  @PathVariable UUID projectId) {
-        return taskService.getAllTasksByProjectId(projectId);
+    public Page<Task> getAllTasks(@PathVariable UUID organizationId,
+                                  @PathVariable UUID projectId,
+                                  TaskCriteria criteria,
+                                  Pageable pageable) throws GendoxException {
+        if (pageable == null || pageable.isUnpaged()) {
+            pageable = PageRequest.of(0, 100, Sort.by(Sort.Direction.DESC, "createdAt"));
+        }
+        if (pageable.getPageSize() > 100) {
+            throw new GendoxException("MAX_PAGE_SIZE_EXCEED", "Page size can't be more than 100", HttpStatus.BAD_REQUEST);
+        }
+        if (pageable.getSort().isUnsorted()) {
+            pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                    Sort.by(Sort.Direction.DESC, "createdAt"));
+        }
+
+        TaskCriteria effectiveCriteria = criteria == null
+                ? TaskCriteria.builder().build()
+                : criteria.toBuilder().build();
+        effectiveCriteria.setProjectId(projectId.toString());
+
+        return taskService.getTasks(effectiveCriteria, pageable);
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
