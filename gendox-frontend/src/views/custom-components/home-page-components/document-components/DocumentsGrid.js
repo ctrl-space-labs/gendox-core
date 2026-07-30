@@ -132,8 +132,8 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, page, pageSize = 20, do
               <MenuItem onClick={handleDeleteConfirmOpen}>Delete Document</MenuItem>
             </Menu>
 
-            <Box sx={{ mb: 5, display: 'flex', alignItems: 'center' }}>
-              <CustomAvatar skin='light' color='primary' variant='rounded' sx={{ mr: 3, height: 34, width: 34 }}>
+            <Box sx={{ mb: 5, display: 'flex', alignItems: 'center', width: '100%', minWidth: 0 }}>
+              <CustomAvatar skin='light' color='primary' variant='rounded' sx={{ mr: 3, height: 34, width: 34, flexShrink: 0 }}>
                 <Icon icon='mdi:file' />
               </CustomAvatar>
               <Typography
@@ -144,10 +144,16 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, page, pageSize = 20, do
                   fontWeight: 600,
                   textDecoration: 'none',
                   '&:hover': { color: 'primary.main' },
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  display: 'block',
+                  flex: 1,
+                  minWidth: 0,
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis'
                 }}
               >
-                <TruncatedText text={document.title} />
+                <TruncatedText text={document.title} limit={40} />
               </Typography>
             </Box>
             <Box

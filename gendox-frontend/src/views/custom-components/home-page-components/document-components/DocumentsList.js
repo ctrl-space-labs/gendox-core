@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { isValid, parseISO, format } from 'date-fns'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -53,7 +53,7 @@ const DocumentsList = ({
   const isSearchMountedRef = useRef(false)
   const ignorePaginationRef = useRef(true)
 
-  const paginationModel = { page, pageSize }
+  const paginationModel = useMemo(() => ({ page, pageSize }), [page, pageSize])
 
   useEffect(() => {
     setSearchInput(documentNameContains)

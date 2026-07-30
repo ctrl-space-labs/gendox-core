@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { useAuth } from 'src/authentication/useAuth'
@@ -54,7 +54,7 @@ const Tasks = () => {
   const skipDebounceRef = useRef(false)
   const isSearchMountedRef = useRef(false)
 
-  const sortModel = sortParamToModel(sort)
+  const sortModel = useMemo(() => sortParamToModel(sort), [sort])
 
   useEffect(() => {
     setSearchInput('')

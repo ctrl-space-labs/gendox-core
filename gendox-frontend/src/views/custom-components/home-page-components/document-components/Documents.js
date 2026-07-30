@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { useAuth } from 'src/authentication/useAuth'
@@ -60,7 +60,7 @@ const Documents = () => {
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const sortModel = sortParamToModel(sort)
+  const sortModel = useMemo(() => sortParamToModel(sort), [sort])
 
   useEffect(() => {
     setCurrentPage(0)
@@ -98,30 +98,6 @@ const Documents = () => {
       setShowAll(true)
     }
   }, [viewMode])
-
-  // Mount list in the background after first paint so switching to it is instant.
-  // Hidden via display:none; pagination mount noise is ignored in DocumentsList.
-  useEffect(() => {
-    if (!documents.length || listMounted || isMobile) return undefined
-
-    let idleId
-    let timeoutId
-
-    if (typeof window.requestIdleCallback === 'function') {
-      idleId = window.requestIdleCallback(() => setListMounted(true))
-    } else {
-      timeoutId = window.setTimeout(() => setListMounted(true), 150)
-    }
-
-    return () => {
-      if (idleId != null && typeof window.cancelIdleCallback === 'function') {
-        window.cancelIdleCallback(idleId)
-      }
-      if (timeoutId != null) {
-        window.clearTimeout(timeoutId)
-      }
-    }
-  }, [documents.length, listMounted, isMobile])
 
   const handlePageChange = newPage => {
     if (newPage >= 0 && newPage < totalPages) {
