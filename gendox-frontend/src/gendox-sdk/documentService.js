@@ -2,7 +2,7 @@ import axios from 'axios'
 import apiRequests from 'src/configs/apiRequest.js'
 
 /**
- * Get all documents by criteria
+ * Get all documents by criteria (POST body — for complex filters like id lists / date ranges)
  * @param organizationId
  * @param projectId
  * @param criteria
@@ -15,6 +15,30 @@ const findDocumentsByCriteria = async (organizationId, projectId, criteria, toke
   return axios.post(apiRequests.findDocumentsByCriteria(organizationId, projectId, page, size), criteria, {
     headers: {
       'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
+ * Get all documents by criteria (GET query params — home page / simple filters)
+ * @param organizationId
+ * @param projectId
+ * @param criteria
+ * @param token
+ * @param page
+ * @param size
+ * @returns {Promise<axios.AxiosResponse<DocumentInstances[]>>}
+ */
+const getDocuments = async (organizationId, projectId, criteria, token, page = 0, size = 20) => {
+  return axios.get(apiRequests.documentInstances(organizationId, projectId), {
+    params: {
+      ...criteria,
+      page,
+      size,
+      sort: 'createdAt,desc'
+    },
+    headers: {
       Authorization: 'Bearer ' + token
     }
   })
@@ -266,6 +290,7 @@ export default {
   deleteDocumentSection,
   triggerJobs,
   findDocumentsByCriteria,
+  getDocuments,
   viewDocumentContent,
   downloadDocument
 }

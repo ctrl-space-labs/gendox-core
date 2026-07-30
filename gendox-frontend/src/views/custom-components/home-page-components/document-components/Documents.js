@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import { useAuth } from 'src/authentication/useAuth'
@@ -15,9 +15,10 @@ import { ResponsiveCardContent } from 'src/utils/responsiveCardContent'
 import DocumentsGrid from './DocumentsGrid'
 import DocumentsList from './DocumentsList'
 import { localStorageConstants } from 'src/utils/generalConstants'
-import { fetchDocuments } from 'src/store/activeDocument/activeDocument'
+import { fetchProjectDocuments } from 'src/store/activeDocument/activeDocument'
 import { isValidOrganizationAndProject } from 'src/utils/validators'
 
+const DEFAULT_PAGE_SIZE = 20
 
 const Documents = () => {
   const { user } = useAuth()
@@ -28,38 +29,43 @@ const Documents = () => {
   const { organizationId, projectId } = router.query
   const token = window.localStorage.getItem(localStorageConstants.accessTokenKey)
   const { projectDocuments, isBlurring } = useSelector(state => state.activeDocument)
-  const { content: documents, totalPages } = projectDocuments
+  const { content: documents, totalPages, totalElements = 0 } = projectDocuments
 
   const [viewMode, setViewMode] = useState('grid')
   const [currentPage, setCurrentPage] = useState(0)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [showAll, setShowAll] = useState(false)
+  const [documentNameContains, setDocumentNameContains] = useState('')
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
   useEffect(() => {
     setCurrentPage(0)
+    setPageSize(DEFAULT_PAGE_SIZE)
+    setDocumentNameContains('')
   }, [projectId])
 
   useEffect(() => {
     if (isValidOrganizationAndProject(organizationId, projectId, user)) {
       dispatch(
-        fetchDocuments({
+        fetchProjectDocuments({
           organizationId,
           projectId,
           token,
           page: currentPage,
-          target: 'projectDocuments'
+          size: pageSize,
+          documentNameContains: documentNameContains || undefined
         })
       )
     }
-  }, [organizationId, projectId, currentPage, dispatch])
+  }, [organizationId, projectId, currentPage, pageSize, documentNameContains, dispatch, token, user])
 
   useEffect(() => {
-    if (!documents.length) {
+    if (!documents.length && !documentNameContains) {
       setViewMode('grid')
     }
-  }, [documents])
+  }, [documents, documentNameContains])
 
   useEffect(() => {
     if (viewMode !== 'grid') {
@@ -72,6 +78,23 @@ const Documents = () => {
       setCurrentPage(newPage)
     }
   }
+
+  const handleDocumentSearch = useCallback(searchValue => {
+    setCurrentPage(0)
+    setDocumentNameContains(searchValue)
+  }, [])
+
+  const handleListPaginationChange = useCallback(
+    model => {
+      if (model.pageSize !== pageSize) {
+        setPageSize(model.pageSize)
+        setCurrentPage(0)
+        return
+      }
+      setCurrentPage(model.page)
+    },
+    [pageSize]
+  )
 
   const toggleViewMode = mode => {
     setViewMode(mode)
@@ -92,13 +115,13 @@ const Documents = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          mb: documents.length ? 4 : 0 // Add margin only if documents exist
+          mb: documents.length || documentNameContains ? 4 : 0
         }}
       >
         <Typography variant='h5' sx={{ fontWeight: 600, textAlign: 'left' }}>
           Recent Documents
         </Typography>
-        {documents.length > 0 && (
+        {(documents.length > 0 || documentNameContains) && (
           <Box
             sx={{
               display: 'flex',
@@ -130,12 +153,27 @@ const Documents = () => {
       </Box>
 
       {viewMode === 'grid' ? (
-        <DocumentsGrid documents={documents} showAll={showAll} setShowAll={setShowAll} page={currentPage} />
+        <DocumentsGrid
+          documents={documents}
+          showAll={showAll}
+          setShowAll={setShowAll}
+          page={currentPage}
+          pageSize={pageSize}
+          documentNameContains={documentNameContains}
+        />
       ) : (
-        <DocumentsList documents={documents} page={currentPage} />
+        <DocumentsList
+          documents={documents}
+          page={currentPage}
+          pageSize={pageSize}
+          totalElements={totalElements}
+          documentNameContains={documentNameContains}
+          onSearch={handleDocumentSearch}
+          onPaginationModelChange={handleListPaginationChange}
+        />
       )}
 
-      {showAll && (
+      {viewMode === 'grid' && showAll && totalPages > 0 && (
         <Box
           sx={{
             display: 'flex',
@@ -149,7 +187,7 @@ const Documents = () => {
           <Typography sx={{ mt: 1.5 }}>{`Page ${currentPage + 1} of ${totalPages}`}</Typography>
           <Button
             onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages - 1}
+            disabled={currentPage >= totalPages - 1}
             sx={{ ml: 2 }}
           >
             Next
@@ -160,7 +198,9 @@ const Documents = () => {
       {/* Empty State */}
       {!documents.length && (
         <Typography variant='body2' sx={{ textAlign: 'center', mt: 40, color: 'text.secondary' }}>
-          No documents available. Please create or upload new documents.
+          {documentNameContains
+            ? 'No documents match your search.'
+            : 'No documents available. Please create or upload new documents.'}
         </Typography>
       )}
     </ResponsiveCardContent>

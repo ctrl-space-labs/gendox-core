@@ -66,6 +66,44 @@ export const fetchDocuments = createAsyncThunk(
   }
 )
 
+/** Home page project documents — GET with query params (pagination + name filter). */
+export const fetchProjectDocuments = createAsyncThunk(
+  'activeDocument/fetchProjectDocuments',
+  async (
+    {
+      organizationId,
+      projectId,
+      token,
+      page = 0,
+      size = 20,
+      documentNameContains
+    },
+    thunkAPI
+  ) => {
+    try {
+      const criteria = {
+        organizationId,
+        projectId,
+        ...(documentNameContains ? { documentNameContains } : {})
+      }
+
+      const response = await documentService.getDocuments(
+        organizationId,
+        projectId,
+        criteria,
+        token,
+        page,
+        size
+      )
+
+      return response.data
+    } catch (error) {
+      toast.error('Failed to fetch documents')
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
+    }
+  }
+)
+
 // Thunk action for updating section order
 export const updateSectionsOrder = createAsyncThunk(
   'activeDocument/updateSectionsOrder',
@@ -84,7 +122,7 @@ export const updateSectionsOrder = createAsyncThunk(
 const initialActiveDocumentState = {
   document: {},
   sections: [],
-  projectDocuments: { content: [], totalPages: 0 },
+  projectDocuments: { content: [], totalPages: 0, totalElements: 0 },
   supportingDocuments: [],
   taskDocuments: [],
   isBlurring: false,
@@ -161,6 +199,18 @@ const activeDocumentSlice = createSlice({
         }
       })
       .addCase(fetchDocuments.rejected, (state, action) => {
+        state.isBlurring = false
+        state.error = action.payload
+      })
+      .addCase(fetchProjectDocuments.pending, state => {
+        state.isBlurring = true
+        state.error = null
+      })
+      .addCase(fetchProjectDocuments.fulfilled, (state, action) => {
+        state.isBlurring = false
+        state.projectDocuments = action.payload
+      })
+      .addCase(fetchProjectDocuments.rejected, (state, action) => {
         state.isBlurring = false
         state.error = action.payload
       })

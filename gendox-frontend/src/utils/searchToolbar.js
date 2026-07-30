@@ -22,6 +22,7 @@ const SearchToolbar = (props) => {
         size="small"
         value={props.value}
         onChange={props.onChange}
+        onKeyDown={props.onKeyDown}
         placeholder="Search…"
         InputProps={{
           startAdornment: (

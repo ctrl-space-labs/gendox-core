@@ -16,7 +16,7 @@ import Icon from 'src/views/custom-components/mui/icon/icon'
 import { useDropzone } from 'react-dropzone'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import documentService from 'src/gendox-sdk/documentService'
-import { fetchDocuments } from 'src/store/activeDocument/activeDocument'
+import { fetchProjectDocuments } from 'src/store/activeDocument/activeDocument'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { ta } from 'date-fns/locale'
 
@@ -186,7 +186,7 @@ const UploaderDocument = ({ closeUploader }) => {
     setAlertVisible(true)
     setFileQueue([])
     closeUploader()
-    dispatch(fetchDocuments({ organizationId, projectId, token: accessToken, page: 0, target: 'projectDocuments' }))
+    dispatch(fetchProjectDocuments({ organizationId, projectId, token: accessToken, page: 0 }))
   }
 
   // Remove a file from the queue using its unique id.

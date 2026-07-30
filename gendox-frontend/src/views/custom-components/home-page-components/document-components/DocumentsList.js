@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { isValid, parseISO, format } from 'date-fns'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -17,13 +17,21 @@ import documentService from 'src/gendox-sdk/documentService.js'
 import SearchToolbar from 'src/utils/searchToolbar'
 import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/router'
-import { fetchDocuments } from 'src/store/activeDocument/activeDocument'
+import { fetchProjectDocuments } from 'src/store/activeDocument/activeDocument'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import toast from 'react-hot-toast'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
 
-const DocumentsList = ({ documents, page }) => {
+const DocumentsList = ({
+  documents,
+  page,
+  pageSize = 20,
+  totalElements = 0,
+  documentNameContains = '',
+  onSearch,
+  onPaginationModelChange
+}) => {
   const dispatch = useDispatch()
   const { projectDetails, projectMembers } = useSelector(state => state.activeProject)
   const router = useRouter()
@@ -37,17 +45,33 @@ const DocumentsList = ({ documents, page }) => {
   const [deleteMode, setDeleteMode] = useState('single') // 'single' | 'bulk'
   const [isDeleting, setIsDeleting] = useState(false)
   const [deletingCount, setDeletingCount] = useState(0)
-  const [searchText, setSearchText] = useState('')
-  const [filteredDocuments, setFilteredDocuments] = useState(documents)
-  const [paginationModel, setPaginationModel] = useState({
-    page: 0,
-    pageSize: 20
-  })
+  const [searchInput, setSearchInput] = useState(documentNameContains)
+  const skipDebounceRef = useRef(false)
+
+  const paginationModel = { page, pageSize }
 
   useEffect(() => {
-    setFilteredDocuments(documents || [])
+    setSearchInput(documentNameContains)
+  }, [documentNameContains])
+
+  useEffect(() => {
     setRowSelectionModel([])
   }, [documents])
+
+  useEffect(() => {
+    if (skipDebounceRef.current) {
+      skipDebounceRef.current = false
+      return
+    }
+
+    const timer = setTimeout(() => {
+      if (searchInput !== documentNameContains) {
+        onSearch?.(searchInput)
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchInput, documentNameContains, onSearch])
 
   const handleMenuClick = (event, document) => {
     setAnchorEl(event.currentTarget)
@@ -73,28 +97,38 @@ const DocumentsList = ({ documents, page }) => {
     setConfirmDelete(false)
   }
 
-  const handleSearch = searchValue => {
-    setSearchText(searchValue)
+  const applySearch = value => {
+    skipDebounceRef.current = true
+    setSearchInput(value)
+    if (value !== documentNameContains) {
+      onSearch?.(value)
+    }
+  }
 
-    const filteredRows = documents.filter(row => {
-      return Object.keys(row).some(field => {
-        const fieldValue = row[field]
-        return fieldValue && fieldValue.toString().toLowerCase().includes(searchValue.toLowerCase())
-      })
-    })
+  const handleSearchInputChange = event => {
+    setSearchInput(event.target.value)
+  }
 
-    setFilteredDocuments(searchValue.length ? filteredRows : documents)
-    setRowSelectionModel([])
+  const handleSearchKeyDown = event => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      applySearch(searchInput)
+    }
+  }
+
+  const handleClearSearch = () => {
+    applySearch('')
   }
 
   const refreshDocuments = () => {
     dispatch(
-      fetchDocuments({
+      fetchProjectDocuments({
         organizationId,
         projectId,
         token,
         page: page,
-        target: 'projectDocuments'
+        size: pageSize,
+        documentNameContains: documentNameContains || undefined
       })
     )
   }
@@ -298,13 +332,15 @@ const DocumentsList = ({ documents, page }) => {
         <CardHeader />
         <DataGrid
           autoHeight
-          rows={filteredDocuments}
+          rows={documents || []}
           columns={columns}
-          pageSizeOptions={[10, 25, 50]}
+          paginationMode='server'
+          rowCount={totalElements}
+          pageSizeOptions={[10, 20, 25, 50]}
           paginationModel={paginationModel}
           onPaginationModelChange={model => {
-            setPaginationModel(model)
             setRowSelectionModel([])
+            onPaginationModelChange?.(model)
           }}
           checkboxSelection
           disableRowSelectionOnClick
@@ -314,9 +350,10 @@ const DocumentsList = ({ documents, page }) => {
           slots={{ toolbar: SearchToolbar }}
           slotProps={{
             toolbar: {
-              value: searchText,
-              clearSearch: () => handleSearch(''),
-              onChange: event => handleSearch(event.target.value),
+              value: searchInput,
+              clearSearch: handleClearSearch,
+              onChange: handleSearchInputChange,
+              onKeyDown: handleSearchKeyDown,
               leftContent:
                 rowSelectionModel.length > 0 ? (
                   <>

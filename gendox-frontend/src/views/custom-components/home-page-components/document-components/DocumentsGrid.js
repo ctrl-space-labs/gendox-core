@@ -14,13 +14,13 @@ import Icon from 'src/views/custom-components/mui/icon/icon'
 import CustomAvatar from 'src/views/custom-components/mui/avatar'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import documentService from 'src/gendox-sdk/documentService.js'
-import { fetchDocuments } from 'src/store/activeDocument/activeDocument'
+import { fetchProjectDocuments } from 'src/store/activeDocument/activeDocument'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import toast from 'react-hot-toast'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
 
-const DocumentsGrid = ({ documents, showAll, setShowAll, page }) => {
+const DocumentsGrid = ({ documents, showAll, setShowAll, page, pageSize = 20, documentNameContains = '' }) => {
   const dispatch = useDispatch()
   const { projectDetails, projectMembers } = useSelector(state => state.activeProject)
   const { id: projectId, organizationId } = projectDetails
@@ -65,12 +65,13 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, page }) => {
       setSelectedDocument(null)
       setIsBlurring(false)
       dispatch(
-        fetchDocuments({
+        fetchProjectDocuments({
           organizationId,
           projectId,
           token,
           page: page,
-          target: 'projectDocuments'
+          size: pageSize,
+          documentNameContains: documentNameContains || undefined
         })
       )
     } catch (error) {
