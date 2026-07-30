@@ -19,6 +19,24 @@ import { fetchProjectDocuments } from 'src/store/activeDocument/activeDocument'
 import { isValidOrganizationAndProject } from 'src/utils/validators'
 
 const DEFAULT_PAGE_SIZE = 20
+const DEFAULT_SORT = 'createdAt,desc'
+const SORTABLE_FIELDS = new Set(['title', 'createdAt'])
+
+const sortModelToParam = sortModel => {
+  const active = sortModel?.[0]
+  if (!active?.field || !active?.sort || !SORTABLE_FIELDS.has(active.field)) {
+    return DEFAULT_SORT
+  }
+  return `${active.field},${active.sort}`
+}
+
+const sortParamToModel = (sortParam = DEFAULT_SORT) => {
+  const [field, sort] = sortParam.split(',')
+  if (!SORTABLE_FIELDS.has(field) || (sort !== 'asc' && sort !== 'desc')) {
+    return [{ field: 'createdAt', sort: 'desc' }]
+  }
+  return [{ field, sort }]
+}
 
 const Documents = () => {
   const { user } = useAuth()
@@ -36,14 +54,21 @@ const Documents = () => {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [showAll, setShowAll] = useState(false)
   const [documentNameContains, setDocumentNameContains] = useState('')
+  const [sort, setSort] = useState(DEFAULT_SORT)
+  // Keep list mounted after first open so switching views doesn't remount DataGrid
+  const [listMounted, setListMounted] = useState(false)
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const sortModel = sortParamToModel(sort)
 
   useEffect(() => {
     setCurrentPage(0)
     setPageSize(DEFAULT_PAGE_SIZE)
     setDocumentNameContains('')
+    setSort(DEFAULT_SORT)
+    setListMounted(false)
+    setViewMode('grid')
   }, [projectId])
 
   useEffect(() => {
@@ -55,11 +80,12 @@ const Documents = () => {
           token,
           page: currentPage,
           size: pageSize,
-          documentNameContains: documentNameContains || undefined
+          documentNameContains: documentNameContains || undefined,
+          sort
         })
       )
     }
-  }, [organizationId, projectId, currentPage, pageSize, documentNameContains, dispatch, token, user])
+  }, [organizationId, projectId, currentPage, pageSize, documentNameContains, sort, dispatch, token, user])
 
   useEffect(() => {
     if (!documents.length && !documentNameContains) {
@@ -72,6 +98,30 @@ const Documents = () => {
       setShowAll(true)
     }
   }, [viewMode])
+
+  // Mount list in the background after first paint so switching to it is instant.
+  // Hidden via display:none; pagination mount noise is ignored in DocumentsList.
+  useEffect(() => {
+    if (!documents.length || listMounted || isMobile) return undefined
+
+    let idleId
+    let timeoutId
+
+    if (typeof window.requestIdleCallback === 'function') {
+      idleId = window.requestIdleCallback(() => setListMounted(true))
+    } else {
+      timeoutId = window.setTimeout(() => setListMounted(true), 150)
+    }
+
+    return () => {
+      if (idleId != null && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleId)
+      }
+      if (timeoutId != null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [documents.length, listMounted, isMobile])
 
   const handlePageChange = newPage => {
     if (newPage >= 0 && newPage < totalPages) {
@@ -86,17 +136,36 @@ const Documents = () => {
 
   const handleListPaginationChange = useCallback(
     model => {
-      if (model.pageSize !== pageSize) {
-        setPageSize(model.pageSize)
+      const nextPage = Number(model.page)
+      const nextPageSize = Number(model.pageSize)
+
+      if (nextPage === currentPage && nextPageSize === pageSize) {
+        return
+      }
+      if (nextPageSize !== pageSize) {
+        setPageSize(nextPageSize)
         setCurrentPage(0)
         return
       }
-      setCurrentPage(model.page)
+      setCurrentPage(nextPage)
     },
-    [pageSize]
+    [currentPage, pageSize]
+  )
+
+  const handleListSortModelChange = useCallback(
+    nextSortModel => {
+      const nextSort = sortModelToParam(nextSortModel)
+      if (nextSort === sort) return
+      setSort(nextSort)
+      setCurrentPage(0)
+    },
+    [sort]
   )
 
   const toggleViewMode = mode => {
+    if (mode === 'list') {
+      setListMounted(true)
+    }
     setViewMode(mode)
   }
 
@@ -152,7 +221,7 @@ const Documents = () => {
         )}
       </Box>
 
-      {viewMode === 'grid' ? (
+      <Box sx={{ display: viewMode === 'grid' ? 'block' : 'none' }}>
         <DocumentsGrid
           documents={documents}
           showAll={showAll}
@@ -160,17 +229,25 @@ const Documents = () => {
           page={currentPage}
           pageSize={pageSize}
           documentNameContains={documentNameContains}
+          sort={sort}
         />
-      ) : (
-        <DocumentsList
-          documents={documents}
-          page={currentPage}
-          pageSize={pageSize}
-          totalElements={totalElements}
-          documentNameContains={documentNameContains}
-          onSearch={handleDocumentSearch}
-          onPaginationModelChange={handleListPaginationChange}
-        />
+      </Box>
+
+      {listMounted && (
+        <Box sx={{ display: viewMode === 'list' ? 'block' : 'none' }}>
+          <DocumentsList
+            documents={documents}
+            page={currentPage}
+            pageSize={pageSize}
+            totalElements={totalElements}
+            documentNameContains={documentNameContains}
+            sort={sort}
+            sortModel={sortModel}
+            onSearch={handleDocumentSearch}
+            onPaginationModelChange={handleListPaginationChange}
+            onSortModelChange={handleListSortModelChange}
+          />
+        </Box>
       )}
 
       {viewMode === 'grid' && showAll && totalPages > 0 && (

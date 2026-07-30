@@ -30,13 +30,13 @@ const findDocumentsByCriteria = async (organizationId, projectId, criteria, toke
  * @param size
  * @returns {Promise<axios.AxiosResponse<DocumentInstances[]>>}
  */
-const getDocuments = async (organizationId, projectId, criteria, token, page = 0, size = 20) => {
+const getDocuments = async (organizationId, projectId, criteria, token, page = 0, size = 20, sort = 'createdAt,desc') => {
   return axios.get(apiRequests.documentInstances(organizationId, projectId), {
     params: {
       ...criteria,
       page,
       size,
-      sort: 'createdAt,desc'
+      sort
     },
     headers: {
       Authorization: 'Bearer ' + token

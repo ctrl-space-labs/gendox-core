@@ -76,7 +76,8 @@ export const fetchProjectDocuments = createAsyncThunk(
       token,
       page = 0,
       size = 20,
-      documentNameContains
+      documentNameContains,
+      sort = 'createdAt,desc'
     },
     thunkAPI
   ) => {
@@ -93,7 +94,8 @@ export const fetchProjectDocuments = createAsyncThunk(
         criteria,
         token,
         page,
-        size
+        size,
+        sort
       )
 
       return response.data

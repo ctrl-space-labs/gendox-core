@@ -29,8 +29,11 @@ const DocumentsList = ({
   pageSize = 20,
   totalElements = 0,
   documentNameContains = '',
+  sort = 'createdAt,desc',
+  sortModel = [{ field: 'createdAt', sort: 'desc' }],
   onSearch,
-  onPaginationModelChange
+  onPaginationModelChange,
+  onSortModelChange
 }) => {
   const dispatch = useDispatch()
   const { projectDetails, projectMembers } = useSelector(state => state.activeProject)
@@ -47,6 +50,8 @@ const DocumentsList = ({
   const [deletingCount, setDeletingCount] = useState(0)
   const [searchInput, setSearchInput] = useState(documentNameContains)
   const skipDebounceRef = useRef(false)
+  const isSearchMountedRef = useRef(false)
+  const ignorePaginationRef = useRef(true)
 
   const paginationModel = { page, pageSize }
 
@@ -58,7 +63,24 @@ const DocumentsList = ({
     setRowSelectionModel([])
   }, [documents])
 
+  // DataGrid can emit pagination events shortly after mount — ignore briefly so
+  // opening/warming list view doesn't trigger a refetch + blur.
   useEffect(() => {
+    ignorePaginationRef.current = true
+    const timer = window.setTimeout(() => {
+      ignorePaginationRef.current = false
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  // Debounce search input → parent. Skip the initial mount so opening list view
+  // doesn't wait ~500ms or trigger a needless refetch.
+  useEffect(() => {
+    if (!isSearchMountedRef.current) {
+      isSearchMountedRef.current = true
+      return
+    }
+
     if (skipDebounceRef.current) {
       skipDebounceRef.current = false
       return
@@ -72,6 +94,21 @@ const DocumentsList = ({
 
     return () => clearTimeout(timer)
   }, [searchInput, documentNameContains, onSearch])
+
+  const handlePaginationModelChange = model => {
+    if (ignorePaginationRef.current) {
+      return
+    }
+    setRowSelectionModel([])
+    onPaginationModelChange?.(model)
+  }
+
+  const handleSortModelChange = model => {
+    if (ignorePaginationRef.current) {
+      return
+    }
+    onSortModelChange?.(model)
+  }
 
   const handleMenuClick = (event, document) => {
     setAnchorEl(event.currentTarget)
@@ -128,7 +165,8 @@ const DocumentsList = ({
         token,
         page: page,
         size: pageSize,
-        documentNameContains: documentNameContains || undefined
+        documentNameContains: documentNameContains || undefined,
+        sort
       })
     )
   }
@@ -226,12 +264,11 @@ const DocumentsList = ({
       headerName: 'Author',
       flex: 0.2,
       minWidth: 150,
-      sortable: true,
+      sortable: false,
       valueGetter: params => {
         const documentAuthor = projectMembers.find(member => member.user.id === params?.row.createdBy)
         return documentAuthor?.user?.name || 'Unknown Author'
       },
-      sortComparator: (v1, v2) => v1.localeCompare(v2),
       renderCell: params => <Typography variant='body2'>{params.value}</Typography>
     },
     {
@@ -239,6 +276,7 @@ const DocumentsList = ({
       headerName: 'Author Email',
       flex: 0.2,
       minWidth: 200,
+      sortable: false,
       valueGetter: params => {
         const documentAuthor = projectMembers.find(member => member.user.id === params?.row.createdBy)
         return documentAuthor?.user?.email || 'Unknown Email'
@@ -251,7 +289,6 @@ const DocumentsList = ({
       flex: 0.2,
       minWidth: 150,
       sortable: true,
-      sortComparator: (v1, v2) => new Date(v1) - new Date(v2),
       renderCell: params => {
         const createdAt = params.row.createAt
         const formattedDate =
@@ -264,6 +301,7 @@ const DocumentsList = ({
       field: 'actions',
       headerName: 'Actions',
       width: 100,
+      sortable: false,
       renderCell: params => (
         <>
           <IconButton
@@ -335,13 +373,14 @@ const DocumentsList = ({
           rows={documents || []}
           columns={columns}
           paginationMode='server'
+          sortingMode='server'
+          sortingOrder={['asc', 'desc']}
           rowCount={totalElements}
           pageSizeOptions={[10, 20, 25, 50]}
           paginationModel={paginationModel}
-          onPaginationModelChange={model => {
-            setRowSelectionModel([])
-            onPaginationModelChange?.(model)
-          }}
+          onPaginationModelChange={handlePaginationModelChange}
+          sortModel={sortModel}
+          onSortModelChange={handleSortModelChange}
           checkboxSelection
           disableRowSelectionOnClick
           rowSelectionModel={rowSelectionModel}

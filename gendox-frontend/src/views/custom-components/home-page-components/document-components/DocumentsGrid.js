@@ -20,7 +20,7 @@ import toast from 'react-hot-toast'
 import { getErrorMessage } from 'src/utils/errorHandler'
 import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
 
-const DocumentsGrid = ({ documents, showAll, setShowAll, page, pageSize = 20, documentNameContains = '' }) => {
+const DocumentsGrid = ({ documents, showAll, setShowAll, page, pageSize = 20, documentNameContains = '', sort = 'createdAt,desc' }) => {
   const dispatch = useDispatch()
   const { projectDetails, projectMembers } = useSelector(state => state.activeProject)
   const { id: projectId, organizationId } = projectDetails
@@ -71,7 +71,8 @@ const DocumentsGrid = ({ documents, showAll, setShowAll, page, pageSize = 20, do
           token,
           page: page,
           size: pageSize,
-          documentNameContains: documentNameContains || undefined
+          documentNameContains: documentNameContains || undefined,
+          sort
         })
       )
     } catch (error) {
