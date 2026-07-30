@@ -36,7 +36,7 @@ const DocumentsList = ({ documents, page }) => {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteMode, setDeleteMode] = useState('single') // 'single' | 'bulk'
   const [isDeleting, setIsDeleting] = useState(false)
-  const [deleteProgress, setDeleteProgress] = useState({ completed: 0, total: 0 })
+  const [deletingCount, setDeletingCount] = useState(0)
   const [searchText, setSearchText] = useState('')
   const [filteredDocuments, setFilteredDocuments] = useState(documents)
   const [paginationModel, setPaginationModel] = useState({
@@ -104,11 +104,10 @@ const DocumentsList = ({ documents, page }) => {
 
     setConfirmDelete(false)
     setIsDeleting(true)
-    setDeleteProgress({ completed: 0, total: 1 })
+    setDeletingCount(1)
 
     try {
       await documentService.deleteDocument(organizationId, projectId, selectedDocument.id, token)
-      setDeleteProgress({ completed: 1, total: 1 })
       toast.success('The document has been successfully deleted.')
       setSelectedDocument(null)
       setRowSelectionModel(prev => prev.filter(id => id !== selectedDocument.id))
@@ -119,7 +118,7 @@ const DocumentsList = ({ documents, page }) => {
       setSelectedDocument(null)
     } finally {
       setIsDeleting(false)
-      setDeleteProgress({ completed: 0, total: 0 })
+      setDeletingCount(0)
     }
   }
 
@@ -129,37 +128,23 @@ const DocumentsList = ({ documents, page }) => {
     const idsToDelete = [...rowSelectionModel]
     setConfirmDelete(false)
     setIsDeleting(true)
-    setDeleteProgress({ completed: 0, total: idsToDelete.length })
+    setDeletingCount(idsToDelete.length)
 
-    let successCount = 0
-    let failureCount = 0
-
-    for (const documentId of idsToDelete) {
-      try {
-        await documentService.deleteDocument(organizationId, projectId, documentId, token)
-        successCount += 1
-      } catch (error) {
-        console.error(`Failed to delete document ${documentId}:`, error)
-        failureCount += 1
-      }
-      setDeleteProgress({ completed: successCount + failureCount, total: idsToDelete.length })
-    }
-
-    setRowSelectionModel([])
-    setIsDeleting(false)
-    setDeleteProgress({ completed: 0, total: 0 })
-    refreshDocuments()
-
-    if (failureCount === 0) {
+    try {
+      await documentService.deleteDocuments(organizationId, projectId, idsToDelete, token)
+      setRowSelectionModel([])
+      refreshDocuments()
       toast.success(
-        successCount === 1
+        idsToDelete.length === 1
           ? 'The document has been successfully deleted.'
-          : `${successCount} documents have been successfully deleted.`
+          : `${idsToDelete.length} documents have been successfully deleted.`
       )
-    } else if (successCount === 0) {
-      toast.error('Failed to delete the selected documents.')
-    } else {
-      toast.error(`${successCount} deleted, ${failureCount} failed.`)
+    } catch (error) {
+      console.error('Failed to delete documents:', error)
+      toast.error(`Document deletion failed. Error: ${getErrorMessage(error)}`)
+    } finally {
+      setIsDeleting(false)
+      setDeletingCount(0)
     }
   }
 
@@ -296,9 +281,9 @@ const DocumentsList = ({ documents, page }) => {
         >
           <CircularProgress size={36} />
           <Typography variant='body1' color='text.primary'>
-            {deleteProgress.total === 1
+            {deletingCount === 1
               ? 'Deleting document...'
-              : `Deleted ${deleteProgress.completed} of ${deleteProgress.total} documents`}
+              : `Deleting ${deletingCount} documents...`}
           </Typography>
         </Box>
       )}

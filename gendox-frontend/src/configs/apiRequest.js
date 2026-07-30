@@ -80,6 +80,9 @@ export default {
   documentInstance: (organizationId, projectId, documentId) =>
     `${url}organizations/${organizationId}/projects/${projectId}/documents/${documentId}`,
 
+  documentInstances: (organizationId, projectId) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/documents`,
+
   documentSection: (documentId, sectionId) => `${url}documents/${documentId}/sections/${sectionId}`,
 
   getDocumentById: documentId => `${url}documents/${documentId}`,

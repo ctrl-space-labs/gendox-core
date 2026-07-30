@@ -157,7 +157,7 @@ const updateSectionsOrder = async (documentId, updatedSectionPayload, token) => 
 }
 
 /**
- * Detele Document Instance
+ * Delete Document Instance
  * @param organizationId
  * @param projectId
  * @param documentId
@@ -166,6 +166,25 @@ const updateSectionsOrder = async (documentId, updatedSectionPayload, token) => 
  */
 const deleteDocument = async (organizationId, projectId, documentId, token) => {
   return axios.delete(apiRequests.documentInstance(organizationId, projectId, documentId), {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    }
+  })
+}
+
+/**
+ * Delete multiple Document Instances
+ * @param organizationId
+ * @param projectId
+ * @param documentIds
+ * @param token
+ * @returns {Promise<axios.AxiosResponse<String>>}
+ */
+const deleteDocuments = async (organizationId, projectId, documentIds, token) => {
+  const documentIdsQuery = documentIds.map(id => `documentIds=${id}`).join('&')
+
+  return axios.delete(`${apiRequests.documentInstances(organizationId, projectId)}?${documentIdsQuery}`, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token
@@ -243,6 +262,7 @@ export default {
   uploadSingleDocument,
   updateSectionsOrder,
   deleteDocument,
+  deleteDocuments,
   deleteDocumentSection,
   triggerJobs,
   findDocumentsByCriteria,
