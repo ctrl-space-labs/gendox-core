@@ -169,19 +169,55 @@ const taskSlice = createSlice({
         state.isLoading = false
         state.error = action.payload
       })
+      .addCase(fetchTasks.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
       .addCase(fetchTasks.fulfilled, (state, action) => {
+        state.isLoading = false
         state.projectTasks = action.payload
       })
+      .addCase(fetchTasks.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+      .addCase(fetchTaskById.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
       .addCase(fetchTaskById.fulfilled, (state, action) => {
+        state.isLoading = false
         state.selectedTask = action.payload
       })
+      .addCase(fetchTaskById.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+      .addCase(updateTask.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
       .addCase(updateTask.fulfilled, (state, action) => {
+        state.isLoading = false
         const idx = state.projectTasks.findIndex(t => t.id === action.payload.id)
         if (idx !== -1) state.projectTasks[idx] = action.payload
       })
+      .addCase(updateTask.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
+      })
+      .addCase(deleteTask.pending, state => {
+        state.isLoading = true
+        state.error = null
+      })
       .addCase(deleteTask.fulfilled, (state, action) => {
+        state.isLoading = false
         state.projectTasks = state.projectTasks.filter(t => t.id !== action.payload)
         if (state.selectedTask?.id === action.payload) state.selectedTask = null
+      })
+      .addCase(deleteTask.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload
       })
   }
 })

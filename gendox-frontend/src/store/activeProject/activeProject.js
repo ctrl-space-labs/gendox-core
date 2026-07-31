@@ -18,8 +18,8 @@ export const fetchProject = createAsyncThunk(
       // Return combined data
       return { project: projectData.data, members: membersData.data }
     } catch (error) {
-      console.error('Failed to fetch project', error)
-      return thunkAPI.rejectWithValue(error.response.data)
+      toast.error(`Failed to fetch project. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )
@@ -31,9 +31,8 @@ export const updateProject = createAsyncThunk(
       const response = await projectService.updateProject(organizationId, projectId, updatedProjectPayload, token)
       return response.data
     } catch (error) {
-      toast.error(`${getErrorMessage(error)}`)
-      console.error('Failed to update project', error)
-      return thunkAPI.rejectWithValue(error.response.data)
+      toast.error(`Failed to update project. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )
@@ -45,9 +44,8 @@ export const deleteProject = createAsyncThunk(
       const response = await projectService.deactivateProjectById(organizationId, projectId, token)
       return response.data
     } catch (error) {
-      toast.error(`${getErrorMessage(error)}`)
-      console.error('Failed to delete project', error)
-      return thunkAPI.rejectWithValue(error.response.data)
+      toast.error(`Failed to delete project. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )
@@ -79,9 +77,8 @@ export const fetchProjectMembersAndRoles = createAsyncThunk(
 
       return updatedProjectMembers
     } catch (error) {
-      toast.error(`${getErrorMessage(error)}`)
-      console.error('Failed to fetch project members and roles', error)
-      return thunkAPI.rejectWithValue(error.response.data)
+      toast.error(`Failed to fetch project members and roles. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )
@@ -95,7 +92,7 @@ export const deleteProjectMember = createAsyncThunk(
       return userId
     } catch (error) {
       toast.error(`${getErrorMessage(error)}`)
-      return thunkAPI.rejectWithValue(error.response.data)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )

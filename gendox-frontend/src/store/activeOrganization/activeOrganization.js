@@ -18,7 +18,7 @@ export const fetchOrganization = createAsyncThunk(
       return response.data
     } catch (error) {
       toast.error(`Failed to fetch organization by ID status. Error: ${getErrorMessage(error)}`)
-      return thunkAPI.rejectWithValue(error.response.data)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )
@@ -31,7 +31,7 @@ export const fetchAiModelProviders = createAsyncThunk(
       return response.data
     } catch (error) {
       toast.error(`Failed to fetch Ai model Providers. Error: ${getErrorMessage(error)}`)
-      return thunkAPI.rejectWithValue(error.response.data)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )
@@ -43,9 +43,8 @@ export const fetchOrganizationAiModelKeys = createAsyncThunk(
       const response = await aiModelService.getModelKeysByOrganizationId(organizationId, token)
       return response.data.content
     } catch (error) {
-      // toast.error(`Failed to fetch organization Ai model keys. Error: ${getErrorMessage(error)}`)
-      console.error(`Failed to fetch organization Ai model keys. Error: ${getErrorMessage(error)}`)
-      return thunkAPI.rejectWithValue(error.response.data)
+      toast.error(`Failed to fetch organization Ai model keys. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )
@@ -57,9 +56,8 @@ export const fetchOrganizationPlans = createAsyncThunk(
       const response = await subscriptionPlanService.getOrganizationPlans(organizationId, token)
       return response.data
     } catch (error) {
-      // toast.error(`Failed to fetch organization plans. Error: ${getErrorMessage(error)}`)
-      console.error(`Failed to fetch organization plans. Error: ${getErrorMessage(error)}`)
-      return thunkAPI.rejectWithValue(error.response.data)
+      toast.error(`Failed to fetch organization plans. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )
@@ -71,9 +69,8 @@ export const fetchApiKeys = createAsyncThunk(
       const response = await apiKeyService.getApiKeysByOrganizationId(organizationId, token)
       return response.data
     } catch (error) {
-      // toast.error(`Failed to fetch API Keys. Error: ${getErrorMessage(error)}`)
-      console.error(`Failed to fetch API Keys. Error: ${getErrorMessage(error)}`)
-      return thunkAPI.rejectWithValue(error.response.data)
+      toast.error(`Failed to fetch API Keys. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )
@@ -85,9 +82,8 @@ export const fetchOrganizationWebSites = createAsyncThunk(
       const response = await organizationWebSiteService.getOrganizationWebSitesByOrganizationId(organizationId, token)
       return response.data
     } catch (error) {
-      // toast.error(`Failed to fetch organization websites. Error: ${getErrorMessage(error)}`)
-      console.error(`Failed to fetch organization websites. Error: ${getErrorMessage(error)}`)
-      return thunkAPI.rejectWithValue(error.response.data)
+      toast.error(`Failed to fetch organization websites. Error: ${getErrorMessage(error)}`)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )
@@ -100,7 +96,7 @@ export const fetchOrganizationMembers = createAsyncThunk(
       return response.data
     } catch (error) {
       toast.error(`Failed to fetch organization members. Error: ${getErrorMessage(error)}`)
-      return thunkAPI.rejectWithValue(error.response.data)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )
@@ -114,7 +110,7 @@ export const removeOrganizationMember = createAsyncThunk(
       return { memberId: userId }
     } catch (error) {
       toast.error(`${getErrorMessage(error)}`)
-      return thunkAPI.rejectWithValue(error.response.data)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )
@@ -128,7 +124,7 @@ export const updateMemberRole = createAsyncThunk(
       return { memberId: data.userOrganizationId, newRole: data.roleName }
     } catch (error) {
       toast.error(`Failed to update user role. Error: ${getErrorMessage(error)}`)
-      return thunkAPI.rejectWithValue(error.response.data)
+      return thunkAPI.rejectWithValue(error.response?.data || error.message)
     }
   }
 )
