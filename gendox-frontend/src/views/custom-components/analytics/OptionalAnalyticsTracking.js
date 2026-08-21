@@ -51,14 +51,6 @@ const readConsent = () => {
   const analyticsRaw = getCookie(CONSENT_COOKIE_ANALYTICS)
   const marketingRaw = getCookie(CONSENT_COOKIE_MARKETING)
 
-  // Temporary: remove after confirming cookies are readable on .gendox.dev subdomains.
-  console.log('[OptionalAnalyticsTracking] ConsentMagic cookies', {
-    [CONSENT_COOKIE_VIEWED]: viewed,
-    [CONSENT_COOKIE_ANALYTICS]: analyticsRaw,
-    [CONSENT_COOKIE_MARKETING]: marketingRaw,
-    documentCookie: typeof document !== 'undefined' ? document.cookie : null
-  })
-
   if (!viewed) return DEFAULT_CONSENT
 
   const analyticsGranted = analyticsRaw === 'yes'
@@ -70,9 +62,6 @@ const readConsent = () => {
     ad_user_data: marketingGranted ? CONSENT_GRANTED : CONSENT_DENIED,
     ad_personalization: marketingGranted ? CONSENT_GRANTED : CONSENT_DENIED
   }
-
-  // Temporary: remove after confirming consent mapping on deploy.
-  console.log('[OptionalAnalyticsTracking] Mapped consent', nextConsent)
 
   return nextConsent
 }
