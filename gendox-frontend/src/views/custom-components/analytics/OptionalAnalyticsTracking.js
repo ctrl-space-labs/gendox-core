@@ -24,16 +24,58 @@ const DEFAULT_CONSENT = {
   ad_personalization: CONSENT_DENIED
 }
 
+// ConsentMagic Pro cookies on .gendox.dev (shared with app.gendox.dev).
+const CONSENT_COOKIE_ANALYTICS = 'cs_enabled_cookie_term_67'
+const CONSENT_COOKIE_MARKETING = 'cs_enabled_cookie_term_68'
+const CONSENT_COOKIE_VIEWED = 'cs_viewed_cookie_policy'
+
+const getCookie = name => {
+  if (typeof document === 'undefined') return null
+  const prefix = `${name}=`
+  const row = document.cookie.split('; ').find(value => value.startsWith(prefix))
+  return row ? row.slice(prefix.length) : null
+}
+
 /**
- * TODO(CMP): once a cookie-consent platform is installed on gendox.dev, replace the
- * body of this function with a reader for that provider's cookie (name and value
- * shape depend on the vendor chosen). Return granted/denied for each field below.
+ * Reads ConsentMagic Pro cookies set on .gendox.dev.
+ * - cs_enabled_cookie_term_67: Analytics (yes/no)
+ * - cs_enabled_cookie_term_68: Marketing (yes/no)
+ * - cs_viewed_cookie_policy: present when the user has submitted a choice
  *
- * Whenever the user changes their choice, the CMP integration must dispatch:
+ * If the user has not submitted a choice yet, all fields stay denied.
+ * To re-apply after a mid-session change, dispatch:
  *   window.dispatchEvent(new Event('gendox:consent-updated'))
- * so this component re-reads consent and re-applies it to Google/Meta.
  */
-const readConsent = () => DEFAULT_CONSENT
+const readConsent = () => {
+  const viewed = getCookie(CONSENT_COOKIE_VIEWED)
+  const analyticsRaw = getCookie(CONSENT_COOKIE_ANALYTICS)
+  const marketingRaw = getCookie(CONSENT_COOKIE_MARKETING)
+
+  // Temporary: remove after confirming cookies are readable on .gendox.dev subdomains.
+  console.log('[OptionalAnalyticsTracking] ConsentMagic cookies', {
+    [CONSENT_COOKIE_VIEWED]: viewed,
+    [CONSENT_COOKIE_ANALYTICS]: analyticsRaw,
+    [CONSENT_COOKIE_MARKETING]: marketingRaw,
+    documentCookie: typeof document !== 'undefined' ? document.cookie : null
+  })
+
+  if (!viewed) return DEFAULT_CONSENT
+
+  const analyticsGranted = analyticsRaw === 'yes'
+  const marketingGranted = marketingRaw === 'yes'
+
+  const nextConsent = {
+    analytics_storage: analyticsGranted ? CONSENT_GRANTED : CONSENT_DENIED,
+    ad_storage: marketingGranted ? CONSENT_GRANTED : CONSENT_DENIED,
+    ad_user_data: marketingGranted ? CONSENT_GRANTED : CONSENT_DENIED,
+    ad_personalization: marketingGranted ? CONSENT_GRANTED : CONSENT_DENIED
+  }
+
+  // Temporary: remove after confirming consent mapping on deploy.
+  console.log('[OptionalAnalyticsTracking] Mapped consent', nextConsent)
+
+  return nextConsent
+}
 
 const hasMarketingConsent = consent =>
   consent.ad_storage === CONSENT_GRANTED &&
