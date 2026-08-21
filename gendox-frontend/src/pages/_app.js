@@ -35,6 +35,7 @@ import OrganizationProjectGuard from 'src/authentication/components/Organization
 import { AuthProvider } from '../authentication/context/AuthContext'
 import { IFrameMessageManagerProvider } from '../authentication/context/IFrameMessageManagerContext'
 import GlobalScrollbar from 'src/views/custom-components/global-scrollbar/GlobalScrollbar'
+import OptionalAnalyticsTracking from 'src/views/custom-components/analytics/OptionalAnalyticsTracking'
 import { registerAxiosInterceptors } from 'src/configs/axiosInterceptors'
 
 const clientSideEmotionCache = createEmotionCache()
@@ -85,9 +86,12 @@ const App = props => {
               <SettingsConsumer>
                 {({ settings }) => {
                   return (
-                    <ThemeComponent settings={settings}>
-                      <GlobalScrollbar />
-                      <OrganizationProjectGuard authProviderOption={authProviderOption} pageConfig={pageConfig}>
+                      <ThemeComponent settings={settings}>
+                        <GlobalScrollbar />
+                        {(process.env.NEXT_PUBLIC_GTAG_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID) && (
+                          <OptionalAnalyticsTracking />
+                        )}
+                        <OrganizationProjectGuard authProviderOption={authProviderOption} pageConfig={pageConfig}>
                         <RouteHandler routeType={routeType}>{getLayout(<Component {...pageProps} />)}</RouteHandler>
                       </OrganizationProjectGuard>
                       <CustomToast />
