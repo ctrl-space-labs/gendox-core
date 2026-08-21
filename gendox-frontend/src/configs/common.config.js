@@ -1,6 +1,7 @@
 const commonConfig = {
     gendoxHomePage: "https://gendox.dev/",
     gendoxDocsUrl: process.env.NEXT_PUBLIC_GENDOX_DOCS_URL || "https://docs.gendox.dev",
+    gendoxSupportUrl: process.env.NEXT_PUBLIC_GENDOX_SUPPORT_URL || "https://gendox.dev/contact/",
     gendoxUrl: process.env.NEXT_PUBLIC_GENDOX_URL,
     oidcAuthority: process.env.NEXT_PUBLIC_OIDC_AUTHORITY,
     oidcClientId: process.env.NEXT_PUBLIC_OIDC_CLIENT_ID,

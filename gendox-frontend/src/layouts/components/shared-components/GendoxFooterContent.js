@@ -3,6 +3,7 @@ import Box from '@mui/material/Box'
 import Link from '@mui/material/Link'
 import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
+import commonConfig from 'src/configs/common.config'
 
 const GendoxFooterContent = () => {
   // ** Var
@@ -20,11 +21,11 @@ const GendoxFooterContent = () => {
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', '& :not(:last-child)': { mr: 4 } }}>
           <Link
             target='_blank'
-            href='https://ctrl-space-labs.github.io/gendox-core'
+            href={`${commonConfig.gendoxDocsUrl}/`}
           >
             Documentation
           </Link>
-          <Link target='_blank' href='https://www.ctrlspace.dev/'>
+          <Link target='_blank' href={commonConfig.gendoxSupportUrl}>
             Support
           </Link>
           <Link target='_blank' href='https://themeselection.com/'>
