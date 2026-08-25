@@ -63,12 +63,19 @@ public class SecurityUtils {
 
 
     public boolean isSuperAdmin() {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (!(principal instanceof UserProfile)) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Object principal = authentication != null ? authentication.getPrincipal() : null;
+
+        if (!(principal instanceof UserProfile userProfile)) {
+            logSuperAdminAccess(false, principal);
             return false;
         }
-        return isSuperAdmin((UserProfile) principal);
 
+        boolean authorized = isSuperAdmin(userProfile);
+
+        logSuperAdminAccess(authorized, userProfile);
+
+        return authorized;
     }
 
     public boolean isSuperAdmin(UserProfile userProfile) {
@@ -76,6 +83,35 @@ public class SecurityUtils {
                 UserNamesConstants.GENDOX_SUPER_ADMIN.equals(
                         userProfile.getGlobalUserRoleType().getName()
                 );
+    }
+
+    private void logSuperAdminAccess(boolean authorized, Object principal) {
+        HttpServletRequest request = getCurrentHttpRequest();
+        String ip = request != null ? resolveClientIp(request) : null;
+        String method = request != null ? request.getMethod() : null;
+        String uri = request != null ? request.getRequestURI() : null;
+        String query = request != null ? request.getQueryString() : null;
+        String userAgent = request != null ? request.getHeader("User-Agent") : null;
+
+        if (authorized) {
+            logger.info("Authorized super-admin API access: principal={}, ip={}, method={}, uri={}, query={}, userAgent={}",
+                    principal, ip, method, uri, query, userAgent);
+        } else {
+            logger.warn("Unauthorized super-admin API access attempt: principal={}, ip={}, method={}, uri={}, query={}, userAgent={}",
+                    principal, ip, method, uri, query, userAgent);
+        }
+    }
+
+    private String resolveClientIp(HttpServletRequest request) {
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isBlank()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
+        }
+        return request.getRemoteAddr();
     }
 
     public boolean isUser() {

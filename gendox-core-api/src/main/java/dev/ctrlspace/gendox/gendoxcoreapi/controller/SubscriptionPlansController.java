@@ -5,6 +5,10 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SubscriptionNotificationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationPlanCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.*;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ObservabilityTags;
+import io.micrometer.observation.annotation.Observed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,12 +16,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 @RestController
 public class SubscriptionPlansController {
+
+    Logger logger = LoggerFactory.getLogger(SubscriptionPlansController.class);
 
     private OrganizationPlanService organizationPlanService;
     private SubscriptionPlanService subscriptionPlanService;
@@ -70,8 +74,15 @@ public class SubscriptionPlansController {
 
     @PreAuthorize("@securityUtils.isSuperAdmin()")
     @PostMapping("/subscription-notifications")
+    @Observed(name = "SubscriptionPlansController.createOrganizationPlanBySubscriptionNotification",
+            contextualName = "SubscriptionPlansController#createOrganizationPlanBySubscriptionNotification",
+            lowCardinalityKeyValues = {
+                    ObservabilityTags.LOGGABLE, "true",
+                    ObservabilityTags.LOG_LEVEL, ObservabilityTags.LOG_LEVEL_INFO,
+                    ObservabilityTags.LOG_METHOD_NAME, "true",
+                    ObservabilityTags.LOG_ARGS, "true"
+            })
     public OrganizationPlan createOrganizationPlanBySubscriptionNotification(@RequestBody SubscriptionNotificationDTO subscriptionNotificationDTO) throws GendoxException {
-
         User user = userService.getByEmail(subscriptionNotificationDTO.getEmail());
         UserOrganization userOrganization = userOrganizationService.getUserOrganizationByOwnerId(user.getId());
 
@@ -80,7 +91,15 @@ public class SubscriptionPlansController {
         }
 
         Organization organization = userOrganization.getOrganization();
-        return organizationPlanService.upsertOrganizationPlan(subscriptionNotificationDTO, organization);
+        OrganizationPlan organizationPlan = organizationPlanService.upsertOrganizationPlan(subscriptionNotificationDTO, organization);
+
+        logger.info("Successfully activated subscription for organizationId={}, organizationPlanId={}, email={}, productSKU={}",
+                organization.getId(),
+                organizationPlan.getId(),
+                subscriptionNotificationDTO.getEmail(),
+                subscriptionNotificationDTO.getProductSKU());
+
+        return organizationPlan;
     }
 
 
