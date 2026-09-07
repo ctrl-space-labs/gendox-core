@@ -1,9 +1,13 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.exceptions;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.controller.UserController;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -22,12 +26,21 @@ import java.io.Serializable;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @ControllerAdvice
 public class ResponseControllerAdvice extends ResponseEntityExceptionHandler {
 
+    private static final String APP_PACKAGE_PREFIX = "dev.ctrlspace.gendox";
 
     Logger logger = LoggerFactory.getLogger(ResponseControllerAdvice.class);
+
+    private SecurityUtils securityUtils;
+
+    @Autowired
+    public ResponseControllerAdvice(@Lazy SecurityUtils securityUtils) {
+        this.securityUtils = securityUtils;
+    }
 
     @ExceptionHandler(value = {
             Exception.class,
@@ -36,8 +49,14 @@ public class ResponseControllerAdvice extends ResponseEntityExceptionHandler {
             AccessDeniedException.class,
             ConstraintViolationException.class
     })
-    protected ResponseEntity<Object> handleConflict(Exception ex, WebRequest request) {
-        logger.error("Error in Gendox APP", ex);
+    protected ResponseEntity<Object> handleConflict(Exception ex, HttpServletRequest servletRequest, WebRequest request) {
+        String queryString = servletRequest.getQueryString();
+        String uri = queryString == null ? servletRequest.getRequestURI() : servletRequest.getRequestURI() + "?" + queryString;
+        logger.error("Error in Gendox APP, endpoint: {} {}, user: {}\n{}",
+                servletRequest.getMethod(),
+                uri,
+                securityUtils.getUserIdentifier(),
+                formatFilteredStackTrace(ex));
 
         GendoxErrorResponse error = new GendoxErrorResponse();
 
@@ -92,6 +111,28 @@ public class ResponseControllerAdvice extends ResponseEntityExceptionHandler {
         error.setMetadata((Serializable) fieldErrors); // Assuming you add a setFieldErrors method to your GendoxErrorResponse
 
         return ResponseEntity.status(error.getHttpStatus()).body(error);
+    }
+
+    // Keeps only this app's own stack frames, so 3rd-party/framework noise doesn't flood prod logs
+    private String formatFilteredStackTrace(Throwable ex) {
+        StringBuilder sb = new StringBuilder();
+        Throwable current = ex;
+        while (current != null) {
+            sb.append(current.getClass().getName())
+                    .append(": ")
+                    .append(current.getMessage())
+                    .append("\n");
+
+            Stream.of(current.getStackTrace())
+                    .filter(frame -> frame.getClassName().startsWith(APP_PACKAGE_PREFIX))
+                    .forEach(frame -> sb.append("\tat ").append(frame).append("\n"));
+
+            current = current.getCause();
+            if (current != null) {
+                sb.append("Caused by: ");
+            }
+        }
+        return sb.toString();
     }
 
     public record FieldErrorDTO(String field, String message) {

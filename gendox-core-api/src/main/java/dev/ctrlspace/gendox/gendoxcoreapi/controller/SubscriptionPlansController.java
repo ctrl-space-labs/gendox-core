@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -86,11 +85,18 @@ public class SubscriptionPlansController {
         User user = userService.getByEmail(subscriptionNotificationDTO.getEmail());
         UserOrganization userOrganization = userOrganizationService.getUserOrganizationByOwnerId(user.getId());
 
+        Organization organization;
         if (userOrganization == null) {
-            throw new GendoxException("NO_ORGANIZATION_FOUND", "User does not own any organization", HttpStatus.BAD_REQUEST);
+            Organization newOrganization = new Organization();
+            newOrganization.setName("Default Organization");
+            organization = organizationService.createOrganization(newOrganization, user.getId());
+
+            logger.info("No organization found for user with email={}, created new organization with id={}",
+                    subscriptionNotificationDTO.getEmail(), organization.getId());
+        } else {
+            organization = userOrganization.getOrganization();
         }
 
-        Organization organization = userOrganization.getOrganization();
         OrganizationPlan organizationPlan = organizationPlanService.upsertOrganizationPlan(subscriptionNotificationDTO, organization);
 
         logger.info("Successfully activated subscription for organizationId={}, organizationPlanId={}, email={}, productSKU={}",
