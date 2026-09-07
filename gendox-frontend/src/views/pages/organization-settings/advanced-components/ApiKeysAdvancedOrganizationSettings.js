@@ -133,6 +133,15 @@ const ApiKeysAdvancedOrganizationSettings = () => {
 
   const handleDeleteClose = () => setOpenDeleteDialog(false)
 
+  // ** Mask the API key, keeping only the first characters visible
+  const maskApiKey = apiKey => {
+    if (!apiKey) return ''
+    const visibleLength = 11
+    if (apiKey.length <= visibleLength) return apiKey
+
+    return `${apiKey.slice(0, visibleLength)}${'*'.repeat(apiKey.length - visibleLength)}`
+  }
+
   // ** Handle copy action
   const handleCopy = (apiKeyId, apiKey) => {
     copyToClipboard(apiKey)
@@ -168,7 +177,7 @@ const ApiKeysAdvancedOrganizationSettings = () => {
           <Grid item xs={12} sm={12} md={6} sx={{ mt: 3, mb: 4 }} key={item.id}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <TextField label='Name' value={item.name} disabled sx={{ mr: 2 }} />
-              <TextField fullWidth label='Key' value={item.apiKey} disabled />
+              <TextField fullWidth label='Key' value={maskApiKey(item.apiKey)} disabled />
               <Box sx={{ display: 'flex', ml: 1 }}>
                 <Tooltip title='Copy'>
                   <IconButton

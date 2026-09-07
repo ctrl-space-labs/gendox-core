@@ -19,8 +19,8 @@ import { fetchProjectDocuments } from 'src/store/activeDocument/activeDocument'
 import { isValidOrganizationAndProject } from 'src/utils/validators'
 
 const DEFAULT_PAGE_SIZE = 20
-const DEFAULT_SORT = 'createdAt,desc'
-const SORTABLE_FIELDS = new Set(['title', 'createdAt'])
+const DEFAULT_SORT = 'updatedAt,desc'
+const SORTABLE_FIELDS = new Set(['title', 'updatedAt'])
 
 const sortModelToParam = sortModel => {
   const active = sortModel?.[0]
@@ -33,7 +33,7 @@ const sortModelToParam = sortModel => {
 const sortParamToModel = (sortParam = DEFAULT_SORT) => {
   const [field, sort] = sortParam.split(',')
   if (!SORTABLE_FIELDS.has(field) || (sort !== 'asc' && sort !== 'desc')) {
-    return [{ field: 'createdAt', sort: 'desc' }]
+    return [{ field: 'updatedAt', sort: 'desc' }]
   }
   return [{ field, sort }]
 }

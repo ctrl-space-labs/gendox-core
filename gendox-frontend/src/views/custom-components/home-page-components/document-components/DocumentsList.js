@@ -29,8 +29,8 @@ const DocumentsList = ({
   pageSize = 20,
   totalElements = 0,
   documentNameContains = '',
-  sort = 'createdAt,desc',
-  sortModel = [{ field: 'createdAt', sort: 'desc' }],
+  sort = 'updatedAt,desc',
+  sortModel = [{ field: 'updatedAt', sort: 'desc' }],
   onSearch,
   onPaginationModelChange,
   onSortModelChange
@@ -284,15 +284,15 @@ const DocumentsList = ({
       renderCell: params => <Typography variant='body2'>{params.value}</Typography>
     },
     {
-      field: 'createdAt',
-      headerName: 'Created At',
+      field: 'updatedAt',
+      headerName: 'Updated At',
       flex: 0.2,
       minWidth: 150,
       sortable: true,
       renderCell: params => {
-        const createdAt = params.row.createAt
+        const updatedAt = params.row.updateAt
         const formattedDate =
-          createdAt && isValid(parseISO(createdAt)) ? format(parseISO(createdAt), 'dd/MM/yyyy - HH:mm') : 'Unknown Date'
+          updatedAt && isValid(parseISO(updatedAt)) ? format(parseISO(updatedAt), 'dd/MM/yyyy - HH:mm') : 'Unknown Date'
 
         return <Typography variant='body2'>{formattedDate}</Typography>
       }

@@ -56,8 +56,7 @@ Upload a batch of documents, define the questions that matter to you, and let AI
 
 Turn scanned PDFs and office files into clean, machine-readable output **page by page** using vision-capable LLMs — no traditional OCR needed. Add an optional **JSON schema (Structure)** to extract structured data in a single pass, then export all results to CSV. Supports PDFs, Word, Excel, PowerPoint, and more.
 
-<!-- Replace the placeholder below with a screen recording: create a Document Digitization task, add a scanned PDF, run generation, preview per-page results, export CSV. -->
-![Document Digitization](documentation/docs/08-document-digitization/img/feature-document-digitization.gif)
+![Document Digitization](documentation/docs/08-document-digitization/img/digitization-task-demo.png)
 
 [Document Digitization guide →](documentation/docs/08-document-digitization/01-document-digitization.md)
 
