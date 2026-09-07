@@ -137,9 +137,22 @@ public class OrganizationPlanService {
             return organizationPlanRepository.save(matchingPlan);
         }
 
+        // Handle suspension: set the end date to now, same as refund
+        if ((SubscriptionStatusConstants.SUSPENDED).equalsIgnoreCase(dto.getStatus())) {
+            matchingPlan.setEndDate(Instant.now());
+            matchingPlan.setStatus(SubscriptionStatusConstants.SUSPENDED);
+            return organizationPlanRepository.save(matchingPlan);
+        }
+
         // Handle cancellation: mark the plan as cancelled
         if ((SubscriptionStatusConstants.CANCELLED).equalsIgnoreCase(dto.getStatus())) {
             matchingPlan.setStatus(SubscriptionStatusConstants.CANCELLED);
+            return organizationPlanRepository.save(matchingPlan);
+        }
+
+        // Handle pending cancellation: mark the plan as pending cancellation, same as cancelled
+        if ((SubscriptionStatusConstants.PENDING_CANCELLATION).equalsIgnoreCase(dto.getStatus())) {
+            matchingPlan.setStatus(SubscriptionStatusConstants.PENDING_CANCELLATION);
             return organizationPlanRepository.save(matchingPlan);
         }
 
