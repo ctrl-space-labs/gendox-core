@@ -99,11 +99,12 @@ public class SubscriptionPlansController {
 
         OrganizationPlan organizationPlan = organizationPlanService.upsertOrganizationPlan(subscriptionNotificationDTO, organization);
 
-        logger.info("Successfully activated subscription for organizationId={}, organizationPlanId={}, email={}, productSKU={}",
+        logger.info("Successfully processed subscription for organizationId={}, organizationPlanId={}, email={}, productSKU={}, status={}",
                 organization.getId(),
                 organizationPlan.getId(),
                 subscriptionNotificationDTO.getEmail(),
-                subscriptionNotificationDTO.getProductSKU());
+                subscriptionNotificationDTO.getProductSKU(),
+                subscriptionNotificationDTO.getStatus());
 
         return organizationPlan;
     }

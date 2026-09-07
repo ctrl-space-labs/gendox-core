@@ -10,9 +10,7 @@ title: Document Digitization
 
 Supported input formats: PDF, Word (.docx/.doc), Excel (.xlsx/.xls), PowerPoint (.pptx), plain text, Markdown, CSV, and more.
 
-<!-- Replace the placeholder below with a screen recording of the full Document Digitization workflow.
-![Document Digitization — overview](./img/feature-document-digitization.gif)
--->
+![Document Digitization — overview](./img/digitization-task-demo.png)
 
 ---
 
