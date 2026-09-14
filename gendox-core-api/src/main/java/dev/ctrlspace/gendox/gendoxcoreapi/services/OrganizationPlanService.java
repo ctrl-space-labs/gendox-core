@@ -9,6 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.SubscriptionNotificationDTO
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.OrganizationPlanCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationPlanRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.OrganizationPlanPredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.BillingWindowUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.SubscriptionStatusConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -71,17 +73,38 @@ public class OrganizationPlanService {
      * @return
      */
     public OrganizationPlan getActiveOrganizationPlan(UUID organizationId) {
-        OrganizationPlan plan = this.getAllOrganizationPlansByCriteria(OrganizationPlanCriteria
+        Instant now = Instant.now();
+        return this.getAllOrganizationPlansByCriteria(OrganizationPlanCriteria
                         .builder()
                         .organizationId(organizationId)
-                        .activeAtDate(Instant.now())
+                        .activeAtDate(now)
                         .build(), Pageable.unpaged())
                 .getContent()
                 .stream()
                 .findFirst()
-                .orElse(subscriptionPlanService.createDefaultFreePlan());
+                .orElseGet(() -> getFreePlan(organizationId, now));
+    }
 
-        return plan;
+    /**
+     * The free plan of an organization without an active plan.
+     * When a previous plan has ended, the free plan starts at its end, so that the billing periods
+     * don't count again the usage made under the previous plan. It ends with the current billing period.
+     */
+    private OrganizationPlan getFreePlan(UUID organizationId, Instant now) {
+        // the default free plan is cached and shared by all organizations, it must not be modified
+        OrganizationPlan defaultFreePlan = subscriptionPlanService.createDefaultFreePlan();
+
+        return organizationPlanRepository.findMostRecentlyEndedPlan(organizationId, now)
+                .map(previousPlan -> {
+                    OrganizationPlan freePlan = new OrganizationPlan();
+                    freePlan.setSubscriptionPlan(defaultFreePlan.getSubscriptionPlan());
+                    freePlan.setApiRateLimit(defaultFreePlan.getApiRateLimit());
+                    freePlan.setNumberOfSeats(defaultFreePlan.getNumberOfSeats());
+                    freePlan.setStartDate(previousPlan.getEndDate());
+                    freePlan.setEndDate(BillingWindowUtils.currentBillingPeriod(previousPlan.getEndDate(), Clock.systemUTC()).to());
+                    return freePlan;
+                })
+                .orElse(defaultFreePlan);
     }
 
     // Create or update organization plan based on subscription notification

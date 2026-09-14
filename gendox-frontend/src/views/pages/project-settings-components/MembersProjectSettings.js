@@ -17,10 +17,12 @@ import InviteDialog from 'src/views/pages/project-settings-components/members-co
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import toast from 'react-hot-toast'
 import { fetchProjectMembersAndRoles, deleteProjectMember, fetchProjectInvitations } from 'src/store/activeProject/activeProject'
-import { fetchOrganizationMembers } from 'src/store/activeOrganization/activeOrganization'
+import { fetchOrganizationMembers, fetchOrganizationPlans } from 'src/store/activeOrganization/activeOrganization'
 import { userTypeStatus, memberRoleStatus, escapeRegExp, renderClientAvatar } from 'src/utils/membersUtils'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
+import Tooltip from '@mui/material/Tooltip'
+import { hasPlanFeature, planFeatures, planFeatureMessages } from 'src/configs/planFeatures'
 
 const MembersProjectSettings = () => {
   const dispatch = useDispatch()
@@ -33,7 +35,7 @@ const MembersProjectSettings = () => {
     isInvitationsLoading,
     isDeletingMember 
   } = useSelector(state => state.activeProject)
-  const { organizationMembers } = useSelector(state => state.activeOrganization)
+  const { organizationMembers, organizationPlans } = useSelector(state => state.activeOrganization)
 
   const { id: projectId, organizationId } = project || {}
   const canSeeInvitations = useHasOrgRole({ organizationId, roles: ['OP_ADD_PROJECT_MEMBERS'] })
@@ -52,6 +54,8 @@ const MembersProjectSettings = () => {
     return member.userType !== 'GENDOX_AGENT'
   })
 
+  const canInviteUsers = hasPlanFeature(organizationPlans?.subscriptionPlan?.sku, planFeatures.INVITE_USERS)
+
   useEffect(() => {
     if (projectId) {
       dispatch(fetchProjectMembersAndRoles({ organizationId, projectId, token }))
@@ -68,6 +72,8 @@ const MembersProjectSettings = () => {
     }
     if (organizationId) {
       dispatch(fetchOrganizationMembers({ organizationId, token }))
+      // the organization's plan decides whether inviting members is available
+      dispatch(fetchOrganizationPlans({ organizationId, token }))
     }
   }, [projectId, organizationId, token, dispatch, canSeeInvitations])
 
@@ -327,16 +333,28 @@ const MembersProjectSettings = () => {
 
       {/* Invite New Members Button */}
       <Box sx={{ padding: 4, display: 'flex', justifyContent: 'flex-end', py: '1.5rem' }}>
-        <Button
-          size='large'
-          variant='contained'
-          onClick={handleInviteNewMembers}
-          target='_blank'
-          rel='noopener noreferrer'
-        >
-          Invite new members
-        </Button>
+        <Tooltip title={canInviteUsers ? '' : planFeatureMessages[planFeatures.INVITE_USERS]}>
+          <span>
+            <Button
+              size='large'
+              variant='contained'
+              onClick={handleInviteNewMembers}
+              disabled={!canInviteUsers}
+              target='_blank'
+              rel='noopener noreferrer'
+            >
+              Invite new members
+            </Button>
+          </span>
+        </Tooltip>
       </Box>
+      {!canInviteUsers && (
+        <Box sx={{ px: 4, pb: 4, display: 'flex', justifyContent: 'flex-end' }}>
+          <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+            {planFeatureMessages[planFeatures.INVITE_USERS]}
+          </Typography>
+        </Box>
+      )}
 
       {/* Invite Dialog */}
       <InviteDialog open={showInviteDialog} handleClose={() => setShowInviteDialog(false)} />

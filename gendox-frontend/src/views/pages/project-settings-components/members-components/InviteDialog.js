@@ -26,6 +26,7 @@ import { getErrorMessage } from 'src/utils/errorHandler'
 import { getAllowedRoles, memberRoleStatus } from 'src/utils/membersUtils'
 import { fetchProjectInvitations } from 'src/store/activeProject/activeProject'
 import useHasOrgRole from 'src/authentication/hooks/useHasOrgRole'
+import { hasPlanFeature, planFeatures, planFeatureMessages } from 'src/configs/planFeatures'
 
 const InviteDialog = ({ open, handleClose }) => {
   const dispatch = useDispatch()
@@ -34,12 +35,14 @@ const InviteDialog = ({ open, handleClose }) => {
   const project = useSelector(state => state.activeProject.projectDetails)
   const { projectInvitations, isInvitationsLoading } = useSelector(state => state.activeProject)
   const organizationMembers = useSelector(state => state.activeOrganization.organizationMembers)
+  const organizationPlans = useSelector(state => state.activeOrganization.organizationPlans)
   const { id: projectId, organizationId } = project
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [selectedRole, setSelectedRole] = useState('')
 
   const canSeeInvitations = useHasOrgRole({ organizationId, roles: ['OP_ADD_PROJECT_MEMBERS'] })
+  const canInviteUsers = hasPlanFeature(organizationPlans?.subscriptionPlan?.sku, planFeatures.INVITE_USERS)
 
   const members = organizationMembers.filter(member => member.user.email !== null)
   const userRole = members.find(member => member.user.email === auth.user.email)?.role?.name
@@ -395,18 +398,25 @@ const InviteDialog = ({ open, handleClose }) => {
             </Tooltip>
 
             {/* Send Button */}
-            <Button
-              variant='contained'
-              onClick={handleInvitation}
-              sx={{ ml: { xs: 0, sm: 5 }, width: { xs: '100%', sm: 'auto' } }}
-            >
-              Send
-            </Button>
+            <Tooltip title={canInviteUsers ? '' : planFeatureMessages[planFeatures.INVITE_USERS]}>
+              <span>
+                <Button
+                  variant='contained'
+                  onClick={handleInvitation}
+                  disabled={!canInviteUsers}
+                  sx={{ ml: { xs: 0, sm: 5 }, width: { xs: '100%', sm: 'auto' } }}
+                >
+                  Send
+                </Button>
+              </span>
+            </Tooltip>
           </Box>
 
           {/* Invitation Description */}
           <Typography variant='body2' sx={{ mt: 4 }}>
-            {`Enter your friend’s email address and invite them to join the ${project.name} project!`}
+            {canInviteUsers
+              ? `Enter your friend’s email address and invite them to join the ${project.name} project!`
+              : planFeatureMessages[planFeatures.INVITE_USERS]}
           </Typography>
         </Box>
       </DialogContent>

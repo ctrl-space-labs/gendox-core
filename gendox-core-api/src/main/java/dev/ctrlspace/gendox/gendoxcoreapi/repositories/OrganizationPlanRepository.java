@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,6 +25,17 @@ public interface OrganizationPlanRepository extends JpaRepository<OrganizationPl
     UUID findSubscriptionPlanIdByOrganizationId(@Param("organizationId") UUID organizationId);
 
     List<OrganizationPlan> findAllByOrganizationId(UUID organizationId);
+
+    @Query(value = """
+            SELECT *
+            FROM gendox_core.organization_plan
+            WHERE organization_id = :organizationId
+              AND end_date < :before
+            ORDER BY end_date DESC
+            LIMIT 1
+            """, nativeQuery = true)
+    Optional<OrganizationPlan> findMostRecentlyEndedPlan(@Param("organizationId") UUID organizationId,
+                                                         @Param("before") Instant before);
 
 
 

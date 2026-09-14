@@ -55,7 +55,7 @@ public class OrganizationWebSiteController {
     @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
     @PostMapping("/organizations/{organizationId}/websites")
     public OrganizationWebSite createOrganizationWebSite(@PathVariable UUID organizationId,
-                                                         @RequestBody OrganizationWebSiteDTO organizationWebSiteDTO) {
+                                                         @RequestBody OrganizationWebSiteDTO organizationWebSiteDTO) throws GendoxException {
 
         return organizationWebSiteService.createOrganizationWebSite(organizationWebSiteDTO, organizationId);
     }

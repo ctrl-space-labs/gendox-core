@@ -12,8 +12,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 
 @Service
 public class SubscriptionPlanService {
@@ -51,9 +52,10 @@ public class SubscriptionPlanService {
         plan.setApiRateLimit(apiRateLimitRepository.findByTierTypeName(ApiRateLimitTypes.RATE_LIMIT_FREE));
         plan.setSubscriptionPlan(subscriptionPlanRepository.findBySkuAndActiveIsTrue(SubscriptionTypes.SKU_FREE));
         plan.setNumberOfSeats(1);
-        Instant now = Instant.now();
-        plan.setStartDate(now);
-        plan.setEndDate(now.plus(Duration.ofDays(365)));
+        // organizations that never had a plan renew monthly, on the 1st of every month
+        ZonedDateTime firstDayOfMonth = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1).atStartOfDay(ZoneOffset.UTC);
+        plan.setStartDate(firstDayOfMonth.toInstant());
+        plan.setEndDate(firstDayOfMonth.plusMonths(1).toInstant());
         return plan;
     }
 

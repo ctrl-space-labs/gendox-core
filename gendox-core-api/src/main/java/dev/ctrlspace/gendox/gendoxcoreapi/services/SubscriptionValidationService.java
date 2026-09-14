@@ -2,29 +2,27 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 
 import dev.ctrlspace.gendox.authentication.GendoxAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.AiModel;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationPlan;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Project;
-import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.DocumentCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.*;
-import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.DocumentPredicates;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.TimePeriodDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.BillingWindowUtils;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.Instant;
-import java.util.Set;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.Date;
 
 
@@ -36,36 +34,54 @@ public class SubscriptionValidationService {
     private boolean isSubscriptionValidationEnabled;
     private OrganizationPlanService organizationPlanService;
     private DocumentInstanceRepository documentInstanceRepository;
-    private DocumentInstanceSectionRepository documentInstanceSectionRepository;
     private InvitationRepository invitationRepository;
     private TypeService typeService;
     private OrganizationDailyUsageRepository organizationDailyUsageRepository;
     private IntegrationRepository integrationRepository;
+    private ProjectRepository projectRepository;
     private ProjectService projectService;
+    private OrganizationWebSiteRepository organizationWebSiteRepository;
     private ApiRateLimitService apiRateLimitService;
+    private OrganizationModelKeyService organizationModelKeyService;
+    private double providedKeyAllowanceRatio;
 
 
     @Autowired
     public SubscriptionValidationService(@Value("${gendox.features.subscription-validation}") boolean isSubscriptionValidationEnabled,
                                          OrganizationPlanService organizationPlanService,
                                          DocumentInstanceRepository documentInstanceRepository,
-                                         DocumentInstanceSectionRepository documentInstanceSectionRepository,
                                          InvitationRepository invitationRepository,
                                          TypeService typeService,
                                          OrganizationDailyUsageRepository organizationDailyUsageRepository,
                                          IntegrationRepository integrationRepository,
-                                         ProjectService projectService,
-                                         ApiRateLimitService apiRateLimitService) {
+                                         ProjectRepository projectRepository,
+                                         @Lazy ProjectService projectService,
+                                         OrganizationWebSiteRepository organizationWebSiteRepository,
+                                         ApiRateLimitService apiRateLimitService,
+                                         OrganizationModelKeyService organizationModelKeyService,
+                                         @Value("${gendox.features.provided-key-allowance-ratio}") double providedKeyAllowanceRatio) {
         this.isSubscriptionValidationEnabled = isSubscriptionValidationEnabled;
         this.organizationPlanService = organizationPlanService;
         this.documentInstanceRepository = documentInstanceRepository;
-        this.documentInstanceSectionRepository = documentInstanceSectionRepository;
         this.invitationRepository = invitationRepository;
         this.typeService = typeService;
         this.organizationDailyUsageRepository = organizationDailyUsageRepository;
         this.integrationRepository = integrationRepository;
+        this.projectRepository = projectRepository;
         this.projectService = projectService;
+        this.organizationWebSiteRepository = organizationWebSiteRepository;
         this.apiRateLimitService = apiRateLimitService;
+        this.organizationModelKeyService = organizationModelKeyService;
+        this.providedKeyAllowanceRatio = providedKeyAllowanceRatio;
+    }
+
+
+    // plan limits are stored per seat, a missing limit allows nothing
+    private int effectiveLimit(Integer planLimit, Integer numberOfSeats) {
+        if (planLimit == null) {
+            return 0;
+        }
+        return planLimit * numberOfSeats;
     }
 
 
@@ -75,8 +91,9 @@ public class SubscriptionValidationService {
             return true;
         }
         OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
-        int maxDocuments = activePlan.getSubscriptionPlan().getUserMessageMonthlyLimitCount() * activePlan.getNumberOfSeats();
-        int numberOfDocuments = this.countDocumentUploads(organizationId, activePlan.getStartDate(), activePlan.getEndDate());
+        int maxDocuments = effectiveLimit(activePlan.getSubscriptionPlan().getUserUploadLimitFileCount(), activePlan.getNumberOfSeats());
+        // documents are a stock, not a monthly flow, so everything the organization currently holds counts
+        int numberOfDocuments = this.countDocumentUploads(organizationId, Instant.EPOCH, Instant.now());
         return numberOfDocuments < maxDocuments;
     }
 
@@ -86,34 +103,54 @@ public class SubscriptionValidationService {
             return true;
         }
         OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
-        long maxDocumentSize = (long) activePlan.getSubscriptionPlan().getUserUploadLimitMb() * activePlan.getNumberOfSeats() ;
-        long totalDocumentSize = countDocumentsSize(organizationId, activePlan.getStartDate(), activePlan.getEndDate()) + fileSize;
+        long maxDocumentSize = effectiveLimit(activePlan.getSubscriptionPlan().getUserUploadLimitMb(), activePlan.getNumberOfSeats());
+        long totalDocumentSize = countDocumentsSize(organizationId, Instant.EPOCH, Instant.now()) + fileSize;
 
         long totalDocumentSizeMb = totalDocumentSize / (1024 * 1024);
         return totalDocumentSizeMb < maxDocumentSize;
 
     }
 
-    // check for the Document Sections allowed for the organization
-    public boolean canCreateDocumentSections(UUID organizationId) throws GendoxException {
+    // check for the total document pages allowed for the organization, so a few very large documents can't consume the whole allowance
+    public boolean canCreateDocumentPages(UUID organizationId, Integer numberOfPages) throws GendoxException {
         if (!isSubscriptionValidationEnabled) {
             return true;
         }
-        OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
-        int maxDocumentSections = activePlan.getSubscriptionPlan().getUserUploadLimitFileCount() * activePlan.getNumberOfSeats();
-        int numberOfDocumentSections = this.countDocumentInstanceSections(this.getDocumentsByOrganizationIdAndTimePeriod(organizationId, activePlan.getStartDate(), activePlan.getEndDate()));
-
-        return numberOfDocumentSections < maxDocumentSections;
+        return hasDocumentPageCapacity(organizationId, billablePages(numberOfPages));
     }
 
-    // check for the messages allowed for the organization
-    public boolean canSendMessage(UUID organizationId) throws GendoxException {
+    public boolean canCreateDocumentPages(UUID organizationId, Integer numberOfPages, Integer replacedNumberOfPages) throws GendoxException {
+        if (!isSubscriptionValidationEnabled) {
+            return true;
+        }
+        int additionalBillablePages = billablePages(numberOfPages) - billablePages(replacedNumberOfPages);
+        return hasDocumentPageCapacity(organizationId, additionalBillablePages);
+    }
+
+    private boolean hasDocumentPageCapacity(UUID organizationId, int additionalBillablePages) throws GendoxException {
+        OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
+        int maxDocumentPages = effectiveLimit(activePlan.getSubscriptionPlan().getDocumentPagesLimit(), activePlan.getNumberOfSeats());
+        return this.countDocumentPages(organizationId) + additionalBillablePages <= maxDocumentPages;
+    }
+
+    private int billablePages(Integer numberOfPages) {
+        return numberOfPages != null ? numberOfPages : 1;
+    }
+
+    // check for the messages allowed for the organization in the current billing period
+    public boolean canSendMessage(UUID organizationId, AiModel completionModel) throws GendoxException {
         if (!isSubscriptionValidationEnabled) {
             return true;
         }
         OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
-        int maxMessages = activePlan.getSubscriptionPlan().getUserMessageMonthlyLimitCount() * activePlan.getNumberOfSeats();
-        int numberOfMessages = this.countMessages(organizationId, activePlan.getStartDate(), activePlan.getEndDate());
+        int maxMessages = effectiveLimit(activePlan.getSubscriptionPlan().getUserMessageMonthlyLimitCount(), activePlan.getNumberOfSeats());
+        // a model used with the API key provided by Gendox gets only a share of the allowance
+        if (organizationModelKeyService.getKeyForModel(organizationId, completionModel) == null) {
+            maxMessages = (int) Math.ceil(maxMessages * providedKeyAllowanceRatio);
+        }
+        TimePeriodDTO billingPeriod = BillingWindowUtils.currentBillingPeriod(activePlan.getStartDate(), Clock.systemUTC());
+        // usage is stored per day, so the whole first day of the period is counted
+        int numberOfMessages = this.countMessages(organizationId, billingPeriod.from().truncatedTo(ChronoUnit.DAYS), billingPeriod.to());
         return numberOfMessages < maxMessages;
     }
 
@@ -134,20 +171,31 @@ public class SubscriptionValidationService {
             return true;
         }
         OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
-        int maxIntegrations = activePlan.getSubscriptionPlan().getOrganizationWebSites() * activePlan.getNumberOfSeats();
+        int maxIntegrations = effectiveLimit(activePlan.getSubscriptionPlan().getOrganizationWebSites(), activePlan.getNumberOfSeats());
         int numberOfIntegrations = this.countActiveIntegrations(organizationId);
         return numberOfIntegrations < maxIntegrations;
     }
 
     // check for the number of websites allowed for the organization
-    public boolean canCreateWebsite(UUID organizationId, Integer numberOfWebsites) {
+    public boolean canCreateWebsite(UUID organizationId) {
         if (!isSubscriptionValidationEnabled) {
             return true;
         }
         OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
-        Integer maxWebsites = activePlan.getSubscriptionPlan().getOrganizationWebSites() * activePlan.getNumberOfSeats();
+        int maxWebsites = effectiveLimit(activePlan.getSubscriptionPlan().getOrganizationWebSites(), activePlan.getNumberOfSeats());
 
-        return numberOfWebsites < maxWebsites;
+        return this.countWebsites(organizationId) < maxWebsites;
+    }
+
+    // check for the number of active projects allowed for the organization
+    public boolean canCreateProjects(UUID organizationId) {
+        if (!isSubscriptionValidationEnabled) {
+            return true;
+        }
+        OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
+        int maxProjects = effectiveLimit(activePlan.getSubscriptionPlan().getProjectLimit(), activePlan.getNumberOfSeats());
+
+        return this.countActiveProjects(organizationId) < maxProjects;
     }
 
     /**
@@ -169,22 +217,17 @@ public class SubscriptionValidationService {
     }
 
 
-    public Page<DocumentInstance> getDocumentsByOrganizationIdAndTimePeriod(UUID organizationId, Instant startDate, Instant endDate) throws GendoxException {
-        return documentInstanceRepository.findAll(DocumentPredicates
-                .build(DocumentCriteria.builder()
-                        .organizationId(organizationId.toString())
-                        .createdBetween(new TimePeriodDTO(startDate, endDate))
-                        .build()), PageRequest.of(0, 100));
-
+    public Integer countDocumentPages(UUID organizationId) {
+        Long totalDocumentPages = documentInstanceRepository.sumNumberOfPagesByOrganizationId(organizationId);
+        return totalDocumentPages != null ? totalDocumentPages.intValue() : 0;
     }
 
-    public Integer countDocumentInstanceSections(Page<DocumentInstance> documentInstances) {
-        Set<UUID> documentInstanceIds = documentInstances.getContent().stream()
-                .map(DocumentInstance::getId)
-                .collect(Collectors.toSet());
+    public Integer countWebsites(UUID organizationId) {
+        return (int) organizationWebSiteRepository.countByOrganizationId(organizationId);
+    }
 
-        // Use the repository method to count the DocumentInstanceSections related to the documentInstance IDs
-        return (int) documentInstanceSectionRepository.countByDocumentInstanceIds(documentInstanceIds);
+    public Integer countActiveProjects(UUID organizationId) {
+        return (int) projectRepository.countActiveProjectsByOrganizationId(organizationId);
     }
 
     public Integer countDocumentUploads(UUID organizationId, Instant startDate, Instant endDate) throws GendoxException {
@@ -195,12 +238,16 @@ public class SubscriptionValidationService {
         return totalDocumentUploads != null ? totalDocumentUploads.intValue() : 0;
     }
 
-    public Integer countDocumentsSize(UUID organizationId, Instant startDate, Instant endDate) throws GendoxException {
+    /**
+     * Total bytes stored by the organization. Returned as a long, the sum outgrows an int well
+     * before the storage limit of the larger plans is reached.
+     */
+    public Long countDocumentsSize(UUID organizationId, Instant startDate, Instant endDate) throws GendoxException {
         Date start = Date.from(startDate);
         Date end = Date.from(endDate);
 
         Long totalDocumentSize = organizationDailyUsageRepository.sumStorageMbByOrganizationIdAndDateBetween(organizationId, start, end);
-        return totalDocumentSize != null ? totalDocumentSize.intValue() : 0;
+        return totalDocumentSize != null ? totalDocumentSize : 0L;
     }
 
     public Integer countMessages(UUID organizationId, Instant startDate, Instant endDate) throws GendoxException {

@@ -37,6 +37,8 @@ public class TaskService {
     private TaskConverter taskConverter;
     private AiModelService aiModelService;
     private TaskNodeService taskNodeService;
+    private ProjectService projectService;
+    private SubscriptionAiModelTierService subscriptionAiModelTierService;
 
     private Integer maxQuestionsPerBucket;
     private Integer maxQuestionTokensPerBucket;
@@ -52,6 +54,8 @@ public class TaskService {
                        TaskConverter taskConverter,
                        AiModelService aiModelService,
                        TaskNodeService taskNodeService,
+                       ProjectService projectService,
+                       SubscriptionAiModelTierService subscriptionAiModelTierService,
                        @Value("${gendox.tasks.max-questions-per-bucket}") Integer maxQuestionsPerBucket,
                        @Value("${gendox.tasks.max-question-tokens-per-bucket}") Integer maxQuestionTokensPerBucket,
                        @Value("${gendox.tasks.max-sections-chunk-tokens}") Integer maxSectionsChunkTokens) {
@@ -64,6 +68,8 @@ public class TaskService {
         this.taskConverter = taskConverter;
         this.aiModelService = aiModelService;
         this.taskNodeService = taskNodeService;
+        this.projectService = projectService;
+        this.subscriptionAiModelTierService = subscriptionAiModelTierService;
         this.maxQuestionsPerBucket = maxQuestionsPerBucket;
         this.maxQuestionTokensPerBucket = maxQuestionTokensPerBucket;
         this.maxSectionsChunkTokens = maxSectionsChunkTokens;
@@ -230,6 +236,16 @@ public class TaskService {
                     throw new GendoxException(
                             "INACTIVE_COMPLETION_MODEL",
                             "The selected completion model is inactive",
+                            HttpStatus.FORBIDDEN
+                    );
+                }
+
+                // the model tier has to be allowed by the plan, same as when it is selected on the project agent
+                UUID organizationId = projectService.getProjectById(existingTask.getProjectId()).getOrganizationId();
+                if (!subscriptionAiModelTierService.hasAccessToModel(organizationId, completionModel)) {
+                    throw new GendoxException(
+                            "NO_ACCESS_TO_COMPLETION_MODEL",
+                            "No access to the completion model. Basic or Pro subscription is required",
                             HttpStatus.FORBIDDEN
                     );
                 }

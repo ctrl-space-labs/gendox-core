@@ -75,6 +75,17 @@ public interface DocumentInstanceRepository extends JpaRepository<DocumentInstan
     @Query(nativeQuery = true, value = "DELETE FROM gendox_core.document_instance WHERE id IN :documentIds")
     void deleteAllByIds(@Param("documentIds") List<UUID> documentIds);
 
+    /**
+     * Total number of document pages currently stored by an organization.
+     * Documents uploaded as chat attachments are excluded, they are not knowledge base content.
+     * A document with an unknown page count (e.g. plain text files, or a failed page count) counts as one page.
+     */
+    @Query(nativeQuery = true, value = "SELECT COALESCE(SUM(COALESCE(di.number_of_pages, 1)), 0) " +
+            "FROM gendox_core.document_instance di " +
+            "WHERE di.organization_id = :organizationId " +
+            "AND NOT EXISTS (SELECT 1 FROM gendox_core.chat_thread_documents ctd WHERE ctd.document_id = di.id)")
+    Long sumNumberOfPagesByOrganizationId(@Param("organizationId") UUID organizationId);
+
     @Query("select d.organizationId from DocumentInstance d where d.id = :documentId")
     UUID findOrganizationIdByDocumentId(@Param("documentId") UUID documentId);
 

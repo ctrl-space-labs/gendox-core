@@ -235,6 +235,8 @@ gendox:
     ttl: 2592000  # 30 days in seconds
   features:
     subscription-validation: true
+    # LLM API keys provided by Gendox instead of their own.
+    provided-key-allowance-ratio: 0.25
 
 # AWS
 
