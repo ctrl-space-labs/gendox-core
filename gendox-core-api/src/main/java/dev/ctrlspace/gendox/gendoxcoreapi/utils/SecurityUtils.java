@@ -442,9 +442,14 @@ public class SecurityUtils {
 
         return projectIds.size() == 1
                 && !documentIds.isEmpty()
-                && documentInstanceRepository.areAllDocumentIdsInAnyProject(
-                    documentIds.stream().map(UUID::fromString).toArray(UUID[]::new),
-                    projectIds.stream().map(UUID::fromString).toArray(UUID[]::new));
+                && (
+                documentInstanceRepository.areAllDocumentIdsInAnyProject(toUuids(documentIds), toUuids(projectIds))
+                        || chatThreadDocumentsRepository.areAllDocumentIdsInAnyProject(toUuids(documentIds), toUuids(projectIds)));
+    }
+
+
+    private static UUID[] toUuids(Collection<String> ids) {
+        return ids.stream().map(UUID::fromString).toArray(UUID[]::new);
     }
 
     public AccessCriteria getRequestedDocumentIdAccessCriteria(String documentId) {
