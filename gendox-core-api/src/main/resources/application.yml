@@ -138,6 +138,10 @@ gendox:
         wait-time-seconds: 1 #not in use
         visibility-timeout-seconds: 300
         batch-size: 10
+    web-scrape:
+      firecrawl:
+        base-url: https://api.firecrawl.dev/v2
+        api-key: ${FIRECRAWL_KEY:}
   maintenance:
     daily-usage-aggregator:
       fixed-delay: 10s
