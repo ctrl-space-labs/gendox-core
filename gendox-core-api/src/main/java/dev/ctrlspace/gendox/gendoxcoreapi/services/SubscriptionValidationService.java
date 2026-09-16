@@ -138,6 +138,7 @@ public class SubscriptionValidationService {
     }
 
     // check for the messages allowed for the organization in the current billing period
+    // TODO this takes 200ms, performance improvement is needed
     public boolean canSendMessage(UUID organizationId, AiModel completionModel) throws GendoxException {
         if (!isSubscriptionValidationEnabled) {
             return true;
