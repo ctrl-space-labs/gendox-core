@@ -103,3 +103,13 @@ CREATE INDEX IF NOT EXISTS idx_chat_thread_documents_document_id
 
 -------------- DOCUMENT PAGES INDEX  --------------
 -----------------------------------------------------
+
+
+-----------------------------------------------------
+-------------- ORGANIZATION PLAN INDEX  --------------
+-- organization_plan is read on every subscription check (messages, uploads, rate limits).
+CREATE INDEX IF NOT EXISTS idx_organization_plan_organization_id_end_date
+    ON gendox_core.organization_plan (organization_id, end_date DESC);
+
+-------------- ORGANIZATION PLAN INDEX  --------------
+-----------------------------------------------------
