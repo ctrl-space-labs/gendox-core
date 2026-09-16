@@ -28,6 +28,7 @@ public class ProjectService {
     private ProjectConverter projectConverter;
     private TypeService typeService;
     private AuditLogsService auditLogsService;
+    private SubscriptionValidationService subscriptionValidationService;
 
 
     @Autowired
@@ -37,7 +38,8 @@ public class ProjectService {
                           ProjectMemberService projectMemberService,
                           UserOrganizationService userOrganizationService,
                           TypeService typeService,
-                          AuditLogsService auditLogsService) {
+                          AuditLogsService auditLogsService,
+                          SubscriptionValidationService subscriptionValidationService) {
         this.projectRepository = projectRepository;
         this.projectAgentService = projectAgentService;
         this.projectConverter = projectConverter;
@@ -45,6 +47,7 @@ public class ProjectService {
         this.userOrganizationService = userOrganizationService;
         this.typeService = typeService;
         this.auditLogsService = auditLogsService;
+        this.subscriptionValidationService = subscriptionValidationService;
     }
 
     public Project getProjectById(UUID id) throws GendoxException {
@@ -74,6 +77,11 @@ public class ProjectService {
     public Project createProject(ProjectDTO projectDTO, String creatorUserId) throws Exception {
 
         Project project = projectConverter.toEntity(projectDTO);
+
+        // Check if the organization has reached the maximum number of projects allowed
+        if (!subscriptionValidationService.canCreateProjects(project.getOrganizationId())) {
+            throw new GendoxException("MAX_PROJECTS_REACHED", "Maximum number of projects reached for this organization", HttpStatus.BAD_REQUEST);
+        }
 
 
         ProjectAgent projectAgent = projectAgentService.createProjectAgent(project.getProjectAgent());

@@ -107,12 +107,12 @@ public class OrganizationWebSiteService {
     }
 
 
-    public OrganizationWebSite createOrganizationWebSite(OrganizationWebSiteDTO organizationWebSiteDTO, UUID organizationId) {
+    public OrganizationWebSite createOrganizationWebSite(OrganizationWebSiteDTO organizationWebSiteDTO, UUID organizationId) throws GendoxException {
         logger.info("Creating OrganizationWebSite for Organization ID: {}", organizationId);//
 
-//        if (!subscriptionValidationService.canCreateWebsite(organizationId, getAllByOrganizationId(organizationId).size())) {
-//            throw new IllegalStateException("Maximum number of websites reached for this organization");
-//        }
+        if (!subscriptionValidationService.canCreateWebsite(organizationId)) {
+            throw new GendoxException("MAX_WEBSITES_REACHED", "Maximum number of websites reached for this organization", HttpStatus.BAD_REQUEST);
+        }
 
         OrganizationWebSite organizationWebSite = organizationWebSiteConverter.toEntity(organizationWebSiteDTO);
         return organizationWebSiteRepository.save(organizationWebSite);

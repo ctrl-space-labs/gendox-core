@@ -123,23 +123,7 @@ public class DocumentService {
             documentInstance.setFileSizeBytes(0L);
         }
 
-        if (documentInstance.getRemoteUrl() != null) {
-            try {
-                String ext = downloadService.getFileExtension(documentInstance.getRemoteUrl());
-                if (downloadService.isPagedFormat(ext) || downloadService.isTextExtractable(ext)) {
-                    documentInstance.setNumberOfPages(downloadService.countDocumentPages(documentInstance.getRemoteUrl()));
-                } else if (downloadService.isImageFile(ext)) {
-                    documentInstance.setNumberOfPages(1);
-                } else {
-                    documentInstance.setNumberOfPages(null);
-                }
-            } catch (Exception e) {
-                logger.warn("Could not count pages for document {}: {}", documentInstance.getId(), e.getMessage());
-                documentInstance.setNumberOfPages(null);
-            }
-        } else {
-            documentInstance.setNumberOfPages(null);
-        }
+        documentInstance.setNumberOfPages(countDocumentPages(documentInstance));
 
 //         Check if the organization has reached the maximum number of documents allowed
         if (!subscriptionValidationService.canCreateDocuments(documentInstance.getOrganizationId())) {
@@ -151,10 +135,10 @@ public class DocumentService {
             throw new GendoxException("MAX_DOCUMENT_SIZE_REACHED", "Maximum document size reached for this organization", HttpStatus.BAD_REQUEST);
         }
 
-//         Check if the organization has reached the maximum number of document sections allowed
-//        if (!subscriptionValidationService.canCreateDocumentSections(documentInstance.getOrganizationId())) {
-//            throw new GendoxException("MAX_DOCUMENT_SECTIONS_REACHED", "Maximum number of document sections reached for this organization", HttpStatus.BAD_REQUEST);
-//        }
+        // Check if the organization has reached the maximum number of document pages allowed
+        if (!subscriptionValidationService.canCreateDocumentPages(documentInstance.getOrganizationId(), documentInstance.getNumberOfPages())) {
+            throw new GendoxException("MAX_DOCUMENT_PAGES_REACHED", "Maximum number of document pages reached for this organization", HttpStatus.BAD_REQUEST);
+        }
 
         // Save the DocumentInstance first to save its ID
         documentInstance = documentInstanceRepository.save(documentInstance);
@@ -198,25 +182,46 @@ public class DocumentService {
             existingDocument.setDocumentSha256Hash(updatedDocument.getDocumentSha256Hash());
         }
         if (updatedDocument.getFileSizeBytes() != null) {
-            if (updatedDocument.getRemoteUrl() != null && downloadService.isPdfUrl(updatedDocument.getRemoteUrl())) {
-                try {
-                    updatedDocument.setNumberOfPages(downloadService.countDocumentPages(updatedDocument.getRemoteUrl()));
-                } catch (IOException e) {
-                    logger.error("Error counting document pages for document with ID: {}", updatedDocument.getId(), e);
-                    throw new GendoxException("PAGE_COUNT_ERROR", "Error counting document pages", HttpStatus.INTERNAL_SERVER_ERROR);
-                }
+            Integer numberOfPages = countDocumentPages(existingDocument);
+            long existingFileSizeBytes = existingDocument.getFileSizeBytes() != null ? existingDocument.getFileSizeBytes() : 0L;
+
+            // only the difference from the replaced file counts against the limits
+            if (!subscriptionValidationService.canCreateDocumentsSize(existingDocument.getOrganizationId(), (int) (updatedDocument.getFileSizeBytes() - existingFileSizeBytes))) {
+                throw new GendoxException("MAX_DOCUMENT_SIZE_REACHED", "Maximum document size reached for this organization", HttpStatus.BAD_REQUEST);
             }
+            if (!subscriptionValidationService.canCreateDocumentPages(existingDocument.getOrganizationId(), numberOfPages, existingDocument.getNumberOfPages())) {
+                throw new GendoxException("MAX_DOCUMENT_PAGES_REACHED", "Maximum number of document pages reached for this organization", HttpStatus.BAD_REQUEST);
+            }
+
+            existingDocument.setFileSizeBytes(updatedDocument.getFileSizeBytes());
+            existingDocument.setNumberOfPages(numberOfPages);
         }
 
         existingDocument.setUpdatedAt(Instant.now());
 
         existingDocument = documentInstanceRepository.save(existingDocument);
-        // TODO Giannis: I remove this because it is not necessary to update the sections here
-//        updateExistingSectionsList(updatedDocument, existingDocument);
 
         return existingDocument;
     }
 
+
+    // null when the pages can't be counted, e.g. for unsupported formats
+    private Integer countDocumentPages(DocumentInstance documentInstance) {
+        if (documentInstance.getRemoteUrl() == null) {
+            return null;
+        }
+        try {
+            String ext = downloadService.getFileExtension(documentInstance.getRemoteUrl());
+            if (downloadService.isPagedFormat(ext) || downloadService.isTextExtractable(ext)) {
+                return downloadService.countDocumentPages(documentInstance.getRemoteUrl());
+            } else if (downloadService.isImageFile(ext)) {
+                return 1;
+            }
+        } catch (Exception e) {
+            logger.warn("Could not count pages for document {}: {}", documentInstance.getId(), e.getMessage());
+        }
+        return null;
+    }
 
     /**
      * Gets the list of sections to be updated, added or deleted from the existing document

@@ -17,6 +17,8 @@ import { useDropzone } from 'react-dropzone'
 import { localStorageConstants } from 'src/utils/generalConstants'
 import documentService from 'src/gendox-sdk/documentService'
 import { fetchProjectDocuments } from 'src/store/activeDocument/activeDocument'
+import { getErrorMessage } from 'src/utils/errorHandler'
+import toast from 'react-hot-toast'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { ta } from 'date-fns/locale'
 
@@ -167,6 +169,9 @@ const UploaderDocument = ({ closeUploader }) => {
         setUploadedCount(prev => prev + 1)
       } catch (error) {
         console.error(`Error uploading ${file.name}:`, error)
+        const errorMessage = getErrorMessage(error)
+        // same id for the same message, so a failing batch shows one toast instead of one per file
+        toast.error(errorMessage, { id: errorMessage })
       }
     })
     await Promise.all(tasks)

@@ -7,6 +7,8 @@ import chatThreadService from '../../gendox-sdk/chatThreadService'
 import completionService from '../../gendox-sdk/completionService'
 import documentService from '../../gendox-sdk/documentService'
 import { updateSessionThreadId } from 'src/utils/embeddedChatSession'
+import { getErrorMessage } from 'src/utils/errorHandler'
+import toast from 'react-hot-toast'
 
 const DEFAULT_LOCAL_CONTEXT_MAX_RESPONSES = 0 // basically dont wait
 const DEFAULT_LOCAL_CONTEXT_MAX_WAIT_MS = 10
@@ -208,15 +210,21 @@ export const sendMessage = createAsyncThunk(
     const deepThinking = currentThread.deepThinking || false
 
     // Send the message to the server
-    const response = await completionService.postCompletionMessage(
-      projectId,
-      threadId,
-      message,
-      chatLocalContextResponses,
-      documentInstanceIds,
-      token,
-      deepThinking
-    )
+    let response
+    try {
+      response = await completionService.postCompletionMessage(
+        projectId,
+        threadId,
+        message,
+        chatLocalContextResponses,
+        documentInstanceIds,
+        token,
+        deepThinking
+      )
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      return rejectWithValue(error.response?.data || error.message)
+    }
 
     // Deep thinking returns HTTP 202 with { jobExecutionId, threadId }
     if (response.status === 202 && response.data?.jobExecutionId) {

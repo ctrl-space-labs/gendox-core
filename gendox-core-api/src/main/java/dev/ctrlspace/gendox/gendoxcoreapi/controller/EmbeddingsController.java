@@ -187,7 +187,7 @@ public class EmbeddingsController {
 
         Project project = projectService.getProjectById(UUID.fromString(projectId));
         // check if the message is within the subscription limits
-        if (!subscriptionValidationService.canSendMessage(project.getOrganizationId())) {
+        if (!subscriptionValidationService.canSendMessage(project.getOrganizationId(), project.getProjectAgent().getCompletionModel())) {
             throw new GendoxException("MAX_MESSAGES_EXCEED", "Maximum messages limit exceeded", HttpStatus.BAD_REQUEST);
         }
 
