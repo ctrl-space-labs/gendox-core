@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "data": {
+    "markdown": "# Page Not Found\n\nWe could not find what you were looking for.",
+    "metadata": {
+      "title": "Gendox",
+      "sourceURL": "https://docs.gendox.dev/does-not-exist",
+      "statusCode": 404
+    }
+  }
+}

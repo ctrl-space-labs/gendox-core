@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "status": "completed",
+  "total": 3,
+  "completed": 3,
+  "creditsUsed": 3,
+  "data": [
+    {
+      "metadata": {
+        "sourceURL": "https://docs.gendox.dev/sitemap.xml",
+        "statusCode": 200
+      }
+    },
+    {
+      "metadata": {
+        "title": "User Guide | Gendox",
+        "sourceURL": "https://docs.gendox.dev/earth-observation/user-guide",
+        "statusCode": 200
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "id": "01a09fcb-9e2e-7618-8698-31bab1d70d11",
+  "links": [
+    {
+      "url": "https://docs.gendox.dev",
+      "title": "Gendox: Introduction",
+      "description": "Gendox enables organizations to create AI-driven chat agents."
+    },
+    {
+      "url": "https://docs.gendox.dev/sitemap.xml"
+    },
+    {
+      "url": "https://docs.gendox.dev/earth-observation/architecture"
+    }
+  ]
+}
