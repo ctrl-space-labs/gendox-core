@@ -201,7 +201,9 @@ public class FirecrawlWebScrapeProvider implements WebScrapeProvider {
                 : new FirecrawlPageMetadata();
 
         if (metadata.getStatusCode() != null && metadata.getStatusCode() >= 400) {
-            throw new GendoxException("WEB_SCRAPE_PAGE_FAILED",
+            boolean pageIsGone = metadata.getStatusCode() == 404 || metadata.getStatusCode() == 410;
+
+            throw new GendoxException(pageIsGone ? "WEB_SCRAPE_PAGE_NOT_FOUND" : "WEB_SCRAPE_PAGE_FAILED",
                     "Page " + url + " returned HTTP " + metadata.getStatusCode(),
                     HttpStatus.BAD_GATEWAY);
         }
@@ -334,7 +336,6 @@ public class FirecrawlWebScrapeProvider implements WebScrapeProvider {
             }
         }
     }
-
 
 
 }

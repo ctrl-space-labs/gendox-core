@@ -33,6 +33,7 @@ public class IntegrationManager {
     private TypeService typeService;
     private S3BucketIntegrationUpdateService s3BucketIntegrationUpdateService;
     private ApiIntegrationUpdateService apiIntegrationUpdateService;
+    private WebScrapeIntegrationUpdateService webScrapeIntegrationUpdateService;
 
     @Autowired
     public IntegrationManager(GitIntegrationUpdateService gitIntegrationUpdateService,
@@ -40,13 +41,15 @@ public class IntegrationManager {
                               @Lazy IntegrationService integrationService,
                               TypeService typeService,
                               S3BucketIntegrationUpdateService s3BucketIntegrationUpdateService,
-                              ApiIntegrationUpdateService apiIntegrationUpdateService) {
+                              ApiIntegrationUpdateService apiIntegrationUpdateService,
+                              WebScrapeIntegrationUpdateService webScrapeIntegrationUpdateService) {
         this.gitIntegrationUpdateService = gitIntegrationUpdateService;
         this.integrationRepository = integrationRepository;
         this.integrationService = integrationService;
         this.typeService = typeService;
         this.s3BucketIntegrationUpdateService = s3BucketIntegrationUpdateService;
         this.apiIntegrationUpdateService = apiIntegrationUpdateService;
+        this.webScrapeIntegrationUpdateService = webScrapeIntegrationUpdateService;
     }
 
     /**
@@ -106,6 +109,8 @@ public class IntegrationManager {
             processS3Integration(integration, map);
         } else if (integration.getIntegrationType().equals(typeService.getIntegrationTypeByName(IntegrationTypesConstants.API_INTEGRATION))) {
             processApiIntegration(integration, map);
+        } else if (integration.getIntegrationType().equals(typeService.getIntegrationTypeByName(IntegrationTypesConstants.WEB_SCRAPE_INTEGRATION))) {
+            processWebScrapeIntegration(integration, map);
         } else {
             logger.error("Unsupported integration type");
 
@@ -128,6 +133,12 @@ public class IntegrationManager {
     private void processApiIntegration(Integration integration, Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map) throws GendoxException {
         logger.debug("Processing API integration...");
         Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> projectMap = apiIntegrationUpdateService.checkForUpdates(integration);
+        updateMap(projectMap, map);
+    }
+
+    private void processWebScrapeIntegration(Integration integration, Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> map) throws GendoxException {
+        logger.debug("Processing web scrape integration...");
+        Map<ProjectIntegrationDTO, List<IntegratedFileDTO>> projectMap = webScrapeIntegrationUpdateService.checkForUpdates(integration);
         updateMap(projectMap, map);
     }
 
