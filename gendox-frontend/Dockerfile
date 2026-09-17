@@ -1,5 +1,5 @@
 # Stage 1: Build the Next.js static site
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
