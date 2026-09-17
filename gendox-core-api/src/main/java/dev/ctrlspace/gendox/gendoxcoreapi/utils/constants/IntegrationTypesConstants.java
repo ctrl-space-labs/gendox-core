@@ -6,4 +6,5 @@ public class IntegrationTypesConstants {
     public static final String GOOGLE_DRIVE_INTEGRATION = "GOOGLE_DRIVE_INTEGRATION";
     public static final String AWS_S3_INTEGRATION = "AWS_S3_INTEGRATION";
     public static final String API_INTEGRATION = "API_INTEGRATION";
+    public static final String WEB_SCRAPE_INTEGRATION = "WEB_SCRAPE_INTEGRATION";
 }

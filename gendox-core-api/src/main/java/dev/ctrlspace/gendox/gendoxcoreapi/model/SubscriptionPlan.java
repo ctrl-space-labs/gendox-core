@@ -75,6 +75,10 @@ public class SubscriptionPlan {
     @Column(name = "document_pages_limit", nullable = false)
     private Integer documentPagesLimit;
 
+    @Basic
+    @Column(name = "web_scrape_pages_monthly_limit", nullable = false)
+    private Integer webScrapePagesMonthlyLimit;
+
     public UUID getId() {
         return id;
     }
@@ -219,16 +223,23 @@ public class SubscriptionPlan {
         this.documentPagesLimit = documentPagesLimit;
     }
 
+    public Integer getWebScrapePagesMonthlyLimit() {
+        return webScrapePagesMonthlyLimit;
+    }
+
+    public void setWebScrapePagesMonthlyLimit(Integer webScrapePagesMonthlyLimit) {
+        this.webScrapePagesMonthlyLimit = webScrapePagesMonthlyLimit;
+    }
+
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         SubscriptionPlan that = (SubscriptionPlan) o;
-        return Objects.equals(id, that.id) && Objects.equals(sku, that.sku) && Objects.equals(skuType, that.skuType) && Objects.equals(apiRateLimit, that.apiRateLimit) && Objects.equals(name, that.name) && Objects.equals(description, that.description) && Objects.equals(price, that.price) && Objects.equals(currency, that.currency) && Objects.equals(moq, that.moq) && Objects.equals(userUploadLimitFileCount, that.userUploadLimitFileCount) && Objects.equals(userUploadLimitMb, that.userUploadLimitMb) && Objects.equals(userMessageMonthlyLimitCount, that.userMessageMonthlyLimitCount) && Objects.equals(active, that.active) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(organizationWebSites, that.organizationWebSites) && Objects.equals(projectLimit, that.projectLimit) && Objects.equals(documentPagesLimit, that.documentPagesLimit);
+        return Objects.equals(id, that.id) && Objects.equals(sku, that.sku) && Objects.equals(skuType, that.skuType) && Objects.equals(apiRateLimit, that.apiRateLimit) && Objects.equals(name, that.name) && Objects.equals(description, that.description) && Objects.equals(price, that.price) && Objects.equals(currency, that.currency) && Objects.equals(moq, that.moq) && Objects.equals(userUploadLimitFileCount, that.userUploadLimitFileCount) && Objects.equals(userUploadLimitMb, that.userUploadLimitMb) && Objects.equals(userMessageMonthlyLimitCount, that.userMessageMonthlyLimitCount) && Objects.equals(active, that.active) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(organizationWebSites, that.organizationWebSites) && Objects.equals(projectLimit, that.projectLimit) && Objects.equals(documentPagesLimit, that.documentPagesLimit) && Objects.equals(webScrapePagesMonthlyLimit, that.webScrapePagesMonthlyLimit);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, sku, skuType, apiRateLimit, name, description, price, currency, moq, userUploadLimitFileCount, userUploadLimitMb, userMessageMonthlyLimitCount, active, createdAt, updatedAt, organizationWebSites, projectLimit, documentPagesLimit);
+        return Objects.hash(id, sku, skuType, apiRateLimit, name, description, price, currency, moq, userUploadLimitFileCount, userUploadLimitMb, userMessageMonthlyLimitCount, active, createdAt, updatedAt, organizationWebSites, projectLimit, documentPagesLimit, webScrapePagesMonthlyLimit);
     }
 }

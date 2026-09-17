@@ -6,6 +6,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationConnector;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationConnectorService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.webScrapeIntegration.WebScrapeProvider;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.ConnectorTypesConstants;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapeConfigConstants;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -81,7 +82,7 @@ public class WebScrapeProviderUtils {
             return null;
         }
 
-        Object apiKey = organizationConnectorConverter.toDTO(connector).getConfig().get("apiKey");
+        Object apiKey = organizationConnectorConverter.toDTO(connector).getConfig().get(WebScrapeConfigConstants.API_KEY);
 
         return apiKey == null ? null : apiKey.toString();
     }

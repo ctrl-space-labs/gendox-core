@@ -2,8 +2,9 @@ package dev.ctrlspace.gendox.gendoxcoreapi.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
-import lombok.Builder;
-import org.eclipse.jgit.lib.ObjectId;
+import org.hibernate.annotations.JdbcTypeCode;
+
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -11,7 +12,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
-import java.util.Arrays;
+
 import java.util.Objects;
 import java.util.UUID;
 
@@ -43,10 +44,10 @@ public class Integration {
     @Column(name = "queue_name")
     private String queueName;
     @Basic
-    @Column(name="directory_path")
+    @Column(name = "directory_path")
     private String directoryPath;
     @Basic
-    @Column(name="repository_head")
+    @Column(name = "repository_head")
     private String repoHead;
     @Basic
     @Column(name = "user_name")
@@ -55,6 +56,15 @@ public class Integration {
     @Column(name = "password")
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
+    @Basic
+    @Column(name = "run_interval_minutes")
+    private Integer runIntervalMinutes;
+    @Basic
+    @Column(name = "last_run_at")
+    private Instant lastRunAt;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "config", nullable = false, columnDefinition = "JSONB")
+    private String config;
     @Basic
     @Column(name = "created_at", nullable = true)
     @CreatedDate
@@ -192,45 +202,39 @@ public class Integration {
         this.updatedBy = updatedBy;
     }
 
+    public Integer getRunIntervalMinutes() {
+        return runIntervalMinutes;
+    }
+
+    public void setRunIntervalMinutes(Integer runIntervalMinutes) {
+        this.runIntervalMinutes = runIntervalMinutes;
+    }
+
+    public Instant getLastRunAt() {
+        return lastRunAt;
+    }
+
+    public void setLastRunAt(Instant lastRunAt) {
+        this.lastRunAt = lastRunAt;
+    }
+
+    public String getConfig() {
+        return config;
+    }
+
+    public void setConfig(String config) {
+        this.config = config;
+    }
+
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Integration that)) return false;
-
-        if (!Objects.equals(id, that.id)) return false;
-        if (!Objects.equals(projectId, that.projectId)) return false;
-        if (!Objects.equals(integrationType, that.integrationType))
-            return false;
-        if (!Objects.equals(isActive, that.isActive)) return false;
-        if (!Objects.equals(url, that.url)) return false;
-        if (!Objects.equals(queueName, that.queueName)) return false;
-        if (!Objects.equals(directoryPath, that.directoryPath))
-            return false;
-        if (!Objects.equals(repoHead, that.repoHead)) return false;
-        if (!Objects.equals(userName, that.userName)) return false;
-        if (!Objects.equals(password, that.password)) return false;
-        if (!Objects.equals(createdAt, that.createdAt)) return false;
-        if (!Objects.equals(updatedAt, that.updatedAt)) return false;
-        if (!Objects.equals(createdBy, that.createdBy)) return false;
-        return Objects.equals(updatedBy, that.updatedBy);
+        if (o == null || getClass() != o.getClass()) return false;
+        Integration that = (Integration) o;
+        return Objects.equals(id, that.id) && Objects.equals(organizationId, that.organizationId) && Objects.equals(projectId, that.projectId) && Objects.equals(integrationType, that.integrationType) && Objects.equals(isActive, that.isActive) && Objects.equals(url, that.url) && Objects.equals(queueName, that.queueName) && Objects.equals(directoryPath, that.directoryPath) && Objects.equals(repoHead, that.repoHead) && Objects.equals(userName, that.userName) && Objects.equals(password, that.password) && Objects.equals(runIntervalMinutes, that.runIntervalMinutes) && Objects.equals(lastRunAt, that.lastRunAt) && Objects.equals(config, that.config) && Objects.equals(createdAt, that.createdAt) && Objects.equals(updatedAt, that.updatedAt) && Objects.equals(createdBy, that.createdBy) && Objects.equals(updatedBy, that.updatedBy);
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (projectId != null ? projectId.hashCode() : 0);
-        result = 31 * result + (integrationType != null ? integrationType.hashCode() : 0);
-        result = 31 * result + (isActive != null ? isActive.hashCode() : 0);
-        result = 31 * result + (url != null ? url.hashCode() : 0);
-        result = 31 * result + (queueName != null ? queueName.hashCode() : 0);
-        result = 31 * result + (directoryPath != null ? directoryPath.hashCode() : 0);
-        result = 31 * result + (repoHead != null ? repoHead.hashCode() : 0);
-        result = 31 * result + (userName != null ? userName.hashCode() : 0);
-        result = 31 * result + (password != null ? password.hashCode() : 0);
-        result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0);
-        result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0);
-        result = 31 * result + (createdBy != null ? createdBy.hashCode() : 0);
-        result = 31 * result + (updatedBy != null ? updatedBy.hashCode() : 0);
-        return result;
+        return Objects.hash(id, organizationId, projectId, integrationType, isActive, url, queueName, directoryPath, repoHead, userName, password, runIntervalMinutes, lastRunAt, config, createdAt, updatedAt, createdBy, updatedBy);
     }
 }
