@@ -75,22 +75,18 @@ COMMENT ON COLUMN gendox_core.ai_models.system_role_name IS
 COMMENT ON COLUMN gendox_core.ai_models.supports_sampling_params IS
     'FALSE where the endpoint rejects temperature/top_p outright: search-preview models, and reasoning models on the Responses API.';
 COMMENT ON COLUMN gendox_core.ai_models.model_origin IS
-    'Jurisdiction the model was trained in (US/EU/CN/GLOBAL). Distinct from where it is hosted - see ai_model_providers.hosting_region.';
+    'Jurisdiction the model was trained in (US/EU/CN/GLOBAL). Distinct from where it is hosted - see hosting_region.';
 
 
 -- ---------------------------------------------------------------------------
--- ai_model_providers: where inference actually runs.
---
--- Deliberately separate from ai_models.model_origin. "Trained in CN" and "hosted
--- in the EU" are different facts and users need both; collapsing them into one
--- badge would be misleading.
+-- hosting_region: where inference actually runs.
 -- ---------------------------------------------------------------------------
 
-ALTER TABLE gendox_core.ai_model_providers
+ALTER TABLE gendox_core.ai_models
     ADD COLUMN IF NOT EXISTS hosting_region TEXT;
 
-COMMENT ON COLUMN gendox_core.ai_model_providers.hosting_region IS
-    'EU | US | GLOBAL. GLOBAL means the provider gives no region commitment (e.g. Nebius public serverless endpoints).';
+COMMENT ON COLUMN gendox_core.ai_models.hosting_region IS
+    'EU | US | GLOBAL. GLOBAL means no region commitment (e.g. Nebius public serverless endpoints).';
 
 
 -- ---------------------------------------------------------------------------
@@ -151,16 +147,20 @@ FROM gendox_core.ai_model_providers p
 WHERE m.ai_model_provider_id = p.id
   AND p.name = 'VERTEX_AI';
 
--- Provenance for providers that exist today. New providers set their own.
-UPDATE gendox_core.ai_model_providers
+-- Provenance for models that exist today.
+UPDATE gendox_core.ai_models m
 SET hosting_region = 'US'
-WHERE name IN ('OPEN_AI', 'ANTHROPIC_AI', 'GEMINI', 'GROQ', 'COHERE', 'VOYAGE_AI', 'VERTEX_AI')
-  AND hosting_region IS NULL;
+FROM gendox_core.ai_model_providers p
+WHERE m.ai_model_provider_id = p.id
+  AND p.name IN ('OPEN_AI', 'ANTHROPIC_AI', 'GEMINI', 'GROQ', 'COHERE', 'VOYAGE_AI', 'VERTEX_AI')
+  AND m.hosting_region IS NULL;
 
-UPDATE gendox_core.ai_model_providers
+UPDATE gendox_core.ai_models m
 SET hosting_region = 'EU'
-WHERE name = 'MISTRAL_AI'
-  AND hosting_region IS NULL;
+FROM gendox_core.ai_model_providers p
+WHERE m.ai_model_provider_id = p.id
+  AND p.name = 'MISTRAL_AI'
+  AND m.hosting_region IS NULL;
 
 UPDATE gendox_core.ai_models m
 SET model_origin = 'US'

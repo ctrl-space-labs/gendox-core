@@ -30,7 +30,7 @@ const HOSTING = {
 
 const AiModelOption = ({ props, option }) => {
   const origin = ORIGIN_LABELS[option.modelOrigin]
-  const hosting = HOSTING[option.aiModelProvider?.hostingRegion]
+  const hosting = HOSTING[option.hostingRegion]
   const isFree = option.modelTierType?.name === 'FREE_MODEL'
 
   return (

@@ -92,6 +92,11 @@ public class AiModel {
     @Column(name = "model_origin")
     private String modelOrigin;
 
+    // Where inference runs: EU | US | GLOBAL.
+    @Basic
+    @Column(name = "hosting_region")
+    private String hostingRegion;
+
 
     public UUID getId() {
         return id;
@@ -241,6 +246,14 @@ public class AiModel {
 
     public void setModelOrigin(String modelOrigin) {
         this.modelOrigin = modelOrigin;
+    }
+
+    public String getHostingRegion() {
+        return hostingRegion;
+    }
+
+    public void setHostingRegion(String hostingRegion) {
+        this.hostingRegion = hostingRegion;
     }
 
     @Override
