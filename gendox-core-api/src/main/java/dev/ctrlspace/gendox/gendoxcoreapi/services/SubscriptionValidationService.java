@@ -43,6 +43,7 @@ public class SubscriptionValidationService {
     private OrganizationWebSiteRepository organizationWebSiteRepository;
     private ApiRateLimitService apiRateLimitService;
     private OrganizationModelKeyService organizationModelKeyService;
+    private WebScrapePageRepository webScrapePageRepository;
     private double providedKeyAllowanceRatio;
 
 
@@ -59,6 +60,7 @@ public class SubscriptionValidationService {
                                          OrganizationWebSiteRepository organizationWebSiteRepository,
                                          ApiRateLimitService apiRateLimitService,
                                          OrganizationModelKeyService organizationModelKeyService,
+                                         WebScrapePageRepository webScrapePageRepository,
                                          @Value("${gendox.features.provided-key-allowance-ratio}") double providedKeyAllowanceRatio) {
         this.isSubscriptionValidationEnabled = isSubscriptionValidationEnabled;
         this.organizationPlanService = organizationPlanService;
@@ -72,6 +74,7 @@ public class SubscriptionValidationService {
         this.organizationWebSiteRepository = organizationWebSiteRepository;
         this.apiRateLimitService = apiRateLimitService;
         this.organizationModelKeyService = organizationModelKeyService;
+        this.webScrapePageRepository = webScrapePageRepository;
         this.providedKeyAllowanceRatio = providedKeyAllowanceRatio;
     }
 
@@ -199,6 +202,35 @@ public class SubscriptionValidationService {
         return this.countActiveProjects(organizationId) < maxProjects;
     }
 
+    // check whether the plan includes web scraping at all
+    public boolean canUseWebScrape(UUID organizationId) {
+        if (!isSubscriptionValidationEnabled) {
+            return true;
+        }
+        OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
+        int maxPages = effectiveLimit(activePlan.getSubscriptionPlan().getWebScrapePagesMonthlyLimit(),
+                activePlan.getNumberOfSeats());
+
+        return maxPages > 0;
+    }
+
+    // check the monthly page budget for the current billing period
+    public boolean canScrapeWebPages(UUID organizationId, int pageCount) {
+        if (!isSubscriptionValidationEnabled) {
+            return true;
+        }
+        OrganizationPlan activePlan = organizationPlanService.getActiveOrganizationPlan(organizationId);
+        int maxPages = effectiveLimit(activePlan.getSubscriptionPlan().getWebScrapePagesMonthlyLimit(),
+                activePlan.getNumberOfSeats());
+
+        TimePeriodDTO billingPeriod = BillingWindowUtils.currentBillingPeriod(
+                activePlan.getStartDate(), Clock.systemUTC());
+        int scrapedPages = this.countScrapedPages(organizationId, billingPeriod.from(), billingPeriod.to());
+
+        return scrapedPages + pageCount <= maxPages;
+    }
+
+
     /**
      * Check if the API Key is within the subscription limits.
      * This included the rate limits and the subscription plan limits.
@@ -259,6 +291,11 @@ public class SubscriptionValidationService {
         return totalMessages != null ? totalMessages.intValue() : 0;
     }
 
+    public Integer countScrapedPages(UUID organizationId, Instant startDate, Instant endDate) {
+        return (int) webScrapePageRepository
+                .countScrapedPagesByOrganizationIdAndPeriod(organizationId, startDate, endDate);
+    }
+
     public Integer countAcceptedInvitations(UUID organizationId) {
         return (int) invitationRepository.countByOrganizationIdAndStatusTypeId(organizationId, typeService.getEmailInvitationStatusByName("ACCEPTED").getId());
     }
@@ -296,7 +333,6 @@ public class SubscriptionValidationService {
         }
         return probe;
     }
-
 
 
 }

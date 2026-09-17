@@ -42,6 +42,7 @@ class SubscriptionValidationServiceTest {
     private OrganizationWebSiteRepository organizationWebSiteRepository;
     private ApiRateLimitService apiRateLimitService;
     private OrganizationModelKeyService organizationModelKeyService;
+    private WebScrapePageRepository webScrapePageRepository;
 
     @BeforeEach
     void setUp() {
@@ -56,6 +57,7 @@ class SubscriptionValidationServiceTest {
         organizationWebSiteRepository = mock(OrganizationWebSiteRepository.class);
         apiRateLimitService = mock(ApiRateLimitService.class);
         organizationModelKeyService = mock(OrganizationModelKeyService.class);
+        webScrapePageRepository = mock(WebScrapePageRepository.class);
     }
 
     private SubscriptionValidationService service(boolean validationEnabled) {
@@ -71,6 +73,7 @@ class SubscriptionValidationServiceTest {
                 organizationWebSiteRepository,
                 apiRateLimitService,
                 organizationModelKeyService,
+                webScrapePageRepository,
                 PROVIDED_KEY_RATIO);
     }
 

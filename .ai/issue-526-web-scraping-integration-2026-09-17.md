@@ -91,7 +91,7 @@ A website row holds at most one integration (`integration_id` is a single column
 
 > `V20251011_102510__Update_audit_logs_to_remove_deadlocks.sql` exists because these aggregate writes have contended before. Increment this counter **once per run with the batch total**, never per page.
 
-New/extended: `WebScrapePage` + `WebScrapePageRepository`; four new fields on `Integration`, one each on `SubscriptionPlan` and `OrganizationDailyUsage`.
+New/extended: `WebScrapePage` + `WebScrapePageRepository`; three new fields on `Integration` (`runIntervalMinutes`, `lastRunAt`, `config`), one on `SubscriptionPlan`. `OrganizationDailyUsage` is unchanged.
 
 ## Phase 3 — The integration run
 
@@ -110,7 +110,7 @@ A changed page **overwrites its document in place** and re-embeds; no versioning
 **Wiring**
 
 - [`IntegrationManager.processIntegration`](gendox-core-api/src/main/java/dev/ctrlspace/gendox/gendoxcoreapi/services/integrations/IntegrationManager.java) — add a `WEB_SCRAPE_INTEGRATION` branch beside GIT / S3 / API.
-- [`IntegrationConfiguration.integrationHandler`](gendox-core-api/src/main/java/dev/ctrlspace/gendox/gendoxcoreapi/configuration/IntegrationConfiguration.java) — upload and splitter/training stay unchanged. Add a `WEB_SCRAPE_INTEGRATION` post-processing branch (the handler already branches on API and GIT types) to stamp `document_instance_id`, `content_hash`, `last_scraped_at`, `status = SCRAPED` from the `DocumentInstance` that `uploadService.uploadFile(...)` returns, and add the batch page count to the daily-usage counter.
+- [`IntegrationConfiguration.integrationHandler`](gendox-core-api/src/main/java/dev/ctrlspace/gendox/gendoxcoreapi/configuration/IntegrationConfiguration.java) — upload and splitter/training stay unchanged. Add a `WEB_SCRAPE_INTEGRATION` post-processing branch (the handler already branches on API and GIT types) to stamp `document_instance_id`, `content_hash`, `last_scraped_at`, `status = SCRAPED` from the `DocumentInstance` that `uploadService.uploadFile(...)` returns. Nothing is written to a usage counter: `last_scraped_at` is the record, and the monthly count is derived from it.
 
 Deselecting a page deletes its document via `documentService.deleteAllDocumentInstances(...)` and clears `document_instance_id` — otherwise unselecting leaves stale content in the agent's context.
 
@@ -129,14 +129,14 @@ Under `OP_EDIT_ORGANIZATION_WEB_SITES` / `OP_READ_ORGANIZATION_WEB_SITES`, match
 
 - **Select-all is server-side** — a single `UPDATE … WHERE integration_id = ? AND status <> REMOVED`. A site can hold thousands of pages; posting every id would be wrong.
 - All three `POST` actions are `@Async` + `@SchedulerLock(name = "webScrapeManualTrigger-#{#integrationId}", …)`, mirroring `IntegrationService.triggerForOrganization`, so repeated clicks cannot fan out into repeated bills. They bypass the due check but **not** entitlement or budget. A deep crawl bills per page visited, so its `crawl_page_limit` is checked against the remaining monthly budget before it starts.
-- The schedule endpoint rejects `scrape_interval_minutes < 1440` unless `@securityUtils.isSuperAdmin()` — the idiom already used on `SubscriptionPlansController`. This is the admin override.
+- The schedule endpoint rejects `run_interval_minutes < 1440` unless `@securityUtils.isSuperAdmin()` — the idiom already used on `SubscriptionPlansController`. This is the admin override.
 
 ## Phase 5 — Entitlement and budget
 
 In [`SubscriptionValidationService`](gendox-core-api/src/main/java/dev/ctrlspace/gendox/gendoxcoreapi/services/SubscriptionValidationService.java), beside `canCreateIntegrations` / `canCreateWebsite`:
 
 - `canUseWebScrape(orgId)` → `plan.getWebScrapePagesMonthlyLimit() > 0`
-- `canScrapeWebPages(orgId, pageCount)` → pages already scraped in the current billing period + `pageCount` ≤ `effectiveLimit(plan.getWebScrapePagesMonthlyLimit(), seats)`. Use `BillingWindowUtils.currentBillingPeriod(activePlan.getStartDate(), Clock.systemUTC())` for the window, as `canSendMessage` does — the period is anchored on the subscription start date, not on the calendar month. Decide whether an organization on the platform Firecrawl key gets only a share of the allowance, the way `canSendMessage` applies `gendox.features.provided-key-allowance-ratio` when the organization has no key of its own
+- `canScrapeWebPages(orgId, pageCount)` → pages already scraped in the current billing period + `pageCount` ≤ `effectiveLimit(plan.getWebScrapePagesMonthlyLimit(), seats)`. Use `BillingWindowUtils.currentBillingPeriod(activePlan.getStartDate(), Clock.systemUTC())` for the window, as `canSendMessage` does — the period is anchored on the subscription start date, not on the calendar month. **Decided 2026-09-17: no allowance ratio for now.** `canSendMessage` gives an organization on a Gendox-provided model key only `gendox.features.provided-key-allowance-ratio` of its allowance; the same argument applies to an organization with no Firecrawl connector of its own, since the platform key spends Gendox credits. It is deliberately left out: the seeded page limits are already conservative, and the check would add a connector lookup to every run. It can be added later in a few lines, with no migration, once real usage and cost are visible
 
 Both short-circuit on `gendox.features.subscription-validation`, as every other check in that class does.
 
