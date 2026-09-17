@@ -3,9 +3,6 @@ package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// TODO(chris): REVIEW - parses an undocumented format. Google documents how to REQUEST thought
-//  summaries but not how to read them; the tag shape comes from one live response. If Google
-//  changes it, reasoning silently lands in the answer bubble. Tests cover the shapes we know.
 /**
  * Splits Gemini's inline {@code <thought>...</thought>} block out of the answer text.
  * Gemini's compat layer has no reasoning field; without this the transcript renders as the answer.

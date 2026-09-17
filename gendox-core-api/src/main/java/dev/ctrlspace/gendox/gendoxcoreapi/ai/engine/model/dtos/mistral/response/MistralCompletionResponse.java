@@ -74,7 +74,6 @@ public class MistralCompletionResponse {
                 for (JsonNode chunk : node) {
                     String type = chunk.path("type").asText("");
                     if ("thinking".equals(type)) {
-                        // TODO(chris): REVIEW - docs are not explicit whether the body is under "thinking" or "text".
                         String value = chunk.hasNonNull("thinking")
                                 ? chunk.get("thinking").asText()
                                 : chunk.path("text").asText("");
