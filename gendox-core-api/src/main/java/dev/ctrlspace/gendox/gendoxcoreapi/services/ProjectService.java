@@ -17,9 +17,15 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collection;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class ProjectService {
+
+    // The project's name becomes the agent's Keycloak username, and Keycloak accepts only letters, digits and + @ . _ - there.
+    private static final Pattern UNSUPPORTED_NAME_CHARS = Pattern.compile("[^\\p{L}\\p{N}+@._\\s-]");
 
     private ProjectRepository projectRepository;
     private ProjectAgentService projectAgentService;
@@ -74,9 +80,25 @@ public class ProjectService {
         return projectRepository.findAll(ProjectPredicates.build(criteria), pageable);
     }
 
+    private void validateProjectName(String name) throws GendoxException {
+        Matcher matcher = UNSUPPORTED_NAME_CHARS.matcher(name == null ? "" : name);
+        String found = matcher.results()
+                .map(match -> match.group())
+                .distinct()
+                .collect(Collectors.joining(" "));
+
+        if (!found.isEmpty()) {
+            throw new GendoxException("INVALID_PROJECT_NAME",
+                    "Project name cannot contain " + found + ". Only letters, numbers, spaces and + @ . _ - are supported.",
+                    HttpStatus.BAD_REQUEST);
+        }
+    }
+
     public Project createProject(ProjectDTO projectDTO, String creatorUserId) throws Exception {
 
         Project project = projectConverter.toEntity(projectDTO);
+
+        validateProjectName(project.getName());
 
         // Check if the organization has reached the maximum number of projects allowed
         if (!subscriptionValidationService.canCreateProjects(project.getOrganizationId())) {
