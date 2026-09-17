@@ -23,9 +23,16 @@ public sealed interface AnthropicContentBlock {
 
     String type();
 
-    record Text(String type, String text) implements AnthropicContentBlock {
+    record Text(String type, String text,
+                @JsonProperty("cache_control") @JsonInclude(JsonInclude.Include.NON_NULL)
+                AnthropicCompletionRequest.CacheControl cacheControl) implements AnthropicContentBlock {
         public Text(String text) {
-            this("text", text);
+            this("text", text, null);
+        }
+
+        /** Closes the cacheable prefix at this block. */
+        public Text cached() {
+            return new Text(type, text, AnthropicCompletionRequest.CacheControl.ephemeral());
         }
     }
 

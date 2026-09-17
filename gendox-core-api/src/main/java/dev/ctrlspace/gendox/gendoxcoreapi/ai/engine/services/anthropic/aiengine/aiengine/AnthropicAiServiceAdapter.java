@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.AnthropicCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.AnthropicMessagesConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request.AnthropicCompletionRequest;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request.AnthropicContentBlock;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.response.AnthropicCompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
@@ -22,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -95,12 +97,14 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
         AnthropicCompletionRequest.AnthropicCompletionRequestBuilder anthropicRequestBuilder = AnthropicCompletionRequest.builder()
                 .model(aiModel.getModel())
                 .messages(mapped.messages())
-                .max_tokens(aiModelRequestParams.getMaxTokens().intValue())
-                .cacheControl(AnthropicCompletionRequest.CacheControl.builder().type("ephemeral").build());
+                .max_tokens(aiModelRequestParams.getMaxTokens().intValue());
 
         if (mapped.system() != null && !mapped.system().isEmpty()) {
-            anthropicRequestBuilder.system(mapped.system());
+            anthropicRequestBuilder.system(List.of(
+                    AnthropicCompletionRequest.SystemBlock.cached(mapped.system())));
         }
+
+        markConversationPrefix(mapped.messages());
 
         AnthropicCompletionRequest.OutputConfig.OutputConfigBuilder outputConfig =
                 AnthropicCompletionRequest.OutputConfig.builder();
@@ -175,6 +179,25 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
                 message.setReasoningMetadata(null);
             }
         }
+    }
+
+    /**
+     * Puts a cache breakpoint on the last block of the newest already-answered turn, so a growing
+     * thread re-reads its history instead of re-sending it. No-op until there is a settled turn.
+     */
+    private static void markConversationPrefix(List<AnthropicCompletionRequest.Message> messages) {
+        if (messages.size() < 2) {
+            return;
+        }
+        AnthropicCompletionRequest.Message message = messages.get(messages.size() - 2);
+        List<AnthropicContentBlock> blocks = message.getContent();
+        if (blocks == null || blocks.isEmpty() || !(blocks.getLast() instanceof AnthropicContentBlock.Text text)) {
+            return;
+        }
+        // The converter hands back immutable lists, so replace rather than mutate in place.
+        List<AnthropicContentBlock> marked = new ArrayList<>(blocks);
+        marked.set(marked.size() - 1, text.cached());
+        message.setContent(marked);
     }
 
     private static void upsertSystemPrompt(List<AiModelMessage> messages, String agentRole) {

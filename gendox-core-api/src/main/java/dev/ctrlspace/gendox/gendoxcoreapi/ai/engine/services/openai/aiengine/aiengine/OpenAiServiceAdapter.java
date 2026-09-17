@@ -300,6 +300,8 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         extractReasoning(completionResponse);
 
         // for openai, completion tokens include the reasoning tokens
+        normalizeVllmCacheHits(completionResponse.getUsage());
+
         // for gemini, the reasoning tokens are total_tokens - prompt_tokens - completion_tokens
         if (aiModel.getModel().contains("gemini")) {
             completionResponse.getUsage().setCompletionTokensDetail(new Usage.CompletionTokensDetails());
@@ -384,6 +386,16 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         } else if (aiModel.getSupportsReasoning()) {
             builder.reasoningEffort(effort);
         }
+    }
+
+    /** vLLM reports cache hits top-level; move them where every other provider puts them. */
+    private static void normalizeVllmCacheHits(Usage usage) {
+        if (usage == null || usage.getPromptCacheHitTokens() == null || usage.getPromptTokensDetail() != null) {
+            return;
+        }
+        usage.setPromptTokensDetail(Usage.PromptTokensDetail.builder()
+                .cachedTokens(usage.getPromptCacheHitTokens())
+                .build());
     }
 
     /** Agent preference first, then the model's default. */
