@@ -307,6 +307,7 @@ public class ProjectAgentService {
         existingProjectAgent.setCreatedAt(projectAgent.getCreatedAt());
         existingProjectAgent.setCreatedBy(projectAgent.getCreatedBy());
         existingProjectAgent.setMaxToken(projectAgent.getMaxToken());
+        existingProjectAgent.setReasoningEffort(projectAgent.getReasoningEffort());
         existingProjectAgent.setTemperature(projectAgent.getTemperature());
         existingProjectAgent.setTopP(projectAgent.getTopP());
         existingProjectAgent.setDocumentSplitterType(projectAgent.getDocumentSplitterType());

@@ -22,6 +22,14 @@ public class AiModelProvider {
     @Basic
     @Column(name = "description", nullable = true, length = -1)
     private String description;
+
+    /**
+     * Where inference runs: EU | US | GLOBAL. GLOBAL means no region commitment at all.
+     * Shown in the model picker, so it must stay honest. Distinct from AiModel.modelOrigin.
+     */
+    @Basic
+    @Column(name = "hosting_region")
+    private String hostingRegion;
     @Basic
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -51,6 +59,14 @@ public class AiModelProvider {
 
     public void setApiType(Type apiType) {
         this.apiType = apiType;
+    }
+
+    public String getHostingRegion() {
+        return hostingRegion;
+    }
+
+    public void setHostingRegion(String hostingRegion) {
+        this.hostingRegion = hostingRegion;
     }
 
     public String getDescription() {

@@ -206,7 +206,7 @@ public class EmbeddingService {
             })
     private EmbeddingResponse getEmbeddingForMessage(ProjectAgent agent, EmbeddingMessage embeddingMessage, AiModel aiModel) throws GendoxException {
         String apiKey = this.getApiKey(agent, "SEMANTIC_SEARCH_MODEL");
-        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
+        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getApiType().getName());
         EmbeddingResponse embeddingResponse = aiModelApiAdapterService.askEmbedding(embeddingMessage, aiModel, apiKey);
 
         Type embeddingType = typeService.getAuditLogTypeByName("EMBEDDING_RESPONSE");

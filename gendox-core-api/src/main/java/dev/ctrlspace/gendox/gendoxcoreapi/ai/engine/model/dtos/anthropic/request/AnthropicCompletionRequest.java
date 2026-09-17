@@ -27,6 +27,7 @@ public class AnthropicCompletionRequest {
     private List<Message> messages;
     @JsonProperty("output_config")
     private OutputConfig outputConfig;
+    private Thinking thinking;
     private List<ToolDefinition> tools = new ArrayList<>();
     @JsonProperty("tool_choice")
     private JsonNode toolChoice;
@@ -46,8 +47,23 @@ public class AnthropicCompletionRequest {
     @Builder(toBuilder = true)
     @AllArgsConstructor
     @NoArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class OutputConfig {
         private Format format;
+        // low | medium | high | xhigh | max. Replaces budget_tokens, which current models reject
+        private String effort;
+    }
+
+    /**
+     * {@code display} defaults to "omitted" on current models
+     */
+    @Data
+    @Builder(toBuilder = true)
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class Thinking {
+        private String type;
+        private String display;
     }
 
     @Data
@@ -65,7 +81,7 @@ public class AnthropicCompletionRequest {
     @NoArgsConstructor
     public static class Message {
         private String role;
-        private JsonNode content;
+        private List<AnthropicContentBlock> content;
     }
 
     @Data

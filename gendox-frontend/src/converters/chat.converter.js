@@ -72,7 +72,8 @@ const gendoxMessageToThreadMessage = (message) => {
     toolName: message.name,
     toolCallId: message.toolCallId,
     toolCalls: message.toolCalls,
-    attachments: message.attachments || []
+    attachments: message.attachments || [],
+    reasoningContent: message.reasoningContent || null
   };
 };
 

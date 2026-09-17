@@ -33,6 +33,7 @@ import { localStorageConstants } from 'src/utils/generalConstants'
 import { useRouter } from 'next/router'
 import { sortModels } from 'src/utils/sortModels'
 import { updateTask, fetchTasks, createTask } from 'src/store/activeTask/activeTask'
+import AiModelOption from 'src/views/custom-components/ai-model/AiModelOption'
 
 const TASK_OPTIONS = [
   {
@@ -406,51 +407,7 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
                     }}
                   />
                 )}
-                renderOption={(props, option) => (
-                  <Box
-                    {...props}
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      p: 1,
-                      borderRadius: 1,
-                      transition: 'background 0.2s ease',
-                      '&:hover': {
-                        backgroundColor: theme.palette.primary.light
-                      }
-                    }}
-                  >
-                    <Typography
-                      variant='body1'
-                      sx={{
-                        fontWeight: 600,
-                        color: theme.palette.text.primary
-                      }}
-                    >
-                      {option.name}
-                    </Typography>
-                    <Typography variant='body2' sx={{ fontStyle: 'italic', color: theme.palette.text.secondary }}>
-                      {option.aiModelProvider?.name + '   '}
-                      {option.modelTierType?.name === 'FREE_MODEL' && (
-                        <Box
-                          component='span'
-                          sx={{
-                            ml: 1,
-                            px: 1.5,
-                            py: 0.3,
-                            backgroundColor: '#e0f2f1',
-                            color: '#00695c',
-                            fontWeight: 600,
-                            fontSize: '0.75rem',
-                            borderRadius: '6px'
-                          }}
-                        >
-                          Free
-                        </Box>
-                      )}
-                    </Typography>
-                  </Box>
-                )}
+                renderOption={(props, option) => <AiModelOption props={props} option={option} />}
               />
             </FormControl>
 

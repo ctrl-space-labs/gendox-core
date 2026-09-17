@@ -34,6 +34,12 @@ public class AnthropicCompletionResponse {
         private String id;
         private String name;
         private JsonNode input;
+        /** Set on type="thinking" blocks. */
+        private String thinking;
+        /** Must be replayed verbatim on later turns, so it is stored unmodified. */
+        private String signature;
+        /** Set on type="redacted_thinking" blocks: encrypted reasoning, replayed but never shown. */
+        private String data;
     }
 
     @Data

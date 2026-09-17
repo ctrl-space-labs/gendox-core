@@ -23,6 +23,7 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         projectAgentDTO.setUpdatedBy(projectAgent.getUpdatedBy());
         projectAgentDTO.setDocumentSplitterType(projectAgent.getDocumentSplitterType());
         projectAgentDTO.setMaxToken(projectAgent.getMaxToken());
+        projectAgentDTO.setReasoningEffort(projectAgent.getReasoningEffort());
         projectAgentDTO.setTemperature(projectAgent.getTemperature());
         projectAgentDTO.setTopP(projectAgent.getTopP());
         projectAgentDTO.setModerationCheck(projectAgent.getModerationCheck());
@@ -75,6 +76,7 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         projectAgent.setUpdatedBy(projectAgentDTO.getUpdatedBy());
         projectAgent.setDocumentSplitterType(projectAgentDTO.getDocumentSplitterType());
         projectAgent.setMaxToken(projectAgentDTO.getMaxToken());
+        projectAgent.setReasoningEffort(projectAgentDTO.getReasoningEffort());
         projectAgent.setTemperature(projectAgentDTO.getTemperature());
         projectAgent.setTopP(projectAgentDTO.getTopP());
         projectAgent.setModerationCheck(projectAgentDTO.getModerationCheck());

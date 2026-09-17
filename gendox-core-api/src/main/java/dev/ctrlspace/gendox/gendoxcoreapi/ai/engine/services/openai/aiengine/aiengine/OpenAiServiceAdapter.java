@@ -12,6 +12,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.request.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.openai.response.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.InlineReasoningParser;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.utils.constants.OpenAIADA2;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.OpenAiCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.OpenAiEmbeddingResponseConverter;
@@ -282,59 +283,21 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         }
 
 
-        openAiGptRequestBuilder
-                .temperature(aiModelRequestParams.getTemperature())
-                .topP(aiModelRequestParams.getTopP())
-                .maxTokens(aiModelRequestParams.getMaxTokens());
+        String providerName = aiModel.getAiModelProvider().getName();
 
-        // Special case for preview search models
-        if (aiModel.getModel().toLowerCase().contains("search-preview")) {
-            // Only model and messages are set, no temperature, top_p, max_tokens
-            logger.info("Detected Preview Search Model: Only setting model and messages for {}", aiModel.getModel());
-            openAiGptRequestBuilder
-                    .temperature(null)
-                    .topP(null)
-                    .maxTokens(null)
-                    .maxCompletionTokens(null);
-        }
-        // Special case for o1, o3, o4 models, temprature to 1
-        if (List.of("o1", "o3", "o4", "gpt-5-", "gpt-5.1", "gpt-5.4").stream()
-                .anyMatch(aiModel.getModel()::contains)) {
-            openAiGptRequestBuilder
-                    .temperature(1.0)
-                    .topP(1.0);
-            // Make first message "user"
-            messages.getFirst().setRole("developer");
-        }
+        // Driven by ai_models columns, not by matching substrings of the model name.
+        applySamplingParams(openAiGptRequestBuilder, aiModel, aiModelRequestParams);
+        applySystemRole(messages, aiModel);
+        applyReasoning(openAiGptRequestBuilder, aiModel, aiModelRequestParams, providerName);
 
-        // thinking models, increate max tokens and set reasoning effort
-        if (List.of("o1", "o3", "o4", "gpt-5-", "gpt-5.1", "gpt-5.4", "gemini-2.5", "gemini-3").stream()
-                .anyMatch(aiModel.getModel()::contains)) {
-            openAiGptRequestBuilder
-                    .reasoningEffort(computeReasoningEffort(aiModelRequestParams.getMaxTokens(), aiModel.getModel()))
-                    .maxCompletionTokens(2 * aiModelRequestParams.getMaxTokens())
-                    .maxTokens(null);
-
-            // Make first message "user"
-            messages.getFirst().setRole("developer");
-        }
-
-        // Vertex AI strongly suggest to not set reasoning effort, and to set thinking budget to 0
-        if ("VERTEX_AI".equals(aiModel.getAiModelProvider().getName())) {
-            openAiGptRequestBuilder
-                    .reasoningEffort(null)
-                    .extraBody(OpenAiExtraBody.builder()
-                            .google(GoogleExtraBody.builder()
-                                    .thinkingConfig(GoogleThinkingConfig.builder()
-                                            .thinkingBudget(0)
-                                            .build())
-                                    .build())
-                            .build());
-        }
+        // Drop tokens this provider cannot verify, or the API rejects the request.
+        restoreReasoning(messages, aiModel);
 
         OpenAiCompletionRequest openAiCompletionRequest = openAiGptRequestBuilder.build();
         OpenAiCompletionResponse openAiCompletionResponse = this.getCompletionResponse(openAiCompletionRequest, aiModel, apiKey);
         CompletionResponse completionResponse = openAiCompletionResponseConverter.toCompletionResponse(openAiCompletionResponse);
+
+        extractReasoning(completionResponse);
 
         // for openai, completion tokens include the reasoning tokens
         // for gemini, the reasoning tokens are total_tokens - prompt_tokens - completion_tokens
@@ -374,29 +337,134 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
         }
     }
 
-    // TODO Change this. The reasoning budget should be stored as an extra property n the Agent
-    private static String computeReasoningEffort(Long maxTokens, String modelName) {
-        long tokens = maxTokens == null ? 0L : maxTokens;
-        String name = modelName == null ? "" : modelName.toLowerCase(Locale.ROOT);
+    /** These configure thinking via Google's extra_body instead of reasoning_effort. */
+    private static final Set<String> GOOGLE_PROVIDERS = Set.of("GEMINI", "VERTEX_AI");
 
-        boolean isGpt51       = name.startsWith("gpt-5.1");
-        boolean isGpt54       = name.startsWith("gpt-5.4");
-        boolean isGpt5        = name.startsWith("gpt-5") && !isGpt51 && !isGpt54;
-        boolean isGemini25Pro = name.contains("gemini-2.5-pro");
-        boolean isGemini3Pro = name.startsWith("gemini-3-pro") || name.startsWith("gemini-3.1-pro");
-        boolean isGemini3Flash = name.startsWith("gemini-3-flash");
-        boolean isGemini31FlashLite = name.startsWith("gemini-3.1-flash-lite");
+    private static void applySamplingParams(OpenAiCompletionRequest.OpenAiCompletionRequestBuilder builder,
+                                            AiModel aiModel,
+                                            AiModelRequestParams params) {
+        // search-preview rejects sampling params; NON_EMPTY then drops them from the body.
+        if (aiModel.getSupportsSamplingParams()) {
+            builder.temperature(params.getTemperature())
+                    .topP(params.getTopP());
+        }
 
-        if (tokens >= 32_768L) return "high";
-        if (tokens >= 8_192L && isGemini3Pro)  return "high";
-        if (tokens >= 8_192L)  return "medium";
-        if (tokens >= 1_024L)  return "low";
+        Long maxTokens = params.getMaxTokens();
+        if (aiModel.getSupportsReasoning()) {
+            // Reasoning bills as completion tokens, so the budget must cover both.
+            builder.maxCompletionTokens(maxTokens == null ? null : 2 * maxTokens);
+        } else {
+            builder.maxTokens(maxTokens);
+        }
+    }
 
-        if (isGpt5 || isGemini3Flash || isGemini31FlashLite) return "minimal"; // GPT-5 min is "minimal"
-        if (isGemini25Pro || isGemini3Pro) return "low";     // Gemini 2.5 Pro: no "none", min "low"
+    private static void applySystemRole(List<AiModelMessage> messages, AiModel aiModel) {
+        String roleName = aiModel.getSystemRoleName();
+        if ("system".equals(roleName) || messages.isEmpty()) {
+            return;
+        }
+        AiModelMessage first = messages.getFirst();
+        if ("system".equals(first.getRole()) || "developer".equals(first.getRole())) {
+            first.setRole(roleName);
+        }
+    }
 
-        // GPT-5.1, GPT-5.4 flagship, and others (that support it) can get "none"
-        return "none";
+    private void applyReasoning(OpenAiCompletionRequest.OpenAiCompletionRequestBuilder builder,
+                                AiModel aiModel,
+                                AiModelRequestParams params,
+                                String providerName) {
+        boolean isGoogle = GOOGLE_PROVIDERS.contains(providerName);
+
+        if (!aiModel.getSupportsReasoning()) {
+            // Google must be told explicitly not to think.
+            if (isGoogle) {
+                builder.extraBody(googleThinking(null, false));
+            }
+            return;
+        }
+
+        String effort = resolveEffort(aiModel, params);
+
+        if (isGoogle) {
+            // Google rejects reasoning_effort alongside its own thinking params.
+            builder.extraBody(googleThinking(toThinkingLevel(effort), true));
+        } else {
+            builder.reasoningEffort(effort);
+        }
+    }
+
+    /** Agent preference first, then the model's default. */
+    private String resolveEffort(AiModel aiModel, AiModelRequestParams params) {
+        return params.getReasoningEffort() != null
+                ? params.getReasoningEffort()
+                : aiModel.getDefaultReasoningEffort();
+    }
+
+    /** Gemini exposes low/medium/high (1K/8K/24K budgets) and cannot be turned off on 2.5 Pro / 3+. */
+    private static String toThinkingLevel(String effort) {
+        if (effort == null) {
+            return "low";
+        }
+        return switch (effort) {
+            case "high" -> "high";
+            case "medium" -> "medium";
+            default -> "low";
+        };
+    }
+
+    private static OpenAiExtraBody googleThinking(String thinkingLevel, boolean includeThoughts) {
+        return OpenAiExtraBody.builder()
+                .google(GoogleExtraBody.builder()
+                        .thinkingConfig(GoogleThinkingConfig.builder()
+                                .thinkingLevel(thinkingLevel)
+                                .thinkingBudget(includeThoughts ? null : 0)
+                                .includeThoughts(includeThoughts ? Boolean.TRUE : null)
+                                .build())
+                        .build())
+                .build();
+    }
+
+    /** Normalizes whatever reasoning shape this provider used. */
+    private void extractReasoning(CompletionResponse completionResponse) {
+        if (completionResponse.getChoices() == null) {
+            return;
+        }
+
+        for (Choice choice : completionResponse.getChoices()) {
+            AiModelMessage message = choice.getMessage();
+            if (message == null) {
+                continue;
+            }
+
+            // Google inlines the summary in the content; left there it renders as the answer.
+            InlineReasoningParser.Split split = InlineReasoningParser.split(message.getContent());
+            if (split.reasoning() != null) {
+                message.setReasoningContent(split.reasoning());
+                message.setContent(split.content());
+            }
+
+            // Google's thought_signature. Stored whole and opaque.
+            if (message.getExtraContent() != null && !message.getExtraContent().isNull()) {
+                message.setReasoningMetadata(message.getExtraContent());
+            }
+        }
+    }
+
+    /**
+     * Re-expands stored reasoning before replay. Another model's token is dropped
+     * (replaying it is a hard error); the summary always survives, so the UI stays intact.
+     */
+    private void restoreReasoning(List<AiModelMessage> messages, AiModel aiModel) {
+        if (messages == null) {
+            return;
+        }
+
+        for (AiModelMessage message : messages) {
+            boolean replayable = message.getReasoningMetadata() != null
+                    && aiModel.getId().equals(message.getAiModelId());
+
+            message.setExtraContent(replayable ? message.getReasoningMetadata() : null);
+        }
     }
 
 

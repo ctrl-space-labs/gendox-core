@@ -46,7 +46,7 @@ public class RerankService {
     }
 
     public RerankResponse rerankList(List<String> documents, String query, AiModel aiModel, String apiKey) throws GendoxException {
-        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
+        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getApiType().getName());
         return aiModelApiAdapterService.askRerank(documents, query, aiModel, apiKey);
 
     }

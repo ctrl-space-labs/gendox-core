@@ -137,7 +137,7 @@ public class TrainingService {
 
     public ModerationResponse getModeration(String message, String apiKey, AiModel aiModel) throws GendoxException {
 
-        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
+        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getApiType().getName());
         ModerationResponse moderationResponse = aiModelApiAdapterService.askModeration(message, apiKey, aiModel);
         return moderationResponse;
     }

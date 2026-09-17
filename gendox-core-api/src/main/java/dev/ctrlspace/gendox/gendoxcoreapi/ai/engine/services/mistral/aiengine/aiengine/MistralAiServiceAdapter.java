@@ -125,12 +125,22 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
                 .map(m -> MistralCompletionRequest.MistralMessage.builder()
                         .role(m.getRole())
                         .content(m.getContent())
+                        .thinking(aiModel.getId().equals(m.getAiModelId()) ? m.getReasoningContent() : null)
                         .build())
                 .toList();
 
         MistralCompletionRequest.MistralCompletionRequestBuilder completionRequestBuilder = MistralCompletionRequest.builder()
                 .model(aiModel.getModel())
                 .messages(mistralMessages);
+
+        if (aiModel.getSupportsReasoning()) {
+            String effort = aiModelRequestParams.getReasoningEffort() != null
+                    ? aiModelRequestParams.getReasoningEffort()
+                    : aiModel.getDefaultReasoningEffort();
+            if (effort != null) {
+                completionRequestBuilder.reasoning_effort(effort);
+            }
+        }
 
         MistralCompletionRequest completionRequest = completionRequestBuilder.build();
         MistralCompletionResponse mistralCompletionResponse = this.getCompletionResponse(completionRequest, aiModel, apiKey);

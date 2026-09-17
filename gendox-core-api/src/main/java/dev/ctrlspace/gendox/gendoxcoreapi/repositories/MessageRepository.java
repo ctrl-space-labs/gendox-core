@@ -57,6 +57,9 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
                         name,
                         tool_call_id,
                         tool_calls,
+                        reasoning_content,
+                        reasoning_metadata,
+                        ai_model_id,
                         ROW_NUMBER() OVER (PARTITION BY thread_id ORDER BY created_at DESC) AS row_number
                     FROM gendox_core.message
                     WHERE thread_id IN :threadIds
@@ -72,7 +75,10 @@ public interface MessageRepository extends JpaRepository<Message, UUID>, Queryds
                         role,
                         name,
                         tool_call_id,
-                        tool_calls
+                        tool_calls,
+                        reasoning_content,
+                        reasoning_metadata,
+                        ai_model_id
                 FROM ranked_messages
                 WHERE row_number = 1
             """, nativeQuery = true)

@@ -73,9 +73,30 @@ public class MockGeminiServiceAdapter implements AiModelApiAdapterService {
                         .message(AiModelMessage.builder()
                                 .role("assistant")
                                 .content(mockContent)
+                                // Lets the whole reasoning path be exercised without a real API call.
+                                .reasoningContent(generateMockReasoning(messages))
                                 .build())
                         .build()))
                 .build();
+    }
+
+    private String generateMockReasoning(List<AiModelMessage> messages) {
+        String lastUserMessage = messages.stream()
+                .filter(m -> "user".equals(m.getRole()))
+                .map(AiModelMessage::getContent)
+                .filter(c -> c != null && !c.isBlank())
+                .reduce((first, second) -> second)
+                .orElse("the request");
+
+        return "**Mock reasoning**\n\nLooking at the question, I need to work out what is being asked.\n\n"
+                + "The user said: \"" + abbreviate(lastUserMessage) + "\"\n\n"
+                + "There are " + messages.size() + " message(s) of context. "
+                + "This is a mock model, so no real reasoning happened - this text exists to verify "
+                + "that reasoning is captured, persisted and rendered separately from the answer.";
+    }
+
+    private static String abbreviate(String text) {
+        return text.length() <= 120 ? text : text.substring(0, 120) + "...";
     }
 
     @Override

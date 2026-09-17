@@ -24,6 +24,7 @@ public class CompletionRuntimeOverridesDTO {
     private Long maxTokens;
     private Double temperature;
     private Double topP;
+    private String reasoningEffort;
     private String completionApiKey;
 
     private UUID projectId;

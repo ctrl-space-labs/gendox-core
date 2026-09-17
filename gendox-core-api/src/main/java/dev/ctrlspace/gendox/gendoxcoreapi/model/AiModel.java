@@ -60,9 +60,37 @@ public class AiModel {
     @JoinColumn(name = "ai_model_provider_id", referencedColumnName = "id", nullable = false)
     private AiModelProvider aiModelProvider;
 
+    @ManyToOne
+    @JoinColumn(name = "api_type_id", referencedColumnName = "id", nullable = false)
+    private Type apiType;
+
     @Basic
     @Column(name = "is_active")
     private Boolean isActive;
+
+    @Basic
+    @Column(name = "supports_reasoning")
+    private Boolean supportsReasoning;
+
+    // none | minimal | low | medium | high
+    @Basic
+    @Column(name = "default_reasoning_effort")
+    private String defaultReasoningEffort;
+
+    // "system" | "developer"
+    @Basic
+    @Column(name = "system_role_name")
+    private String systemRoleName;
+
+    // False where the endpoint rejects temperature/top_p outright.
+    @Basic
+    @Column(name = "supports_sampling_params")
+    private Boolean supportsSamplingParams;
+
+    // Jurisdiction the model was trained in. Distinct from where it is hosted.
+    @Basic
+    @Column(name = "model_origin")
+    private String modelOrigin;
 
 
     public UUID getId() {
@@ -155,6 +183,14 @@ public class AiModel {
         this.organizationId = organizationId;
     }
 
+    public Type getApiType() {
+        return apiType;
+    }
+
+    public void setApiType(Type apiType) {
+        this.apiType = apiType;
+    }
+
     public AiModelProvider getAiModelProvider() {
         return aiModelProvider;
     }
@@ -166,6 +202,46 @@ public class AiModel {
     public Boolean getIsActive() {return isActive;}
 
     public void setIsActive(Boolean active) {isActive = active;}
+
+    public Boolean getSupportsReasoning() {
+        return supportsReasoning != null && supportsReasoning;
+    }
+
+    public void setSupportsReasoning(Boolean supportsReasoning) {
+        this.supportsReasoning = supportsReasoning;
+    }
+
+    public String getDefaultReasoningEffort() {
+        return defaultReasoningEffort;
+    }
+
+    public void setDefaultReasoningEffort(String defaultReasoningEffort) {
+        this.defaultReasoningEffort = defaultReasoningEffort;
+    }
+
+    public String getSystemRoleName() {
+        return systemRoleName == null ? "system" : systemRoleName;
+    }
+
+    public void setSystemRoleName(String systemRoleName) {
+        this.systemRoleName = systemRoleName;
+    }
+
+    public Boolean getSupportsSamplingParams() {
+        return supportsSamplingParams == null || supportsSamplingParams;
+    }
+
+    public void setSupportsSamplingParams(Boolean supportsSamplingParams) {
+        this.supportsSamplingParams = supportsSamplingParams;
+    }
+
+    public String getModelOrigin() {
+        return modelOrigin;
+    }
+
+    public void setModelOrigin(String modelOrigin) {
+        this.modelOrigin = modelOrigin;
+    }
 
     @Override
     public boolean equals(Object o) {
