@@ -14,6 +14,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Implementation plans and audits live in `.ai/`, one file per topic, named `<topic>-<YYYY-MM-DD>.md`. Read the relevant plan before starting work on a ticket it covers — the plan holds the design decisions and grounding, while the GitHub issue deliberately carries only Goal / Scope / Notes / Relationships.
 
+When implementation changes a plan substantially, leave the original file exactly as written and continue in a new file dated the day of the revision. The design as first agreed stays readable next to what it became; **Pending plans** below always links the current file.
+
 **`.ai/` is committed to a PUBLIC repository.** Before writing or editing anything there:
 
 - No secrets, tokens, or API keys — env var *names* are fine, values never.
@@ -24,7 +26,7 @@ Implementation plans and audits live in `.ai/`, one file per topic, named `<topi
 
 ### Pending plans
 
-- [Web Scraping Integration (Firecrawl) — #526](.ai/issue-526-web-scraping-integration-2026-09-10.md) — not started.
+- [Web Scraping Integration (Firecrawl) — #526](.ai/issue-526-web-scraping-integration-2026-09-17.md) — in progress; 526.1 and 526.2 implemented. Supersedes the [original 2026-09-10 plan](.ai/issue-526-web-scraping-integration-2026-09-10.md), kept unchanged as first written.
 
 ## Common Development Commands
 
