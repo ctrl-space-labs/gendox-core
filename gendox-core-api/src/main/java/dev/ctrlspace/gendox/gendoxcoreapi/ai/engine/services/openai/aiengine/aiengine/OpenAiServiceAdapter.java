@@ -374,21 +374,14 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                                 AiModelRequestParams params,
                                 String providerName) {
         boolean isGoogle = GOOGLE_PROVIDERS.contains(providerName);
-
-        if (!aiModel.getSupportsReasoning()) {
-            // Google must be told explicitly not to think.
-            if (isGoogle) {
-                builder.extraBody(googleThinking(null, false));
-            }
-            return;
-        }
-
-        String effort = resolveEffort(aiModel, params);
+        String effort = aiModel.getSupportsReasoning() ? resolveEffort(aiModel, params) : "none";
 
         if (isGoogle) {
-            // Google rejects reasoning_effort alongside its own thinking params.
-            builder.extraBody(googleThinking(toThinkingLevel(effort), true));
-        } else {
+            // Google rejects reasoning_effort alongside its own thinking params, and must
+            // be told explicitly not to think - omitting the config is not the same thing.
+            String level = toThinkingLevel(effort);
+            builder.extraBody(googleThinking(level, level != null));
+        } else if (aiModel.getSupportsReasoning()) {
             builder.reasoningEffort(effort);
         }
     }
@@ -400,14 +393,15 @@ public class OpenAiServiceAdapter implements AiModelApiAdapterService {
                 : aiModel.getDefaultReasoningEffort();
     }
 
-    /** Gemini exposes low/medium/high (1K/8K/24K budgets) and cannot be turned off on 2.5 Pro / 3+. */
+    /**
+     * Gemini exposes low/medium/high (1K/8K/24K budgets); null means budget 0, i.e. do not
+     * think. 2.5 Pro and 3+ Pro cannot be turned off, so those rows default to "medium".
+     */
     private static String toThinkingLevel(String effort) {
-        if (effort == null) {
-            return "low";
-        }
-        return switch (effort) {
+        return switch (effort == null ? "none" : effort) {
             case "high" -> "high";
             case "medium" -> "medium";
+            case "none", "minimal" -> null;
             default -> "low";
         };
     }
