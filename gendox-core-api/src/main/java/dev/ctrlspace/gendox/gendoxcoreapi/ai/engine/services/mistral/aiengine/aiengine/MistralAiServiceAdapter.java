@@ -109,7 +109,7 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
                 apiKey);
 
         EmbeddingResponse embeddingResponse = mistralEmbeddingResponseConverter.mistraltoEmbeddingResponse(mistralEmbedResponse);
-        logger.info("Embedding Response: {}", embeddingResponse);
+        logger.trace("Embedding Response: {}", embeddingResponse);
         return embeddingResponse;
 
 
@@ -144,9 +144,9 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
 
         MistralCompletionRequest completionRequest = completionRequestBuilder.build();
         MistralCompletionResponse mistralCompletionResponse = this.getCompletionResponse(completionRequest, aiModel, apiKey);
-        logger.info("Completion Response: {}", mistralCompletionResponse);
+        logger.trace("Completion Response: {}", mistralCompletionResponse);
         CompletionResponse completionResponse = mistralCompletionResponseConverter.toCompletionResponse(mistralCompletionResponse);
-        logger.info("Completion Response: {}", completionResponse);
+        logger.trace("Completion Response: {}", completionResponse);
 
         return completionResponse;
     }

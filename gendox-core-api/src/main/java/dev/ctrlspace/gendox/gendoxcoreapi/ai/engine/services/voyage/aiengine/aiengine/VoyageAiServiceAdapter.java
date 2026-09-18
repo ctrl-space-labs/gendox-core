@@ -92,7 +92,7 @@ public class VoyageAiServiceAdapter implements AiModelApiAdapterService {
                 apiKey);
 
         EmbeddingResponse embeddingResponse = voyageEmbeddingResponseConverter.voyagetoEmbeddingResponse(voyageEmbedResponse);
-        logger.info("Embedding Response: {}", embeddingResponse);
+        logger.trace("Embedding Response: {}", embeddingResponse);
         return embeddingResponse;
 
     }
