@@ -100,7 +100,7 @@ public class SecurityUtils {
         } else {
             // isSuperAdmin() is also used as a plain boolean check (e.g. JobController), so a
             // negative result is the normal path for every regular user, not an access attempt.
-            logger.debug("Super-admin check denied: principal={}, ip={}, method={}, uri={}, query={}, userAgent={}",
+            logger.trace("Super-admin check denied: principal={}, ip={}, method={}, uri={}, query={}, userAgent={}",
                     describePrincipal(principal), ip, method, uri, query, userAgent);
         }
     }
