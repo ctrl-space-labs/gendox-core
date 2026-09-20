@@ -59,7 +59,7 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
 
     public MistralEmbedResponse getEmbeddingResponse(MistralEmbedRequest embeddingRequestHttpEntity, AiModel aiModel, String apiKey) {
         String embeddingsApiUrl = aiModel.getUrl();
-        logger.debug("Sending Embedding Request to '{}': {}", embeddingsApiUrl, embeddingRequestHttpEntity);
+        logger.trace("Sending Embedding Request to '{}': {}", embeddingsApiUrl, embeddingRequestHttpEntity);
         logger.info("AiModel for Embedding-->: {}", aiModel.getModel());
         ResponseEntity<MistralEmbedResponse> responseEntity = restTemplate.postForEntity(
                 embeddingsApiUrl,

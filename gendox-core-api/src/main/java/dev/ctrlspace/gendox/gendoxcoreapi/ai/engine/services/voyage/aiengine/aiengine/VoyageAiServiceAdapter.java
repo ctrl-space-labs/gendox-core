@@ -53,7 +53,7 @@ public class VoyageAiServiceAdapter implements AiModelApiAdapterService {
 
     public VoyageEmbedResponse getEmbeddingResponse(VoyageEmbedRequest embeddingRequestHttpEntity, AiModel aiModel, String apiKey) {
         String embeddingsApiUrl = aiModel.getUrl();
-        logger.debug("Sending Embedding Request to '{}': {}", embeddingsApiUrl, embeddingRequestHttpEntity);
+        logger.trace("Sending Embedding Request to '{}': {}", embeddingsApiUrl, embeddingRequestHttpEntity);
         logger.info("AiModel for Embeddings-->: {}", aiModel.getModel());
         ResponseEntity<VoyageEmbedResponse> response = restTemplate.postForEntity(
                 embeddingsApiUrl,

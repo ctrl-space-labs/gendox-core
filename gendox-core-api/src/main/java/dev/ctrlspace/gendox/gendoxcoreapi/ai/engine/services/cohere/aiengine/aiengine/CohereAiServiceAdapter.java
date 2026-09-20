@@ -64,7 +64,7 @@ public class CohereAiServiceAdapter implements AiModelApiAdapterService {
 
     public CohereEmbedResponse getEmbeddingResponse(CohereEmbedRequest embeddingRequestHttpEntity, AiModel aiModel, String apiKey) {
         String embeddingsApiUrl = aiModel.getUrl();
-        logger.debug("Sending Embedding Request to '{}': {}", embeddingsApiUrl, embeddingRequestHttpEntity);
+        logger.trace("Sending Embedding Request to '{}': {}", embeddingsApiUrl, embeddingRequestHttpEntity);
         logger.info("AiModel for embeddings-->: {}", aiModel.getModel());
         ResponseEntity<CohereEmbedResponse> responseEntity = restTemplate.postForEntity(
                 embeddingsApiUrl,
