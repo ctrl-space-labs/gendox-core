@@ -183,6 +183,7 @@ public class OpenAiResponsesServiceAdapter implements AiModelApiAdapterService {
                         .type("json_schema")
                         .name(name)
                         .schema(schemaNode)
+                        .strict(false)
                         .build())
                 .build();
     }

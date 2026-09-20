@@ -95,5 +95,13 @@ public class OpenAiResponsesRequest {
         private String type;
         private String name;
         private JsonNode schema;
+
+        /**
+         * Responses defaults this to true, unlike Chat Completions, and strict mode demands
+         * {@code additionalProperties: false} plus an exhaustive {@code required} on every
+         * nested object. Schemas reach us from a generator and from user-defined structures,
+         * so we send it explicitly rather than inheriting the stricter default.
+         */
+        private Boolean strict;
     }
 }
