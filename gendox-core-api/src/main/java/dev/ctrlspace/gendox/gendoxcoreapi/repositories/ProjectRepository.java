@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -27,6 +28,10 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, Queryds
 
     @EntityGraph(attributePaths = {"projectAgent"})
     Page<Project> findAll(Predicate predicate, Pageable pageable);
+
+    // aiTools fetched eagerly: the project is used by completions on async threads, outside the loading session
+    @EntityGraph(attributePaths = {"projectAgent", "projectAgent.aiTools"}, type = EntityGraph.EntityGraphType.LOAD)
+    Optional<Project> findById(UUID id);
 
     @Query(value = "SELECT COUNT(*) FROM gendox_core.projects WHERE organization_id = :organizationId AND is_active = TRUE", nativeQuery = true)
     long countActiveProjectsByOrganizationId(@Param("organizationId") UUID organizationId);

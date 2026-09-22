@@ -27,5 +27,9 @@ public class CompletionResponse {
     private String prompt;
     private int k;
 
+    /** Unused today; lets #519 streaming and #518 suspend/resume reuse this DTO for half a turn. */
+    @Builder.Default
+    private boolean partial = false;
+
 
 }

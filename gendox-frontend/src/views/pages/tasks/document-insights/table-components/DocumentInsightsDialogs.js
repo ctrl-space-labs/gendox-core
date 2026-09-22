@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useDispatch } from 'react-redux'
-import { deleteTaskNode, createTaskNode } from 'src/store/activeTaskNode/activeTaskNode'
+import { deleteTaskNode, createTaskNodesBatch } from 'src/store/activeTaskNode/activeTaskNode'
+import { chunk, runWithConcurrency, fetchAllPages } from 'src/utils/tasks/taskUtils'
+import taskService from 'src/gendox-sdk/taskService'
+import { getErrorMessage } from 'src/utils/errorHandler'
 import { toast } from 'react-hot-toast'
 import DeleteConfirmDialog from 'src/utils/dialogs/DeleteConfirmDialog'
 import AddNewDocumentDialog from 'src/views/pages/tasks/helping-components/AddNewDocumentDialog'
@@ -8,6 +11,9 @@ import AnswerDialog from 'src/views/pages/tasks/document-insights/table-dialogs/
 import QuestionsDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsQuestionsDialog'
 import DocumentPagePreviewDialog from '../table-dialogs/DocumentInsightsDocumentPagePreviewDialog'
 import SummaryDialog from 'src/views/pages/tasks/document-insights/table-dialogs/DocumentInsightsSummaryDialog'
+
+const TASK_NODE_CONCURRENCY = 4 // no batch endpoint for deletes, so keep requests in flight
+const ADD_BATCH_SIZE = 20
 
 const DocumentInsightsDialogs = ({
   dialogs,
@@ -28,27 +34,67 @@ const DocumentInsightsDialogs = ({
 }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
+  // The `documents` prop is only the main table's current page, so the picker needs
+  // every DOCUMENT node of the task to know what is already in it and what to remove.
+  const [taskDocumentNodes, setTaskDocumentNodes] = useState([])
+  const [isLoadingTaskDocuments, setIsLoadingTaskDocuments] = useState(false)
 
-  // ADD NEW documents
-  const handleAddNewDocuments = async selectedDocIds => {
+  useEffect(() => {
+    if (!dialogs.newDoc || !organizationId || !projectId || !taskId) return
+
+    const loadAllTaskDocumentNodes = async () => {
+      setIsLoadingTaskDocuments(true)
+      try {
+        const nodes = await fetchAllPages((page, size) =>
+          taskService
+            .getTaskNodesByCriteria(
+              organizationId,
+              projectId,
+              taskId,
+              { taskId, nodeTypeNames: ['DOCUMENT'] },
+              token,
+              page,
+              size
+            )
+            .then(response => response.data)
+        )
+        setTaskDocumentNodes(nodes)
+      } catch (error) {
+        toast.error(`Failed to load the task's documents. Error: ${getErrorMessage(error)}`)
+      } finally {
+        setIsLoadingTaskDocuments(false)
+      }
+    }
+
+    loadAllTaskDocumentNodes()
+  }, [dialogs.newDoc, organizationId, projectId, taskId, token])
+
+  const taskDocumentIds = useMemo(() => taskDocumentNodes.map(node => node.documentId), [taskDocumentNodes])
+
+  // ADD NEW documents, in batches of ADD_BATCH_SIZE, TASK_NODE_CONCURRENCY batches at a time
+  const handleAddNewDocuments = async (selectedDocIds, onProgress) => {
     setLoading(true)
     try {
-      for (const docId of selectedDocIds) {
-        const payload = {
-          taskId,
-          nodeType: 'DOCUMENT',
-          documentId: docId
-        }
+      const payloads = selectedDocIds.map(docId => ({
+        taskId,
+        nodeType: 'DOCUMENT',
+        documentId: docId
+      }))
 
-        await dispatch(
-          createTaskNode({
-            organizationId,
-            projectId,
-            taskNodePayload: payload,
-            token
-          })
-        ).unwrap()
-      }
+      await runWithConcurrency(
+        chunk(payloads, ADD_BATCH_SIZE),
+        TASK_NODE_CONCURRENCY,
+        batch =>
+          dispatch(
+            createTaskNodesBatch({
+              organizationId,
+              projectId,
+              taskNodesPayload: batch,
+              token
+            })
+          ).unwrap(),
+        { onProgress, weight: batch => batch.length }
+      )
 
       reloadAll()
       onClose('newDoc')
@@ -57,6 +103,19 @@ const DocumentInsightsDialogs = ({
     } finally {
       setLoading(false)
     }
+  }
+
+  // REMOVE documents straight from the picker (also deletes their answers)
+  const handleRemoveDocuments = async (removedDocIds, onProgress) => {
+    const removedIds = new Set(removedDocIds)
+    const nodeIds = taskDocumentNodes.filter(node => removedIds.has(node.documentId)).map(node => node.id)
+
+    await runWithConcurrency(
+      nodeIds,
+      TASK_NODE_CONCURRENCY,
+      nodeId => dispatch(deleteTaskNode({ organizationId, projectId, taskNodeId: nodeId, token })).unwrap(),
+      { onProgress }
+    )
   }
 
   // DELETE handler for DeleteConfirmDialog
@@ -80,9 +139,10 @@ const DocumentInsightsDialogs = ({
       <AddNewDocumentDialog
         open={dialogs.newDoc}
         onClose={() => onClose('newDoc')}
-        existingDocumentIds={documents.map(d => d.documentId)}
-        loading={loading}
+        existingDocumentIds={taskDocumentIds}
+        loading={loading || isLoadingTaskDocuments}
         onConfirm={handleAddNewDocuments}
+        onRemove={handleRemoveDocuments}
         organizationId={organizationId}
         projectId={projectId}
         token={token}

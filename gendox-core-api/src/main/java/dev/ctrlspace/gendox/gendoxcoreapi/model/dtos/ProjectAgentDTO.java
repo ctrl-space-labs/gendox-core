@@ -34,6 +34,7 @@ public class ProjectAgentDTO {
     private Type documentSplitterType;
     private UUID sectionTemplateId;
     private Long maxToken;
+    private String reasoningEffort;
     private Double temperature;
     private Double topP;
     private Boolean moderationCheck;

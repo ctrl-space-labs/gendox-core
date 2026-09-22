@@ -20,13 +20,11 @@ public class AnthropicCompletionRequest {
 
     private String model;
     private Integer max_tokens;
-    /** Top-level automatic prompt caching (default 5-minute ephemeral TTL per Anthropic). */
-    @JsonProperty("cache_control")
-    private CacheControl cacheControl;
-    private String system;
+    private List<SystemBlock> system;
     private List<Message> messages;
     @JsonProperty("output_config")
     private OutputConfig outputConfig;
+    private Thinking thinking;
     private List<ToolDefinition> tools = new ArrayList<>();
     @JsonProperty("tool_choice")
     private JsonNode toolChoice;
@@ -40,14 +38,50 @@ public class AnthropicCompletionRequest {
     @NoArgsConstructor
     public static class CacheControl {
         private String type;
+
+        public static CacheControl ephemeral() {
+            return CacheControl.builder().type("ephemeral").build();
+        }
+    }
+
+    /** A system-prompt content block. Carrying cache_control here caches the stable prefix. */
+    @Data
+    @Builder(toBuilder = true)
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class SystemBlock {
+        private String type;
+        private String text;
+        @JsonProperty("cache_control")
+        private CacheControl cacheControl;
+
+        public static SystemBlock cached(String text) {
+            return SystemBlock.builder().type("text").text(text).cacheControl(CacheControl.ephemeral()).build();
+        }
     }
 
     @Data
     @Builder(toBuilder = true)
     @AllArgsConstructor
     @NoArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class OutputConfig {
         private Format format;
+        // low | medium | high | xhigh | max. Replaces budget_tokens, which current models reject
+        private String effort;
+    }
+
+    /**
+     * {@code display} defaults to "omitted" on current models
+     */
+    @Data
+    @Builder(toBuilder = true)
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class Thinking {
+        private String type;
+        private String display;
     }
 
     @Data
@@ -65,7 +99,7 @@ public class AnthropicCompletionRequest {
     @NoArgsConstructor
     public static class Message {
         private String role;
-        private JsonNode content;
+        private List<AnthropicContentBlock> content;
     }
 
     @Data

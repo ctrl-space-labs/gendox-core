@@ -111,7 +111,7 @@ public class CompletionService {
                                                         @Nullable ObjectNode responseJsonSchema) throws GendoxException {
 
         //choose the correct aiModel adapter
-        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getAiModelProvider().getApiType().getName());
+        AiModelApiAdapterService aiModelApiAdapterService = aiModelUtils.getAiModelApiAdapterImpl(aiModel.getApiType().getName());
         CompletionResponse completionResponse = aiModelApiAdapterService.askCompletion(aiModelMessages, agentRole, aiModel, aiModelRequestParams, apiKey, tools, toolChoice, responseJsonSchema);
         return completionResponse;
     }
@@ -291,6 +291,7 @@ public class CompletionService {
             saveCompletionAuditLogs(completionResponse, runtimeContext, completionRequestType, completionResponseType);
 
             Message completionResponseMessage = messageAiMessageConverter.toEntity(completionResponse.getChoices().get(0).getMessage());
+            completionResponseMessage.setAiModelId(runtimeContext.completionModel().getId());
             completionResponseMessage.setProjectId(runtimeContext.projectId());
             completionResponseMessage.setThreadId(message.getThreadId());
             completionResponseMessage.setCreatedBy(runtimeContext.createdByAgentUserId());
@@ -381,6 +382,7 @@ public class CompletionService {
                 .maxTokens(maxTokens)
                 .temperature(temperature)
                 .topP(topP)
+                .reasoningEffort(resolveReasoningEffort(agent, overrides))
                 .build();
 
         CancellationToken cancellationToken = Optional.ofNullable(overrides)
@@ -570,6 +572,19 @@ public class CompletionService {
         throw missingOverrideException("topP");
     }
 
+    /** Optional, unlike the other params: null means "use the model's default". */
+    @Nullable
+    private String resolveReasoningEffort(@Nullable ProjectAgent agent,
+                                          @Nullable CompletionRuntimeOverridesDTO overrides) {
+        if (overrides != null && overrides.getReasoningEffort() != null) {
+            return overrides.getReasoningEffort();
+        }
+        if (agent != null && agent.getReasoningEffort() != null) {
+            return agent.getReasoningEffort();
+        }
+        return null;
+    }
+
     private GendoxException missingOverrideException(String fieldName) {
         return new GendoxException("COMPLETION_RUNTIME_OVERRIDE_REQUIRED",
                 "Missing required completion runtime value: " + fieldName,
@@ -648,6 +663,7 @@ public class CompletionService {
                 .maxTokens(agent.getMaxToken())
                 .temperature(agent.getTemperature())
                 .topP(agent.getTopP())
+                .reasoningEffort(agent.getReasoningEffort())
                 .build();
 
         CompletionResponse completionResponse = getCompletionForMessages(previousMessages,

@@ -32,7 +32,7 @@ public interface AiModelRepository extends JpaRepository<AiModel, UUID>, Queryds
     @Query("SELECT a FROM AiModel a WHERE a.organizationId is null")
     List<AiModel> findAllPublicModels();
 
-    @EntityGraph(attributePaths = { "aiModelProvider", "modelTierType", "aiModelType" })
+    @EntityGraph(attributePaths = { "aiModelProvider", "modelTierType", "aiModelType", "apiType" })
     @Query("SELECT a FROM AiModel a WHERE (a.organizationId = :organizationId or a.organizationId is null) and a.isActive = true")
     List<AiModel> findAllActiveModelsByOrganizationId(@Param("organizationId") UUID organizationId);
 

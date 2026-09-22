@@ -63,6 +63,7 @@
     "highlight.js": "^11.11.1",
     "html2canvas": "^1.4.1",
     "identicon.js": "^2.3.3",
+    "katex": "^0.18.7",
     "leaflet": "^1.9.4",
     "lodash": "^4.17.21",
     "mdi-material-ui": "^7.1.0",
@@ -84,9 +85,14 @@
     "react-redux": "^9.2.0",
     "redux-logger": "^3.0.6",
     "rehype-highlight": "^7.0.2",
+    "rehype-katex": "^7.0.0",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
     "showdown": "^2.1.0"
+  },
+  "resolutions": {
+    "katex": "0.18.7"
   },
   "devDependencies": {
     "eslint": "^7.32.0",

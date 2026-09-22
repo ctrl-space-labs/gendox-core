@@ -14,9 +14,12 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import rehypeRaw from "rehype-raw";
 import rehypeHighlight from "rehype-highlight";
+import rehypeKatex from "rehype-katex";
 import "highlight.js/styles/github.css"; // Import a highlight.js theme
+import "katex/dist/katex.min.css";
 
 import { Typography, Box, Link, List, ListItem, Divider } from "@mui/material";
 
@@ -48,6 +51,27 @@ import { Typography, Box, Link, List, ListItem, Divider } from "@mui/material";
  *   - h1 elements will have the primary main color and a margin-bottom of 1.5rem.
  *   - Paragraphs (p) will have a margin-bottom of 1rem.
  */
+/**
+ * remark-math only recognises $...$ and $$...$$, but LLMs emit LaTeX delimiters
+ * (\[...\] for display, \(...\) for inline). Without this they render literally.
+ *
+ * Fenced code is left untouched so a snippet showing these delimiters stays intact.
+ */
+const normalizeMathDelimiters = (text) => {
+  if (!text) return text;
+
+  return text
+    .split(/(```[\s\S]*?```|`[^`\n]*`)/g)
+    .map((segment, index) => {
+      // Odd indices are the captured code segments.
+      if (index % 2 === 1) return segment;
+      return segment
+        .replace(/\\\[([\s\S]*?)\\\]/g, (_, body) => `$$${body.trim()}$$`)
+        .replace(/\\\(([\s\S]*?)\\\)/g, (_, body) => `$${body.trim()}$`);
+    })
+    .join("");
+};
+
 const GendoxMarkdownRenderer = ({ markdownText, sxOverrides = {} }) => {
   // Helper function to merge default styles with any overrides for a given tag.
   const getSx = (tag, defaultSx = {}) => ({ ...defaultSx, ...(sxOverrides[tag] || {}) });
@@ -55,8 +79,8 @@ const GendoxMarkdownRenderer = ({ markdownText, sxOverrides = {} }) => {
   return (
     <Box className="markdown-container" sx={getSx('container')}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw, rehypeHighlight]}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeRaw, rehypeKatex, rehypeHighlight]}
         components={{
           // Paragraphs rendered with MUI Typography
           p: ({ node, children, ...props }) => (
@@ -165,7 +189,7 @@ const GendoxMarkdownRenderer = ({ markdownText, sxOverrides = {} }) => {
             ),
         }}
       >
-        {markdownText}
+        {normalizeMathDelimiters(markdownText)}
       </ReactMarkdown>
     </Box>
   );

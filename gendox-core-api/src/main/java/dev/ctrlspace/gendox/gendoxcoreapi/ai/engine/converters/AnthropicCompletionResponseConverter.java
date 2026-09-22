@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request.AnthropicContentBlock;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.response.AnthropicCompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.CompletionResponse;
@@ -37,6 +38,9 @@ public class AnthropicCompletionResponseConverter {
                 .build();
 
         List<String> textParts = new ArrayList<>();
+        List<String> thinkingParts = new ArrayList<>();
+        // One signature per block, all of which must be replayed, so keep them intact.
+        List<AnthropicContentBlock> thinkingBlocks = new ArrayList<>();
         ArrayNode toolCallsArray = objectMapper.createArrayNode();
         List<AnthropicCompletionResponse.Content> contents = anthropicCompletionResponse.getContent();
         if (contents != null) {
@@ -46,6 +50,15 @@ public class AnthropicCompletionResponseConverter {
                 }
                 if ("tool_use".equals(c.getType())) {
                     toolCallsArray.add(anthropicToolUseToOpenAiToolCall(c));
+                } else if ("thinking".equals(c.getType())) {
+                    if (c.getThinking() != null && !c.getThinking().isEmpty()) {
+                        thinkingParts.add(c.getThinking());
+                    }
+                    thinkingBlocks.add(new AnthropicContentBlock.Thinking(
+                            c.getThinking() != null ? c.getThinking() : "", c.getSignature()));
+                } else if ("redacted_thinking".equals(c.getType())) {
+                    // Nothing readable to show, but dropping it breaks replay of the turn.
+                    thinkingBlocks.add(new AnthropicContentBlock.RedactedThinking(c.getData()));
                 } else if ("text".equals(c.getType()) || (c.getType() == null && c.getText() != null)) {
                     if (c.getText() != null && !c.getText().isEmpty()) {
                         textParts.add(c.getText());
@@ -55,6 +68,7 @@ public class AnthropicCompletionResponseConverter {
         }
 
         String joinedText = textParts.isEmpty() ? null : String.join("\n", textParts);
+        String joinedThinking = thinkingParts.isEmpty() ? null : String.join("\n\n", thinkingParts);
 
         String stopReason = anthropicCompletionResponse.getStop_reason();
         String finishReason;
@@ -71,6 +85,10 @@ public class AnthropicCompletionResponseConverter {
                 .content(joinedText);
         if (!toolCallsArray.isEmpty()) {
             messageBuilder.toolCalls(toolCallsArray);
+        }
+        if (!thinkingBlocks.isEmpty()) {
+            messageBuilder.reasoningContent(joinedThinking)
+                    .reasoningMetadata(objectMapper.valueToTree(thinkingBlocks));
         }
 
         Choice choice = Choice.builder()

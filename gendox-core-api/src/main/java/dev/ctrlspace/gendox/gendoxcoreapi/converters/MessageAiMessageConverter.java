@@ -32,7 +32,10 @@ public class MessageAiMessageConverter implements GendoxConverter<Message, AiMod
                 .content(message.getValue())
                 .name(message.getName())
                 .toolCallId(message.getToolCallId())
-                .toolCalls(message.getToolCalls());
+                .toolCalls(message.getToolCalls())
+                .reasoningContent(message.getReasoningContent())
+                .reasoningMetadata(message.getReasoningMetadata())
+                .aiModelId(message.getAiModelId());
 
         if (!nonTextParts.isEmpty()) {
             builder.contentParts(nonTextParts);
@@ -49,6 +52,9 @@ public class MessageAiMessageConverter implements GendoxConverter<Message, AiMod
         message.setName(aiModelMessage.getName());
         message.setToolCallId(aiModelMessage.getToolCallId());
         message.setToolCalls(aiModelMessage.getToolCalls());
+        message.setReasoningContent(aiModelMessage.getReasoningContent());
+        message.setReasoningMetadata(aiModelMessage.getReasoningMetadata());
+        message.setAiModelId(aiModelMessage.getAiModelId());
 
 
         return message;

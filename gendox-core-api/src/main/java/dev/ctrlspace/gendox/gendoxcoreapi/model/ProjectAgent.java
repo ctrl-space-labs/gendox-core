@@ -80,6 +80,9 @@ public class ProjectAgent {
     @Column(name = "max_token", nullable = true)
     private Long maxToken;
     @Basic
+    @Column(name = "reasoning_effort", nullable = true)
+    private String reasoningEffort;
+    @Basic
     @Column(name = "temperature", nullable = true)
     private Double temperature;
 
@@ -258,6 +261,14 @@ public class ProjectAgent {
 
     public Long getMaxToken() {
         return maxToken;
+    }
+
+    public String getReasoningEffort() {
+        return reasoningEffort;
+    }
+
+    public void setReasoningEffort(String reasoningEffort) {
+        this.reasoningEffort = reasoningEffort;
     }
 
     public void setMaxToken(Long maxToken) {

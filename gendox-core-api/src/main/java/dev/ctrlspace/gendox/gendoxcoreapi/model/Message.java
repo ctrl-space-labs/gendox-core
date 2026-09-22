@@ -73,6 +73,21 @@ public class Message {
     @Column(name = "tool_calls", columnDefinition = "JSONB")
     private JsonNode toolCalls;
 
+    // Normalized summary; provider-neutral, safe to render and to send as plain text.
+    @Basic
+    @Column(name = "reasoning_content")
+    private String reasoningContent;
+
+    // Provider's replay token (encrypted or signed), stored verbatim and never interpreted
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reasoning_metadata", columnDefinition = "JSONB")
+    private JsonNode reasoningMetadata;
+
+    // Model that produced this message, if comes from an AI.
+    @Basic
+    @Column(name = "ai_model_id")
+    private UUID aiModelId;
+
     //    @JsonBackReference(value = "message")
     @JsonManagedReference(value = "message")
     @OneToMany(mappedBy = "message")
@@ -210,6 +225,30 @@ public class Message {
 
     public void setToolCalls(JsonNode toolCalls) {
         this.toolCalls = toolCalls;
+    }
+
+    public String getReasoningContent() {
+        return reasoningContent;
+    }
+
+    public void setReasoningContent(String reasoningContent) {
+        this.reasoningContent = reasoningContent;
+    }
+
+    public JsonNode getReasoningMetadata() {
+        return reasoningMetadata;
+    }
+
+    public void setReasoningMetadata(JsonNode reasoningMetadata) {
+        this.reasoningMetadata = reasoningMetadata;
+    }
+
+    public UUID getAiModelId() {
+        return aiModelId;
+    }
+
+    public void setAiModelId(UUID aiModelId) {
+        this.aiModelId = aiModelId;
     }
 
 

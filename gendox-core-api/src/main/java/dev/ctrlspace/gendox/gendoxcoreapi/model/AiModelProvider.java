@@ -22,6 +22,7 @@ public class AiModelProvider {
     @Basic
     @Column(name = "description", nullable = true, length = -1)
     private String description;
+
     @Basic
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -52,6 +53,8 @@ public class AiModelProvider {
     public void setApiType(Type apiType) {
         this.apiType = apiType;
     }
+
+
 
     public String getDescription() {
         return description;

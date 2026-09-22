@@ -25,10 +25,7 @@ public class MistralCompletionResponseConverter {
                 .map(choice -> Choice.builder()
                         .index(choice.getIndex())
                         .finishReason(choice.getFinish_reason())
-                        .message(AiModelMessage.builder()
-                                .content(choice.getMessage().getContent())
-                                .role(choice.getMessage().getRole())
-                                .build())
+                        .message(toAiModelMessage(choice.getMessage()))
                         .build())
                 .toList();
 
@@ -44,5 +41,17 @@ public class MistralCompletionResponseConverter {
 
 
         return completionResponse;
+    }
+
+    private AiModelMessage toAiModelMessage(MistralCompletionResponse.Choice.Message message) {
+        AiModelMessage.AiModelMessageBuilder builder = AiModelMessage.builder()
+                .role(message.getRole())
+                .content(message.getContent());
+
+        if (message.getThinking() != null) {
+            builder.reasoningContent(message.getThinking());
+        }
+
+        return builder.build();
     }
 }

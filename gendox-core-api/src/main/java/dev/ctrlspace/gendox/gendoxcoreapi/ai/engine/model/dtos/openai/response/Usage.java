@@ -26,6 +26,13 @@ public class Usage {
     @JsonProperty("total_tokens")
     private Integer totalTokens;
     
+    /**
+     * vLLM-backed providers (Nebius, DeepSeek) report prefix-cache hits here instead of inside
+     * prompt_tokens_details, which they omit entirely. Normalized in OpenAiServiceAdapter.
+     */
+    @JsonProperty("prompt_cache_hit_tokens")
+    private Integer promptCacheHitTokens;
+
     // Detailed breakdowns of token usage (provider-specific)
     @JsonProperty("prompt_tokens_details")
     private PromptTokensDetail promptTokensDetail; // e.g., cached, audio tokens for input

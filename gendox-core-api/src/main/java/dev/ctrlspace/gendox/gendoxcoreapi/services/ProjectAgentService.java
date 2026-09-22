@@ -178,19 +178,19 @@ public class ProjectAgentService {
             projectAgent.setPrivateAgent(true);
         }
         if (projectAgent.getSemanticSearchModel() == null) {
-            projectAgent.setSemanticSearchModel(aiModelService.getByName(AiModelConstants.OPENAI_EMBEDDING_V3_SMALL));
+            projectAgent.setSemanticSearchModel(aiModelService.getByName(AiModelConstants.VOYAGE_4_LITE));
         }
         if (projectAgent.getCompletionModel() == null) {
-            projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_5_NANO));
+            projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_5_6_LUNA));
         }
         if (projectAgent.getModerationModel() == null) {
             projectAgent.setModerationModel(aiModelService.getByName(AiModelConstants.OMNI_MODERATION));
         }
         if (projectAgent.getRerankModel() == null) {
-            projectAgent.setRerankModel(aiModelService.getByName(AiModelConstants.VOYAGE_RERANK_2));
+            projectAgent.setRerankModel(aiModelService.getByName(AiModelConstants.VOYAGE_RERANK_3_LITE));
         }
         if (projectAgent.getAdvancedSearchModel() == null) {
-            projectAgent.setAdvancedSearchModel(aiModelService.getByName(AiModelConstants.GPT_5_NANO));
+            projectAgent.setAdvancedSearchModel(aiModelService.getByName(AiModelConstants.GPT_5_6_LUNA));
         }
         if (projectAgent.getModerationCheck() == null) {
             projectAgent.setModerationCheck(false);
@@ -307,6 +307,7 @@ public class ProjectAgentService {
         existingProjectAgent.setCreatedAt(projectAgent.getCreatedAt());
         existingProjectAgent.setCreatedBy(projectAgent.getCreatedBy());
         existingProjectAgent.setMaxToken(projectAgent.getMaxToken());
+        existingProjectAgent.setReasoningEffort(projectAgent.getReasoningEffort());
         existingProjectAgent.setTemperature(projectAgent.getTemperature());
         existingProjectAgent.setTopP(projectAgent.getTopP());
         existingProjectAgent.setDocumentSplitterType(projectAgent.getDocumentSplitterType());

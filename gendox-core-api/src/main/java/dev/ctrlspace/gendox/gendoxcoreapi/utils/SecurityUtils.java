@@ -4,6 +4,7 @@ package dev.ctrlspace.gendox.gendoxcoreapi.utils;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.UserOrganization;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.OrganizationUserDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.authentication.UserProfile;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.AccessCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.ChatThreadDocumentsRepository;
@@ -95,11 +96,27 @@ public class SecurityUtils {
 
         if (authorized) {
             logger.info("Authorized super-admin API access: principal={}, ip={}, method={}, uri={}, query={}, userAgent={}",
-                    principal, ip, method, uri, query, userAgent);
+                    describePrincipal(principal), ip, method, uri, query, userAgent);
         } else {
-            logger.warn("Unauthorized super-admin API access attempt: principal={}, ip={}, method={}, uri={}, query={}, userAgent={}",
-                    principal, ip, method, uri, query, userAgent);
+            // isSuperAdmin() is also used as a plain boolean check (e.g. JobController), so a
+            // negative result is the normal path for every regular user, not an access attempt.
+            logger.trace("Super-admin check denied: principal={}, ip={}, method={}, uri={}, query={}, userAgent={}",
+                    describePrincipal(principal), ip, method, uri, query, userAgent);
         }
+    }
+
+    /**
+     * Compact principal descriptor. UserProfile.toString() expands every organization, project
+     * and agent, which makes it unusable in a log line.
+     */
+    private String describePrincipal(Object principal) {
+        if (principal instanceof UserProfile userProfile) {
+            Type roleType = userProfile.getGlobalUserRoleType();
+            return "UserProfile(id=" + userProfile.getId()
+                    + ", email=" + userProfile.getEmail()
+                    + ", globalRole=" + (roleType != null ? roleType.getName() : null) + ")";
+        }
+        return principal != null ? principal.toString() : null;
     }
 
     private String resolveClientIp(HttpServletRequest request) {

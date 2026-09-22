@@ -35,7 +35,10 @@ import java.util.UUID;
                                 @ColumnResult(name = "tool_call_id", type = String.class),
                                 @ColumnResult(name = "name", type = String.class),
                                 @ColumnResult(name = "tool_calls", type = JsonNode.class),
-                                @ColumnResult(name = "created_at", type = Instant.class)
+                                @ColumnResult(name = "created_at", type = Instant.class),
+                                @ColumnResult(name = "reasoning_content", type = String.class),
+                                @ColumnResult(name = "reasoning_metadata", type = JsonNode.class),
+                                @ColumnResult(name = "ai_model_id", type = UUID.class)
                         }
                 )
         }
@@ -45,7 +48,8 @@ import java.util.UUID;
         query = """
                 WITH numbered AS (
                   SELECT m.id, m.value, m.role, m.tool_call_id, m.name, m.tool_calls, m.created_at,
-                         row_number() OVER (ORDER BY m.created_at DESC) AS rn,   -- 1 = newest 
+                         m.reasoning_content, m.reasoning_metadata, m.ai_model_id,
+                         row_number() OVER (ORDER BY m.created_at DESC) AS rn,   -- 1 = newest
                          count(*)     OVER ()                                   AS total
                   FROM gendox_core.message m
                   LEFT JOIN gendox_core.users u  ON u.id = m.created_by
@@ -53,7 +57,8 @@ import java.util.UUID;
                   WHERE m.thread_id   = :threadId
                     AND m.created_at <  :before
                 )
-                SELECT id, value, role, tool_call_id, name, tool_calls, created_at
+                SELECT id, value, role, tool_call_id, name, tool_calls, created_at,
+                       reasoning_content, reasoning_metadata, ai_model_id
                 FROM numbered
                 WHERE rn <= (:window_size + (total % :window_size))
                 ORDER BY created_at DESC;
@@ -90,6 +95,26 @@ public class AiModelMessage {
     @JsonIgnore
     private List<ContentPart> contentParts = new ArrayList<>();
 
+    /**
+     * Normalized reasoning summary; every adapter flattens its own format into this string.
+     * WRITE_ONLY so vLLM providers deserialize it for free but nobody receives it back.
+     */
+    @JsonProperty(value = "reasoning_content", access = JsonProperty.Access.WRITE_ONLY)
+    private String reasoningContent;
+
+    /** Opaque provider replay token, stored verbatim and never interpreted here. */
+    @JsonIgnore
+    private JsonNode reasoningMetadata;
+
+    /** Which adapter produced {@link #reasoningMetadata}; only that one can replay it. */
+    @JsonIgnore
+    private UUID aiModelId;
+
+    /** Gemini's thought-signature envelope; set from reasoningMetadata just before sending. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("extra_content")
+    private JsonNode extraContent;
+
     @JsonIgnore
     private Instant createdAt;
 
@@ -103,8 +128,12 @@ public class AiModelMessage {
      * @param name
      * @param toolCalls
      * @param createdAt
+     * @param reasoningContent
+     * @param reasoningMetadata
+     * @param aiModelId
      */
-    public AiModelMessage(UUID id, String content, String role, String toolCallId, String name, JsonNode toolCalls, Instant createdAt) {
+    public AiModelMessage(UUID id, String content, String role, String toolCallId, String name, JsonNode toolCalls, Instant createdAt,
+                          String reasoningContent, JsonNode reasoningMetadata, UUID aiModelId) {
         this.id = id;
         this.content = content;
         this.role = role;
@@ -112,6 +141,9 @@ public class AiModelMessage {
         this.name = name;
         this.toolCalls = toolCalls;
         this.createdAt = createdAt;
+        this.reasoningContent = reasoningContent;
+        this.reasoningMetadata = reasoningMetadata;
+        this.aiModelId = aiModelId;
     }
 
     /**

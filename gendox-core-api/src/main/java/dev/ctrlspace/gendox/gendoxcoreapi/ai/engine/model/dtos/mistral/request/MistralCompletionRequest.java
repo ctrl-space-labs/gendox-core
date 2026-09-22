@@ -1,11 +1,14 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.mistral.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +36,8 @@ public class MistralCompletionRequest {
     private Prediction prediction;
     private Boolean parallel_tool_calls;
     private Boolean safe_prompt;
+    // none | low | medium | high. Supported on magistral-* and mistral-small/medium
+    private String reasoning_effort;
 
     @Data
     @Builder(toBuilder = true)
@@ -89,7 +94,27 @@ public class MistralCompletionRequest {
     @NoArgsConstructor
     public static class MistralMessage {
         private String role;
+
+        @JsonIgnore
         private String content;
+
+        // Reasoning trace
+        @JsonIgnore
+        private String thinking;
+
+        /** Plain string normally; a thinking+text chunk array when replaying reasoning. */
+        @JsonProperty("content")
+        public Object getJsonContent() {
+            if (thinking == null || thinking.isBlank()) {
+                return content;
+            }
+            List<Map<String, String>> chunks = new ArrayList<>();
+            chunks.add(Map.of("type", "thinking", "thinking", thinking));
+            if (content != null && !content.isBlank()) {
+                chunks.add(Map.of("type", "text", "text", content));
+            }
+            return chunks;
+        }
     }
 }
 

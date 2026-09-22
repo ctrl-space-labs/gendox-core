@@ -91,7 +91,9 @@ public class DocumentInstanceSection {
     }
 
     public void setSectionValue(String sectionValue) {
-        this.sectionValue = sectionValue;
+        // Postgres text columns cannot store NUL (0x00) in any encoding. Extracted content can
+        // contain it, so strip it here rather than in each extractor.
+        this.sectionValue = sectionValue == null ? null : sectionValue.replace("\0", "");
     }
 
     public String getDocumentSectionIsccCode() {

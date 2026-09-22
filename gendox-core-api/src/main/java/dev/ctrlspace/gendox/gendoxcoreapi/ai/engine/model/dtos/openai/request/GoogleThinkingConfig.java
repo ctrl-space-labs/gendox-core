@@ -17,6 +17,7 @@ public class GoogleThinkingConfig {
     private String thinkingLevel;
     @JsonProperty("thinking_budget")
     private Integer thinkingBudget;
+    // Without this Gemini thinks but returns no summary. See InlineReasoningParser
     @JsonProperty("include_thoughts")
     private Boolean includeThoughts;
 }

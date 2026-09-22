@@ -14,6 +14,7 @@ public class AiModelConstants {
     public static final String GPT_5_NANO = "GPT-5-NANO";
     public static final String GPT_5_MINI = "GPT-5-MINI";
     public static final String GPT_5_2 = "GPT-5.2";
+    public static final String GPT_5_6_LUNA = "GPT-5.6-LUNA";
     public static final String O4_MINI = "O4-MINI";
     public static final String O1_MINI = "O1-MINI";
     public static final String O3 = "O3";
@@ -38,10 +39,12 @@ public class AiModelConstants {
     public static final String VOYAGE_3="VOYAGE_3";
     public static final String VOYAGE_3_LARGE="VOYAGE_3_LARGE";
     public static final String VOYAGE_3_LITE="VOYAGE_3_LITE";
+    public static final String VOYAGE_4_LITE="VOYAGE_4_LITE";
     public static final String MISTRAL_EMBED="MISTRAL_EMBED";
     // Rerank models
     public static final String VOYAGE_RERANK_2_LITE = "RERANK-2-LITE";
     public static final String VOYAGE_RERANK_2 = "RERANK-2";
+    public static final String VOYAGE_RERANK_3_LITE = "VOYAGE_RERANK_3_LITE";
     public static final String COHERE_RERANK_V3_5 = "RERANK-V3.5";
     public static final String COHERE_RERANK_MULTILINGUAL_V3 = "RERANK-MULTILINGUAL-V3.0";
     // Moderation models

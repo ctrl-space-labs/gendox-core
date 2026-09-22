@@ -7,6 +7,7 @@ import { fetchMessageMetadata } from 'src/store/chat/gendoxChat'
 import CircularProgress from '@mui/material/CircularProgress'
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline'
 import ToolCallHeader from './ToolCallHeader'
+import ThinkingHeader from './ThinkingHeader'
 import MessageAttachments from './message-components/MessageAttachments'
 import { toMessageAttachmentUI } from 'src/utils/attachmentsAdapter'
 
@@ -170,7 +171,8 @@ const ThreadMessagesArea = ({
               // Tool-call header + its outputs in a single collapsible row
               if (item.type === 'toolCall') {
                 return (
-                  <Box key={index} sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-start' }}>
+                  <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <ThinkingHeader reasoning={item.headerMessage?.reasoningContent} />
                     <ToolCallHeader header={item.headerMessage} outputs={item.toolResponses} theme={theme} />
                   </Box>
                 )
@@ -179,7 +181,8 @@ const ThreadMessagesArea = ({
               const { message } = item
               const hasText = Boolean(message?.message && message.message.trim().length > 0)
               const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0
-              if (!hasText && !hasAttachments) return null
+              const hasReasoning = Boolean(message?.reasoningContent && message.reasoningContent.trim().length > 0)
+              if (!hasText && !hasAttachments && !hasReasoning) return null
 
               const isMyMessage = message.createdBy === auth?.user?.id || message.createdBy === null
               const nextIsToolCall = displayItems[index + 1]?.type === 'toolCall'
@@ -206,6 +209,8 @@ const ThreadMessagesArea = ({
                       }}
                     >
                       {' '}
+                      {/* reasoning ABOVE the answer, collapsed by default */}
+                      {!isMyMessage && <ThinkingHeader reasoning={message.reasoningContent} />}
                       {/* ✅ attachments OUTSIDE bubble */}
                       <MessageAttachments
                         attachments={uiAttachments}

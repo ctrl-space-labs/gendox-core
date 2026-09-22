@@ -59,7 +59,7 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
 
     public MistralEmbedResponse getEmbeddingResponse(MistralEmbedRequest embeddingRequestHttpEntity, AiModel aiModel, String apiKey) {
         String embeddingsApiUrl = aiModel.getUrl();
-        logger.debug("Sending Embedding Request to '{}': {}", embeddingsApiUrl, embeddingRequestHttpEntity);
+        logger.trace("Sending Embedding Request to '{}': {}", embeddingsApiUrl, embeddingRequestHttpEntity);
         logger.info("AiModel for Embedding-->: {}", aiModel.getModel());
         ResponseEntity<MistralEmbedResponse> responseEntity = restTemplate.postForEntity(
                 embeddingsApiUrl,
@@ -109,7 +109,7 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
                 apiKey);
 
         EmbeddingResponse embeddingResponse = mistralEmbeddingResponseConverter.mistraltoEmbeddingResponse(mistralEmbedResponse);
-        logger.info("Embedding Response: {}", embeddingResponse);
+        logger.trace("Embedding Response: {}", embeddingResponse);
         return embeddingResponse;
 
 
@@ -125,6 +125,7 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
                 .map(m -> MistralCompletionRequest.MistralMessage.builder()
                         .role(m.getRole())
                         .content(m.getContent())
+                        .thinking(aiModel.getId().equals(m.getAiModelId()) ? m.getReasoningContent() : null)
                         .build())
                 .toList();
 
@@ -132,11 +133,20 @@ public class MistralAiServiceAdapter implements AiModelApiAdapterService {
                 .model(aiModel.getModel())
                 .messages(mistralMessages);
 
+        if (aiModel.getSupportsReasoning()) {
+            String effort = aiModelRequestParams.getReasoningEffort() != null
+                    ? aiModelRequestParams.getReasoningEffort()
+                    : aiModel.getDefaultReasoningEffort();
+            if (effort != null) {
+                completionRequestBuilder.reasoning_effort(effort);
+            }
+        }
+
         MistralCompletionRequest completionRequest = completionRequestBuilder.build();
         MistralCompletionResponse mistralCompletionResponse = this.getCompletionResponse(completionRequest, aiModel, apiKey);
-        logger.info("Completion Response: {}", mistralCompletionResponse);
+        logger.trace("Completion Response: {}", mistralCompletionResponse);
         CompletionResponse completionResponse = mistralCompletionResponseConverter.toCompletionResponse(mistralCompletionResponse);
-        logger.info("Completion Response: {}", completionResponse);
+        logger.trace("Completion Response: {}", completionResponse);
 
         return completionResponse;
     }

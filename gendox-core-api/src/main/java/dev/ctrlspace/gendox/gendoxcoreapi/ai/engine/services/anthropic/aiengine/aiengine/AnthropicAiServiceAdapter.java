@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.AnthropicCompletionResponseConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters.AnthropicMessagesConverter;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request.AnthropicCompletionRequest;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request.AnthropicContentBlock;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.response.AnthropicCompletionResponse;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.services.AiModelApiAdapterService;
@@ -22,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -30,6 +32,8 @@ import java.util.Set;
 public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
     Logger logger = LoggerFactory.getLogger(AnthropicAiServiceAdapter.class);
     private Set<String> supportedApiTypeNames = Set.of("ANTHROPIC_AI_API");
+
+    private static final Set<String> ANTHROPIC_EFFORTS = Set.of("low", "medium", "high", "xhigh", "max");
     private RestTemplate restTemplate;
     private AnthropicCompletionResponseConverter anthropicCompletionResponseConverter;
     private AnthropicMessagesConverter anthropicMessagesConverter;
@@ -85,17 +89,25 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
             upsertSystemPrompt(messages, agentRole);
         }
 
+        // Another provider's signatures cannot be used here
+        dropForeignReasoning(messages, aiModel);
+
         AnthropicMessagesConverter.MappedAnthropicMessages mapped = anthropicMessagesConverter.mapMessages(messages);
 
         AnthropicCompletionRequest.AnthropicCompletionRequestBuilder anthropicRequestBuilder = AnthropicCompletionRequest.builder()
                 .model(aiModel.getModel())
                 .messages(mapped.messages())
-                .max_tokens(aiModelRequestParams.getMaxTokens().intValue())
-                .cacheControl(AnthropicCompletionRequest.CacheControl.builder().type("ephemeral").build());
+                .max_tokens(aiModelRequestParams.getMaxTokens().intValue());
 
         if (mapped.system() != null && !mapped.system().isEmpty()) {
-            anthropicRequestBuilder.system(mapped.system());
+            anthropicRequestBuilder.system(List.of(
+                    AnthropicCompletionRequest.SystemBlock.cached(mapped.system())));
         }
+
+        markConversationPrefix(mapped.messages());
+
+        AnthropicCompletionRequest.OutputConfig.OutputConfigBuilder outputConfig =
+                AnthropicCompletionRequest.OutputConfig.builder();
 
         if (responseJsonSchema != null) {
             // We accept the OpenAI-style json_schema wrapper ({ name, schema }) and map it to Anthropic's output_config.format.
@@ -109,20 +121,21 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
             ObjectNode sanitized = schemaNode.deepCopy();
             enforceClosedObjectSchemas(sanitized);
 
-            anthropicRequestBuilder.outputConfig(AnthropicCompletionRequest.OutputConfig.builder()
-                    .format(AnthropicCompletionRequest.Format.builder()
-                            .type("json_schema")
-                            .schema(sanitized)
-                            .build())
+            outputConfig.format(AnthropicCompletionRequest.Format.builder()
+                    .type("json_schema")
+                    .schema(sanitized)
                     .build());
         }
-        // Anthropic rejects requests that set both temperature and top_p for some models.
+        // Anthropic rejects requests that set both temperature and top_p for some models, and
+        // rejects any temperature other than 1 once thinking is on.
         Double temperature = aiModelRequestParams.getTemperature();
         Double topP = aiModelRequestParams.getTopP();
-        if (temperature != null) {
-            anthropicRequestBuilder.temperature(temperature);
-        } else if (topP != null) {
-            anthropicRequestBuilder.topP(topP);
+        if (aiModel.getSupportsSamplingParams()) {
+            if (temperature != null) {
+                anthropicRequestBuilder.temperature(temperature);
+            } else if (topP != null) {
+                anthropicRequestBuilder.topP(topP);
+            }
         }
         if (tools != null && !tools.isEmpty()) {
             anthropicRequestBuilder.tools(tools.stream()
@@ -131,10 +144,60 @@ public class AnthropicAiServiceAdapter implements AiModelApiAdapterService {
             anthropicRequestBuilder.toolChoice(anthropicMessagesConverter.mapToolChoice(toolChoice));
         }
 
+        if (aiModel.getSupportsReasoning()) {
+            // Without display=summarized the thinking blocks come back with empty text.
+            anthropicRequestBuilder.thinking(AnthropicCompletionRequest.Thinking.builder()
+                    .type("adaptive")
+                    .display("summarized")
+                    .build());
+
+            // Current models reject the old thinking.budget_tokens form; effort replaces it.
+            String effort = aiModelRequestParams.getReasoningEffort() != null
+                    ? aiModelRequestParams.getReasoningEffort()
+                    : aiModel.getDefaultReasoningEffort();
+            if (ANTHROPIC_EFFORTS.contains(effort)) {
+                outputConfig.effort(effort);
+            }
+        }
+
+        anthropicRequestBuilder.outputConfig(outputConfig.build());
+
         AnthropicCompletionRequest anthropicRequest = anthropicRequestBuilder.build();
         AnthropicCompletionResponse anthropicResponse = this.getCompletionResponse(anthropicRequest, aiModel, apiKey);
 
         return anthropicCompletionResponseConverter.toCompletionResponse(anthropicResponse);
+    }
+
+    /** Replaying a foreign signature is rejected, so the token goes and the summary stays. */
+    private static void dropForeignReasoning(List<AiModelMessage> messages, AiModel aiModel) {
+        if (messages == null) {
+            return;
+        }
+        for (AiModelMessage message : messages) {
+            if (message.getReasoningMetadata() != null
+                    && !aiModel.getId().equals(message.getAiModelId())) {
+                message.setReasoningMetadata(null);
+            }
+        }
+    }
+
+    /**
+     * Puts a cache breakpoint on the last block of the newest already-answered turn, so a growing
+     * thread re-reads its history instead of re-sending it. No-op until there is a settled turn.
+     */
+    private static void markConversationPrefix(List<AnthropicCompletionRequest.Message> messages) {
+        if (messages.size() < 2) {
+            return;
+        }
+        AnthropicCompletionRequest.Message message = messages.get(messages.size() - 2);
+        List<AnthropicContentBlock> blocks = message.getContent();
+        if (blocks == null || blocks.isEmpty() || !(blocks.getLast() instanceof AnthropicContentBlock.Text text)) {
+            return;
+        }
+        // The converter hands back immutable lists, so replace rather than mutate in place.
+        List<AnthropicContentBlock> marked = new ArrayList<>(blocks);
+        marked.set(marked.size() - 1, text.cached());
+        message.setContent(marked);
     }
 
     private static void upsertSystemPrompt(List<AiModelMessage> messages, String agentRole) {

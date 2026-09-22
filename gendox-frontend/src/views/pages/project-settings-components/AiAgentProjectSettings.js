@@ -37,6 +37,7 @@ import Chip from "@mui/material/Chip";
 import { useRouter } from 'next/router'
 import RequireOrgRoles from 'src/authentication/components/RequireOrgRoles'
 import AgentEmbedSnippet from 'src/views/pages/project-settings-components/AgentEmbedSnippet'
+import AiModelOption from 'src/views/custom-components/ai-model/AiModelOption'
 
 
 const AiAgentProjectSettings = () => {
@@ -71,6 +72,8 @@ const AiAgentProjectSettings = () => {
     autoDigitization: project.projectAgent.autoDigitization ?? false,
     documentSplitterType: project.projectAgent.documentSplitterType?.name || '',
     maxToken: project.projectAgent.maxToken,
+    // null/undefined means 'use the model default'; the Select shows it as empty.
+    reasoningEffort: project.projectAgent.reasoningEffort ?? '',
     temperature: project.projectAgent.temperature,
     maxSearchLimit: project.projectAgent.maxSearchLimit,
     maxCompletionLimit: project.projectAgent.maxCompletionLimit,
@@ -177,6 +180,13 @@ const AiAgentProjectSettings = () => {
     }
   }, [completionModels, watch('completionModel'), setValue])
 
+  // Capability flags come straight from ai_models. The defaults mirror the backend
+  // getters, so an unmigrated row behaves the same here as it does server-side.
+  const selectedCompletionModel =
+    completionModels.find(model => model.name === watch('completionModel')) || null
+  const supportsSamplingParams = selectedCompletionModel?.supportsSamplingParams !== false
+  const supportsReasoning = selectedCompletionModel?.supportsReasoning === true
+
   useEffect(() => {
     if (moderationModels.length > 0) {
       const current = watch('moderationModel')
@@ -220,6 +230,8 @@ const AiAgentProjectSettings = () => {
         advancedSearchModel: { name: data.advancedSearchModel },
         privateAgent: data.selected === 'private',
         maxToken: data.maxToken,
+        // Send null rather than '' so the backend falls back to the model default.
+        reasoningEffort: data.reasoningEffort || null,
         temperature: data.temperature,
         topP: data.topP,
         maxSearchLimit: data.maxSearchLimit,
@@ -292,31 +304,7 @@ const AiAgentProjectSettings = () => {
                           value={semanticModels.find(model => model.name === watch('semanticSearchModel')) || null} // Set selected value
                           disableClearable
                           renderInput={params => <TextField {...params} label='Semantic Search Model' />}
-                          renderOption={(props, option) => (
-                            <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
-                              <Typography variant='body1'>{option.name}</Typography>
-                              <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
-                                {option.aiModelProvider?.name + '   '}
-                                {option.modelTierType?.name === 'FREE_MODEL' && (
-                                  <Box
-                                    component='span'
-                                    sx={{
-                                      ml: 1,
-                                      px: 1.5,
-                                      py: 0.3,
-                                      backgroundColor: '#e0f2f1',
-                                      color: '#00695c',
-                                      fontWeight: 600,
-                                      fontSize: '0.75rem',
-                                      borderRadius: '6px'
-                                    }}
-                                  >
-                                    Free
-                                  </Box>
-                                )}
-                              </Typography>
-                            </Box>
-                          )}
+                          renderOption={(props, option) => <AiModelOption props={props} option={option} />}
                         />
                       )}
                     />
@@ -337,31 +325,7 @@ const AiAgentProjectSettings = () => {
                           value={completionModels.find(model => model.name === watch('completionModel')) || null} // Set selected value
                           disableClearable
                           renderInput={params => <TextField {...params} label='Completion Model' />}
-                          renderOption={(props, option) => (
-                            <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
-                              <Typography variant='body1'>{option.name}</Typography>
-                              <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
-                                {option.aiModelProvider?.name + '   '}
-                                {option.modelTierType?.name === 'FREE_MODEL' && (
-                                  <Box
-                                    component='span'
-                                    sx={{
-                                      ml: 1,
-                                      px: 1.5,
-                                      py: 0.3,
-                                      backgroundColor: '#e0f2f1',
-                                      color: '#00695c',
-                                      fontWeight: 600,
-                                      fontSize: '0.75rem',
-                                      borderRadius: '6px'
-                                    }}
-                                  >
-                                    Free
-                                  </Box>
-                                )}
-                              </Typography>
-                            </Box>
-                          )}
+                          renderOption={(props, option) => <AiModelOption props={props} option={option} />}
                         />
                       )}
                     />
@@ -421,32 +385,65 @@ const AiAgentProjectSettings = () => {
                         }}
                       />
                     </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        label='Temperature'
-                        type='number'
-                        {...register('temperature', { valueAsNumber: true })}
-                        InputProps={{
-                          startAdornment: <InputAdornment position='start'>temp:</InputAdornment>
-                        }}
-                        inputProps={{ max: 1, min: 0, step: 0.01 }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        label='Top p'
-                        type='number'
-                        {...register('topP', { valueAsNumber: true })}
-                        InputProps={{
-                          startAdornment: <InputAdornment position='start'>top P</InputAdornment>
-                        }}
-                        inputProps={{ max: 1, min: 0, step: 0.01 }}
-                      />
-                    </Grid>
+                    {supportsSamplingParams && (
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label='Temperature'
+                          type='number'
+                          {...register('temperature', { valueAsNumber: true })}
+                          InputProps={{
+                            startAdornment: <InputAdornment position='start'>temp:</InputAdornment>
+                          }}
+                          inputProps={{ max: 1, min: 0, step: 0.01 }}
+                        />
+                      </Grid>
+                    )}
+                    {supportsSamplingParams && (
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label='Top p'
+                          type='number'
+                          {...register('topP', { valueAsNumber: true })}
+                          InputProps={{
+                            startAdornment: <InputAdornment position='start'>top P</InputAdornment>
+                          }}
+                          inputProps={{ max: 1, min: 0, step: 0.01 }}
+                        />
+                      </Grid>
+                    )}
 
-                    <Grid item xs={12} sm={6}></Grid>
+                    {supportsReasoning && (
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                          <InputLabel id='reasoning-effort-label'>Reasoning Effort</InputLabel>
+                          <Controller
+                            name='reasoningEffort'
+                            control={control}
+                            render={({ field }) => (
+                              <Select
+                                labelId='reasoning-effort-label'
+                                label='Reasoning Effort'
+                                value={field.value ?? ''}
+                                onChange={field.onChange}
+                              >
+                                {/* Empty falls back to the model's own default, which is
+                                    what most agents should use. */}
+                                <MenuItem value=''>
+                                  <em>Model default</em>
+                                </MenuItem>
+                                <MenuItem value='none'>None</MenuItem>
+                                <MenuItem value='minimal'>Minimal</MenuItem>
+                                <MenuItem value='low'>Low</MenuItem>
+                                <MenuItem value='medium'>Medium</MenuItem>
+                                <MenuItem value='high'>High</MenuItem>
+                              </Select>
+                            )}
+                          />
+                        </FormControl>
+                      </Grid>
+                    )}
 
                     <Grid item xs={12} sm={6}>
                       <TextField
@@ -478,219 +475,145 @@ const AiAgentProjectSettings = () => {
                         }}
                       />
                     </Grid>
-                    {/* Moderation Check */}
-                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
-                      <FormControlLabel
-                        label='Moderation Check'
-                        control={<Checkbox {...register('moderationCheck')} checked={watch('moderationCheck')} />}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
-                      {watch('moderationCheck') && (
-                        <FormControl fullWidth>
-                          <InputLabel id='moderation-model-label'></InputLabel>
-                          <Controller
-                            name='moderationModel'
-                            control={control}
-                            render={({ field }) => (
-                              <Autocomplete
-                                {...field}
-                                options={sortModels(moderationModels)}
-                                getOptionLabel={option => option.name} // Label for autocomplete
-                                onChange={(_, value) => setValue('moderationModel', value?.name)} // Update form state
-                                value={moderationModels.find(model => model.name === watch('moderationModel')) || null} // Set selected value
-                                disableClearable
-                                renderInput={params => <TextField {...params} label='Moderation Model' />}
-                                renderOption={(props, option) => (
-                                  <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
-                                    <Typography variant='body1'>{option.name}</Typography>
-                                    <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
-                                      {option.aiModelProvider?.name + '   '}
-                                      {option.modelTierType?.name === 'FREE_MODEL' && (
-                                        <Box
-                                          component='span'
-                                          sx={{
-                                            ml: 1,
-                                            px: 1.5,
-                                            py: 0.3,
-                                            backgroundColor: '#e0f2f1',
-                                            color: '#00695c',
-                                            fontWeight: 600,
-                                            fontSize: '0.75rem',
-                                            borderRadius: '6px'
-                                          }}
-                                        >
-                                          Free
-                                        </Box>
-                                      )}
-                                    </Typography>
-                                  </Box>
-                                )}
-                              />
-                            )}
-                          />
-                        </FormControl>
-                      )}
-                    </Grid>
-
-                    {/* Advanced Search */}
-                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
-                      <FormControlLabel
-                        label="Advanced Search"
-                        control={
-                          <Checkbox
-                            {...register('advancedSearchEnable')}
-                            checked={watch('advancedSearchEnable')}
-                          />
-                        }
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
-                      {watch('advancedSearchEnable') && (
-                        <FormControl fullWidth>
-                          <InputLabel id="advanced-search-model-label" />
-                          <Controller
-                            name="advancedSearchModel"
-                            control={control}
-                            render={({ field }) => (
-                              <Autocomplete
-                                {...field}
-                                options={sortModels(completionModels)}
-                                getOptionLabel={option => option.name}
-                                onChange={(_, value) =>
-                                  setValue('advancedSearchModel', value?.name)
-                              }
-                                value={
-                                completionModels.find(
-                                  model => model.name === watch('advancedSearchModel')
-                                ) || null
-                              }
-                                disableClearable
-                                renderInput={params => (
-                                  <TextField
-                                    {...params}
-                                    label="Advanced Search Model"
-                                    id="advanced-search-model-label"
-                                  />
-                                )}
-                                renderOption={(props, option) => (
-                                  <Box
-                                    {...props}
-                                    sx={{ display: 'flex', flexDirection: 'column' }}
-                                  >
-                                    <Typography variant="body1">{option.name}</Typography>
-                                    <Typography
-                                      variant="body2"
-                                      sx={{ fontStyle: 'italic', color: 'gray' }}
-                                    >
-                                      {option.aiModelProvider?.name}{' '}
-                                      {option.modelTierType?.name === 'FREE_MODEL' && (
-                                        <Box
-                                          component="span"
-                                          sx={{
-                                            ml: 1,
-                                            px: 1.5,
-                                            py: 0.3,
-                                            backgroundColor: '#e0f2f1',
-                                            color: '#00695c',
-                                            fontWeight: 600,
-                                            fontSize: '0.75rem',
-                                            borderRadius: '6px',
-                                          }}
-                                        >
-                                          Free
-                                        </Box>
-                                      )}
-                                    </Typography>
-                                  </Box>
-                                )}
-                              />
-                            )}
-                          />
-                        </FormControl>
-                      )}
-                    </Grid>
-
-
-
-                    {/* Rerank Search Results */}
-                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
-                      <FormControlLabel
-                        label='Rerank Search Results'
-                        control={<Checkbox {...register('rerankEnable')} checked={watch('rerankEnable')} />}
-                      />
-                    </Grid>
-                    {watch('rerankEnable') && (
+                    <Grid item xs={12}>
+                      <Grid container spacing={4}>
+                      {/* Moderation Check */}
                       <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
-                        <FormControl fullWidth>
-                          <InputLabel id='rerank-model-label'></InputLabel>
-                          <Controller
-                            name='rerankModel'
-                            control={control}
-                            render={({ field }) => (
-                              <Autocomplete
-                                {...field}
-                                options={sortModels(rerankModels)}
-                                getOptionLabel={option => option.name} // Label for autocomplete
-                                onChange={(_, value) => setValue('rerankModel', value?.name)} // Update form state
-                                value={rerankModels.find(model => model.name === watch('rerankModel')) || null} // Set selected value
-                                disableClearable
-                                renderInput={params => <TextField {...params} label='Rerank Model' />}
-                                renderOption={(props, option) => (
-                                  <Box {...props} sx={{ display: 'flex', flexDirection: 'column' }}>
-                                    <Typography variant='body1'>{option.name}</Typography>
-                                    <Typography variant='body2' sx={{ fontStyle: 'italic', color: 'gray' }}>
-                                      {option.aiModelProvider?.name + '   '}
-                                      {option.modelTierType?.name === 'FREE_MODEL' && (
-                                        <Box
-                                          component='span'
-                                          sx={{
-                                            ml: 1,
-                                            px: 1.5,
-                                            py: 0.3,
-                                            backgroundColor: '#e0f2f1',
-                                            color: '#00695c',
-                                            fontWeight: 600,
-                                            fontSize: '0.75rem',
-                                            borderRadius: '6px'
-                                          }}
-                                        >
-                                          Free
-                                        </Box>
-                                      )}
-                                    </Typography>
-                                  </Box>
-                                )}
-                              />
-                            )}
-                          />
-                        </FormControl>
+                        <FormControlLabel
+                          label='Moderation Check'
+                          control={<Checkbox {...register('moderationCheck')} checked={watch('moderationCheck')} />}
+                        />
                       </Grid>
-                    )}
 
-                    <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
-                      <FormControlLabel
-                        label={
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            Advanced Digitization
-                            <Tooltip
-                              title='Uses per-page LLM digitization when documents are split instead of plain text extraction. This is slower and consumes significantly more tokens. Requires Basic or Pro subscription.'
-                              arrow
-                            >
-                              <span>
-                                <IconButton color='primary' size='small' sx={{ ml: 0.5, p: 0.25 }}>
-                                  <Icon icon='mdi:information-outline' fontSize='small' />
-                                </IconButton>
-                              </span>
-                            </Tooltip>
-                          </Box>
-                        }
-                        control={
-                          <Checkbox {...register('autoDigitization')} checked={watch('autoDigitization')} />
-                        }
-                      />
+                      <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                        {watch('moderationCheck') && (
+                          <FormControl fullWidth>
+                            <InputLabel id='moderation-model-label'></InputLabel>
+                            <Controller
+                              name='moderationModel'
+                              control={control}
+                              render={({ field }) => (
+                                <Autocomplete
+                                  {...field}
+                                  options={sortModels(moderationModels)}
+                                  getOptionLabel={option => option.name} // Label for autocomplete
+                                  onChange={(_, value) => setValue('moderationModel', value?.name)} // Update form state
+                                  value={moderationModels.find(model => model.name === watch('moderationModel')) || null} // Set selected value
+                                  disableClearable
+                                  renderInput={params => <TextField {...params} label='Moderation Model' />}
+                                  renderOption={(props, option) => <AiModelOption props={props} option={option} />}
+                                />
+                              )}
+                            />
+                          </FormControl>
+                        )}
+                      </Grid>
+
+                      {/* Advanced Search */}
+                      <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                        <FormControlLabel
+                          label="Advanced Search"
+                          control={
+                            <Checkbox
+                              {...register('advancedSearchEnable')}
+                              checked={watch('advancedSearchEnable')}
+                            />
+                          }
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                        {watch('advancedSearchEnable') && (
+                          <FormControl fullWidth>
+                            <InputLabel id="advanced-search-model-label" />
+                            <Controller
+                              name="advancedSearchModel"
+                              control={control}
+                              render={({ field }) => (
+                                <Autocomplete
+                                  {...field}
+                                  options={sortModels(completionModels)}
+                                  getOptionLabel={option => option.name}
+                                  onChange={(_, value) =>
+                                    setValue('advancedSearchModel', value?.name)
+                                }
+                                  value={
+                                  completionModels.find(
+                                    model => model.name === watch('advancedSearchModel')
+                                  ) || null
+                                }
+                                  disableClearable
+                                  renderInput={params => (
+                                    <TextField
+                                      {...params}
+                                      label="Advanced Search Model"
+                                      id="advanced-search-model-label"
+                                    />
+                                  )}
+                                  renderOption={(props, option) => <AiModelOption props={props} option={option} />}
+                                />
+                              )}
+                            />
+                          </FormControl>
+                        )}
+                      </Grid>
+
+
+
+                      {/* Rerank Search Results */}
+                      <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                        <FormControlLabel
+                          label='Rerank Search Results'
+                          control={<Checkbox {...register('rerankEnable')} checked={watch('rerankEnable')} />}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                        {watch('rerankEnable') && (
+                          <FormControl fullWidth>
+                            <InputLabel id='rerank-model-label'></InputLabel>
+                            <Controller
+                              name='rerankModel'
+                              control={control}
+                              render={({ field }) => (
+                                <Autocomplete
+                                  {...field}
+                                  options={sortModels(rerankModels)}
+                                  getOptionLabel={option => option.name} // Label for autocomplete
+                                  onChange={(_, value) => setValue('rerankModel', value?.name)} // Update form state
+                                  value={rerankModels.find(model => model.name === watch('rerankModel')) || null} // Set selected value
+                                  disableClearable
+                                  renderInput={params => <TextField {...params} label='Rerank Model' />}
+                                  renderOption={(props, option) => <AiModelOption props={props} option={option} />}
+                                />
+                              )}
+                            />
+                          </FormControl>
+                        )}
+                      </Grid>
+
+                      <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+                        <FormControlLabel
+                          label={
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              Advanced Digitization
+                              <Tooltip
+                                title='Uses per-page LLM digitization when documents are split instead of plain text extraction. This is slower and consumes significantly more tokens. Requires Basic or Pro subscription.'
+                                arrow
+                              >
+                                <span>
+                                  <IconButton color='primary' size='small' sx={{ ml: 0.5, p: 0.25 }}>
+                                    <Icon icon='mdi:information-outline' fontSize='small' />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            </Box>
+                          }
+                          control={
+                            <Checkbox {...register('autoDigitization')} checked={watch('autoDigitization')} />
+                          }
+                        />
+                      </Grid>
+                      </Grid>
                     </Grid>
                   </Grid>
                 </Grid>

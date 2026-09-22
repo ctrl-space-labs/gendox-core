@@ -19,6 +19,47 @@ export function chunk(array, size) {
   return result
 }
 
+/**
+ * Read every page of a paginated endpoint. `fetchPage(page, size)` must resolve to a
+ * Spring Page ({ content, totalPages }). `maxPages` is a safety valve.
+ */
+export const fetchAllPages = async (fetchPage, { size = 100, maxPages = 50 } = {}) => {
+  const items = []
+  let page = 0
+  let totalPages = 1
+
+  while (page < totalPages && page < maxPages) {
+    const data = await fetchPage(page, size)
+    totalPages = data?.totalPages || 0
+    items.push(...(data?.content || []))
+    page += 1
+  }
+
+  return items
+}
+
+/**
+ * Run `handler` over `items`, `concurrency` at a time, draining a shared queue.
+ * `onProgress(done, total)` fires after each item; `weight` lets one item count
+ * for more than one unit of progress (e.g. a batch of 10 documents).
+ */
+export const runWithConcurrency = async (items, concurrency, handler, { onProgress, weight = () => 1 } = {}) => {
+  const queue = [...items]
+  const total = items.reduce((sum, item) => sum + weight(item), 0)
+  let done = 0
+
+  const worker = async () => {
+    while (queue.length) {
+      const item = queue.shift()
+      await handler(item)
+      done += weight(item)
+      onProgress?.(done, total)
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker))
+}
+
 // Import centralized file format configuration for document digitization
 import { isDocumentDigitizationFileTypeSupported, isDocumentInsightsFileTypeSupported } from './fileFormats'
 

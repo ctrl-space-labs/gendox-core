@@ -1,11 +1,12 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.converters;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request.AnthropicCompletionRequest;
+import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.anthropic.request.AnthropicContentBlock;
 import dev.ctrlspace.gendox.gendoxcoreapi.ai.engine.model.dtos.generic.AiModelMessage;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxRuntimeException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.AiTools;
@@ -60,13 +61,11 @@ public class AnthropicMessagesConverter {
         if (toolBatch.isEmpty()) {
             return;
         }
-        ArrayNode content = objectMapper.createArrayNode();
+        List<AnthropicContentBlock> content = new ArrayList<>();
         for (AiModelMessage t : toolBatch) {
-            ObjectNode block = objectMapper.createObjectNode();
-            block.put("type", "tool_result");
-            block.put("tool_use_id", t.getToolCallId() != null ? t.getToolCallId() : "");
-            block.put("content", t.getContent() != null ? t.getContent() : "");
-            content.add(block);
+            content.add(new AnthropicContentBlock.ToolResult(
+                    t.getToolCallId() != null ? t.getToolCallId() : "",
+                    t.getContent() != null ? t.getContent() : ""));
         }
         out.add(AnthropicCompletionRequest.Message.builder()
                 .role("user")
@@ -77,16 +76,25 @@ public class AnthropicMessagesConverter {
 
     private AnthropicCompletionRequest.Message mapUserOrAssistant(AiModelMessage m) {
         String role = m.getRole();
-        if ("assistant".equals(role) && m.getToolCalls() != null && m.getToolCalls().isArray() && !m.getToolCalls().isEmpty()) {
-            ArrayNode blocks = objectMapper.createArrayNode();
-            if (m.getContent() != null && !m.getContent().isBlank()) {
-                ObjectNode textBlock = objectMapper.createObjectNode();
-                textBlock.put("type", "text");
-                textBlock.put("text", m.getContent());
-                blocks.add(textBlock);
+        boolean hasToolCalls = m.getToolCalls() != null && m.getToolCalls().isArray() && !m.getToolCalls().isEmpty();
+        // Foreign signatures are stripped upstream, so anything here is ours.
+        boolean hasThinking = m.getReasoningMetadata() != null && m.getReasoningMetadata().isArray()
+                && !m.getReasoningMetadata().isEmpty();
+
+        if ("assistant".equals(role) && (hasToolCalls || hasThinking)) {
+            List<AnthropicContentBlock> blocks = new ArrayList<>();
+            // Mirrors the order Anthropic returns them in. Not enforced by the API, but the
+            // signature is verified, so the blocks themselves must replay untouched.
+            if (hasThinking) {
+                blocks.addAll(toThinkingBlocks(m.getReasoningMetadata()));
             }
-            for (JsonNode call : m.getToolCalls()) {
-                blocks.add(openAiToolCallToAnthropicToolUse(call));
+            if (m.getContent() != null && !m.getContent().isBlank()) {
+                blocks.add(new AnthropicContentBlock.Text(m.getContent()));
+            }
+            if (hasToolCalls) {
+                for (JsonNode call : m.getToolCalls()) {
+                    blocks.add(openAiToolCallToAnthropicToolUse(call));
+                }
             }
             return AnthropicCompletionRequest.Message.builder()
                     .role("assistant")
@@ -96,11 +104,17 @@ public class AnthropicMessagesConverter {
         String text = m.getContent() != null ? m.getContent() : "";
         return AnthropicCompletionRequest.Message.builder()
                 .role(role)
-                .content(objectMapper.getNodeFactory().textNode(text))
+                .content(List.of(new AnthropicContentBlock.Text(text)))
                 .build();
     }
 
-    private ObjectNode openAiToolCallToAnthropicToolUse(JsonNode call) {
+    /** reasoning_metadata is stored as the blocks Anthropic returned, so it maps straight back. */
+    private List<AnthropicContentBlock> toThinkingBlocks(JsonNode reasoningMetadata) {
+        return objectMapper.convertValue(reasoningMetadata, new TypeReference<>() {
+        });
+    }
+
+    private AnthropicContentBlock.ToolUse openAiToolCallToAnthropicToolUse(JsonNode call) {
         JsonNode idNode = call.get("id");
         JsonNode function = call.get("function");
         String id = idNode != null && !idNode.isNull() ? idNode.asText() : "";
@@ -113,12 +127,7 @@ public class AnthropicMessagesConverter {
             }
             input = parseToolArguments(function.get("arguments"));
         }
-        ObjectNode block = objectMapper.createObjectNode();
-        block.put("type", "tool_use");
-        block.put("id", id);
-        block.put("name", name);
-        block.set("input", input);
-        return block;
+        return new AnthropicContentBlock.ToolUse(id, name, input);
     }
 
     private JsonNode parseToolArguments(JsonNode arguments) {

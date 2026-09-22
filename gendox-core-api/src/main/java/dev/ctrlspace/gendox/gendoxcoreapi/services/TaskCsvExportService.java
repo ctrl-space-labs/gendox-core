@@ -55,6 +55,7 @@ public class TaskCsvExportService {
         );
 
         // Build helpers
+        List<TaskNode> questions = sortQuestionsByOrder(questionNodes);
         Map<UUID, String> docIdToTitle = getDocumentTitles(documentNodes);
         Map<String, TaskNodeValueDTO> answerMatrix = buildAnswerMatrix(answerNodes);
 
@@ -65,8 +66,8 @@ public class TaskCsvExportService {
             // Write UTF-8 BOM for Excel, this is the "ZERO WIDTH NO-BREAK SPACE" character in UTF-8
             writer.write('\uFEFF');
 
-            writeHeaderRows(writer, questionNodes);
-            writeDataRows(writer, documentNodes, questionNodes, docIdToTitle, answerMatrix);
+            writeHeaderRows(writer, questions, "Document/Question");
+            writeDataRows(writer, documentNodes, questions, docIdToTitle, answerMatrix);
             writer.flush();
             return new InputStreamResource(new ByteArrayInputStream(out.toByteArray()));
         } catch (Exception e) {
@@ -93,6 +94,7 @@ public class TaskCsvExportService {
                 .build();
         Page<TaskNode> answerNodes = taskNodeService.getTaskNodesByCriteria(criteria, Pageable.unpaged());
 
+        List<TaskNode> questions = sortQuestionsByOrder(questionNodes);
         Map<String, TaskNodeValueDTO> answerMatrix = buildAnswerMatrix(answerNodes);
 
         // Optional: Load document title
@@ -105,23 +107,11 @@ public class TaskCsvExportService {
             // Write UTF-8 BOM for Excel, this is the "ZERO WIDTH NO-BREAK SPACE" character in UTF-8
             writer.write('\uFEFF');
 
-            // header: questions only
-            writer.write("Document");
-            for (TaskNode question : questionNodes) {
-                writer.write("," + escapeCsv(question.getNodeValue().getMessage()));
-            }
-            writer.write("\r\n");
+            writeHeaderRows(writer, questions, "Document");
 
             String docTitle = docTitles.getOrDefault(documentNode.getDocumentId(), documentNodeId.toString());
             writer.write(escapeCsv(docTitle));
-
-            // answers row
-            for (TaskNode q : questionNodes) {
-                String key = documentNodeId + "|" + q.getId();
-                TaskNodeValueDTO val = answerMatrix.get(key);
-                writer.write("," + escapeCsv(val != null ? val.getAnswerValue() : ""));
-            }
-
+            writeAnswerCells(writer, documentNodeId, questions, answerMatrix);
             writer.write("\r\n");
             writer.flush();
 
@@ -151,6 +141,27 @@ public class TaskCsvExportService {
                 ));
     }
 
+    /**
+     * Questions are exported in the order they have in the task, the same order the UI shows.
+     */
+    private List<TaskNode> sortQuestionsByOrder(Page<TaskNode> questionNodes) {
+        return questionNodes.getContent().stream()
+                .sorted(Comparator.comparingInt(this::getQuestionOrder))
+                .toList();
+    }
+
+    private int getQuestionOrder(TaskNode question) {
+        return question.getNodeValue() != null && question.getNodeValue().getOrder() != null
+                ? question.getNodeValue().getOrder()
+                : 0;
+    }
+
+    private String getQuestionTitle(TaskNode question) {
+        return question.getNodeValue() != null && question.getNodeValue().getMessage() != null
+                ? question.getNodeValue().getMessage().replaceAll("[\r\n]+", " ")
+                : question.getId().toString();
+    }
+
     private Map<String, TaskNodeValueDTO> buildAnswerMatrix(Page<TaskNode> answerNodes) {
         Map<String, TaskNodeValueDTO> answerMatrix = new HashMap<>();
         for (TaskNode answerNode : answerNodes) {
@@ -163,14 +174,11 @@ public class TaskCsvExportService {
         return answerMatrix;
     }
 
-    private void writeHeaderRows(OutputStreamWriter writer, Page<TaskNode> questionNodes) throws Exception {
-        // First row: question texts (each 3 times)
-        writer.write("Document/Question");
-        for (TaskNode question : questionNodes) {
-            String qTitle = question.getNodeValue() != null && question.getNodeValue().getMessage() != null
-                    ? question.getNodeValue().getMessage().replaceAll("[\r\n]+", " ")
-                    : question.getId().toString();
-            writer.write("," + escapeCsv(qTitle));
+    private void writeHeaderRows(OutputStreamWriter writer, List<TaskNode> questions, String cornerLabel) throws Exception {
+        // First row: question texts, each spanning the 3 answer columns
+        writer.write(cornerLabel);
+        for (TaskNode question : questions) {
+            writer.write("," + escapeCsv(getQuestionTitle(question)));
             writer.write(",");
             writer.write(",");
         }
@@ -178,8 +186,8 @@ public class TaskCsvExportService {
 
         // Second row: sub-headers
         writer.write("");
-        for (int i = 0; i < questionNodes.getContent().size(); i++) {
-            writer.write(",Answer,Flag,Message");
+        for (int i = 0; i < questions.size(); i++) {
+            writer.write(",Status,Short Description,Long Description");
         }
         writer.write("\r\n");
     }
@@ -187,25 +195,36 @@ public class TaskCsvExportService {
     private void writeDataRows(
             OutputStreamWriter writer,
             Page<TaskNode> documentNodes,
-            Page<TaskNode> questionNodes,
+            List<TaskNode> questions,
             Map<UUID, String> docIdToTitle,
             Map<String, TaskNodeValueDTO> answerMatrix
     ) throws Exception {
         for (TaskNode document : documentNodes) {
             String docTitle = docIdToTitle.getOrDefault(document.getDocumentId(), document.getId().toString());
             writer.write(escapeCsv(docTitle));
-            for (TaskNode question : questionNodes) {
-                String key = document.getId() + "|" + question.getId();
-                TaskNodeValueDTO value = answerMatrix.get(key);
-                String answerValue = value != null && value.getAnswerValue() != null ? value.getAnswerValue() : "";
-                String flagEnum = value != null && value.getAnswerFlagEnum() != null ? value.getAnswerFlagEnum().toString() : "";
-                String message = value != null && value.getMessage() != null ? value.getMessage() : "";
-
-                writer.write("," + escapeCsv(answerValue));
-                writer.write("," + escapeCsv(flagEnum));
-                writer.write("," + escapeCsv(message));
-            }
+            writeAnswerCells(writer, document.getId(), questions, answerMatrix);
             writer.write("\r\n");
+        }
+    }
+
+    /**
+     * Writes the 3 columns of every answer of one document: status, short and long description.
+     */
+    private void writeAnswerCells(
+            OutputStreamWriter writer,
+            UUID documentNodeId,
+            List<TaskNode> questions,
+            Map<String, TaskNodeValueDTO> answerMatrix
+    ) throws Exception {
+        for (TaskNode question : questions) {
+            TaskNodeValueDTO value = answerMatrix.get(documentNodeId + "|" + question.getId());
+            String status = value != null && value.getAnswerFlagEnum() != null ? value.getAnswerFlagEnum().toString() : "";
+            String shortDescription = value != null && value.getAnswerValue() != null ? value.getAnswerValue() : "";
+            String longDescription = value != null && value.getMessage() != null ? value.getMessage() : "";
+
+            writer.write("," + escapeCsv(status));
+            writer.write("," + escapeCsv(shortDescription));
+            writer.write("," + escapeCsv(longDescription));
         }
     }
 
