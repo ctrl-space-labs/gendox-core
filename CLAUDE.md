@@ -26,7 +26,7 @@ When implementation changes a plan substantially, leave the original file exactl
 
 ### Pending plans
 
-- [Web Scraping Integration (Firecrawl) — #526](.ai/issue-526-web-scraping-integration-2026-09-17.md) — in progress; 526.1 and 526.2 implemented. Supersedes the [original 2026-09-10 plan](.ai/issue-526-web-scraping-integration-2026-09-10.md), kept unchanged as first written.
+- [Web Scraping Integration (Firecrawl) — #526](.ai/issue-526-web-scraping-integration-2026-09-17.md) — in progress; 526.1, 526.2, 526.4, 526.5 and 526.6 implemented, 526.3 deferred into 526.7. Supersedes the [original 2026-09-10 plan](.ai/issue-526-web-scraping-integration-2026-09-10.md), kept unchanged as first written.
 
 ## Common Development Commands
 
