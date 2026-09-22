@@ -122,3 +122,7 @@ file:/
 
 # Local-only end-user workspace (kept locally, not tracked)
 gendox-workspace/
+
+# Gendox settings lab
+gendox-settings-lab/node_modules/
+gendox-settings-lab/dist/
