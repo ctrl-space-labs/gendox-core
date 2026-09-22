@@ -74,7 +74,7 @@ export const fetchTaskNodesByTaskId = createAsyncThunk(
 
 export const fetchTaskNodesByCriteria = createAsyncThunk(
   'taskNode/fetchByCriteria',
-  async ({ organizationId, projectId, taskId, criteria, token, page = 0, size = 20 }, thunkAPI) => {
+  async ({ organizationId, projectId, taskId, criteria, token, page = 0, size = 20, sort }, thunkAPI) => {
     try {
       const response = await taskService.getTaskNodesByCriteria(
         organizationId,
@@ -83,7 +83,8 @@ export const fetchTaskNodesByCriteria = createAsyncThunk(
         criteria,
         token,
         page,
-        size
+        size,
+        sort
       )
       return {
         content: response.data.content,
@@ -241,44 +242,82 @@ export const loadTaskDigitizationData = createAsyncThunk(
 
 export const loadTaskInsightsData = createAsyncThunk(
   'taskNode/loadTaskInsightsData',
-  async ({ organizationId, projectId, taskId, token, docsPage, docsPageSize }, thunkAPI) => {
+  async ({ organizationId, projectId, taskId, token, docsPage, docsPageSize, documentCriteria = {}, documentSort }, thunkAPI) => {
     try {
       //
-      // 1️⃣ Fetch DOCUMENT task nodes
+      // 1️⃣ Fetch DOCUMENT and QUESTION task nodes, in parallel
       //
-      const docsResult = await thunkAPI
-        .dispatch(
-          fetchTaskNodesByCriteria({
-            organizationId,
-            projectId,
-            taskId,
-            token,
-            criteria: { taskId, nodeTypeNames: ['DOCUMENT'] },
-            page: docsPage,
-            size: docsPageSize
-          })
-        )
-        .unwrap()
-
-      const documentNodes = docsResult.content || []
-      const documentIds = documentNodes.map(n => n.documentId).filter(Boolean)
-
-      //
-      // 2️⃣ Fetch full documents
-      //
-      if (documentIds.length > 0) {
-        await thunkAPI
+      const [docsResult, questionsResult] = await Promise.all([
+        thunkAPI
           .dispatch(
-            fetchDocuments({
+            fetchTaskNodesByCriteria({
               organizationId,
               projectId,
-              documentIds,
+              taskId,
               token,
-              target: 'taskDocuments'
+              criteria: { taskId, nodeTypeNames: ['DOCUMENT'], ...documentCriteria },
+              page: docsPage,
+              size: docsPageSize,
+              sort: documentSort
+            })
+          )
+          .unwrap(),
+        thunkAPI
+          .dispatch(
+            fetchTaskNodesByCriteria({
+              organizationId,
+              projectId,
+              taskId,
+              token,
+              criteria: { taskId, nodeTypeNames: ['QUESTION'] },
+              page: 0,
+              size: 2147483647 // max int to fetch all questions
             })
           )
           .unwrap()
+      ])
+
+      const documentNodes = docsResult.content || []
+      const questionNodes = questionsResult.content || []
+      const documentIds = documentNodes.map(n => n.documentId).filter(Boolean)
+
+      //
+      // 2️⃣ Fetch full documents (for their titles) and ANSWER task nodes, in parallel
+      //
+      const answerPayload = {
+        documentNodeIds: documentNodes.map(d => d.id),
+        questionNodeIds: questionNodes.map(q => q.id)
       }
+
+      await Promise.all([
+        documentIds.length > 0 &&
+          thunkAPI
+            .dispatch(
+              fetchDocuments({
+                organizationId,
+                projectId,
+                documentIds,
+                token,
+                size: documentIds.length,
+                target: 'taskDocuments'
+              })
+            )
+            .unwrap(),
+        thunkAPI
+          .dispatch(
+            fetchAnswerTaskNodes({
+              organizationId,
+              projectId,
+              taskId,
+              answerTaskNodePayload: answerPayload,
+              token,
+              page: 0,
+              size: 2147483647 // max int to fetch all answers
+            })
+          )
+          .unwrap()
+      ])
+
       const fullDocs = thunkAPI.getState().activeDocument.taskDocuments
 
       const mergedDocumentNodes = documentNodes.map(node => {
@@ -305,47 +344,6 @@ export const loadTaskInsightsData = createAsyncThunk(
         type: 'taskNode/updateMergedDocuments',
         payload: mergedDocumentNodes
       })
-
-      //
-      // 3️⃣ Fetch QUESTION task nodes
-      //
-      const questionsResult = await thunkAPI
-        .dispatch(
-          fetchTaskNodesByCriteria({
-            organizationId,
-            projectId,
-            taskId,
-            token,
-            criteria: { taskId, nodeTypeNames: ['QUESTION'] },
-            page: 0,
-            size: 2147483647 // max int to fetch all questions
-          })
-        )
-        .unwrap()
-
-      const questionNodes = questionsResult.content || []
-
-      //
-      // 4️⃣ Fetch ANSWER task nodes (depends on docs + questions)
-      //
-      const answerPayload = {
-        documentNodeIds: documentNodes.map(d => d.id),
-        questionNodeIds: questionNodes.map(q => q.id)
-      }
-
-      await thunkAPI
-        .dispatch(
-          fetchAnswerTaskNodes({
-            organizationId,
-            projectId,
-            taskId,
-            answerTaskNodePayload: answerPayload,
-            token,
-            page: 0,
-            size: 2147483647 // max int to fetch all answers
-          })
-        )
-        .unwrap()
 
       return true
     } catch (error) {
@@ -475,6 +473,7 @@ const taskNodeSlice = createSlice({
         state.isLoading = false
         state.error = action.payload
       })
+
 
       // explicit fetch answers
       .addCase(fetchAnswerTaskNodes.pending, state => {

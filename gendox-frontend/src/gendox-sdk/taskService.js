@@ -192,10 +192,11 @@ const getTaskNodesByTaskId = async (organizationId, projectId, taskId, token, pa
  * @param token
  * @param page
  * @param size
+ * @param sort optional, e.g. 'createdAt,desc'. DOCUMENT nodes also sort by 'title' or 'answer' (criteria.sortQuestionNodeId)
  * @returns {Promise<axios.AxiosResponse<TaskNode[]>>}
  */
-const getTaskNodesByCriteria = async (organizationId, projectId, taskId, criteria, token, page, size) => {
-  return axios.post(apiRequests.getTaskNodesByCriteria(organizationId, projectId, taskId, page, size), criteria, {
+const getTaskNodesByCriteria = async (organizationId, projectId, taskId, criteria, token, page, size, sort) => {
+  return axios.post(apiRequests.getTaskNodesByCriteria(organizationId, projectId, taskId, page, size, sort), criteria, {
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + token

@@ -11,6 +11,32 @@ import HeaderSection from './table-components/DocumentInsightsHeaderSection'
 import DialogManager from 'src/views/pages/tasks/document-insights/table-components/DocumentInsightsDialogs'
 import { useJobMonitor } from '../generation/useJobMonitor'
 
+const QUESTION_FIELD_PREFIX = 'q_' // question columns are named q_<questionNodeId>
+
+// The grid's search, sort and filter, as the task node search criteria and sort
+const toDocumentSearch = (searchTerm, sortModel, filterModel) => {
+  const criteria = { documentNameContains: searchTerm || undefined }
+  let sort = 'createdAt,desc'
+
+  const sortItem = sortModel[0]
+  if (sortItem?.field === 'name') {
+    sort = `title,${sortItem.sort}`
+  } else if (sortItem?.field.startsWith(QUESTION_FIELD_PREFIX)) {
+    sort = `answer,${sortItem.sort}`
+    criteria.sortQuestionNodeId = sortItem.field.slice(QUESTION_FIELD_PREFIX.length)
+  }
+
+  const filter = filterModel.items[0]
+  const statuses = filter?.operator === 'isAnyOf' ? filter.value : filter?.value ? [filter.value] : []
+  if (filter?.field.startsWith(QUESTION_FIELD_PREFIX) && statuses?.length) {
+    criteria.answerFilterQuestionNodeId = filter.field.slice(QUESTION_FIELD_PREFIX.length)
+    criteria.answerFilterStatuses = statuses
+    criteria.answerFilterNegate = filter.operator === 'not'
+  }
+
+  return { criteria, sort }
+}
+
 const DocumentInsightsTable = ({ selectedTask }) => {
   const router = useRouter()
   const dispatch = useDispatch()
@@ -22,6 +48,10 @@ const DocumentInsightsTable = ({ selectedTask }) => {
 
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
+  const [searchInput, setSearchInput] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortModel, setSortModel] = useState([]) // empty = newest documents first
+  const [filterModel, setFilterModel] = useState({ items: [] })
   const [dialogs, setDialogs] = useState({
     newDoc: false,
     delete: false,
@@ -127,6 +157,21 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   }, [taskNodesAnswerList])
 
 
+  // Debounce the search box
+  useEffect(() => {
+    if (searchInput === searchTerm) return
+    const timer = setTimeout(() => setSearchTerm(searchInput), 500)
+    return () => clearTimeout(timer)
+  }, [searchInput, searchTerm])
+
+  const documentSearch = useMemo(
+    () => toDocumentSearch(searchTerm, sortModel, filterModel),
+    [searchTerm, sortModel, filterModel]
+  )
+  // The filter model also changes while its panel is being edited, so reload on real changes only
+  const criteriaKey = JSON.stringify(documentSearch)
+  const lastCriteriaKey = useRef(criteriaKey)
+
   const reloadAll = useCallback(async () => {
     if (!organizationId || !projectId || !taskId) return
     setIsPageReloading(true)
@@ -139,13 +184,15 @@ const DocumentInsightsTable = ({ selectedTask }) => {
           taskId,
           token,
           docsPage: page,
-          docsPageSize: pageSize
+          docsPageSize: pageSize,
+          documentCriteria: documentSearch.criteria,
+          documentSort: documentSearch.sort
         })
       ).unwrap()
     } finally {
       setIsPageReloading(false)
     }
-  }, [organizationId, projectId, taskId, token, page, pageSize, dispatch])
+  }, [organizationId, projectId, taskId, token, page, pageSize, documentSearch, dispatch])
 
   // Initial load
   useEffect(() => {
@@ -156,6 +203,15 @@ const DocumentInsightsTable = ({ selectedTask }) => {
 
   useEffect(() => {
     if (!pageSize) return
+
+    // New search, sort or filter: start again from the first page (setPage re-runs this effect)
+    if (criteriaKey !== lastCriteriaKey.current) {
+      lastCriteriaKey.current = criteriaKey
+      if (page !== 0) {
+        setPage(0)
+        return
+      }
+    }
 
     router.replace(
       {
@@ -171,7 +227,7 @@ const DocumentInsightsTable = ({ selectedTask }) => {
     )
     if (!organizationId || !projectId || !taskId) return
     reloadAll()
-  }, [page, pageSize])
+  }, [page, pageSize, criteriaKey])
 
   const { resumeStartedJobs } = useJobMonitor({
     organizationId,
@@ -284,6 +340,12 @@ const DocumentInsightsTable = ({ selectedTask }) => {
             setPage={setPage}
             setPageSize={setPageSize}
             totalDocuments={totalDocuments}
+            searchInput={searchInput}
+            onSearchChange={setSearchInput}
+            sortModel={sortModel}
+            onSortModelChange={setSortModel}
+            filterModel={filterModel}
+            onFilterModelChange={setFilterModel}
             selectedDocuments={selectedDocuments}
             setSelectedDocuments={setSelectedDocuments}
             onSelectDocument={handleSelectDocument}

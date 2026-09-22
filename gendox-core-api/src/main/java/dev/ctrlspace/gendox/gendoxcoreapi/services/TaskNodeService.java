@@ -3,6 +3,10 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
+import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.QTaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
@@ -22,6 +26,9 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.querydsl.QPageRequest;
+import org.springframework.data.querydsl.QSort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -250,7 +257,30 @@ public class TaskNodeService {
 
     public Page<TaskNode> getTaskNodesByCriteria(TaskNodeCriteria criteria, Pageable pageable) {
         logger.trace("Fetching task nodes by criteria: {}", criteria);
-        return taskNodeRepository.findAll(TaskNodePredicates.build(criteria), pageable);
+        Page<TaskNode> page = taskNodeRepository.findAll(TaskNodePredicates.build(criteria), withSubquerySort(criteria, pageable));
+        // Return the requested pageable: a subquery QSort holds QueryDSL expressions that can't be serialized
+        return new PageImpl<>(page.getContent(), pageable, page.getTotalElements());
+    }
+
+    /**
+     * "title" and "answer" aren't TaskNode properties, so sort=title / sort=answer are turned into
+     * subquery sorts: the document title, or the answer value to criteria.sortQuestionNodeId.
+     */
+    private Pageable withSubquerySort(TaskNodeCriteria criteria, Pageable pageable) {
+        Sort.Order title = pageable.getSort().getOrderFor("title");
+        Sort.Order answer = pageable.getSort().getOrderFor("answer");
+        Sort.Order order = title != null ? title : answer;
+        if (order == null || (answer != null && criteria.getSortQuestionNodeId() == null)) {
+            return pageable;
+        }
+
+        Expression<String> sortBy = title != null
+                ? TaskNodePredicates.documentTitle()
+                : TaskNodePredicates.answerValue(criteria.getSortQuestionNodeId());
+        QSort sort = new QSort(
+                new OrderSpecifier<>(order.isAscending() ? Order.ASC : Order.DESC, sortBy, OrderSpecifier.NullHandling.NullsLast),
+                QTaskNode.taskNode.id.asc()); // ties (e.g. many "No" answers) need a stable order to page through
+        return QPageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 
     /**

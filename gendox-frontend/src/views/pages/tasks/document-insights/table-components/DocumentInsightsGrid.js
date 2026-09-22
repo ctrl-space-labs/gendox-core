@@ -5,13 +5,23 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import DescriptionIcon from '@mui/icons-material/Description'
 import CircularProgress from '@mui/material/CircularProgress'
-import { answerFlagEnum } from 'src/utils/tasks/answerFlagEnum'
+import { answerFlagEnum, getAnswerFlagProps } from 'src/utils/tasks/answerFlagEnum'
+import SearchToolbar from 'src/utils/searchToolbar'
 import Checkbox from '@mui/material/Checkbox'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useTheme } from '@mui/material/styles'
 import TruncatedText from 'src/views/custom-components/truncated-text/TrancatedText'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+
+// Filter options of a question column: the answer statuses, plus "not answered"
+const ANSWER_STATUS_OPTIONS = [
+  { value: 'UNANSWERED', label: 'Not answered' },
+  ...['OK', 'INFO', 'WARNING', 'MINOR_ISSUE', 'MAJOR_ISSUE', 'CRITICAL_ISSUE', 'NA'].map(flag => ({
+    value: flag,
+    label: getAnswerFlagProps(flag).label
+  }))
+]
 
 const DocumentInsightsGrid = ({
   openDialog,
@@ -24,6 +34,12 @@ const DocumentInsightsGrid = ({
   setPage,
   setPageSize,
   totalDocuments,
+  searchInput,
+  onSearchChange,
+  sortModel,
+  onSortModelChange,
+  filterModel,
+  onFilterModelChange,
   selectedDocuments = [],
   setSelectedDocuments,
   onSelectDocument = () => {},
@@ -129,7 +145,7 @@ const DocumentInsightsGrid = ({
         field: 'name',
         headerName: 'Document',
         width: 350,
-        sortable: false,
+        sortable: true,
         filterable: false,
         disableColumnMenu: true,
         renderCell: params => {
@@ -205,12 +221,13 @@ const DocumentInsightsGrid = ({
       // Dynamic question columns
       ...sortedQuestions.map((q, idx) => ({
         field: `q_${q.id}`,
-        headerName: <TruncatedText text={q.text} />,
+        headerName: q.title || q.text, // shown in the column menu and filter panel
         width: 240,
         editable: false,
-        sortable: false,
-        filterable: false,
-        disableColumnMenu: true,
+        sortable: true,
+        filterable: true,
+        type: 'singleSelect',
+        valueOptions: ANSWER_STATUS_OPTIONS,
         cellClassName: 'answer-cell',
 
         renderHeader: () => {
@@ -232,7 +249,10 @@ const DocumentInsightsGrid = ({
             >
               {/* Title (normal flow) */}
               <Box
-                onClick={() => openDialog('questionDetail', q)}
+                onClick={e => {
+                  e.stopPropagation()
+                  openDialog('questionDetail', q)
+                }}
                 sx={{
                   minWidth: 0,
                   flexGrow: 1,
@@ -441,13 +461,9 @@ const DocumentInsightsGrid = ({
     theme
   ])
 
+  // Documents come sorted and filtered by the server
   const rows = useMemo(() => {
-    const sortedDocs = [...documents].sort((a, b) => {
-      const dateA = new Date(a.createdAt || a.createdAt || 0)
-      const dateB = new Date(b.createdAt || b.createdAt || 0)
-      return dateA - dateB
-    })
-    return sortedDocs.map(doc => {
+    return documents.map(doc => {
       const row = {
         id: doc.id,
         name: doc.name || '',
@@ -522,7 +538,20 @@ const DocumentInsightsGrid = ({
         componentsProps={{
           pagination: { showFirstButton: true, showLastButton: true }
         }}
-        loading={isPageLoading}
+        sortingMode='server'
+        sortModel={sortModel}
+        onSortModelChange={onSortModelChange}
+        filterMode='server'
+        filterModel={filterModel}
+        onFilterModelChange={onFilterModelChange}
+        slots={{ toolbar: SearchToolbar }}
+        slotProps={{
+          toolbar: {
+            value: searchInput,
+            onChange: e => onSearchChange(e.target.value),
+            clearSearch: () => onSearchChange('')
+          }
+        }}
         sx={{
           '& .MuiDataGrid-columnHeaderTitleContainer': {
             width: '100% !important'

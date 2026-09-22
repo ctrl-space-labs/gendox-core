@@ -14,6 +14,9 @@ import java.util.UUID;
 @Builder(toBuilder = true)
 public class TaskNodeCriteria {
 
+    /** answerFilterStatuses value meaning "the document has no answer for the question". */
+    public static final String UNANSWERED = "UNANSWERED";
+
     private UUID taskId;
     private List<UUID> nodeIds;
     private List<String> nodeTypeNames;
@@ -28,4 +31,13 @@ public class TaskNodeCriteria {
     // Page range for document digitization (1-based indexing)
     private Integer pageFrom;
     private Integer pageTo;
+
+    // Document Insights table: DOCUMENT nodes by document title, and by the status of their
+    // answer to a question (AnswerFlag names, or UNANSWERED). answerFilterNegate keeps the rest.
+    private String documentNameContains;
+    private UUID answerFilterQuestionNodeId;
+    private List<String> answerFilterStatuses;
+    private Boolean answerFilterNegate;
+    // The question whose answers are sorted by, with sort=answer
+    private UUID sortQuestionNodeId;
 }
