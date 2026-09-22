@@ -9,6 +9,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.WebScrapePage;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.IntegratedFileDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.ProjectIntegrationDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapeScheduleDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.integrations.webScrape.DiscoveredPageDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.integrations.webScrape.WebCrawlResultDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.integrations.webScrape.WebPageContentDTO;
@@ -24,11 +25,13 @@ import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.FirecrawlConfig;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapeConfigConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapePageStatusConstants;
 import jakarta.transaction.Transactional;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -37,9 +40,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class WebScrapeIntegrationUpdateService implements IntegrationUpdateService {
@@ -89,42 +90,34 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
             return Map.of();
         }
 
+        discoverPages(integration);
+        scrapeSelectedPages(integration);
+
+        return Map.of();
+    }
+
+    /**
+     * Lists the pages of the site and stores what is new, without downloading any content.
+     */
+    public void discoverPages(Integration integration) throws GendoxException {
+
         Map<String, Object> config = readConfig(integration);
-        String providerName = (String) config.getOrDefault(
-                WebScrapeConfigConstants.PROVIDER, FirecrawlConfig.PROVIDER_NAME);
-        Integer crawlPageLimit = (Integer) config.get(WebScrapeConfigConstants.CRAWL_PAGE_LIMIT);
-
-        WebScrapeProvider provider = webScrapeProviderUtils.getProvider(providerName);
-
-        WebScrapeTargetDTO target = WebScrapeTargetDTO.builder()
-                .seedUrl(integration.getUrl())
-                .apiKey(webScrapeProviderUtils.resolveApiKey(integration.getOrganizationId()))
-                .crawlLimit(crawlPageLimit)
-                .build();
+        WebScrapeProvider provider = resolveProvider(config);
+        WebScrapeTargetDTO target = buildTarget(integration, config);
 
         WebCrawlResultDTO result = provider.crawl(target);
-        Instant now = Instant.now();
 
-        for (DiscoveredPageDTO discovered : result.getPages()) {
-            WebScrapePage page = webScrapePageRepository
-                    .findByIntegrationIdAndUrl(integration.getId(), discovered.getUrl())
-                    .orElseGet(() -> {
-                        WebScrapePage newPage = new WebScrapePage();
-                        newPage.setIntegrationId(integration.getId());
-                        newPage.setUrl(discovered.getUrl());
-                        newPage.setSelected(false);
-                        newPage.setStatus(WebScrapePageStatusConstants.DISCOVERED);
-                        newPage.setDiscoveredAt(now);
-                        return newPage;
-                    });
+        savePages(integration, result);
+    }
 
-            page.setTitle(discovered.getTitle());
-            page.setLastCrawledAt(now);
-            webScrapePageRepository.save(page);
-        }
+    /**
+     * Downloads the pages the user has selected and stores each one as a document.
+     */
+    public void scrapeSelectedPages(Integration integration) throws GendoxException {
 
-        integration.setLastRunAt(now);
-        integrationRepository.save(integration);
+        Map<String, Object> config = readConfig(integration);
+        WebScrapeProvider provider = resolveProvider(config);
+        WebScrapeTargetDTO target = buildTarget(integration, config);
 
         // pages the user unselected, whose document must go
         List<WebScrapePage> deselectedPages = webScrapePageRepository.findAllByIntegrationId(integration.getId())
@@ -154,10 +147,6 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
                 .sorted(Comparator.comparing(WebScrapePage::getLastScrapedAt,
                         Comparator.nullsFirst(Comparator.naturalOrder())))
                 .toList();
-
-        if (selectedPages.isEmpty()) {
-            return Map.of();
-        }
 
         for (WebScrapePage page : selectedPages) {
             if (!subscriptionValidationService.canScrapeWebPages(integration.getOrganizationId(), 1)) {
@@ -203,8 +192,202 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
 
             webScrapePageRepository.save(page);
         }
+    }
 
-        return Map.of();
+    /**
+     * Crawls the site in depth and stores what is new. Costs one credit per page visited.
+     */
+    public void deepDiscoverPages(Integration integration) throws GendoxException {
+
+        Map<String, Object> config = readConfig(integration);
+        WebScrapeProvider provider = resolveProvider(config);
+        WebScrapeTargetDTO target = buildTarget(integration, config);
+
+        WebCrawlResultDTO result = provider.deepCrawl(target);
+
+        savePages(integration, result);
+    }
+
+    // ----------------------------------------------------------------
+    // manual actions: the checks run in the request thread, the work does not
+    // ----------------------------------------------------------------
+
+    public void validateCrawl(UUID integrationId) throws GendoxException {
+        loadAndCheckPlan(integrationId);
+    }
+
+    public void validateDeepCrawl(UUID integrationId) throws GendoxException {
+
+        Integration integration = loadAndCheckPlan(integrationId);
+
+        Map<String, Object> config = readConfig(integration);
+        Integer crawlPageLimit = (Integer) config.get(WebScrapeConfigConstants.CRAWL_PAGE_LIMIT);
+
+        if (crawlPageLimit == null) {
+            throw new GendoxException("WEB_SCRAPE_CRAWL_LIMIT_REQUIRED",
+                    "A crawl page limit is required for a deep crawl",
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        if (!subscriptionValidationService.canScrapeWebPages(integration.getOrganizationId(), crawlPageLimit)) {
+            throw new GendoxException("MAX_WEB_SCRAPE_PAGES_REACHED",
+                    "The monthly web scraping budget of organization " + integration.getOrganizationId()
+                            + " is not enough for " + crawlPageLimit + " pages",
+                    HttpStatus.FORBIDDEN);
+        }
+    }
+
+    public void validateScrape(UUID integrationId) throws GendoxException {
+
+        Integration integration = loadAndCheckPlan(integrationId);
+
+        if (!subscriptionValidationService.canScrapeWebPages(integration.getOrganizationId(), 1)) {
+            throw new GendoxException("MAX_WEB_SCRAPE_PAGES_REACHED",
+                    "The monthly web scraping budget of organization " + integration.getOrganizationId()
+                            + " has been reached",
+                    HttpStatus.FORBIDDEN);
+        }
+    }
+
+    @Async
+    @SchedulerLock(name = "webScrapeManualTrigger-#{#integrationId}",
+            lockAtMostFor = "PT30M", lockAtLeastFor = "PT5S")
+    public void triggerCrawl(UUID integrationId) {
+        try {
+            logger.info("Manually listing the pages of web scrape integration {}", integrationId);
+            discoverPages(loadIntegration(integrationId));
+        } catch (Exception e) {
+            logger.error("Error listing the pages of web scrape integration {}", integrationId, e);
+        }
+    }
+
+    @Async
+    @SchedulerLock(name = "webScrapeManualTrigger-#{#integrationId}",
+            lockAtMostFor = "PT30M", lockAtLeastFor = "PT5S")
+    public void triggerDeepCrawl(UUID integrationId) {
+        try {
+            logger.info("Manually deep crawling the site of web scrape integration {}", integrationId);
+            deepDiscoverPages(loadIntegration(integrationId));
+        } catch (Exception e) {
+            logger.error("Error deep crawling the site of web scrape integration {}", integrationId, e);
+        }
+    }
+
+    @Async
+    @SchedulerLock(name = "webScrapeManualTrigger-#{#integrationId}",
+            lockAtMostFor = "PT30M", lockAtLeastFor = "PT5S")
+    public void triggerScrape(UUID integrationId) {
+        try {
+            logger.info("Manually scraping the selected pages of web scrape integration {}", integrationId);
+            scrapeSelectedPages(loadIntegration(integrationId));
+        } catch (Exception e) {
+            logger.error("Error scraping the selected pages of web scrape integration {}", integrationId, e);
+        }
+    }
+
+    private Integration loadAndCheckPlan(UUID integrationId) throws GendoxException {
+
+        Integration integration = loadIntegration(integrationId);
+
+        if (!subscriptionValidationService.canUseWebScrape(integration.getOrganizationId())) {
+            throw new GendoxException("WEB_SCRAPE_NOT_IN_PLAN",
+                    "Web scraping is not included in the plan of organization "
+                            + integration.getOrganizationId(),
+                    HttpStatus.FORBIDDEN);
+        }
+
+        return integration;
+    }
+
+    private Integration loadIntegration(UUID integrationId) throws GendoxException {
+        return integrationRepository.findById(integrationId)
+                .orElseThrow(() -> new GendoxException("INTEGRATION_NOT_FOUND",
+                        "Integration not found: " + integrationId, HttpStatus.NOT_FOUND));
+    }
+
+    private void savePages(Integration integration, WebCrawlResultDTO result) {
+
+        Instant now = Instant.now();
+
+        for (DiscoveredPageDTO discovered : result.getPages()) {
+            WebScrapePage page = webScrapePageRepository
+                    .findByIntegrationIdAndUrl(integration.getId(), discovered.getUrl())
+                    .orElseGet(() -> {
+                        WebScrapePage newPage = new WebScrapePage();
+                        newPage.setIntegrationId(integration.getId());
+                        newPage.setUrl(discovered.getUrl());
+                        newPage.setSelected(false);
+                        newPage.setStatus(WebScrapePageStatusConstants.DISCOVERED);
+                        newPage.setDiscoveredAt(now);
+                        return newPage;
+                    });
+
+            page.setTitle(discovered.getTitle());
+            page.setLastCrawledAt(now);
+            webScrapePageRepository.save(page);
+        }
+
+        integration.setLastRunAt(now);
+        integrationRepository.save(integration);
+    }
+
+    private WebScrapeProvider resolveProvider(Map<String, Object> config) throws GendoxException {
+        String providerName = (String) config.getOrDefault(
+                WebScrapeConfigConstants.PROVIDER, FirecrawlConfig.PROVIDER_NAME);
+
+        return webScrapeProviderUtils.getProvider(providerName);
+    }
+
+    private WebScrapeTargetDTO buildTarget(Integration integration, Map<String, Object> config) throws GendoxException {
+        return WebScrapeTargetDTO.builder()
+                .seedUrl(integration.getUrl())
+                .apiKey(webScrapeProviderUtils.resolveApiKey(integration.getOrganizationId()))
+                .crawlLimit((Integer) config.get(WebScrapeConfigConstants.CRAWL_PAGE_LIMIT))
+                .build();
+    }
+
+    /**
+     * Writes the schedule and the provider settings of the integration. Fields left null are kept.
+     */
+    public Integration updateSchedule(Integration integration, WebScrapeScheduleDTO scheduleDTO) throws GendoxException {
+
+        if (scheduleDTO.getRunIntervalMinutes() != null) {
+            if (scheduleDTO.getRunIntervalMinutes() < 1) {
+                throw new GendoxException("WEB_SCRAPE_INTERVAL_INVALID",
+                        "The run interval must be at least one minute", HttpStatus.BAD_REQUEST);
+            }
+            integration.setRunIntervalMinutes(scheduleDTO.getRunIntervalMinutes());
+        }
+
+        Map<String, Object> config = new HashMap<>(readConfig(integration));
+
+        if (scheduleDTO.getProvider() != null) {
+            // throws when the provider is not one we support
+            webScrapeProviderUtils.getProvider(scheduleDTO.getProvider());
+            config.put(WebScrapeConfigConstants.PROVIDER, scheduleDTO.getProvider());
+        }
+
+        if (scheduleDTO.getCrawlPageLimit() != null) {
+            if (scheduleDTO.getCrawlPageLimit() < 1) {
+                throw new GendoxException("WEB_SCRAPE_CRAWL_LIMIT_INVALID",
+                        "The crawl page limit must be at least one page", HttpStatus.BAD_REQUEST);
+            }
+            config.put(WebScrapeConfigConstants.CRAWL_PAGE_LIMIT, scheduleDTO.getCrawlPageLimit());
+        }
+
+        integration.setConfig(writeConfig(integration, config));
+
+        return integrationRepository.save(integration);
+    }
+
+    private String writeConfig(Integration integration, Map<String, Object> config) throws GendoxException {
+        try {
+            return objectMapper.writeValueAsString(config);
+        } catch (JsonProcessingException e) {
+            throw new GendoxException("WEB_SCRAPE_CONFIG_INVALID",
+                    "Could not write the config of integration " + integration.getId(),
+                    HttpStatus.BAD_REQUEST, e);
+        }
     }
 
     private Map<String, Object> readConfig(Integration integration) throws GendoxException {

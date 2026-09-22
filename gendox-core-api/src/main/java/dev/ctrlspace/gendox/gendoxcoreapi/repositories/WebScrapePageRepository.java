@@ -1,7 +1,9 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.repositories;
 
 import dev.ctrlspace.gendox.gendoxcoreapi.model.WebScrapePage;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.query.Param;
@@ -30,5 +32,19 @@ public interface WebScrapePageRepository extends JpaRepository<WebScrapePage, UU
     long countScrapedPagesByOrganizationIdAndPeriod(@Param("organizationId") UUID organizationId,
                                                     @Param("startDate") Instant startDate,
                                                     @Param("endDate") Instant endDate);
+
+    List<WebScrapePage> findAllByIdInAndIntegrationId(List<UUID> ids, UUID integrationId);
+
+    @Modifying
+    @Transactional
+    @Query("""
+                UPDATE WebScrapePage p
+                SET p.isSelected = :selected
+                WHERE p.integrationId = :integrationId
+                  AND p.status <> :removedStatus
+            """)
+    int updateSelectionForIntegration(@Param("integrationId") UUID integrationId,
+                                      @Param("selected") boolean selected,
+                                      @Param("removedStatus") String removedStatus);
 
 }
