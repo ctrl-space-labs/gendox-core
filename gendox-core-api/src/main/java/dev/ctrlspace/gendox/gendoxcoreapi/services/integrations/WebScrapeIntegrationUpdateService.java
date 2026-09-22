@@ -310,12 +310,14 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
         Instant now = Instant.now();
 
         for (DiscoveredPageDTO discovered : result.getPages()) {
+            String url = normalizeUrl(discovered.getUrl());
+
             WebScrapePage page = webScrapePageRepository
-                    .findByIntegrationIdAndUrl(integration.getId(), discovered.getUrl())
+                    .findByIntegrationIdAndUrl(integration.getId(), url)
                     .orElseGet(() -> {
                         WebScrapePage newPage = new WebScrapePage();
                         newPage.setIntegrationId(integration.getId());
-                        newPage.setUrl(discovered.getUrl());
+                        newPage.setUrl(url);
                         newPage.setSelected(false);
                         newPage.setStatus(WebScrapePageStatusConstants.DISCOVERED);
                         newPage.setDiscoveredAt(now);
@@ -329,6 +331,18 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
 
         integration.setLastRunAt(now);
         integrationRepository.save(integration);
+    }
+
+    /**
+     * The same page must not become two rows. Map returns urls without a trailing slash and crawl
+     * returns them with one, and a fragment points inside a page that is already listed on its own.
+     */
+    private String normalizeUrl(String url) {
+        String normalized = url.split("#")[0];
+
+        return normalized.length() > 1 && normalized.endsWith("/")
+                ? normalized.substring(0, normalized.length() - 1)
+                : normalized;
     }
 
     private WebScrapeProvider resolveProvider(Map<String, Object> config) throws GendoxException {
