@@ -134,6 +134,7 @@ public class TaskController {
         if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
             throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
         }
+        taskNodeService.validateNodeDocumentsAccessible(List.of(taskNodeDTO), projectId);
         TaskNode taskNode = taskNodeConverter.toEntity(taskNodeDTO);
         return taskNodeService.createTaskNode(taskNode);
     }
@@ -146,10 +147,14 @@ public class TaskController {
                                                @PathVariable UUID projectId,
                                                @RequestBody List<TaskNodeDTO> taskNodeDTOs) throws GendoxException {
 
-        Task task = taskService.getTaskById(taskNodeDTOs.getFirst().getTaskId());
-        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
-            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        // every node's task must belong to the project, not just the first one's. Should be just 1 task though
+        for (UUID taskId : taskNodeDTOs.stream().map(TaskNodeDTO::getTaskId).distinct().toList()) {
+            Task task = taskService.getTaskById(taskId);
+            if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+                throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+            }
         }
+        taskNodeService.validateNodeDocumentsAccessible(taskNodeDTOs, projectId);
 
         try {
             List<TaskNode> nodes = new ArrayList<>();
@@ -179,6 +184,7 @@ public class TaskController {
         if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
             throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
         }
+        taskNodeService.validateNodeDocumentsAccessible(List.of(taskNodeDTO), projectId);
         return taskNodeService.updateTaskNode(taskNodeDTO, task);
     }
 

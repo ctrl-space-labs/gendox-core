@@ -16,6 +16,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskEdgeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskNodeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.TaskNodePredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
 import jakarta.persistence.EntityManager;
@@ -45,6 +46,7 @@ public class TaskNodeService {
     private final TypeService typeService;
     private final EntityManager entityManager;
     private final DocumentService documentService;
+    private final SecurityUtils securityUtils;
 
 
     @Autowired
@@ -52,12 +54,14 @@ public class TaskNodeService {
                            TaskEdgeRepository taskEdgeRepository,
                            TypeService typeService,
                            EntityManager entityManager,
-                           @Lazy DocumentService documentService) {
+                           @Lazy DocumentService documentService,
+                           SecurityUtils securityUtils) {
         this.taskNodeRepository = taskNodeRepository;
         this.taskEdgeRepository = taskEdgeRepository;
         this.typeService = typeService;
         this.entityManager = entityManager;
         this.documentService = documentService;
+        this.securityUtils = securityUtils;
     }
 
 
@@ -93,6 +97,9 @@ public class TaskNodeService {
         TaskNode existing = taskNodeRepository.findById(taskNodeDTO.getId())
                 .orElseThrow(() -> new GendoxException("TASK_NODE_NOT_FOUND", "Node not found", HttpStatus.NOT_FOUND));
         logger.trace("Updating task node: {} with data: {}", existing.getId(), taskNodeDTO);
+        if (!existing.getTaskId().equals(task.getId())) {
+            throw new GendoxException("TASK_NODE_NOT_IN_TASK", "Task node does not belong to the specified task", HttpStatus.FORBIDDEN);
+        }
 
         // check for Answer nodes to delete if document insights task questions or documents changed
         if (TaskTypeConstants.DOCUMENT_INSIGHTS.equalsIgnoreCase(task.getTaskType().getName())) {
@@ -188,6 +195,28 @@ public class TaskNodeService {
         return taskNodeRepository.save(existing);
     }
 
+
+    /**
+     * Validates that every document referenced by the nodes (the node's documentId and any
+     * supportingDocumentIds) can be used by a task of the given project. Runs a single query.
+     */
+    public void validateNodeDocumentsAccessible(Collection<TaskNodeDTO> taskNodeDTOs, UUID projectId) throws GendoxException {
+        List<UUID> documentIds = new ArrayList<>();
+        for (TaskNodeDTO dto : taskNodeDTOs) {
+            documentIds.add(dto.getDocumentId());
+            if (dto.getNodeValue() != null && dto.getNodeValue().getDocumentMetadata() != null
+                    && dto.getNodeValue().getDocumentMetadata().getSupportingDocumentIds() != null) {
+                documentIds.addAll(dto.getNodeValue().getDocumentMetadata().getSupportingDocumentIds());
+            }
+        }
+        documentIds.removeIf(Objects::isNull);
+        if (documentIds.isEmpty()) {
+            return;
+        }
+        if (!securityUtils.areAllDocumentsInAnyProject(documentIds, List.of(projectId))) {
+            throw new GendoxException("DOCUMENT_NOT_IN_PROJECT", "One or more documents do not belong to the project", HttpStatus.FORBIDDEN);
+        }
+    }
 
     public TaskNode updateTaskNodesMetadata(TaskDocumentMetadataDTO taskDocumentMetadataDTO) throws GendoxException {
         logger.debug("Updating task node for document digitization: {}", taskDocumentMetadataDTO);

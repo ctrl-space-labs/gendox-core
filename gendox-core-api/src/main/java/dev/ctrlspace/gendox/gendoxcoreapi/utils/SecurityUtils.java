@@ -459,14 +459,23 @@ public class SecurityUtils {
 
         return projectIds.size() == 1
                 && !documentIds.isEmpty()
-                && (
-                documentInstanceRepository.areAllDocumentIdsInAnyProject(toUuids(documentIds), toUuids(projectIds))
-                        || chatThreadDocumentsRepository.areAllDocumentIdsInAnyProject(toUuids(documentIds), toUuids(projectIds)));
+                && areAllDocumentsInAnyProject(toUuids(documentIds), toUuids(projectIds));
+    }
+
+    /**
+     * True if every document is a project document or a chat attachment of one of the given projects.
+     */
+    public boolean areAllDocumentsInAnyProject(Collection<UUID> documentIds, Collection<UUID> projectIds) {
+        // distinct ids are required: the queries compare COUNT(DISTINCT document_id) with the array size
+        UUID[] documentIdArray = documentIds.stream().filter(Objects::nonNull).distinct().toArray(UUID[]::new);
+        UUID[] projectIdArray = projectIds.toArray(UUID[]::new);
+        return documentInstanceRepository.areAllDocumentIdsInAnyProject(documentIdArray, projectIdArray)
+                || chatThreadDocumentsRepository.areAllDocumentIdsInAnyProject(documentIdArray, projectIdArray);
     }
 
 
-    private static UUID[] toUuids(Collection<String> ids) {
-        return ids.stream().map(UUID::fromString).toArray(UUID[]::new);
+    private static List<UUID> toUuids(Collection<String> ids) {
+        return ids.stream().map(UUID::fromString).toList();
     }
 
     public AccessCriteria getRequestedDocumentIdAccessCriteria(String documentId) {
