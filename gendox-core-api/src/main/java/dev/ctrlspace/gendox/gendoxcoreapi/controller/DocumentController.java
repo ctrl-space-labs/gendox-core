@@ -26,6 +26,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.util.StringUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -96,7 +97,11 @@ public class DocumentController {
     @GetMapping("/organizations/{organizationId}/projects/{projectId}/documents")
     @Operation(summary = "Get all documents",
             description = "Retrieve a list of all documents based on the provided criteria.")
-    public Page<DocumentInstanceDTO> getAll(@Valid DocumentCriteria criteria, Pageable pageable) throws GendoxException {
+    public Page<DocumentInstanceDTO> getAll(@PathVariable UUID organizationId,
+                                            @PathVariable UUID projectId,
+                                            @Valid DocumentCriteria criteria,
+                                            Pageable pageable) throws GendoxException {
+        requireCriteriaMatchesPath(criteria, organizationId, projectId);
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
         }
@@ -118,7 +123,11 @@ public class DocumentController {
     @PostMapping("/organizations/{organizationId}/projects/{projectId}/documents/search")
     @Operation(summary = "Get all documents",
             description = "Retrieve a list of all documents based on the provided criteria.")
-    public Page<DocumentInstanceDTO> getAllByCriteria(@RequestBody DocumentCriteria criteria, Pageable pageable) throws GendoxException {
+    public Page<DocumentInstanceDTO> getAllByCriteria(@PathVariable UUID organizationId,
+                                                     @PathVariable UUID projectId,
+                                                     @RequestBody DocumentCriteria criteria,
+                                                     Pageable pageable) throws GendoxException {
+        requireCriteriaMatchesPath(criteria, organizationId, projectId);
         if (pageable == null) {
             pageable = PageRequest.of(0, 100);
         }
@@ -400,7 +409,10 @@ public class DocumentController {
     @PostMapping("/organizations/{organizationId}/projects/{projectId}/documents/split")
     @Operation(summary = "",
             description = " ")
-    public List<DocumentInstanceSection> handleFileSplitter(@Valid DocumentCriteria criteria) throws IOException, GendoxException {
+    public List<DocumentInstanceSection> handleFileSplitter(@PathVariable UUID organizationId,
+                                                            @PathVariable UUID projectId,
+                                                            @Valid DocumentCriteria criteria) throws IOException, GendoxException {
+        requireCriteriaMatchesPath(criteria, organizationId, projectId);
         List<DocumentInstanceSection> documentInstanceSections = new ArrayList<>();
 
         Map<DocumentInstance, List<String>> contentSections = splitFileService.splitDocuments(criteria);
@@ -452,5 +464,20 @@ public class DocumentController {
         return "";
     }
 
-}
+    private void requireCriteriaMatchesPath(DocumentCriteria criteria, UUID organizationId, UUID projectId) throws GendoxException {
+        requireSameAsPath(criteria.getOrganizationId(), organizationId, "organizationId");
+        requireSameAsPath(criteria.getProjectId(), projectId, "projectId");
+        // chatThreadProjectId is optional, but it is OR'ed with projectId, so it can widen the scope
+        if (criteria.getChatThreadProjectId() != null) {
+            requireSameAsPath(criteria.getChatThreadProjectId(), projectId, "chatThreadProjectId");
+        }
+    }
 
+    private void requireSameAsPath(String criteriaId, UUID pathId, String field) throws GendoxException {
+        if (!pathId.toString().equalsIgnoreCase(criteriaId)) {
+            throw new GendoxException("INVALID_CRITERIA_SCOPE", field + " must be the one in the path", HttpStatus.FORBIDDEN);
+        }
+    }
+
+
+}
