@@ -4,8 +4,12 @@ import dev.ctrlspace.gendox.authentication.ApiKeyAuthenticationToken;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationWebSiteDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapeSourceDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebsiteIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.OrganizationWebSiteService;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.WebScrapeConfigConstants;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,10 +23,13 @@ import java.util.UUID;
 public class OrganizationWebSiteController {
 
     private OrganizationWebSiteService organizationWebSiteService;
+    private SecurityUtils securityUtils;
 
     @Autowired
-    public OrganizationWebSiteController(OrganizationWebSiteService organizationWebSiteService) {
+    public OrganizationWebSiteController(OrganizationWebSiteService organizationWebSiteService,
+                                         SecurityUtils securityUtils) {
         this.organizationWebSiteService = organizationWebSiteService;
+        this.securityUtils = securityUtils;
     }
 
 
@@ -49,6 +56,25 @@ public class OrganizationWebSiteController {
 
         return organizationWebSiteService.integrateOrganizationWebSite(organizationId, websiteIntegrationDTO);
 
+    }
+
+    @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
+    @PostMapping("/organizations/{organizationId}/websites/web-scrape")
+    @Operation(summary = "Add a website that Gendox reads by crawling it",
+            description = "Creates the website row and its web scrape integration together. "
+                    + "Discovery and scraping are then driven through the web-scrape endpoints.")
+    public OrganizationWebSite createWebScrapeSource(@PathVariable UUID organizationId,
+                                                     @RequestBody WebScrapeSourceDTO sourceDTO) throws GendoxException {
+
+        if (sourceDTO.getRunIntervalMinutes() != null
+                && sourceDTO.getRunIntervalMinutes() < WebScrapeConfigConstants.MIN_RUN_INTERVAL_MINUTES
+                && !securityUtils.isSuperAdmin()) {
+            throw new GendoxException("WEB_SCRAPE_INTERVAL_TOO_SHORT",
+                    "Only a system admin can set an interval shorter than one day",
+                    HttpStatus.FORBIDDEN);
+        }
+
+        return organizationWebSiteService.createWebScrapeSource(organizationId, sourceDTO);
     }
 
 

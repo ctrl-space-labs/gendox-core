@@ -143,6 +143,31 @@ public class IntegrationService {
         return createIntegration(newIntegrationDTO);
     }
 
+    /**
+     * A web scrape source. The config starts empty and is filled by the schedule update,
+     * so provider validation and the limit checks live in one place only.
+     */
+    public Integration createWebScrapeIntegration(UUID organizationId, UUID projectId, String url) throws GendoxException {
+
+        if (!subscriptionValidationService.canCreateIntegrations(organizationId)) {
+            throw new GendoxException("MAX_INTEGRATIONS_REACHED",
+                    "Max integrations reached for organization", HttpStatus.BAD_REQUEST);
+        }
+
+        logger.info("Creating web scrape integration for Organization ID: {}, url: {}", organizationId, url);
+
+        Integration integration = new Integration();
+        integration.setOrganizationId(organizationId);
+        integration.setProjectId(projectId);
+        integration.setUrl(url);
+        integration.setActive(true);
+        integration.setIntegrationType(
+                typeService.getIntegrationTypeByName(IntegrationTypesConstants.WEB_SCRAPE_INTEGRATION));
+        integration.setConfig("{}");
+
+        return integrationRepository.save(integration);
+    }
+
     public Integration updateExistingIntegration(Integration integration, WebsiteIntegrationDTO websiteIntegrationDTO) throws GendoxException {
         logger.info("Updating existing integration ID: {}", integration.getId());
         String statusName = websiteIntegrationDTO.getIntegrationStatus().getName();

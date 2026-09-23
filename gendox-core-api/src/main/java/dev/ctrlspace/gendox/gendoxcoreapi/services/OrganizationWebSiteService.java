@@ -6,9 +6,13 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.ApiKey;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Integration;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.OrganizationWebSite;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.OrganizationWebSiteDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapeScheduleDTO;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebScrapeSourceDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.WebsiteIntegrationDTO;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationWebSiteRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.WebScrapeIntegrationUpdateService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.FirecrawlConfig;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +32,7 @@ public class OrganizationWebSiteService {
     private IntegrationService integrationService;
     private DocumentUtils documentUtils;
     private SubscriptionValidationService subscriptionValidationService;
+    private WebScrapeIntegrationUpdateService webScrapeIntegrationUpdateService;
 
     @Autowired
     public OrganizationWebSiteService(OrganizationWebSiteRepository organizationWebSiteRepository,
@@ -35,13 +40,15 @@ public class OrganizationWebSiteService {
                                       ApiKeyService apiKeyService,
                                       IntegrationService integrationService,
                                       DocumentUtils documentUtils,
-                                      SubscriptionValidationService subscriptionValidationService) {
+                                      SubscriptionValidationService subscriptionValidationService,
+                                      WebScrapeIntegrationUpdateService webScrapeIntegrationUpdateService) {
         this.organizationWebSiteRepository = organizationWebSiteRepository;
         this.organizationWebSiteConverter = organizationWebSiteConverter;
         this.apiKeyService = apiKeyService;
         this.integrationService = integrationService;
         this.documentUtils = documentUtils;
         this.subscriptionValidationService = subscriptionValidationService;
+        this.webScrapeIntegrationUpdateService = webScrapeIntegrationUpdateService;
     }
 
     public OrganizationWebSite getById(UUID id) {
@@ -73,6 +80,67 @@ public class OrganizationWebSiteService {
         // Handle Integration Logic and Update Organization WebSite
         Integration integration = integrationService.handleIntegrationLogic(organizationId, organizationWebSite, websiteIntegrationDTO);
         return updateOrganizationWebSite(organizationWebSite, apiKey, integration);
+    }
+
+    /**
+     * A website Gendox reads by crawling it. Creates the integration and the website row
+     * together, so a crawl source appears in the same list as every other website.
+     */
+    @Transactional(rollbackOn = Exception.class)
+    public OrganizationWebSite createWebScrapeSource(UUID organizationId, WebScrapeSourceDTO sourceDTO) throws GendoxException {
+
+        if (sourceDTO.getProjectId() == null) {
+            throw new GendoxException("PROJECT_ID_REQUIRED",
+                    "A target project is required: it is where the scraped pages become documents",
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        if (!subscriptionValidationService.canUseWebScrape(organizationId)) {
+            throw new GendoxException("WEB_SCRAPE_NOT_IN_PLAN",
+                    "Web scraping is not included in the plan of organization " + organizationId,
+                    HttpStatus.FORBIDDEN);
+        }
+
+        // one website, one content source: a site that already pushes through the plugin
+        // must not also be crawled, or the same page becomes two documents
+        OrganizationWebSite existing = getOrganizationWebSite(organizationId, sourceDTO.getUrl());
+        if (existing != null && existing.getIntegrationId() != null) {
+            throw new GendoxException("WEBSITE_ALREADY_HAS_SOURCE",
+                    "This website already sends content to Gendox through another integration",
+                    HttpStatus.CONFLICT);
+        }
+
+        Integration integration = integrationService.createWebScrapeIntegration(
+                organizationId, sourceDTO.getProjectId(), sourceDTO.getUrl());
+
+        OrganizationWebSite webSite;
+        if (existing != null) {
+            // an embed-only row gains a content source, keeping the name the user gave it
+            existing.setIntegrationId(integration.getId());
+            webSite = organizationWebSiteRepository.save(existing);
+        } else {
+            String domain = documentUtils.extractBaseDomain(sourceDTO.getUrl());
+            String name = (sourceDTO.getName() == null || sourceDTO.getName().isBlank())
+                    ? domain
+                    : sourceDTO.getName();
+
+            webSite = createOrganizationWebSite(OrganizationWebSiteDTO.builder()
+                    .organizationId(organizationId)
+                    .name(name)
+                    .url(domain)
+                    .integrationId(integration.getId())
+                    .build(), organizationId);
+        }
+
+        webScrapeIntegrationUpdateService.updateSchedule(integration, WebScrapeScheduleDTO.builder()
+                .runIntervalMinutes(sourceDTO.getRunIntervalMinutes())
+                .crawlPageLimit(sourceDTO.getCrawlPageLimit())
+                .provider(sourceDTO.getProvider() == null
+                        ? FirecrawlConfig.PROVIDER_NAME
+                        : sourceDTO.getProvider())
+                .build());
+
+        return webSite;
     }
 
     private ApiKey validateApiKey(UUID organizationId, String apiKeyValue) throws GendoxException {
