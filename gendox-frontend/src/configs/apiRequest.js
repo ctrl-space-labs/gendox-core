@@ -208,8 +208,8 @@ export default {
   getDocumentPages: (organizationId, projectId, taskId, page, size) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/document-pages?page=${page}&size=${size}`,
 
-  getTaskNodesByCriteria: (organizationId, projectId, taskId, page, size) =>
-    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/search?page=${page}&size=${size}`,
+  getTaskNodesByCriteria: (organizationId, projectId, taskId, page, size, sort) =>
+    `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/task-nodes/search?page=${page}&size=${size}${sort ? `&sort=${sort}` : ''}`,
 
   getAnswerTaskNodes: (organizationId, projectId, taskId, page, size) =>
     `${url}organizations/${organizationId}/projects/${projectId}/tasks/${taskId}/answers/batch?page=${page}&size=${size}`,

@@ -9,10 +9,14 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.UUID;
 
 @Repository
 public interface TaskRepository extends JpaRepository<Task, UUID>, QuerydslPredicateExecutor<Task> {
+
+    boolean existsByIdAndProjectIdIn(UUID id, Collection<UUID> projectIds);
+
 
     List<Task> findAllByProjectId(UUID projectId);
 

@@ -1,11 +1,16 @@
 package dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications;
 
+import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Predicate;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.core.types.dsl.SimpleExpression;
 import com.querydsl.core.types.dsl.StringExpression;
+import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.jpa.JPQLQuery;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.QDocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.QTaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.criteria.TaskNodeCriteria;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
@@ -15,6 +20,7 @@ import java.util.UUID;
 
 public class TaskNodePredicates {
     private static final QTaskNode qTaskNode = QTaskNode.taskNode;
+    private static final QDocumentInstance qDocument = QDocumentInstance.documentInstance;
 
     /**
      * ((node_value ->> 'order')::int) — exposed so it can be reused as a
@@ -40,9 +46,23 @@ public class TaskNodePredicates {
                 nodeValueNodeDocumentIds(criteria.getDocumentNodeIds()),
                 nodeValueNodeAnswerIds(criteria.getAnswerNodeIds()),
                 pageFrom(criteria.getPageFrom()),
-                pageTo(criteria.getPageTo())
-
+                pageTo(criteria.getPageTo()),
+                documentNameContains(criteria.getDocumentNameContains()),
+                answerStatus(criteria)
         );
+    }
+
+    /** The lower-cased title of a DOCUMENT node's document, to sort by. */
+    public static Expression<String> documentTitle() {
+        return JPAExpressions.select(qDocument.title.lower())
+                .from(qDocument)
+                .where(qDocument.id.eq(qTaskNode.documentId));
+    }
+
+    /** The lower-cased answer value of a DOCUMENT node for a question, to sort by. */
+    public static Expression<String> answerValue(UUID questionNodeId) {
+        QTaskNode answer = new QTaskNode("sortAnswer");
+        return answersOf(answer, questionNodeId, nodeValueText(answer, "answerValue").lower().max());
     }
 
     public static Predicate buildAnyNodeType(TaskNodeCriteria criteria) {
@@ -173,6 +193,60 @@ public class TaskNodePredicates {
                 );
 
         return answerIdUuid.in(answerNodeIds);
+    }
+
+    private static Predicate documentNameContains(String documentNameContains) {
+        if (documentNameContains == null || documentNameContains.isBlank()) {
+            return null;
+        }
+        return JPAExpressions.selectOne()
+                .from(qDocument)
+                .where(qDocument.id.eq(qTaskNode.documentId),
+                        qDocument.title.containsIgnoreCase(documentNameContains.trim()))
+                .exists();
+    }
+
+    /**
+     * DOCUMENT nodes whose answer to answerFilterQuestionNodeId has one of answerFilterStatuses.
+     * EXISTS is never null, so with answerFilterNegate a document with no answer counts as "not OK".
+     */
+    private static Predicate answerStatus(TaskNodeCriteria criteria) {
+        UUID questionNodeId = criteria.getAnswerFilterQuestionNodeId();
+        List<String> statuses = criteria.getAnswerFilterStatuses();
+        if (questionNodeId == null || statuses == null || statuses.isEmpty()) {
+            return null;
+        }
+
+        List<String> flags = statuses.stream().filter(status -> !TaskNodeCriteria.UNANSWERED.equals(status)).toList();
+        QTaskNode flaggedAnswer = new QTaskNode("flaggedAnswer");
+        BooleanExpression hasFlag = flags.isEmpty() ? null
+                : answersOf(flaggedAnswer, questionNodeId, Expressions.ONE)
+                .where(nodeValueText(flaggedAnswer, "answerFlagEnum").in(flags))
+                .exists();
+        BooleanExpression unanswered = statuses.contains(TaskNodeCriteria.UNANSWERED)
+                ? answersOf(new QTaskNode("anyAnswer"), questionNodeId, Expressions.ONE).notExists()
+                : null;
+
+        Predicate match = ExpressionUtils.anyOf(hasFlag, unanswered);
+        return Boolean.TRUE.equals(criteria.getAnswerFilterNegate()) ? match.not() : match;
+    }
+
+    /** The ANSWER nodes of the current DOCUMENT node for one question. */
+    private static <T> JPQLQuery<T> answersOf(QTaskNode answer, UUID questionNodeId, Expression<T> select) {
+        return JPAExpressions.select(select)
+                .from(answer)
+                .where(answer.taskId.eq(qTaskNode.taskId),
+                        answer.nodeType.name.eq(TaskNodeTypeConstants.ANSWER),
+                        nodeValueText(answer, "nodeDocumentId").eq(Expressions.stringTemplate("str({0})", qTaskNode.id)),
+                        nodeValueText(answer, "nodeQuestionId").eq(questionNodeId.toString()));
+    }
+
+    /**
+     * node_value ->> key, as text. The key is written into the SQL (not bound as a parameter)
+     * and ids are compared as text, so the answer lookup index on these expressions can be used.
+     */
+    private static StringExpression nodeValueText(QTaskNode node, String key) {
+        return Expressions.stringTemplate("function('jsonb_extract_path_text', {0}, '" + key + "')", node.nodeValue);
     }
 
     private static Predicate taskIdEq(UUID taskId) {

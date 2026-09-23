@@ -13,6 +13,8 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.DocumentInstanceRepositor
 import dev.ctrlspace.gendox.gendoxcoreapi.services.MessageLocalContextService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.ProjectAgentService;
 import dev.ctrlspace.gendox.gendoxcoreapi.services.UserOrganizationService;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskRepository;
+import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskNodeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.QueryParamNames;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.UserNamesConstants;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,6 +41,8 @@ import java.util.stream.Collectors;
 public class SecurityUtils {
 
     private final ChatThreadDocumentsRepository chatThreadDocumentsRepository;
+    private final TaskRepository taskRepository;
+    private final TaskNodeRepository taskNodeRepository;
     Logger logger = org.slf4j.LoggerFactory.getLogger(SecurityUtils.class);
 
     private ChatThreadRepository chatThreadRepository;
@@ -53,13 +57,17 @@ public class SecurityUtils {
                          DocumentInstanceRepository documentInstanceRepository,
                          UserOrganizationService userOrganizationService,
                          MessageLocalContextService messageLocalContextService,
-                         ChatThreadDocumentsRepository chatThreadDocumentsRepository) {
+                         ChatThreadDocumentsRepository chatThreadDocumentsRepository,
+                         TaskRepository taskRepository,
+                         TaskNodeRepository taskNodeRepository) {
         this.chatThreadRepository = chatThreadRepository;
         this.projectAgentService = projectAgentService;
         this.documentInstanceRepository = documentInstanceRepository;
         this.userOrganizationService = userOrganizationService;
         this.messageLocalContextService = messageLocalContextService;
         this.chatThreadDocumentsRepository = chatThreadDocumentsRepository;
+        this.taskRepository = taskRepository;
+        this.taskNodeRepository = taskNodeRepository;
     }
 
 
@@ -187,6 +195,14 @@ public class SecurityUtils {
             return canAccessThread(authority, userProfile, UUID.fromString(accessCriteria.getThreadId()));
         }
 
+        if (accessCriteria.getTaskId() != null && !accessCriteria.getTaskId().isEmpty()) {
+            return canAccessTask(authority, userProfile, UUID.fromString(accessCriteria.getTaskId()));
+        }
+
+        if (accessCriteria.getTaskNodeIds() != null && !accessCriteria.getTaskNodeIds().isEmpty()) {
+            return canAccessTaskNodes(authority, userProfile, toUuids(accessCriteria.getTaskNodeIds()));
+        }
+
         if (accessCriteria.getDocumentIds() != null && !accessCriteria.getDocumentIds().isEmpty()) {
             return canAccessDocuments(authority, userProfile, accessCriteria.getDocumentIds()
                     .stream()
@@ -256,6 +272,36 @@ public class SecurityUtils {
                 .collect(Collectors.toList());
 
         return documentInstanceRepository.existsByDocumentIdAndProjectIds(documentId, authorizedProjectIds);
+    }
+
+    /** A task is accessible when it belongs to a project the user has the authority in. */
+    private boolean canAccessTask(String authority, UserProfile userProfile, UUID taskId) {
+        return taskRepository.existsByIdAndProjectIdIn(taskId, authorizedProjectIds(authority, userProfile));
+    }
+
+    private boolean canAccessTaskNodes(String authority, UserProfile userProfile, Collection<UUID> taskNodeIds) {
+        return areAllNodesInAnyProject(taskNodeIds, authorizedProjectIds(authority, userProfile));
+    }
+
+    /**
+     * True if every task node belongs to a task of one of the given projects. One query, so it can
+     * also be used for the node ids that arrive in a request body and are checked in the controller.
+     */
+    public boolean areAllNodesInAnyProject(Collection<UUID> taskNodeIds, Collection<UUID> projectIds) {
+        // distinct ids are required: the query compares COUNT(DISTINCT id) with the array size
+        UUID[] nodeIdArray = taskNodeIds.stream().filter(Objects::nonNull).distinct().toArray(UUID[]::new);
+        return nodeIdArray.length > 0
+                && taskNodeRepository.areAllNodeIdsInAnyProject(nodeIdArray, projectIds.toArray(UUID[]::new));
+    }
+
+    private Set<UUID> authorizedProjectIds(String authority, UserProfile userProfile) {
+        return userProfile
+                .getOrganizations()
+                .stream()
+                .filter(org -> org.getAuthorities().contains(authority))
+                .flatMap(org -> org.getProjects().stream())
+                .map(project -> UUID.fromString(project.getId()))
+                .collect(Collectors.toSet());
     }
 
     private boolean canAccessDocuments(String authority, UserProfile userProfile, Set<UUID> documentIds) {
@@ -436,6 +482,30 @@ public class SecurityUtils {
         return getRequestedDocumentIdAccessCriteria(documentId);
     }
 
+    /** The {taskId} of the path, so a task of another project can't be reached through it. */
+    private AccessCriteria getRequestedTaskIdFromPathVariable() {
+        AccessCriteria accessCriteria = new AccessCriteria();
+        accessCriteria.setTaskId(getUriTemplateVariable(QueryParamNames.TASK_ID));
+
+        return accessCriteria;
+    }
+
+    /** The ?id= of a task node, for the endpoints that address a node directly. */
+    private AccessCriteria getRequestedTaskNodeIdFromRequestParam() {
+        AccessCriteria accessCriteria = new AccessCriteria();
+        String taskNodeId = getCurrentHttpRequest().getParameter(QueryParamNames.TASK_NODE_ID);
+        accessCriteria.setTaskNodeIds(taskNodeId == null ? List.of() : List.of(taskNodeId));
+
+        return accessCriteria;
+    }
+
+    private String getUriTemplateVariable(String name) {
+        Map<String, String> uriTemplateVariables =
+                (Map<String, String>) getCurrentHttpRequest().getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+
+        return uriTemplateVariables == null ? null : uriTemplateVariables.get(name);
+    }
+
     private AccessCriteria getRequestedDocumentIdsFromRequestParam() {
         HttpServletRequest request = getCurrentHttpRequest();
 
@@ -459,14 +529,23 @@ public class SecurityUtils {
 
         return projectIds.size() == 1
                 && !documentIds.isEmpty()
-                && (
-                documentInstanceRepository.areAllDocumentIdsInAnyProject(toUuids(documentIds), toUuids(projectIds))
-                        || chatThreadDocumentsRepository.areAllDocumentIdsInAnyProject(toUuids(documentIds), toUuids(projectIds)));
+                && areAllDocumentsInAnyProject(toUuids(documentIds), toUuids(projectIds));
+    }
+
+    /**
+     * True if every document is a project document or a chat attachment of one of the given projects.
+     */
+    public boolean areAllDocumentsInAnyProject(Collection<UUID> documentIds, Collection<UUID> projectIds) {
+        // distinct ids are required: the queries compare COUNT(DISTINCT document_id) with the array size
+        UUID[] documentIdArray = documentIds.stream().filter(Objects::nonNull).distinct().toArray(UUID[]::new);
+        UUID[] projectIdArray = projectIds.toArray(UUID[]::new);
+        return documentInstanceRepository.areAllDocumentIdsInAnyProject(documentIdArray, projectIdArray)
+                || chatThreadDocumentsRepository.areAllDocumentIdsInAnyProject(documentIdArray, projectIdArray);
     }
 
 
-    private static UUID[] toUuids(Collection<String> ids) {
-        return ids.stream().map(UUID::fromString).toArray(UUID[]::new);
+    private static List<UUID> toUuids(Collection<String> ids) {
+        return ids.stream().map(UUID::fromString).toList();
     }
 
     public AccessCriteria getRequestedDocumentIdAccessCriteria(String documentId) {
@@ -575,6 +654,9 @@ public class SecurityUtils {
         public static final String DOCUMENT_ID_FROM_PATH_VARIABLE = "getRequestedDocumentIdFromPathVariable";
         public static final String DOCUMENT_IDS_FROM_REQUEST_PARAMS = "getRequestedDocumentIdsFromRequestParams";
         public static final String ORG_ID_FROM_DOCUMENT_ID_PATH_VARIABLE = "getRequestedOrgIdFromDocumentIdPathVariable";
+
+        public static final String TASK_ID_FROM_PATH_VARIABLE = "getRequestedTaskIdFromPathVariable";
+        public static final String TASK_NODE_ID_FROM_REQUEST_PARAM = "getRequestedTaskNodeIdFromRequestParam";
     }
 
 
@@ -620,6 +702,14 @@ public class SecurityUtils {
 
         if (AccessCriteriaGetterFunction.ORG_ID_FROM_DOCUMENT_ID_PATH_VARIABLE.equals(getterFunction)) {
             accessCriteria = getRequestedOrgIdFromDocumentIdPathVariable();
+        }
+
+        if (AccessCriteriaGetterFunction.TASK_ID_FROM_PATH_VARIABLE.equals(getterFunction)) {
+            accessCriteria = getRequestedTaskIdFromPathVariable();
+        }
+
+        if (AccessCriteriaGetterFunction.TASK_NODE_ID_FROM_REQUEST_PARAM.equals(getterFunction)) {
+            accessCriteria = getRequestedTaskNodeIdFromRequestParam();
         }
 
         if (!(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserProfile)) {

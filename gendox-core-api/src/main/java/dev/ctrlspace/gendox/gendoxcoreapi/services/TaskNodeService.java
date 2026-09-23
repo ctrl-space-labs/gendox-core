@@ -3,6 +3,10 @@ package dev.ctrlspace.gendox.gendoxcoreapi.services;
 import dev.ctrlspace.gendox.gendoxcoreapi.exceptions.GendoxException;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.DocumentInstance;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskEdge;
+import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
+import dev.ctrlspace.gendox.gendoxcoreapi.model.QTaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.TaskNode;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Task;
 import dev.ctrlspace.gendox.gendoxcoreapi.model.Type;
@@ -12,6 +16,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.model.dtos.taskDTOs.*;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskEdgeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.TaskNodeRepository;
 import dev.ctrlspace.gendox.gendoxcoreapi.repositories.specifications.TaskNodePredicates;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskNodeTypeConstants;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.TaskTypeConstants;
 import jakarta.persistence.EntityManager;
@@ -22,6 +27,9 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.querydsl.QPageRequest;
+import org.springframework.data.querydsl.QSort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +46,7 @@ public class TaskNodeService {
     private final TypeService typeService;
     private final EntityManager entityManager;
     private final DocumentService documentService;
+    private final SecurityUtils securityUtils;
 
 
     @Autowired
@@ -45,12 +54,14 @@ public class TaskNodeService {
                            TaskEdgeRepository taskEdgeRepository,
                            TypeService typeService,
                            EntityManager entityManager,
-                           @Lazy DocumentService documentService) {
+                           @Lazy DocumentService documentService,
+                           SecurityUtils securityUtils) {
         this.taskNodeRepository = taskNodeRepository;
         this.taskEdgeRepository = taskEdgeRepository;
         this.typeService = typeService;
         this.entityManager = entityManager;
         this.documentService = documentService;
+        this.securityUtils = securityUtils;
     }
 
 
@@ -86,6 +97,9 @@ public class TaskNodeService {
         TaskNode existing = taskNodeRepository.findById(taskNodeDTO.getId())
                 .orElseThrow(() -> new GendoxException("TASK_NODE_NOT_FOUND", "Node not found", HttpStatus.NOT_FOUND));
         logger.trace("Updating task node: {} with data: {}", existing.getId(), taskNodeDTO);
+        if (!existing.getTaskId().equals(task.getId())) {
+            throw new GendoxException("TASK_NODE_NOT_IN_TASK", "Task node does not belong to the specified task", HttpStatus.FORBIDDEN);
+        }
 
         // check for Answer nodes to delete if document insights task questions or documents changed
         if (TaskTypeConstants.DOCUMENT_INSIGHTS.equalsIgnoreCase(task.getTaskType().getName())) {
@@ -182,6 +196,28 @@ public class TaskNodeService {
     }
 
 
+    /**
+     * Validates that every document referenced by the nodes (the node's documentId and any
+     * supportingDocumentIds) can be used by a task of the given project. Runs a single query.
+     */
+    public void validateNodeDocumentsAccessible(Collection<TaskNodeDTO> taskNodeDTOs, UUID projectId) throws GendoxException {
+        List<UUID> documentIds = new ArrayList<>();
+        for (TaskNodeDTO dto : taskNodeDTOs) {
+            documentIds.add(dto.getDocumentId());
+            if (dto.getNodeValue() != null && dto.getNodeValue().getDocumentMetadata() != null
+                    && dto.getNodeValue().getDocumentMetadata().getSupportingDocumentIds() != null) {
+                documentIds.addAll(dto.getNodeValue().getDocumentMetadata().getSupportingDocumentIds());
+            }
+        }
+        documentIds.removeIf(Objects::isNull);
+        if (documentIds.isEmpty()) {
+            return;
+        }
+        if (!securityUtils.areAllDocumentsInAnyProject(documentIds, List.of(projectId))) {
+            throw new GendoxException("DOCUMENT_NOT_IN_PROJECT", "One or more documents do not belong to the project", HttpStatus.FORBIDDEN);
+        }
+    }
+
     public TaskNode updateTaskNodesMetadata(TaskDocumentMetadataDTO taskDocumentMetadataDTO) throws GendoxException {
         logger.debug("Updating task node for document digitization: {}", taskDocumentMetadataDTO);
 
@@ -250,7 +286,30 @@ public class TaskNodeService {
 
     public Page<TaskNode> getTaskNodesByCriteria(TaskNodeCriteria criteria, Pageable pageable) {
         logger.trace("Fetching task nodes by criteria: {}", criteria);
-        return taskNodeRepository.findAll(TaskNodePredicates.build(criteria), pageable);
+        Page<TaskNode> page = taskNodeRepository.findAll(TaskNodePredicates.build(criteria), withSubquerySort(criteria, pageable));
+        // Return the requested pageable: a subquery QSort holds QueryDSL expressions that can't be serialized
+        return new PageImpl<>(page.getContent(), pageable, page.getTotalElements());
+    }
+
+    /**
+     * "title" and "answer" aren't TaskNode properties, so sort=title / sort=answer are turned into
+     * subquery sorts: the document title, or the answer value to criteria.sortQuestionNodeId.
+     */
+    private Pageable withSubquerySort(TaskNodeCriteria criteria, Pageable pageable) {
+        Sort.Order title = pageable.getSort().getOrderFor("title");
+        Sort.Order answer = pageable.getSort().getOrderFor("answer");
+        Sort.Order order = title != null ? title : answer;
+        if (order == null || (answer != null && criteria.getSortQuestionNodeId() == null)) {
+            return pageable;
+        }
+
+        Expression<String> sortBy = title != null
+                ? TaskNodePredicates.documentTitle()
+                : TaskNodePredicates.answerValue(criteria.getSortQuestionNodeId());
+        QSort sort = new QSort(
+                new OrderSpecifier<>(order.isAscending() ? Order.ASC : Order.DESC, sortBy, OrderSpecifier.NullHandling.NullsLast),
+                QTaskNode.taskNode.id.asc()); // ties (e.g. many "No" answers) need a stable order to page through
+        return QPageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 
     /**

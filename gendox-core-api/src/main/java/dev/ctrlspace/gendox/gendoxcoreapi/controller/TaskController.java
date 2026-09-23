@@ -27,6 +27,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.SecurityUtils;
+
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -40,6 +42,7 @@ public class TaskController {
     private final TaskCsvExportService taskCsvExportService;
     private final TaskNodeService taskNodeService;
     private final TaskEdgeService taskEdgeService;
+    private final SecurityUtils securityUtils;
 
 
     @Autowired
@@ -48,7 +51,8 @@ public class TaskController {
                           TaskEdgeConverter taskEdgeConverter,
                           TaskCsvExportService taskCsvExportService,
                           TaskNodeService taskNodeService,
-                          TaskEdgeService taskEdgeService
+                          TaskEdgeService taskEdgeService,
+                          SecurityUtils securityUtils
     ) {
         this.taskService = taskService;
         this.taskNodeConverter = taskNodeConverter;
@@ -56,6 +60,7 @@ public class TaskController {
         this.taskCsvExportService = taskCsvExportService;
         this.taskNodeService = taskNodeService;
         this.taskEdgeService = taskEdgeService;
+        this.securityUtils = securityUtils;
 
     }
 
@@ -103,17 +108,20 @@ public class TaskController {
         return taskService.getTasks(effectiveCriteria, pageable);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')" +
+            " && @securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedTaskIdFromPathVariable')")
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}", produces = {"application/json"})
     @ResponseStatus(value = HttpStatus.OK)
     public Task getTaskById(@PathVariable UUID organizationId,
                             @PathVariable UUID projectId,
-                            @PathVariable UUID taskId) {
+                            @PathVariable UUID taskId) throws GendoxException {
 
-        return taskService.getTaskById(taskId);
+        Task task = taskService.getTaskById(taskId);
+        return task;
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')" +
+            " && @securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedTaskIdFromPathVariable')")
     @PutMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}")
     @ResponseStatus(value = HttpStatus.OK)
     public Task updateTask(@PathVariable UUID organizationId,
@@ -134,6 +142,7 @@ public class TaskController {
         if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
             throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
         }
+        taskNodeService.validateNodeDocumentsAccessible(List.of(taskNodeDTO), projectId);
         TaskNode taskNode = taskNodeConverter.toEntity(taskNodeDTO);
         return taskNodeService.createTaskNode(taskNode);
     }
@@ -146,10 +155,14 @@ public class TaskController {
                                                @PathVariable UUID projectId,
                                                @RequestBody List<TaskNodeDTO> taskNodeDTOs) throws GendoxException {
 
-        Task task = taskService.getTaskById(taskNodeDTOs.getFirst().getTaskId());
-        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
-            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        // every node's task must belong to the project, not just the first one's. Should be just 1 task though
+        for (UUID taskId : taskNodeDTOs.stream().map(TaskNodeDTO::getTaskId).distinct().toList()) {
+            Task task = taskService.getTaskById(taskId);
+            if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
+                throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+            }
         }
+        taskNodeService.validateNodeDocumentsAccessible(taskNodeDTOs, projectId);
 
         try {
             List<TaskNode> nodes = new ArrayList<>();
@@ -165,7 +178,8 @@ public class TaskController {
     }
 
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')" +
+            " && @securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedTaskIdFromPathVariable')")
     @PutMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/task-nodes")
     @ResponseStatus(value = HttpStatus.OK)
     public TaskNode updateTaskNode(@PathVariable UUID organizationId,
@@ -176,14 +190,16 @@ public class TaskController {
         if (!task.getId().equals(taskId)) {
             throw new GendoxException("TASK_ID_MISMATCH", "Task ID in path and body do not match", HttpStatus.BAD_REQUEST);
         }
-        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
-            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+        if (!taskId.equals(taskNodeDTO.getTaskId())) {
+            throw new GendoxException("INVALID_CRITERIA_SCOPE", "taskId must be the one in the path", HttpStatus.FORBIDDEN);
         }
+        taskNodeService.validateNodeDocumentsAccessible(List.of(taskNodeDTO), projectId);
         return taskNodeService.updateTaskNode(taskNodeDTO, task);
     }
 
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')" +
+            " && @securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedTaskNodeIdFromRequestParam')")
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/task-nodes", produces = {"application/json"})
     @ResponseStatus(value = HttpStatus.OK)
     public TaskNode getTaskNodeById(@PathVariable UUID organizationId,
@@ -192,7 +208,8 @@ public class TaskController {
         return taskNodeService.getTaskNodeById(id);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')" +
+            " && @securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedTaskIdFromPathVariable')")
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/task-nodes", produces = {"application/json"})
     @ResponseStatus(value = HttpStatus.OK)
     public Page<TaskNode> getTaskNodesByTaskId(@PathVariable UUID organizationId,
@@ -200,29 +217,22 @@ public class TaskController {
                                                @PathVariable UUID taskId,
                                                Pageable pageable) throws GendoxException {
 
-        Task task = taskService.getTaskById(taskId);
-        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
-            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
-        }
-
         return taskNodeService.getTaskNodesByTaskId(taskId, pageable);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')" +
+            " && @securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedTaskIdFromPathVariable')")
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/document-pages", produces = {"application/json"})
     @ResponseStatus(value = HttpStatus.OK)
     public Page<DocumentNodeAnswerPagesDTO> getDocumentNodeAnswerPages(@PathVariable UUID organizationId,
                                                                        @PathVariable UUID projectId,
                                                                        @PathVariable UUID taskId,
                                                                        Pageable pageable) throws GendoxException {
-        Task task = taskService.getTaskById(taskId);
-        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
-            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
-        }
         return taskNodeService.getDocumentNodeAnswerPages(taskId, pageable);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')" +
+            " && @securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedTaskIdFromPathVariable')")
     @PostMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/task-nodes/search", produces = {"application/json"})
     @ResponseStatus(value = HttpStatus.OK)
     public Page<TaskNode> getTaskNodesByCriteria(@PathVariable UUID organizationId,
@@ -232,13 +242,15 @@ public class TaskController {
                                                  Pageable pageable) throws GendoxException {
 
         Task task = taskService.getTaskById(taskId);
-        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
-            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
+
+        if (!taskId.equals(criteria.getTaskId())) {
+            throw new GendoxException("INVALID_CRITERIA_SCOPE", "taskId must be the one in the path", HttpStatus.FORBIDDEN);
         }
         return taskNodeService.getTaskNodesByCriteria(criteria, pageable);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')" +
+            " && @securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedTaskIdFromPathVariable')")
     @PostMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/answers/batch", produces = {"application/json"})
     @ResponseStatus(value = HttpStatus.OK)
     public Page<TaskNode> getAnswerNodesByDocumentAndQuestion(
@@ -250,10 +262,6 @@ public class TaskController {
     ) throws GendoxException {
         List<TaskNode> answers = new ArrayList<>();
 
-        Task task = taskService.getTaskById(taskId);
-        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
-            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
-        }
         List<UUID> docs = Optional.ofNullable(answerBatchDTO.getDocumentNodeIds()).orElse(List.of());
         List<UUID> ques = Optional.ofNullable(answerBatchDTO.getQuestionNodeIds()).orElse(List.of());
         return taskNodeService.findAnswerNodesBatch(taskId, docs, ques, pageable);
@@ -266,6 +274,7 @@ public class TaskController {
     public TaskEdge createTaskEdge(@PathVariable UUID organizationId,
                                    @PathVariable UUID projectId,
                                    @RequestBody TaskEdgeDTO taskEdgeDTO) throws GendoxException {
+        requireNodesInProject(List.of(taskEdgeDTO.getFromNodeId(), taskEdgeDTO.getToNodeId()), projectId);
         TaskEdge taskEdge = taskEdgeConverter.toEntity(taskEdgeDTO);
         return taskEdgeService.createTaskEdge(taskEdge);
     }
@@ -275,8 +284,13 @@ public class TaskController {
     @ResponseStatus(value = HttpStatus.OK)
     public TaskEdge getTaskEdgeById(@PathVariable UUID organizationId,
                                     @PathVariable UUID projectId,
-                                    @RequestParam UUID id) {
-        return taskEdgeService.getTaskEdgeById(id);
+                                    @RequestParam UUID id) throws GendoxException {
+        TaskEdge taskEdge = taskEdgeService.getTaskEdgeById(id);
+        if (taskEdge == null) {
+            throw new GendoxException("TASK_EDGE_NOT_FOUND", "Task edge not found", HttpStatus.NOT_FOUND);
+        }
+        requireNodesInProject(List.of(taskEdge.getFromNode().getId(), taskEdge.getToNode().getId()), projectId);
+        return taskEdge;
     }
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
@@ -285,7 +299,19 @@ public class TaskController {
     public Page<TaskEdge> getTaskEdgesByCriteria(@PathVariable UUID organizationId,
                                                  @PathVariable UUID projectId,
                                                  @RequestBody TaskEdgeCriteria criteria,
-                                                 Pageable pageable) {
+                                                 Pageable pageable) throws GendoxException {
+        // The criteria has no task or project, so the nodes it filters on are what ties it to one
+        List<UUID> nodeIds = new ArrayList<>();
+        if (criteria.getFromNodeIds() != null) {
+            nodeIds.addAll(criteria.getFromNodeIds());
+        }
+        if (criteria.getToNodeIds() != null) {
+            nodeIds.addAll(criteria.getToNodeIds());
+        }
+        if (nodeIds.isEmpty()) {
+            throw new GendoxException("INVALID_CRITERIA_SCOPE", "fromNodeIds or toNodeIds is required", HttpStatus.BAD_REQUEST);
+        }
+        requireNodesInProject(nodeIds, projectId);
         return taskEdgeService.getTaskEdgesByCriteria(criteria, pageable);
     }
 
@@ -309,7 +335,8 @@ public class TaskController {
 
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')" +
+            " && @securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedTaskIdFromPathVariable')")
     @DeleteMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/answers")
     @ResponseStatus(value = HttpStatus.NO_CONTENT)
     public void deleteAnswerNodes(@PathVariable UUID organizationId,
@@ -317,10 +344,6 @@ public class TaskController {
                                   @PathVariable UUID taskId,
                                   @RequestParam(name = "documentNodeIds", required = false) List<UUID> documentNodeIds,
                                   @RequestParam(name = "answerNodeIds", required = false) List<UUID> answerNodeIds) throws GendoxException {
-        Task task = taskService.getTaskById(taskId);
-        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
-            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
-        }
 
         int deleted = taskNodeService.deleteAnswerNodes(taskId, documentNodeIds, answerNodeIds);
         logger.info("Request to delete answer nodes: taskId={}, documentNodeIds={}, answerNodeIds={}, deleted={}",
@@ -328,7 +351,8 @@ public class TaskController {
     }
 
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')" +
+            " && @securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedTaskIdFromPathVariable')")
     @DeleteMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}")
     @ResponseStatus(value = HttpStatus.NO_CONTENT)
     public void deleteTask(@PathVariable UUID organizationId,
@@ -338,14 +362,12 @@ public class TaskController {
         if (task == null) {
             throw new GendoxException("TASK_NOT_FOUND", "Task not found", HttpStatus.NOT_FOUND);
         }
-        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
-            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
-        }
         taskService.deleteTask(taskId);
         logger.info("Request to delete task: taskId={}", taskId);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')" +
+            " && @securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedTaskIdFromPathVariable')")
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/documents/{documentNodeId}/insights/export-csv")
     public ResponseEntity<InputStreamResource> documentInsightExportSingleCSV(
             @PathVariable UUID organizationId,
@@ -357,9 +379,6 @@ public class TaskController {
         if (task == null) {
             throw new GendoxException("TASK_NOT_FOUND", "Task not found", HttpStatus.NOT_FOUND);
         }
-        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
-            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
-        }
         InputStreamResource fileResource = taskCsvExportService.documentInsightExportSingleDocumentCSV(taskId, documentNodeId);
         String filename = "task_" + taskId + "_document_" + documentNodeId + ".csv";
 
@@ -370,7 +389,8 @@ public class TaskController {
                 .body(fileResource);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')" +
+            " && @securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedTaskIdFromPathVariable')")
     @GetMapping("/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/insights/export-csv")
     public ResponseEntity<InputStreamResource> documentInsightExportAll(
             @PathVariable UUID organizationId,
@@ -393,7 +413,8 @@ public class TaskController {
     }
 
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')" +
+            " && @securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedTaskIdFromPathVariable')")
     @GetMapping(value = "/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/documents/{documentNodeId}/digitization/export-csv")
     public ResponseEntity<InputStreamResource> documentDigitizationExportCSV(@PathVariable UUID organizationId,
                                                                              @PathVariable UUID projectId,
@@ -404,9 +425,6 @@ public class TaskController {
         if (task == null) {
             throw new GendoxException("TASK_NOT_FOUND", "Task not found", HttpStatus.NOT_FOUND);
         }
-        if (task.getProjectId() == null || !task.getProjectId().equals(projectId)) {
-            throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
-        }
 
         InputStreamResource fileResource = taskCsvExportService.documentDigitizationExportCSV(taskId, documentNodeId);
         String filename = "document_digitization_" + documentNodeId + ".csv";
@@ -416,7 +434,8 @@ public class TaskController {
                 .body(fileResource);
     }
 
-    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')")
+    @PreAuthorize("@securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedProjectIdFromPathVariable')" +
+            " && @securityUtils.hasAuthority('OP_UPDATE_PROJECT', 'getRequestedTaskIdFromPathVariable')")
     @PutMapping("/organizations/{organizationId}/projects/{projectId}/tasks/{taskId}/questions/order")
     @ResponseStatus(HttpStatus.OK)
     public void reorderQuestionColumns(@PathVariable UUID organizationId,
@@ -427,5 +446,13 @@ public class TaskController {
         taskNodeService.reorderQuestionNodes(taskId, projectId, dto.getOrderedQuestionNodeIds());
     }
 
-
+    /**
+     * Task node ids that arrive in a request body can't be checked by @PreAuthorize, so they are
+     * checked here, against the project of the URL. One query for all of them.
+     */
+    private void requireNodesInProject(Collection<UUID> taskNodeIds, UUID projectId) throws GendoxException {
+        if (!securityUtils.areAllNodesInAnyProject(taskNodeIds, List.of(projectId))) {
+            throw new GendoxException("TASK_NODE_NOT_IN_PROJECT", "One or more task nodes do not belong to the project", HttpStatus.FORBIDDEN);
+        }
+    }
 }

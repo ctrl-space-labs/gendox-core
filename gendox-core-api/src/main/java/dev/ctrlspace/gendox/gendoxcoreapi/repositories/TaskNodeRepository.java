@@ -28,6 +28,15 @@ public interface TaskNodeRepository extends JpaRepository<TaskNode, UUID>, Query
             value = "DELETE FROM gendox_core.task_nodes n WHERE n.id IN :ids")
     void deleteAllByIds(@Param("ids") List<UUID> ids);
 
+    @Query(value = """
+                SELECT (COUNT(DISTINCT n.id) = cardinality(CAST(:taskNodeIds AS uuid[]))) AS all_belong
+                FROM gendox_core.task_nodes n
+                JOIN gendox_core.tasks t ON t.id = n.task_id
+                WHERE n.id = ANY(CAST(:taskNodeIds AS uuid[]))
+                  AND t.project_id = ANY(CAST(:projectIds AS uuid[]))
+            """, nativeQuery = true)
+    boolean areAllNodeIdsInAnyProject(@Param("taskNodeIds") UUID[] taskNodeIds, @Param("projectIds") UUID[] projectIds);
+
     @Query("SELECT tn FROM TaskNode tn WHERE tn.taskId = :taskId AND tn.nodeType.name = :nodeTypeName")
     List<TaskNode> findAllByTaskIdAndNodeTypeName(@Param("taskId") UUID taskId, @Param("nodeTypeName") String nodeTypeName);
 
