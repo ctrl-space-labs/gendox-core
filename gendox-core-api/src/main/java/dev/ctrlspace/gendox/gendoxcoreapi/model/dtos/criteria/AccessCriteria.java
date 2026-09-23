@@ -17,4 +17,6 @@ public class AccessCriteria {
     private Set<String> projectIds;
     private String threadId;
     private List<String> documentIds;
+    private String taskId;
+    private List<String> taskNodeIds;
 }
