@@ -176,3 +176,55 @@ FROM gendox_core.project_agent pa
          JOIN gendox_core.projects p ON p.id = pa.project_id
 WHERE m.is_active = FALSE;
 
+
+-- ===========================================================================
+UPDATE gendox_core.ai_model_providers SET description = 'SpaceXAI', updated_at = NOW() WHERE name = 'XAI';
+UPDATE gendox_core.ai_model_providers SET description = 'Nebius', updated_at = NOW() WHERE name = 'NEBIUS';
+
+
+-- ===========================================================================
+-- Finds a document's answer to a question (Document Insights: filter and sort by answer).
+-- The expressions must match TaskNodePredicates.nodeValueText() exactly for the index to be used.
+CREATE INDEX IF NOT EXISTS idx_nodes_answer_lookup
+    ON gendox_core.task_nodes (task_id,
+                               jsonb_extract_path_text(node_value, 'nodeDocumentId'),
+                               jsonb_extract_path_text(node_value, 'nodeQuestionId'));
+
+-- ===========================================================================
+
+-- ===========================================================================
+-- 1. New models
+-- ===========================================================================
+INSERT INTO gendox_core.ai_models
+(model, url, name, price, created_at, updated_at, description, ai_model_type_id, api_type_id,
+ model_tier_type_id, organization_id, ai_model_provider_id, is_active,
+ supports_reasoning, default_reasoning_effort, system_role_name,
+ supports_sampling_params, model_origin, hosting_region)
+SELECT v.model, 'https://api.openai.com/v1/responses', v.name, v.price, NOW(), NOW(), v.description,
+       (SELECT id FROM gendox_core.types WHERE name = 'COMPLETION_MODEL' AND type_category = 'AI_MODEL_TYPE'),
+       (SELECT id FROM gendox_core.types WHERE name = 'OPEN_AI_RESPONSES_API' AND type_category = 'AI_MODEL_API_TYPE'),
+       (SELECT id FROM gendox_core.types WHERE name = v.tier AND type_category = 'MODEL_TIER'),
+       NULL,
+       (SELECT id FROM gendox_core.ai_model_providers WHERE name = 'OPEN_AI'),
+       TRUE, TRUE, v.effort, 'developer', FALSE, 'US', 'US'
+FROM (VALUES
+          ('gpt-6-sol',  'GPT-6-SOL',  0.00200, 'GPT-6 Sol: flagship GPT-6 model for sophisticated professional applications.', 'PREMIUM_MODEL', 'medium'),
+          ('gpt-6-luna', 'GPT-6-LUNA', 0.00010, 'GPT-6 Luna: most cost-efficient GPT-6 model. Default completion model.',        'FREE_MODEL',    'medium')
+     ) AS v(model, name, price, description, tier, effort)
+WHERE NOT EXISTS (SELECT 1 FROM gendox_core.ai_models WHERE name = v.name);
+
+
+-- ===========================================================================
+-- 2. Move agents' completion and advanced search models off GPT-5.6 Luna
+-- ===========================================================================
+
+UPDATE gendox_core.project_agent pa
+SET completion_model_id = (SELECT id FROM gendox_core.ai_models WHERE name = 'GPT-6-LUNA'),
+    updated_at          = NOW()
+WHERE pa.completion_model_id = (SELECT id FROM gendox_core.ai_models WHERE name = 'GPT-5.6-LUNA');
+
+UPDATE gendox_core.project_agent pa
+SET advanced_search_model_id = (SELECT id FROM gendox_core.ai_models WHERE name = 'GPT-6-LUNA'),
+    updated_at               = NOW()
+WHERE pa.advanced_search_model_id = (SELECT id FROM gendox_core.ai_models WHERE name = 'GPT-5.6-LUNA');
+

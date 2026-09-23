@@ -181,7 +181,7 @@ public class ProjectAgentService {
             projectAgent.setSemanticSearchModel(aiModelService.getByName(AiModelConstants.VOYAGE_4_LITE));
         }
         if (projectAgent.getCompletionModel() == null) {
-            projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_5_6_LUNA));
+            projectAgent.setCompletionModel(aiModelService.getByName(AiModelConstants.GPT_6_LUNA));
         }
         if (projectAgent.getModerationModel() == null) {
             projectAgent.setModerationModel(aiModelService.getByName(AiModelConstants.OMNI_MODERATION));
@@ -190,7 +190,7 @@ public class ProjectAgentService {
             projectAgent.setRerankModel(aiModelService.getByName(AiModelConstants.VOYAGE_RERANK_3_LITE));
         }
         if (projectAgent.getAdvancedSearchModel() == null) {
-            projectAgent.setAdvancedSearchModel(aiModelService.getByName(AiModelConstants.GPT_5_6_LUNA));
+            projectAgent.setAdvancedSearchModel(aiModelService.getByName(AiModelConstants.GPT_6_LUNA));
         }
         if (projectAgent.getModerationCheck() == null) {
             projectAgent.setModerationCheck(false);
