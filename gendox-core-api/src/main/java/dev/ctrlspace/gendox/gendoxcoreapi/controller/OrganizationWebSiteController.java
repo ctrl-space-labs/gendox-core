@@ -98,8 +98,13 @@ public class OrganizationWebSiteController {
 
     @PreAuthorize("@securityUtils.hasAuthority('OP_EDIT_ORGANIZATION_WEB_SITES', 'getRequestedOrgIdFromPathVariable')")
     @DeleteMapping("/organizations/{organizationId}/websites/{websiteId}")
-    public void deleteOrganizationWebSite(@PathVariable UUID organizationId, @PathVariable UUID websiteId) {
-        organizationWebSiteService.deleteOrganizationWebSite(websiteId);
+    @Operation(summary = "Remove a website",
+            description = "Removes the website row. A crawl source is removed together with the pages "
+                    + "it discovered and the documents those pages produced.")
+    public void deleteOrganizationWebSite(@PathVariable UUID organizationId,
+                                          @PathVariable UUID websiteId) throws GendoxException {
+
+        organizationWebSiteService.deleteOrganizationWebSite(organizationId, websiteId);
     }
 
 

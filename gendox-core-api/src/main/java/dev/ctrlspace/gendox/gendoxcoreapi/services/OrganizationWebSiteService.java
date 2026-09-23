@@ -13,6 +13,7 @@ import dev.ctrlspace.gendox.gendoxcoreapi.repositories.OrganizationWebSiteReposi
 import dev.ctrlspace.gendox.gendoxcoreapi.services.integrations.WebScrapeIntegrationUpdateService;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.DocumentUtils;
 import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.FirecrawlConfig;
+import dev.ctrlspace.gendox.gendoxcoreapi.utils.constants.IntegrationTypesConstants;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -211,9 +212,34 @@ public class OrganizationWebSiteService {
         return organizationWebSite;
     }
 
-    public void deleteOrganizationWebSite(UUID id) {
-        organizationWebSiteRepository.deleteById(id);
-    }
+    /**
+     * Deleting the website row used to leave a crawl source behind: the integration
+     * kept its schedule and kept fetching pages, with nothing on any screen showing
+     * that it still existed. A source that was created together with its row is now
+     * removed together with it.
+     *
+     * The website is looked up through the organization in the path, so an id that
+     * belongs to another organization answers 404 instead of confirming it exists.
+     */
+    @Transactional(rollbackOn = Exception.class)
+    public void deleteOrganizationWebSite(UUID organizationId, UUID id) throws GendoxException {
+        OrganizationWebSite organizationWebSite = organizationWebSiteRepository.findById(id)
+                .filter(website -> organizationId.equals(website.getOrganizationId()))
+                .orElseThrow(() -> new GendoxException("WEBSITE_NOT_FOUND",
+                        "Website not found with id: " + id, HttpStatus.NOT_FOUND));
 
+        UUID integrationId = organizationWebSite.getIntegrationId();
+        boolean isCrawlSource = integrationId != null
+                && IntegrationTypesConstants.WEB_SCRAPE_INTEGRATION.equals(
+                integrationService.getIntegrationById(integrationId)
+                        .getIntegrationType().getName());
+
+        // the row holds the foreign key to the integration, so it goes first
+        organizationWebSiteRepository.deleteById(id);
+
+        if (isCrawlSource) {
+            webScrapeIntegrationUpdateService.deleteSource(integrationId);
+        }
+    }
 
 }

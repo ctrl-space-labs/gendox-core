@@ -285,6 +285,32 @@ public class WebScrapeIntegrationUpdateService implements IntegrationUpdateServi
         }
     }
 
+    /**
+     * Removes a crawl source completely: the documents it produced, its page rows
+     * and the integration itself.
+     * <p>
+     * The page rows follow the integration through their foreign key, but the
+     * documents do not — they live in the project, and once the pages are gone
+     * nothing is left that knows they came from here. Deleting them is the same
+     * rule as deselecting a page, applied to every page at once.
+     */
+    @Transactional(rollbackOn = Exception.class)
+    public void deleteSource(UUID integrationId) throws GendoxException {
+        List<UUID> documentInstanceIds = webScrapePageRepository.findAllByIntegrationId(integrationId)
+                .stream()
+                .map(WebScrapePage::getDocumentInstanceId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        // deleteAllDocumentInstances refuses an empty list, and a source that was
+        // never scraped has one
+        if (!documentInstanceIds.isEmpty()) {
+            documentService.deleteAllDocumentInstances(documentInstanceIds);
+        }
+
+        integrationRepository.deleteById(integrationId);
+    }
+
     private Integration loadAndCheckPlan(UUID integrationId) throws GendoxException {
 
         Integration integration = loadIntegration(integrationId);
