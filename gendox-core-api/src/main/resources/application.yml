@@ -162,6 +162,8 @@ gendox:
       key: ${NEBIUS_KEY:default-token}
     xai:
       key: ${XAI_KEY:default-token}
+    typesafe_ai:
+      key: ${TYPESAFE_AI_KEY:default-token}
   domain:
     base-url: http://localhost:${server.port}
     document-sections:

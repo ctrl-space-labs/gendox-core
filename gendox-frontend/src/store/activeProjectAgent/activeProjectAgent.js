@@ -52,6 +52,7 @@ const initialState = {
   aiModels: {
     semanticModels: [],
     completionModels: [],
+    decisionModels: [],
     moderationModels: [],
     rerankModels: []
   },
@@ -77,6 +78,7 @@ const activeProjectAgentSlice = createSlice({
         const models = action.payload
         state.aiModels.semanticModels = models.filter(model => model.aiModelType.name === 'SEMANTIC_SEARCH_MODEL')
         state.aiModels.completionModels = models.filter(model => model.aiModelType.name === 'COMPLETION_MODEL')
+        state.aiModels.decisionModels = models.filter(model => model.aiModelType.name === 'DECISION_MODEL')
         state.aiModels.moderationModels = models.filter(model => model.aiModelType.name === 'MODERATION_MODEL')
         state.aiModels.rerankModels = models.filter(model => model.aiModelType.name === 'RERANK_MODEL')
       })

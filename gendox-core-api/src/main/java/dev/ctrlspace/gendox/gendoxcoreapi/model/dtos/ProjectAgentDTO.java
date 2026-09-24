@@ -24,6 +24,7 @@ public class ProjectAgentDTO {
     private UUID userId;
     private AiModel semanticSearchModel;
     private AiModel completionModel;
+    private AiModel decisionModel;
     private String agentName;
     private String agentBehavior;
     private Boolean privateAgent;

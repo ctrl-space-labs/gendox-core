@@ -54,6 +54,9 @@ public class AiModelConstants {
     public static final String OMNI_MODERATION = "OMNI_MODERATION";
     public static final String MISTRAL_MODERATION = "MISTRAL_MODERATION";
 
+    // Decision models
+    public static final String JEV_LATEST = "JEV-LATEST";
+
 
 
 }

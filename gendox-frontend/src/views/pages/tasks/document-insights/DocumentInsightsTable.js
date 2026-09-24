@@ -105,7 +105,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       text: node.nodeValue?.message || '',
       order: node.nodeValue?.order || 0,
       supportingDocumentIds: node.nodeValue?.documentMetadata?.supportingDocumentIds || [],
-      title: node.nodeValue?.questionTitle || ''
+      title: node.nodeValue?.questionTitle || '',
+      insightConfig: node.nodeValue?.insightConfig || { version: 1, answerMode: 'GENERATED_TEXT' }
     }))
   }, [taskNodesQuestionList])
 
@@ -152,7 +153,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
       questionNodeId: node.nodeValue?.nodeQuestionId,
       message: node.nodeValue?.message || '',
       answerValue: node.nodeValue?.answerValue || '',
-      answerFlagEnum: node.nodeValue?.answerFlagEnum || ''
+      answerFlagEnum: node.nodeValue?.answerFlagEnum || '',
+      decisionResult: node.nodeValue?.decisionResult || null
     }))
   }, [taskNodesAnswerList])
 

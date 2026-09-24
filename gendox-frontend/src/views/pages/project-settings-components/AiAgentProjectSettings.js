@@ -49,7 +49,7 @@ const AiAgentProjectSettings = () => {
   const { projectDetails: project, isBlurring: isUpdatingProject } = useSelector(state => state.activeProject)
 
   const { isFetchingAiModels, isUpdatingProjectAgent, aiModels, exampleTools, isFetchingExampleTools } = useSelector(state => state.activeProjectAgent)
-  const { semanticModels, completionModels, moderationModels, rerankModels } = aiModels
+  const { semanticModels, completionModels, decisionModels, moderationModels, rerankModels } = aiModels
   const isLoading = isUpdatingProjectAgent || isFetchingAiModels || isUpdatingProject || isFetchingExampleTools
 
   /* ----------  Add these state hooks (place near the other hooks, before the return)  ---------- */
@@ -63,6 +63,7 @@ const AiAgentProjectSettings = () => {
   const defaultValues = {
     semanticSearchModel: project.projectAgent.semanticSearchModel?.name || '',
     completionModel: project.projectAgent.completionModel?.name || '',
+    decisionModel: project.projectAgent.decisionModel?.name || '',
     moderationModel: project.projectAgent.moderationModel?.name || '',
     rerankModel: project.projectAgent.rerankModel?.name || '',
     advancedSearchModel: project.projectAgent.advancedSearchModel?.name || '',
@@ -180,6 +181,14 @@ const AiAgentProjectSettings = () => {
     }
   }, [completionModels, watch('completionModel'), setValue])
 
+  useEffect(() => {
+    if (decisionModels.length > 0) {
+      const current = watch('decisionModel')
+      const exists = decisionModels.some(model => model.name === current)
+      if (!exists) setValue('decisionModel', decisionModels[0].name)
+    }
+  }, [decisionModels, watch('decisionModel'), setValue])
+
   // Capability flags come straight from ai_models. The defaults mirror the backend
   // getters, so an unmigrated row behaves the same here as it does server-side.
   const selectedCompletionModel =
@@ -225,6 +234,7 @@ const AiAgentProjectSettings = () => {
         ...project.projectAgent,
         semanticSearchModel: { name: data.semanticSearchModel },
         completionModel: { name: data.completionModel },
+        decisionModel: { name: data.decisionModel },
         moderationModel: { name: data.moderationModel },
         rerankModel: { name: data.rerankModel },
         advancedSearchModel: { name: data.advancedSearchModel },
@@ -304,6 +314,26 @@ const AiAgentProjectSettings = () => {
                           value={semanticModels.find(model => model.name === watch('semanticSearchModel')) || null} // Set selected value
                           disableClearable
                           renderInput={params => <TextField {...params} label='Semantic Search Model' />}
+                          renderOption={(props, option) => <AiModelOption props={props} option={option} />}
+                        />
+                      )}
+                    />
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <Controller
+                      name='decisionModel'
+                      control={control}
+                      render={({ field }) => (
+                        <Autocomplete
+                          {...field}
+                          options={sortModels(decisionModels)}
+                          getOptionLabel={option => option.name}
+                          onChange={(_, value) => setValue('decisionModel', value?.name)}
+                          value={decisionModels.find(model => model.name === watch('decisionModel')) || null}
+                          disableClearable
+                          renderInput={params => <TextField {...params} label='Decision Model' />}
                           renderOption={(props, option) => <AiModelOption props={props} option={option} />}
                         />
                       )}

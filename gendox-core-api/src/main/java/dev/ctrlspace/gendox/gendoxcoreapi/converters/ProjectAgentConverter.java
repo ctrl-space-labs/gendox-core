@@ -14,6 +14,7 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         projectAgentDTO.setUserId(projectAgent.getUserId());
         projectAgentDTO.setSemanticSearchModel(projectAgent.getSemanticSearchModel());
         projectAgentDTO.setCompletionModel(projectAgent.getCompletionModel());
+        projectAgentDTO.setDecisionModel(projectAgent.getDecisionModel());
         projectAgentDTO.setAgentName(projectAgent.getAgentName());
         projectAgentDTO.setAgentBehavior(projectAgent.getAgentBehavior());
         projectAgentDTO.setPrivateAgent(projectAgent.getPrivateAgent());
@@ -67,6 +68,7 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         projectAgent.setUserId(projectAgentDTO.getUserId());
         projectAgent.setSemanticSearchModel(projectAgentDTO.getSemanticSearchModel());
         projectAgent.setCompletionModel(projectAgentDTO.getCompletionModel());
+        projectAgent.setDecisionModel(projectAgentDTO.getDecisionModel());
         projectAgent.setAgentName(projectAgentDTO.getAgentName());
         projectAgent.setAgentBehavior(projectAgentDTO.getAgentBehavior());
         projectAgent.setPrivateAgent(projectAgentDTO.getPrivateAgent());
@@ -111,7 +113,6 @@ public class ProjectAgentConverter implements GendoxConverter<ProjectAgent, Proj
         return projectAgent;
     }
 }
-
 
 
 

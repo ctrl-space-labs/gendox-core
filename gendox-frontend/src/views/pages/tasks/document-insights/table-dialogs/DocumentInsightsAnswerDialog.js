@@ -15,6 +15,7 @@ const AnswerDialog = ({ open, onClose, answer, questions }) => {
   if (!answer) return null
   const flagProps = getAnswerFlagProps(answer.answerFlagEnum)
   const questionText = answer ? getQuestionMessageById(questions, answer.questionNodeId) : ''
+  const decision = answer.decisionResult
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth='xl' aria-labelledby='answer-dialog-title'>
@@ -89,11 +90,36 @@ const AnswerDialog = ({ open, onClose, answer, questions }) => {
 
         <Divider sx={{ my: 2, borderColor: theme.palette.divider }} />
 
-        <ExpandableMarkdownSection
-          label='Description'
-          markdown={answer.message || '*N/A*'}
-          maxHeight={MAX_COLLAPSED_HEIGHT}
-        />
+        {decision ? (
+          <Box>
+            <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 2 }}>
+              Decision details
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+              <Chip label={decision.kind === 'BOOLEAN' ? 'Yes / No' : decision.kind === 'CHOICE' ? 'Choose one' : 'Rating'} />
+              {decision.probability != null && <Chip variant='outlined' label={`Probability ${Math.round(decision.probability * 100)}%`} />}
+              {decision.confidence != null && <Chip variant='outlined' label={`Confidence ${Math.round(decision.confidence * 100)}%`} />}
+              {decision.score != null && <Chip variant='outlined' label={`Score ${decision.score}`} />}
+              {decision.modelVersion && <Chip variant='outlined' label={decision.modelVersion} />}
+            </Box>
+            {Object.keys(decision.probabilities || {}).length > 0 && (
+              <Box sx={{ display: 'grid', gap: 1 }}>
+                {Object.entries(decision.probabilities).map(([label, probability]) => (
+                  <Box key={label} sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider', py: 0.75 }}>
+                    <Typography variant='body2'>{decision.legend?.[label] || label}</Typography>
+                    <Typography variant='body2' sx={{ fontWeight: 600 }}>{Math.round(probability * 100)}%</Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Box>
+        ) : (
+          <ExpandableMarkdownSection
+            label='Description'
+            markdown={answer.message || '*N/A*'}
+            maxHeight={MAX_COLLAPSED_HEIGHT}
+          />
+        )}
       </DialogContent>
 
       <Divider sx={{ borderColor: theme.palette.divider }} />

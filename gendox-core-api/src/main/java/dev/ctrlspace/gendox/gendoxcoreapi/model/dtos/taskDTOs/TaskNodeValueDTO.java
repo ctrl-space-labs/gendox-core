@@ -23,5 +23,7 @@ public class TaskNodeValueDTO {
     private AnswerFlag answerFlagEnum;
     private String questionTitle;
     private Integer order;
+    private InsightConfigDTO insightConfig;
+    private DecisionResultDTO decisionResult;
     private TaskDocumentMetadataDTO documentMetadata = new TaskDocumentMetadataDTO();
 }

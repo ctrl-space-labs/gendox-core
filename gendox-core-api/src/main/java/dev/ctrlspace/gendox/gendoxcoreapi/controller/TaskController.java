@@ -42,6 +42,7 @@ public class TaskController {
     private final TaskCsvExportService taskCsvExportService;
     private final TaskNodeService taskNodeService;
     private final TaskEdgeService taskEdgeService;
+    private final InsightQuestionService insightQuestionService;
     private final SecurityUtils securityUtils;
 
 
@@ -52,6 +53,7 @@ public class TaskController {
                           TaskCsvExportService taskCsvExportService,
                           TaskNodeService taskNodeService,
                           TaskEdgeService taskEdgeService,
+                          InsightQuestionService insightQuestionService,
                           SecurityUtils securityUtils
     ) {
         this.taskService = taskService;
@@ -60,6 +62,7 @@ public class TaskController {
         this.taskCsvExportService = taskCsvExportService;
         this.taskNodeService = taskNodeService;
         this.taskEdgeService = taskEdgeService;
+        this.insightQuestionService = insightQuestionService;
         this.securityUtils = securityUtils;
 
     }
@@ -162,15 +165,19 @@ public class TaskController {
                 throw new GendoxException("INVALID_PROJECT", "Task does not belong to the specified project", HttpStatus.BAD_REQUEST);
             }
         }
-        taskNodeService.validateNodeDocumentsAccessible(taskNodeDTOs, projectId);
+
+        List<TaskNodeDTO> resolvedTaskNodeDTOs = insightQuestionService.resolveAutoQuestions(taskNodeDTOs);
+        taskNodeService.validateNodeDocumentsAccessible(resolvedTaskNodeDTOs, projectId);
 
         try {
             List<TaskNode> nodes = new ArrayList<>();
-            for (TaskNodeDTO dto : taskNodeDTOs) {
+            for (TaskNodeDTO dto : resolvedTaskNodeDTOs) {
                 TaskNode node = taskNodeConverter.toEntity(dto);
                 nodes.add(node);
             }
             return taskNodeService.createTaskNodesBatch(nodes);
+        } catch (GendoxException exception) {
+            throw exception;
         } catch (Exception e) {
             logger.error("Error creating task nodes batch: {}", e.getMessage(), e);
             throw new GendoxException("BATCH_CREATION_FAILED", "Failed to create task nodes batch", HttpStatus.INTERNAL_SERVER_ERROR);
