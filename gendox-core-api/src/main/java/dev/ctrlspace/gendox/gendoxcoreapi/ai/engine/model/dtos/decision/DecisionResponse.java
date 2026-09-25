@@ -18,4 +18,5 @@ public class DecisionResponse {
     private String model;
     @Builder.Default
     private Map<String, DecisionAnswer> answers = new LinkedHashMap<>();
+    private DecisionUsage usage;
 }

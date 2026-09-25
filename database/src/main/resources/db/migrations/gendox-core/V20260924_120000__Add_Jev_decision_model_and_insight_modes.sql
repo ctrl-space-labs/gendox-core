@@ -76,3 +76,22 @@ WHERE node.node_type_id = (
         WHERE type_category = 'TASK_NODE_TYPE' AND name = 'QUESTION'
     )
   AND NOT COALESCE(node.node_value, '{}'::jsonb) ? 'insightConfig';
+
+
+INSERT INTO gendox_core.types (type_category, name, description)
+SELECT 'AUDIT_LOG_TYPE', 'DECISION_REQUEST', 'Input token usage for a decision model request.'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.types
+    WHERE type_category = 'AUDIT_LOG_TYPE' AND name = 'DECISION_REQUEST'
+);
+
+INSERT INTO gendox_core.types (type_category, name, description)
+SELECT 'AUDIT_LOG_TYPE', 'DECISION_RESPONSE', 'Output token usage for a decision model response.'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM gendox_core.types
+    WHERE type_category = 'AUDIT_LOG_TYPE' AND name = 'DECISION_RESPONSE'
+);
+
+

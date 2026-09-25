@@ -37,7 +37,8 @@ class TypeSafeJevDecisionAdapterTest {
                 .andExpect(jsonPath("$.model").value("jev-latest"))
                 .andExpect(jsonPath("$.questions.eligible.type").value("noul"))
                 .andRespond(withSuccess("""
-                        {"model":"jev-latest","answers":{"eligible":{"type":"noul","noul":0.82}}}
+                        {"model":"jev-latest","answers":{"eligible":{"type":"noul","noul":0.82}},
+                         "usage":{"input_tokens":120,"output_tokens":12}}
                         """, MediaType.APPLICATION_JSON));
 
         DecisionQuestionConfigDTO question = DecisionQuestionConfigDTO.builder()
@@ -51,6 +52,8 @@ class TypeSafeJevDecisionAdapterTest {
                 "secret");
 
         assertThat(response.getAnswers().get("eligible").getNoul()).isEqualTo(0.82d);
+        assertThat(response.getUsage().getInputTokens()).isEqualTo(120L);
+        assertThat(response.getUsage().getOutputTokens()).isEqualTo(12L);
         server.verify();
     }
 
@@ -79,7 +82,7 @@ class TypeSafeJevDecisionAdapterTest {
                         {"model":"jev-latest","answers":{
                           "status":{"type":"choice","choice":"citizen","probabilities":{"citizen":0.8,"resident":0.2}},
                           "risk":{"type":"score","score":1.4,"confidence":0.9}
-                        }}
+                        },"usage":{"input_tokens":240,"output_tokens":18}}
                         """, MediaType.APPLICATION_JSON));
 
         Map<String, DecisionQuestionConfigDTO> questions = new LinkedHashMap<>();
