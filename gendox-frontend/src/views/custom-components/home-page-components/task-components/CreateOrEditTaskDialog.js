@@ -77,7 +77,8 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
     maxToken: '',
     completionModel: '',
     usePrintedPage: null,
-    usePageText: null
+    usePageText: null,
+    summarizationEnabled: false
   })
   const [errors, setErrors] = useState({})
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -85,6 +86,9 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
 
   const isDigitizationTask = taskType =>
     taskType === 'DOCUMENT_DIGITIZATION'
+
+  const isDocumentInsightsTask = taskType =>
+    taskType === 'DOCUMENT_INSIGHTS'
 
   // --- Load initial data when editing ---
   useEffect(() => {
@@ -100,7 +104,10 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
         maxToken: initialData.maxToken || '',
         completionModel: initialData.completionModel?.name || '',
         usePrintedPage: isDigitizationTask(taskType) ? initialData.usePrintedPage ?? true : null,
-        usePageText: isDigitizationTask(taskType) ? initialData.usePageText ?? false : null
+        usePageText: isDigitizationTask(taskType) ? initialData.usePageText ?? false : null,
+        summarizationEnabled: isDocumentInsightsTask(taskType)
+          ? initialData.summarizationEnabled ?? false
+          : null
       })
       setErrors({})
     }
@@ -123,9 +130,15 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
         if (value === 'DOCUMENT_DIGITIZATION') {
           next.usePrintedPage = true
           next.usePageText = prev.usePageText ?? false
+          next.summarizationEnabled = null
+        } else if (value === 'DOCUMENT_INSIGHTS') {
+          next.usePrintedPage = null
+          next.usePageText = null
+          next.summarizationEnabled = false
         } else {
           next.usePrintedPage = null
           next.usePageText = null
+          next.summarizationEnabled = null
         }
       }
       return next
@@ -187,7 +200,8 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
         topP: task.topP ? Number(task.topP) : null,
         completionModel: task.completionModel ? { name: task.completionModel } : null,
         usePrintedPage: task.usePrintedPage ?? null,
-        usePageText: task.usePageText ?? null
+        usePageText: task.usePageText ?? null,
+        summarizationEnabled: task.summarizationEnabled ?? null
       }
 
       if (editMode) {
@@ -471,6 +485,33 @@ const CreateTaskDialog = ({ open, onClose, initialData = {}, editMode = false, T
                 />
               </Grid>
             </Grid>
+
+            {isDocumentInsightsTask(task.taskType) && (
+              <FormControlLabel
+                sx={{ mt: 2 }}
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    Generate a summary for each document
+                    <Tooltip
+                      title='After answering the questions, use the completion model to consolidate each document’s answers into a summary.'
+                      arrow
+                    >
+                      <span>
+                        <IconButton size='small' color='primary' sx={{ ml: 0.5, p: 0.25 }}>
+                          <InfoOutlinedIcon fontSize='small' />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </Box>
+                }
+                control={
+                  <Checkbox
+                    checked={Boolean(task.summarizationEnabled)}
+                    onChange={e => handleChange('summarizationEnabled', e.target.checked)}
+                  />
+                }
+              />
+            )}
 
             {isDigitizationTask(task.taskType) && (
               <Box sx={{ mt: 2 }}>

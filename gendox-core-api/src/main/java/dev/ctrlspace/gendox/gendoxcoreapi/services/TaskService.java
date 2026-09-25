@@ -93,6 +93,9 @@ public class TaskService {
         if (isDocumentDigitizationTask(task) && task.getUsePageText() == null) {
             task.setUsePageText(false);
         }
+        if (task.getSummarizationEnabled() == null) {
+            task.setSummarizationEnabled(false);
+        }
         validateDigitizationContentFields(task);
         logger.debug("Creating new task: {}", task);
         return taskRepository.save(task);
@@ -281,6 +284,9 @@ public class TaskService {
         if (taskDTO.getUsePageText() != null) {
             existingTask.setUsePageText(taskDTO.getUsePageText());
         }
+        if (taskDTO.getSummarizationEnabled() != null) {
+            existingTask.setSummarizationEnabled(taskDTO.getSummarizationEnabled());
+        }
 
         validateDigitizationContentFields(existingTask);
 
@@ -358,7 +364,5 @@ public class TaskService {
     }
 
 }
-
-
 
 

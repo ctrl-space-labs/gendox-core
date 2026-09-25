@@ -41,6 +41,7 @@ public class TaskConverter implements GendoxConverter <Task, TaskDTO> {
                 .topP(task.getTopP())
                 .usePrintedPage(task.getUsePrintedPage())
                 .usePageText(task.getUsePageText())
+                .summarizationEnabled(task.getSummarizationEnabled())
                 .build();
     }
 
@@ -96,6 +97,9 @@ public class TaskConverter implements GendoxConverter <Task, TaskDTO> {
         }
         if (taskDTO.getUsePageText() != null) {
             task.setUsePageText(taskDTO.getUsePageText());
+        }
+        if (taskDTO.getSummarizationEnabled() != null) {
+            task.setSummarizationEnabled(taskDTO.getSummarizationEnabled());
         }
         return task;
     }
