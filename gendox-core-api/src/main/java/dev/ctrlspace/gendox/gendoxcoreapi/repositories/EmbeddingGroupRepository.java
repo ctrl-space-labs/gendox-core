@@ -32,8 +32,8 @@ public interface EmbeddingGroupRepository extends JpaRepository<EmbeddingGroup, 
 
     @Query("SELECT eg " +
             "FROM EmbeddingGroup eg " +
-            "WHERE (eg.sectionId is not null and eg.sectionId = :sectionId) " +
-            "   OR (eg.messageId is not null and eg.messageId = :messageId) " +
+            "WHERE ((eg.sectionId is not null and eg.sectionId = :sectionId) " +
+            "   OR (eg.messageId is not null and eg.messageId = :messageId)) " +
             "AND eg.semanticSearchModelId = :semanticSearchModelId")
     Optional<EmbeddingGroup> findBySectionIdOrMessageIdAndSemanticSearchModel(
             @Param("sectionId") UUID sectionId,

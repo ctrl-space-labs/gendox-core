@@ -156,9 +156,12 @@ public class EmbeddingService {
             embedding = embeddingRepository.findById(embeddingGroup.getEmbeddingId()).get();
 
             embedding.setEmbeddingVector(embeddingResponse.getData().get(0).getEmbedding());
+            // the vector may come from a different model than the one it replaces (the agent's model changed)
+            embedding.setSemanticSearchModelId(semanticSearchModelId);
 
 
             embeddingGroup.setEmbeddingId(embedding.getId());
+            embeddingGroup.setSemanticSearchModelId(semanticSearchModelId);
             embeddingGroup.setTokenCount((double) embeddingResponse.getUsage().getTotalTokens());
             embeddingGroup.setGroupingStrategyType(typeService.getGroupingTypeByName("SIMPLE_SECTION").getId());
             embeddingGroup.setEmbeddingSha256Hash(sectionSha256Hash);
