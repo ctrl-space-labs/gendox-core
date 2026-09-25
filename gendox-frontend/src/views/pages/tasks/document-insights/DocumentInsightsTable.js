@@ -14,7 +14,7 @@ import { useJobMonitor } from '../generation/useJobMonitor'
 const QUESTION_FIELD_PREFIX = 'q_' // question columns are named q_<questionNodeId>
 
 // The grid's search, sort and filter, as the task node search criteria and sort
-const toDocumentSearch = (searchTerm, sortModel, filterModel) => {
+const toDocumentSearch = (searchTerm, sortModel, filterModel, questions) => {
   const criteria = { documentNameContains: searchTerm || undefined }
   let sort = 'createdAt,desc'
 
@@ -29,8 +29,15 @@ const toDocumentSearch = (searchTerm, sortModel, filterModel) => {
   const filter = filterModel.items[0]
   const statuses = filter?.operator === 'isAnyOf' ? filter.value : filter?.value ? [filter.value] : []
   if (filter?.field.startsWith(QUESTION_FIELD_PREFIX) && statuses?.length) {
-    criteria.answerFilterQuestionNodeId = filter.field.slice(QUESTION_FIELD_PREFIX.length)
-    criteria.answerFilterStatuses = statuses
+    const questionId = filter.field.slice(QUESTION_FIELD_PREFIX.length)
+    const question = questions.find(item => item.id === questionId)
+    criteria.answerFilterQuestionNodeId = questionId
+    if (question?.insightConfig?.answerMode === 'DECISION') {
+      criteria.answerFilterValues = statuses
+      criteria.answerFilterValuePrefix = question.insightConfig?.decision?.kind === 'SCORE'
+    } else {
+      criteria.answerFilterStatuses = statuses
+    }
     criteria.answerFilterNegate = filter.operator === 'not'
   }
 
@@ -167,8 +174,8 @@ const DocumentInsightsTable = ({ selectedTask }) => {
   }, [searchInput, searchTerm])
 
   const documentSearch = useMemo(
-    () => toDocumentSearch(searchTerm, sortModel, filterModel),
-    [searchTerm, sortModel, filterModel]
+    () => toDocumentSearch(searchTerm, sortModel, filterModel, questions),
+    [searchTerm, sortModel, filterModel, questions]
   )
   // The filter model also changes while its panel is being edited, so reload on real changes only
   const criteriaKey = JSON.stringify(documentSearch)

@@ -23,6 +23,23 @@ const ANSWER_STATUS_OPTIONS = [
   }))
 ]
 
+const getFilterOptions = question => {
+  if (question.insightConfig?.answerMode !== 'DECISION') return ANSWER_STATUS_OPTIONS
+
+  const decision = question.insightConfig.decision
+  const values =
+    decision?.kind === 'BOOLEAN'
+      ? ['Yes', 'No']
+      : decision?.kind === 'CHOICE'
+      ? Object.values(decision.choices || {})
+      : decision?.scoreCriteria || []
+
+  return [
+    { value: 'UNANSWERED', label: 'Not answered' },
+    ...values.filter(Boolean).map(value => ({ value, label: value }))
+  ]
+}
+
 const DocumentInsightsGrid = ({
   openDialog,
   documents,
@@ -227,7 +244,7 @@ const DocumentInsightsGrid = ({
         sortable: true,
         filterable: true,
         type: 'singleSelect',
-        valueOptions: ANSWER_STATUS_OPTIONS,
+        valueOptions: getFilterOptions(q),
         cellClassName: 'answer-cell',
 
         renderHeader: () => {
